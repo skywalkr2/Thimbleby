@@ -4,6 +4,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+/** The assistant's configured name, as the app reports it. */
+async function assistantName(page: Page): Promise<string> {
+  const response = await page.request.get("api/runtime-config");
+  expect(response.ok()).toBe(true);
+  return (await response.json()).assistant_name;
+}
+
 async function signIn(page: Page, hash = "") {
   await page.goto("?token=e2e-token");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
@@ -403,7 +410,7 @@ test.describe("screen use and the shell", () => {
       const beside = width >= 1440;
       expect((await header.boundingBox())!.height).toBe(56);
       const statusRow = header.getByRole("button", { name: /^App status: / });
-      const assistant = header.getByRole("button", { name: /^Assistant/ });
+      const assistant = header.getByRole("button", { name: new RegExp(`^${await assistantName(page)}`) });
       await expect(assistant).toHaveCount(beside ? 1 : 0);
       const rowOf = async (selector: Locator) => {
         const box = (await selector.boundingBox())!;
@@ -454,7 +461,7 @@ test.describe("screen use and the shell", () => {
 
   // Below 1440px the header is one row (design 7.1): the title, Ask, the status chip and the buttons, with the assistant's state in
   // the chip's popover and "Your pages" in the person's menu; at about 1,000px Ask is an icon. Nothing is clipped by the
-  // window, the workspace's name keeps its room before Ask gives any up, and Missed one has its words.
+  // window, the workspace's name keeps its room before Ask gives any up, and Missed something? has its words.
   for (const width of [800, 1000, 1100, 1200, 1300]) {
     test(`at ${width}px the header is one row, with every control inside the window and the assistant's state in the status chip`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
@@ -466,7 +473,7 @@ test.describe("screen use and the shell", () => {
         header.getByRole("link", { name: /^Go to Today/ }),
         header.getByRole("button", { name: "Ask" }).first(),
         header.getByRole("button", { name: /^App status: / }),
-        header.getByRole("button", { name: "Missed one" }),
+        header.getByRole("button", { name: "Missed something?" }),
         header.getByRole("button", { name: "Hand something in" }),
         header.getByRole("button", { name: "Help" }),
         header.getByRole("button", { name: /^Change appearance, / }),
@@ -487,10 +494,10 @@ test.describe("screen use and the shell", () => {
           const apart = a.x + a.width <= b.x + 0.5 || b.x + b.width <= a.x + 0.5 || a.y + a.height <= b.y + 0.5 || b.y + b.height <= a.y + 0.5;
           expect(apart, `header controls ${i} and ${j} overlap`).toBe(true);
         }
-      // No assistant line, no "Your pages" and no bare icon for Missed one.
-      await expect(header.getByRole("button", { name: /^Assistant/ })).toHaveCount(0);
+      // No assistant line, no "Your pages" and no bare icon for Missed something?.
+      await expect(header.getByRole("button", { name: new RegExp(`^${await assistantName(page)}`) })).toHaveCount(0);
       await expect(header.getByRole("button", { name: "Your pages" })).toHaveCount(0);
-      await expect(header.getByRole("button", { name: "Missed one" })).toHaveText("Missed one");
+      await expect(header.getByRole("button", { name: "Missed something?" })).toHaveText("Missed something?");
       // Where Ask is a field the workspace's name is whole: it gives way only after Ask has.
       if (width >= 1024) {
         const clipped = await header.getByRole("link", { name: /^Go to Today/ }).evaluate((el) => Array.from(el.querySelectorAll("span")).filter((s) => s.scrollWidth > s.clientWidth + 1).length);
@@ -758,7 +765,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     const section = page.getByRole("region", { name: /^AI accounts/ });
     await expect(section.getByRole("heading", { name: /^AI accounts/ })).toBeVisible();
     await expect(section.getByRole("group", { name: "Who does the work" })).toContainText("Main account does");
-    await expect(section.getByRole("group", { name: "Who does the work" })).toContainText("Second account stands in");
+    await expect(section.getByRole("group", { name: "Who does the work" })).toContainText("Second account takes over");
     const rows = section.locator("li[data-row]");
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText("Does the work");
