@@ -51,6 +51,19 @@ password kept as a secret reference; messages are fetched without marking anythi
 hand something in (6.6), not connectors. Connectors for particular products and services (wikis, trackers, a named mail or
 calendar service that needs its own sign-in) are plugins (6.27).
 
+**Versions of one document.** In a watched folder (`folder`), files whose names differ only by version marks (`v3`, `v3_1`,
+`v2.0`), dates (`2026-10-21`, `20261021`) and the words in `watch.versions.ignore_words` (FOR REVIEW, DRAFT, FINAL, ARCHIVE)
+are one family within the same top folder; a folder named in `watch.versions.archive_folders` (Archive, Old, Superseded)
+doesn't make a new family. A bare number of three or more digits is an id, never a version, so "<form> 1234" and
+"<form> 5678" stay apart. The current copy is the highest date, then version, then modified time among the family's files
+that exist outside an archive folder; a deleted file or one in an archive folder is never current. A change to any other
+copy (including a copy moved into an archive folder and the removal at its old place) closes itself under the rule "Older
+version", "an older version; the current one is <file>", listed with the other auto-closed changes, where Take a closer
+look brings it back and records the usual pulled-back signal (6.22). The current copy's change says which version it
+replaces, and the notes prompt says the newer version wins: record what it says now, write a correction when it contradicts
+an earlier fact, never report a discrepancy against an older copy. Files with unrelated names aren't linked; no existing op
+or setting links two files by hand, so that waits for a plugin API release. Built: `tests/test_versions.py`.
+
 **Structured items.** A calendar or mail item carries what it is as structured fields beside its text: an event's start, end,
 place and whether it was cancelled; a message's sender, received time and whether it is unread. The watcher keeps them on the
 item's snapshot, so the agenda and the list of what came in on Today need no AI call (6.15); the text still carries everything

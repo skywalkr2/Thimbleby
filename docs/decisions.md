@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Versions of one document in a watched folder: only the newest counts (P51, lesson 1)
+
+**Decided:** Files in a watched folder whose names differ only by version marks (v3, v3_1), dates and the configured words
+are one family within a top folder; the current copy is the highest date, version, then modified time outside an archive
+folder, never a deleted one. A change to any other copy closes itself ("an older version; the current one is <file>") among
+the auto-closed changes, with Take a closer look to bring it back. The current copy's change names what it replaces and the
+notes prompt says the newer version wins. Ignore words and archive folder names are advanced settings. Ids (3+ digit bare
+numbers) are not version marks. *Why:* the assistant compared the newest deck with facts from older copies and kept
+actions open on them. Linking unrelated names by hand has no op or setting today; left for a plugin API release.
+Change log: section 212.
+
 ## 2026-10-26: Every setting is on screen, behind Advanced, or only in files; every page reached from Settings keeps the Settings side bar (P40 points 19, 20)
 
 **Decided:** (1) Each setting of the app's own files is one of three kinds: basic (on screen first), advanced (behind

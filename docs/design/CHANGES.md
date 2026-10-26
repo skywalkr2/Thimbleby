@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 212. Versions of one document in a watched folder: only the current copy counts (2026-10-26; P51)
+
+Files in a watched folder that differ only by version marks, dates or configured words are one family; the newest copy
+outside an archive folder is current, and a change to any older copy closes itself as "an older version; the current one is
+<file>" (brought back by Take a closer look). The current copy's change names the version it replaces and the notes prompt
+says the newer version wins. New settings `watch.versions.{enabled, ignore_words, archive_folders}` (advanced). Design 6.2.
+Built: `tests/test_versions.py`. (The log's top entry was 211, so this takes 212.)
+
 ## 211. Ending a project drops what is open on it, in the same undoable change (2026-10-26; P52)
 
 (The top section was 209; 211 is the number the brief gave.)

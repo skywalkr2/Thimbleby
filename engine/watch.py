@@ -29,13 +29,15 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from engine import audience, entry_rules
+from engine import audience, entry_rules, versions
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.extract.attached import with_files_read
 from engine.names import People
 from engine.storage import StoreError, WriteContext
 from engine.triage import classify
 
+#: The name a close carries when the change is to an older copy of a document's versions.
+VERSION_RULE = "Older version"
 _WATCHER = WriteContext(actor="watcher", trust="untrusted", op="watch.read")
 _SORTER = WriteContext(actor="engine", trust="trusted", op="watch.sort")
 #: Lines of unchanged text shown around each change in a diff.
@@ -358,6 +360,7 @@ class _Entry:
     old: str | None
     closed: dict[str, str] | None
     handed: bool  # it is handed in now, not only noted
+    replaces: str | None = None  # for the current copy of a document's versions: the version it replaces
 
 
 def _compare(
@@ -377,6 +380,11 @@ def _compare(
     entries: list[_Entry] = []
     unplaced: dict[str, dict[str, Any]] = {}
     plain = entry_rules.Plain(store.read(), cfg, source.id)
+    families = (
+        versions.Families(poll.items, cfg.watch.versions)
+        if source.connector in versions.FOLDER_CONNECTORS and cfg.watch.versions.enabled
+        else None
+    )
     for polled in poll.items:
         listed.add(polled.key)
         # Files an item carries are read as text first, so the item is compared and handed in with their words.
@@ -396,6 +404,10 @@ def _compare(
         old = _read_text(ws, before.data["content_hash"]) if before is not None else None
         facts = _change(cfg, source, item, change, old)
         closed, kept = classify(store, cfg, facts)
+        older = families.older_than_current(item.key, item.changed_at) if families else None
+        if older and closed is None:
+            closed = {"rule": VERSION_RULE, "reason": older}
+        replaces = families.replaces(item.key) if families and not older else None
         handed = not baseline or (recent is not None and is_recent(details, item.changed_at, now, recent))
         if handed and plain.of(item):
             handed = False  # a plain calendar entry is kept by rule, with no run and no line (design 6.32)
@@ -403,7 +415,7 @@ def _compare(
             closed = _carried_sorting(before)
         if handed and closed is None and not kept and before is None and item.message is not None:
             unplaced[item.key] = facts
-        entries.append(_Entry(item, digest, before, details, change, old, closed, handed))
+        entries.append(_Entry(item, digest, before, details, change, old, closed, handed, replaces))
     marks, result.note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
     for entry in entries:
         item, before, closed = entry.item, entry.before, entry.closed or marks.get(entry.item.key)
@@ -425,7 +437,7 @@ def _compare(
                 tx.update("snapshot", before.id, data, _WATCHER, read_version=before.version)
             if not entry.handed:
                 continue
-            text = _input_text(source, item, entry.change, entry.old)
+            text = _input_text(source, item, entry.change, entry.old, entry.replaces)
             request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed)
         (result.new if entry.change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
@@ -441,6 +453,9 @@ def _compare(
             text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
             facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
             closed = classify(store, cfg, facts)[0]
+            older = families.older_than_current(key, snapshot.data.get("changed_at"), gone=True) if families else None
+            if older and closed is None:
+                closed = {"rule": VERSION_RULE, "reason": older}
             result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, closed))
     return result
 
@@ -617,8 +632,11 @@ def _carried_sorting(before: Any) -> dict[str, str] | None:
     return None
 
 
-def _input_text(source: Any, item: SourceItem, change: str, old: str | None) -> str:
+def _input_text(source: Any, item: SourceItem, change: str, old: str | None, replaces: str | None = None) -> str:
     where = source.label or source.id
+    if replaces:
+        note = f"This is the current version of the document. It replaces the earlier version {replaces}; it wins.\n\n"
+        return note + _input_text(source, item, change, old)
     if change == "new":
         return f"New in {where}: {item.title}\n\n{item.text}"
     diff = difflib.unified_diff(

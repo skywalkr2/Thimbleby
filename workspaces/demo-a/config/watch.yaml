@@ -61,6 +61,10 @@ default_data_level: internal   # how sensitive a watched source's items are when
 connector_data_levels: {mailbox: internal}   # per kind of source; a source's own data_level wins over this
 set_aside_defaults: true   # mailing lists and promotions are set aside with no AI run
 sorting: rules   # no AI run: only the rules above set mail aside
+versions:   # copies of one document in a watched folder: only the newest counts
+  enabled: true
+  ignore_words: [FOR REVIEW, DRAFT, FINAL, ARCHIVE, ARCHIVED, COPY, SUPERSEDED]
+  archive_folders: [Archive, Old, Superseded]
 automated_mail:   # one-time-code mail from a no-reply address is set aside with no AI run
   set_aside: true
   senders: [no-reply, noreply, no_reply, do-not-reply, donotreply]   # what an automated address starts with

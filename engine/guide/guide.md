@@ -157,7 +157,11 @@ events in the coming weeks are followed: a moved meeting or a new invitation com
 read over IMAP with an app password from your mail service; messages are never marked as read or changed. Addresses
 and passwords are kept outside your settings, as environment variables or files on this computer. Rules can set
 aside changes that don't matter, such as a spacing fix or a change made by your own account; they are listed under
-Auto-closed, where Take a closer look hands one in after all. If a source can't be read several times in a row, you
+Auto-closed, where Take a closer look hands one in after all. In a watched folder, files that differ only by version marks (v3, v3_1), dates or words such as FOR REVIEW,
+DRAFT and FINAL are versions of one document: only the newest copy outside an Archive, Old or Superseded folder counts, a
+change to an older copy is closed as "an older version; the current one is ..." (Take a closer look brings it back), and
+the newest copy says which version it replaces. Files with unrelated names aren't linked, and there is no way yet to link
+two of them by hand; give the newer one the older one's name plus a version mark. If a source can't be read several times in a row, you
 are asked once, with what to do.
 
 Some add-ons read a service through your own account, signing in on that service's page. Sign in from Settings: the

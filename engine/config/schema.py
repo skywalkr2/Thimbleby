@@ -2826,6 +2826,27 @@ class TriageRule(ConfigModel):
     )
 
 
+class VersionFamilies(FileModel):
+    enabled: bool = Field(
+        True,
+        description="Treat files in a watched folder that differ only by version marks, dates or the words below as "
+        "versions of one document: only the current copy is read, and a change to an older copy closes itself.",
+        json_schema_extra={"advanced": True},
+    )
+    ignore_words: list[str] = Field(
+        default_factory=lambda: ["FOR REVIEW", "DRAFT", "FINAL", "ARCHIVE", "ARCHIVED", "COPY", "SUPERSEDED"],
+        description="Words in a file name that mark a version and are left out when files are grouped into one "
+        "document's versions. Version marks (v3, v3_1) and dates are always left out; a bare number is an id.",
+        json_schema_extra={"advanced": True},
+    )
+    archive_folders: list[str] = Field(
+        default_factory=lambda: ["Archive", "Old", "Superseded"],
+        description="Folder names that hold old copies: a file in one is never the current copy, and the folder "
+        "doesn't make a new document.",
+        json_schema_extra={"advanced": True},
+    )
+
+
 class AutomatedMail(FileModel):
     set_aside: bool = Field(
         True,
@@ -2954,6 +2975,11 @@ class WatchFile(FileModel):
         description="Set aside mail the mail itself says is not work, with no AI run: mailing lists and bulk mail, and "
         "mail the mail service files under promotions, social or forums. It applies after the rules above, so a rule "
         "that keeps mail from a sender wins.",
+    )
+    versions: VersionFamilies = Field(
+        default_factory=VersionFamilies,
+        description="How versions of one document in a watched folder are told apart from the current copy.",
+        json_schema_extra={"advanced": True},
     )
     automated_mail: AutomatedMail = Field(
         default_factory=AutomatedMail,
