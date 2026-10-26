@@ -289,7 +289,9 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
                 if item is not None:
                     items.append(item)
         newest = max(uids, default=last)
-        return Poll(items, {"validity": validity, "last_uid": newest}, complete=False)
+        # A first read that returned as many messages as it may take stopped at its cap, not at the end of the mail.
+        capped = not last and bool(settings.first_read) and len(uids) >= settings.first_read
+        return Poll(items, {"validity": validity, "last_uid": newest, "capped": capped}, complete=False)
     except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
         raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
     finally:

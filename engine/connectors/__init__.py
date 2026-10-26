@@ -480,6 +480,7 @@ class FakeSettings(BaseModel):
         "and data as base64 text).",
     )
     error: ErrorKind | None = Field(None, description="Fail every read with this kind of error.")
+    capped: bool = Field(False, description="The read stopped at its cap, as a mail connector's first read can.")
 
 
 def _read_fake(settings: FakeSettings, state: dict[str, Any], context: ConnectorContext) -> Poll:
@@ -509,7 +510,7 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
                 else None,
             )
         )
-    return Poll(items, {"reads": reads}, complete=True)
+    return Poll(items, {"reads": reads, "capped": settings.capped}, complete=True)
 
 
 def _core() -> dict[str, Connector]:

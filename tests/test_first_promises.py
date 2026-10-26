@@ -279,8 +279,7 @@ def test_before_the_start_it_names_the_account_the_folders_and_the_day_the_read_
     assert (place.kind, place.account, place.missing_sent) == ("mail", account, False)
     assert [(f.source, f.name, f.sent, f.from_date) for f in place.folders] == [
         ("m", "Inbox", False, back),
-        # The sent folder holds only one message, 3 days old: its read looked back as far as that, not further.
-        ("s", "Sent", True, (NOW - timedelta(days=3)).date()),
+        ("s", "Sent", True, back),
     ]
     assert shown.complete  # every source was read and the sent mail is among them
 

@@ -77,15 +77,17 @@ def _when(data: dict[str, Any]) -> datetime | None:
     return at if at.tzinfo else at.replace(tzinfo=UTC)
 
 
-def looked_back_to(source: Any, items: list[Any], now: datetime) -> date | None:
+def looked_back_to(source: Any, items: list[Any], now: datetime, capped: bool = False) -> date | None:
     """The day before which a source's mail isn't looked at by its first read: `first_run_days` before the read. None
     for a source that holds no mail (any other kind of source is taken in whole)."""
     mail = [item for item in items if getattr(item, "message", None) is not None]
     if not mail:
         return None
     window = (now - timedelta(days=source.first_run_days)).date()
-    # A read that returned less than the window holds (the connector took only the latest messages) looked back only as
-    # far as the oldest message it returned, so the date says that day, the same day a look further back starts from.
+    # A read that stopped at its cap (the connector says so) looked back only as far as the oldest message it returned,
+    # so the date says that day, the same day a look further back starts from. Any other read looked at the window.
+    if not capped:
+        return window
     days = [at.astimezone(UTC).date() for item in mail if (at := _item_when(item)) is not None]
     return max(window, min(days)) if days else window
 
@@ -425,7 +427,8 @@ def look_back_preview(
     ]
     count = len(found) + remote
     result = LookBack(days, asked, count, available_from=available if available and available > asked else None)
-    result.reaches = result.available_from is None or (remote > 0 and remote < cfg.watch.look_back_max_items)
+    # The source was asked: fewer than the limit means it holds nothing older than it gave.
+    result.reaches = result.available_from is None or remote < cfg.watch.look_back_max_items
     if result.reaches:
         result.available_from = None
     if count and prices:
@@ -448,8 +451,13 @@ def look_further_back(
         raise StoreError("this source can't be asked for older mail")
     with watch._read_lock(ws, source_id):
         asked, old, new, available = _plan(store, cfg, source_id, days)
-        if _fetch_older(ws, store, cfg, source, *_remote_range(store, source_id, asked, old, available), now):
+        fetched = _fetch_older(ws, store, cfg, source, *_remote_range(store, source_id, asked, old, available), now)
+        if fetched:
             asked, old, new, available = _plan(store, cfg, source_id, days)
+        everything = fetched < cfg.watch.look_back_max_items  # the source gave all it holds of those days
+        if everything:
+            new = asked
+            available = None
         found = _candidates(ws, store, cfg, source, _in_window(asked, old, now))
         result = LookBack(
             days, asked, len(found), available_from=available if available and available > asked else None

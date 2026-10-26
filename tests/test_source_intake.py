@@ -46,9 +46,24 @@ def item(key: str, days: float = 400, now: datetime = NOW) -> dict:
     }
 
 
-def make(tmp_path, items, *, price: float | None = 1.0, confirm: float = 0.10, confirm_unpriced=True, **source):
+def make(
+    tmp_path,
+    items,
+    *,
+    settings_extra=None,
+    price: float | None = 1.0,
+    confirm: float = 0.10,
+    confirm_unpriced=True,
+    **source,
+):
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
-    entry = {"id": "m", "connector": "fake", "label": "Inbox", "settings": {"items": items}, **source}
+    entry = {
+        "id": "m",
+        "connector": "fake",
+        "label": "Inbox",
+        "settings": {"items": items, **(settings_extra or {})},
+        **source,
+    }
     (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump({"version": 1, "sources": [entry], "sorting": "rules"}))
     cfg = load_config(ws.config_dir, env={})
     use = cfg.ai.tiers["routine"].use
@@ -195,7 +210,7 @@ def test_above_the_amount_to_confirm_the_requests_wait_for_one_go_with_the_total
             )
         (line,) = [x for x in queue(ws, store, cfg, NOW) if x.kind == "intake_go"]
         assert (line.group, line.source, line.subject, line.count, line.unpriced) == ("decide", "m", "Inbox", 3, 0)
-        assert line.days == 10  # the oldest mail the read returned is 10 days back
+        assert line.days == 14
         assert line.estimate_usd == pytest.approx(sum(r.data["estimate_usd"] for r in held))
         # No line of their own for each, and nothing has run.
         assert not [x for x in queue(ws, store, cfg, NOW) if x.kind in ("go", "refused", "failed", "first_go")]
@@ -450,15 +465,15 @@ def test_a_look_back_is_held_for_the_go_by_the_same_rule_and_joins_the_sources_l
         store.close()
 
 
-def test_when_the_source_doesnt_reach_that_far_the_result_says_so_and_the_date_stops_where_the_mail_does(tmp_path):
+def test_when_the_source_holds_nothing_older_the_answer_says_no_mail_and_the_date_goes_to_the_day_asked(tmp_path):
     ws, cfg, store = make(tmp_path, [mail("new", 2), mail("a", 20)])
     try:
         read((ws, cfg, store))
         found = source_intake.look_back_preview(ws, store, cfg, "m", 90, NOW)
-        assert (found.reaches, found.available_from) == (False, (NOW - timedelta(days=20)).date())
+        assert (found.reaches, found.available_from, found.count) == (True, None, 1)
         done = source_intake.look_further_back(ws, store, cfg, "m", 90, NOW)
-        assert (done.taken, done.reaches) == (1, False)
-        assert source_intake.back_to_of(store.read(), "m") == (NOW - timedelta(days=20)).date()
+        assert (done.taken, done.reaches) == (1, True)
+        assert source_intake.back_to_of(store.read(), "m") == (NOW - timedelta(days=14 + 90)).date()
     finally:
         store.close()
 
@@ -478,9 +493,10 @@ def test_a_source_without_mail_has_no_look_back(tmp_path):
 # ---- the date the header and the answer give, and what a source can be asked ---------------------------------
 
 
-def _capped(tmp_path, held_days=(1, 2, 3, 6)):
-    """A source whose first read returned only its latest mail (the oldest 6 days back, inside the 14-day window)."""
-    return make(tmp_path, [mail(f"m{d}", d) for d in held_days])
+def _capped(tmp_path, held_days=(1, 2, 3, 6), capped=True):
+    """A source whose first read returned only its latest mail (the oldest 6 days back, inside the 14-day window), and
+    says whether it stopped at its cap."""
+    return make(tmp_path, [mail(f"m{d}", d) for d in held_days], settings_extra={"capped": capped})
 
 
 def test_the_date_it_was_looked_back_to_is_the_oldest_mail_the_read_returned_and_the_answer_gives_the_same_day(
@@ -502,7 +518,7 @@ def test_a_late_evening_in_a_zone_behind_utc_is_the_same_day_in_the_header_and_t
     # Received 23:30 on Oct 12 at -05:00 is 04:30 on Oct 13 in UTC; both ends count that one way.
     late = mail("late", 0)
     late["message"]["received"] = "2026-10-12T23:30:00-05:00"
-    ws, cfg, store = make(tmp_path, [late, mail("x", 1)])
+    ws, cfg, store = make(tmp_path, [late, mail("x", 1)], settings_extra={"capped": True})
     try:
         read((ws, cfg, store))
         header = source_intake.back_to_of(store.read(), "m")
@@ -558,3 +574,16 @@ def test_a_source_that_cannot_be_asked_for_older_mail_is_not_offered_a_look_back
             source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
     finally:
         store.close()
+
+
+def test_a_quiet_mailbox_keeps_the_whole_window_and_a_capped_read_uses_its_oldest_mail(tmp_path):
+    window = (NOW - timedelta(days=14)).date()
+    for capped, expected in ((False, window), (True, (NOW - timedelta(days=6)).date())):
+        ws, cfg, store = _capped(tmp_path / str(capped), capped=capped)
+        try:
+            read((ws, cfg, store))
+            header = source_intake.back_to_of(store.read(), "m")
+            found = source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
+            assert header == expected and found.available_from in (None, header)
+        finally:
+            store.close()

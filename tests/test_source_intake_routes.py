@@ -116,8 +116,8 @@ def test_the_preview_counts_and_prices_and_the_look_back_takes_in_the_older_mail
     assert ninety["count"] == 1
     year = client.get("/api/watch/m/look-back", params={"days": 365}).json()
     assert year["count"] == 2 and year["estimate_usd"] > ninety["estimate_usd"]
-    # The mail starts 150 days back, so a year can't be reached and the answer says where it does start.
-    assert (year["reaches"], year["available_from"]) == (False, (now() - timedelta(days=150)).date().isoformat())
+    # The source holds nothing older than its mail, so the answer doesn't name a later day.
+    assert (year["reaches"], year["available_from"]) == (True, None)
     done = client.post("/api/watch/m/look-back", json={"days": 90}).json()
     assert (done["taken"], done["started"], done["reaches"]) == (1, False, True)  # over the amount to confirm: held
     (line,) = kinds(client, "intake_go")

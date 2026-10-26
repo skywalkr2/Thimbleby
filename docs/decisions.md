@@ -6,8 +6,9 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 ## 2026-10-26: Looking further back asks the source, only when it can, and lives on the source's page; a title that does nothing doesn't look clickable (P41, P48)
 
-**Decided:** (1) The day a mail source's first read says it looked back to is the oldest day of the mail the read returned
-when that is later than the window (a connector that took only its latest messages), and every day is counted in UTC from the
+**Decided:** (1) The day a mail source's first read says it looked back to is the window start, except when the read stopped at its
+cap (the core mailbox says so when it returned `first_read` messages): then it is the oldest day of the mail returned. An add-on
+source keeps the window start. Every day is counted in UTC, and every day is counted in UTC from the
 message's own moment, so a mail late in the evening in a zone behind UTC is the same day in Today's header and in the answer.
 (2) Looking further back is offered only for a source whose connector can be asked for older mail: the core mailbox can (a
 search by days, its messages fetched without marking them read); a source of an add-on can't, because the plugin API has no way
