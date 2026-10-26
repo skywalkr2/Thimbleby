@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.90"
+PLUGIN_API_VERSION = "0.3.91"
 
 
 class Settings(BaseModel):
@@ -420,6 +420,39 @@ class ReadView:
         from engine.projects import language_for
 
         return language_for(self.__view, self.default_language, record)
+
+    def sides(self) -> list[Side]:
+        """Every side of the person's life, Personal first (the person's own life: `kind` "personal") and then the
+        sides of their work in the order the person listed them (`kind` "job" or "business"): each with the id of its
+        top-level project (`project`) and its `name`. Only sides whose project still exists. A person record's `sides`
+        and `side_of` name a side by that id."""
+        from engine import sides
+
+        cfg = self.source_cfg
+        if cfg is None:
+            return []
+        personal = sides.personal_project(self.__view, cfg)
+        found = (
+            [Side(personal, "personal", str(self.__view.get("project", personal).data.get("name") or ""))]
+            if personal
+            else []
+        )
+        return [*found, *(Side(s.project, s.kind, s.name) for s in sides.side_list(self.__view, cfg))]
+
+    def side_of(self, record_or_project_id: Stored | str) -> str | None:
+        """The side a record or a project is on, as the id of that side's top project: the project's own top project
+        (a project) or that of the first project it names (a record with a `project` or `projects` field), when that is
+        a side's top project or the personal project's; None when it is on no side, is in no project, or isn't there."""
+        from engine import sides
+
+        if self.source_cfg is None:
+            return None
+        if isinstance(record_or_project_id, str):
+            return sides.side_of_project(self.__view, self.source_cfg, record_or_project_id)
+        if record_or_project_id.kind == "project":
+            return sides.side_of_project(self.__view, self.source_cfg, record_or_project_id.id)
+        self._allow(record_or_project_id.kind)
+        return sides.side_of_item(self.__view, self.source_cfg, record_or_project_id)
 
 
 class OpWriter(ReadView):
@@ -1336,6 +1369,17 @@ class SetupState(frozenset):
 
     def tool_available(self, name: str) -> bool:
         return bool(self._available and self._available(name))
+
+
+@dataclass(frozen=True)
+class Side:
+    """One side of the person's life, as `ReadView.sides()` lists it: `project` is the id of its top-level project (also
+    what a person's `sides` and `ReadView.side_of` use to name it), `kind` is "personal" (their own life), "job" (they
+    work for someone) or "business" (their own) and `name` is the project's name."""
+
+    project: str
+    kind: str
+    name: str
 
 
 @dataclass(frozen=True)
@@ -2798,6 +2842,7 @@ __all__ = [
     "StageDefinition",
     "StageCheckResult",
     "StageStatus",
+    "Side",
     "SetupState",
     "ToolBox",
     "ToolResult",

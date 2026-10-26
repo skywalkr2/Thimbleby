@@ -3854,8 +3854,19 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     one business side, and with several it is refused in plain words ("say which side").
   - **Mailboxes and calendars:** a watched source's `sides` says which sides it serves (empty: not said). It is a filing
     rank right after people: one side files there; several narrow the choice to them.
-  - **Plugin API 0.3.91** (the owner lifted the hold for this alone): `person.sides`; on the read view, the sides
-    (project id, kind, name) and the side of a record or project. Nothing is removed.
+  - **Plugin API 0.3.91** (the owner lifted the hold for this alone): `person.sides`; on the read view, `sides()` (Personal
+    first, kind `personal`, then each side with its kind and name) and `side_of(record or project id)`. Nothing is
+    removed. A person stored before 0.3.91 with only `side` has an empty `sides` on its raw record; the core reads `side`
+    in its place, and a plugin uses `side_of` (*built*, `tests/test_many_sides.py`).
+  - **Filing (built, `tests/test_many_sides.py`):** each rank votes for a set of side ids and decides when it names one;
+    the order is people, then the input's **source** (its `sides`; `filed_by.by: source`), then the sender's domain,
+    aliases, project names and side words. The business side words apply only while there is exactly one other side.
+  - **Setup's routes** (`POST /api/setup/work`, `/api/setup/business`, with an optional `kind`) add a side each time; a
+    name an existing side already has returns that side. A side is renamed by editing its project, never by posting
+    its name again.
+  - **Not yet:** the "which side" Today line and "Move to the other side" read only while there is one other side
+    (with several, Move goes to Personal from a side, and from Personal offers nothing yet); the screens task makes
+    both a list to pick from.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
   second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
   a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for

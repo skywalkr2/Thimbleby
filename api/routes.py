@@ -2008,11 +2008,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/people")
     def people() -> list[PersonView]:
+        from engine import sides
         from engine.record_page import counts
 
         pm = cfg.workspace.user.person
-        orgs = {o.id: o.data["name"] for o in store.read().list("organization")}
-        seen = counts(store.read())["people"]
+        view = store.read()
+        orgs = {o.id: o.data["name"] for o in view.list("organization")}
+        seen = counts(view)["people"]
+        held = {p.id: sides.person_sides(view, cfg, p.data) for p in view.list("person")}
         return [
             PersonView(
                 id=p.id,
@@ -2027,10 +2030,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 track_only=bool(p.data.get("track_only")),
                 how_to_reach=p.data.get("how_to_reach") or {},
                 relation=p.data.get("relation"),
-                side=p.data.get("side"),
+                side=sides.side_word_of(view, cfg, held[p.id]) or p.data.get("side"),
+                sides=held[p.id],
                 **seen.get(p.id, {}),
             )
-            for p in store.read().list("person")
+            for p in view.list("person")
         ]
 
     def _same_name(kind: str, field: str, value: str, except_id: str | None = None) -> None:
@@ -2044,9 +2048,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         if body.org:
             need("organization", body.org)
 
+        from engine import sides
+
+        written, why = sides.person_write(
+            store.read(), cfg, {"sides": body.sides} if body.sides else {"side": body.side} if body.side else {}
+        )
+        if why:
+            raise HTTPException(status_code=409, detail=why)
+
         def do() -> str:
             with store.transaction() as tx:
-                return tx.create("person", {**body.model_dump(), "name_verified": True}, _setup("person.add")).id
+                data = {**body.model_dump(exclude={"sides"}), "name_verified": True, **written}
+                return tx.create("person", data, _setup("person.add")).id
 
         new = guard(do)
         changed()

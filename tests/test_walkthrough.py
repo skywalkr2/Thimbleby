@@ -259,9 +259,10 @@ def test_the_work_question_is_a_counted_step_that_reads_as_skipped_when_left_for
 def test_just_me_is_an_answer_that_keeps_no_work_side(tmp_path):
     ws, c = _fresh(tmp_path)
     answered = c.post("/api/setup/work", json={"choice": "me"})
-    assert answered.status_code == 200 and answered.json() == {"business": False, "name": None, "chosen": "me"}
+    assert answered.status_code == 200 and answered.json()["chosen"] == "me"
+    assert answered.json()["business"] is False and answered.json()["name"] is None and answered.json()["sides"] == []
     assert _steps(c)["work"]["done"] is True
-    assert ws.config(env={}).workspace.project.business is None
+    assert ws.config(env={}).workspace.project.sides == []
     assert _steps(_open(ws))["work"]["done"] is True  # kept on this computer, so it survives a restart
 
 
@@ -272,12 +273,12 @@ def test_me_and_my_work_names_the_work_side_and_it_stays(tmp_path):
     named = c.post("/api/setup/work", json={"choice": "work", "name": "Harbor  Goods"})
     assert named.status_code == 200 and named.json()["chosen"] == "work" and named.json()["name"] == "Harbor Goods"
     cfg = ws.config(env={})
-    assert cfg.workspace.project.business is not None
+    assert len(cfg.workspace.project.sides) == 1
     assert _steps(c)["work"]["done"] is True
-    # Saying it again renames the same side rather than making another.
+    # Saying another name adds a second side beside the first.
     again = c.post("/api/setup/work", json={"choice": "work", "name": "Harbor Supply"}).json()
-    assert again["name"] == "Harbor Supply"
-    assert ws.config(env={}).workspace.project.business == cfg.workspace.project.business
+    assert [s["name"] for s in again["sides"]] == ["Harbor Goods", "Harbor Supply"] and again["name"] == "Harbor Goods"
+    assert len(ws.config(env={}).workspace.project.sides) == 2
     # Once a work side exists, Just me can't quietly pretend there is none.
     refused = c.post("/api/setup/work", json={"choice": "me"})
     assert refused.status_code == 409 and "stays" in refused.json()["detail"]

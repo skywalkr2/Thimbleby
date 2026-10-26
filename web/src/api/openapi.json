@@ -5965,6 +5965,22 @@
       "BusinessIn": {
         "additionalProperties": false,
         "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "job",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the side is: a job (the person works for someone) or a business of their own; empty means a business.",
+            "title": "Kind"
+          },
           "name": {
             "description": "What the person's business or job is called.",
             "maxLength": 200,
@@ -5980,7 +5996,7 @@
         "type": "object"
       },
       "BusinessState": {
-        "description": "Whether the person has a business, for the Personal / business filter on Today and Follow-ups: `business` is\nfalse until one is set (or once its project is undone), and `name` is its project's own name, rendered.",
+        "description": "The sides of the person's work, for the side filter on Today and Follow-ups: `business` is false until a side\nbeside the personal one is set (or once its project is undone), `name` is the first such side's project name,\nrendered, `sides` lists them in order and `personal` is the personal project's id.",
         "properties": {
           "business": {
             "title": "Business",
@@ -6012,6 +6028,26 @@
               }
             ],
             "title": "Name"
+          },
+          "personal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the personal project, when there is one.",
+            "title": "Personal"
+          },
+          "sides": {
+            "description": "The sides beside the personal one, in order.",
+            "items": {
+              "$ref": "#/components/schemas/SideView"
+            },
+            "title": "Sides",
+            "type": "array"
           }
         },
         "required": [
@@ -6021,7 +6057,7 @@
         "type": "object"
       },
       "BusinessView": {
-        "description": "The person's business after saying what it is called: its project, whether this call made it (a second call\nrenames it instead), and the changeset Undo takes (none when the name was already that).",
+        "description": "The side added by saying what it is called: its project, what it is, whether this call made it (a name a side\nalready has is that side, made by no call), and the changeset Undo takes (none when nothing changed).",
         "properties": {
           "changeset": {
             "anyOf": [
@@ -6037,6 +6073,15 @@
           "created": {
             "title": "Created",
             "type": "boolean"
+          },
+          "kind": {
+            "default": "business",
+            "enum": [
+              "job",
+              "business"
+            ],
+            "title": "Kind",
+            "type": "string"
           },
           "name": {
             "title": "Name",
@@ -8657,10 +8702,11 @@
         "type": "object"
       },
       "FiledView": {
-        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`domain`: the sender's mail domain; `alias`, `name`: a project's alias or name; `word`: a configured side\nword) and `word` what matched, under `project_name`. `move_to` is the top project of the other side, `move_to_name`\nits name, and the item moves there in one step: POST /api/records/edit with `{field: id}` (a list for\n`projects`) and `read_version` set to `version`. Absent once the item is anywhere else.",
+        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;\n`alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under\n`project_name`. `move_to` is the top project of the other side it can move to in one step (Personal from another\nside; from Personal, the one other side, and none when there are several), `move_to_name` its name, and the item\nmoves there in one step: POST /api/records/edit with `{field: id}` (a list for `projects`) and `read_version` set\nto `version`. Absent once the item is anywhere else.",
         "properties": {
           "by": {
             "enum": [
+              "source",
               "domain",
               "alias",
               "name",
@@ -9389,17 +9435,13 @@
           "side": {
             "anyOf": [
               {
-                "enum": [
-                  "personal",
-                  "business"
-                ],
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Which side the action is on, from its project: personal, business, or none for neither (the screen's side filter shows such rows under every choice).",
+            "description": "Which side the action is on, from its project: the id of that side's top project (the personal project's or another side's), or none for neither (the screen's side filter shows such rows under every choice).",
             "title": "Side"
           },
           "text": {
@@ -9585,17 +9627,13 @@
           "side": {
             "anyOf": [
               {
-                "enum": [
-                  "personal",
-                  "business"
-                ],
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Which side the question is on, from its project: personal, business, or none for neither (the screen's side filter shows such rows under every choice).",
+            "description": "Which side the question is on, from its project: the id of that side's top project (the personal project's or another side's), or none for neither (the screen's side filter shows such rows under every choice).",
             "title": "Side"
           },
           "status": {
@@ -16508,8 +16546,23 @@
                 "type": "null"
               }
             ],
-            "description": "Which side of life they belong to.",
+            "description": "Which side of life they belong to. Refused for business or both when there is more than one side besides the personal one: name the side in `sides`.",
             "title": "Side"
+          },
+          "sides": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The ids of the top-level projects that hold the sides they belong to.",
+            "title": "Sides"
           }
         },
         "required": [
@@ -16688,8 +16741,23 @@
                 "type": "null"
               }
             ],
-            "description": "Which side they belong to.",
+            "description": "Which side they belong to. Refused for business or both when there is more than one side besides the personal one: name the side in `sides`.",
             "title": "Side"
+          },
+          "sides": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The ids of the top-level projects that hold the sides they belong to.",
+            "title": "Sides"
           },
           "status": {
             "anyOf": [
@@ -16908,8 +16976,16 @@
                 "type": "null"
               }
             ],
-            "description": "Which side of the person's life they belong to; empty when not known.",
+            "description": "Which side of the person's life they belong to, worked out from `sides` (only Personal: personal; some other side and not Personal: business; both kinds: both); empty when not known.",
             "title": "Side"
+          },
+          "sides": {
+            "description": "The ids of the top-level projects that hold the sides they belong to; empty when not known.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sides",
+            "type": "array"
           },
           "status": {
             "default": "active",
@@ -20775,17 +20851,13 @@
           "side": {
             "anyOf": [
               {
-                "enum": [
-                  "personal",
-                  "business"
-                ],
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Which side the line is on, from its project: personal, business, or none for neither (the screen's side filter shows such lines under every choice).",
+            "description": "Which side the line is on, from its project: the id of that side's top project (the personal project's or another side's), or none for neither (the screen's side filter shows such lines under every choice).",
             "title": "Side"
           },
           "snooze_days": {
@@ -24163,6 +24235,34 @@
           "walkthrough"
         ],
         "title": "SetupView",
+        "type": "object"
+      },
+      "SideView": {
+        "description": "One side of the person's work beside their own life: the id of its top project, what it is and its name.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "job",
+              "business"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "kind",
+          "name"
+        ],
+        "title": "SideView",
         "type": "object"
       },
       "SignInAccount": {
@@ -28289,6 +28389,22 @@
             ],
             "title": "Choice",
             "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "job",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `work`: whether it is a job or a business of their own; empty means a business.",
+            "title": "Kind"
           },
           "name": {
             "anyOf": [
@@ -39137,7 +39253,7 @@
         "summary": "Business State"
       },
       "post": {
-        "description": "Say what the person's business is called: makes its top-level project and sets `project.business`; saying it\nagain renames that project. With Undo.",
+        "description": "Add a side beside the person's own life: makes its top-level project and appends it to `project.sides`\nwith its kind (a business unless `kind` says job). A name a side already has is that side, and nothing\nchanges. With Undo.",
         "operationId": "business_save_api_setup_business_post",
         "requestBody": {
           "content": {
@@ -39354,7 +39470,7 @@
     },
     "/api/setup/work": {
       "post": {
-        "description": "Answer the work question: Just me keeps nothing but the answer; Me and my work names the work side (as\n`POST /setup/business` does). Once a work side exists it stays; the answer can't go back to Just me.",
+        "description": "Answer the work question: Just me keeps nothing but the answer; Me and my work adds a side named by\n`name` (as `POST /setup/business` does). Once a work side exists it stays; the answer can't go back to Just\nme.",
         "operationId": "work_save_api_setup_work_post",
         "requestBody": {
           "content": {

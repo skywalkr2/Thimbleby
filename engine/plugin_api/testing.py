@@ -451,6 +451,17 @@ class PluginWorkspace:
 
         return self.store.plugins._with_files(ReadView(self.store.read(), plugin or self.plugins[0]))
 
+    def add_side(self, name: str, kind: str = "business") -> str:
+        """Add a side to the person's life as the app does when they name their work: a new top-level project called
+        `name`, listed in the workspace's sides with `kind` ("job" or "business"). Returns the project's id, which
+        `view.sides()`, `view.side_of(...)` and a person's `sides` use. The workspace's settings read it at once."""
+        from engine import sides
+        from engine.config import load_config
+
+        made = sides.set_business(self.ws, self.store, self.cfg, name, kind=kind, env={})
+        self.cfg.files["workspace"] = load_config(self.ws.config_dir, env={}).files["workspace"]
+        return made.project
+
     def _outcome(self, cs_id: str) -> Outcome:
         record = self.store.read().get("changeset", cs_id)
         return Outcome(cs_id, record.data["status"], list(record.data["ops"]), list(record.data.get("problems") or []))

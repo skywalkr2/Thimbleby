@@ -235,7 +235,14 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
         req = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
         settled = req.data.get("project") if req is not None else None
         ops = sides.file_by_people(
-            ops, view, ctx.cfg, ctx.people, _reporter(ctx), ctx.inputs.raw_input, settled=settled
+            ops,
+            view,
+            ctx.cfg,
+            ctx.people,
+            _reporter(ctx),
+            ctx.inputs.raw_input,
+            settled=settled,
+            source=ctx.inputs.source,
         )
     else:
         # Only the filing above says why an item was filed; a reason arriving any other way is not kept.
@@ -621,6 +628,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"{op.kind}.{op.field} can't be changed this way")
             elif op.kind == "project" and _no_target(view, ctx.cfg, op):
                 refuse(i, "targets", _no_target(view, ctx.cfg, op))
+            elif op.kind == "person" and _side_problem(view, ctx.cfg, op):
+                refuse(i, "targets", _side_problem(view, ctx.cfg, op))
             elif op.kind == "action" and op.field == "due" and target.data.get("status") not in ("open", "held"):
                 refuse(
                     i,
@@ -1751,6 +1760,20 @@ def is_confirm(kind: str, current: dict[str, Any], fields: dict[str, Any]) -> bo
     return kind == "fact" and current.get("basis") == "inferred" and fields == {"basis": "person"}
 
 
+def _on_personal(view: Any, cfg: Any, project: str | None) -> bool:
+    """Whether a project is on the Personal side: the personal project or one inside it."""
+    from engine import sides
+
+    personal = sides.personal_project(view, cfg)
+    return personal is not None and sides.side_of_project(view, cfg, project) == personal
+
+
+def _side_problem(view: Any, cfg: Any, op: Any) -> str | None:
+    from engine import sides
+
+    return sides.person_write(view, cfg, {op.field: op.value})[1] if op.field in ("side", "sides") else None
+
+
 def _no_target(view: Any, cfg: Any, op: Any) -> str | None:
     from engine import sides
 
@@ -1779,6 +1802,12 @@ def edit_problem(store: Store, view: Any, op: Any) -> str | None:
             return f"{op.record.kind} has no field {name}"
         if name in closed:
             return f"{name} can't be changed this way"
+    if op.record.kind == "person":
+        from engine import sides
+
+        _, why = sides.person_write(view, store.plugins.cfg, dict(op.fields))
+        if why:
+            return why
     merged = {**current.data, **op.fields}
     try:
         model.model_validate(merged)
@@ -1804,7 +1833,12 @@ def edit_record(store: Store, tx: Tx, op: Any, w: WriteContext) -> None:
     why = edit_problem(store, tx, op)
     if why:
         raise StoreError(why)
-    tx.update(op.record.kind, op.record.id, dict(op.fields), w, read_version=op.read_version)
+    fields = dict(op.fields)
+    if op.record.kind == "person":
+        from engine import sides
+
+        fields = sides.person_write(tx, store.plugins.cfg, fields)[0]  # `side` and `sides` are kept in step
+    tx.update(op.record.kind, op.record.id, fields, w, read_version=op.read_version)
     if op.record.kind == "event" and "start" in op.fields:
         follow_event(tx, op.record.id, w)
 
@@ -3524,6 +3558,10 @@ def _apply_op(
         if w.actor != "pm" and model_for(op.kind).needs_person(op.field, value):
             raise NeedsPerson(f"only you can set {op.field} on a {op.kind}")
         changes = {op.field: value}
+        if op.kind == "person" and op.field in ("side", "sides"):
+            from engine import sides
+
+            changes = sides.person_write(tx, ctx.cfg, changes)[0]  # `side` and `sides` are kept in step
         if op.field == "series" and value is not None and cur.data.get("event") is None:
             changes["event"] = series_module.placement(tx, None, value, today, zone(ctx.cfg))
         tx.update(op.kind, op.id, changes, w, read_version=cur.version)
@@ -3543,6 +3581,8 @@ def _apply_op(
         made("project", op.project)
     elif isinstance(op, ActionAddOp):
         owners = [{"person": ctx.people.resolve(n).person} for n in op.owners]
+        if not owners and ctx.people.pm and _on_personal(tx, ctx.cfg, op.project):
+            owners = [{"person": ctx.people.pm}]  # on Personal an action that names nobody is the person's own
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         due, check = _due(tx, ctx, source, op.due_words, op.due)
         placed = series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg))

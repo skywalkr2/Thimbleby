@@ -8,10 +8,11 @@ import { useWords } from "../lib/wording";
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Filed = S["FiledView"];
 
-/** "Filed under <project>: it names <word>", or "it's from <domain>" when the sender's domain placed it. */
+/** "Filed under <project>: it names <word>", or "it's from <domain>" when the sender's domain, or the source it was read
+ * from, placed it. */
 export function filedWords(filed: Filed, t: T): string {
   const vars = { project: filed.project_name, word: filed.word ?? "" };
-  return filed.by === "domain" ? t("filed.from", vars) : t("filed.names", vars);
+  return filed.by === "domain" || filed.by === "source" ? t("filed.from", vars) : t("filed.names", vars);
 }
 
 /** Moves an item to the top project of the other side; the toast says so and has Undo. */

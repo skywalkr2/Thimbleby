@@ -182,6 +182,7 @@ BASIC_EXTRA = frozenset(
     {
         "workspace.project.personal",
         "workspace.project.business",
+        "workspace.project.sides",
         "ui.notifications.quiet_hours.start",
         "ui.notifications.quiet_hours.end",
         "steward.default_stance",

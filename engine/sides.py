@@ -1,15 +1,20 @@
-"""Two sides in the data (design 6.32): the person's own life (Personal) and, when they have one, their business.
+"""Sides in the data (design 6.32): the person's own life (Personal) and any number of other sides, each a job or a
+business of their own.
 
-`project.personal` and `project.business` name the top project of each side. A project is on a side by the top of its
-parent chain; a person is on a side, both or neither by their own record; an item is on the side of the project it is
-filed under. Filing by people (`file_by_people`) gives an item that names no project the side's top project when every
-person it names, and the one it came from, are on one side; people on both sides, and people not known, don't decide.
-When the people don't place an item and there is a business, the signals after them may, each a rank read in order, the
-first that decides deciding and a rank pointing to both sides deciding nothing: the sender's mail domain when the sender
-is nobody known, a project's aliases, the names of projects that count by themselves (two or more words, or one that is
-no everyday word), then the configured `project.side_words`; the item's text and quote are matched as whole words
-whatever their case. Whatever files an item is kept on it (`filed_by`) so the item can say why.
-Reads only, except `make_personal` and `set_business`, which write the one project each side needs."""
+`project.personal` names the top project of Personal and `project.sides` lists the others (the older single
+`project.business` is read as the first). A side is identified by the id of its top project. A project is on a side by
+the top of its parent chain; a person is on the sides their record names (`sides`, or the older `side` read as
+Personal, the first side or both); an item is on the side of the project it is filed under. Filing by people
+(`file_by_people`) gives an item that names no project the side's top project when the people it names, and the one it
+came from, are on one side; people on several sides, and people not known, don't decide. When the people don't place an
+item and there is another side, the signals after them may, each a rank read in order, the first that decides deciding
+and a rank pointing to two or more sides deciding nothing: the sides the watched source serves (one decides, several
+narrow every later rank to them), the sender's mail domain when the sender is nobody known, a project's aliases, the
+names of projects that count by themselves (two or more words, or one that is no everyday word), then the configured
+`project.side_words` (the personal words, and the business words while there is exactly one other side); the item's text
+and quote are matched as whole words whatever their case. Whatever files an item is kept on it (`filed_by`) so the item
+can say why. Reads only, except `make_personal` and `set_business`, which write the project each side needs.
+"""
 
 from __future__ import annotations
 
@@ -24,12 +29,16 @@ from engine.records import FiledBy
 from engine.storage import StoreError, WriteContext
 from engine.yaml_load import load_yaml
 
-Side = Literal["personal", "business"]
+#: A side is the id of its top project.
+Side = str
+#: What a side is: a job (the person works for someone) or a business of their own.
+SIDE_KINDS = ("job", "business")
 
 WORDS_FILE = Path(__file__).parent / "defaults" / "words.yaml"
 PERSONAL_NAME_KEY = "project.personal_name"
 SETTING_PERSONAL = "workspace.project.personal"
 SETTING_BUSINESS = "workspace.project.business"
+SETTING_SIDES = "workspace.project.sides"
 
 
 def word(cfg: Any | None, key: str) -> str:
@@ -70,9 +79,38 @@ def no_target_problem(view: Any, cfg: Any, project_id: str | None, fields: dict[
     return None
 
 
+@dataclass(frozen=True)
+class SideInfo:
+    """A side besides Personal: the id of its top `project`, what it is (`kind`: job or business) and its `name`."""
+
+    project: str
+    kind: str
+    name: str
+
+
+def side_list(view: Any, cfg: Any) -> list[SideInfo]:
+    """The sides besides Personal, in the order the person listed them (the older single business first): only those
+    whose project still exists, each once. The one place the list is read."""
+    found: list[SideInfo] = []
+    personal = cfg.workspace.project.personal
+    for entry in cfg.workspace.project.sides:
+        record = view.get("project", entry.project)
+        if record is None or entry.project == personal or any(f.project == entry.project for f in found):
+            continue
+        found.append(SideInfo(entry.project, entry.kind, str(record.data.get("name") or "")))
+    return found
+
+
 def business_project(view: Any, cfg: Any) -> str | None:
-    """The top project of the business side, when one is set and still there."""
-    return _live(view, cfg.workspace.project.business)
+    """The top project of the first side besides Personal, when there is one and it is still there."""
+    listed = side_list(view, cfg)
+    return listed[0].project if listed else None
+
+
+def side_ids(view: Any, cfg: Any) -> list[str]:
+    """The id of every side that exists: Personal first, then the others in their order."""
+    personal = personal_project(view, cfg)
+    return [*([personal] if personal else []), *(s.project for s in side_list(view, cfg))]
 
 
 def top_of(view: Any, project_id: str) -> str | None:
@@ -91,18 +129,33 @@ def top_of(view: Any, project_id: str) -> str | None:
 
 
 def side_of_project(view: Any, cfg: Any, project_id: str | None) -> Side | None:
-    """Which side a project is on: the side whose top project the project's parent chain ends in; none when it ends
-    in neither (or the project isn't there)."""
+    """Which side a project is on: the id of the side whose top project the project's parent chain ends in; none when
+    it ends in no side's (or the project isn't there)."""
     if not project_id:
         return None
     top = top_of(view, project_id)
-    if top is None:
+    return top if top is not None and top in side_ids(view, cfg) else None
+
+
+def side_word(view: Any, cfg: Any, side: str | None) -> Literal["personal", "business"] | None:
+    """The older word for a side: personal for Personal, business for any other side."""
+    if side is None:
         return None
-    if top == personal_project(view, cfg):
+    if side == personal_project(view, cfg):
         return "personal"
-    if top == business_project(view, cfg):
-        return "business"
-    return None
+    return "business" if any(s.project == side for s in side_list(view, cfg)) else None
+
+
+def resolve_side(view: Any, cfg: Any, choice: str | None) -> Side | None:
+    """A side id from what a caller names: the id itself, or the older words (`personal`: the personal project,
+    `business`: the first other side); none for anything else."""
+    if not choice:
+        return None
+    if choice == "personal":
+        return personal_project(view, cfg)
+    if choice == "business":
+        return business_project(view, cfg)
+    return choice if choice in side_ids(view, cfg) else None
 
 
 def projects_of(data: dict[str, Any]) -> list[str]:
@@ -127,8 +180,8 @@ def side_of_item(view: Any, cfg: Any, record: Any) -> Side | None:
 
 def side_of_line(view: Any, cfg: Any, line: Any) -> Side | None:
     """Which side a line of Today's queue is on: that of its project, else the one side every record it names (the
-    question, the actions and the questions it covers) is on. A line about records on both sides, or about none, is on
-    no side, so a side filter shows it under every choice."""
+    question, the actions and the questions it covers) is on. A line about records on several sides, or about none, is
+    on no side, so a side filter shows it under every choice."""
     if side := side_of_project(view, cfg, getattr(line, "project", None)):
         return side
     found: set[Side] = set()
@@ -142,10 +195,79 @@ def side_of_line(view: Any, cfg: Any, line: Any) -> Side | None:
     return next(iter(found)) if len(found) == 1 else None
 
 
-def side_of_person(people: Any, person_id: str | None) -> Literal["personal", "business", "both"] | None:
-    """The side a person's record gives them, none when unset or when no such person is known."""
+# ---- the sides a person is on --------------------------------------------------------------------------------------
+
+
+def _legacy_sides(view: Any, cfg: Any, word: str | None) -> list[str]:
+    """The sides the older `side` word means: personal is Personal, business the first other side and both are those
+    two."""
+    personal, first = personal_project(view, cfg), business_project(view, cfg)
+    mapped = {"personal": [personal], "business": [first], "both": [personal, first]}.get(word or "", [])
+    return [m for m in mapped if m]
+
+
+def person_sides(view: Any, cfg: Any, data: dict[str, Any]) -> list[str]:
+    """The sides a person's record puts them on, as side ids in the order of the sides' list: what `sides` names that
+    still exists, else what the older `side` word means. Empty when not known."""
+    ids = side_ids(view, cfg)
+    named = {s for s in data.get("sides") or [] if isinstance(s, str)}
+    found = [i for i in ids if i in named]
+    return found or _legacy_sides(view, cfg, data.get("side"))
+
+
+def side_word_of(view: Any, cfg: Any, held: list[str]) -> Literal["personal", "business", "both"] | None:
+    """The older `side` word for a person on these sides: only Personal is personal, no Personal but some other side
+    is business, Personal and another is both, and none is none."""
+    personal = personal_project(view, cfg)
+    has_personal = personal is not None and personal in held
+    has_other = any(h != personal for h in held)
+    if has_personal and has_other:
+        return "both"
+    if has_personal:
+        return "personal"
+    return "business" if has_other else None
+
+
+def sides_of_person(view: Any, cfg: Any, people: Any, person_id: str | None) -> list[str]:
+    """The sides a known person is on; empty when unset or when no such person is known."""
     data = people.records.get(person_id or "") if person_id else None
-    return (data or {}).get("side") or None
+    return person_sides(view, cfg, data) if data else []
+
+
+def side_of_person(
+    view: Any, cfg: Any, people: Any, person_id: str | None
+) -> Literal["personal", "business", "both"] | None:
+    """The older word for the side a person's record gives them, none when unset or when no such person is known."""
+    return side_word_of(view, cfg, sides_of_person(view, cfg, people, person_id))
+
+
+def person_write(view: Any, cfg: Any, fields: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
+    """A write to a person's `side` or `sides` with the other kept in step, or why it can't be made. Naming `sides`
+    works out `side` from it; writing the older `side` works out `sides` while there is at most one side besides
+    Personal, and with several it is refused in plain words, since business or both doesn't say which. Anything else
+    in the write is left as it is."""
+    if "sides" not in fields and "side" not in fields:
+        return fields, None
+    ids = side_ids(view, cfg)
+    personal = personal_project(view, cfg)
+    others = [i for i in ids if i != personal]
+    out = dict(fields)
+    if "sides" in fields:
+        given = fields["sides"] if isinstance(fields["sides"], list) else []
+        if unknown := [g for g in given if g not in ids]:
+            return fields, f"{', '.join(str(u) for u in unknown)} isn't one of your sides"
+        held = [i for i in ids if i in given]
+        out["sides"], out["side"] = held, side_word_of(view, cfg, held)
+        return out, None
+    word = fields["side"]
+    if word in ("business", "both") and len(others) > 1:
+        names = ", ".join(s.name for s in side_list(view, cfg))
+        return fields, (
+            f"you have more than one side besides your own life ({names}): name the side this person is on "
+            f"instead of '{word}'"
+        )
+    out["sides"] = _legacy_sides(view, cfg, word)
+    return out, None
 
 
 def _named(op: Any) -> list[str]:
@@ -175,10 +297,11 @@ def _words_of(op: Any) -> str:
     return "\n".join(p for p in parts if p)
 
 
-#: The ranks of words, in the order they are read after the people and the sender's domain.
+#: The ranks of words, in the order they are read after the people, the source and the sender's domain.
 WORD_RANKS: tuple[Literal["alias", "name", "word"], ...] = ("alias", "name", "word")
 
-#: What a rank holds for each side: the pattern, the project it names (none for a configured word) and the word itself.
+#: What a rank holds for each side (by its id): the pattern, the project it names (none for a configured word) and the
+#: word itself.
 Patterns = dict[Side, list[tuple[re.Pattern[str], str | None, str]]]
 
 
@@ -196,10 +319,12 @@ def _name_counts(name: str, everyday: frozenset[str]) -> bool:
 def _side_words(view: Any, cfg: Any) -> dict[str, Patterns]:
     """For each rank of words, the patterns that place an item on each side, each with the project it names: a
     project's aliases (any alias counts, even one word, since the person gave it), then the names of the projects on
-    that side that count by themselves, then the configured side words. Only projects on a side have any."""
+    that side that count by themselves, then the configured side words (the personal words for Personal, the business
+    words while there is exactly one other side). Only projects on a side have any."""
     configured = cfg.workspace.project.side_words
     everyday = _everyday(cfg)
-    found: dict[str, Patterns] = {rank: {"personal": [], "business": []} for rank in WORD_RANKS}
+    ids = side_ids(view, cfg)
+    found: dict[str, Patterns] = {rank: {i: [] for i in ids} for rank in WORD_RANKS}
     for project in view.list("project"):
         side = side_of_project(view, cfg, project.id)
         if side is None:
@@ -210,38 +335,41 @@ def _side_words(view: Any, cfg: Any) -> dict[str, Patterns]:
         name = " ".join(str(project.data.get("name") or "").split())
         if name and _name_counts(name, everyday) and (pattern := _phrase(name)):
             found["name"][side].append((pattern, project.id, name))
-    for side, words in (("personal", configured.personal), ("business", configured.business)):
-        found["word"][side] += [(pattern, None, " ".join(w.split())) for w in words if (pattern := _phrase(w))]
+    personal, others = personal_project(view, cfg), side_list(view, cfg)
+    words = [(personal, configured.personal)] if personal else []
+    words += [(others[0].project, configured.business)] if len(others) == 1 else []
+    for side, listed in words:
+        found["word"][side] += [(pattern, None, " ".join(w.split())) for w in listed if (pattern := _phrase(w))]
     return found
 
 
 @dataclass(frozen=True)
 class Filing:
-    """The project an item is filed under and why: the signal (`FiledBy.by`), the word or domain that matched (none for
-    people) and the project."""
+    """The project an item is filed under and why: the signal (`FiledBy.by`), the word, domain or source that matched
+    (none for people) and the project."""
 
     project: str
-    by: Literal["people", "domain", "alias", "name", "word"]
+    by: Literal["people", "source", "domain", "alias", "name", "word"]
     word: str | None = None
 
     def stamp(self) -> FiledBy:
         return FiledBy(by=self.by, word=self.word, project=self.project)
 
 
-def _top_of_side(view: Any, cfg: Any, side: Side) -> str | None:
-    return personal_project(view, cfg) if side == "personal" else business_project(view, cfg)
-
-
-def file_by_words(op: Any, view: Any, cfg: Any, words: dict[str, Patterns] | None = None) -> Filing | None:
+def file_by_words(
+    op: Any, view: Any, cfg: Any, words: dict[str, Patterns] | None = None, allowed: set[str] | None = None
+) -> Filing | None:
     """How an item's words place it, none when they don't. The ranks are read in order (identifiers, project names,
     configured words) and the first that decides, decides: a rank whose words are all of one side gives that side's top
-    project, or the one project of that side the words name; a rank with words of both sides decides nothing, so the
-    next is read."""
+    project, or the one project of that side the words name; a rank with words of several sides decides nothing, so the
+    next is read. With `allowed`, only words of those sides count."""
     text = _words_of(op)
     ranks = words or _side_words(view, cfg)
     for rank in WORD_RANKS:
         matched: dict[Side, list[tuple[str | None, str]]] = {}
         for side, patterns in ranks[rank].items():
+            if allowed is not None and side not in allowed:
+                continue
             hits = [(project, word) for pattern, project, word in patterns if pattern.search(text)]
             if hits:
                 matched[side] = hits
@@ -249,9 +377,7 @@ def file_by_words(op: Any, view: Any, cfg: Any, words: dict[str, Patterns] | Non
             continue
         side, hits = next(iter(matched.items()))
         named = {project for project, _ in hits if project}
-        project = next(iter(named)) if len(named) == 1 else _top_of_side(view, cfg, side)
-        if project is None:
-            continue
+        project = next(iter(named)) if len(named) == 1 else side
         word = next((w for p, w in hits if p == project), hits[0][1])
         return Filing(project, rank, word)
     return None
@@ -275,10 +401,10 @@ def sender_domain(people: Any, raw_input: str | None) -> str | None:
     return _domain_of(parseaddr(sender)[1]) or None
 
 
-def domain_side(people: Any, cfg: Any, domain: str) -> Side | None:
+def domain_side(view: Any, people: Any, cfg: Any, domain: str) -> Side | None:
     """The side a mail domain votes for: when every known person with an address there works for one organization and
-    that organization's people are all on one side. A public mail service shared by many unrelated people, an address
-    nobody known has, and a person with no organization never vote."""
+    that organization's people are all on the same one side. A public mail service shared by many unrelated people, an
+    address nobody known has, and a person with no organization never vote."""
     from engine.set_aside import is_public_domain
 
     if is_public_domain(domain, cfg):
@@ -291,11 +417,15 @@ def domain_side(people: Any, cfg: Any, domain: str) -> Side | None:
     if len(orgs) != 1 or None in orgs:
         return None
     org = next(iter(orgs))
-    on = {data.get("side") for data in people.records.values() if data.get("org") == org and data.get("side")}
+    on = {
+        tuple(held)
+        for data in people.records.values()
+        if data.get("org") == org and (held := person_sides(view, cfg, data))
+    }
     if len(on) != 1:
         return None
-    side = next(iter(on))
-    return side if side in ("personal", "business") else None
+    held = next(iter(on))
+    return held[0] if len(held) == 1 else None
 
 
 def without_filed_by(ops: list[Any]) -> list[Any]:
@@ -308,6 +438,18 @@ def without_filed_by(ops: list[Any]) -> list[Any]:
     ]
 
 
+def source_sides(view: Any, cfg: Any, source: str | None) -> tuple[list[str], str]:
+    """The sides the watched source an input came from serves (those that still exist, in the sides' order) and its
+    label; empty when the input wasn't read from a watched source or the source names none."""
+    record = view.get("source", source) if source else None
+    watched = (record.data.get("watched") if record is not None else None) or {}
+    for watch in cfg.watch.sources:
+        if watch.id == watched.get("source"):
+            named = set(watch.sides)
+            return [i for i in side_ids(view, cfg) if i in named], watch.label or watch.id
+    return [], ""
+
+
 def file_by_people(
     ops: list[Any],
     view: Any,
@@ -316,34 +458,38 @@ def file_by_people(
     sender: str | None,
     raw_input: str | None = None,
     settled: str | None = None,
+    source: str | None = None,
 ) -> list[Any]:
     """The ops with every new action, question, fact or note that names no project filed under a project, each keeping
-    why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to both
-    sides decides nothing and the next is read:
+    why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to two
+    or more sides decides nothing and the next is read:
     00. the project the person settled for the hand-in (the request's own project), when it has one;
     0. mail the rules know as a bill, an order or a delivery (`engine/mail_kinds.py`): the personal project, whoever
-       sent it, unless the person has a work side and the sender's relation is work (`_sender_relation`: a known person
-       on that side, or an organization whose people are all on it), which files it under the work side;
+       sent it, unless the person has another side and the sender's relation is to it (`_sender_relation`: a known
+       person on that side, or an organization whose people are all on it), which files it under that side;
     1. the people the op names and the input's sender, when known: the side every deciding person is on (those on
-       both sides and those not known don't decide), filed under that side's top project;
-    2. the sender's mail domain, when the sender is nobody known (`domain_side`);
-    3. a project's aliases, 4. the names of projects that count by themselves, 5. the configured side words
+       several sides and those not known don't decide), filed under that side's top project;
+    2. the sides the watched source the input came from serves (`WatchSource.sides`): one files it there, several
+       narrow every rank after this one to them;
+    3. the sender's mail domain, when the sender is nobody known (`domain_side`);
+    4. a project's aliases, 5. the names of projects that count by themselves, 6. the configured side words
        (`file_by_words`): under the one project they name, else the side's top project.
-    With no business set an unplaced item goes to the personal project when that is the only top-level project (a
-    workspace tracking other work without naming a business keeps its unfiled items for the person to place); with one,
+    With no other side an unplaced item goes to the personal project when that is the only top-level project (a
+    workspace tracking other work without naming a side keeps its unfiled items for the person to place); with one,
     an item no signal places stays unfiled for the person to place. A changeset that also proposes a new project is left
     as it is: adding that project files what the same input made with no project under it. Whatever the assistant
     wrote in `filed_by` is cleared: only this function sets it. The same ops always give the same result."""
     ops = without_filed_by(ops)
-    personal, business = personal_project(view, cfg), business_project(view, cfg)
-    if personal is None and business is None:
+    personal, others = personal_project(view, cfg), side_list(view, cfg)
+    if personal is None and not others:
         return ops
     if any(isinstance(op, ProjectAddOp) for op in ops):
         return ops
-    words = _side_words(view, cfg) if business is not None else None
-    domain = sender_domain(people, raw_input) if business is not None else None
-    by_domain = domain_side(people, cfg, domain) if domain else None
-    only_personal = business is None and personal is not None and _only_top(view, personal)
+    words = _side_words(view, cfg) if others else None
+    domain = sender_domain(people, raw_input) if others else None
+    by_domain = domain_side(view, people, cfg, domain) if domain else None
+    served, served_name = source_sides(view, cfg, source) if others else ([], "")
+    only_personal = not others and personal is not None and _only_top(view, personal)
     kind = kind_of_input(cfg.watch.mail_kinds, raw_input)
     out: list[Any] = []
     for op in ops:
@@ -356,50 +502,57 @@ def file_by_people(
             continue
         if kind and personal:
             # A bill, an order or a delivery is the person's own life, whoever sent it: the Personal project. Once the
-            # person has a work side, a sender whose relation is work (a known person on that side, or an
+            # person has another side, a sender whose relation is to it (a known person on that side, or an
             # organization whose people are all on it) is read first, so a supplier's invoice goes to work.
-            relation = _sender_relation(sender, by_domain, domain, business, people)
+            relation = _sender_relation(view, cfg, sender, by_domain, domain, personal, people)
             filing = relation or Filing(personal, "word", kind)
             out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}))
             continue
-        if business is None:
+        if not others:
             out.append(op.model_copy(update={"project": personal}) if only_personal else op)
             continue
         who = [people.resolve(name) for name in _named(op)]
         persons = [r.person for r in who if r.status == "ok" and r.person] + ([sender] if sender else [])
-        decided = {s for p in persons if (s := side_of_person(people, p)) in ("personal", "business")}
+        voted = {held[0] for p in persons if len(held := sides_of_person(view, cfg, people, p)) == 1}
         filing: Filing | None = None
-        if len(decided) == 1:
-            target = business if decided == {"business"} else personal
-            filing = Filing(target, "people") if target else None
-        if filing is None and len(decided) != 1:
-            if by_domain is not None and (target := _top_of_side(view, cfg, by_domain)) and domain:
-                filing = Filing(target, "domain", domain)
+        if len(voted) == 1:
+            filing = Filing(next(iter(voted)), "people")
+        elif len(served) == 1:
+            filing = Filing(served[0], "source", served_name)
+        else:
+            allowed = set(served) if len(served) > 1 else None
+            if by_domain is not None and domain and (allowed is None or by_domain in allowed):
+                filing = Filing(by_domain, "domain", domain)
             else:
-                filing = file_by_words(op, view, cfg, words)
+                filing = file_by_words(op, view, cfg, words, allowed)
         out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}) if filing else op)
     return out
 
 
 def _sender_relation(
-    sender: str | None, by_domain: Side | None, domain: str | None, business: str | None, people: Any
+    view: Any,
+    cfg: Any,
+    sender: str | None,
+    by_domain: Side | None,
+    domain: str | None,
+    personal: str | None,
+    people: Any,
 ) -> Filing | None:
-    """How the sender's own relation files a bill, an order or a delivery under the work side, or none: the sender is a
-    known person on the work side, or nobody known at a mail domain whose organization is wholly on it. Both sides, no
-    side and an unknown sender leave the Personal default."""
-    if business is None:
-        return None
-    if sender and side_of_person(people, sender) == "business":
-        return Filing(business, "people")
-    if by_domain == "business" and domain:
-        return Filing(business, "domain", domain)
+    """How the sender's own relation files a bill, an order or a delivery under another side than Personal, or none:
+    the sender is a known person on exactly that one side, or nobody known at a mail domain whose organization is wholly
+    on it. Several sides, no side and an unknown sender leave the Personal default."""
+    if sender and len(held := sides_of_person(view, cfg, people, sender)) == 1 and held[0] != personal:
+        return Filing(held[0], "people")
+    if by_domain is not None and by_domain != personal and domain:
+        return Filing(by_domain, "domain", domain)
     return None
 
 
 def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | None:
-    """What an item says about why it was filed, for its line and its page: the signal and the word or domain, the
-    project it was filed under and its name, and the top project of the other side it can move to in one step (with
-    the field that holds its project and the version to read). None when people placed it or nobody did, when the
+    """What an item says about why it was filed, for its line and its page: the signal and the word, domain or source,
+    the project it was filed under and its name, and the top project of the other side it can move to in one step (with
+    the field that holds its project and the version to read): from another side to Personal, from Personal to the one
+    other side, and none from Personal when there are several. None when people placed it or nobody did, when the
     project it was filed under is gone, and once the item is anywhere else: the line goes when the person moves it, and
     comes back with Undo."""
     found = record.data.get("filed_by")
@@ -409,7 +562,13 @@ def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | 
     if project is None or found["project"] not in projects_of(record.data):
         return None
     side = side_of_project(view, cfg, project.id)
-    other = _top_of_side(view, cfg, "personal" if side == "business" else "business") if side else None
+    personal = personal_project(view, cfg)
+    elsewhere = [i for i in side_ids(view, cfg) if i != side]
+    other = None
+    if side is not None:
+        other = (
+            personal if side != personal and personal is not None else (elsewhere[0] if len(elsewhere) == 1 else None)
+        )
     target = view.get("project", other) if other and other != project.id else None
     return {
         "by": found["by"],
@@ -423,7 +582,7 @@ def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | 
     }
 
 
-# ---- making the two top projects ----------------------------------------------------------------------------
+# ---- making the top projects --------------------------------------------------------------------------------------
 
 
 def make_personal(store: Any, cfg: Any | None = None) -> str:
@@ -439,43 +598,45 @@ def make_personal(store: Any, cfg: Any | None = None) -> str:
 
 @dataclass(frozen=True)
 class Business:
-    """The business project after `set_business`: its `project` id, whether this call made it (`created`), and the
-    `changeset` to undo (none when nothing changed)."""
+    """The side after `set_business`: its `project` id, whether this call made it (`created`), and the `changeset` to
+    undo (none when nothing changed)."""
 
     project: str
     created: bool
     changeset: str | None
+    kind: str = "business"
 
 
-def set_business(ws: Any, store: Any, cfg: Any, name: str, *, env: dict[str, str] | None = None) -> Business:
-    """Say what the person's business is called: the first call makes a top-level project with that name and sets
-    `project.business` to it; a later call renames that project, never making another. Both are the person's own edit,
-    with Undo. A business whose project was since undone or removed is made again. Raises `StoreError` in plain words
-    for a name another live project has, or no name."""
+def set_business(
+    ws: Any, store: Any, cfg: Any, name: str, *, kind: str = "business", env: dict[str, str] | None = None
+) -> Business:
+    """Add a side: make a top-level project with that name and append it to `project.sides` with its kind (a job or a
+    business), as the person's own change with Undo. A name a side already has is that side, and nothing changes. A
+    side whose project was since undone or removed is made again. Raises `StoreError` in plain words for a name another
+    live project has, a kind that isn't one, or no name."""
     from engine import settings as config_screens
     from engine.applier import apply_as_person
 
     name = " ".join(name.split())
     if not name:
         raise StoreError("Give the business a name.")
+    if kind not in SIDE_KINDS:
+        raise StoreError(f"A side is a {' or a '.join(SIDE_KINDS)}.")
     view = store.read()
-    current = business_project(view, cfg)
-    if current is not None:
-        record = view.get("project", current)
-        if record.data["name"] == name:
-            return Business(current, False, None)
-        op = {"op": "record.edit", "record": {"kind": "project", "id": current}, "fields": {"name": name}}
-        changeset = apply_as_person(store, cfg, [{**op, "read_version": record.version}], "Renamed the business")
-        return Business(current, False, changeset)
+    listed = side_list(view, cfg)
+    if same := next((s for s in listed if s.name == name), None):
+        return Business(same.project, False, None, same.kind)
     changeset = apply_as_person(store, cfg, [{"op": "project.add", "name": name}], "Added the business")
     made = next(p for p in store.read().list("project") if p.data["name"] == name)
+    entries = [{"project": s.project, "kind": s.kind} for s in listed]
     config_screens.save(
         ws,
         cfg,
         store,
-        changes={SETTING_BUSINESS: made.id},
+        changes={SETTING_SIDES: [*entries, {"project": made.id, "kind": kind}]},
         reset=[],
         read_fingerprint=config_screens.fingerprint(ws.config_dir),
         env=env,
+        allow=(SETTING_SIDES,),
     )
-    return Business(made.id, True, changeset)
+    return Business(made.id, True, changeset, kind)

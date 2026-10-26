@@ -99,6 +99,9 @@ Built keys, with defaults:
   number, which the rules then offer for that person's record as a held `person.contact` when the answer didn't (6.7).
   **Built (B-10):** `tests/test_signature_contact.py`.
 - `project.completed_status`: the project status that means a project is finished (default `Done`), picked from the project status list on screen. Projects with it are listed under Completed at the end of the Projects table and count as completed in the project record; nothing is removed (7.13). Live.
+- `project.sides`: the sides besides Personal (6.32), each `project` (a top-level project id) and `kind` (`job` or
+  `business`), in order; empty by default. Setup's Work step adds to it. The older `project.business` (one id) is read
+  as the first entry of kind `business`, with no file rewrite. Basic, shown read-only; live.
 - `project.side_words`: `personal` and `business`, each a list of words or phrases (empty by default) that place an item
   on a side when the people it names don't (6.32). With a business set, an item's text and quote are matched as whole
   words, whatever the case, as the last rank of the filing signals (6.32): after the people, the sender's mail domain, the
@@ -214,6 +217,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
 - `sources`: a list. Each entry:
   - `id` (lowercase letters, digits and dashes; unique), `label` (what to call it on screen) and `enabled` (off keeps its
     history and stops reading it);
+  - `sides`: the sides it serves, as project ids (Personal's or a side's; empty: not said). Filing reads it right after
+    the people an item names (6.32). Asked by setup's mail step once a side exists;
   - `connector`: what reads it. The core's are `folder`, `feed` (RSS and Atom), `calendar` (a calendar's private file
     address) and `mailbox` (a mail folder over IMAP); a plugin's are `<plugin>/<name>` (6.2);
   - `every_minutes` (60, at least 5): how often it is read while the app runs;

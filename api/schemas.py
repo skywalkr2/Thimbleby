@@ -944,10 +944,11 @@ class FollowupQuestion(BaseModel):
     about: str | None
     options: list[Option]
     origin: Origin | None = Field(None, description="Where the question came from, for its link.")
-    side: Literal["personal", "business"] | None = Field(
+    side: str | None = Field(
         None,
-        description="Which side the question is on, from its project: personal, business, or none for neither "
-        "(the screen's side filter shows such rows under every choice).",
+        description="Which side the question is on, from its project: the id of that side's top project (the "
+        "personal project's or another side's), or none for neither (the screen's side filter shows such rows under "
+        "every choice).",
     )
 
 
@@ -989,10 +990,11 @@ class FollowupAction(BaseModel):
         "or it has waited long enough with no word, and it is not on hold.",
     )
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
-    side: Literal["personal", "business"] | None = Field(
+    side: str | None = Field(
         None,
-        description="Which side the action is on, from its project: personal, business, or none for neither "
-        "(the screen's side filter shows such rows under every choice).",
+        description="Which side the action is on, from its project: the id of that side's top project (the "
+        "personal project's or another side's), or none for neither (the screen's side filter shows such rows under "
+        "every choice).",
     )
 
 
@@ -1094,7 +1096,13 @@ class PersonView(BaseModel):
     )
     relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
     side: Literal["personal", "business", "both"] | None = Field(
-        None, description="Which side of the person's life they belong to; empty when not known."
+        None,
+        description="Which side of the person's life they belong to, worked out from `sides` (only Personal: "
+        "personal; some other side and not Personal: business; both kinds: both); empty when not known.",
+    )
+    sides: list[str] = Field(
+        default_factory=list,
+        description="The ids of the top-level projects that hold the sides they belong to; empty when not known.",
     )
 
 
@@ -1107,7 +1115,14 @@ class PersonIn(BaseModel):
     org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
     relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
-    side: Literal["personal", "business", "both"] | None = Field(None, description="Which side of life they belong to.")
+    side: Literal["personal", "business", "both"] | None = Field(
+        None,
+        description="Which side of life they belong to. Refused for business or both when there is more than one "
+        "side besides the personal one: name the side in `sides`.",
+    )
+    sides: list[str] | None = Field(
+        None, description="The ids of the top-level projects that hold the sides they belong to."
+    )
 
 
 class PersonPatch(BaseModel):
@@ -1118,7 +1133,14 @@ class PersonPatch(BaseModel):
     aliases: list[str] | None = None
     status: Literal["active", "left"] | None = None
     relation: str | None = Field(None, description="How they relate to the person; null clears it.")
-    side: Literal["personal", "business", "both"] | None = Field(None, description="Which side they belong to.")
+    side: Literal["personal", "business", "both"] | None = Field(
+        None,
+        description="Which side they belong to. Refused for business or both when there is more than one side "
+        "besides the personal one: name the side in `sides`.",
+    )
+    sides: list[str] | None = Field(
+        None, description="The ids of the top-level projects that hold the sides they belong to."
+    )
 
 
 class OrganizationView(BaseModel):
@@ -1374,12 +1396,14 @@ class RecordRefName(BaseModel):
 
 class FiledView(BaseModel):
     """Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the
-    signal (`domain`: the sender's mail domain; `alias`, `name`: a project's alias or name; `word`: a configured side
-    word) and `word` what matched, under `project_name`. `move_to` is the top project of the other side, `move_to_name`
-    its name, and the item moves there in one step: POST /api/records/edit with `{field: id}` (a list for
-    `projects`) and `read_version` set to `version`. Absent once the item is anywhere else."""
+    signal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;
+    `alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under
+    `project_name`. `move_to` is the top project of the other side it can move to in one step (Personal from another
+    side; from Personal, the one other side, and none when there are several), `move_to_name` its name, and the item
+    moves there in one step: POST /api/records/edit with `{field: id}` (a list for `projects`) and `read_version` set
+    to `version`. Absent once the item is anywhere else."""
 
-    by: Literal["domain", "alias", "name", "word"]
+    by: Literal["source", "domain", "alias", "name", "word"]
     word: str | None = None
     project: str
     project_name: str
@@ -2754,10 +2778,11 @@ class QueueLineView(BaseModel):
         description="For a line about one action: that action's notes, which the screen shows on hover and in the "
         "inspector.",
     )
-    side: Literal["personal", "business"] | None = Field(
+    side: str | None = Field(
         None,
-        description="Which side the line is on, from its project: personal, business, or none for neither "
-        "(the screen's side filter shows such lines under every choice).",
+        description="Which side the line is on, from its project: the id of that side's top project (the "
+        "personal project's or another side's), or none for neither (the screen's side filter shows such lines "
+        "under every choice).",
     )
     due: date | None = None
     waiting_days: int | None = None
@@ -5208,24 +5233,41 @@ class MeIn(BaseModel):
 class BusinessIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=200, description="What the person's business or job is called.")
+    kind: Literal["job", "business"] | None = Field(
+        None,
+        description="What the side is: a job (the person works for someone) or a business of their own; empty means "
+        "a business.",
+    )
 
 
 class BusinessView(BaseModel):
-    """The person's business after saying what it is called: its project, whether this call made it (a second call
-    renames it instead), and the changeset Undo takes (none when the name was already that)."""
+    """The side added by saying what it is called: its project, what it is, whether this call made it (a name a side
+    already has is that side, made by no call), and the changeset Undo takes (none when nothing changed)."""
 
     project: str
     name: str
+    kind: Literal["job", "business"] = "business"
     created: bool
     changeset: str | None
 
 
+class SideView(BaseModel):
+    """One side of the person's work beside their own life: the id of its top project, what it is and its name."""
+
+    project: str
+    kind: Literal["job", "business"]
+    name: str
+
+
 class BusinessState(BaseModel):
-    """Whether the person has a business, for the Personal / business filter on Today and Follow-ups: `business` is
-    false until one is set (or once its project is undone), and `name` is its project's own name, rendered."""
+    """The sides of the person's work, for the side filter on Today and Follow-ups: `business` is false until a side
+    beside the personal one is set (or once its project is undone), `name` is the first such side's project name,
+    rendered, `sides` lists them in order and `personal` is the personal project's id."""
 
     business: bool
     name: str | None = None
+    personal: str | None = Field(None, description="The id of the personal project, when there is one.")
+    sides: list[SideView] = Field(default_factory=list, description="The sides beside the personal one, in order.")
     chosen: Literal["me", "work"] | None = Field(
         None,
         description="What the person said about their work at setup: Just me (`me`) or Me and my work (`work`); "
@@ -5241,6 +5283,9 @@ class WorkIn(BaseModel):
         None,
         max_length=200,
         description="What the work is called (an employer or a business); needed for `work`, ignored for `me`.",
+    )
+    kind: Literal["job", "business"] | None = Field(
+        None, description="With `work`: whether it is a job or a business of their own; empty means a business."
     )
 
 

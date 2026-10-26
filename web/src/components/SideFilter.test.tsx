@@ -15,6 +15,11 @@ beforeEach(() => besidePane());
 
 // The All / Personal / <business> filter on Today and Follow-ups (design 6.32, S1-4b). The names are made up here.
 const BUSINESS = "Example Works";
+const OTHER = "Example Studio";
+// A side is the id of its top project; the personal project's id and the business's come from the state the screen reads.
+const PERSONAL_ID = "PRJ-personal";
+const BUSINESS_ID = "PRJ-business";
+const OTHER_ID = "PRJ-other";
 
 type Line = S["QueueLineView"];
 const line = (kind: Line["kind"], over: Partial<Line> = {}): Line => ({
@@ -29,13 +34,26 @@ const line = (kind: Line["kind"], over: Partial<Line> = {}): Line => ({
   outcome: {},
   ...over,
 });
-const personal = line("decision", { key: "question:Q-1", text: "Pick the family photo", question: "Q-1", side: "personal" });
-const work = line("decision", { key: "question:Q-2", text: "Approve the invoice run", question: "Q-2", side: "business" });
+const personal = line("decision", { key: "question:Q-1", text: "Pick the family photo", question: "Q-1", side: PERSONAL_ID });
+const work = line("decision", { key: "question:Q-2", text: "Approve the invoice run", question: "Q-2", side: BUSINESS_ID });
 const restart = line("restart", { key: "restart", count: 2 });
 const sort = line("unfiled", { key: "unfiled", group: "review", count: 3, state: "which_side", subject: BUSINESS });
 
-const hasBusiness: Routes = { "GET setup/business": () => ({ business: true, name: BUSINESS }) };
-const noBusiness: Routes = { "GET setup/business": () => ({ business: false, name: null }) };
+const hasBusiness: Routes = {
+  "GET setup/business": () => ({ business: true, name: BUSINESS, personal: PERSONAL_ID, sides: [{ project: BUSINESS_ID, kind: "business", name: BUSINESS }] }),
+};
+const hasTwoSides: Routes = {
+  "GET setup/business": () => ({
+    business: true,
+    name: BUSINESS,
+    personal: PERSONAL_ID,
+    sides: [
+      { project: BUSINESS_ID, kind: "business", name: BUSINESS },
+      { project: OTHER_ID, kind: "job", name: OTHER },
+    ],
+  }),
+};
+const noBusiness: Routes = { "GET setup/business": () => ({ business: false, name: null, personal: PERSONAL_ID, sides: [] }) };
 
 function showToday(lines: Line[], extra: Routes = {}) {
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }));
@@ -80,7 +98,7 @@ afterEach(() => {
 });
 
 test("with no business there is no filter on Today, whatever this browser remembered", async () => {
-  window.localStorage.setItem("cockpit:side-filter", "personal");
+  window.localStorage.setItem("cockpit:side-filter", PERSONAL_ID);
   showToday([personal, work], noBusiness);
   expect(await screen.findByText("Approve the invoice run", { selector: "li *" })).toBeInTheDocument();
   expect(screen.getByText("Pick the family photo", { selector: "li *" })).toBeInTheDocument();
@@ -93,6 +111,27 @@ test("with a business, Today offers All, Personal and the business by its name, 
   expect(within(group).getAllByRole("radio").map((r) => r.textContent)).toEqual(["All", "Personal", BUSINESS]);
   expect(choice("All")).toBeChecked();
   expect(screen.getByText("Approve the invoice run", { selector: "li *" })).toBeInTheDocument();
+});
+
+test("with two sides, Today offers each by its name and a pick shows that side's lines and the app's own", async () => {
+  const user = userEvent.setup();
+  const other = line("decision", { key: "question:Q-9", text: "Renew the studio lease", question: "Q-9", side: OTHER_ID });
+  showToday([personal, work, other, restart], hasTwoSides);
+  const group = await screen.findByRole("radiogroup", { name: "Show" });
+  expect(within(group).getAllByRole("radio").map((r) => r.textContent)).toEqual(["All", "Personal", BUSINESS, OTHER]);
+  await user.click(screen.getByRole("radio", { name: OTHER }));
+  expect(await screen.findByText("Renew the studio lease", { selector: "li *" })).toBeInTheDocument();
+  expect(screen.queryByText("Approve the invoice run", { selector: "li *" })).toBeNull();
+  expect(screen.queryByText("Pick the family photo", { selector: "li *" })).toBeNull();
+  expect(lineKeys().sort()).toEqual(["decision", "restart"]);
+});
+
+test("a pick remembered as the older word business means the first side", async () => {
+  window.localStorage.setItem("cockpit:side-filter", "business");
+  showToday([personal, work], hasTwoSides);
+  await screen.findByRole("radiogroup", { name: "Show" });
+  expect(choice(BUSINESS)).toBeChecked();
+  expect(screen.queryByText("Pick the family photo", { selector: "li *" })).toBeNull();
 });
 
 test("picking Personal hides the business lines and keeps the app's own lines and the Sort line", async () => {
@@ -124,7 +163,7 @@ test("the pick is remembered on this browser and survives the screen being drawn
   const user = userEvent.setup();
   showToday([personal, work], hasBusiness);
   await user.click(await screen.findByRole("radio", { name: "Personal" }));
-  expect(window.localStorage.getItem("cockpit:side-filter")).toBe("personal");
+  expect(window.localStorage.getItem("cockpit:side-filter")).toBe(PERSONAL_ID);
   cleanup();
   showToday([personal, work], hasBusiness);
   await screen.findByRole("radiogroup", { name: "Show" });
@@ -180,7 +219,7 @@ const sections: S["FollowupSection"][] = [
     person: "PER-1",
     name: "Pat Example",
     is_pm: true,
-    questions: [question("Q-1", "Pick the family photo", "personal", { kind: "decision" }), question("Q-2", "Approve the invoice run", "business", { kind: "decision" })],
+    questions: [question("Q-1", "Pick the family photo", PERSONAL_ID, { kind: "decision" }), question("Q-2", "Approve the invoice run", BUSINESS_ID, { kind: "decision" })],
     actions: [],
     message: "",
     to_send: 0,
@@ -189,8 +228,8 @@ const sections: S["FollowupSection"][] = [
     person: "PER-2",
     name: "Robin Sample",
     is_pm: false,
-    questions: [question("Q-3", "Is the index final?", "personal")],
-    actions: [action("ACT-1", "Send the invoice", "business")],
+    questions: [question("Q-3", "Is the index final?", PERSONAL_ID)],
+    actions: [action("ACT-1", "Send the invoice", BUSINESS_ID)],
     message: "Hi Robin,\n\nIs the index final?\n\nAction items with you:\n- Send the invoice",
     to_send: 2,
   },
@@ -198,7 +237,7 @@ const sections: S["FollowupSection"][] = [
     person: "PER-3",
     name: "Dana Sample",
     is_pm: false,
-    questions: [question("Q-4", "Can the crew start Monday?", "business")],
+    questions: [question("Q-4", "Can the crew start Monday?", BUSINESS_ID)],
     actions: [],
     message: "Hi Dana,\n\nCan the crew start Monday?",
     to_send: 1,

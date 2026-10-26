@@ -1321,16 +1321,16 @@ def _everything(
     from engine.unfiled import unfiled
 
     loose = unfiled(reader)
-    business = sides.business_project(reader, cfg)
+    other_sides = sides.side_list(reader, cfg)
     if loose:
         lines.append(
             Line(
                 key="unfiled",
                 group="review",
                 kind="unfiled",
-                # With a business set, the one thing to settle is which side the items belong to.
-                state="which_side" if business else None,
-                subject=reader.get("project", business).data["name"] if business else None,
+                # With another side set, the one thing to settle is which side the items belong to.
+                state="which_side" if other_sides else None,
+                subject=other_sides[0].name if len(other_sides) == 1 else None,
                 count=len(loose),
                 since=min(i.created_at for i in loose),
             )

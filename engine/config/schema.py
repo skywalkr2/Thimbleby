@@ -83,6 +83,18 @@ class SideWords(ConfigModel):
     )
 
 
+class SideEntry(ConfigModel):
+    project: str = Field(
+        "",
+        min_length=1,
+        description="The top-level project that holds this side of the person's work: everything under it is on it.",
+    )
+    kind: Literal["job", "business"] = Field(
+        "business",
+        description="What the side is: a job (the person works for someone) or a business (their own).",
+    )
+
+
 class ProjectSettings(ConfigModel):
     summary_max_lines: int = Field(
         3,
@@ -106,16 +118,30 @@ class ProjectSettings(ConfigModel):
     )
     business: str | None = Field(
         None,
-        description="The top project of the person's business or job, when they have one: what names only people on "
-        "the business side is filed under it, and what can't be placed asks which side it belongs to. Empty means "
-        "no business, and everything unplaced goes to the personal project.",
+        description="The older form of the sides list, for one business or job: read as one entry of kind business in "
+        "the sides list, whatever else that holds. Use the sides list instead.",
         json_schema_extra={"choices": "projects"},
+    )
+    sides: list[SideEntry] = Field(
+        default_factory=list,
+        description="The sides of the person's work beside their own life (the personal project): each a top-level "
+        "project, with what it is (a job or a business). What names only people on one side is filed under it, and "
+        "what can't be placed asks which side it belongs to. Empty means no other side, and everything unplaced goes "
+        "to the personal project.",
     )
     side_words: SideWords = Field(
         default_factory=SideWords,
         description="Words that place an item on a side when the people it names don't: the names of the projects "
-        "on each side always count, and these add to them. Used only when you have a business.",
+        "on each side always count, and these add to them. Used only when you have a side beside your own life; the "
+        "business words apply when you have exactly one.",
     )
+
+    @model_validator(mode="after")
+    def _read_the_older_business_as_a_side(self) -> ProjectSettings:
+        """The older single `business` is the first entry of the sides list, with no file rewritten."""
+        if self.business and all(entry.project != self.business for entry in self.sides):
+            self.sides = [SideEntry(project=self.business, kind="business"), *self.sides]
+        return self
 
 
 class ToolSettings(ConfigModel):
@@ -2830,6 +2856,13 @@ class WatchSource(ConfigModel):
     enabled: bool = Field(True, description="Off keeps its history and stops reading it.")
     every_minutes: int = Field(60, ge=5, description="How often it is read while the app runs.")
     project: str | None = Field(None, description="The project its changes are about, if they all are.")
+    sides: list[str] = Field(
+        default_factory=list,
+        description="The sides of your work this source serves, as the top-level projects that hold them (your own "
+        "life included): one side files what it hands in there when the people it names don't place it; several "
+        "narrow the choice to them. Empty means not said.",
+        json_schema_extra={"choices": "projects"},
+    )
     first_run: Literal["intake", "baseline", "recent", "all"] = Field(
         "intake",
         description="What the first read of a source does. intake: it is taken in quietly: nothing is reported as new "

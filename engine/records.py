@@ -221,13 +221,14 @@ class Evidence(BaseModel):
 
 class FiledBy(BaseModel):
     """Why the assistant filed an item under a project: the signal that decided (`people` it names or came from, the
-    sender's mail `domain`, a project's `alias`, a project's `name`, or a configured side `word`), the word or domain
-    that matched (none for people) and the project it was filed under."""
+    sender's mail `domain`, the watched `source` it was read from, a project's `alias`, a project's `name`, or a
+    configured side `word`), the word, domain or source that matched (none for people) and the project it was filed
+    under."""
 
     model_config = ConfigDict(extra="forbid")
 
-    by: Literal["people", "domain", "alias", "name", "word"] = Field(description="The signal that decided.")
-    word: str | None = Field(None, description="The word or domain that matched; none when people decided.")
+    by: Literal["people", "source", "domain", "alias", "name", "word"] = Field(description="The signal that decided.")
+    word: str | None = Field(None, description="The word, domain or source that matched; none when people decided.")
     project: str = Field(description="The id of the project it was filed under.")
 
 
@@ -327,7 +328,7 @@ class ActionNews(BaseModel):
 
 class Person(Record):
     """Someone the workspace works with or tracks. Added by `person.add`; role, org, why_they_matter, side and relation
-    change through `record.set`; the person edits the rest in the app."""
+    change through `record.set`; the person edits the rest (the sides included) in the app."""
 
     record_kind: ClassVar[str] = "person"
     prefix: ClassVar[str] = "PER"
@@ -364,11 +365,17 @@ class Person(Record):
         "work alongside each other), report_to (the person reports to them) or watch (the person only watches). "
         "Empty means the workspace's default stance; someone marked track_only counts as watch.",
     )
+    sides: list[Annotated[str, RefTo("project", blocks_delete=False)]] = Field(
+        default_factory=list,
+        description="The sides of the person's life this person belongs to, as the ids of the top-level projects that "
+        "hold them (the personal project's id for family, friends and home). Empty means not known, and then `side` "
+        "is read. Someone on two or more sides, or not known, never decides where an item that names them is filed.",
+    )
     side: Literal["personal", "business", "both"] | None = Field(
         None,
-        description="Which side of the person's life this person belongs to: personal (family, friends, home), "
-        "business (work) or both. Empty means not known; someone on both sides, or not known, never decides where "
-        "an item that names them is filed.",
+        description="The older, shorter form of `sides`: personal (family, friends, home), business (work) or both. "
+        "It is worked out from `sides` when that is set; it can be written while there is at most one side besides "
+        "the personal one, and with several the side is named in `sides`.",
     )
     relation: str | None = Field(
         None,

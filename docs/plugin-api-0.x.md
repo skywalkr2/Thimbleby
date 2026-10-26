@@ -10,6 +10,24 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.91 adds
+
+Manifests stay `'>=0.3,<0.4'`. Additive only: nothing a 0.3.90 plugin relies on changes. The person's life has any
+number of sides (their own life, and each job or business they track); the generated guide has the exact signatures.
+
+- **A person's sides:** the core `person` record has `sides`, a list of project ids (each a side's top-level project;
+  the personal project's id for their own life), empty when not known. `side` (personal, business or both) stays and is
+  worked out from `sides` whenever either is written. A person record stored before `sides` existed has it empty until
+  the record next changes its side; the core reads such a record's `side` as the sides it means, so a plugin that needs
+  the sides of a person treats an empty `sides` with a `side` set as "the older word only".
+- **The sides on the read view:** `view.sides()` lists every side, the person's own life first (`kind` "personal") and
+  then the others in the person's order (`kind` "job" or "business"), each with its project id and name. A side whose
+  project is gone is left out.
+- **The side of a record:** `view.side_of(record_or_project_id)` returns the id of the side a project, or a record
+  filed under one, is on, or None when it is on no side.
+- **The testing kit:** `ws.add_side(name, kind="business")` adds a side the way the app does when the person names
+  their work and returns its project id; `ws.view()` then reads it through `view.sides()` and `view.side_of(...)`.
+
 ## What 0.3.90 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a 0.3.89 plugin relies on changes. Items B1 to B3 answer a pack builder's questions

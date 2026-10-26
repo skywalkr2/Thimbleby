@@ -126,7 +126,7 @@ def test_a_workspace_made_with_no_template_has_a_personal_project_and_no_busines
         (project,) = store.read().list("project")
         assert cfg.workspace.project.personal == project.id and cfg.workspace.project.business is None
         assert project.data["name"] == sides.word(cfg, sides.PERSONAL_NAME_KEY)
-        assert sides.side_of_project(store.read(), cfg, project.id) == "personal"
+        assert sides.side_of_project(store.read(), cfg, project.id) == project.id
     finally:
         store.close()
     # The wording sheet carries the same default the engine writes, and the workspace's own wording wins.
@@ -152,24 +152,49 @@ def api(tmp_path):
         yield client, ws, app.state.store
 
 
-def test_the_business_route_makes_one_top_project_and_a_second_call_renames_it(api):
+def test_the_business_route_adds_a_side_and_a_second_call_adds_a_second_in_order(api):
     client, ws, store = api
     first = client.post("/api/setup/business", json={"name": BUSINESS_NAME})
     assert first.status_code == 200, first.text
     made = first.json()
-    assert made["created"] is True and made["name"] == BUSINESS_NAME
+    assert made["created"] is True and made["name"] == BUSINESS_NAME and made["kind"] == "business"
     cfg = ws.config(env={})
-    assert cfg.workspace.project.business == made["project"]
+    assert [(e.project, e.kind) for e in cfg.workspace.project.sides] == [(made["project"], "business")]
+    assert cfg.workspace.project.business is None  # the older single value is never written again
     record = store.read().get("project", made["project"])
     assert record.data["name"] == BUSINESS_NAME and not record.data.get("parent")
-    assert sides.side_of_project(store.read(), cfg, made["project"]) == "business"
-    again = client.post("/api/setup/business", json={"name": OTHER_BUSINESS_NAME}).json()
-    assert again["created"] is False and again["project"] == made["project"] and again["changeset"]
-    assert len(store.read().list("project")) == 2  # Personal and the business, never a second business
-    assert store.read().get("project", made["project"]).data["name"] == OTHER_BUSINESS_NAME
+    assert sides.side_of_project(store.read(), cfg, made["project"]) == made["project"]
+    again = client.post("/api/setup/business", json={"name": OTHER_BUSINESS_NAME, "kind": "job"}).json()
+    assert again["created"] is True and again["project"] != made["project"] and again["kind"] == "job"
+    assert len(store.read().list("project")) == 3  # Personal and the two sides
+    cfg = ws.config(env={})
+    listed = sides.side_list(store.read(), cfg)
+    assert [(s.project, s.kind, s.name) for s in listed] == [
+        (made["project"], "business", BUSINESS_NAME),
+        (again["project"], "job", OTHER_BUSINESS_NAME),
+    ]
+    assert sides.business_project(store.read(), cfg) == made["project"]  # "the" business is the first side
+    state = client.get("/api/setup/business").json()
+    assert state["business"] is True and state["name"] == BUSINESS_NAME
+    assert state["personal"] == cfg.workspace.project.personal
+    assert [(s["project"], s["kind"], s["name"]) for s in state["sides"]] == [
+        (s.project, s.kind, s.name) for s in listed
+    ]
+    # Saying a name a side already has is that side: nothing is made.
+    same = client.post("/api/setup/business", json={"name": OTHER_BUSINESS_NAME}).json()
+    assert same["created"] is False and same["project"] == again["project"] and same["changeset"] is None
+    assert len(store.read().list("project")) == 3
     undone = client.post(f"/api/changesets/{again['changeset']}/undo", json={})
     assert undone.status_code == 200, undone.text
-    assert store.read().get("project", made["project"]).data["name"] == BUSINESS_NAME
+    assert [s.project for s in sides.side_list(store.read(), ws.config(env={}))] == [made["project"]]
+
+
+def test_work_made_with_a_kind_is_refused_when_it_is_neither_a_job_nor_a_business(api):
+    client, _, _ = api
+    odd = client.post("/api/setup/work", json={"choice": "work", "name": BUSINESS_NAME, "kind": "hobby"})
+    assert odd.status_code == 422
+    made = client.post("/api/setup/work", json={"choice": "work", "name": BUSINESS_NAME, "kind": "job"})
+    assert made.status_code == 200 and made.json()["sides"][0]["kind"] == "job"
 
 
 def test_the_settings_offer_the_projects_to_pick_from_and_an_undone_business_counts_as_none(api):
@@ -208,14 +233,14 @@ def test_a_project_is_on_the_side_its_parent_chain_ends_in(env):
     loose = make_project(store, "Loose top project")
     view = store.read()
     side = lambda pid: sides.side_of_project(view, cfg, pid)  # noqa: E731
-    assert [side(p) for p in (BUSINESS_ID, business_child, business_grandchild)] == ["business"] * 3
-    assert [side(p) for p in (PERSONAL_ID, personal_child)] == ["personal"] * 2
+    assert [side(p) for p in (BUSINESS_ID, business_child, business_grandchild)] == [BUSINESS_ID] * 3
+    assert [side(p) for p in (PERSONAL_ID, personal_child)] == [PERSONAL_ID] * 2
     assert side(loose) is None and side("PRJ-999") is None and side(None) is None
     assert sides.top_of(view, business_grandchild) == BUSINESS_ID
     # With no business set, what hangs under the old business is on no side.
     other = without(ws, "business")
     assert sides.side_of_project(view, other, business_grandchild) is None
-    assert sides.side_of_project(view, other, personal_child) == "personal"
+    assert sides.side_of_project(view, other, personal_child) == PERSONAL_ID
 
 
 def test_an_item_is_on_the_side_of_the_project_it_is_filed_under(env):
@@ -225,8 +250,8 @@ def test_an_item_is_on_the_side_of_the_project_it_is_filed_under(env):
         question = tx.create("question", {"to": ME, "title": "A question?", "projects": [BUSINESS_ID]}, _PM)
         loose = tx.create("note", {"text": "A loose note."}, _PM)
     view = store.read()
-    assert sides.side_of_item(view, cfg, view.get("note", note.id)) == "personal"
-    assert sides.side_of_item(view, cfg, view.get("question", question.id)) == "business"
+    assert sides.side_of_item(view, cfg, view.get("note", note.id)) == PERSONAL_ID
+    assert sides.side_of_item(view, cfg, view.get("question", question.id)) == BUSINESS_ID
     assert sides.side_of_item(view, cfg, view.get("note", loose.id)) is None
 
 
@@ -454,7 +479,7 @@ def test_the_rule_runs_for_the_assistants_work_and_not_for_a_change_the_person_m
 
 def test_the_question_that_asks_who_owns_an_action_sits_under_the_actions_project(env):
     _, cfg, store = env
-    op = new_op(project=PERSONAL_ID)
+    op = new_op(project=BUSINESS_ID)
     cs = CHANGESET.validate_python(
         {"ops": [op.model_dump(mode="json", exclude_none=True)]}, context={"op_models": store.plugins.ops}
     )
@@ -462,7 +487,7 @@ def test_the_question_that_asks_who_owns_an_action_sits_under_the_actions_projec
     apply_changeset(cs, [], ctx, run=None)
     (action,) = store.read().list("action", include_deleted=False)[-1:]
     (asked,) = [q for q in store.read().list("question") if (q.data.get("resolves") or {}).get("action") == action.id]
-    assert action.data["status"] == "held" and asked.data["projects"] == [PERSONAL_ID]
+    assert action.data["status"] == "held" and asked.data["projects"] == [BUSINESS_ID]
 
 
 # ---- a week of mail through the stub --------------------------------------------------------------------------------
@@ -585,23 +610,32 @@ def seed_both_sides(client, store, cfg):
                 {"text": f"Do the {name} thing", "owners": [{"person": other}], **({"project": home} if home else {})},
                 _PM,
             )
-            ids[name] = {"line": f"question:{mine.id}", "question": theirs.id, "action": action.id}
+            ids[name] = {"line": f"question:{mine.id}", "question": theirs.id, "action": action.id, "home": home}
     return ids, other
 
 
 def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported(anytime):
     client, ws, store = anytime
-    assert client.get("/api/setup/business").json() == {"business": False, "name": None, "chosen": None}
+    personal_id = ws.config(env={}).workspace.project.personal
+    empty = {"business": False, "name": None, "personal": personal_id, "sides": [], "chosen": None}
+    assert client.get("/api/setup/business").json() == empty
     ids, other = seed_both_sides(client, store, ws.config(env={}))
-    assert client.get("/api/setup/business").json() == {"business": True, "name": BUSINESS_NAME, "chosen": "work"}
+    business = ids["business"]["home"]
+    assert client.get("/api/setup/business").json() == {
+        "business": True,
+        "name": BUSINESS_NAME,
+        "personal": personal_id,
+        "sides": [{"project": business, "kind": "business", "name": BUSINESS_NAME}],
+        "chosen": "work",
+    }
     lines = {line["key"]: line for line in client.get("/api/today/queue").json()}
-    for name, side in (("business", "business"), ("personal", "personal"), ("none", None)):
+    for name, side in (("business", business), ("personal", personal_id), ("none", None)):
         assert lines[ids[name]["line"]]["side"] == side
     rows = {}
     for section in client.get("/api/followups").json():
         for row in [*section["questions"], *section["actions"]]:
             rows[row["id"]] = row["side"]
-    for name, side in (("business", "business"), ("personal", "personal"), ("none", None)):
+    for name, side in (("business", business), ("personal", personal_id), ("none", None)):
         assert rows[ids[name]["question"]] == side and rows[ids[name]["action"]] == side
 
 
@@ -612,10 +646,11 @@ def test_with_no_business_nothing_is_on_the_business_side_and_the_route_says_so(
     with store.transaction() as tx:
         home = tx.create("question", {"to": me, "title": "Which one?", "projects": [personal_id]}, _PM).id
         loose = tx.create("question", {"to": me, "title": "Which other?"}, _PM).id
-    assert client.get("/api/setup/business").json() == {"business": False, "name": None, "chosen": None}
+    empty = {"business": False, "name": None, "personal": personal_id, "sides": [], "chosen": None}
+    assert client.get("/api/setup/business").json() == empty
     lines = {line["key"]: line["side"] for line in client.get("/api/today/queue").json()}
-    assert lines[f"question:{home}"] == "personal" and lines[f"question:{loose}"] is None
-    assert "business" not in lines.values()
+    assert lines[f"question:{home}"] == personal_id and lines[f"question:{loose}"] is None
+    assert set(lines.values()) <= {personal_id, None}
 
 
 def test_a_line_about_records_on_both_sides_is_on_neither_and_one_side_gives_it_that_side(env):
@@ -626,7 +661,9 @@ def test_a_line_about_records_on_both_sides_is_on_neither_and_one_side_gives_it_
     view = store.read()
     of = lambda **line: sides.side_of_line(view, cfg, SimpleNamespace(project=None, **line))  # noqa: E731
     assert (
-        of(actions=[mine, work]) is None and of(actions=[mine]) == "personal" and of(actions=[work, work]) == "business"
+        of(actions=[mine, work]) is None
+        and of(actions=[mine]) == PERSONAL_ID
+        and of(actions=[work, work]) == BUSINESS_ID
     )
     assert of(actions=[]) is None and of(actions=["ACT-999"]) is None
-    assert sides.side_of_line(view, cfg, SimpleNamespace(project=BUSINESS_ID, actions=[mine])) == "business"
+    assert sides.side_of_line(view, cfg, SimpleNamespace(project=BUSINESS_ID, actions=[mine])) == BUSINESS_ID

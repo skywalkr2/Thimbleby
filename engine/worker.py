@@ -52,6 +52,7 @@ LIVE_KEYS = (
     "workspace.project.completed_status",
     "workspace.project.personal",
     "workspace.project.business",
+    "workspace.project.sides",
     "workspace.our_accounts",
     "storage.backups.",
     "storage.export.every_minutes",
