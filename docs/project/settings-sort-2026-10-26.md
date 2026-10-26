@@ -1,7 +1,7 @@
 # Settings sort, 2026-10-26
 
 Where every setting of the app's own files is shown (design 7.9, change 210). Rule: basic is on screen, advanced is behind Advanced, internal is kept only in files. The markers are applied in `engine/config/levels.py` (fronts, longest wins) and `engine.settings.BASIC`; add-on settings keep their own markers. "More settings" is empty after this sort: every field is one of the three.
-Counts: basic 32, advanced 109, files only 242.
+Counts: basic 32, advanced 155, files only 198.
 
 
 | Field | Where | Why |
@@ -34,8 +34,8 @@ Counts: basic 32, advanced 109, files only 242.
 | `workspace.plugins.jobs` | internal | Add-on host limit, timeout or catalog interval; technical. |
 | `workspace.plugins.secrets` | advanced | Reference to a secret; set in its own box. |
 | `workspace.plugins.failures_before_off` | internal | Add-on host limit, timeout or catalog interval; technical. |
-| `workspace.plugins.catalog.enabled` | internal | Add-on host limit, timeout or catalog interval; technical. |
-| `workspace.plugins.catalog.shipped_feed` | internal | Add-on host limit, timeout or catalog interval; technical. |
+| `workspace.plugins.catalog.enabled` | advanced | Add-on switch or feed address a person may add. |
+| `workspace.plugins.catalog.shipped_feed` | advanced | Add-on switch or feed address a person may add. |
 | `workspace.plugins.catalog.feeds` | advanced | Add-on switch or feed address a person may add. |
 | `workspace.plugins.catalog.refresh_hours` | internal | Add-on host limit, timeout or catalog interval; technical. |
 | `workspace.plugins.catalog.release_tokens` | advanced | Reference to a secret; set in its own box. |
@@ -49,8 +49,10 @@ Counts: basic 32, advanced 109, files only 242.
 | `server.base_path` | advanced | Where the app is served; changed by a person who deploys it. |
 | `server.public_url` | internal | Address, port or path: the program and the deploy read it; a wrong value stops the app being reached. |
 | `server.open_browser` | advanced | Where the app is served; changed by a person who deploys it. |
+| `storage.backend` | internal | Size limit, retry or interval; technical. |
 | `storage.export.every_minutes` | advanced | Export and sync behaviour; rarely changed. |
 | `storage.export.commit` | advanced | Export and sync behaviour; rarely changed. |
+| `storage.export.remote` | internal | Size limit, retry or interval; technical. |
 | `storage.backups.automatic` | basic | On screen first: what most people set in their first week. |
 | `storage.backups.cloud_path` | internal | Size limit, retry or interval; technical. |
 | `storage.backups.every_hours` | basic | On screen first: what most people set in their first week. |
@@ -59,15 +61,15 @@ Counts: basic 32, advanced 109, files only 242.
 | `storage.backups.retry_minutes` | internal | Size limit, retry or interval; technical. |
 | `storage.files.max_file_mb` | internal | Size limit, retry or interval; technical. |
 | `storage.files.max_total_mb` | internal | Size limit, retry or interval; technical. |
-| `storage.files.accepted_types` | internal | Size limit, retry or interval; technical. |
+| `storage.files.accepted_types` | advanced | Export and sync behaviour; rarely changed. |
 | `storage.files.read_max_mb` | internal | Size limit, retry or interval; technical. |
 | `storage.files.read_max_chars` | internal | Size limit, retry or interval; technical. |
 | `storage.sync.folder` | basic | On screen first: what most people set in their first week. |
 | `storage.sync.watch_outside_edits` | advanced | Export and sync behaviour; rarely changed. |
 | `storage.sync.shared` | advanced | Export and sync behaviour; rarely changed. |
 | `storage.sync.lease_stale_after_minutes` | internal | Size limit, retry or interval; technical. |
-| `storage.kept_secrets.keep_days` | internal | Size limit, retry or interval; technical. |
-| `storage.kept_secrets.undo_grace_minutes` | internal | Size limit, retry or interval; technical. |
+| `storage.kept_secrets.keep_days` | advanced | Export and sync behaviour; rarely changed. |
+| `storage.kept_secrets.undo_grace_minutes` | advanced | Export and sync behaviour; rarely changed. |
 | `ai.roles.write.tier` | advanced | AI behaviour a setup person tunes: roles, warnings, fallback choice. |
 | `ai.roles.write.same_account` | advanced | AI behaviour a setup person tunes: roles, warnings, fallback choice. |
 | `ai.roles.check.tier` | advanced | AI behaviour a setup person tunes: roles, warnings, fallback choice. |
@@ -251,21 +253,21 @@ Counts: basic 32, advanced 109, files only 242.
 | `ui.feedback_to` | advanced | Display or notice choice that suits some people. |
 | `ui.feedback_problem_days` | internal | Count, day window or layout limit; technical tuning. |
 | `ui.feedback_problem_max` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.today.mail_hours` | advanced | Display or notice choice that suits some people. |
-| `ui.today.mail_max` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.today.agenda_days_ahead` | advanced | Display or notice choice that suits some people. |
-| `ui.today.stale_after_days` | advanced | Display or notice choice that suits some people. |
-| `ui.today.top_priorities_lines` | advanced | Display or notice choice that suits some people. |
-| `ui.today.top_priorities_ahead_days` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.followups.action_due_within_days` | advanced | Display or notice choice that suits some people. |
-| `ui.followups.undated_after_days` | advanced | Display or notice choice that suits some people. |
-| `ui.followups.question_after_days` | advanced | Display or notice choice that suits some people. |
-| `ui.followups.second_nudge_items` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.followups.escalate_after_chases` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.walkthrough.first_promises` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.series.usually_with_share` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.series.usually_with_min_meetings` | internal | Count, day window or layout limit; technical tuning. |
-| `ui.series.usually_with_max` | internal | Count, day window or layout limit; technical tuning. |
+| `ui.today.mail_hours` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.today.mail_max` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.today.agenda_days_ahead` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.today.stale_after_days` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.today.top_priorities_lines` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.today.top_priorities_ahead_days` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.followups.action_due_within_days` | advanced | When a follow-up is due: timings a person may want different. |
+| `ui.followups.undated_after_days` | advanced | When a follow-up is due: timings a person may want different. |
+| `ui.followups.question_after_days` | advanced | When a follow-up is due: timings a person may want different. |
+| `ui.followups.second_nudge_items` | advanced | When a follow-up is due: timings a person may want different. |
+| `ui.followups.escalate_after_chases` | advanced | When a follow-up is due: timings a person may want different. |
+| `ui.walkthrough.first_promises` | advanced | How many items a screen shows. |
+| `ui.series.usually_with_share` | advanced | How many items a screen shows. |
+| `ui.series.usually_with_min_meetings` | advanced | How many items a screen shows. |
+| `ui.series.usually_with_max` | advanced | How many items a screen shows. |
 | `ui.brand.color` | basic | On screen first: what most people set in their first week. |
 | `ui.brand.logo` | basic | On screen first: what most people set in their first week. |
 | `ui.notifications.enabled` | basic | On screen first: what most people set in their first week. |
@@ -282,30 +284,30 @@ Counts: basic 32, advanced 109, files only 242.
 | `ui.density` | basic | On screen first: what most people set in their first week. |
 | `stages.moves` | advanced | Who advances records. |
 | `watch.set_aside_defaults` | advanced | Mail sorting choice or data level for a source. |
-| `watch.automated_mail.version` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.automated_mail.set_aside` | advanced | Mail sorting choice or data level for a source. |
-| `watch.automated_mail.senders` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.automated_mail.words` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.version` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.enabled` | advanced | Mail sorting choice or data level for a source. |
-| `watch.mail_kinds.bill.version` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.bill.senders` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.bill.subject_words` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.bill.words` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.order.version` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.order.senders` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.order.subject_words` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.order.words` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.shipping.version` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.shipping.senders` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.shipping.subject_words` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.mail_kinds.shipping.words` | internal | Sorting rule, word list, batch size or interval; technical. |
+| `watch.automated_mail.version` | internal | Format version. |
+| `watch.automated_mail.set_aside` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.automated_mail.senders` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.automated_mail.words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.version` | internal | Format version. |
+| `watch.mail_kinds.enabled` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.bill.version` | internal | Format version. |
+| `watch.mail_kinds.bill.senders` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.bill.subject_words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.bill.words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.order.version` | internal | Format version. |
+| `watch.mail_kinds.order.senders` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.order.subject_words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.order.words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.shipping.version` | internal | Format version. |
+| `watch.mail_kinds.shipping.senders` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.shipping.subject_words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
+| `watch.mail_kinds.shipping.words` | advanced | Which mail counts as automated, a bill, an order or a shipping notice: words a person may add to. |
 | `watch.sorting` | advanced | Mail sorting choice or data level for a source. |
 | `watch.acting` | advanced | Mail sorting choice or data level for a source. |
-| `watch.propose_days` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.propose_slots` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.propose_round_minutes` | internal | Sorting rule, word list, batch size or interval; technical. |
-| `watch.look_back_max_items` | internal | Sorting rule, word list, batch size or interval; technical. |
+| `watch.propose_days` | advanced | How far or how many a proposal or look-back reaches. |
+| `watch.propose_slots` | advanced | How far or how many a proposal or look-back reaches. |
+| `watch.propose_round_minutes` | advanced | How far or how many a proposal or look-back reaches. |
+| `watch.look_back_max_items` | advanced | How far or how many a proposal or look-back reaches. |
 | `watch.sorting_batch` | internal | Sorting rule, word list, batch size or interval; technical. |
 | `watch.set_aside_keep_seconds` | internal | Sorting rule, word list, batch size or interval; technical. |
 | `watch.public_mail_domains_extra` | advanced | Mail sorting choice or data level for a source. |
@@ -313,81 +315,81 @@ Counts: basic 32, advanced 109, files only 242.
 | `watch.unread_gap_factor` | internal | Sorting rule, word list, batch size or interval; technical. |
 | `watch.stale_after_hours` | advanced | Mail sorting choice or data level for a source. |
 | `watch.default_data_level` | advanced | Mail sorting choice or data level for a source. |
-| `steward.version` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
+| `steward.version` | advanced | Daily steward choice: times, lead days, brief sections. |
 | `steward.default_stance` | basic | On screen first: what most people set in their first week. |
-| `steward.tracks` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.second_move_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.background_stuck_after_minutes` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
+| `steward.tracks` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.second_move_days` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.background_stuck_after_minutes` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
 | `steward.reminders.working_start` | basic | On screen first: what most people set in their first week. |
 | `steward.reminders.working_end` | basic | On screen first: what most people set in their first week. |
 | `steward.reminders.working_first_day` | basic | On screen first: what most people set in their first week. |
 | `steward.reminders.working_last_day` | basic | On screen first: what most people set in their first week. |
 | `steward.reminders.quiet_start` | basic | On screen first: what most people set in their first week. |
 | `steward.reminders.quiet_end` | basic | On screen first: what most people set in their first week. |
-| `steward.reminders.missed` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.reminders.later_today_hours` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.reminders.evening` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.reminders.late_after_minutes` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.reminders.where` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.reminders.where_account` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.reminders.look_ahead_hours` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.reminders.allowed_data` | advanced | Daily steward choice: times, lead days, brief sections. |
+| `steward.reminders.missed` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.later_today_hours` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.evening` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.late_after_minutes` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.where` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.where_account` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.look_ahead_hours` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
+| `steward.reminders.allowed_data` | advanced | When reminders arrive: working days, hours, quiet hours, snooze and late times. |
 | `steward.hold_outside_hours` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.reply_thread_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.sent_match.window_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.sent_match.similarity` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.sent_match.ask_after_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
+| `steward.reply_thread_days` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.sent_match.window_days` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.sent_match.similarity` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.sent_match.ask_after_days` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
 | `steward.brief.enabled` | basic | On screen first: what most people set in their first week. |
-| `steward.brief.morning_from` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.evening_from` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.overnight_from` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.weekly_day` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.max_lines` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.goals_min` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.goals_max` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.offer_reminders` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.brief.remind_within_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.meetings.prep_hours_before` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.meetings.prep_min_open` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.meetings.capture_hours_after` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.meetings.max_items` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.meetings.setup_lead_working_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.meetings.setup_words` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.meetings.invitation_days_ahead` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.people.quiet_promise_days` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.people.max_facts` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.people.snooze_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.people.date_words` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.capacity.buffer_minutes` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.capacity.tentative_is_free` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.clashes.days_ahead` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.clashes.travel_minutes` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.attention.quiet` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.attention.daily_cap` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.attention.threshold` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.escalate` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.unfiled` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.stale` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.learned` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.catch_up` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.area` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.attention.importance.pattern` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.dates.bookings_to_calendar` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.dates.suggest_reminders` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.dates.lead_days.deadline` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.dates.lead_days.renewal` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.dates.lead_days.expiry` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.dates.lead_days.warranty` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.dates.lead_days.bill` | advanced | Daily steward choice: times, lead days, brief sections. |
-| `steward.areas.propose_after` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.capture.audio_kbps` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.capture.max_audio_mb` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.conversation.recent_turns` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.conversation.older_turn_chars` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.conversation.record_chars` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.patterns.moved_times` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.patterns.redated_times` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.patterns.owed_replies` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
-| `steward.patterns.snooze_days` | internal | Tuning of the daily steward: counts, windows, weights and word lists. |
+| `steward.brief.morning_from` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.evening_from` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.overnight_from` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.weekly_day` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.max_lines` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.goals_min` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.goals_max` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.offer_reminders` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.brief.remind_within_days` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.prep_hours_before` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.prep_min_open` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.capture_hours_after` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.max_items` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.setup_lead_working_days` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.setup_words` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.meetings.invitation_days_ahead` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.people.quiet_promise_days` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.people.max_facts` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.people.snooze_days` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.people.date_words` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.capacity.buffer_minutes` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.capacity.tentative_is_free` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.clashes.days_ahead` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.clashes.travel_minutes` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.attention.quiet` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.attention.daily_cap` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.attention.threshold` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.escalate` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.unfiled` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.stale` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.learned` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.catch_up` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.area` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.attention.importance.pattern` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.dates.bookings_to_calendar` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.dates.suggest_reminders` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.dates.lead_days.deadline` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.dates.lead_days.renewal` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.dates.lead_days.expiry` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.dates.lead_days.warranty` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.dates.lead_days.bill` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.areas.propose_after` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.capture.audio_kbps` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.capture.max_audio_mb` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.conversation.recent_turns` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.conversation.older_turn_chars` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.conversation.record_chars` | internal | Internal threshold, weight, window or size the program tunes; no person sets it. |
+| `steward.patterns.moved_times` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.patterns.redated_times` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.patterns.owed_replies` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
+| `steward.patterns.snooze_days` | advanced | What the person sees and when: prep, clashes, brief, suggestions, dates, patterns. |
 
 Not part of this sort: each file's `version`, and records or lists with a screen of their own (AI accounts, tiers, tasks, routing, prices and content levels; sources, triage and acting accounts; wording sheets; stages; rules; shortcuts; links; backup targets and cloud folders; `storage.backend` and `storage.export.remote`, which only files change).

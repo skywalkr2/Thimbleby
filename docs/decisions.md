@@ -9,7 +9,7 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 **Decided:** (1) Each setting of the app's own files is one of three kinds: basic (on screen first), advanced (behind
 Advanced), or internal (kept only in files, never listed). Internal means an address, port, id, callback address, limit,
 timeout, retry count, cache size, similarity cut-off, word or pattern list the program reads, or a format version.
-"More settings" is left empty by this: nothing sits in between. The sort of all 383 fields (32 basic, 109 advanced, 242
+"More settings" is left empty by this: nothing sits in between. The sort of all 385 fields (32 basic, 155 advanced, 198
 files only) is in `docs/project/settings-sort-2026-10-26.md`, applied by `engine/config/levels.py` (a front of the key
 decides, the field's own marker wins); a new field with no kind fails `tests/test_internal_settings.py`. (2) Connections,
 Quality, Add-ons and what each account can do open inside Settings, beside the same side bar, so the person goes to any
