@@ -66,3 +66,15 @@ workspace, no template).
 
 The reviewer's answers are built, each with its browser test, before the gate week and before any installer work
 (roadmap I-0).
+
+## From the functional designer's full read (2026-10-26), for the reviewer to settle
+
+The owner asked that these go to you rather than being fixed before your review
+(`docs/project/designer-answers-2026-10-26.md`, points 5 and 6, quoted):
+
+- **Settings.** "385 settings is the root of F33's kind of bug. About 70 `language.*` word lists do what the AI already
+  does, and several are restart-only. Move word lists into shipped data, cut duplicate settings (quiet hours, snooze days,
+  backup and export intervals), and keep 30 to 40 on screen."
+- **One place to act.** "One place to act isn't true yet. A to-do can be ticked in the queue line, the rail, the To-dos
+  screen and Follow-ups. 7.7 says the queue is the only place. Pick one, and make the others links."
+

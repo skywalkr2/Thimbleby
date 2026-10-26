@@ -4,6 +4,32 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The owner's answers to the designer's full read: one batched plugin API release, the review before the gate, nothing held back
+
+**Decided:**
+- **The plugin API hold** (in force since 2026-10-22, P33) covers any change to `engine/plugin_api`, the manifest, events,
+  plugin settings, core records or ops that plugins see. It is lifted once, for one batched release planned in full first:
+  the project-ending hook (`registrar.project_ending`, design F35) first; then the four core behaviors waiting on it
+  (Helpful / Not helpful signals from packs, the sent folder of an add-on's sign-in, older mail from add-on sources, and
+  linking files by hand if F36's check finds it needs the API); then the batch promised to the pack builders (P2). After
+  that release the hold applies again until the owner lifts it.
+- **The order:** the fix batch, then the UI/UX review, then the gate week, measured as planned. No two-day check comes
+  first.
+- **Nothing built is held back** (sending, meeting prep, people memory, voice and capture, the attention budget, the
+  record conversation and the schedule stay on).
+- **Settings (385 to 30 or 40 on screen) and one place to tick a to-do** are not fixed here: they go to the UI/UX reviewer
+  with the hand-over, with the designer's reasoning, once the functions are ready.
+
+**Decided by:** the owner, answering the functional designer's full read (`docs/project/designer-answers-2026-10-26.md`
+points 1, 2, 5, 6 and 9): "One batched release", "Straight to UI/UX review", "i see no reason to hold functions", and
+"save this and this message will go along with your message to the UI/UX designer after the functions are ready".
+
+**Why:** The hold now blocked five core behaviors and an owed batch; one planned release clears them together. The owner
+wants the reviewer to see the whole app before measuring it.
+
+**Impact:** Open promises P33, P56, P61, P63; the roadmap's next steps. The designer's point 2 (the gate after what it
+gates) is the owner's accepted risk; the pass bar (R10) is still to be set before the gate week. Change log: none.
+
 ## 2026-10-26: Handled for you: one screen for mail set aside and mail read with nothing to do (P45, P46, P47, P41)
 
 **Decided:** Mail the app handled sits on one screen under Work, **Handled for you**, with two tabs, each with a one-line
