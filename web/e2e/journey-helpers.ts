@@ -141,3 +141,34 @@ export async function openView(page: Page, label: string) {
   }
   throw new Error(`No view is named ${label}`);
 }
+
+/** The widths a setup step is checked at: two phones, a tablet and a desktop. */
+export const STEP_WIDTHS = [320, 390, 768, 1280];
+
+/** Every place a screen is wider than the window at each width: the page itself scrolling sideways, or an element ending
+ *  past the window inside a parent that does not. The window goes back to its size afterwards. */
+export async function widerThanWindow(page: Page, label: string): Promise<string[]> {
+  const before = page.viewportSize() ?? { width: 1280, height: 900 };
+  const found: string[] = [];
+  for (const width of STEP_WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    // Measured once the screen has what it loads, never while its loading rows are shown.
+    await expect(page.locator("main [data-skeleton]")).toHaveCount(0, { timeout: 20_000 });
+    // The page switches to its phone layout in response to the resize: let that frame be drawn before measuring.
+    await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => done())))));
+    const out = await page.evaluate(() => {
+      const limit = document.documentElement.clientWidth;
+      const cut: string[] = [];
+      for (const el of Array.from(document.querySelectorAll("main *"))) {
+        const box = el.getBoundingClientRect();
+        if (box.width > 0 && box.height > 0 && box.right > limit + 1 && getComputedStyle(el).position !== "fixed" && !Array.from(el.children).some((c) => c.getBoundingClientRect().right > limit + 1)) {
+          cut.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} reaches ${Math.round(box.right)} (width ${Math.round(box.width)}, ${(el.textContent ?? "").trim().slice(0, 30)})`);
+        }
+      }
+      return { limit, page: document.documentElement.scrollWidth, body: document.body.scrollWidth, cut: cut.slice(0, 5) };
+    });
+    if (out.page > out.limit || out.body > out.limit || out.cut.length > 0) found.push(`${label} at ${width}: ${JSON.stringify(out)}`);
+  }
+  await page.setViewportSize(before);
+  return found;
+}

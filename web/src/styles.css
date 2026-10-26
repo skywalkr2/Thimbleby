@@ -562,3 +562,12 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .time-zone-list [role="option"][aria-selected="true"]::before {
   content: "✓ ";
 }
+
+/* A service row in setup: the text and its button side by side while there is room; below that the button goes under the
+   text, full width, and its label wraps instead of running past the window. */
+.mail-step .row.pair > .acts { min-width: 0; max-width: 100%; }
+.mail-step .row.pair > .acts .btn { white-space: normal; text-align: center; max-width: 100%; padding-block: var(--space-2); }
+@media (max-width: 640px) {
+  .mail-step .row.pair { grid-template-columns: minmax(0, 1fr); }
+  .mail-step .row.pair > .acts { display: grid; }
+}
