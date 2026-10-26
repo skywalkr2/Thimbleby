@@ -226,9 +226,8 @@ def test_a_facts_page_says_who_it_rests_on_and_where_it_came_from(api):
 
     assert label(inferred)["basis"] == "inferred" and label(inferred)["kind"] == "pasted"
     assert label(inferred)["sender"] == author.data["full_name"]
-    assert "Production check-in notes" not in json.dumps(label(inferred)), (
-        "the source's own title never reaches the label"
-    )
+    assert label(inferred)["title"] == "Production check-in notes", "the label carries the input's own subject"
+    assert label(inferred)["origin"]["source"] == source, "and links to the input it came from"
     said_label = label(reported)
     assert said_label["basis"] == "said" and said_label["by"] == said.data["full_name"]
     assert said_label["reported_by"] == author.data["full_name"]

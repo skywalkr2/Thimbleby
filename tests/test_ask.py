@@ -161,15 +161,15 @@ def test_words_that_arent_in_the_material_are_refused(app):
 def test_a_setting_the_screens_dont_change_is_never_suggested(app):
     ws, c, api, worker = app
     answer_with(
-        {"op": "answer", "text": "The port is set in its file.", "cites": [{"quote": BACKUP_WORDS}]},
+        {"op": "answer", "text": "The address prefix is set in its file.", "cites": [{"quote": BACKUP_WORDS}]},
         {
             "op": "setting.propose",
-            "setting": code_of(load_config(ws.config_dir, env={}), "server.port"),
-            "value": 9000,
-            "why": "Another port.",
+            "setting": code_of(load_config(ws.config_dir, env={}), "server.base_path"),
+            "value": "/other",
+            "why": "Another prefix.",
         },
     )
-    asked = c.post(f"{api}/ask", json={"question": "Can I change the port backups use?"}).json()["id"]
+    asked = c.post(f"{api}/ask", json={"question": "Can I change the address prefix backups use?"}).json()["id"]
     worker.run_pending()
     found = next(a for a in c.get(f"{api}/asks").json() if a["id"] == asked)
     assert found["answer"] is not None and found["proposals"] == []

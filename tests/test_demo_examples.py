@@ -118,7 +118,7 @@ def test_an_inferred_fact_says_who_it_rests_on_and_links_to_the_input_it_came_fr
     assert shown["basis"] == "inferred" and shown["kind"] == "email"
     assert shown["sender"] == people[sources[fact["source"]]["author"]]["full_name"]
     assert shown["origin"] == {"kind": "source", "source": fact["source"]}
-    assert "title" not in shown and sources[fact["source"]]["title"] not in json.dumps(shown)  # never the raw title
+    assert shown["title"] == sources[fact["source"]]["title"]  # the short label shows the input's own subject
     assert WORDING["fact.src.inferred"] and WORDING["fact.confirm"]
 
 

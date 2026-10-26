@@ -153,6 +153,7 @@ INTERNAL = (
     "ui.feedback_problem_days",
     "ui.feedback_problem_max",
     "ui.notifications.retry_minutes",
+    "watch.versions.version",
     "watch.automated_mail.version",
     "watch.mail_kinds.version",
     "watch.mail_kinds.bill.version",

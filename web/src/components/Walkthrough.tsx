@@ -112,26 +112,31 @@ export function Walkthrough(
   // cursor in a field or elsewhere keeps it there.
   useEffect(() => {
     if (!current) return;
-    let tries = 0;
-    let timer = 0;
+    const main = heading.current?.closest("main");
+    if (!main) return;
+    let watcher: MutationObserver | null = null;
+    const stop = () => watcher?.disconnect();
     const place = () => {
-      const main = heading.current?.closest("main");
       const active = document.activeElement;
-      if (active && main?.contains(active) && active.matches("input, select, textarea")) return;
-      const field = main?.querySelector<HTMLElement>(
+      // A cursor the person put in a field of the screen, or on something else inside it, stays where it is.
+      const parked = !active || active === document.body || active === heading.current || !main.contains(active);
+      if (!parked) return stop();
+      const field = main.querySelector<HTMLElement>(
         "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
       );
       if (field) {
         field.focus();
-        return;
+        return stop();
       }
-      if (tries === 10) heading.current?.focus();
-      // Only while the cursor is still where this code put it (nowhere, or the heading) does it keep waiting for a field.
-      const parked = !active || active === document.body || active === heading.current;
-      if (tries++ < 200 && parked) timer = window.setTimeout(place, 50);
+      if (active !== heading.current) heading.current?.focus();
     };
     place();
-    return () => window.clearTimeout(timer);
+    // The screen's fields can arrive a moment later (a slow answer): the cursor goes to the first one as it appears.
+    if (typeof MutationObserver !== "undefined") {
+      watcher = new MutationObserver(place);
+      watcher.observe(main, { childList: true, subtree: true });
+    }
+    return stop;
   }, [current]);
 
   // What a screen said in a toast is about that screen: moving to another one clears it.
