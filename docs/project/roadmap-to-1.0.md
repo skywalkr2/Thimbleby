@@ -37,6 +37,19 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   whole app (P56, with the designer's settings and one-place-to-act points in its hand-over); the one batched plugin API
   release alongside it (P64, `docs/project/plugin-api-release-plan.md`); then the gate week, once its pass bar is set
   (P65); then phase I, which starts only after roadmap I-0c and I-0d.
+- **Updated order (2026-10-26, after checking this file for anything dropped):**
+  1. Phase U's sides and setup work (F3, F4, plugin API 0.3.91): merged, one full run, pushed, the add-on builders told.
+  2. A sweep: tick what is now proven (U1, U2, U3, U5, U9, U11 and the browser tests that were written but not run),
+     then the leftovers the plugin API release unblocked (P58 "Not an older version", P63 lessons 4, 5 and 8, P62
+     `includes:`) and the small fix-batch leftovers (P36, P44, P49).
+  3. The rest of phase U: each item once on Today and one place to act (F6, C57, the reviewer's section 4), the
+     Settings cut with B-11b's screens folded in (F8, U12), day mode (F7), the P1 and P2 findings, the U checks.
+  4. Every kind of AI account hardened (B-11c, gate I-0a), checked on a low-cost model first, then the owner's re-run.
+  5. The UI/UX reviewer's second pass with both personas; the writer walk-through (P70) once the writing pack has screens.
+  6. The owner's part: the laptop and phone exit checks (B-6a, B-6b), an add-on installed from a real private release
+     host (B-5), the gate week with its pass bar (P65), the AI re-run (B-10, O3).
+  7. Phase S's small "Left:" items that the gate week shows matter; the rest stay listed where they are.
+  8. Phase I, once I-0, I-0a, I-0c and I-0d pass.
 - **Status lives here and in `open-promises.md`;** finished promises move to `open-promises-done.md`.
 
 ## Where things stand (2026-10-20)
