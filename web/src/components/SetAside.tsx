@@ -1,6 +1,7 @@
-// The Set aside folder (design 6.5): mail kept away from the assistant, in two sections, one row per message with its
-// sender, date and why it was set aside. "This is work" hands a message in after all; Confirm (one message, or all in a
-// section) teaches the sorting and deletes the copy from the app. The person's mailbox is never changed.
+// The Set aside folder (design 6.5): mail kept away from the assistant, in three sections, one row per message with its
+// sender, date and why it was set aside. Leaving a message here is the confirmation. Treat as work or Treat as personal
+// hands a message in after all; Always set aside mail like this teaches the sorting. The person's mailbox is never
+// changed.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
@@ -11,7 +12,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 type Item = S["SetAsideView"];
-const SECTIONS: Section[] = ["personal", "sales"];
+const SECTIONS: Section[] = ["personal", "sales", "notices"];
 
 export function SetAside() {
   const { t, tn } = useWords();
@@ -46,32 +47,14 @@ export function SetAside() {
 
 function SectionList(props: { section: Section; items: Item[] }) {
   const { t } = useWords();
-  const { confirm } = useSetAside();
-  const [busy, setBusy] = useState(false);
   const { section, items } = props;
   const name = t(`setaside.section.${section}`);
-  const confirmAll = async () => {
-    setBusy(true);
-    await confirm(items.map((i) => i.id));
-    setBusy(false);
-  };
   return (
     <section aria-labelledby={`set-aside-${section}`} data-section={section}>
       <div className="heading">
         <h4 id={`set-aside-${section}`}>
           {name} <span className="count">{items.length}</span>
         </h4>
-        {items.length > 0 && (
-          <button
-            type="button"
-            className="btn small"
-            disabled={busy}
-            aria-label={t("setaside.confirm_all_named", { section: name })}
-            onClick={() => void confirmAll()}
-          >
-            {t("setaside.confirm_all")}
-          </button>
-        )}
       </div>
       {items.length === 0 ? (
         <p className="empty">{t("setaside.section_empty")}</p>
@@ -88,7 +71,7 @@ function SectionList(props: { section: Section; items: Item[] }) {
 
 function SetAsideRow(props: { item: Item }) {
   const { t } = useWords();
-  const { isWork, confirm } = useSetAside();
+  const { isWork, isPersonal, alwaysLikeThis } = useSetAside();
   const [busy, setBusy] = useState(false);
   const { item } = props;
   const titleId = `set-aside-row-${item.id}`;
@@ -97,7 +80,26 @@ function SetAsideRow(props: { item: Item }) {
     await isWork({ id: item.id, title: item.title, version: item.version });
     setBusy(false);
   };
-  const menu: MenuAction[] = [{ id: "confirm", label: t("setaside.confirm"), run: () => void confirm([item.id]) }];
+  const personal = async () => {
+    setBusy(true);
+    await isPersonal({ id: item.id, title: item.title, version: item.version });
+    setBusy(false);
+  };
+  const menu: MenuAction[] = [
+    { id: "personal", label: t("setaside.personal"), run: () => void personal() },
+    ...(item.address
+      ? [
+          {
+            id: "always",
+            label: t("setaside.always_like_this"),
+            run: () => void alwaysLikeThis({ id: item.id, title: item.title, section: item.section, address: item.address }),
+          },
+        ]
+      : []),
+    ...(item.link
+      ? [{ id: "open", label: t("setaside.open"), run: () => void window.open(item.link ?? "", "_blank", "noopener,noreferrer") }]
+      : []),
+  ];
   const facts = [item.sender, item.received ? when(item.received) : "", item.source].filter(Boolean);
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>

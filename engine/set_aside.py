@@ -18,7 +18,7 @@ from engine.storage import StoreError, WriteContext
 from engine.triage import sender_address
 from engine.yaml_load import load_yaml
 
-SECTIONS = ("personal", "sales")
+SECTIONS = ("personal", "sales", "notices")
 #: The domains the core ships as public mail domains (see `is_public_domain`).
 PUBLIC_DOMAINS_FILE = Path(__file__).parent / "defaults" / "public_mail_domains.yaml"
 #: The rule name shown for mail the person set aside by hand.
@@ -30,7 +30,7 @@ _DELETE = WriteContext(actor="pm", trust="trusted", op="set_aside.delete")
 _SNAPSHOT_FIELDS = ["title", "author", "link", "content_hash", "message"]
 _SOURCE_FIELDS = ["title", "content_hash", "url", "watched"]
 
-SECTION_WORDS = {"personal": "personal mail", "sales": "sales mail"}
+SECTION_WORDS = {"personal": "personal mail", "sales": "sales mail", "notices": "automated notices"}
 
 #: The op that deletes a confirmed item's content, and the fields it redacts in the ledger, by record kind.
 DELETE_OP = _DELETE.op
@@ -119,7 +119,7 @@ def set_aside_item(store: Any, snapshot_id: str, section: str) -> list[str]:
     """Set a mail item aside by hand. A request for it that hasn't started (queued, or stopped for the person) is
     closed, remembering what it was so putting the item back restores it. Returns the ids of the requests closed."""
     if section not in SECTIONS:
-        raise StoreError("Choose personal or sales.")
+        raise StoreError("Choose personal, sales or notices.")
     reason = f"you set it aside as {SECTION_WORDS[section]}"
     closed_ids: list[str] = []
     with store.transaction() as tx:
@@ -373,6 +373,7 @@ def folder(ws: Any, store: Any, cfg: Any) -> list[dict[str, Any]]:
                 "source": labels.get(data["source"], data["source"]),
                 "received": message.get("received"),
                 "reason": mark["reason"],
+                "link": data.get("link"),
                 "address": address,
                 "domain": offerable_domain(address, cfg),
             }

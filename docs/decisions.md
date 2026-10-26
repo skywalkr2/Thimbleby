@@ -19,6 +19,28 @@ and the ask prompt calls the reader "the person". Not decided here: "Helpful" an
 kinds, a core record shape the plugin API hold keeps closed.
 **Why:** the owner's first real use showed all three on one screen. Change log: section 206.
 
+## 2026-10-26: Bills, orders and deliveries are tracked from the first sign-in and never set aside; automated notices get their own section (P46)
+
+**Decided:** (1) Three default kinds of mail are recognized by rules with no setup (`watch.mail_kinds`, on): bills and
+statements, orders, and shipping and delivery notices. They are never set aside and never sorted by the assistant's sorting;
+they go to the assistant as work, filed under the Personal project. A bill becomes a to-do to pay it on its due day with the
+amount to pay as the bill states it (never a balance, an account number or a bank link); an order becomes something to watch
+until it arrives, with its return-by day when the mail gives one; a shipping or delivery notice updates the watched order
+instead of making a second. The extraction prompt covers what the rules miss. (2) One-time codes, sign-in alerts and security
+notices move out of "sales" into their own section, Automated notices. (3) A set-aside row offers Treat as work, and in its
+menu Treat as personal, Always set aside mail like this and Open the message, each recording a signal; "Keep it set aside" is
+removed everywhere, because leaving a mail in the folder is the confirmation and only "Always set aside mail like this" teaches.
+Four golden cases cover a bill, an order confirmation, a shipping notice and a one-time code.
+
+**Decided by:** the owner (P46, 2026-10-22).
+
+**Why:** The owner's first real use sorted a utility bill and a shop's order confirmation as sales, and found "Keep set aside" in a
+folder the mail was already in meaningless. Bills and orders are the personal side's daily work.
+
+**Impact:** Design 6.5, 6.32 and 7. New setting group `watch.mail_kinds` with defaults and demo values; the assistant's sorting
+gains the answer `notice`. The amount of a bill is kept in the to-do's text, not as a record field (the dated-fact op still
+carries a day only). No plugin API, manifest, event, record-shape or op change. Change log: section 205.
+
 ## 2026-10-26: One-time-code mail is set aside by rules, a read with nothing to record closes itself, and each mail shows in one list (P42, P47)
 
 **Decided:** (1) The built-in sorting after the workspace's rules also sets aside automated one-time-code mail with no AI

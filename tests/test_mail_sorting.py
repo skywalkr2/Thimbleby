@@ -196,7 +196,7 @@ def test_the_check_reads_answers_by_id_and_refuses_unknown_and_repeated_ids():
     for text in ("no json here", '{"answers": "sales"}', "[1, 2]", ""):
         assert read_answers(text, ids)[1], text
     assert read_answers('{"answers": []}', ids, truncated=True)[1], "an answer cut off at the limit is refused"
-    assert set(ANSWERS) == {"work", "personal", "sales"}
+    assert set(ANSWERS) == {"work", "personal", "sales", "notice"}
 
 
 def test_an_answer_that_fails_the_check_goes_back_once_and_the_fixed_answer_is_used(tmp_path, account):

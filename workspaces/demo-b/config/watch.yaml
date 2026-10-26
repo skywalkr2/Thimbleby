@@ -63,7 +63,12 @@ sorting: ai   # a low-cost run sorts the mail the rules cannot place, from sende
 automated_mail:   # one-time-code mail from a no-reply address is set aside with no AI run
   set_aside: true
   senders: [no-reply, noreply, no_reply, do-not-reply, donotreply]   # what an automated address starts with
-  words: [verification code, one-time code, one-time password, security code, sign-in code, login code, passcode]
+  words: [verification code, one-time code, one-time password, security code, sign-in code, login code, passcode, new sign-in, security alert]
+mail_kinds:   # bills, orders and deliveries are tracked for the Personal project, never set aside
+  enabled: true
+  bill: {senders: [billing, statements, invoices], subject_words: [your statement, statement is ready, amount due, invoice], words: [amount due, due date]}
+  order: {senders: [orders, receipts], subject_words: [order confirmation, thank you for your order], words: [order number]}
+  shipping: {senders: [shipping, tracking], subject_words: [has shipped, out for delivery, has been delivered, tracking number], words: [estimated delivery]}
 sorting_batch: 25   # messages covered by one sorting run
 set_aside_keep_seconds: 60   # how long a confirmed message's copy is kept so Undo can bring it back
 public_mail_domains_extra: [mail.example.net]   # more free mail domains, so no rule is offered for the whole domain

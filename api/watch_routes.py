@@ -34,7 +34,7 @@ from api.schemas import (
     WatchRunView,
     WatchSourceView,
 )
-from engine import closes, set_aside, setup, source_intake, watch
+from engine import closes, set_aside, setup, sides, source_intake, watch
 from engine import settings as settings_screens
 from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
@@ -417,6 +417,41 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         signal(store, "pulled_back", [waiting or snapshot_id], f"Set aside: {mark['reason']}")
+        events.changed()
+        worker.poke()
+        return done(snapshot_id, mark["section"])
+
+    @r.post("/set-aside/{snapshot_id}/personal")
+    def set_aside_is_personal(snapshot_id: str, body: ReadVersion) -> SetAsideDone:
+        """Treat as personal: hand the message in after all, to be read for the Personal project, and keep the
+        correction."""
+        from engine.dispatcher import signal
+
+        snap = mail_snapshot(snapshot_id)
+        mark = snap.data.get("set_aside")
+        if not mark:
+            raise HTTPException(status_code=404, detail="That isn't set aside.")
+        if snap.version != body.read_version:
+            raise HTTPException(status_code=409, detail="That message changed. Look at the folder again.")
+        personal = sides.personal_project(store.read(), current())
+        if personal is None:
+            raise HTTPException(status_code=409, detail="There is no Personal project to file it under.")
+        try:
+            waiting = set_aside.put_back(ws, store, cfg, snapshot_id, hand_in=True)
+            if waiting:
+                with store.transaction() as tx:
+                    req = tx.get("request", waiting)
+                    if req is not None and not req.data.get("project"):
+                        tx.update(
+                            "request",
+                            waiting,
+                            {"project": personal},
+                            WriteContext(actor="pm", trust="trusted", op="set_aside.personal"),
+                            read_version=req.version,
+                        )
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        signal(store, "pulled_back", [waiting or snapshot_id], f"Set aside: {mark['reason']}; treated as personal")
         events.changed()
         worker.poke()
         return done(snapshot_id, mark["section"])

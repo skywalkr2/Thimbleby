@@ -6927,7 +6927,8 @@
               {
                 "enum": [
                   "personal",
-                  "sales"
+                  "sales",
+                  "notices"
                 ],
                 "type": "string"
               },
@@ -7686,7 +7687,8 @@
           "section": {
             "enum": [
               "personal",
-              "sales"
+              "sales",
+              "notices"
             ],
             "title": "Section",
             "type": "string"
@@ -22078,7 +22080,8 @@
           "section": {
             "enum": [
               "personal",
-              "sales"
+              "sales",
+              "notices"
             ],
             "title": "Section",
             "type": "string"
@@ -22124,7 +22127,8 @@
           "section": {
             "enum": [
               "personal",
-              "sales"
+              "sales",
+              "notices"
             ],
             "title": "Section",
             "type": "string"
@@ -22162,6 +22166,18 @@
             "title": "Id",
             "type": "string"
           },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the message opens in the person's mail service, when it has one.",
+            "title": "Link"
+          },
           "reason": {
             "description": "Why it was set aside, in plain words.",
             "title": "Reason",
@@ -22182,7 +22198,8 @@
           "section": {
             "enum": [
               "personal",
-              "sales"
+              "sales",
+              "notices"
             ],
             "title": "Section",
             "type": "string"
@@ -23551,6 +23568,7 @@
             "enum": [
               "personal",
               "sales",
+              "notices",
               "never"
             ],
             "title": "Choice",
@@ -23566,6 +23584,18 @@
           "fingerprint": {
             "title": "Fingerprint",
             "type": "string"
+          },
+          "mail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The set-aside message the choice was made on, so the choice is kept as a correction.",
+            "title": "Mail"
           },
           "senders": {
             "items": {
@@ -36279,6 +36309,56 @@
           }
         },
         "summary": "Set Aside Unconfirm"
+      }
+    },
+    "/api/set-aside/{snapshot_id}/personal": {
+      "post": {
+        "description": "Treat as personal: hand the message in after all, to be read for the Personal project, and keep the\ncorrection.",
+        "operationId": "set_aside_is_personal_api_set_aside__snapshot_id__personal_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetAsideDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside Is Personal"
       }
     },
     "/api/set-aside/{snapshot_id}/put-back": {

@@ -55,7 +55,7 @@ def test_a_no_reply_bill_is_not_caught_and_the_setting_turns_the_rule_off(tmp_pa
     ws, cfg, store = make_mail(tmp_path, [bill, code_mail(1)])
     try:
         assert first_match(store, cfg, _change(bill)) is None
-        assert first_match(store, cfg, _change(code_mail(1)))["section"] == "sales"
+        assert first_match(store, cfg, _change(code_mail(1)))["section"] == "notices"
     finally:
         store.close()
     ws, cfg, store = make_mail(tmp_path / "off", [code_mail(1)], automated_mail={"set_aside": False})

@@ -18,6 +18,7 @@ const item = (id: string, extra: Partial<S["SetAsideView"]> = {}): S["SetAsideVi
   source: "Inbox",
   received: "2026-10-11T08:30:00+00:00",
   reason: "it was sent to many people, as a mailing list or bulk mail",
+  link: null,
   address: addr(id),
   domain: "lists.example.com",
   ...extra,
@@ -46,7 +47,7 @@ function open(extra: Routes = {}, folder: S["SetAsideFolder"] = FOLDER) {
 
 const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
-test("two sections, one row per message with sender, date and why it was set aside", async () => {
+test("three sections, one row per message with sender, date and why it was set aside", async () => {
   open();
   const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
   const personal = screen.getByRole("region", { name: /Personal/ });
@@ -122,58 +123,62 @@ test("Undo of Treat as work sets the message aside again in its section", async 
   await waitFor(() => expect(body(calls, "POST mail/c/set-aside")).toEqual({ section: "personal" }));
 });
 
-test("Confirm in a row's menu writes the sender rule, reads it back and Undo brings the message back and undoes the rule", async () => {
+test("a row offers Treat as work, and in its menu Treat as personal, Always set aside mail like this and Open the message, with no Keep set aside anywhere", async () => {
+  const user = userEvent.setup();
+  open({}, { items: [item("a", { link: "message-a" })], deleted: 0 });
+  const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
+  expect(within(sales).getByRole("button", { name: "Treat as work: Offer a" })).toBeInTheDocument();
+  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
+  expect(await screen.findByRole("menuitem", { name: "Treat as personal" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Always set aside mail like this" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Open the message" })).toBeInTheDocument();
+  expect(screen.queryByText(/Keep (it|them all) set aside/)).not.toBeInTheDocument();
+});
+
+test("Open the message is offered only for a message that has a link", async () => {
+  const user = userEvent.setup();
+  open({}, { items: [item("a")], deleted: 0 });
+  const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
+  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
+  expect(await screen.findByRole("menuitem", { name: "Treat as personal" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Open the message" })).not.toBeInTheDocument();
+});
+
+test("Treat as personal hands the message in for the Personal project, and Undo sets it aside again", async () => {
   const user = userEvent.setup();
   const calls = open({
-    "POST set-aside/confirm": () => ({
-      saved: SAVED,
-      confirmed: 1,
-      senders: [addr("a")],
-      section: "sales",
-      domain_offers: [],
-      ids: ["a"],
-    }),
-    "POST set-aside/unconfirm": () => ({ id: "a" }),
-    "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
+    "POST set-aside/a/personal": () => ({ id: "a", version: 4, section: "sales", address: addr("a"), domain: null }),
+    "POST mail/a/set-aside": () => ({ id: "a", version: 5, section: "sales", address: addr("a"), domain: null }),
   });
   const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Keep it set aside" }));
-  await waitFor(() => expect(body(calls, "POST set-aside/confirm")).toEqual({ fingerprint: "fp-1", ids: ["a"] }));
-  expect(await screen.findByText(`From now on, mail from ${addr("a")} is set aside as sales mail.`)).toBeInTheDocument();
+  await user.click(await screen.findByRole("menuitem", { name: "Treat as personal" }));
+  await waitFor(() => expect(body(calls, "POST set-aside/a/personal")).toEqual({ read_version: 3 }));
+  expect(await screen.findByText(/Handed in Offer a for your Personal project/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(body(calls, "POST set-aside/unconfirm")).toEqual({ ids: ["a"] }));
-  await waitFor(() =>
-    expect(body(calls, "POST settings")).toEqual({ changes: {}, reset: ["watch.triage"], fingerprint: "fp-1" }),
-  );
+  await waitFor(() => expect(body(calls, "POST mail/a/set-aside")).toEqual({ section: "sales" }));
 });
 
-test("Confirm all confirms what the section lists in one save, and offers a rule for a domain three senders share", async () => {
+test("Always set aside mail like this saves a rule for the sender, kept as a correction, and reads it back", async () => {
   const user = userEvent.setup();
-  const calls = open({
-    "POST set-aside/confirm": () => ({
-      saved: SAVED,
-      confirmed: 2,
-      senders: [addr("a"), addr("b")],
-      section: "sales",
-      domain_offers: [{ domain: "lists.example.com", senders: 3, section: "sales" }],
-      ids: ["a", "b"],
-    }),
-    "POST watch/sorting": () => SAVED,
-  });
+  const calls = open({ "POST watch/sorting": () => SAVED });
   const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
-  await user.click(within(sales).getByRole("button", { name: "Keep them all set aside in Sales and promotions" }));
-  await waitFor(() => expect(body(calls, "POST set-aside/confirm")).toEqual({ fingerprint: "fp-1", ids: ["a", "b"] }));
-  expect(calls.filter((c) => c.route === "POST set-aside/confirm")).toHaveLength(1);
-  expect(await screen.findByText("From now on, mail from 2 senders is set aside as sales mail.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Apply to lists.example.com" }));
+  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Always set aside mail like this" }));
   await waitFor(() =>
     expect(body(calls, "POST watch/sorting")).toEqual({
       fingerprint: "fp-1",
       choice: "sales",
-      senders: [],
-      domains: ["lists.example.com"],
+      senders: [addr("a")],
+      domains: [],
+      mail: "a",
     }),
   );
-  expect(await screen.findByText("From now on, mail from lists.example.com is set aside as sales mail.")).toBeInTheDocument();
+  expect(await screen.findByText(`From now on, mail from ${addr("a")} is set aside as sales mail.`)).toBeInTheDocument();
+});
+
+test("the automated notices section is listed beside the others", async () => {
+  open({}, { items: [item("n", { section: "notices", reason: "it is an automated notice" })], deleted: 0 });
+  const notices = await screen.findByRole("region", { name: /Automated notices/ });
+  expect(within(notices).getAllByRole("listitem")).toHaveLength(1);
 });

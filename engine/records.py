@@ -990,7 +990,7 @@ class Snapshot(Record):
     )
     set_aside: dict[str, str] | None = Field(
         None,
-        description="For a mail item set aside as not work: {section (personal or sales), rule, reason}, and "
+        description="For a mail item set aside as not work: {section (personal, sales or notices), rule, reason}, and "
         "{confirmed_at} once the person confirmed it (it is then deleted from the app after a short while). Today "
         "leaves it out and counts it until it is confirmed; the Set aside folder lists it.",
     )

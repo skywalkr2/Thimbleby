@@ -6,10 +6,10 @@ A rule names a matcher: the core's are below; plugins add theirs (`registrar.tri
 change (source, key, title, change, author, before, now, and the added and removed lines) and the rule's parameters,
 and returns a reason in plain words, or None. Matchers are deterministic and never call AI.
 
-A rule with `set_aside` puts mail in the Set aside folder (personal, or sales and promotions) instead of plainly
-closing it; `never` keeps mail with the assistant, over every set-aside rule after it and over the built-in sorting
-that follows the list (`watch.set_aside_defaults`). A match returns `{rule, reason}`, with `section` when the mail is
-set aside.
+A rule with `set_aside` puts mail in the Set aside folder (personal, sales and promotions, or automated notices)
+instead of plainly closing it; `never` keeps mail with the assistant, over every set-aside rule after it and over
+the built-in sorting that follows the list (`watch.set_aside_defaults`). A match returns `{rule, reason}`, with
+`section` when the mail is set aside.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from collections.abc import Callable
 from email.utils import parseaddr
 from typing import Any
 
+from engine.mail_kinds import kind_of_change
 from engine.references import names_for
 
 Matcher = Callable[[dict[str, Any], dict[str, Any]], str | None]
@@ -112,7 +113,7 @@ def automated_code_mail(change: dict[str, Any], params: dict[str, Any]) -> str |
         return None
     text = f"{change.get('title') or ''}\n{change.get('now') or ''}".lower()
     if any(str(w).strip().lower() in text for w in params.get("words", []) if str(w).strip()):
-        return "it is an automated mail with a one-time code"
+        return "it is an automated notice, such as a one-time code or a sign-in alert"
     return None
 
 
@@ -204,17 +205,18 @@ def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, st
         if rule.set_aside:
             closed["section"] = rule.set_aside
         return closed, kept
-    if kept or not change.get("message") or not cfg.watch.set_aside_defaults:
+    if kept or not change.get("message"):
         return None, kept
     auto = cfg.watch.automated_mail
-    built_in = (
-        *BUILT_IN_SET_ASIDE,
-        *(
-            (("automated-code-mail", {"senders": auto.senders, "words": auto.words}, "Automated codes", "sales"),)
-            if auto.set_aside
-            else ()
-        ),
-    )
+    if cfg.watch.set_aside_defaults and auto.set_aside:
+        reason = automated_code_mail(change, {"senders": auto.senders, "words": auto.words})
+        if reason:
+            return {"rule": "Automated notices", "reason": reason, "section": "notices"}, kept
+    if kind_of_change(cfg.watch.mail_kinds, change):
+        return None, True  # a bill, an order or a delivery is never set aside, and no sorting may set it aside
+    if not cfg.watch.set_aside_defaults:
+        return None, kept
+    built_in = BUILT_IN_SET_ASIDE
     for kind, params, name, section in built_in:
         reason = CORE[kind](change, params)
         if reason:

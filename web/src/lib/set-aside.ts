@@ -4,7 +4,6 @@
 import { useCallback } from "react";
 import { api, type S } from "./api";
 import { useAct } from "./act";
-import { undoBody } from "./settings";
 import { useAfterSave, useFreshFingerprint } from "./settings-save";
 import { useWords } from "./wording";
 
@@ -17,7 +16,7 @@ export interface MailRef {
 }
 
 export function useSetAside() {
-  const { t, tn, has } = useWords();
+  const { t, has } = useWords();
   const act = useAct();
   const afterSave = useAfterSave();
   const fresh = useFreshFingerprint();
@@ -84,38 +83,30 @@ export function useSetAside() {
     [act, offers, t],
   );
 
-  /** Confirm: a sorting rule for each sender, and the messages leave the folder to be deleted from the app after the
-   * undo time. One save and one Undo for everything confirmed together. */
-  const confirm = useCallback(
-    (ids: string[]) =>
+  /** "Treat as personal" on a message in the folder: handed in to be read for the Personal project. Undo sets it
+   * aside again. */
+  const isPersonal = useCallback(
+    (mail: MailRef & { version: number }) =>
       act(
-        async () => api.confirmSetAside(await fresh(), ids),
-        (done) => {
-          const words = what(done.section ?? null);
-          const message = done.senders.length
-            ? done.senders.length === 1
-              ? t("setaside.rule_sender", { sender: done.senders[0], what: words })
-              : tn("setaside.confirmed_senders", done.senders.length, { what: words })
-            : done.confirmed > 0
-              ? tn("setaside.confirmed_none", done.confirmed)
-              : t("setaside.confirmed_nothing");
-          const domains = done.domain_offers.map((o) => ({
-            label: t("setaside.always_domain_named", { domain: o.domain }),
-            run: () => always(o.section, [], [o.domain], t("setaside.rule_domain", { domain: o.domain, what: what(o.section) })),
-          }));
-          return {
-            message,
-            undo: async () => {
-              await api.unconfirmSetAside(done.ids);
-              if (done.saved.changes.length) await api.saveSettings(undoBody(done.saved.changes, await fresh()));
-            },
-            action: domains[0],
-            more: domains.slice(1),
-          };
-        },
+        () => api.isPersonal(mail.id, mail.version),
+        (done) => ({
+          message: t("setaside.personal_done", { title: mail.title }),
+          undo: () => api.setAsideMail(done.id, done.section),
+          ...offers("never", done, ""),
+        }),
       ),
-    [act, always, fresh, t, tn, what],
+    [act, offers, t],
   );
 
-  return { setAside, isWork, confirm, always };
+  /** "Always set aside mail like this": a saved rule for the sender, read back with Undo, kept as a correction. */
+  const alwaysLikeThis = useCallback(
+    async (mail: MailRef & { section: Section; address: string }) => {
+      const fingerprint = await fresh();
+      const saved = await act(() => api.sortingRule({ fingerprint, choice: mail.section, senders: [mail.address], domains: [], mail: mail.id }));
+      if (saved) await afterSave(saved, { message: t("setaside.rule_sender", { sender: mail.address, what: what(mail.section) }) });
+    },
+    [act, afterSave, fresh, t, what],
+  );
+
+  return { setAside, isWork, isPersonal, alwaysLikeThis, always };
 }

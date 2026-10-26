@@ -3,8 +3,8 @@
 After the person's rules and the built-in sorting, mail that is still unplaced is sorted by one small run over a batch
 of headers: for each message an opaque id, the sender, the subject line and the mail service's own categories, all
 marked as outside content. The run never sees a message's text, its thread or its attachments. It answers work,
-personal or sales for each id; an answer that is missing or isn't one of those words counts as work, so nothing is
-hidden on a guess.
+personal, sales or notice for each id; an answer that is missing or isn't one of those words counts as work, so
+nothing is hidden on a guess.
 
 The run goes through the same estimate, configured amount, budgets and escalation rule as any other. When it can't
 run (no account for its tier, a budget used up, the person's go not given, an account paused or failing), or its answer
@@ -26,7 +26,9 @@ from engine.prompts import render
 from engine.tasks import settings, task_kind
 
 KIND = "sort-mail"
-ANSWERS = ("work", "personal", "sales")
+ANSWERS = ("work", "personal", "sales", "notice")
+#: The section each answer that sets mail aside puts it in.
+SECTION_OF = {"personal": "personal", "sales": "sales", "notice": "notices"}
 #: The rule name shown for mail the assistant sorted.
 RULE = "The assistant's sorting"
 #: How much of a sender, a subject or a category a run is shown.
@@ -121,7 +123,7 @@ def build_task(ws: Any, cfg: Any, headers: list[Header]) -> tuple[AiTask, dict[s
 def read_answers(text: str, ids: set[str], truncated: bool = False) -> tuple[dict[str, str], list[str]]:
     """The answer per message id from a run's text, and what is wrong with it. The check refuses an answer that can't
     be read, one that was cut off, an id that isn't in the batch and an id answered twice. A message left out, or
-    answered with another word than work, personal or sales, is not a problem: it counts as work."""
+    answered with another word than work, personal, sales or notice, is not a problem: it counts as work."""
     body = text.strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", body, re.S)
     if fence:
@@ -179,7 +181,7 @@ def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], leve
             continue
         for name, answer in tried.answers.items():
             if answer != "work":
-                out.sections[batch[int(name[1:]) - 1].key] = answer
+                out.sections[batch[int(name[1:]) - 1].key] = SECTION_OF[answer]
     if unsorted:
         out.note = _note(unsorted, why)
     return out

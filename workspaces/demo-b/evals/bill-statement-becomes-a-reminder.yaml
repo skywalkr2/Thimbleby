@@ -1,0 +1,34 @@
+id: bill-statement-becomes-a-reminder
+title: 'A utility bill becomes a to-do to pay it by its due day, with the amount to pay and no balance'
+skills: [dates, evidence]
+received: '2026-10-26'
+pasted: |-
+  From: Harbor Power <billing@power.example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Your statement is ready
+
+  Your October statement is ready. Amount due: $64.20. Payment due: November 12, 2026.
+  Your previous balance of $0.00 was paid in full. Thank you.
+expect:
+- op: action.add
+  text_has:
+  - pay
+  - '64.20'
+  owners: [PER-1]
+  due: '2026-11-12'
+- held: record.set
+  text_has:
+  - remind_at
+forbid:
+- op: question.add
+# The delivery day is the to-do's own due day, so no calendar entry is made for it.
+- op: event.add
+stub_answer:
+  summary: The power bill of $64.20 is due on November 12.
+  ops:
+  - op: action.add
+    text: Pay the Harbor Power bill, $64.20
+    owners: [PER-1]
+    due_words: November 12, 2026
+    evidence:
+      quote: 'Amount due: $64.20. Payment due: November 12, 2026.'

@@ -4361,12 +4361,13 @@ class SetAsideView(BaseModel):
 
     id: str = Field(description="The mail item's snapshot.")
     version: int
-    section: Literal["personal", "sales"]
+    section: Literal["personal", "sales", "notices"]
     title: str
     sender: str | None = None
     source: str = Field(description="The watched source's label.")
     received: str | None = Field(None, description="ISO 8601 date-time with its offset, as the service gave it.")
     reason: str = Field(description="Why it was set aside, in plain words.")
+    link: str | None = Field(None, description="Where the message opens in the person's mail service, when it has one.")
     address: str = Field("", description="The sender's address, when the mail holds one.")
     domain: str | None = Field(
         None,
@@ -4383,7 +4384,7 @@ class SetAsideFolder(BaseModel):
 class SetAsideIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    section: Literal["personal", "sales"]
+    section: Literal["personal", "sales", "notices"]
 
 
 class SetAsideDone(BaseModel):
@@ -4391,7 +4392,7 @@ class SetAsideDone(BaseModel):
 
     id: str
     version: int
-    section: Literal["personal", "sales"]
+    section: Literal["personal", "sales", "notices"]
     address: str = Field("", description="The sender's address, when the mail holds one.")
     domain: str | None = Field(
         None,
@@ -4406,7 +4407,10 @@ class SortingRuleIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fingerprint: str
-    choice: Literal["personal", "sales", "never"]
+    choice: Literal["personal", "sales", "notices", "never"]
+    mail: str | None = Field(
+        None, description="The set-aside message the choice was made on, so the choice is kept as a correction."
+    )
     senders: list[str] = Field(default_factory=list)
     domains: list[str] = Field(default_factory=list)
 
@@ -4421,14 +4425,16 @@ class ConfirmIn(BaseModel):
 class DomainOffer(BaseModel):
     domain: str
     senders: int = Field(description="How many of the confirmed senders are on it.")
-    section: Literal["personal", "sales"]
+    section: Literal["personal", "sales", "notices"]
 
 
 class ConfirmDone(BaseModel):
     saved: SettingsSaved
     confirmed: int = Field(description="How many messages were confirmed.")
     senders: list[str] = Field(description="The distinct sender addresses a rule was written for.")
-    section: Literal["personal", "sales"] | None = Field(None, description="The section, when all were in one.")
+    section: Literal["personal", "sales", "notices"] | None = Field(
+        None, description="The section, when all were in one."
+    )
     domain_offers: list[DomainOffer] = Field(
         description="Domains that three or more of the confirmed senders share, for an 'always' rule."
     )

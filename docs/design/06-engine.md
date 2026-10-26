@@ -190,13 +190,22 @@ and has a one-click way to send it back ("Take a closer look" queues it and reco
 tuned, 6.20). A closed mail item is left out of Today's list of what came in, and counted. A matcher that fails counts as no
 match and is contained like any plugin call (6.1).
 
-**One-time-code mail** (section 204): after the workspace's rules, the built-in sorting sets aside, by rules with no AI run,
-mail from a no-reply address (`watch.automated_mail.senders`) whose subject or text holds a code phrase (`words`); `set_aside`
-turns it off. A no-reply bill or order has no code phrase and goes on to the assistant.
+**Automated notices** (sections 204, 205): after the workspace's rules, the built-in sorting sets aside, by rules with no AI
+run, mail from a no-reply address (`watch.automated_mail.senders`) whose subject or text holds a notice phrase (`words`: a
+one-time code, a sign-in alert, a security notice), in its own section, *Automated notices*, never in sales; `set_aside` turns
+it off. A no-reply bill or order has no such phrase and goes on to the assistant.
+
+**Bills, orders and deliveries are never set aside** (section 205; P46): right after the automated notices, rules with no AI
+run (`engine/mail_kinds.py`, words in `watch.mail_kinds`, on from the first sign-in with no setup) recognize a bill or
+statement, an order confirmation and a shipping or delivery notice, from the sender's address and the subject or text. Such
+mail is kept with the assistant against the built-in sorting and the assistant's sorting (as a `never` rule would), is filed
+under the Personal project whoever sent it (`engine/sides.py`, rank 0, `filed_by` word = the kind), and the assistant's
+sorting prompt answers *work* for what the rules miss. Rules and the person's own sender rules still come first: a rule that
+sets mail aside from a sender wins. What each becomes is in 6.32. `tests/test_mail_kinds.py`.
 
 **Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**, `tests/test_set_aside.py`; the sorting run and the
-proof that learning never reads it are phase L0, **built**, `tests/test_mail_sorting.py`). Mail that isn't work goes into a **Set aside** folder in the app, in two
-sections: *Personal*, and *Sales and promotions*. The person's mailbox is never changed; the add-ons read only. Set-aside mail
+proof that learning never reads it are phase L0, **built**, `tests/test_mail_sorting.py`). Mail that isn't work goes into a **Set aside** folder in the app, in three
+sections: *Personal*, *Sales and promotions* and *Automated notices*. The person's mailbox is never changed; the add-ons read only. Set-aside mail
 never reaches the assistant and never feeds learning:
 - **No knowledge from it:** no signal, fact, glossary term, lesson or evaluation case comes from it, and the repeat-correction
   and knowledge-used rates leave it out (6.20, 6.22). **As built,** a set-aside change is kept the way a closed one is, as a
@@ -214,7 +223,7 @@ the address), from the add-on (plugin API 0.3.58, optional, empty by default) or
 Cc headers; the snapshot keeps it. It lets a first name in the text mean the person on the message (6.11).
 
 It is sorted in this order, first match wins:
-1. **The person's own rules**, in the `triage:` list (4.5). A rule with `set_aside: personal` or `sales` sets mail aside in that
+1. **The person's own rules**, in the `triage:` list (4.5). A rule with `set_aside: personal`, `sales` or `notices` sets mail aside in that
    section instead of plainly closing it; `set_aside: never` keeps mail with the assistant against every set-aside rule after it
    and against the built-in sorting. The app keeps one rule of its own per choice (a `sender-rule` with the senders and domains
    listed), so the list stays short: "never" goes first in the list, a set-aside rule right after the last "never", and a sender
@@ -3655,6 +3664,22 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     put off with Not now, and what waits for the brief is one line there. Start makes the area under Personal and files
     the items as the person's own `record.edit`s, so each move is a correction the assistant learns from, in two changes
     that Undo takes back together. Nothing is moved before the yes. `tests/test_areas.py`.
+- **Bills, orders and deliveries (decided 2026-10-26; change log 205; P46):** they are the person's own life, tracked from the
+  first sign-in with no setup, never set aside as sales (6.5). Rules recognize them (`watch.mail_kinds`) and file them under
+  the Personal project; the extraction prompt covers what the rules miss. A *bill* becomes one to-do owned by the person,
+  "Pay the <sender> bill, <amount to pay>", due on the bill's due day, so the reminder the rules propose for a due day
+  follows (held for the person's yes, as every reminder is): the amount to pay as the bill states it, never a balance, an
+  account number or a bank link, and a statement with nothing to pay and no due day records nothing. An *order
+  confirmation* becomes one to-do that is something to watch for, "Watch for the <shop> order of <what>", on hold
+  ("waiting for the order to arrive") and due on the expected delivery day when the mail gives one, plus a dated fact for the
+  return-by day when it gives one. A *shipping or delivery notice* never makes a second one: it moves the watched order
+  (a new expected day), closes it ("delivered") or is news on it ("shipped" with no new day); only a notice with no matching
+  open to-do makes the watch. These use ops that exist (`action.add`, `action.move`, `action.close`, `action.news`, `fact`);
+  nothing in the plugin API changed. On the Set aside screen a row offers *Treat as work*, and in its menu *Treat as
+  personal* (handed in for the Personal project), *Always set aside mail like this* (a rule for the sender) and *Open the
+  message*, each recording a signal; there is no "Keep it set aside", because leaving a mail there is the confirmation.
+  Golden set: `bill-statement-becomes-a-reminder`, `order-confirmation-is-watched-until-it-arrives`,
+  `shipping-notice-updates-the-watched-order` and `not-work-one-time-code` in `workspaces/demo-b/evals/`.
 - **One Today:** a bill due Friday sits beside a work deadline, tagged by its area.
 
 ### Dependability, from the designer's answers (2026-10-19)

@@ -2807,20 +2807,20 @@ class TriageRule(ConfigModel):
         description="People the matcher looks for by name (terms-absent, name-matches), held by id like projects: "
         "their names and other names now count as terms.",
     )
-    set_aside: Literal["personal", "sales", "never"] | None = Field(
+    set_aside: Literal["personal", "sales", "notices", "never"] | None = Field(
         None,
-        description="With a match, put mail in the Set aside folder (personal, or sales and promotions) instead of "
-        "plainly closing it; never keeps the mail with the assistant, over any set-aside rule after it and over the "
-        "built-in sorting. Empty: the rule closes the change as usual.",
+        description="With a match, put mail in the Set aside folder (personal, sales and promotions, or automated "
+        "notices) instead of plainly closing it; never keeps the mail with the assistant, over any set-aside rule "
+        "after it and over the built-in sorting. Empty: the rule closes the change as usual.",
     )
 
 
 class AutomatedMail(FileModel):
     set_aside: bool = Field(
         True,
-        description="Set aside automated mail that carries a one-time code (a verification or sign-in code) from a "
-        "no-reply address, with no AI run. It applies after the rules above, so a rule that keeps mail from a "
-        "sender wins.",
+        description="Set aside automated notices (a one-time code, a sign-in alert, a security notice) from a "
+        "no-reply address into the Automated notices section, with no AI run. It applies after the rules "
+        "above, so a rule that keeps mail from a sender wins.",
     )
     senders: list[str] = Field(
         default_factory=lambda: ["no-reply", "noreply", "no_reply", "do-not-reply", "donotreply"],
@@ -2835,9 +2835,88 @@ class AutomatedMail(FileModel):
             "sign-in code",
             "login code",
             "passcode",
+            "new sign-in",
+            "new login",
+            "sign-in attempt",
+            "security alert",
+            "suspicious activity",
+            "reset your password",
         ],
-        description="Words in the subject or text that say a mail carries a one-time code. A no-reply mail without "
+        description="Words in the subject or text that say a mail is an automated notice (a one-time code, a sign-in "
+        "alert or a security notice). A no-reply mail without "
         "one of them stays with the assistant.",
+    )
+
+
+class MailKind(FileModel):
+    senders: list[str] = Field(
+        default_factory=list,
+        description="Words a sender's address starts with, before the @ sign. With one of these, a word below in the "
+        "subject or text makes the mail this kind.",
+    )
+    subject_words: list[str] = Field(
+        default_factory=list, description="Phrases in the subject line that alone make the mail this kind."
+    )
+    words: list[str] = Field(
+        default_factory=list,
+        description="Phrases in the subject or text that, from a sender above, make the mail this kind.",
+    )
+
+
+def _kind(what: str, senders: list[str], subject_words: list[str], words: list[str]) -> Any:
+    return Field(
+        default_factory=lambda: MailKind(senders=senders, subject_words=subject_words, words=words),
+        description=f"How {what} is recognized.",
+    )
+
+
+class MailKinds(FileModel):
+    enabled: bool = Field(
+        True,
+        description="Recognize bills and statements, orders, and shipping and delivery notices by rules, with no AI "
+        "run, from the first sign-in: such mail is never set aside, is not sorted by the assistant's sorting and is "
+        "handed to the assistant as work for the Personal project. It applies after the rules above, so a rule that "
+        "sets mail aside from a sender wins.",
+    )
+    bill: MailKind = _kind(
+        "a bill or statement",
+        ["billing", "bills", "statements", "statement", "invoice", "invoices", "accounts"],
+        [
+            "your bill",
+            "your statement",
+            "statement is ready",
+            "bill is ready",
+            "bill is due",
+            "amount due",
+            "payment due",
+            "payment reminder",
+            "invoice",
+        ],
+        ["amount due", "due date", "payment due", "due on", "minimum payment", "statement"],
+    )
+    order: MailKind = _kind(
+        "an order confirmation",
+        ["orders", "order", "receipts"],
+        ["order confirmation", "your order", "thank you for your order", "order receipt", "order #"],
+        ["order number", "order confirmation", "thank you for your order", "order total"],
+    )
+    shipping: MailKind = _kind(
+        "a shipping or delivery notice",
+        ["shipping", "delivery", "tracking", "dispatch", "shipment"],
+        [
+            "has shipped",
+            "has been shipped",
+            "shipping confirmation",
+            "out for delivery",
+            "has been delivered",
+            "was delivered",
+            "delivery update",
+            "tracking number",
+            "on its way",
+            "your package",
+            "your parcel",
+        ],
+        ["tracking number", "estimated delivery", "out for delivery", "has shipped"],
     )
 
 
@@ -2856,6 +2935,11 @@ class WatchFile(FileModel):
     automated_mail: AutomatedMail = Field(
         default_factory=AutomatedMail,
         description="How automated mail with a one-time code is recognized and set aside by rules.",
+    )
+    mail_kinds: MailKinds = Field(
+        default_factory=MailKinds,
+        description="How bills and statements, orders, and shipping and delivery notices are recognized by rules; "
+        "they are tracked for the Personal project, never set aside.",
     )
     sorting: Literal["ai", "rules"] = Field(
         "ai",

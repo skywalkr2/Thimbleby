@@ -815,7 +815,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 "aside mail from people you know. Choose the sender instead.",
             )
         rules = sorting.with_sender_rules(triage_now(), body.choice, body.senders, body.domains)
-        return saved(save({"watch.triage": rules}, [], body.fingerprint, allow=("watch.triage",)))
+        result = saved(save({"watch.triage": rules}, [], body.fingerprint, allow=("watch.triage",)))
+        if body.mail and body.choice != "never" and store.read().get("snapshot", body.mail) is not None:
+            from engine.dispatcher import signal
+
+            signal(store, "set_aside", [body.mail], f"Always set aside mail like this ({body.choice})")
+        return result
 
     @r.post("/set-aside/confirm")
     def set_aside_confirm(body: ConfirmIn) -> ConfirmDone:

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from engine.mail_kinds import kind_of_input
 from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
 from engine.records import FiledBy
 from engine.storage import StoreError, WriteContext
@@ -299,6 +300,8 @@ def file_by_people(
     """The ops with every new action, question, fact or note that names no project filed under a project, each keeping
     why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to both
     sides decides nothing and the next is read:
+    0. mail the rules know as a bill, an order or a delivery (`engine/mail_kinds.py`): the personal project, whoever
+       sent it;
     1. the people the op names and the input's sender, when known: the side every deciding person is on (those on
        both sides and those not known don't decide), filed under that side's top project;
     2. the sender's mail domain, when the sender is nobody known (`domain_side`);
@@ -319,10 +322,15 @@ def file_by_people(
     domain = sender_domain(people, raw_input) if business is not None else None
     by_domain = domain_side(people, cfg, domain) if domain else None
     only_personal = business is None and personal is not None and _only_top(view, personal)
+    kind = kind_of_input(cfg.watch.mail_kinds, raw_input)
     out: list[Any] = []
     for op in ops:
         if not isinstance(op, (ActionAddOp, QuestionAddOp, FactOp, NoteOp)) or op.project:
             out.append(op)
+            continue
+        if kind and personal:
+            # A bill, an order or a delivery is the person's own life, whoever sent it: the Personal project.
+            out.append(op.model_copy(update={"project": personal, "filed_by": Filing(personal, "word", kind).stamp()}))
             continue
         if business is None:
             out.append(op.model_copy(update={"project": personal}) if only_personal else op)

@@ -255,13 +255,13 @@ test.describe.serial("journey: mail", () => {
     expect(handed.inputs.filter((input) => input.includes(sales))).toHaveLength(1);
     expect(handed.inputs.filter((input) => input.includes(social))).toHaveLength(0);
 
-    // Confirming the social update teaches the sorting about its sender and takes it out of the folder.
+    // Choosing Always set aside mail like this teaches the sorting about the sender; the message stays in the folder.
     await socialRow.getByRole("button", { name: `More actions for ${social}` }).click();
-    await page.getByRole("menuitem", { name: "Keep it set aside" }).click();
+    await page.getByRole("menuitem", { name: "Always set aside mail like this" }).click();
     await expect(
       page.getByText("From now on, mail from updates@network.example.com is set aside as sales mail."),
     ).toBeVisible();
-    await expect(folder.locator("li.line", { hasText: social })).toHaveCount(0);
+    await expect(folder.locator("li.line", { hasText: social })).toHaveCount(1);
     await visit(page);
 
     // The next read brings a new message from that sender, saying nothing about itself: it is set aside by the new
@@ -269,11 +269,10 @@ test.describe.serial("journey: mail", () => {
     const later = await (await fetch(`${FAKE}/__e2e/mail-later`, { method: "POST" })).json();
     await openView(page, "Today");
     const cameIn = page.getByRole("region", { name: "Came in" });
-    // The confirmed message has left the folder, so nothing is counted until the new one is read.
+    // The earlier message is still in the folder, so it is counted until the new one is read, then both are.
     await expect(cameIn.getByRole("button", { name: "Check now" })).toBeVisible();
-    await expect(cameIn.getByRole("button", { name: /set aside$/ })).toHaveCount(0);
     await cameIn.getByRole("button", { name: "Check now" }).click();
-    await expect(cameIn.getByRole("button", { name: "1 set aside" })).toBeVisible({ timeout: 30_000 });
+    await expect(cameIn.getByRole("button", { name: "2 set aside" })).toBeVisible({ timeout: 30_000 });
     await expect(cameIn.getByText(later.subject)).toHaveCount(0);
     await openView(page, "Connections");
     await expect(page.locator("#set-aside").locator("li.line", { hasText: later.subject })).toContainText(

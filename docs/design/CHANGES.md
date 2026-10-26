@@ -1041,6 +1041,25 @@ yet follow, that it is *designed*, with its phase.
   and the summary of the change an item follows are not shown (`web/src/components/WhatChanged.test.tsx`: "the
   assistant's own summary of a run never shows").
 
+## 205. Bills, orders and deliveries are tracked and never set aside; automated notices have their own section; a set-aside row's choices (2026-10-26; P46)
+
+- **Design 6.5 (sorting):** a new rules step, `watch.mail_kinds` (`engine/mail_kinds.py`), keeps a bill or statement, an order
+  confirmation and a shipping or delivery notice with the assistant, against the built-in sorting and the assistant's sorting;
+  the one-time-code rule moves to a third section, *Automated notices* (`watch.automated_mail` also reads sign-in alerts and
+  security notices); the assistant's sorting answers `notice` for those and `work` for bills and orders. **Built:**
+  `tests/test_mail_kinds.py::test_a_bill_an_order_and_a_delivery_are_kept_with_the_assistant_whatever_else_the_mail_says`,
+  `::test_a_first_read_hands_them_in_as_work_with_no_run_and_sets_a_code_aside_as_a_notice`,
+  `::test_the_setting_turns_the_kinds_off`, `::test_a_shop_newsletter_with_no_order_words_is_still_sales_mail`.
+- **Design 6.32 (what they become):** filing rank 0 puts such mail under the Personal project
+  (`::test_mail_the_rules_know_as_a_bill_or_an_order_is_filed_under_the_personal_project`); a bill is a to-do to pay with its
+  due day and the amount to pay, an order is something to watch (on hold, due on its delivery day) with its return-by day as a
+  fact, a shipping notice moves or closes the watched order (extraction prompt `notes`; golden set, below). Existing ops only.
+- **Design 7 and 6.5 (the Set aside screen):** a row offers Treat as work, and in its menu Treat as personal, Always set aside
+  mail like this and Open the message; "Keep it set aside" and "Keep them all set aside" are gone. **Built:**
+  `tests/test_mail_kinds.py::test_treat_as_personal_hands_it_in_for_the_personal_project_and_records_a_signal`,
+  `::test_always_set_aside_records_a_signal_and_the_row_carries_its_link`, `web/src/components/SetAside.test.tsx`.
+- **Golden set:** `tests/test_mail_kinds.py::test_the_mail_kind_cases_pass_on_their_ideal_answers` runs the four cases.
+
 ## 204. One-time-code mail is set aside by rules; a read with nothing to record closes itself; each mail in one list (2026-10-26; P42, P47)
 
 - **Design 6.5 (built-in sorting):** after the workspace's rules, automated one-time-code mail (a no-reply sender and a code

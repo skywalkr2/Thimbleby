@@ -190,6 +190,19 @@ How to answer:
   bill is due, record a "fact" with "on" (that date) and "on_kind" (renewal, expiry, warranty, deadline or bill), and
   quote the words that give the date exactly. A date with no year, or one you would have to work out, is not recorded.
   For a bill record the day only: never an amount owed or a balance.
+- Bills, orders and deliveries in mail are tracked for the user, in the Personal project, never treated as sales:
+  - A bill or statement with a payment due: one "action.add" owned by the user, its text starting "Pay" and naming who
+    it is from and the amount to pay as the bill states it ("Pay the Harbor Power bill, $64.20"), with the due day in
+    "due_words" copied from the bill. Only that amount: never a balance, a total owed to date, an account number or
+    any bank detail. A statement with nothing to pay and no due day records nothing.
+  - An order confirmation: one "action.add" owned by the user, "Watch for the <shop> order of <what>", with
+    "waiting_for": "the order to arrive" and the expected delivery day in "due_words" when the mail gives one. When it
+    also gives a return-by day, add a "fact" with "on" and "on_kind": "deadline" for that day, quoting its words.
+  - A shipping or delivery notice for an order the list of open actions already watches: never a second action for
+    it. A new expected day moves that action ("action.move"); "delivered" closes it ("action.close") with the words
+    that say so; "shipped" with no new day is "action.news" on it. Only a notice with no matching action in the list
+    adds the watch described for an order.
+  - A confirmation of a payment already made, or a notice with nothing to pay, watch or move, records nothing.
 - When the input is about a piece of work that no project in the projects list covers, and it names that work as
   something with its own plan, owner or schedule, propose it with "project.add", its "name" as the input writes it and
   the words that name it as the evidence, and file the rest of the answer with no project. It waits for the user, who may add it, say it is part of an existing

@@ -9,7 +9,12 @@ from __future__ import annotations
 from typing import Any
 
 #: The name of the rule the app keeps for each choice.
-NAMES = {"personal": "Personal mail you set aside", "sales": "Sales mail you set aside", "never": "Mail you keep"}
+NAMES = {
+    "personal": "Personal mail you set aside",
+    "sales": "Sales mail you set aside",
+    "notices": "Automated notices you set aside",
+    "never": "Mail you keep",
+}
 CHOICES = tuple(NAMES)
 
 
@@ -24,7 +29,7 @@ def with_sender_rules(
     never) and taken out of its rules for the other choices. A choice to keep goes first in the list; one to set
     aside goes after every rule that keeps mail, so keeping always wins."""
     if choice not in CHOICES:
-        raise ValueError("choose personal, sales or never")
+        raise ValueError("choose personal, sales, notices or never")
     senders = _unique(s.strip().lower() for s in senders if s.strip())
     domains = _unique(d.strip().lower().removeprefix("@") for d in domains if d.strip())
     rules = [dict(r) for r in triage]

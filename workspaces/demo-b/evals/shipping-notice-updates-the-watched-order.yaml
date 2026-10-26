@@ -1,0 +1,38 @@
+id: shipping-notice-updates-the-watched-order
+title: 'A shipping notice moves the order already being watched; it makes no second one'
+skills: [close-right-item, dates, evidence]
+received: '2026-10-30'
+given:
+- kind: action
+  id: ACT-91
+  fields:
+    project: PRJ-2
+    text: Watch for the Corner Goods order of a desk lamp
+    owners:
+    - person: PER-1
+    due: '2026-11-03'
+    due_words: November 3, 2026
+    on_hold:
+      waiting_for: the order to arrive
+      since: '2026-10-26'
+pasted: |-
+  From: Corner Goods <shipping@shop.example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Your order has shipped
+
+  Your desk lamp has shipped. Tracking number 9Z4471. Estimated delivery: November 5, 2026.
+expect:
+- op: action.move
+  id: ACT-91
+  due_words: November 5, 2026
+forbid:
+- op: action.add
+- op: question.add
+stub_answer:
+  summary: The desk lamp is now expected on November 5.
+  ops:
+  - op: action.move
+    id: ACT-91
+    due_words: November 5, 2026
+    evidence:
+      quote: 'Your desk lamp has shipped. Tracking number 9Z4471. Estimated delivery: November 5, 2026.'

@@ -1,0 +1,46 @@
+id: order-confirmation-is-watched-until-it-arrives
+title: 'A shop order is something to watch for until it arrives, with its return-by day'
+skills: [dates, evidence]
+received: '2026-10-26'
+pasted: |-
+  From: Corner Goods <orders@shop.example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Order confirmation
+
+  Thank you for your order of a desk lamp. Order number 4471.
+  Expected delivery: November 3, 2026. You can return it until November 17, 2026.
+expect:
+- op: action.add
+  text_has:
+  - lamp
+  owners: [PER-1]
+  due: '2026-11-03'
+  on_hold: true
+- op: fact
+  text_has:
+  - return
+  "on": '2026-11-17'
+  on_kind: deadline
+- held: record.set
+  text_has:
+  - remind_at
+forbid:
+- op: question.add
+# The delivery day is the to-do's own due day, so no calendar entry is made for it.
+- op: event.add
+stub_answer:
+  summary: The desk lamp order is expected on November 3 and can be returned until November 17.
+  ops:
+  - op: action.add
+    text: Watch for the Corner Goods order of a desk lamp
+    owners: [PER-1]
+    due_words: November 3, 2026
+    waiting_for: the order to arrive
+    evidence:
+      quote: 'Expected delivery: November 3, 2026.'
+  - op: fact
+    text: The desk lamp from Corner Goods can be returned until November 17, 2026.
+    "on": '2026-11-17'
+    on_kind: deadline
+    evidence:
+      quote: You can return it until November 17, 2026.

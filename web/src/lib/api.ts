@@ -119,6 +119,8 @@ export const api = {
     call<S["SetAsideDone"]>("POST", `mail/${id(item)}/set-aside`, { section } satisfies S["SetAsideIn"]),
   isWork: (item: string, readVersion: number) =>
     call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/work`, { read_version: readVersion }),
+  isPersonal: (item: string, readVersion: number) =>
+    call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/personal`, { read_version: readVersion }),
   putBack: (item: string, readVersion: number) =>
     call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/put-back`, { read_version: readVersion }),
   sortingRule: (body: S["SortingRuleIn"]) => call<S["SettingsSaved"]>("POST", "watch/sorting", body),
