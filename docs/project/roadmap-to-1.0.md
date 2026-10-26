@@ -1210,11 +1210,13 @@ as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't cl
 - [ ] [U8] The first result reads sent mail by default. An empty result says what was read and offers "Hand something in".
 - [x] [U9] The assistant is introduced by name before anything refers to it. The workspace never shows as "Workspace".
   **Built:** `tests/test_walkthrough.py::test_saving_the_persons_name_names_a_default_named_workspace_after_them_and_leaves_a_renamed_one_alone`, `web/src/components/Walkthrough.test.tsx` ("You says what the assistant is called, and Rename...").
-- [ ] [U10] Today shows each item once (C57), with at most three rail cards.
+- [x] [U10] Today shows each item once (C57), with at most three rail cards.
+  **Built:** `tests/test_today_queue.py::test_no_line_key_repeats_on_today_after_each_kind_of_input`, `web/src/components/TodayRail.test.tsx` ("the rail has at most three cards...").
 - [x] [U11] At 390px, setup's first field is above the fold, and the step list is one line.
   **Built:** `web/e2e/shell.spec.ts` ("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold").
 - [ ] [U12] Settings: at most 26 basic fields, at most 30 advanced, and no ids or key names (see `settings.md`).
-- [ ] [C57] An item appears once on Today.
+- [x] [C57] An item appears once on Today.
+  **Built:** `tests/test_today_queue.py::test_an_item_that_would_fall_in_two_groups_stays_in_the_higher_one_only`, `::test_no_line_key_repeats_with_overdue_to_dos_setup_open_and_mail_not_connected`.
 
 ## Phase I: installers for Windows and macOS (after phase S)
 
