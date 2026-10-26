@@ -1337,6 +1337,8 @@ def action_hold_problem(view: Any, op: Any) -> str | None:
     if found is None:
         return f"there is no action {op.id}"
     status = found.data["status"]
+    if status == "held" and isinstance(op, ActionDropOp) and op.reason == endings.PROJECT_ENDED:
+        return None  # an ended project drops what waits for an owner too
     if status == "held":
         return f"action {op.id} is waiting for an owner; pick one or add it to another action first"
     if status != "open":
@@ -1581,7 +1583,10 @@ def question_correction_problem(ctx: Context, view: Any, op: OpModel) -> str | N
         return f"there is no question {qid}"
     if found.data["status"] not in ("open", "sent"):
         return f"question {qid} is already closed"
-    if found.data.get("resolves") and not (isinstance(op, QuestionDropOp) and _waits_on_nothing(view, found)):
+    ended = isinstance(op, QuestionDropOp) and op.reason == endings.PROJECT_ENDED
+    if found.data.get("resolves") and not (
+        isinstance(op, QuestionDropOp) and (ended or _waits_on_nothing(view, found))
+    ):
         return f"question {qid} holds something that waits for the answer; answer it where that item waits"
     if isinstance(op, QuestionMoveOp):
         resolved = ctx.people.resolve(op.to)
@@ -4366,7 +4371,7 @@ def _with_answers(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> list[d
     records (an owner picked), which belongs to the op and would otherwise read as a later change."""
     kept = []
     for e in entries:
-        if e["kind"] == "question" and not e["op"].startswith(f"{FOLD_OP}#"):
+        if e["kind"] == "question" and not e["op"].startswith((f"{FOLD_OP}#", "question.drop")):
             q = tx.get("question", e["record_id"], include_deleted=True)
             if q is not None and q.data.get("kind") == "routing" and not _unanswered_owner_question(q):
                 continue

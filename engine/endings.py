@@ -248,11 +248,11 @@ def ends_project(view: Any, op: Any) -> bool:
 
 
 def wind_down(cs: Any, ctx: Any) -> Any:
-    """Add to a changeset, for each project it ends, a drop of every open action and every open or sent question
-    filed about the project, all in one op group with the ending so one Undo takes them all back. An action waiting
-    for an owner can't be dropped, so it stays. The drops go at the end, so the positions of the ops already there
-    don't move. Dropped, not done: nobody is credited. A drop the changeset names already isn't added twice. Whatever
-    the person keeps, they keep by refusing that item's drop in the held proposal."""
+    """Add to a changeset, for each project it ends, a drop of every open action (one waiting for an owner too, with
+    its "Pick an owner" question) and every open or sent question filed about the project, all in one op group with
+    the ending so one Undo takes them all back. The drops go at the end, so the positions of the ops already there
+    don't move. Dropped, not done: nobody is credited. A drop the changeset names already isn't added twice. The
+    person keeps an item by refusing its drop in the held proposal."""
     view = ctx.store.read()
     ops = list(cs.ops)
     named = {(o.op, o.id) for o in ops if isinstance(o, (ActionDropOp, QuestionDropOp))}
@@ -267,7 +267,7 @@ def wind_down(cs: Any, ctx: Any) -> Any:
         for action in view.list("action"):
             if (
                 action.data.get("project") == op.id
-                and action.data.get("status") == "open"
+                and action.data.get("status") in ("open", "held")
                 and ("action.drop", action.id) not in named
             ):
                 extra.append(ActionDropOp(id=action.id, reason=PROJECT_ENDED, evidence=evidence, group=group))

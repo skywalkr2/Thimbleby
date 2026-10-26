@@ -44,7 +44,9 @@ def statuses(cfg, store):
 def open_of(store):
     view = store.read()
     actions = [
-        a.id for a in view.list("action") if a.data.get("project") == PROJECT["id"] and a.data["status"] == "open"
+        a.id
+        for a in view.list("action")
+        if a.data.get("project") == PROJECT["id"] and a.data["status"] in ("open", "held")
     ]
     questions = [
         q.id
@@ -151,7 +153,36 @@ def test_the_person_keeps_an_item_by_declining_its_drop_and_releases_the_rest(en
         if o["index"] != keep:
             release(store, cfg, cs_id, o["index"])
     view = store.read()
-    assert view.get("action", actions[0]).data["status"] == "open"
+    assert view.get("action", actions[0]).data["status"] in ("open", "held")
     assert all(view.get("action", a).data["status"] == "dropped" for a in actions[1:])
     assert all(view.get("question", q).data["status"] == "dropped" for q in questions)
     assert view.get("project", PROJECT["id"]).data["status"] == ending(cfg, store)
+
+
+def test_an_action_waiting_for_an_owner_is_dropped_with_its_pick_an_owner_question(env):
+    cfg, store = env
+    held = next(
+        a for a in store.read().list("action") if a.data["status"] == "held" and a.data.get("project") == PROJECT["id"]
+    )
+    with store.transaction() as tx:
+        asking = tx.create(
+            "question",
+            {
+                "title": "Pick an owner",
+                "kind": "routing",
+                "to": PROJECT["owner"],
+                "projects": [PROJECT["id"]],
+                "resolves": {"kind": "owner", "action": held.id},
+            },
+            _TEST,
+        )
+    cs_id, result = apply(store, cfg, [set_status(ending(cfg, store))], actor="pm")
+    assert "refused" not in result
+    view = store.read()
+    assert view.get("action", held.id).data["status"] == "dropped"
+    assert not view.get("action", held.id).data.get("done_by")
+    assert view.get("question", asking.id).data["status"] == "dropped"
+    undo_changeset(store, cs_id)
+    view = store.read()
+    assert view.get("action", held.id).data["status"] == "held"
+    assert view.get("question", asking.id).data["status"] == "open"

@@ -448,7 +448,7 @@ told, for the person to send. A status that only pauses (meaning blocked) leaves
 action or note the change applies at once with Undo and lists what was dropped; read from an input or the assistant's own
 initiative, the ending and every drop are held as one proposal (check `project-ending`), the person keeps an item by
 declining its drop, and the assistant never guesses what should outlive the project: every item is listed. Not built:
-risks (a pack's records, needing a plugin API op) and an action waiting for an owner, which `action.drop` refuses.
+risks (a pack's records, needing a plugin API op).
 
 **Text stays text.** Every field of an op that holds text is a string, and a mapping or a list that arrives where text
 belongs is refused in plain words, never turned into a string: "action.text has to be text, but it arrived as a mapping of

@@ -1036,7 +1036,7 @@ yet follow, that it is *designed*, with its phase.
   filed about the project, reason "The project ended", all in the ending's op group (one Undo). A paused status (meaning
   blocked) adds nothing. From the person it applies at once; from an input every one of those ops is held (check
   `project-ending`) and the person keeps an item by declining its drop. Dropping an action drafts the existing called-off
-  note to whoever was told. Not covered: risks (no core record), actions waiting for an owner. **Built:**
+  note to whoever was told. Not covered: risks (no core record). **Built:**
   `tests/test_project_ending.py`
 
 ## 209. The Personal project reads as the person's own: no target day, no work-style questions, notices never become facts, short fact labels (2026-10-26; P43 a, b, d, e)

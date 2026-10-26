@@ -16,7 +16,7 @@ The person's own action or note applies at once, listing what was dropped, with 
 the assistant is held as one proposal (the ending and every drop); the person keeps an item by declining that item's
 drop. When the assistant can't tell whether something should outlive the project, it doesn't guess: every item is in the
 proposal. Not done: risks (the core has no risk record; they belong to a pack and need an op of the plugin API, on
-hold), and an action waiting for an owner (`action.drop` refuses it). **Decided by:** the owner's lesson 2
+hold),. **Decided by:** the owner's lesson 2
 (`docs/project/lessons-2026-10-23.md`); the keep-by-declining-a-drop mechanism is the main session's, under the plugin API
 hold, in place of a `keep` list. **Why:** a manager said a project was complete; it moved to Completed and left 26
 actions, 3 risks and a dozen questions open, still chasing people. **Impact:** Change log: section 211.
