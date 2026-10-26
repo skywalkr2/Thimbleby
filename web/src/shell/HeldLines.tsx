@@ -221,14 +221,16 @@ function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const date = line.due ? day(line.due) : "";
   const { start, busy, problem } = useStartSignIn(line.credential_name ?? "");
   const text = t(`queue.credential.${signIn ? "sign_in" : "account"}.${past ? "past" : "soon"}`, { thing: first, date });
+  const label = t(signIn ? "queue.credential.sign_in_label" : "queue.credential.label");
+  const also = signIn ? t(`queue.credential.sign_in.also.${past ? "past" : "soon"}`, { date }) : t("queue.credential.also");
   return (
-    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.credential.label")} data-queue-line="credential">
-      <Pill tone="warn">{t("queue.credential.label")}</Pill>
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={label} data-queue-line="credential">
+      <Pill tone="warn">{label}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{text}</p>
         {others.length > 0 ? (
           <>
-            <p className={styles.sub}>{t("queue.credential.also")}</p>
+            <p className={styles.sub}>{also}</p>
             <ul className={styles.places}>
               {others.map((place) => (
                 <li key={place}>{place}</li>

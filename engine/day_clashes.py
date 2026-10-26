@@ -38,9 +38,18 @@ class Found:
 
     @property
     def link(self) -> tuple[str, str] | None:
-        item = self.first.item
-        found = item.entry or (item.snapshot if item.own else None)
-        return ("event", found) if found else None
+        return entry_link(self.first)
+
+    @property
+    def other_link(self) -> tuple[str, str] | None:
+        return entry_link(self.second)
+
+
+def entry_link(entry: Timed) -> tuple[str, str] | None:
+    """The calendar entry record to open for an entry, or none when nothing is kept for it."""
+    item = entry.item
+    found = item.entry or (item.snapshot if item.own else None)
+    return ("event", found) if found else None
 
 
 def upcoming(store: Any, cfg: Any, now: datetime) -> list[Found]:

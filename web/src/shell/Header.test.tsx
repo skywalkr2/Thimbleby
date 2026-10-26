@@ -236,20 +236,19 @@ test("with no links the person's menu is only the appearance choices", async () 
   expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
 });
 
-test("Missed one is a button with its words, not a bare warning icon", async () => {
+test("the missed-something button has its words (kept for screen readers where the row is tight), not only an icon", async () => {
   show();
-  const button = await screen.findByRole("button", { name: "Missed one" });
-  expect(button).toHaveTextContent("Missed one");
-  expect(button.querySelector("svg")).toBeNull();
+  const button = await screen.findByRole("button", { name: "Missed something?" });
+  expect(button).toHaveTextContent("Missed something?");
 });
 
 test("a new workspace offers no Missed one until something has been read or handed in", async () => {
   show({ changes: [] });
   await screen.findByRole("button", { name: "Hand something in" });
-  await waitFor(() => expect(screen.queryByRole("button", { name: "Missed one" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Missed something?" })).toBeNull());
 });
 
 test("Missed one shows once the assistant has been given anything it could have missed", async () => {
   show({ changes: [{ id: "REQ-1" }] });
-  expect(await screen.findByRole("button", { name: "Missed one" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Missed something?" })).toBeInTheDocument();
 });

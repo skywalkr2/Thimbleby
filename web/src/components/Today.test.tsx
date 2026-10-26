@@ -200,7 +200,7 @@ test("with no AI service an empty Today says to connect one, and its button goes
   const { onOpenGuide } = show([], { "GET status": () => statusFixture({}, { ai: { state: "not_set_up", detail: null } }) });
   expect(await screen.findByText(/Connect an AI service to get started\./)).toBeInTheDocument();
   expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Missed one" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Missed something?" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Continue setup" }));
   expect(onOpenGuide).toHaveBeenCalledWith("ai");
 });
@@ -210,7 +210,7 @@ test("with a service connected and nothing worked on yet, an empty Today says wh
   const { onHandIn } = show([], { "GET status": () => statusFixture() });
   expect(await screen.findByText(/Paste an email or meeting notes to see what your assistant does\./)).toBeInTheDocument();
   expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Missed one" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Missed something?" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Hand something in" }));
   expect(onHandIn).toHaveBeenCalled();
 });
@@ -218,7 +218,7 @@ test("with a service connected and nothing worked on yet, an empty Today says wh
 test("Missed one appears only once the assistant has worked on something", async () => {
   show([]);
   expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "Missed one" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Missed something?" }).length).toBeGreaterThan(0);
 });
 
 const watched = (id: string, over: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] => ({

@@ -62,7 +62,7 @@ def build_day_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         now = worker.now()
         split = queue_split(ws, store, cfg, now, handover=worker.handover_state(), stuck=worker.stuck_since_text())
         line = next((x for x in [*split.shown, *split.digest] if x.key == body.key), None)
-        if line is None or line.kind not in suggestions.KINDS:
+        if line is None or line.kind not in (*suggestions.KINDS, "clash"):
             raise HTTPException(status_code=404, detail="That suggestion isn't on Today now.")
         made = suggestions.put_off(store, cfg, line, now)
         events.changed()

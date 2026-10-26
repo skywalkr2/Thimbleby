@@ -109,9 +109,7 @@ def expiring(ws: Any, cfg: Any, store: Any, now: datetime) -> list[Expiry]:
         ends = datetime.fromtimestamp(stamp, UTC).date()
         if today < warning_starts(ends, window, tokens.get("signed_in_at")):
             continue
-        reading = [
-            f"the source {s.label or s.id}" for s in cfg.watch.sources if s.connector.split("/", 1)[0] == sign_in.plugin
-        ]
+        reading = [s.label or s.id for s in cfg.watch.sources if s.connector.split("/", 1)[0] == sign_in.plugin]
         found.append(
             Expiry("sign_in", sign_in.name, ends, (ends - today).days, [f"the {sign_in.label} sign-in", *reading])
         )

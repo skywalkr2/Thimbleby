@@ -170,4 +170,32 @@ test.describe("no screen is wider than the window", () => {
     }
     expect(wide).toEqual([]);
   });
+
+  test("the header with every chip shown keeps all of its controls inside the window, none cut short", async ({ page }) => {
+    test.setTimeout(120_000);
+    // The demo chip, the status chip, the assistant's line (from 1440px) and "Missed something?" (shown once a note has
+    // been handed in, as the setup above does) are all on; wider text is tried too, as another computer's fonts may run wider.
+    const cut: string[] = [];
+    for (const width of [768, 1024, 1180, 1280, 1440, 1512]) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const spacing of ["", "0.06em"]) {
+        await page.evaluate((v) => document.querySelectorAll<HTMLElement>("header *").forEach((e) => (e.style.letterSpacing = v)), spacing);
+        const found = await page.evaluate(() => {
+          const header = document.querySelector("header")!;
+          const out: string[] = [];
+          for (const el of Array.from(header.querySelectorAll("*"))) {
+            const box = el.getBoundingClientRect();
+            if (box.width === 0) continue;
+            if (box.right > window.innerWidth + 1) out.push(`${el.tagName.toLowerCase()} reaches ${Math.round(box.right)}`);
+            // Text shortened by the room it has, other than the Ask field's hint and the workspace name, which end in an ellipsis on purpose.
+            const own = el as HTMLElement;
+            if (el.tagName === "BUTTON" && own.scrollWidth > own.clientWidth + 2 && !own.hasAttribute("data-ask-button")) out.push(`${(own.textContent ?? "").trim()} is cut short`);
+          }
+          return out;
+        });
+        if (found.length > 0) cut.push(`${width}${spacing ? " wider text" : ""}: ${found.join("; ")}`);
+      }
+    }
+    expect(cut).toEqual([]);
+  });
 });

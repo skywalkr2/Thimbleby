@@ -2550,6 +2550,21 @@ class QueueLineView(BaseModel):
     entry: str | None = Field(
         None, description="For a clash line: the calendar entry to open, when one is kept for the first meeting."
     )
+    source_name: str | None = Field(
+        None, description="For a clash line: the calendar the first meeting comes from; none for the app's own."
+    )
+    other_source_name: str | None = Field(
+        None, description="For a clash line: the calendar the second meeting comes from; none for the app's own."
+    )
+    starts: str | None = Field(
+        None, description="For a clash line: when the first meeting starts, on the person's clock."
+    )
+    ends: str | None = Field(None, description="For a clash line: when the first meeting ends, on the person's clock.")
+    other_starts: str | None = Field(None, description="For a clash line: when the second meeting starts.")
+    other_ends: str | None = Field(None, description="For a clash line: when the second meeting ends.")
+    other_entry: str | None = Field(
+        None, description="For a clash line: the calendar entry to open, when one is kept for the second meeting."
+    )
     overdue: int | None = Field(
         None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
     )

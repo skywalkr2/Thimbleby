@@ -275,6 +275,26 @@ def test_clashes_after_today_include_too_little_travel_time_and_stop_at_the_days
     assert [(x.state, x.minutes, x.day) for x in in_brief] == [("overlap", 15, day(1)), ("travel", travel - 10, day(2))]
 
 
+def test_a_clash_line_names_both_calendars_and_times_and_its_fine_mark_hides_only_that_clash(env):
+    ws, cfg, store = env
+    connected(store, "a", "Standup", f"{day(1)}T09:00:00+00:00", f"{day(1)}T09:30:00+00:00")
+    connected(store, "b", "Review", f"{day(1)}T09:15:00+00:00", f"{day(1)}T10:00:00+00:00")
+    connected(store, "c", "Sync", f"{day(2)}T09:00:00+00:00", f"{day(2)}T10:00:00+00:00")
+    connected(store, "d", "Lunch", f"{day(2)}T09:30:00+00:00", f"{day(2)}T10:30:00+00:00")
+
+    def clashes():
+        return [x for x in today_queue.queue(ws, store, cfg, NOW) if x.kind == "clash"]
+
+    first = clashes()[0]
+    assert first.source_name and first.other_source_name
+    assert first.starts < first.ends and first.other_starts < first.other_ends
+    assert first.starts[:10] == day(1)
+    made = suggestions.put_off(store, cfg, first, NOW)
+    assert [x.text for x in clashes()] == ["Sync"]
+    assert suggestions.take_back(store, made)
+    assert [x.text for x in clashes()] == ["Standup", "Sync"]
+
+
 def test_a_clash_that_has_already_ended_today_is_left_out(env):
     _, cfg, store = env
     connected(store, "a", "Early one", f"{day(0)}T07:00:00+00:00", f"{day(0)}T08:00:00+00:00")

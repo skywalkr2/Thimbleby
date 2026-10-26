@@ -110,14 +110,42 @@ test("a day can be picked instead, with the cursor in the day field", async () =
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { due: "2026-10-30" } }));
 });
 
-test("a clash is a line that says what clashes and why, and opens the meeting", async () => {
+test("a clash line names both meetings with their times and calendars and offers the ways out", async () => {
   const user = userEvent.setup();
-  const { onOpenRecord } = show([
-    line("clash", { key: "clash:a:b:2026-10-27", text: "Site visit", other: "Supplier call", state: "travel", minutes: 20, due: "2026-10-27", at: "2026-10-27T11:10:00+00:00", entry: "EVT-3" }),
-  ]);
-  expect(await screen.findByText(/^Sort out the clash: Site visit and Supplier call leave 20 minutes too little to travel between them/)).toBeInTheDocument();
-  await user.click(within(row("clash")).getByRole("button", { name: "Open the meeting" }));
+  const { onOpenRecord, calls } = show(
+    [
+      line("clash", {
+        key: "clash:a:b:2026-10-27",
+        text: "Site visit",
+        other: "Supplier call",
+        state: "overlap",
+        minutes: 30,
+        due: "2026-10-27",
+        at: "2026-10-27T11:00:00+00:00",
+        starts: "2026-10-27T10:30:00+00:00",
+        ends: "2026-10-27T11:30:00+00:00",
+        other_starts: "2026-10-27T11:00:00+00:00",
+        other_ends: "2026-10-27T12:00:00+00:00",
+        source_name: "Work calendar",
+        other_source_name: null,
+        entry: "EVT-3",
+        other_entry: "EVT-4",
+      }),
+    ],
+    { "POST suggestions/not-now": () => ({ signal: "SIG-1" }) },
+  );
+  const text = await screen.findByText(/^Sort out the clash on .*: Site visit \(.*from Work calendar\) and Supplier call \(.*from your notes\)/);
+  expect(text).toBeInTheDocument();
+  expect(screen.getByText("They overlap by 30 minutes")).toBeInTheDocument();
+  expect(row("clash").className).toMatch(/plain/);
+  await user.click(within(row("clash")).getByRole("button", { name: "Open Site visit" }));
   expect(onOpenRecord).toHaveBeenCalledWith("event", "EVT-3");
+  await user.click(within(row("clash")).getByRole("button", { name: /More|menu/i }));
+  await user.click(await screen.findByRole("menuitem", { name: "Open Supplier call" }));
+  expect(onOpenRecord).toHaveBeenCalledWith("event", "EVT-4");
+  await user.click(within(row("clash")).getByRole("button", { name: /More|menu/i }));
+  await user.click(await screen.findByRole("menuitem", { name: "It's fine" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/not-now")?.body).toEqual({ key: "clash:a:b:2026-10-27" }));
 });
 
 test("a suggestion has Not now in its menu, which puts it off with Undo; what is due has none", async () => {

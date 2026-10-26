@@ -179,7 +179,7 @@ def test_a_sign_in_whose_credential_ends_soon_is_a_line_naming_the_sign_in_and_w
     cfg.watch.sources.append(WatchSource(id="reader", connector="p18/service-reader", label="Reader"))
     found = [x for x in queue(ws, store, cfg, now) if x.kind == "credential"]
     assert [(x.credential_kind, x.credential_name, x.waiting_days) for x in found] == [("sign_in", "p18/service", 2)]
-    assert found[0].places == [f"the {sign_in.label} sign-in", "the source Reader"]
+    assert found[0].places == [f"the {sign_in.label} sign-in", "Reader"]
     flow.keep(keys, sign_in, {"access_token": "t", "expires_at": time.time() + 3600, "refresh_token": "r"})
     assert [x for x in queue(ws, store, cfg, now) if x.kind == "credential"] == []
 

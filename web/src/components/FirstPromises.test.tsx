@@ -188,8 +188,8 @@ describe("what was found", () => {
     show(view());
     expect(await screen.findByText("No open promises found in the mail it looked over.")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Promises found" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Missed one" }));
-    expect(await screen.findByRole("dialog", { name: "Missed one" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Missed something?" }));
+    expect(await screen.findByRole("dialog", { name: "Report something missed" })).toBeInTheDocument();
   });
 });
 

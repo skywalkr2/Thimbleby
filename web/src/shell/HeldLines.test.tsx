@@ -468,12 +468,15 @@ test("a sign-in about to end offers to sign in again, and names what reads throu
   const user = userEvent.setup();
   const assign = vi.fn();
   vi.stubGlobal("location", { ...window.location, assign });
-  const calls = show([credential({ key: "credential:sign_in:p/s", credential_kind: "sign_in", credential_name: "p/s", places: ["the Mail sign-in", "the source Inbox"] })], {
+  const calls = show([credential({ key: "credential:sign_in:p/s", credential_kind: "sign_in", credential_name: "p/s", places: ["the Mail sign-in", "Inbox"] })], {
     "POST sign-ins/p/s/start": () => ({ url: "about:blank#signin" }),
   }).calls;
-  const row = await screen.findByRole("region", { name: "Access key ending" });
+  const row = await screen.findByRole("region", { name: "Sign-in ending" });
+  expect(row).toHaveTextContent(/Sign in again before .*31 so these keep working:/);
+  expect(row).not.toHaveTextContent("Replace this access key");
+  expect(row).not.toHaveTextContent("the source");
   expect(row).toHaveTextContent(/Sign in again to renew the Mail sign-in before .*31/);
-  expect(within(row).getAllByRole("listitem").map((i) => i.textContent)).toEqual(["the source Inbox"]);
+  expect(within(row).getAllByRole("listitem").map((i) => i.textContent)).toEqual(["Inbox"]);
   await user.click(within(row).getByRole("button", { name: "Sign in again" }));
   await waitFor(() => expect(assign).toHaveBeenCalledWith("about:blank#signin"));
   expect(calls.some((c) => c.route === "POST sign-ins/p/s/start")).toBe(true);

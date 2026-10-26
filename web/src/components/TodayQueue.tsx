@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day, sinceDay, wallTime, wallWhen } from "../lib/dates";
+import { day, sinceDay, wallTime } from "../lib/dates";
 import { backupAge } from "../lib/backup";
 import { useCoverage } from "../lib/coverage";
 import { useFirstGoText } from "../lib/first-go";
@@ -626,8 +626,19 @@ export function useLineTitle(): (line: QueueLine) => string {
         return line.count > 0 ? tn("queue.capacity", line.count, { time }) : t("queue.capacity.none", { time });
       }
       case "clash": {
-        const vars = { text: line.text ?? "", other: line.other ?? "", when: line.at ? wallWhen(line.at) : day(line.due) };
-        return line.state === "travel" ? tn("queue.clash.travel", line.minutes ?? 0, vars) : tn("queue.clash.overlap", line.minutes ?? 0, vars);
+        const part = (start: string | null | undefined, end: string | null | undefined, name: string | null | undefined) =>
+          t("queue.clash.part", {
+            from: start ? wallTime(start) : "",
+            to: end ? wallTime(end) : "",
+            calendar: name ? t("queue.clash.from", { name }) : t("queue.clash.own"),
+          });
+        return t("queue.clash", {
+          text: line.text ?? "",
+          first: part(line.starts, line.ends, line.source_name),
+          other: line.other ?? "",
+          second: part(line.other_starts, line.other_ends, line.other_source_name),
+          when: day(line.due),
+        });
       }
       case "promise": {
         const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
@@ -953,14 +964,23 @@ function QueueRow(props: {
           primary: line.count > 0 ? { label: t("queue.capacity.look") } : null,
           menu: [],
         };
-      case "clash":
+      case "clash": {
+        // Ways out that exist: open either meeting, or say the clash is fine. Moving or declining one needs a calendar
+        // connection that can write, which is not offered here.
+        const open = props.handlers.onOpenRecord;
+        const ways: MenuAction[] = [];
+        if (line.entry && open) ways.push({ id: "open-first", label: t("queue.clash.open_named", { name: line.text ?? "" }), run: () => open("event", line.entry ?? "") });
+        if (line.other_entry && open) ways.push({ id: "open-second", label: t("queue.clash.open_named", { name: line.other ?? "" }), run: () => open("event", line.other_entry ?? "") });
+        ways.push({ id: "fine", label: t("queue.clash.fine"), run: () => notNow(line.key, t("queue.clash.fine_done")) });
+        const [first, ...rest] = ways;
         return {
           pill: t("queue.pill.clash"),
           tone: "warn",
-          meta: undefined,
-          primary: line.entry && props.handlers.onOpenRecord ? { label: t("queue.clash.open"), run: () => props.handlers.onOpenRecord?.("event", line.entry ?? "") } : null,
-          menu: [],
+          meta: tn(line.state === "travel" ? "queue.clash.meta.travel" : "queue.clash.meta.overlap", line.minutes ?? 0),
+          primary: { label: first.label, run: first.run },
+          menu: rest,
         };
+      }
       case "pattern": {
         // The choices the line offers: the first is the main button, the second sits beside it, the rest are in the menu.
         const [first, second, ...rest] = choices;
@@ -1154,6 +1174,7 @@ function QueueRow(props: {
       as="div"
       ref={ref}
       selected={open}
+      className={line.kind === "clash" ? styles.plain : undefined}
       data-queue-line={line.kind}
       data-line-key={line.key}
       aria-label={title}

@@ -261,6 +261,15 @@ class Line:
     needed_minutes: int | None = None
     other: str | None = None
     entry: str | None = None
+    #: For a clash line, each meeting's calendar (the source's name; none for the app's own), when it starts and ends
+    #: on the person's clock, and the second one's entry to open.
+    source_name: str | None = None
+    other_source_name: str | None = None
+    starts: str | None = None
+    ends: str | None = None
+    other_starts: str | None = None
+    other_ends: str | None = None
+    other_entry: str | None = None
     #: For a date_reminder line: the dated fact it is about (`due` is its day, `state` its kind, `at` the reminder).
     fact: str | None = None
     #: For a pattern line, a stale line and the like: the choices the line offers, in order, as ids the screen words.
@@ -1376,8 +1385,14 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
                 since=now.astimezone(zone(cfg)).date().isoformat(),
             )
         )
+    fine = suggestions.fine_clashes(store.read())
+    labels = {s.id: s.label or s.id for s in cfg.watch.sources}
+    here = zone(cfg)
     for clash in day_clashes.upcoming(store, cfg, now):
+        if clash.key in fine:
+            continue
         link = clash.link
+        other_link = clash.other_link
         lines.append(
             Line(
                 key=clash.key,
@@ -1390,10 +1405,25 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
                 due=clash.day.isoformat(),
                 at=clash.at.isoformat(),
                 entry=link[1] if link else None,
+                other_entry=other_link[1] if other_link else None,
+                source_name=_clash_source(clash.first, labels),
+                other_source_name=_clash_source(clash.second, labels),
+                starts=clash.first.start.astimezone(here).isoformat(),
+                ends=clash.first.end.astimezone(here).isoformat(),
+                other_starts=clash.second.start.astimezone(here).isoformat(),
+                other_ends=clash.second.end.astimezone(here).isoformat(),
                 since=clash.at.isoformat(),
             )
         )
     return lines
+
+
+def _clash_source(entry: Any, labels: dict[str, str]) -> str | None:
+    """The name of the calendar an entry comes from; none for the app's own entries."""
+    item = entry.item
+    if item.own or not item.source:
+        return None
+    return labels.get(item.source, item.source)
 
 
 def _tired_of_waiting(

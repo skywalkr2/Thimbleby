@@ -76,6 +76,23 @@ def dismissed(view: Any) -> dict[tuple[str, str], str]:
     return {**found, **patterns.stays_off(view)}
 
 
+def fine_clashes(view: Any) -> set[str]:
+    """The clash lines the person said are fine and hasn't taken back: their line keys. A clash key names both entries
+    and the day, so a clash between other entries, or on another day, still shows."""
+    found: set[str] = set()
+    for signal in view.list("signal"):
+        note = signal.data.get("note")
+        if signal.data["kind"] != "suggestion_dismissed" or note in (None, TAKEN_BACK):
+            continue
+        try:
+            said = json.loads(note)
+        except ValueError:
+            continue
+        if isinstance(said, dict) and said.get("kind") == "clash":
+            found.add(str(said["subject"]))
+    return found
+
+
 def snoozed(view: Any, today: date) -> dict[str, date]:
     """The lines the person snoozed that are still off today and not taken back: line key to the day it comes back."""
     found: dict[str, date] = {}

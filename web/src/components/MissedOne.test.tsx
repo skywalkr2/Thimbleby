@@ -38,8 +38,8 @@ function header(routes: Parameters<typeof fakeApi>[0] = {}) {
 test("the header's Missed one opens the form with the cursor in its one field", async () => {
   const user = userEvent.setup();
   header();
-  await user.click(await screen.findByRole("button", { name: "Missed one" }));
-  const dialog = await screen.findByRole("dialog", { name: "Missed one" });
+  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  const dialog = await screen.findByRole("dialog", { name: "Report something missed" });
   const field = within(dialog).getByLabelText("What did I miss?");
   await waitFor(() => expect(field).toHaveFocus());
   expect(within(dialog).getByRole("button", { name: "Send" })).toBeDisabled();
@@ -48,7 +48,7 @@ test("the header's Missed one opens the form with the cursor in its one field", 
 test("sending posts the words, thanks the person in a toast that points at the request, and closes the form", async () => {
   const user = userEvent.setup();
   const calls = header({ "POST missed": () => ({ request: "REQ-9", signal: "SIG-3" }) });
-  await user.click(await screen.findByRole("button", { name: "Missed one" }));
+  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
   const field = await screen.findByLabelText("What did I miss?");
   await user.type(field, WORDS);
   await user.click(screen.getByRole("button", { name: "Send" }));
@@ -56,27 +56,27 @@ test("sending posts the words, thanks the person in a toast that points at the r
   expect(calls.find((c) => c.route === "POST missed")?.body).toEqual({ text: WORDS });
   expect(screen.getByRole("button", { name: "See it" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Missed one" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Report something missed" })).toBeNull());
 });
 
 test("Enter sends, and a refusal keeps the form and what was typed", async () => {
   const user = userEvent.setup();
   header({ "POST missed": () => new Refuse(400, "Say what the assistant missed.") });
-  await user.click(await screen.findByRole("button", { name: "Missed one" }));
+  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
   const field = await screen.findByLabelText("What did I miss?");
   await user.type(field, `${WORDS}{Enter}`);
   expect(await screen.findByText(/Say what the assistant missed\./)).toBeInTheDocument();
-  expect(screen.getByRole("dialog", { name: "Missed one" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Report something missed" })).toBeInTheDocument();
   expect(screen.getByLabelText("What did I miss?")).toHaveValue(WORDS);
 });
 
 test("Escape closes the form without sending", async () => {
   const user = userEvent.setup();
   const calls = header();
-  await user.click(await screen.findByRole("button", { name: "Missed one" }));
+  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
   await screen.findByLabelText("What did I miss?");
   await user.keyboard("{Escape}");
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Missed one" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Report something missed" })).toBeNull());
   expect(calls.some((c) => c.route === "POST missed")).toBe(false);
 });
 
@@ -91,8 +91,8 @@ test("an empty Today offers it beside what was read", async () => {
   );
   const line = document.querySelector<HTMLElement>("[data-missed-line]")!;
   expect(line).toHaveTextContent("Did Helper miss something?");
-  await user.click(within(line).getByRole("button", { name: "Missed one" }));
-  expect(await screen.findByRole("dialog", { name: "Missed one" })).toBeInTheDocument();
+  await user.click(within(line).getByRole("button", { name: "Missed something?" }));
+  expect(await screen.findByRole("dialog", { name: "Report something missed" })).toBeInTheDocument();
 });
 
 test("the empty list of what changed offers it too", async () => {
@@ -106,7 +106,7 @@ test("the empty list of what changed offers it too", async () => {
     </MissedOneProvider>,
   );
   expect(await screen.findByText("Nothing changed since yesterday.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Missed one" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Missed something?" })).toBeInTheDocument();
 });
 
 test("on a phone it is in the More sheet", async () => {
@@ -118,6 +118,6 @@ test("on a phone it is in the More sheet", async () => {
     </MissedOneProvider>,
   );
   await user.click(screen.getByRole("button", { name: "More" }));
-  await user.click(await screen.findByRole("button", { name: "Missed one" }));
-  expect(await screen.findByRole("dialog", { name: "Missed one" })).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  expect(await screen.findByRole("dialog", { name: "Report something missed" })).toBeInTheDocument();
 });

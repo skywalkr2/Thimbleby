@@ -18923,6 +18923,18 @@
             ],
             "title": "Due"
           },
+          "ends": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: when the first meeting ends, on the person's clock.",
+            "title": "Ends"
+          },
           "entry": {
             "anyOf": [
               {
@@ -19231,6 +19243,54 @@
             "description": "For a clash line: the title of the second meeting; `text` is the first.",
             "title": "Other"
           },
+          "other_ends": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: when the second meeting ends.",
+            "title": "Other Ends"
+          },
+          "other_entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the calendar entry to open, when one is kept for the second meeting.",
+            "title": "Other Entry"
+          },
+          "other_source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the calendar the second meeting comes from; none for the app's own.",
+            "title": "Other Source Name"
+          },
+          "other_starts": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: when the second meeting starts.",
+            "title": "Other Starts"
+          },
           "outcome": {
             "additionalProperties": {
               "type": "integer"
@@ -19501,6 +19561,18 @@
             "description": "For a source_unread line: the watched source's id; its label is in GET /api/watch.",
             "title": "Source"
           },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the calendar the first meeting comes from; none for the app's own.",
+            "title": "Source Name"
+          },
           "stable_budget": {
             "anyOf": [
               {
@@ -19542,6 +19614,18 @@
             ],
             "description": "For a promise line someone else owes: who they are to the person (design 6.34). The screen says Chase for manage and alongside, and Waiting on, with no follow-up, for report_to; null for the person's own.",
             "title": "Stance"
+          },
+          "starts": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: when the first meeting starts, on the person's clock.",
+            "title": "Starts"
           },
           "state": {
             "anyOf": [
