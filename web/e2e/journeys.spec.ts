@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, connectedAgain, fakeAddress, openView, visit, type Info, type Requests } from "./journey-helpers";
+import { collectProblems, connectedAgain, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
@@ -33,10 +33,14 @@ test.describe.serial("journeys", () => {
     // I open the link the start command printed. The walkthrough opens by itself, full screen, and says nothing is
     // spent until I press Go at the end. Nothing else is on the page: no header, no sidebar.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await expect(page.getByText("About 10–20 minutes. You can stop and come back.")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Views" })).toHaveCount(0);
+    // It opens on Welcome: what the app does, what I'll need, and Start. It is no step, so there is no list of steps yet.
+    await expect(page.getByRole("heading", { level: 2, name: "Welcome", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Setup steps" })).toHaveCount(0);
     await visit(page);
+    await pressStart(page);
 
     // You: my name and the time zone, one list that starts with this computer's. Saving makes my own person record. The
     // workspace's name and the assistant's are not asked here; the work question is the next screen.
@@ -45,7 +49,10 @@ test.describe.serial("journeys", () => {
     await main.getByLabel("Your full name").fill(info.people[0]);
     await expect(main.getByLabel("Your time zone")).toBeVisible();
     await expect(main.getByLabel("Workspace name")).toHaveCount(0);
+    // The assistant is introduced by name, with Rename; the name isn't a box until I ask to change it.
+    await expect(main.getByText("Your assistant is called Reginald.")).toBeVisible();
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
+    await expect(page.getByText("You · 1 of 7")).toBeVisible();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
@@ -117,6 +124,10 @@ test.describe.serial("journeys", () => {
     const recap = main.getByRole("list", { name: "What was set up" });
     await expect(recap.locator('[data-step="ai"]')).toContainText("Done");
     await expect(recap.locator('[data-step="mail"]')).toContainText("Skipped");
+    // Done lists all seven, and a step is Done only when its own thing happened: with mail skipped, the first result says why.
+    await expect(recap.locator("li")).toHaveCount(7);
+    await expect(recap.locator('[data-step="work"]')).toContainText("Done");
+    await expect(recap.locator('[data-step="promises"]')).toContainText("Skipped (needs mail)");
     await expect(recap.locator('[data-step="people"]')).toContainText("Skipped");
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
@@ -124,7 +135,7 @@ test.describe.serial("journeys", () => {
     // It is finished for good: a reload doesn't open it again.
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Set up your workspace" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Getting started" })).toHaveCount(0);
     await visit(page);
 
     // I hand in a short note of my own.

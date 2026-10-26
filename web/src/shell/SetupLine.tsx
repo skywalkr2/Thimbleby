@@ -33,25 +33,25 @@ export function SetupLine(props: { workspace: string; onOpenGuide: (step: string
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const [gone, setGone] = useState(() => hidden(props.workspace));
   if (gone || !setup.data || setup.data.finished) return null;
-  // Only the steps that count toward finishing are on the line; the optional extras are not.
+  // The count is the server's, the one the walkthrough and its last screen use: only the steps that count are on the line.
   const steps = setup.data.steps.filter((s) => s.counted);
   const next = steps.find((s) => !s.done && !s.skipped);
   if (!next) return null;
-  const finished = steps.filter((s) => s.done || s.skipped).length;
+  const { settled: finished, total } = setup.data;
   const label = next.label || (has(`setup_step.${next.id}`) ? t(`setup_step.${next.id}`) : next.id);
   return (
     <section className={styles.line} aria-label={t("setup_line.label")} data-setup-line="">
-      <Pill>{t("setup_line.count", { done: finished, total: steps.length })}</Pill>
+      <Pill>{t("setup_line.count", { done: finished, total })}</Pill>
       <div
         className={styles.progress}
         role="progressbar"
         aria-label={t("setup_line.progress")}
         aria-valuemin={0}
-        aria-valuemax={steps.length}
+        aria-valuemax={total}
         aria-valuenow={finished}
-        aria-valuetext={t("setup_line.count", { done: finished, total: steps.length })}
+        aria-valuetext={t("setup_line.count", { done: finished, total })}
       >
-        <span className={styles.bar} style={{ width: `${(finished / steps.length) * 100}%` }} />
+        <span className={styles.bar} style={{ width: `${(finished / Math.max(total, 1)) * 100}%` }} />
       </div>
       <p className={styles.next}>{t("setup_line.next", { step: label })}</p>
       <div className={styles.actions}>

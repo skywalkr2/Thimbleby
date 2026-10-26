@@ -34,23 +34,27 @@ from engine.storage import StoreError
 from engine.yaml_load import load_yaml
 
 STATE_FILE = "setup.json"
-CORE_STEPS = ("workspace", "work", "ai", "mail", "backup", "people", "template", "first_note", "addons")
-#: The walkthrough's screens, in order. "promises" is the first result (the look back over the mail and the promises
-#: found, `engine/first_promises.py`), right after mail, so nothing that asks about more comes before it; it has no
-#: setup step of its own. "work" asks whether the person's work is part of this (Just me, or Me and my work) and is
-#: optional: it never blocks finishing. The last screen lists what was set up and what is optional.
-WALKTHROUGH_STEPS = ("you", "work", "ai", "mail", "promises", "backup", "people", "done")
+CORE_STEPS = ("workspace", "work", "ai", "mail", "promises", "backup", "people", "template", "first_note", "addons")
+#: The walkthrough's screens, in order. "welcome" opens a new start and is not a step: nothing about it is counted.
+#: "promises" is the first result (the look back over the mail and the promises found, `engine/first_promises.py`),
+#: right after mail, so nothing that asks about more comes before it. "work" asks whether the person's work is part of
+#: this (Just me, or Me and my work). The last screen lists what was set up and what was skipped, and what is optional.
+WALKTHROUGH_STEPS = ("welcome", "you", "work", "ai", "mail", "promises", "backup", "people", "done")
 #: The walkthrough screen a core step belongs to; a core step not listed is an optional extra, on the last screen.
 CORE_GROUPS = {
     "workspace": "you",
     "work": "work",
     "ai": "ai",
     "mail": "mail",
+    "promises": "promises",
     "backup": "backup",
     "people": "people",
 }
-#: The core steps that count toward finishing the walkthrough (the work question is answered or left, never required).
-COUNTED_STEPS = frozenset({"workspace", "ai", "mail", "backup", "people"})
+#: The core steps that count, in the order the person meets them: the one list the walkthrough, its last screen and
+#: Today's setup line all show. Each is done only when its own thing happened and skipped when the person passed it.
+COUNTED_STEPS = frozenset({"workspace", "work", "ai", "mail", "promises", "backup", "people"})
+#: Why a skipped step was skipped, when another step it needs was skipped.
+NEEDS_MAIL = "needs_mail"
 #: What the person answered to the work question.
 WORK_CHOICES = ("me", "work")
 CATALOG = shipped("catalog") / "ai-endpoints.yaml"
@@ -74,6 +78,7 @@ class Step:
     group: str = "done"  # the walkthrough screen it belongs to (one of WALKTHROUGH_STEPS)
     counted: bool = False  # whether it counts toward finishing the walkthrough
     applies: bool = True  # whether there is anything for the person to do here; a step that doesn't apply isn't offered
+    reason: str | None = None  # why a skipped step was skipped, when it needed another step that was skipped
 
 
 @dataclass
@@ -135,6 +140,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     """Every setup step with whether it is done or skipped: the core's, then each running plugin's. An add-on's own
     steps and sign-ins belong to the mail and calendar screen when it provides a source of mail or of a calendar."""
     from engine.ai.smoke import ai_state
+    from engine.backup import state as backup_state
     from engine.sign_in import status
 
     state = _state(ws)
@@ -150,26 +156,35 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     mail_signed = any(signed[name] for name, sign_in in sign_ins.items() if sign_in.plugin in mail_addons)
     said = declared_reads({**CORE, **store.plugins.connectors()})
     mail_read = any(source.enabled and reads(source.connector, said) for source in cfg.watch.sources)
+    requests = view.list("request")
     done = {
         "workspace": _pm_named(cfg, view),  # the workspace's own name is optional; naming yourself is what counts
         "work": work_choice(ws, cfg, view) is not None,
         "template": bool(state.get("template")) or _template_in_use(ws, cfg),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
         "mail": mail_signed or mail_read,
-        "backup": bool(cfg.storage.backups.targets),
+        "promises": _looked_back(requests) or _handed_in(requests),
+        "backup": backup_state(ws, cfg).last_success is not None,  # a backup was made, not only a folder chosen
         "people": len(people) >= 2,
-        "first_note": any(r.data.get("origin") == "pm" for r in view.list("request")),
+        "first_note": _handed_in(requests),
         # Done only once the person chose about the add-ons they installed: with nothing installed it isn't offered.
         "addons": bool(state.get("addons_decided")) and not set(addons_off(ws, cfg)) - set(state["addons_decided"]),
     }
+    # The first result can't happen without mail: with mail skipped (and nothing handed in) it reads as skipped, and
+    # says why. Moving on from its screen without it having happened skips it too.
+    mail_skipped = "mail" in skipped and not done["mail"]
+    moved_on = bool(_walkthrough_state(state).get("promises_done"))
+    passed = {"promises": "promises" in skipped or moved_on or mail_skipped}
+    reasons = {"promises": NEEDS_MAIL if mail_skipped else None}
     found = [
         Step(
             step,
             done[step],
-            step in skipped and not done[step],
+            (step in skipped or passed.get(step, False)) and not done[step],
             group=CORE_GROUPS.get(step, "done"),
             counted=step in COUNTED_STEPS,
             applies=step != "addons" or done[step] or bool(addons_off(ws, cfg)),
+            reason=None if done[step] else reasons.get(step),
         )
         for step in CORE_STEPS
     ]
@@ -204,6 +219,32 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             )
         )
     return found
+
+
+def _handed_in(requests: list[Any]) -> bool:
+    """Whether the person handed something in themselves (a pasted message or a typed note)."""
+    return any(r.data.get("origin") == "pm" for r in requests)
+
+
+def _looked_back(requests: list[Any]) -> bool:
+    """Whether the look back over the mail ran: an intake request was started (not still waiting for a go) and didn't
+    fail."""
+    from engine.dispatcher import waits_on_first_go
+    from engine.source_intake import waits_on_go
+
+    return any(
+        r.data.get("intake")
+        and not r.data.get("dismissed")
+        and r.data.get("state") != "failed"
+        and not waits_on_go(r.data)
+        and not waits_on_first_go(r.data)
+        for r in requests
+    )
+
+
+def _walkthrough_state(state: dict[str, Any]) -> dict[str, Any]:
+    mine = state.get("walkthrough")
+    return mine if isinstance(mine, dict) else {}
 
 
 def _not_yet_on(cfg: Any, adds: dict[str, tuple[Any, ...]]) -> dict[str, list[Any]]:
@@ -313,19 +354,21 @@ def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
     """Where the walkthrough stands. It opens by itself on every visit while an essential is missing (naming yourself,
     choosing an AI account), even after Finish later; otherwise only on the first visit to a workspace whose setup isn't
     finished, so the optional steps wait on Today's setup line. Never on the sandbox workspaces. It resumes at the
-    screen kept from the last visit, else at the first one with a step still to do."""
-    mine = _state(ws).get("walkthrough")
-    mine = mine if isinstance(mine, dict) else {}
+    screen kept from the last visit, else at the first one with a step still to do; a new start, where nothing was done
+    or skipped and no screen was ever kept, opens on Welcome, shown once: pressing Start keeps the next screen."""
+    mine = _walkthrough_state(_state(ws))
     closed, ended, started = bool(mine.get("closed")), bool(mine.get("finished")), bool(mine.get("started"))
     step = mine.get("step")
     promises_done = bool(mine.get("promises_done"))
     if step not in WALKTHROUGH_STEPS:
         todo = next((s for s in found if s.counted and not (s.done or s.skipped)), None)
         step = todo.group if todo else "done"
-        # The first result has no setup step, so a resume past mail would pass it over: it comes first.
+        # A resume past mail would pass over the first result, which is left only by moving on: it comes first.
         after_it = WALKTHROUGH_STEPS.index(step) > WALKTHROUGH_STEPS.index("promises")
         if after_it and not promises_done:
             step = "promises"
+        if not started and not any(s.done or s.skipped for s in found if s.counted):
+            step = "welcome"
     return Walkthrough(
         open=not cfg.workspace.demo
         and (missing_essentials(cfg, found) or not (started or closed or ended or finished(found))),
@@ -415,7 +458,7 @@ def check_backup_folder(ws: Any, raw: str) -> FolderCheck:
     folder = folder.resolve()
     root = ws.root.resolve()
     if folder == root or folder.is_relative_to(root) or root.is_relative_to(folder):
-        return FolderCheck(str(folder), False, "Choose a folder outside the workspace, so the backup is a real copy.")
+        return FolderCheck(str(folder), False, "Choose a folder somewhere else, so the backup is a real copy.")
     if not folder.is_dir():
         return FolderCheck(str(folder), False, "That folder isn't there. Connect the drive, or create the folder.")
     probe = folder / ".cockpit-write-test"

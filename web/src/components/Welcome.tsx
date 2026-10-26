@@ -19,6 +19,7 @@ import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
 import { TemplateList } from "./Templates";
 import { TimeZoneSelect } from "./TimeZoneSelect";
+import { RenameName } from "./RenameName";
 import { WelcomeBackup } from "./WelcomeBackup";
 import { WorkStep } from "./WalkthroughWork";
 import { Skeleton } from "../ui/Skeleton";
@@ -338,8 +339,8 @@ function browserZone(): string {
   }
 }
 
-/** The person's name and time zone, in one form. The workspace's name and the assistant's name keep their defaults and
- * are changed in Settings. In the walkthrough, saving a step that was not done yet is also the way on (`onContinue`), so
+/** The person's name and time zone, in one form, and under it the assistant's name with Rename. Saving the person's name
+ * also names the app after them while it still has its default name. In the walkthrough, saving a step that was not done yet is also the way on (`onContinue`), so
  * the screen has one primary button; the setup list has none. */
 export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean } = {}) {
   const { t } = useWords();
@@ -383,10 +384,14 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
     setProblem("");
     try {
       if (nameChanged) {
-        await api.saveMe(fullName.trim());
+        // The first word of the name, for the name the app takes while it has only its default.
+        const first = fullName.trim().split(/\s+/)[0] ?? "";
+        await api.saveMe(fullName.trim(), t("walkthrough.name.default", { name: first }));
         setNameEdit(null);
         await client.invalidateQueries({ queryKey: ["me"] });
         await client.invalidateQueries({ queryKey: ["people"] });
+        await client.invalidateQueries({ queryKey: ["runtime-config"] });
+        await client.invalidateQueries({ queryKey: ["settings"] });
       }
       if (zoneChanged) {
         const fresh = nameChanged ? await api.settings() : settings.data!;
@@ -413,6 +418,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
 
   const zoneId = "workspace-workspace-user-timezone";
   return (
+    <>
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -474,5 +480,15 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
         </div>
       )}
     </form>
+    <RenameName
+      settingKey="workspace.assistant_name"
+      sentence={(name) => t("walkthrough.assistant.called", { name })}
+      label={t("walkthrough.assistant.label")}
+      rename={t("walkthrough.assistant.rename")}
+      save={t("walkthrough.assistant.save")}
+      cancel={t("walkthrough.assistant.cancel")}
+      blank={t("walkthrough.assistant.blank")}
+    />
+    </>
   );
 }

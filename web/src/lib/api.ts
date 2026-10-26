@@ -571,7 +571,9 @@ export const api = {
   firstPromisesGo: () => call<S["IntakeStarted"]>("POST", "setup/first-promises/go"),
   keepWalkthrough: (body: S["WalkthroughIn"]) => call<S["WalkthroughView"]>("POST", "setup/walkthrough", body),
   me: () => call<S["MeView"]>("GET", "me"),
-  saveMe: (fullName: string) => call<S["MeView"]>("POST", "me", { full_name: fullName }),
+  /** Saves the person's name; `workspaceName`, when given, names the workspace after them while it still has its default. */
+  saveMe: (fullName: string, workspaceName?: string) =>
+    call<S["MeView"]>("POST", "me", workspaceName ? { full_name: fullName, workspace_name: workspaceName } : { full_name: fullName }),
   applyStepSettings: (step: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `setup/${named(step)}/apply-settings`, { fingerprint }),
   skipStep: (step: string) => call<S["Ok"]>("POST", `setup/${named(step)}/skip`),

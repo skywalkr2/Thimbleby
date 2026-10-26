@@ -10,6 +10,7 @@ import {
   collectProblems,
   fakeAddress,
   openView,
+  pressStart,
   visit,
   type Info,
   type Requests,
@@ -41,8 +42,9 @@ test.describe.serial("journey: mail", () => {
 
     // A new workspace with the mail add-on on: the walkthrough opens by itself.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await visit(page);
+    await pressStart(page);
 
     // You, then an AI account, as in the first journey.
     const main = page.locator("main#main");

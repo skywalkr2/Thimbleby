@@ -5,16 +5,18 @@ import type { S } from "./api";
 export type Screen = S["WalkthroughView"]["step"];
 type Step = S["SetupStepView"];
 
-/** The screens, in the order a person needs them. The last one lists what was set up and what is optional. */
-export const SCREENS: readonly Screen[] = ["you", "work", "ai", "mail", "promises", "backup", "people", "done"];
+/** The screens, in the order a person needs them. Welcome opens a new start and is no step; the last one lists what was set
+ * up and what was skipped, and what is optional. */
+export const SCREENS: readonly Screen[] = ["welcome", "you", "work", "ai", "mail", "promises", "backup", "people", "done"];
 
-/** The core setup step each screen is about; the first result and the last have none. */
+/** The core setup step each screen is about; Welcome and the last screen have none. */
 export const STEP_OF: Record<Screen, string | null> = {
+  welcome: null,
   you: "workspace",
   work: "work",
   ai: "ai",
   mail: "mail",
-  promises: null,
+  promises: "promises",
   backup: "backup",
   people: "people",
   done: null,
@@ -27,9 +29,9 @@ export function screenOf(steps: Step[], id: string): Screen {
 
 export type Standing = "done" | "skipped" | "todo";
 
-/** Where a screen stands, from the core step it is about. The first result and the last screen have no standing of their own. */
-export function standing(steps: Step[], screen: Screen, promisesDone = false): Standing | null {
-  if (screen === "promises") return promisesDone ? "done" : null;
+/** Where a screen stands, as the server decided it for the core step the screen is about. Welcome and the last screen have
+ * no standing of their own. */
+export function standing(steps: Step[], screen: Screen): Standing | null {
   const id = STEP_OF[screen];
   const step = id ? steps.find((s) => s.id === id) : undefined;
   if (!step) return null;
@@ -45,8 +47,14 @@ export function after(screen: Screen): Screen | null {
   return i >= 0 && i < SCREENS.length - 1 ? SCREENS[i + 1] : null;
 }
 
-/** The screen before this one, or null at the start. */
+/** The screen before this one, or null at the start. Welcome is shown once, so no screen goes back to it. */
 export function before(screen: Screen): Screen | null {
   const i = SCREENS.indexOf(screen);
-  return i > 0 ? SCREENS[i - 1] : null;
+  return i > 1 ? SCREENS[i - 1] : null;
+}
+
+/** The screen's own step, when it is one of the counted ones. */
+export function stepOf(steps: Step[], screen: Screen): Step | undefined {
+  const id = STEP_OF[screen];
+  return id ? steps.find((s) => s.id === id && s.counted) : undefined;
 }

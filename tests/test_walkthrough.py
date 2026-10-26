@@ -19,6 +19,8 @@ from tests.test_sign_in import signing as signing  # noqa: F401 - the fixture
 from tests.test_sign_in_sources import _app, _with_sources, sign_in
 
 TOKEN = "t"
+#: The steps that count, in the order a person meets them.
+COUNTED = ("workspace", "work", "ai", "mail", "promises", "backup", "people")
 
 
 def _fresh(tmp_path):
@@ -43,10 +45,17 @@ def _steps(c):
     return {s["id"]: s for s in _view(c)["steps"]}
 
 
-def test_the_walkthrough_opens_by_itself_on_a_new_workspace_at_its_first_screen(tmp_path):
+def test_the_walkthrough_opens_by_itself_on_a_new_workspace_on_welcome(tmp_path):
     _, c = _fresh(tmp_path)
     walk = _view(c)["walkthrough"]
-    assert walk == {"open": True, "step": "you", "closed": False, "finished": False, "promises_done": False}
+    assert walk == {"open": True, "step": "welcome", "closed": False, "finished": False, "promises_done": False}
+
+
+def test_welcome_is_shown_once_pressing_start_keeps_the_next_screen_for_a_resume(tmp_path):
+    ws, c = _fresh(tmp_path)
+    assert c.post("/api/setup/walkthrough", json={"step": "welcome"}).json()["step"] == "welcome"
+    assert c.post("/api/setup/walkthrough", json={"step": "you"}).json()["step"] == "you"
+    assert _view(_open(ws))["walkthrough"]["step"] == "you"  # after a restart: not Welcome again
 
 
 def test_the_screen_the_person_is_on_is_kept_and_is_where_it_resumes_after_a_restart(tmp_path):
@@ -98,7 +107,7 @@ def test_once_you_and_an_ai_account_are_set_it_opens_by_itself_only_on_the_first
 def test_an_unknown_screen_is_refused_and_nothing_is_kept(tmp_path):
     _, c = _fresh(tmp_path)
     assert c.post("/api/setup/walkthrough", json={"step": "nowhere"}).status_code == 422
-    assert _view(c)["walkthrough"]["step"] == "you"
+    assert _view(c)["walkthrough"]["step"] == "welcome"
 
 
 def test_the_sandbox_workspaces_do_not_open_it_by_themselves(tmp_path):
@@ -108,7 +117,7 @@ def test_the_sandbox_workspaces_do_not_open_it_by_themselves(tmp_path):
 
 def test_skipping_every_step_still_brings_it_back_while_you_and_an_ai_account_are_missing(tmp_path):
     ws, c = _fresh(tmp_path)
-    for step in ("workspace", "ai", "mail", "backup", "people"):
+    for step in COUNTED:
         c.post(f"/api/setup/{step}/skip")
     view = _view(c)
     assert view["finished"] and view["walkthrough"]["open"]
@@ -116,14 +125,14 @@ def test_skipping_every_step_still_brings_it_back_while_you_and_an_ai_account_ar
 
 def test_the_screen_to_open_at_is_the_first_with_something_left_when_none_was_kept(tmp_path):
     ws, c = _fresh(tmp_path)
-    c.post("/api/setup/workspace/skip")
-    c.post("/api/setup/ai/skip")
+    for step in ("workspace", "work", "ai"):
+        c.post(f"/api/setup/{step}/skip")
     assert _view(c)["walkthrough"]["step"] == "mail"
 
 
 def test_the_first_result_is_shown_before_the_screens_after_it_when_none_was_kept(tmp_path):
     _, c = _fresh(tmp_path)
-    for step in ("workspace", "ai", "mail"):
+    for step in ("workspace", "work", "ai", "mail"):
         c.post(f"/api/setup/{step}/skip")
     walk = _view(c)["walkthrough"]
     assert walk["step"] == "promises" and not walk["promises_done"]  # not passed over to Backups
@@ -131,7 +140,7 @@ def test_the_first_result_is_shown_before_the_screens_after_it_when_none_was_kep
 
 def test_moving_past_the_first_result_marks_it_done_and_resume_goes_on_from_there(tmp_path):
     _, c = _fresh(tmp_path)
-    for step in ("workspace", "ai", "mail"):
+    for step in ("workspace", "work", "ai", "mail"):
         c.post(f"/api/setup/{step}/skip")
     assert c.post("/api/setup/walkthrough", json={"step": "promises"}).json()["promises_done"] is False
     done = c.post("/api/setup/walkthrough", json={"step": "backup"}).json()
@@ -140,15 +149,16 @@ def test_moving_past_the_first_result_marks_it_done_and_resume_goes_on_from_ther
     assert _view(c)["walkthrough"]["promises_done"] is True
 
 
-def test_steps_belong_to_a_screen_and_only_the_five_that_matter_count(tmp_path):
+def test_steps_belong_to_a_screen_and_seven_of_them_count_in_the_order_the_person_meets_them(tmp_path):
     _, c = _fresh(tmp_path)
     steps = _steps(c)
     on = {s: (steps[s]["group"], steps[s]["counted"]) for s in setup.CORE_STEPS}
     assert on == {
         "workspace": ("you", True),
-        "work": ("work", False),
+        "work": ("work", True),
         "ai": ("ai", True),
         "mail": ("mail", True),
+        "promises": ("promises", True),
         "backup": ("backup", True),
         "people": ("people", True),
         "template": ("done", False),
@@ -160,7 +170,7 @@ def test_steps_belong_to_a_screen_and_only_the_five_that_matter_count(tmp_path):
 def test_finishing_does_not_need_the_optional_extras(tmp_path):
     _, c = _fresh(tmp_path)
     assert not _view(c)["finished"]
-    for step in ("workspace", "ai", "mail", "backup", "people"):
+    for step in COUNTED:
         c.post(f"/api/setup/{step}/skip")
     view = _view(c)
     # The extras stay undone, the add-ons one too: with nothing installed it isn't offered, and never reads as done.
@@ -232,16 +242,18 @@ def test_the_add_ons_that_come_with_the_app_are_not_listed_to_turn_on_and_not_on
 
 
 def test_the_screens_run_in_the_one_order_the_design_gives():
-    assert setup.WALKTHROUGH_STEPS == ("you", "work", "ai", "mail", "promises", "backup", "people", "done")
+    assert setup.WALKTHROUGH_STEPS == ("welcome", "you", "work", "ai", "mail", "promises", "backup", "people", "done")
 
 
-def test_the_work_question_is_optional_and_never_blocks_finishing(tmp_path):
+def test_the_work_question_is_a_counted_step_that_reads_as_skipped_when_left_for_later(tmp_path):
     _, c = _fresh(tmp_path)
-    assert _steps(c)["work"]["done"] is False and _steps(c)["work"]["counted"] is False
+    assert _steps(c)["work"]["done"] is False and _steps(c)["work"]["counted"] is True
     assert c.get("/api/setup/business").json()["chosen"] is None
-    for step in ("workspace", "ai", "mail", "backup", "people"):
+    for step in COUNTED:
         c.post(f"/api/setup/{step}/skip")
-    assert _view(c)["finished"], "the work question was never answered, and setup still finishes"
+    work = _steps(c)["work"]
+    assert work["skipped"] and not work["done"], "I'll do this later is Skipped, never Done"
+    assert _view(c)["finished"]
 
 
 def test_just_me_is_an_answer_that_keeps_no_work_side(tmp_path):
@@ -284,3 +296,89 @@ def test_the_workspace_and_the_assistant_names_are_basic_settings_where_they_are
     assert items["workspace.name"]["basic"] and items["workspace.assistant_name"]["basic"]
     assert items["workspace.assistant_name"]["value"] == "Reginald"
     assert items["workspace.name"]["editable"] and items["workspace.assistant_name"]["editable"]
+
+
+# ---- one list of seven counted steps, and ticks that are true ----------------------------------------------------
+
+
+def test_the_list_has_seven_counted_steps_in_order_each_with_its_place_and_the_total_is_served(tmp_path):
+    _, c = _fresh(tmp_path)
+    view = _view(c)
+    counted = [s for s in view["steps"] if s["counted"]]
+    assert [s["id"] for s in counted] == list(COUNTED)
+    assert [s["place"] for s in counted] == [1, 2, 3, 4, 5, 6, 7]
+    assert view["total"] == 7 and view["settled"] == 0
+    assert all(s["place"] is None for s in view["steps"] if not s["counted"])
+
+
+def test_skipping_mail_makes_your_promises_skipped_with_the_needs_mail_reason(tmp_path):
+    _, c = _fresh(tmp_path)
+    assert _steps(c)["promises"]["skipped"] is False and _steps(c)["promises"]["reason"] is None
+    c.post("/api/setup/mail/skip")
+    promises = _steps(c)["promises"]
+    assert promises["skipped"] and not promises["done"] and promises["reason"] == "needs_mail"
+
+
+def test_moving_on_from_the_first_result_without_it_having_happened_is_skipped_without_a_reason(tmp_path):
+    _, c = _fresh(tmp_path)
+    c.post("/api/setup/walkthrough", json={"step": "backup"})
+    promises = _steps(c)["promises"]
+    assert promises["skipped"] and not promises["done"] and promises["reason"] is None
+
+
+def test_handing_something_in_makes_your_promises_done_even_with_mail_skipped(tmp_path):
+    _, c = _fresh(tmp_path)
+    c.post("/api/setup/mail/skip")
+    assert c.post("/api/handin", json={"note": "Remember to call the plumber on Friday"}).status_code == 200
+    promises = _steps(c)["promises"]
+    assert promises["done"] and not promises["skipped"] and promises["reason"] is None
+
+
+def test_a_folder_chosen_is_not_a_backup_made_and_a_backup_made_is(tmp_path):
+    from engine.backup import run_backup
+
+    ws, c = _fresh(tmp_path)
+    drive = tmp_path / "drive"
+    drive.mkdir()
+    fingerprint = c.get("/api/settings").json()["fingerprint"]
+    chosen = {"storage.backups.targets": [{"path": str(drive), "label": "drive"}]}
+    added = c.post("/api/settings", json={"changes": chosen, "reset": [], "fingerprint": fingerprint})
+    assert added.status_code == 200, added.text
+    assert _steps(c)["backup"]["done"] is False, "choosing where is not a backup"
+    run_backup(ws, ws.config(env={}))
+    assert _steps(c)["backup"]["done"] is True
+
+
+def test_todays_setup_count_equals_the_walkthroughs(tmp_path):
+    _, c = _fresh(tmp_path)
+    c.post("/api/setup/mail/skip")  # also skips Your promises: two of seven
+    c.post("/api/setup/work/skip")
+    view = _view(c)
+    counted = [s for s in view["steps"] if s["counted"]]
+    assert view["settled"] == sum(1 for s in counted if s["done"] or s["skipped"]) == 3
+    assert view["total"] == len(counted) == 7
+
+
+def test_saving_the_persons_name_names_a_default_named_workspace_after_them_and_leaves_a_renamed_one_alone(tmp_path):
+    ws, c = _fresh(tmp_path)
+    assert ws.config(env={}).workspace.name == "Workspace"
+    saved = c.post("/api/me", json={"full_name": "Avery Stone", "workspace_name": "Avery's"})
+    assert saved.status_code == 200
+    assert ws.config(env={}).workspace.name == "Avery's"
+    # The person renamed it themselves: a later name save never overwrites that.
+    fingerprint = c.get("/api/settings").json()["fingerprint"]
+    assert (
+        c.post(
+            "/api/settings",
+            json={"changes": {"workspace.name": "Harbor Goods"}, "reset": [], "fingerprint": fingerprint},
+        ).status_code
+        == 200
+    )
+    c.post("/api/me", json={"full_name": "Avery Stone-Hale", "workspace_name": "Avery's"})
+    assert ws.config(env={}).workspace.name == "Harbor Goods"
+
+
+def test_a_name_saved_without_a_workspace_name_leaves_the_default_alone(tmp_path):
+    ws, c = _fresh(tmp_path)
+    c.post("/api/me", json={"full_name": "Avery Stone"})
+    assert ws.config(env={}).workspace.name == "Workspace"

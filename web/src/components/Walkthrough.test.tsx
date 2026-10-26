@@ -10,7 +10,7 @@ import { App } from "../App";
 import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture } from "../test-utils";
 import { Walkthrough } from "./Walkthrough";
 
-const CORE = ["workspace", "work", "ai", "mail", "backup", "people", "template", "first_note", "addons"];
+const CORE = ["workspace", "work", "ai", "mail", "promises", "backup", "people", "template", "first_note", "addons"];
 const SETTINGS = [
   {
     key: "ai.budgets.confirm_above_usd",
@@ -232,9 +232,10 @@ describe("opening", () => {
     window.location.hash = "";
   });
 
-  test("it opens by itself on a fresh workspace, with the introduction", async () => {
-    fakeApi({
-      ...routes(),
+  test("it opens by itself on a fresh workspace, on Welcome, and Start goes to You", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...routes({}, CORE.map((id) => step(id)), { step: "welcome" }),
       "GET panels": () => [],
       "GET asks": () => [],
       "GET changes": () => [],
@@ -242,13 +243,37 @@ describe("opening", () => {
       "GET runtime-config": () => ({ instance: null }),
     });
     renderApp(<App rc={rcFixture()} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
     expect(screen.getByText("About 10–20 minutes. You can stop and come back.")).toBeInTheDocument();
-    expect(await screenTitle()).toHaveTextContent("You");
-    expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
-    // The cursor starts where the person types, not on a label or the step list.
-    await waitFor(() => expect(screen.getByLabelText("Your full name")).toHaveFocus());
+    expect(await screenTitle()).toHaveTextContent("Welcome");
+    expect(screen.getByText(/reads your mail and calendar and keeps track of what you've promised and what you're owed/)).toBeInTheDocument();
+    // What the person will need: three things, the cost from the app's own daily limit ($2 a day is about $60 a month).
+    const need = screen.getByRole("region", { name: "What you'll need" });
+    const items = within(need).getAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent("An AI account. It costs about $60 a month at the daily limit you set.");
+    expect(items[1]).toHaveTextContent("optional");
+    expect(items[2]).toHaveTextContent("backups");
+    // Welcome is no step: no list of steps, no place, no Back, one Start; the cursor is on the heading, as there is no field.
+    expect(screen.queryByRole("navigation", { name: "Setup steps" })).toBeNull();
+    expect(screen.queryByText(/ of 7/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "I'll do this later" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Welcome" })).toHaveFocus());
     expect(window.location.hash).toBe("#setup");
+    await user.click(screen.getByRole("button", { name: "Start" }));
+    expect(await screenTitle()).toHaveTextContent("You");
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/walkthrough" && (c.body as S["WalkthroughIn"]).step === "you")).toBe(true));
+    // The cursor starts where the person types.
+    await waitFor(() => expect(screen.getByLabelText("Your full name")).toHaveFocus());
+    expect(screen.getByText("You · 1 of 7")).toBeInTheDocument();
+  });
+
+  test("the first screen of a resumed walkthrough is You, not Welcome", async () => {
+    fakeApi(routes());
+    open();
+    expect(await screenTitle()).toHaveTextContent("You");
+    expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
   });
 
   test("it does not open by itself when the server says it should not", async () => {
@@ -267,7 +292,7 @@ describe("opening", () => {
     renderApp(<App rc={rcFixture()} />);
     expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 30));
-    expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
     expect(window.location.hash).not.toBe("#setup");
   });
 
@@ -300,7 +325,7 @@ describe("opening", () => {
     await user.type(await screen.findByLabelText("Paste or type it here"), "Minutes from the call.");
     release();
     await new Promise((r) => setTimeout(r, 30));
-    expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
     expect(screen.getByLabelText("Paste or type it here")).toHaveValue("Minutes from the call.");
   });
 
@@ -441,7 +466,7 @@ describe("closing", () => {
     await user.click(await screen.findByRole("button", { name: "Go to Today" }));
     const line = await screen.findByRole("group", { name: /^Start the assistant: 1 item/ });
     await waitFor(() => expect(line).toHaveFocus());
-    expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
     expect(finished).toBe(true);
   });
 
@@ -449,7 +474,7 @@ describe("closing", () => {
     const user = userEvent.setup();
     window.location.hash = "";
     let walk: Partial<S["WalkthroughView"]> = { open: false, closed: true, step: "mail" };
-    const steps = CORE.map((id) => step(id, id === "workspace" || id === "ai" ? { done: true } : {}));
+    const steps = CORE.map((id) => step(id, id === "workspace" || id === "work" || id === "ai" ? { done: true } : {}));
     fakeApi({
       ...routes({ "GET setup": () => setupView(steps, { walkthrough: walk }) }),
       "GET panels": () => [],
@@ -468,10 +493,10 @@ describe("closing", () => {
     });
     renderApp(<App rc={rcFixture()} />);
     const line = await screen.findByRole("region", { name: "Setup" });
-    expect(line).toHaveTextContent("Setup 2 of 5");
-    expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
+    expect(line).toHaveTextContent("Setup 3 of 7");
+    expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
     await user.click(within(line).getByRole("button", { name: "Continue setup" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
   });
 });
@@ -500,13 +525,27 @@ describe("a way back to the step", () => {
     });
   }
 
-  test("moving on from Your promises marks it done in the list of screens, like the others", async () => {
+  test("the list of screens says what the server decided for Your promises: Done when it happened, Skipped (needs mail) when mail was skipped", async () => {
     window.location.hash = "";
+    const steps = CORE.map((id) =>
+      id === "mail" ? step(id, { skipped: true }) : id === "promises" ? step(id, { skipped: true, reason: "needs_mail" }) : step(id),
+    );
     fakeApi({
-      ...routes({ "GET setup": () => setupView(CORE.map((id) => step(id)), { walkthrough: { open: true, step: "backup", closed: false, promises_done: true } }) }),
+      ...routes({ "GET setup": () => setupView(steps, { walkthrough: { open: true, step: "backup", closed: false, promises_done: true } }) }),
       "GET watch": () => [],
-      "POST setup/walkthrough": (body) => ({ open: true, step: "backup", closed: false, finished: false, promises_done: true, ...(body as object) }),
     });
+    open();
+    const item = (await screen.findByRole("button", { name: /Your promises/ })) as HTMLElement;
+    expect(item).toHaveAttribute("data-state", "skipped");
+    expect(within(item).getByText("Skipped (needs mail)")).toBeInTheDocument();
+    // Moving on from the screen does not tick it: only the step's own thing does.
+    expect(within(item).queryByText("Done")).toBeNull();
+  });
+
+  test("Your promises reads Done in the list once the server says the look back ran", async () => {
+    window.location.hash = "";
+    const steps = CORE.map((id) => (id === "promises" ? step(id, { done: true }) : step(id)));
+    fakeApi({ ...routes({ "GET setup": () => setupView(steps, { walkthrough: { open: true, step: "backup", closed: false } }) }), "GET watch": () => [] });
     open();
     const item = (await screen.findByRole("button", { name: /Your promises/ })) as HTMLElement;
     expect(item).toHaveAttribute("data-state", "done");
@@ -641,7 +680,7 @@ describe("each screen", () => {
     await user.type(zone, "Zone-Two");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
-    expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester" });
+    expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester", workspace_name: "Sam's" });
     expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.user.timezone": "Zone-Two" } });
     expect(calls.some((c) => c.route === "POST setup/business" || c.route === "POST setup/work")).toBe(false);
   });
@@ -1379,7 +1418,7 @@ describe("the look", { timeout: 20_000 }, () => {
     expect(within(main).queryByRole("button", { name: "Save and continue" })).toBeNull();
     await user.click(within(main).getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
-    expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Harbor Work" });
+    expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Harbor Work", workspace_name: "Harbor's" });
   });
 
   test("a screen that was already done also saves with Continue, and moves on", async () => {
@@ -1426,5 +1465,136 @@ describe("the look", { timeout: 20_000 }, () => {
     await user.click(screen.getByRole("button", { name: "Back up now and continue" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("That drive isn't on this computer.");
     expect(screen.getByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
+  });
+});
+
+describe("one list of seven steps", () => {
+  const SEVEN: [S["WalkthroughView"]["step"], string][] = [
+    ["you", "You"],
+    ["work", "Work"],
+    ["ai", "Your AI account"],
+    ["mail", "Mail and calendar"],
+    ["promises", "Your promises"],
+    ["backup", "Backups"],
+    ["people", "People"],
+  ];
+
+  test("progress reads 1 of 7 through 7 of 7, in the one order", async () => {
+    for (const [at, label] of SEVEN) {
+      fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: at }), "GET watch": () => [] });
+      const { unmount } = open();
+      expect(await screenTitle()).toHaveTextContent(label);
+      const n = SEVEN.findIndex(([id]) => id === at) + 1;
+      expect(await screen.findByText(`${label} · ${n} of 7`)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  test("the step list is the seven counted steps and Done, each with the standing the server gave it", async () => {
+    const steps = CORE.map((id) =>
+      id === "workspace" ? step(id, { done: true }) : id === "work" ? step(id, { skipped: true }) : step(id),
+    );
+    fakeApi({ ...routes({}, steps, { step: "ai" }), "GET watch": () => [] });
+    open();
+    await screen.findByRole("navigation", { name: "Setup steps" });
+    const list = within(document.getElementById("walkthrough-steps")!);
+    expect(list.getAllByRole("button").map((b) => b.getAttribute("data-screen"))).toEqual([
+      "you", "work", "ai", "mail", "promises", "backup", "people", "done",
+    ]);
+    const at = (id: string) => document.querySelector(`#walkthrough-steps [data-screen="${id}"]`);
+    expect(at("you")).toHaveAttribute("data-state", "done");
+    expect(at("work")).toHaveAttribute("data-state", "skipped");
+    expect(at("mail")).toHaveAttribute("data-state", "todo");
+  });
+
+  test("on a narrow window the list of steps is behind a Steps button, and choosing a step closes it", async () => {
+    const user = userEvent.setup();
+    document.documentElement.setAttribute("data-narrow", "");
+    try {
+      fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: "you" }), "GET watch": () => [] });
+      open();
+      expect(await screen.findByText("You · 1 of 7")).toBeInTheDocument();
+      const steps = screen.getByRole("button", { name: "Steps" });
+      const list = document.getElementById("walkthrough-steps")!;
+      expect(steps).toHaveAttribute("aria-expanded", "false");
+      expect(list).toHaveAttribute("data-open", "false");
+      await user.click(steps);
+      expect(steps).toHaveAttribute("aria-expanded", "true");
+      expect(list).toHaveAttribute("data-open", "true");
+      await user.click(within(list).getByRole("button", { name: /^Backups/ }));
+      expect(await screenTitle()).toHaveTextContent("Backups");
+      expect(screen.getByRole("button", { name: "Steps" })).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByText("Backups · 6 of 7")).toBeInTheDocument();
+    } finally {
+      document.documentElement.removeAttribute("data-narrow");
+    }
+  });
+
+  test("Done lists all seven with Done or Skipped, and the reason when one step needed another", async () => {
+    const steps = CORE.map((id) =>
+      id === "workspace"
+        ? step(id, { done: true })
+        : id === "mail"
+          ? step(id, { skipped: true })
+          : id === "promises"
+            ? step(id, { skipped: true, reason: "needs_mail" })
+            : id === "work"
+              ? step(id, { skipped: true })
+              : step(id),
+    );
+    fakeApi({ ...routes({}, steps, { step: "done" }), "GET watch": () => [] });
+    open();
+    const recap = within(await screen.findByRole("list", { name: "What was set up" }));
+    const rows = recap.getAllByRole("listitem");
+    expect(rows.map((r) => r.getAttribute("data-step"))).toEqual(["workspace", "work", "ai", "mail", "promises", "backup", "people"]);
+    expect(rows[0]).toHaveTextContent("Done");
+    expect(rows[1]).toHaveTextContent("Skipped");
+    expect(rows[3]).toHaveTextContent("Skipped");
+    expect(rows[4]).toHaveTextContent("Skipped (needs mail)");
+    expect(rows[2]).toHaveTextContent("Not set up yet");
+  });
+});
+
+describe("names", () => {
+  test("You says what the assistant is called, and Rename turns it into a field in place that saves through the settings", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...routes(),
+      "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+    });
+    open();
+    expect(await screen.findByText("Your assistant is called Reginald.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    const field = await screen.findByLabelText("Your assistant's name");
+    expect(field).toHaveValue("Reginald");
+    await waitFor(() => expect(field).toHaveFocus());
+    await user.clear(field);
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    await user.type(field, "Pilot");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+    expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
+      changes: { "workspace.assistant_name": "Pilot" },
+      reset: [],
+      fingerprint: "fp-1",
+    });
+  });
+
+  test("Done shows the app's name with Rename", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...routes({}, CORE.map((id) => step(id)), { step: "done" }),
+      "GET watch": () => [],
+      "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+    });
+    open();
+    expect(await screen.findByText("The name at the top of the screen is Workspace.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    const field = await screen.findByLabelText("The name at the top of the screen");
+    await user.clear(field);
+    await user.type(field, "Avery's");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+    expect((calls.find((c) => c.route === "POST settings")!.body as S["SettingsSave"]).changes).toEqual({ "workspace.name": "Avery's" });
   });
 });

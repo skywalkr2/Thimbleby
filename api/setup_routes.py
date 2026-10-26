@@ -92,7 +92,7 @@ from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
 from engine.config import Config, ConfigError, load_config
-from engine.config.schema import WatchSource
+from engine.config.schema import WatchSource, WorkspaceFile
 from engine.sign_in_sources import accounts_of
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
@@ -132,6 +132,9 @@ GUIDED = (
     "workspace.user.",
 )
 
+
+#: The workspace's name until someone names it: a person's name saved at setup replaces only this.
+WORKSPACE_DEFAULT_NAME = WorkspaceFile.model_fields["name"].get_default()
 
 #: How the first read of a source added from the screen goes: the source setting's own default, which the add route
 #: leaves untouched.
@@ -341,6 +344,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 allow=("workspace.user.",),
             )
             person_named()
+        workspace_name = " ".join((body.workspace_name or "").split())
+        if workspace_name and current().workspace.name == WORKSPACE_DEFAULT_NAME:
+            try:
+                save({"workspace.name": workspace_name}, [], config_screens.fingerprint(ws.config_dir))
+                worker.apply_live()  # the name is a live setting: the header shows it at once
+            except HTTPException as err:  # a name fixed by the environment stays; the person is named either way
+                log.info("The workspace wasn't named after the person: %s", err.detail)
         return MeView(person=pid, full_name=name)
 
     @r.get("/setup/business")
@@ -406,9 +416,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def setup_view() -> SetupView:
         now = current()
         steps = setup.steps(ws, now, store)
+        counted = [s for s in steps if s.counted]
+        places = {s.id: n for n, s in enumerate(counted, start=1)}
         return SetupView(
-            steps=[SetupStepView(**vars(s)) for s in steps],
+            steps=[SetupStepView(**vars(s), place=places.get(s.id)) for s in steps],
             finished=setup.finished(steps),
+            total=len(counted),
+            settled=sum(1 for s in counted if s.done or s.skipped),
             local=local,
             walkthrough=WalkthroughView(**vars(setup.walkthrough(ws, now, steps))),
         )

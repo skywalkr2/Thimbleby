@@ -17,7 +17,18 @@
   display: grid; grid-template-columns: var(--settings-nav-w) minmax(0, 1fr); gap: var(--gutter);
   padding: var(--page-pad); width: 100%; align-items: start;
 }
-.screens { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); position: sticky; top: var(--space-4); }
+.nav { display: grid; gap: var(--space-2); align-content: start; position: sticky; top: var(--space-4); }
+/* Where the person is among the counted steps ("You · 1 of 7"). The Steps button that shows the list comes only on a phone. */
+.place { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.place p { margin: 0; font-weight: var(--weight-semibold); min-width: 0; overflow-wrap: anywhere; }
+.place button { display: none; }
+/* Welcome has no step list, so the screen takes the whole width. */
+.layout[data-welcome] { grid-template-columns: minmax(0, 1fr); }
+.lead { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); max-width: var(--measure); }
+.needs { display: grid; gap: var(--space-2); }
+.needs h3 { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); }
+.needs ul { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); max-width: var(--measure); }
+.screens { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .screen {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%;
   min-height: var(--btn-h); padding: var(--space-2) var(--space-3); text-align: left;
@@ -70,7 +81,11 @@
 .extras { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); width: 100%; }
 .extras h3 { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); }
 :global([data-narrow]) .layout { grid-template-columns: minmax(0, 1fr); padding: var(--space-4); }
-:global([data-narrow]) .screens { position: static; display: flex; flex-wrap: wrap; gap: var(--space-1); }
+:global([data-narrow]) .nav { position: static; }
+:global([data-narrow]) .place button { display: inline-flex; }
+:global([data-narrow]) .screens { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+/* On a phone the list is behind the Steps button, so the first field of a step is near the top of the window. */
+:global([data-narrow]) .screens[data-open="false"] { display: none; }
 :global([data-narrow]) .screen { width: auto; border-color: var(--border); }
 :global([data-narrow]) .step { padding: var(--space-4); }
 :global([data-narrow]) .head { padding: var(--space-3) var(--space-4); }

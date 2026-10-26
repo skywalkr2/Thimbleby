@@ -3567,12 +3567,20 @@ class SetupStepView(BaseModel):
         description="The walkthrough screen the step is on. A step on the last screen is an optional extra.",
     )
     counted: bool = Field(False, description="The step counts toward finishing the setup.")
+    place: int | None = Field(
+        None,
+        description='A counted step\'s place in the one list of counted steps, from 1 (the 1 of "You · 1 of 7"); the '
+        "walkthrough, its last screen and Today's setup line all read it from here.",
+    )
+    reason: Literal["needs_mail"] | None = Field(
+        None, description="Why a skipped step was skipped, when it needed a step that was skipped: needs_mail."
+    )
     applies: bool | None = Field(
         None, description="False when there is nothing for the person to do here, so the step isn't offered."
     )
 
 
-WalkthroughScreen = Literal["you", "work", "ai", "mail", "promises", "backup", "people", "done"]
+WalkthroughScreen = Literal["welcome", "you", "work", "ai", "mail", "promises", "backup", "people", "done"]
 
 
 class WalkthroughView(BaseModel):
@@ -3596,6 +3604,10 @@ class WalkthroughIn(BaseModel):
 class SetupView(BaseModel):
     steps: list[SetupStepView]
     finished: bool = Field(description="Every step that counts is done or skipped; the optional extras never count.")
+    total: int = Field(
+        description='How many steps count (the "7" of "1 of 7"), the same on every screen that shows it.'
+    )
+    settled: int = Field(description='How many of the counted steps are done or skipped (Today\'s "Setup n of 7").')
     local: bool = Field(description="The app runs on the person's own computer, so folders can be picked here.")
     walkthrough: WalkthroughView
 
@@ -5185,6 +5197,12 @@ class MeView(BaseModel):
 class MeIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     full_name: str = Field(min_length=1, max_length=200)
+    workspace_name: str | None = Field(
+        None,
+        max_length=200,
+        description="What to name the workspace after the person's name is saved, used only while the workspace still "
+        "has its default name; a name the person chose is left alone.",
+    )
 
 
 class BusinessIn(BaseModel):

@@ -97,6 +97,7 @@ const SCREEN_OF: Record<string, S["SetupStepView"]["group"]> = {
   work: "work",
   ai: "ai",
   mail: "mail",
+  promises: "promises",
   backup: "backup",
   people: "people",
 };
@@ -112,7 +113,9 @@ export function setupStep(id: string, extra: Partial<S["SetupStepView"]> = {}): 
     action: null,
     plugin: null,
     group: SCREEN_OF[id] ?? "done",
-    counted: id in SCREEN_OF && id !== "work",
+    counted: id in SCREEN_OF,
+    place: null,
+    reason: null,
     ...extra,
   };
 }
@@ -122,9 +125,15 @@ export function setupView(
   steps: S["SetupStepView"][],
   over: { finished?: boolean; local?: boolean; walkthrough?: Partial<S["WalkthroughView"]> } = {},
 ): S["SetupView"] {
+  // The server numbers the counted steps and counts the settled ones; the fixtures do the same.
+  let place = 0;
+  const numbered = steps.map((s) => (s.counted && s.place == null ? { ...s, place: ++place } : s));
+  const counted = numbered.filter((s) => s.counted);
   return {
-    steps,
+    steps: numbered,
     finished: over.finished ?? false,
+    total: counted.length,
+    settled: counted.filter((s) => s.done || s.skipped).length,
     local: over.local ?? true,
     walkthrough: { open: false, step: "you", closed: false, finished: false, promises_done: false, ...over.walkthrough },
   };

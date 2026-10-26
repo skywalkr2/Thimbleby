@@ -130,7 +130,7 @@ test("older fragments still open their view", async () => {
   window.location.hash = "#welcome";
   fakeApi({ ...quiet, "GET setup": () => setupView([], { finished: false }), "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [] }) });
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
 });
 
 test("going to another view moves focus to its heading, but the first load does not take focus", async () => {

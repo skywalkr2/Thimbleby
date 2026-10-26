@@ -1,6 +1,7 @@
 // The new-start walkthrough (design 7.8): the setup as one guided path, full window, one screen at a time in the order a
-// person needs them: You, Work, Your AI account, Mail and calendar, Your promises (the first result: the look back and what it
-// found), Backups, People, Done. Every screen says why it matters and
+// person needs them: Welcome (which is no step), then seven counted steps, You, Work, Your AI account, Mail and calendar,
+// Your promises (the first result: the look back and what it found), Backups, People, and Done. The server decides each
+// step's standing and its place ("You · 1 of 7"); this only draws them. Every screen says why it matters and
 // can be skipped now and done later. The server keeps the screen the person is on, so it resumes where they left it,
 // also after a restart; "Finish later" closes it for good, and it opens again only when the person asks. The core's own
 // step forms are the ones the setup list uses.
@@ -9,13 +10,15 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { useToastCount, useToasts } from "../lib/toasts";
-import { after, before, counted, SCREENS, standing, STEP_OF, type Screen } from "../lib/walkthrough";
+import { after, before, counted, SCREENS, standing, STEP_OF, stepOf, type Screen } from "../lib/walkthrough";
 import { ContinueSlotProvider, type ContinueSlot, type ContinueSpec } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { FirstPromises } from "./FirstPromises";
+import { RenameName } from "./RenameName";
 import { StepList, WorkspaceStep } from "./Welcome";
+import { WalkthroughWelcome } from "./WalkthroughWelcome";
 import { WalkthroughPeople } from "./WalkthroughPeople";
 import { WorkStep } from "./WalkthroughWork";
 import { WalkthroughMail } from "./WalkthroughMail";
@@ -54,6 +57,8 @@ export function Walkthrough(
   const requested = useRef(0);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  // On a phone the list of steps is behind a Steps button; this is whether it is showing.
+  const [listOpen, setListOpen] = useState(false);
   // What Continue does on this screen, as the screen says (see `useContinue`): kept in a ref and only drawn again when what
   // shows of it changes.
   const slot = useRef<ContinueSpec | null>(null);
@@ -173,9 +178,11 @@ export function Walkthrough(
   const steps = data.steps;
   const go = (screen: Screen) => {
     setChosen(screen);
+    setListOpen(false);
     void keep({ step: screen });
   };
-  const here = standing(steps, current, data.walkthrough.promises_done);
+  const here = standing(steps, current);
+  const placed = stepOf(steps, current);
   // With nothing connected the mail step has one way on, "I'll do this later"; a Continue beside it would do the same thing.
   // Continue comes once something is connected (the step is done), or once the step was left for later.
   const next = after(current);
@@ -245,43 +252,57 @@ export function Walkthrough(
         </div>
         <Button onClick={() => void finishLater()}>{t("walkthrough.later")}</Button>
       </header>
-      <div className={styles.layout}>
-        <nav aria-label={t("walkthrough.screens")}>
-          <ol className={styles.screens}>
-            {SCREENS.map((screen) => {
-              const state = standing(steps, screen, data.walkthrough.promises_done);
-              return (
-                <li key={screen}>
-                  <button
-                    type="button"
-                    className={styles.screen}
-                    data-screen={screen}
-                    data-state={state ?? undefined}
-                    aria-current={screen === current ? "step" : undefined}
-                    onClick={() => go(screen)}
-                  >
-                    <span className={styles.label}>
-                      <span>{t(`walkthrough.screen.${screen}`)}</span>
-                      {screen === current && <span className={styles.here}>{t("walkthrough.here")}</span>}
-                    </span>
-                    {(state === "done" || state === "skipped") && (
-                      <span className={styles.mark}>
-                        <span aria-hidden="true">{state === "done" ? "✓ " : "– "}</span>
-                        {t(`walkthrough.state.${state}`)}
+      <div className={styles.layout} data-welcome={current === "welcome" ? "" : undefined}>
+        {current !== "welcome" && (
+          <nav aria-label={t("walkthrough.screens")} className={styles.nav}>
+            <div className={styles.place}>
+              <p data-place="">
+                {placed
+                  ? t("walkthrough.place", { label: t(`walkthrough.screen.${current}`), n: placed.place ?? 0, total: data.total })
+                  : t(`walkthrough.screen.${current}`)}
+              </p>
+              <Button size="sm" aria-expanded={listOpen} aria-controls="walkthrough-steps" onClick={() => setListOpen((open) => !open)}>
+                {t("walkthrough.steps")}
+              </Button>
+            </div>
+            <ol className={styles.screens} id="walkthrough-steps" data-open={listOpen}>
+              {SCREENS.filter((screen) => screen !== "welcome").map((screen) => {
+                const state = standing(steps, screen);
+                const reason = stepOf(steps, screen)?.reason;
+                return (
+                  <li key={screen}>
+                    <button
+                      type="button"
+                      className={styles.screen}
+                      data-screen={screen}
+                      data-state={state ?? undefined}
+                      aria-current={screen === current ? "step" : undefined}
+                      onClick={() => go(screen)}
+                    >
+                      <span className={styles.label}>
+                        <span>{t(`walkthrough.screen.${screen}`)}</span>
+                        {screen === current && <span className={styles.here}>{t("walkthrough.here")}</span>}
                       </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
+                      {(state === "done" || state === "skipped") && (
+                        <span className={styles.mark}>
+                          <span aria-hidden="true">{state === "done" ? "✓ " : "– "}</span>
+                          {t(state === "skipped" && reason ? `walkthrough.state.skipped_${reason}` : `walkthrough.state.${state}`)}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        )}
         <main id="main" className={styles.step} tabIndex={-1} aria-labelledby="walkthrough-screen-title" data-screen={current}>
           <h2 id="walkthrough-screen-title" ref={heading} tabIndex={-1}>
             {t(`walkthrough.screen.${current}`)}
           </h2>
           <p className={styles.why}>{t(`walkthrough.why.${current}`)}</p>
           <div className={styles.body}>
+          {current === "welcome" && <WalkthroughWelcome />}
           {current === "you" && <WorkspaceStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "work" && <WorkStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "ai" && <WelcomeAi local={data.local} done={aiDone} />}
@@ -323,7 +344,7 @@ export function Walkthrough(
                     reason={slot.current?.disabled ? slot.current.why : undefined}
                     onClick={() => void carryOn()}
                   >
-                    {slot.current?.label ?? t("walkthrough.next")}
+                    {slot.current?.label ?? t(current === "welcome" ? "walkthrough.welcome.start" : "walkthrough.next")}
                   </Button>
                 )}
               </>
@@ -349,13 +370,14 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           const screen = step.group;
           const state = step.done ? "done" : step.skipped ? "skipped" : "todo";
           const label = t(`walkthrough.screen.${screen}`);
+          const said = state === "skipped" && step.reason ? `walkthrough.done.skipped_${step.reason}` : `walkthrough.done.${state}`;
           return (
             <li key={step.id} data-step={step.id} data-state={state}>
               <span className={`what ${styles.what}`}>
                 <span aria-hidden="true">{state === "done" ? "✓ " : state === "skipped" ? "– " : "○ "}</span>
                 {label}
               </span>
-              <span className={styles.state}>{t(`walkthrough.done.${state}`)}</span>
+              <span className={styles.state}>{t(said)}</span>
               <span className={styles.act}>
                 {state !== "done" && (
                   <button
@@ -372,6 +394,15 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           );
         })}
       </ul>
+      <RenameName
+        settingKey="workspace.name"
+        sentence={(name) => t("walkthrough.done.name", { name })}
+        label={t("walkthrough.done.name_label")}
+        rename={t("walkthrough.done.name_rename")}
+        save={t("walkthrough.done.name_save")}
+        cancel={t("walkthrough.done.name_cancel")}
+        blank={t("walkthrough.assistant.blank")}
+      />
       <section className={styles.extras} aria-labelledby="walkthrough-extras">
         <h3 id="walkthrough-extras">{t("walkthrough.extras.title")}</h3>
         <p className={styles.aside}>{t("walkthrough.extras.why")}</p>

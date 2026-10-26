@@ -14,6 +14,7 @@ import { expect, test } from "@playwright/test";
 import {
   collectProblems,
   fakeAddress,
+  pressStart,
   visit,
   type Info,
   type Requests,
@@ -51,9 +52,10 @@ test.describe.serial("journey: new start", () => {
 
     // 1. I open the link the start command printed. The walkthrough opens by itself and says nothing is spent yet.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await expect(page.getByText("About 10–20 minutes. You can stop and come back.")).toBeVisible();
     await visit(page);
+    await pressStart(page);
     const main = page.locator("main#main");
 
     // 2. You.
@@ -131,7 +133,7 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     // A page opened fresh after the restart resumes at this screen.
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await visit(page);
     // Signed in once, nothing was asked of the assistant.
@@ -237,7 +239,7 @@ test.describe.serial("journey: new start", () => {
     // 8. Done: what was set up and what was skipped, then the optional extras. The last button lands on Today.
     await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
-    for (const step of ["workspace", "ai", "mail", "backup"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
+    for (const step of ["workspace", "work", "ai", "mail", "promises", "backup"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
     await expect(recap.locator('[data-step="people"]')).toContainText("Skipped");
     const extras = main.getByRole("region", { name: "Optional extras" });
     await expect(extras).toBeVisible();

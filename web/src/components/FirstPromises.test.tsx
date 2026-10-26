@@ -324,7 +324,7 @@ describe("in the walkthrough", () => {
     const user = userEvent.setup();
     shell("mail");
     const nav = await screen.findByRole("navigation", { name: "Setup steps" });
-    expect(within(nav).getAllByRole("button").map((b) => b.getAttribute("data-screen"))).toEqual(["you", "work", "ai", "mail", "promises", "backup", "people", "done"]);
+    expect(within(nav).getAllByRole("button").map((b) => b.getAttribute("data-screen")).filter(Boolean)).toEqual(["you", "work", "ai", "mail", "promises", "backup", "people", "done"]);
     await user.click(await screen.findByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your promises" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { level: 3, name: "Look back over the last 14 days of your own mail" })).toBeInTheDocument();

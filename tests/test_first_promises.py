@@ -134,6 +134,14 @@ def test_the_go_starts_everything_the_offer_counted_once(env):
     assert (working.stage, working.count, working.finished) == ("working", 2, 0)
 
 
+def test_your_promises_is_done_only_once_the_look_back_started(env):
+    ws, cfg, store = env
+    read(env)
+    assert not next(s for s in setup.steps(ws, cfg, store) if s.id == "promises").done  # offered, not run
+    first_promises.go(ws, store, cfg)
+    assert next(s for s in setup.steps(ws, cfg, store) if s.id == "promises").done
+
+
 def test_while_some_requests_are_held_and_others_still_queued_it_is_working_not_a_part_of_the_offer(env):
     ws, cfg, store = env
     read(env)

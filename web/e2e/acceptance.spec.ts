@@ -2,6 +2,7 @@
 // Names come from the fixture's cases and people, never written out here.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { pressStart } from "./journey-helpers";
 
 interface Case {
   id: string;
@@ -257,8 +258,8 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     const line = page.getByRole("region", { name: "Setup", exact: true });
     await expect(line).toBeVisible();
-    await expect(line).toContainText(/Setup \d+ of \d+/);
-    await expect(line).toContainText("Next: Add an AI account and test it");
+    await expect(line).toContainText(/Setup \d+ of 7/);
+    await expect(line).toContainText("Next: Say whether your work is part of this");
     // The stand-in assistant is a line in the status popover with a button to the AI step, and no command line.
     const status = await openStatus(page);
     await expect(status).toContainText("You're using a practice assistant");
@@ -331,7 +332,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("textbox", { name: "Hours between backups" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Workspace name" })).toHaveCount(0);
     await page.getByRole("button", { name: "Open the setup guide" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await pressStart(page);
     const screens = page.getByRole("navigation", { name: "Setup steps" });
     await screens.getByRole("button", { name: /^Your AI account/ }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();

@@ -1,6 +1,7 @@
 // The panes the shell opens beside or over a screen (design 7.1, 7.13): Hand something in as a drawer, Ask as a pane on a
 // wide screen and a dialog below it, the stages board, and the phone's review mode.
 import { expect, test, type Page } from "@playwright/test";
+import { pressStart } from "./journey-helpers";
 
 async function signIn(page: Page, hash = "") {
   await page.goto("?token=e2e-token");
@@ -214,7 +215,8 @@ test.describe("the walkthrough's look", () => {
   }) => {
     await page.setViewportSize({ width: 1920, height: 1000 });
     await signIn(page, "setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await pressStart(page);
     const steps = page.getByRole("navigation", { name: "Setup steps" });
     await steps.getByRole("button", { name: /^Mail and calendar/ }).click();
     await steps.getByRole("button", { name: /^You/ }).first().click();

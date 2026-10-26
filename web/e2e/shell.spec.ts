@@ -3,6 +3,7 @@
 // the offline state, and the phone's bottom bar. Screenshots go to the folder named by E2E_SHOTS, when it is set.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { pressStart, showSteps } from "./journey-helpers";
 
 /** The assistant's configured name, as the app reports it. */
 async function assistantName(page: Page): Promise<string> {
@@ -101,9 +102,14 @@ test.describe("the visual system", () => {
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: HEIGHT });
         await signIn(page, "setup");
-        await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+        // A fresh start opens on Welcome, which has no step list; it passes the checks too, then Start goes on.
+        await expectNoViolations(page);
+        await pressStart(page);
         const screens = page.getByRole("navigation", { name: "Setup steps" });
         for (const name of [/^Your AI account/, /^Mail and calendar/, /^Done/]) {
+          // On a phone the list is behind the Steps button, and closes once a step is chosen.
+          await showSteps(page);
           await screens.getByRole("button", { name }).click();
           await expectNoViolations(page);
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -278,7 +284,9 @@ test.describe("screen use and the shell", () => {
         });
       });
       await signIn(page, "setup");
-      await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+      await pressStart(page);
+      await showSteps(page);
       await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Done/ }).click();
       await page.getByRole("main").getByRole("button", { name: "Go to Today" }).click();
       const line = page.locator('[data-queue-line="first_go"]');
@@ -288,6 +296,27 @@ test.describe("screen use and the shell", () => {
       await shoot(page, `first-go-${width}`);
     });
   }
+
+  // On a phone the step list is one line with a Steps button, so the first field of a step is above the fold (390×844).
+  test("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page, "setup");
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await pressStart(page);
+    const main = page.getByRole("main");
+    await expect(main.getByRole("heading", { level: 2, name: "You", exact: true })).toBeVisible();
+    await expect(page.getByText("You · 1 of 7")).toBeVisible();
+    const steps = page.getByRole("button", { name: "Steps", exact: true });
+    await expect(steps).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#walkthrough-steps")).toBeHidden();
+    const field = (await main.getByLabel("Your full name").boundingBox())!;
+    expect(field.y + field.height).toBeLessThanOrEqual(844);
+    await steps.click();
+    await expect(page.locator("#walkthrough-steps")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
 
   // A toast sits at the bottom of the window; while the walkthrough is open it never covers the screen's own buttons, and
   // it is gone when the walkthrough moves to another screen.
@@ -300,14 +329,17 @@ test.describe("screen use and the shell", () => {
     }) => {
       await page.setViewportSize({ width, height });
       await signIn(page, "setup");
-      await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
       // The walkthrough resumes at the first screen not done, which depends on what the workspace already has (the AI
       // account's own screen may be the one it opens at, and an opening screen takes the cursor before this test moves it).
       // So the screen under test is always opened by moving to it from another one, which is what puts the cursor in it.
+      await pressStart(page);
       const steps = page.getByRole("navigation", { name: "Setup steps" });
       const main = page.getByRole("main");
+      await showSteps(page);
       await steps.getByRole("button", { name: /^Mail and calendar/ }).click();
       await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+      await showSteps(page);
       await steps.getByRole("button", { name: /^Your AI account/ }).click();
       await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
       // The screen's rows come from several requests, and its height changes as each arrives; the buttons are at its end, so
@@ -575,7 +607,7 @@ test.describe("screen use and the shell", () => {
     await page.goto("#stages");
     await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeVisible();
     await page.goto("#setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
   });
 
   test("changing view moves focus to the new view's heading", async ({ page }) => {

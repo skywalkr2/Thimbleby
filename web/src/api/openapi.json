@@ -13063,6 +13063,19 @@
             "minLength": 1,
             "title": "Full Name",
             "type": "string"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What to name the workspace after the person's name is saved, used only while the workspace still has its default name; a name the person chose is left alone.",
+            "title": "Workspace Name"
           }
         },
         "required": [
@@ -24041,6 +24054,18 @@
             "title": "Label",
             "type": "string"
           },
+          "place": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A counted step's place in the one list of counted steps, from 1 (the 1 of \"You \u00b7 1 of 7\"); the walkthrough, its last screen and Today's setup line all read it from here.",
+            "title": "Place"
+          },
           "plugin": {
             "anyOf": [
               {
@@ -24051,6 +24076,19 @@
               }
             ],
             "title": "Plugin"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "const": "needs_mail",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a skipped step was skipped, when it needed a step that was skipped: needs_mail.",
+            "title": "Reason"
           },
           "settings": {
             "additionalProperties": true,
@@ -24095,12 +24133,22 @@
             "title": "Local",
             "type": "boolean"
           },
+          "settled": {
+            "description": "How many of the counted steps are done or skipped (Today's \"Setup n of 7\").",
+            "title": "Settled",
+            "type": "integer"
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/SetupStepView"
             },
             "title": "Steps",
             "type": "array"
+          },
+          "total": {
+            "description": "How many steps count (the \"7\" of \"1 of 7\"), the same on every screen that shows it.",
+            "title": "Total",
+            "type": "integer"
           },
           "walkthrough": {
             "$ref": "#/components/schemas/WalkthroughView"
@@ -24109,6 +24157,8 @@
         "required": [
           "steps",
           "finished",
+          "total",
+          "settled",
           "local",
           "walkthrough"
         ],
@@ -27510,6 +27560,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "welcome",
                   "you",
                   "work",
                   "ai",
@@ -27558,6 +27609,7 @@
           "step": {
             "description": "The screen to open at.",
             "enum": [
+              "welcome",
               "you",
               "work",
               "ai",

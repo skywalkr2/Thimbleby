@@ -91,6 +91,19 @@ export async function connectedAgain(page: Page) {
   });
 }
 
+/** A fresh start opens on Welcome, which has no step list and one button: Start goes on to You. A walkthrough that resumes
+ * at another screen has no Welcome, so nothing happens there. */
+export async function pressStart(page: Page) {
+  const welcome = page.getByRole("heading", { level: 2, name: "Welcome", exact: true });
+  if (await welcome.isVisible()) await page.getByRole("main").getByRole("button", { name: "Start", exact: true }).click();
+}
+
+/** On a phone the step list is behind a Steps button; open it so a step can be chosen. Nothing happens on a wider window. */
+export async function showSteps(page: Page) {
+  const button = page.getByRole("button", { name: "Steps", exact: true });
+  if ((await button.isVisible()) && (await button.getAttribute("aria-expanded")) === "false") await button.click();
+}
+
 /** A screen the person sees: it names no settings file, secret reference or command, and passes the accessibility checks. */
 export async function visit(page: Page) {
   const text = await readScreen(page);

@@ -183,11 +183,12 @@ def test_steps_say_what_is_done_and_can_be_skipped(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     steps = {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}
-    assert list(steps)[:9] == [
+    assert list(steps)[:10] == [
         "workspace",
         "work",
         "ai",
         "mail",
+        "promises",
         "backup",
         "people",
         "template",
@@ -206,7 +207,7 @@ def test_a_backup_folder_is_checked_then_added(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     inside = c.get(f"{api}/setup/folder-check", params={"path": str(ws.root / "data")}).json()
-    assert not inside["ok"] and "outside the workspace" in inside["problem"]
+    assert not inside["ok"] and "somewhere else" in inside["problem"]
     missing = c.get(f"{api}/setup/folder-check", params={"path": str(tmp_path / "nowhere")}).json()
     assert not missing["ok"]
     folder = tmp_path / "drive"

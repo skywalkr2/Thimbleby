@@ -13,7 +13,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, fakeAddress, openView, visit, widerThanWindow, type Info, type Requests, type SignInSeen } from "./journey-helpers";
+import { collectProblems, fakeAddress, openView, pressStart, visit, widerThanWindow, type Info, type Requests, type SignInSeen } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_EVENING_FAKE_PORT", 8761);
 const RETIRED = "fake-retired-text";
@@ -45,7 +45,8 @@ test.describe.serial("journey: the owner's first evening", () => {
     const [me, friend] = info.people;
 
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await pressStart(page);
     const main = page.locator("main#main");
 
     // 1. You: the cursor is in the first field; only the name and the time zone are asked (the workspace's name and the
@@ -163,7 +164,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
     expect(await widerThanWindow(page, "Done")).toEqual([]);
     const recap = main.getByRole("list", { name: "What was set up" });
-    for (const step of ["workspace", "ai", "mail", "backup", "people"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
+    for (const step of ["workspace", "work", "ai", "mail", "backup", "people"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
     await main.getByRole("button", { name: "Go to Today" }).click();
 
     // 6. Today.

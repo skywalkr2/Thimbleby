@@ -147,7 +147,7 @@ test("the workspace step starts the time zone from this browser while it is stil
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
   // The name goes to the person record (the one place it is kept); the time zone is a setting.
-  expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester" });
+  expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester", workspace_name: "Sam's" });
   const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
   expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
   vi.restoreAllMocks();

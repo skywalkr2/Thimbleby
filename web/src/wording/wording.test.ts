@@ -60,10 +60,10 @@ test("key families built at run time are complete", () => {
     "changes.second.same_account",
     ...["ok", "failed"].map((x) => `setup.job_${x}`),
     "setup.job_other",
-    ...["workspace", "work", "ai", "mail", "backup", "people", "template", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
+    ...["workspace", "work", "ai", "mail", "promises", "backup", "people", "template", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
     ...(s.WalkthroughView.properties.step.enum ?? []).flatMap((x) => [`walkthrough.screen.${x}`, `walkthrough.why.${x}`]),
-    ...["done", "skipped"].map((x) => `walkthrough.state.${x}`),
-    ...["done", "skipped", "todo"].map((x) => `walkthrough.done.${x}`),
+    ...["done", "skipped", "skipped_needs_mail"].map((x) => `walkthrough.state.${x}`),
+    ...["done", "skipped", "skipped_needs_mail", "todo"].map((x) => `walkthrough.done.${x}`),
     ...["not_installed", "off", "restart", "problem", "ready"].map((x) => `walkthrough.mail.state.${x}`),
     ...(s.PackSummary.properties.reads.items?.enum ?? []).map((x) => `walkthrough.mail.reads.${x}`),
     ...modelRoles.map((x) => `welcome.ai.role.${x}`),
@@ -307,4 +307,16 @@ test("Drop stays a distinct word from Done wherever it is offered or reported", 
   expect(blurred.map(([key, text]) => `${key}: ${text}`)).toEqual([]);
   const done = Object.entries(words).filter(([key]) => /(^|\.)done$/.test(key));
   expect(done.filter(([, text]) => /drop/i.test(text)).map(([key]) => key)).toEqual([]);
+});
+
+// Setup is for a person with no IT background, who has no idea what a workspace is: no screen of the walkthrough says it.
+test("no wording the walkthrough uses says workspace", () => {
+  const said = Object.entries(words)
+    .filter(([key]) => /^(walkthrough|welcome|setup_step|setup_line)\./.test(key))
+    .filter(([, text]) => /workspace/i.test(text));
+  expect(said.map(([key]) => key)).toEqual([]);
+});
+
+test("the walkthrough's title is Getting started", () => {
+  expect(words["walkthrough.title"]).toBe("Getting started");
 });

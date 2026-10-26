@@ -5,7 +5,7 @@ import type { S } from "../lib/api";
 import { fakeApi, renderApp, setupStep as step, setupView } from "../test-utils";
 import { SetupLine } from "./SetupLine";
 
-const CORE = ["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"];
+const CORE = ["workspace", "work", "ai", "mail", "promises", "backup", "people", "template", "first_note", "addons"];
 
 function api(steps: S["SetupStepView"][], finished = false) {
   return fakeApi({ "GET setup": () => setupView(steps, { finished }) });
@@ -34,8 +34,21 @@ test("a brand new workspace starts at zero and names the first step", async () =
   api(CORE.map((id) => step(id)));
   open();
   const line = await screen.findByRole("region", { name: "Setup" });
-  expect(line).toHaveTextContent("Setup 0 of 5");
+  expect(line).toHaveTextContent("Setup 0 of 7");
   expect(line).toHaveTextContent("Next: Say who you are");
+});
+
+test("it reads the one count of seven steps the server serves, the same one the walkthrough and its last screen show", async () => {
+  api(
+    CORE.map((id) =>
+      id === "workspace" || id === "work" ? step(id, { done: true }) : id === "mail" ? step(id, { skipped: true }) : id === "promises" ? step(id, { skipped: true, reason: "needs_mail" }) : step(id),
+    ),
+  );
+  open();
+  const line = await screen.findByRole("region", { name: "Setup" });
+  expect(line).toHaveTextContent("Setup 4 of 7");
+  expect(screen.getByRole("progressbar", { name: "Setup progress" })).toHaveAttribute("aria-valuemax", "7");
+  expect(line).toHaveTextContent("Next: Add an AI account and test it");
 });
 
 test("Continue setup opens the guide at the next step", async () => {
