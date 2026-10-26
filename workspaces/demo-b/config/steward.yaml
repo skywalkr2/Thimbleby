@@ -2,6 +2,7 @@ version: 1
 second_move_days: 10   # a second move of the same date within this many days shows in your own history as moved again
 default_stance: alongside   # who a new person is to you until you say otherwise
 tracks: [dates, decisions, design]   # what you track: no question is drafted about anything else
+background_stuck_after_minutes: 10   # background work that has not checked in for this many minutes is shown as stuck
 reply_thread_days: 10   # same subject and someone in common within this many days is one conversation, for a sent reply to end a reply you owe
 sent_match:
   window_days: 5   # a sent message matches a copied one only when it went to the same person within this many days

@@ -84,7 +84,8 @@ class Line:
     `days` how far back its mail was read, none for a source with no mail), intake_review (what was found in a newly
     added `source`: `count` items with something to look over and their results counted in `outcome`, which replace
     the lines each would have had until the person opens the list), refused, restart (work held until the person
-    restarts the app: `count` is how many requests wait), handover (the synced folder can't be used until the person
+    restarts the app: `count` is how many requests wait), stuck (background work that stopped checking in: `waiting_since`
+    is when it last did; the person restarts the app), handover (the synced folder can't be used until the person
     settles it: `state` is diverged, chosen or elsewhere and `text` the other computer), failed,
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), borrow (a
     question: every account a kind of work can use is paused, so may another kind of work's free `account` (with its
@@ -331,21 +332,26 @@ def _model_lines(store: Any, cfg: Any) -> list[Line]:
 
 
 def queue_split(
-    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None
+    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None, stuck: str | None = None
 ) -> suggestions.Split:
     """The queue's lines split by the attention rules (design 6.32): what shows on Today now, and the suggestions saved
     for the brief."""
-    return suggestions.split(cfg, store.read(), _everything(ws, store, cfg, now, handover), now)
+    return suggestions.split(cfg, store.read(), _everything(ws, store, cfg, now, handover, stuck), now)
 
 
-def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[Line]:
+def queue(
+    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None, stuck: str | None = None
+) -> list[Line]:
     """Every line that needs the person now, in rank order, with the suggestions the attention rules hold back left out.
     `handover`: what stops the synced folder from being used, as the worker reports it (state and the other computer's
-    name), which is a line of its own."""
-    return queue_split(ws, store, cfg, now, handover).shown
+    name), which is a line of its own. `stuck`: when background work that has stopped checking in last did, as the worker
+    reports it, which is a line of its own."""
+    return queue_split(ws, store, cfg, now, handover, stuck).shown
 
 
-def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[Line]:
+def _everything(
+    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None, stuck: str | None = None
+) -> list[Line]:
     """Every line, in rank order, before the attention rules."""
     today = now.astimezone(zone(cfg)).date()
     people = People(store, cfg)
@@ -533,6 +539,10 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
         lines.append(
             Line(key="handover", group="decide", kind="handover", text=handover[1], state=handover[0], since="")
         )
+
+    if stuck:
+        # Background work that stopped checking in is never a silent stop; the line asks for a restart, the person's.
+        lines.append(Line(key="stuck", group="decide", kind="stuck", waiting_since=stuck, since=stuck))
 
     from engine.worker import RESTART_NEEDED
 
@@ -1492,6 +1502,7 @@ def _fits(cfg: Any, provider: str, level: str) -> bool:
 
 _KIND_ORDER = {
     "borrow": 1,
+    "stuck": -4,
     "handover": -3,
     "restart": -2,
     "first_go": -1,

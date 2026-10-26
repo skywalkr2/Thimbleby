@@ -29,6 +29,10 @@ function sayText(kind: AliveKind, a: S["AssistantStatus"], t: (key: string, vars
       const first = a.paused[0];
       return t("alive.say.paused", { account: nameOf(first.account), time: wallWhen(first.until) });
     }
+    case "stuck":
+      return t("alive.say.stuck", { time: a.loop_stuck_since ? wallWhen(a.loop_stuck_since) : "" });
+    case "loop_restarted":
+      return t("alive.say.loop_restarted", { time: a.loop_restarted_at ? wallWhen(a.loop_restarted_at) : "" });
     default:
       return t(`alive.say.${kind}`);
   }
@@ -51,6 +55,7 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const nameOf = useAccountNames();
   const alive = useAlive();
+  const restart = useRestart();
   if (!status.data || !alive) return null;
   const a = status.data.assistant;
   const { kind, tone, say } = alive;
@@ -76,6 +81,11 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                   <p className={styles.text}>
                     <Icon name={ICON[tone]} size={16} /> {say}
                   </p>
+                  {kind === "stuck" && status.data.can_restart && (
+                    <Button size="sm" variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+                      {t("restart.now")}
+                    </Button>
+                  )}
                   {(kind === "failing" || kind === "not_set_up") && (
                     <Button size="sm" onClick={() => toGuide(close)}>
                       {t("alive.open")}

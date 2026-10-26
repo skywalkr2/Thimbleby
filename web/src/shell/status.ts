@@ -23,16 +23,18 @@ export function worstState(input: {
 
 /** What the assistant's own line says, worst first: a failing account or run (bad), then the states the chip knows that
  * hold work up (warn), otherwise fine. */
-export type AliveKind = "fine" | "failing" | "run_failed" | "network" | "restarting" | "restart" | "paused" | "not_set_up";
+export type AliveKind = "fine" | "failing" | "run_failed" | "network" | "restarting" | "restart" | "paused" | "not_set_up" | "stuck" | "loop_restarted";
 export type AliveTone = "ok" | "warn" | "bad";
 
 export function aliveState(input: { status: S["Status"]; restartPhase: string }): { kind: AliveKind; tone: AliveTone } {
   const { status } = input;
   if (status.ai.state === "failing") return { kind: "failing", tone: "bad" };
   if (status.assistant.last_run_failed) return { kind: "run_failed", tone: "bad" };
+  if (status.assistant.loop_stuck_since) return { kind: "stuck", tone: "bad" };
   if (status.network_wait) return { kind: "network", tone: "warn" };
   if (input.restartPhase === "waiting") return { kind: "restarting", tone: "warn" };
   if (["asking", "stuck", "refused"].includes(input.restartPhase) || status.restart_needed) return { kind: "restart", tone: "warn" };
+  if (status.assistant.loop_restarted_at) return { kind: "loop_restarted", tone: "warn" };
   if (status.assistant.paused.length) return { kind: "paused", tone: "warn" };
   if (status.ai.state === "not_set_up") return { kind: "not_set_up", tone: "warn" };
   return { kind: "fine", tone: "ok" };

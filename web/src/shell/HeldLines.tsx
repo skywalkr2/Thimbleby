@@ -28,7 +28,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "account_move", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "stuck", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "account_move", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -48,6 +48,8 @@ export function HeldLine(props: {
   switch (line.kind) {
     case "restart":
       return <RestartLine line={line} />;
+    case "stuck":
+      return <StuckLine line={line} />;
     case "handover":
       return <HandoverLine line={line} onOpen={props.onOpenHandover} />;
     case "borrow":
@@ -102,6 +104,30 @@ function RestartLine(props: { line: Line }) {
       <div className={styles.body}>
         <p className={styles.text}>{label}</p>
         <p className={styles.sub}>{sub}</p>
+      </div>
+      {canRestart && (
+        <div className={styles.actions}>
+          <Button size="sm" variant="primary" data-key="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+            {t("restart.now")}
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function StuckLine(props: { line: Line }) {
+  const { t } = useWords();
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const restart = useRestart();
+  const canRestart = !!status.data?.can_restart;
+  const time = props.line.waiting_since ? wallWhen(props.line.waiting_since) : "";
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.stuck.label")} data-queue-line="stuck">
+      <Pill tone="danger">{t("queue.stuck.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.stuck.text", { time })}</p>
+        <p className={styles.sub}>{t(status.data && !canRestart ? "queue.restart.manual" : "queue.stuck.sub")}</p>
       </div>
       {canRestart && (
         <div className={styles.actions}>

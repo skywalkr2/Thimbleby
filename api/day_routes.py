@@ -60,7 +60,7 @@ def build_day_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
     def not_now(body: NotNowIn) -> NotNowDone:
         """Put a suggestion line off until something about it changes. It records a signal and changes nothing else."""
         now = worker.now()
-        split = queue_split(ws, store, cfg, now, handover=worker.handover_state())
+        split = queue_split(ws, store, cfg, now, handover=worker.handover_state(), stuck=worker.stuck_since_text())
         line = next((x for x in [*split.shown, *split.digest] if x.key == body.key), None)
         if line is None or line.kind not in suggestions.KINDS:
             raise HTTPException(status_code=404, detail="That suggestion isn't on Today now.")
@@ -81,7 +81,7 @@ def build_day_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         """Do one of the choices a suggestion line offers, at once, and record it as a signal. A choice that changes a
         to-do is the person's own change with Undo; one that only says leave it, keep or snooze changes nothing."""
         now = worker.now()
-        split = queue_split(ws, store, cfg, now, handover=worker.handover_state())
+        split = queue_split(ws, store, cfg, now, handover=worker.handover_state(), stuck=worker.stuck_since_text())
         line = next((x for x in [*split.shown, *split.digest] if x.key == body.key), None)
         if line is None or not line.choices:
             raise HTTPException(status_code=404, detail="That suggestion isn't on Today now.")
@@ -106,7 +106,7 @@ def build_day_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         return Ok(ok=signal_id)
 
     def quiet_line(action_id: str, now: Any) -> Any:
-        split = queue_split(ws, store, cfg, now, handover=worker.handover_state())
+        split = queue_split(ws, store, cfg, now, handover=worker.handover_state(), stuck=worker.stuck_since_text())
         key = f"quiet_promise:{action_id}"
         line = next((x for x in split.shown if x.key == key), None)
         if line is None:

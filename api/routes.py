@@ -704,7 +704,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         parents = {p.id: projects.get(p.data.get("parent") or "") for p in view.list("project")}
         here = zone(cfg)
         out = []
-        for line in queue(ws, store, cfg, worker.now(), handover=worker.handover_state()):
+        for line in queue(
+            ws, store, cfg, worker.now(), handover=worker.handover_state(), stuck=worker.stuck_since_text()
+        ):
             data = {k: v for k, v in vars(line).items() if k not in ("title", "since")}
             if line.until:
                 # A time of the person's own clock, so the screen shows it as they would say it.
@@ -1306,7 +1308,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         ai, detail = ai_state(ws, cfg, store)
         spent = spend(store, cfg)
         waiting = [x["cause"]["since"] for x in reqs if is_waiting_for_network(x)]
-        alive = assistant_state(store, cfg)
+        alive = assistant_state(
+            store, cfg, loop_restarted_at=worker.loop_restarted_at, loop_stuck_since=worker.stuck_since()
+        )
         return Status(
             ai=AiState(state=ai, detail=detail),
             assistant=AssistantStatus(
@@ -1317,6 +1321,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 oldest_queued_since=alive.oldest_queued_since,
                 chains=[AssistantChain(**vars(x)) for x in alive.chains],
                 paused=[AssistantPaused(**vars(x)) for x in alive.paused],
+                loop_restarted_at=alive.loop_restarted_at,
+                loop_stuck_since=alive.loop_stuck_since,
             ),
             spend=SpendStatus(
                 today_usd=spent.today_usd,

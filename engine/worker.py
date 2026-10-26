@@ -287,6 +287,19 @@ class Worker:
         self._said_no_git = False
         self._reminder_acts: Any = None
         self._beat = 0.0
+        #: The background loops: the function each runs, its thread, and when it last began a pass (monotonic).
+        self._loop_fns: dict[str, Any] = {
+            "requests": self._loop,
+            "backups": self._backup_loop,
+            "sync": self._sync_loop,
+            "jobs": self._jobs_loop,
+        }
+        self._loop_threads: dict[str, threading.Thread] = {}
+        self._beats: dict[str, float] = {}
+        self._watchdog: threading.Thread | None = None
+        #: How many times the watchdog started a stopped loop again, and when it last did (the app's clock).
+        self.loop_restarts = 0
+        self.loop_restarted_at: datetime | None = None
         self._running_noted: float | None = None
         self.sync_lost = False
         #: Started while this computer and the synced folder had diverged: nothing is written to the folder until the
@@ -397,16 +410,95 @@ class Worker:
         if any(requeue_interrupted(self.store)):
             self.events.changed()
         self.settle_acts()
-        self._thread = threading.Thread(target=self._loop, name="cockpit-worker", daemon=True)
-        self._thread.start()
-        self._backups = threading.Thread(target=self._backup_loop, name="cockpit-backups", daemon=True)
-        self._backups.start()
-        self._sync = threading.Thread(target=self._sync_loop, name="cockpit-sync", daemon=True)
-        self._sync.start()
-        self._jobs = threading.Thread(target=self._jobs_loop, name="cockpit-jobs", daemon=True)
-        self._jobs.start()
+        for name in self._loop_fns:
+            self._start_loop(name)
+        self._watchdog = threading.Thread(target=self._watchdog_loop, name="cockpit-watchdog", daemon=True)
+        self._watchdog.start()
         self.check_switch_soon()
         self.measure_soon()
+
+    #: How often the watchdog looks at the background loops.
+    WATCHDOG_CHECK_SECONDS = 30
+    _LOOP_ATTRS = {"requests": "_thread", "backups": "_backups", "sync": "_sync", "jobs": "_jobs"}
+
+    def _start_loop(self, name: str) -> None:
+        thread = threading.Thread(target=self._loop_fns[name], name=f"cockpit-{name}", daemon=True)
+        self._beats[name] = time.monotonic()
+        self._loop_threads[name] = thread
+        setattr(self, self._LOOP_ATTRS[name], thread)
+        thread.start()
+
+    def _beat_of(self, name: str) -> None:
+        self._beats[name] = time.monotonic()
+
+    def _guarded(self, name: str, where: str, step: Any) -> None:
+        """One pass of a loop: a beat first, then the step. Any failure, an exit included, is logged and shown as an
+        automation issue, and the loop goes on to its next pass."""
+        self._beat_of(name)
+        try:
+            step()
+        except (Exception, SystemExit):
+            log.exception("The background work failed in %s", where)
+            self._problem(where)
+
+    def stuck_limit_seconds(self) -> float:
+        return self.cfg.steward.background_stuck_after_minutes * 60.0
+
+    def loop_health(self, now_monotonic: float | None = None) -> dict[str, str]:
+        """For each loop that was started: ok, stopped (its thread ended while the app is not closing or restarting)
+        or stuck (it has not begun a pass or a request for longer than the configured limit)."""
+        now = time.monotonic() if now_monotonic is None else now_monotonic
+        ending = self._stop.is_set() or self.restarting
+        health = {}
+        for name, thread in self._loop_threads.items():
+            if ending:
+                health[name] = "ok"
+            elif not thread.is_alive():
+                health[name] = "stopped"
+            elif now - self._beats.get(name, now) > self.stuck_limit_seconds():
+                health[name] = "stuck"
+            else:
+                health[name] = "ok"
+        return health
+
+    def stuck_since(self, now_monotonic: float | None = None) -> datetime | None:
+        """When the longest-stuck loop last checked in, on the app's clock; none when no loop is stuck."""
+        now = time.monotonic() if now_monotonic is None else now_monotonic
+        ages = [now - self._beats[n] for n, h in self.loop_health(now).items() if h == "stuck"]
+        return self.now() - timedelta(seconds=max(ages)) if ages else None
+
+    def stuck_since_text(self) -> str | None:
+        since = self.stuck_since()
+        return since.isoformat() if since else None
+
+    def watchdog_check(self, now_monotonic: float | None = None) -> None:
+        """Start again, in this process, each loop whose thread ended. A stuck loop is only reported, because a second
+        copy would race the first. The app is never restarted from here."""
+        for name, health in self.loop_health(now_monotonic).items():
+            if health != "stopped":
+                continue
+            log.error("The %s loop had stopped; starting it again", name)
+            self._start_loop(name)
+            self.loop_restarts += 1
+            self.loop_restarted_at = self.now()
+            problems.note(
+                self.ws,
+                self.store,
+                self.cfg,
+                "background work",
+                RuntimeError("the background work stopped and was started again"),
+                now=self.now(),
+            )
+            self.events.changed()
+        if any(h == "stuck" for h in self.loop_health(now_monotonic).values()):
+            self.events.changed()
+
+    def _watchdog_loop(self) -> None:
+        while not self._stop.wait(timeout=self.WATCHDOG_CHECK_SECONDS):
+            try:
+                self.watchdog_check()
+            except (Exception, SystemExit):
+                log.exception("checking the background work failed")
 
     def settle_acts(self) -> None:
         """Once at start: ask the channel what happened to every act a stop left `sending`, and mark an approved act
@@ -492,6 +584,7 @@ class Worker:
         done = 0
         self.queue_catch_up_learning()
         while not self._stop.is_set():
+            self._beat_of("requests")
             now = self.now()
             queued = [
                 r
@@ -508,7 +601,7 @@ class Worker:
             except StoreError as err:  # a write refused with a plain reason
                 log.warning("Request %s couldn't be processed: %s", queued[0].id, err)
                 needs_you(self.store, queued[0].id, f"This couldn't be processed: {str(err).rstrip('.')}.")
-            except Exception:  # a failure in one request must not stop the worker
+            except (Exception, SystemExit):  # a failure in one request, an exit included, must not stop the worker
                 log.exception("Request %s failed", queued[0].id)
                 self._problem("processing a request")
                 needs_you(
@@ -829,10 +922,15 @@ class Worker:
     def _sync_loop(self) -> None:
         after = -1
         while not self._stop.is_set():
-            try:
-                self.sync_if_changed()
-            except Exception:  # a failed write is retried on the next change; nothing here may stop the thread
-                log.exception("writing the synced folder failed")
+
+            def one_pass() -> None:
+                try:
+                    self.sync_if_changed()
+                except Exception:  # a failed write is retried on the next change; nothing here may stop the thread
+                    log.exception("writing the synced folder failed")
+                    self._problem("writing the synced folder failed")
+
+            self._guarded("sync", "writing the synced folder", one_pass)
             after = self.events.wait(after, timeout=self.SYNC_CHECK_SECONDS)
             self._stop.wait(timeout=1)
 
@@ -875,58 +973,79 @@ class Worker:
 
     def _jobs_loop(self) -> None:
         while not self._stop.is_set():
-            self.note_running()
-            try:
-                self.run_due_jobs()
-            except Exception:  # a job's failure is recorded on its run; nothing here may stop the thread
-                log.exception("running scheduled jobs failed")
-            try:
-                self.run_due_watches()
-            except Exception:  # a failed read is recorded on its run; nothing here may stop the thread
-                log.exception("reading watched sources failed")
-            try:
-                self.watch_models_if_due()
-            except Exception:  # the look is made again the next time round; nothing here may stop the thread
-                log.exception("starting the look at newer models failed")
-            try:
-                self.export_if_due()
-            except Exception:  # a failed export is logged by the export; nothing here may stop the thread
-                log.exception("the scheduled export failed")
-            try:
-                self.sweep_proposals_if_due()
-            except Exception:  # the sweep runs again the next time round; nothing here may stop the thread
-                log.exception("expiring old proposals failed")
-            try:
-                self.sweep_kept_secrets_if_due()
-            except Exception:  # the sweep runs again the next time round; nothing here may stop the thread
-                log.exception("removing old kept secrets failed")
-            try:
-                self.roll_series_if_due()
-            except Exception:  # the roll runs again the next time round; nothing here may stop the thread
-                log.exception("moving items to the next instance of a series failed")
-            try:
-                self.notify_if_due()
-            except Exception:  # the notice is tried again the next time round; nothing here may stop the thread
-                log.exception("sending a notice failed")
+            self._guarded("jobs", "scheduled jobs", self._jobs_pass)
             self._read_now.wait(timeout=60)
             self._read_now.clear()
 
+    def _jobs_pass(self) -> None:
+        self.note_running()
+        try:
+            self.run_due_jobs()
+        except (Exception, SystemExit):  # a job's failure is recorded on its run; nothing here may stop the thread
+            log.exception("running scheduled jobs failed")
+            self._problem("running scheduled jobs failed")
+        try:
+            self.run_due_watches()
+        except (Exception, SystemExit):  # a failed read is recorded on its run; nothing here may stop the thread
+            log.exception("reading watched sources failed")
+            self._problem("reading watched sources failed")
+        try:
+            self.watch_models_if_due()
+        except (Exception, SystemExit):  # the look is made again the next time round; nothing here may stop the thread
+            log.exception("starting the look at newer models failed")
+            self._problem("starting the look at newer models failed")
+        try:
+            self.export_if_due()
+        except (Exception, SystemExit):  # a failed export is logged by the export; nothing here may stop the thread
+            log.exception("the scheduled export failed")
+            self._problem("the scheduled export failed")
+        try:
+            self.sweep_proposals_if_due()
+        except (Exception, SystemExit):  # the sweep runs again the next time round; nothing here may stop the thread
+            log.exception("expiring old proposals failed")
+            self._problem("expiring old proposals failed")
+        try:
+            self.sweep_kept_secrets_if_due()
+        except (Exception, SystemExit):  # the sweep runs again the next time round; nothing here may stop the thread
+            log.exception("removing old kept secrets failed")
+            self._problem("removing old kept secrets failed")
+        try:
+            self.roll_series_if_due()
+        except (Exception, SystemExit):  # the roll runs again the next time round; nothing here may stop the thread
+            log.exception("moving items to the next instance of a series failed")
+            self._problem("moving items to the next instance of a series failed")
+        try:
+            self.notify_if_due()
+        except (
+            Exception,
+            SystemExit,
+        ):  # the notice is tried again the next time round; nothing here may stop the thread
+            log.exception("sending a notice failed")
+            self._problem("sending a notice failed")
+
     def _backup_loop(self) -> None:
         while not self._stop.is_set():
-            try:
-                self.backup_if_due()
-            except Exception:  # a failed backup is recorded by run_backup; nothing here may stop the thread
-                log.exception("scheduled backup failed")
+            self._guarded("backups", "scheduled backup", self._backup_pass)
             self._stop.wait(timeout=60)
+
+    def _backup_pass(self) -> None:
+        try:
+            self.backup_if_due()
+        except (Exception, SystemExit):  # a failed backup is recorded by run_backup; nothing here may stop the thread
+            log.exception("scheduled backup failed")
+            self._problem("scheduled backup failed")
 
     def _loop(self) -> None:
         while not self._stop.is_set():
-            self.note_running()
-            self.run_pending()
+            self._guarded("requests", "processing requests", self._request_pass)
             if self.restart_due():
                 return
             self._wake.wait(timeout=5)
             self._wake.clear()
+
+    def _request_pass(self) -> None:
+        self.note_running()
+        self.run_pending()
 
     def restart_due(self) -> bool:
         """Restart once the person asked for it, between requests. The app never restarts on its own: a change that

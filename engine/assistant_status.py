@@ -17,6 +17,8 @@ from engine.today import zone
 
 # How many of the newest runs are looked through for the last one that reached an account.
 LATEST_WINDOW = 20
+# How long a restart of stopped background work stays on the status.
+RESTARTED_WINDOW = timedelta(hours=1)
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,10 @@ class AssistantState:
     oldest_queued_since: datetime | None
     chains: list[Chain]
     paused: list[Paused] = field(default_factory=list)
+    #: When background work was last started again after it stopped, if that was within the last hour.
+    loop_restarted_at: datetime | None = None
+    #: When the longest-stuck piece of background work last checked in, while one is stuck.
+    loop_stuck_since: datetime | None = None
 
 
 def _at(text: str) -> datetime:
@@ -73,7 +79,14 @@ def chains(cfg: Config) -> list[Chain]:
     return found
 
 
-def assistant_state(store: Store, cfg: Config, now: datetime | None = None) -> AssistantState:
+def assistant_state(
+    store: Store,
+    cfg: Config,
+    now: datetime | None = None,
+    *,
+    loop_restarted_at: datetime | None = None,
+    loop_stuck_since: datetime | None = None,
+) -> AssistantState:
     from engine.ai.pauses import Pauses, pauses_path
 
     now = now or datetime.now(UTC)
@@ -112,4 +125,10 @@ def assistant_state(store: Store, cfg: Config, now: datetime | None = None) -> A
         oldest_queued_since=oldest.astimezone(here) if oldest else None,
         chains=chains(cfg),
         paused=[Paused(account, until.astimezone(here)) for account, until in paused],
+        loop_restarted_at=(
+            loop_restarted_at.astimezone(here)
+            if loop_restarted_at and now - loop_restarted_at <= RESTARTED_WINDOW
+            else None
+        ),
+        loop_stuck_since=loop_stuck_since.astimezone(here) if loop_stuck_since else None,
     )

@@ -492,6 +492,15 @@ class AssistantStatus(BaseModel):
     oldest_queued_since: datetime | None = Field(None, description="When the oldest of them was made.")
     chains: list[AssistantChain] = Field(description="For each tier with an account, the order its accounts are tried.")
     paused: list[AssistantPaused] = Field(description="Accounts waiting for a usage limit to reset.")
+    loop_restarted_at: datetime | None = Field(
+        None,
+        description="When background work that had stopped was started again, if that was within the last hour.",
+    )
+    loop_stuck_since: datetime | None = Field(
+        None,
+        description="When background work that is stuck last checked in; none while nothing is stuck. The person "
+        "chooses Restart now (POST /api/restart); the app never restarts itself.",
+    )
 
 
 class Status(BaseModel):
@@ -2346,7 +2355,8 @@ class MadeBy(BaseModel):
 
 
 class QueueLineView(BaseModel):
-    """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
+    """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `stuck`
+    is background work that stopped checking in (`waiting_since`, when it last did; the screen offers Restart now). `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
     POST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`
     waiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account
@@ -2458,6 +2468,7 @@ class QueueLineView(BaseModel):
         "intake_review",
         "refused",
         "restart",
+        "stuck",
         "handover",
         "failed",
         "paused",

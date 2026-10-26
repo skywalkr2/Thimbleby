@@ -3427,6 +3427,14 @@ class StewardFile(FileModel):
         'within this many days of the one before is shown in your own history, as "moved again" with how many times '
         "and since when; it is never in anything drafted for someone else. Zero shows no second moves.",
     )
+    background_stuck_after_minutes: int = Field(
+        10,
+        ge=2,
+        le=1440,
+        description="A part of the app's background work that has not checked in for this many minutes is shown as "
+        "stuck, on the assistant's status and on Today. One AI task can run several minutes, so keep this longer "
+        "than the longest you expect. The app never restarts itself; you choose Restart now.",
+    )
     reminders: RemindersSettings = Field(
         default_factory=RemindersSettings, description="When a reminder on a dated thing reaches the person."
     )

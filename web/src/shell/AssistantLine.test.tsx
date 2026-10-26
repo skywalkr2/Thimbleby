@@ -174,3 +174,20 @@ test("an account with no runs today is not listed as \"0 tasks\"", async () => {
   expect(dialog).toHaveTextContent("acct-2: 2 tasks");
   expect(dialog).not.toHaveTextContent(/\b0 tasks?\b/);
 });
+
+test("amber: background work that stopped and was started again says so and when", async () => {
+  show(statusFixture({}, { assistant: { ...ran, loop_restarted_at: `${TODAY}T10:05:00+09:00` } }));
+  await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "loop_restarted"));
+  expect(lineNow()).toHaveTextContent(/background work stopped and was started again 10:05/);
+  expect(lineNow()).toHaveAttribute("data-tone", "warn");
+});
+
+test("red: stuck background work says since when and the card offers Restart now", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({ can_restart: true }, { assistant: { ...ran, loop_stuck_since: `${TODAY}T10:05:00+09:00` } }));
+  await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "stuck"));
+  expect(lineNow()).toHaveTextContent(/background work stuck since 10:05/);
+  expect(lineNow()).toHaveAttribute("data-tone", "bad");
+  const card = await open(user);
+  expect(within(card).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+});
