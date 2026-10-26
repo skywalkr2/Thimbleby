@@ -10,7 +10,7 @@ from datetime import timedelta
 
 from engine.assistant_status import assistant_state
 from engine.today_queue import queue
-from tests.test_silent_stops import NOTE, data, env, hand, worker_of
+from tests.test_silent_stops import NOTE, data, env, hand, worker_of  # noqa: F401
 
 
 def test_a_jobs_pass_that_exits_does_not_stop_the_next_pass(env):
