@@ -1273,3 +1273,21 @@ test("on a shared ask, Reassign changes the part of the person whose message it 
     }),
   );
 });
+
+test("a person chosen while what waits to go out is still loading stays chosen when it arrives", async () => {
+  besidePane();
+  type Acts = { acts: ReturnType<typeof actFixture>[] };
+  let release: (value: Acts) => void = () => undefined;
+  fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    "GET acts": () => new Promise<Acts>((resolve) => (release = resolve)),
+  });
+  renderApp(<FollowUps />);
+  const robin = await screen.findByRole("listitem", { name: "Robin Sample" });
+  await userEvent.click(within(robin).getByRole("button", { name: /^Robin Sample/ }));
+  expect(await screen.findByRole("complementary", { name: "Robin Sample" })).toBeInTheDocument();
+  await act(async () => release({ acts: [] }));
+  await waitFor(() => expect(screen.queryByRole("complementary", { name: "You" })).toBeNull());
+  expect(screen.getByRole("complementary", { name: "Robin Sample" })).toBeInTheDocument();
+});

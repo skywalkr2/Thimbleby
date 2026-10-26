@@ -32,7 +32,15 @@ export interface ListChoice {
 
 /** `keys` are the rows now listed, in order. `first` is the row to choose when the list opens (the first by default).
  * `reset` changes when the list becomes another list (a filter, a grouping): the choice starts over. */
-export function useListChoice(args: { keys: string[]; beside: boolean; first?: string | null; reset?: string }): ListChoice {
+/** `wait`: rows that lead the list are still loading, so no row is chosen as the first yet; a row the person chooses is
+ * chosen at once. */
+export function useListChoice(args: {
+  keys: string[];
+  beside: boolean;
+  first?: string | null;
+  reset?: string;
+  wait?: boolean;
+}): ListChoice {
   const { keys, beside, reset } = args;
   const [chosen, setChosen] = useState<string | null>(null);
   const [back, setBack] = useState<{ key: string; n: number } | null>(null);
@@ -50,11 +58,11 @@ export function useListChoice(args: { keys: string[]; beside: boolean; first?: s
   }, [reset]);
 
   useEffect(() => {
-    if (beside && !touched.current && chosen === null && first !== null) {
+    if (beside && !args.wait && !touched.current && chosen === null && first !== null) {
       touched.current = true;
       setChosen(first);
     }
-  }, [beside, chosen, first]);
+  }, [beside, chosen, first, args.wait]);
 
   // The chosen row left the list: its neighbor is chosen in its place (beside the list), or the detail closes.
   useEffect(() => {

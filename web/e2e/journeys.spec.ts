@@ -156,10 +156,10 @@ test.describe.serial("journeys", () => {
     await visit(page);
     expect(await requests()).toEqual(afterTest);
 
-    // Go starts it, and the result is on Today: my action in To do, and the assistant's work to look over.
+    // Go starts it, and the result is on Today: the assistant's work to look over (my action is listed in To-dos and
+    // questions, its one home, below).
     await go.getByRole("button", { name: "Start", exact: true }).click();
-    await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
+    await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0, { timeout: 20_000 });
     // The assistant's work waits behind "N new · Show" while the cursor is in the queue, so the list doesn't move under it.
     const review = page.locator('[data-queue-line="review"]');
     const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
@@ -183,6 +183,9 @@ test.describe.serial("journeys", () => {
     await expect(review.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
+    // My action from my own words is in To-dos and questions.
+    await openView(page, "To-dos and questions");
+    await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible();
   });
 
   test("J3. A folder I add on screen is read, a new file in it is handed in, and the assistant's result is on Today", async ({
@@ -224,9 +227,14 @@ test.describe.serial("journeys", () => {
     expect(put.ok).toBe(true);
     await dismissToasts(page);
     await readNow();
-    await page.getByRole("link", { name: /^Today/ }).first().click();
+    // The assistant reads it once; the action it filed is then in To-dos and questions, its one home.
+    await expect.poll(async () => (await requests()).work, { timeout: 20_000 }).toBe(before.work + 1);
+    // Its change is applied a moment after the run, so the list is opened once the server holds the to-do.
+    await expect
+      .poll(async () => JSON.stringify(await (await page.request.get("api/open-items")).json()), { timeout: 20_000 })
+      .toContain("Book the venue by 2026-11-05.");
+    await openView(page, "To-dos and questions");
     await expect(page.getByText("Book the venue by 2026-11-05.").first()).toBeVisible({ timeout: 20_000 });
-    expect((await requests()).work).toBe(before.work + 1);
     // The item that arrived is on What changed, named for the file.
     await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^What changed/ }).click();
     await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
@@ -274,7 +282,7 @@ test.describe.serial("journeys", () => {
       // What changed is newest first and titles a change as Today does, so the change just handed in is the top line.
       // Choosing the line shows the whole change in the detail pane beside the list, which is what the steps read.
       const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
-      await expect(line.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });
+      await expect(line.locator(".kind").first()).toHaveText(/not yet checked/i, { timeout: 30_000 });
       const expander = line.locator(".expander").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
       const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
@@ -410,9 +418,9 @@ test.describe.serial("journeys", () => {
     // 6. Drop, on an action that is no longer needed: it asks why, leaves the list at once, and Undo puts it back.
     const agenda = "I will print the agenda.";
     row = await handIn(agenda);
-    // The to-do is in the rail of Today, beside the queue.
-    await page.getByRole("link", { name: /^Today/ }).first().click();
-    const todo = page.locator("li", { has: page.getByRole("checkbox", { name: "Mark done: Print the agenda." }) });
+    // The to-do is in To-dos and questions, its one home.
+    await openView(page, "To-dos and questions");
+    const todo = page.getByRole("list", { name: "Open to-dos" }).getByRole("listitem").filter({ hasText: "Print the agenda." });
     await expect(todo).toHaveCount(1, { timeout: 20_000 });
     await todo.getByRole("button", { name: "More actions for Print the agenda." }).click();
     await page.getByRole("menuitem", { name: "Drop" }).click();

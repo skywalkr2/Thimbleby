@@ -129,9 +129,10 @@ export function FollowUps(props: { compact?: boolean }) {
   // here sooner, and the first row would then be one of them.
   const actsComing = !compact && !byProject && filter === "send" && acts.isPending;
   const choice = useListChoice({
-    keys: actsComing ? [] : [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)],
+    keys: [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)],
     beside,
     reset: `${group}|${filter}|${side.choice}`,
+    wait: actsComing,
   });
   useEffect(() => {
     if (!picked) return;
