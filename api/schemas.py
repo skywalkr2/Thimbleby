@@ -1126,6 +1126,45 @@ class PersonIn(BaseModel):
     )
 
 
+class PersonSuggestion(BaseModel):
+    """Someone the person's mail shows often and who isn't on file yet: `name` as the mail gives it, `address`, in how
+    many messages they appear (`count`), and whether those were the person's own sent mail."""
+
+    name: str
+    address: str
+    count: int
+    from_sent: bool
+
+
+class SetupPersonIn(PersonIn):
+    """A person added from the people step: as PersonIn, with the `address` their mail showed, kept as the way to reach
+    them (their email), so a later message from that address is known to be theirs."""
+
+    address: str | None = Field(None, max_length=300, description="Their email address, from the mail it was seen in.")
+
+
+class PeopleSuggestionsView(BaseModel):
+    """The people to suggest in the people step, most mail first, at most `ui.walkthrough.suggested_people`."""
+
+    people: list[PersonSuggestion]
+
+
+class PeoplePasteIn(BaseModel):
+    """A list of people typed or pasted, one per line: a name, or `Name <address>`. They go on the side `side` or
+    `sides` names, as PersonIn's do."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(max_length=20000)
+    side: Literal["personal", "business", "both"] | None = None
+    sides: list[str] | None = None
+
+
+class PeoplePasteDone(BaseModel):
+    added: list[str] = Field(description="The names added, in the order given.")
+    skipped: list[str] = Field(description="The names left out because someone of that name is on file already.")
+
+
 class PersonPatch(BaseModel):
     full_name: str | None = Field(None, min_length=1)
     first_name: str | None = Field(None, description="The name a greeting uses; null clears it.")
@@ -3171,6 +3210,10 @@ class FirstPromisesView(BaseModel):
     promises: list[FirstPromise]
     more: int = Field(description="Open promises beyond the ones shown.")
     follow_up: FirstFollowUp | None = None
+    messages_read: int = Field(
+        0, description="With no promise found: how many messages the look back covered, sent mail included."
+    )
+    meetings_week: int = Field(0, description="With no promise found: how many meetings fall in the next seven days.")
 
 
 class IntakeStarted(BaseModel):

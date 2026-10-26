@@ -77,6 +77,17 @@ def _when(data: dict[str, Any]) -> datetime | None:
     return at if at.tzinfo else at.replace(tzinfo=UTC)
 
 
+def messages_looked_at(view: Any, source_id: str, back_to: date | None, now: datetime) -> int:
+    """How many mail items a source holds that its first read looked at: received from the start of `back_to` (no
+    start: any day) up to now, whatever became of them afterwards. Items that have gone from the source don't count."""
+    accept = _in_window(back_to, None, now)
+    return sum(
+        1
+        for snap in view.find("snapshot", {"source": source_id})
+        if snap.data.get("message") and not snap.data.get("gone") and not snap.data.get("deleted") and accept(snap.data)
+    )
+
+
 def looked_back_to(source: Any, items: list[Any], now: datetime, capped: bool = False) -> date | None:
     """The day before which a source's mail isn't looked at by its first read: `first_run_days` before the read. None
     for a source that holds no mail (any other kind of source is taken in whole)."""

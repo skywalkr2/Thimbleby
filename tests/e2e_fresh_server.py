@@ -126,6 +126,7 @@ def main() -> None:
     parser.add_argument("--add-ons", action="store_true")
     parser.add_argument("--catalog-by-environment", action="store_true")
     parser.add_argument("--log", action="store_true")
+    parser.add_argument("--sent-mail", action="store_true", help="the mail add-on also names the account's sent mail")
     args = parser.parse_args()
     state = args.state.resolve()
     ws = prepare(state)
@@ -136,6 +137,8 @@ def main() -> None:
         "source_folder": str(state / "source"),
     }
     python = Path(sys.executable)
+    if args.sent_mail:
+        os.environ["JOURNEY_SENT_MAIL"] = "1"
     if args.https_port:
         address = trust_services(state, args.https_port)
         if args.add_ons:

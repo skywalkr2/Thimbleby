@@ -2433,6 +2433,13 @@ class WalkthroughSettings(ConfigModel):
         description="How many of the promises found in the person's own mail the new-start walkthrough shows on its "
         "first-result screen, soonest day first. The rest are still kept and followed.",
     )
+    suggested_people: int = Field(
+        5,
+        ge=0,
+        le=20,
+        description="How many people the new-start walkthrough's people step suggests from the person's mail: the "
+        "ones their sent mail went to most, else the ones who wrote to them most. Zero turns the suggestions off.",
+    )
 
 
 class SeriesSettings(ConfigModel):
@@ -3141,6 +3148,13 @@ class WatchFile(FileModel):
     triage: list[TriageRule] = Field(
         default_factory=list,
         description="Rules, in order, that close a watched change before the assistant reads it; the first match wins.",
+    )
+    sent_folder_names: list[str] = Field(
+        default_factory=lambda: ["Sent", "Sent Items", "Sent Mail", "Sent Messages", "INBOX.Sent"],
+        description="The names a mailbox's sent folder may have, tried in this order (ignoring capitals) when the mail "
+        "server doesn't mark which folder holds sent mail. The folder the server marks always comes first. A mailbox "
+        "connected for the first time also reads its sent folder, found this way.",
+        json_schema_extra={"internal": True},
     )
     set_aside_defaults: bool = Field(
         True,

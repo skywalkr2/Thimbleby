@@ -764,15 +764,41 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail=str(err)) from None
         return fresh
 
+    def unused_id(label: str, taken: set[str]) -> str:
+        base = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")[:40] or "source"
+        return base if base not in taken else next(f"{base}-{n}" for n in range(2, 999) if f"{base}-{n}" not in taken)
+
+    def default_sent(new: dict[str, Any], taken: set[str]) -> dict[str, Any] | None:
+        """The source that also reads the sent folder of a mailbox being connected, so promises made in mail the person
+        sent are found with no folder to choose: the folder the server marks as sent mail, else one of the usual names.
+        None when the mailbox is read already, the person isn't known (their sent mail can't be credited to them yet),
+        the mailbox can't be reached now, or it has no such folder; the person can still add it from Connections."""
+        from engine.connectors import ConnectorError
+        from engine.connectors.mailbox import MailboxSettings, find_sent, list_folders
+
+        settings = MailboxSettings.model_validate(new["settings"])
+        if taken_folders(settings):
+            return None  # the mailbox is read already: a folder the person took out or left out isn't brought back
+        try:
+            listed = list_folders(settings)
+        except ConnectorError:
+            return None
+        folder = find_sent(listed, current().watch.sent_folder_names)
+        if folder is None or folder == settings.folder:
+            return None
+        wanted = sent_source(new, folder, f"{new['label']} ({folder})")
+        return {"id": unused_id(wanted["label"], taken | {new["id"]}), **wanted}
+
     @r.post("/watch/sources")
     def watch_add(body: WatchSourceIn) -> SettingsSaved:
-        """Start reading a new source, with Undo. Its id comes from its label."""
+        """Start reading a new source, with Undo. Its id comes from its label. A mailbox with no author also reads its
+        sent folder, as the person's own mail, when it can be found."""
+        return add_source(body, with_sent=True)
+
+    def add_source(body: WatchSourceIn, *, with_sent: bool) -> SettingsSaved:
         sources = sources_now()
-        base = re.sub(r"[^a-z0-9]+", "-", (body.label or body.connector).lower()).strip("-")[:40] or "source"
         taken = {s["id"] for s in sources}
-        source_id = base
-        if base in taken:
-            source_id = next(f"{base}-{n}" for n in range(2, 999) if f"{base}-{n}" not in taken)
+        source_id = unused_id(body.label or body.connector, taken)
         given, to_keep = with_secrets(body.connector, source_id, body.settings, body.secrets, body.settings)
         settings = checked_source(body.connector, given)
         new = {
@@ -791,8 +817,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.color:
             new["color"] = body.color
         fresh = keep_all(to_keep, f"source:{source_id}")
+        sent = None
+        if with_sent and body.connector == "mailbox" and not body.author and current().workspace.user.person:
+            sent = default_sent(new, taken)
+        added = [new, *([sent] if sent else [])]
         try:
-            done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
+            done = saved(save({"watch.sources": [*sources, *added]}, [], body.fingerprint, allow=("watch.sources",)))
         except HTTPException:
             for path in fresh:
                 path.unlink(missing_ok=True)
@@ -837,32 +867,50 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def watch_folders(source_id: str) -> MailFoldersView:
         """The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a
         source of its own. Reads the mailbox; nothing there changes."""
+        from engine.connectors.mailbox import find_sent
+
         _, settings = mailbox_of(source_id)
         found = read_folders(settings)
-        return MailFoldersView(folders=list(found.names), sent=found.sent, taken=taken_folders(settings))
+        sent = find_sent(found, current().watch.sent_folder_names)
+        return MailFoldersView(folders=list(found.names), sent=sent, taken=taken_folders(settings))
+
+    def sent_source(found: dict[str, Any], folder: str, label: str) -> dict[str, Any]:
+        """The source that reads a mailbox's sent folder: the same mailbox and sign-in, the folder as given, and the
+        person as its author, since what is in it is their own mail."""
+        person = current().workspace.user.person
+        return {
+            "connector": "mailbox",
+            "label": label,
+            "every_minutes": found["every_minutes"],
+            **({"author": person} if person else {}),
+            "settings": {**found["settings"], "folder": folder},
+        }
 
     @r.post("/watch/{source_id}/sent-folder")
     def watch_sent_folder(source_id: str, body: SentFolderIn) -> SettingsSaved:
         """Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the
-        folder picked from its list, and the person as its author, since what is in it is their own mail. It is taken in
-        quietly like any new source."""
+        folder picked from its list (else the one the server marks, else one of the usual names), and the person as its
+        author, since what is in it is their own mail. It is taken in quietly like any new source."""
+        from engine.connectors.mailbox import find_sent
+
         found, settings = mailbox_of(source_id)
         listed = read_folders(settings)
-        folder = body.folder if body.folder is not None else listed.sent
+        folder = body.folder if body.folder is not None else find_sent(listed, current().watch.sent_folder_names)
         if folder is None:
             raise HTTPException(status_code=409, detail="The mail server doesn't say which folder holds sent mail.")
         if folder not in listed.names or folder in taken_folders(settings):
             raise HTTPException(status_code=400, detail="Choose a folder from the list.")
-        person = current().workspace.user.person
-        return watch_add(
+        wanted = sent_source(found, folder, body.label or f"{found['label']} ({folder})")
+        return add_source(
             WatchSourceIn(
                 connector="mailbox",
-                label=body.label or f"{found['label']} ({folder})",
-                every_minutes=found["every_minutes"],
-                author=person or None,
-                settings={**found["settings"], "folder": folder},
+                label=wanted["label"],
+                every_minutes=wanted["every_minutes"],
+                author=wanted.get("author"),
+                settings=wanted["settings"],
                 fingerprint=body.fingerprint,
-            )
+            ),
+            with_sent=False,
         )
 
     @r.post("/watch/sources/{source_id}")

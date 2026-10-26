@@ -12,7 +12,7 @@ through the same route, so nothing new is kept.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine import followups, promises, source_intake, watch
@@ -89,7 +89,8 @@ class FirstPromises:
     """Where the first result stands. `stage`: no_mail (nothing to read yet), no_ai (no AI account chosen), reading
     (the first read hasn't happened), offer (the look back is held for the person's go: `count` items, about
     `estimate_usd`, `unpriced` with no price, `days` of mail), working (`finished` of `count` done) or ready (the
-    promises found, up to the limit; `more` are not shown). `coverage` is what is read, by account, and `complete`
+    promises found, up to the limit; `more` are not shown; `messages_read` and `meetings_week` say what was looked
+    at, for the screen that finds none). `coverage` is what is read, by account, and `complete`
     is true only when every one of those sources was read and no mail account lacks its sent folder."""
 
     stage: str
@@ -104,6 +105,8 @@ class FirstPromises:
     promises: list[Promise] = field(default_factory=list)
     more: int = 0
     follow_up: FollowUp | None = None
+    messages_read: int = 0
+    meetings_week: int = 0
 
 
 def _sources(store: Any, cfg: Any) -> list[Any]:
@@ -240,6 +243,54 @@ def _where(ws: Any, store: Any, cfg: Any, router: Any) -> FirstPromises:
     return FirstPromises("ready", sources=labels, days=days, count=len(mine), finished=len(mine))
 
 
+#: The days from today that make "this week" for the meetings the first result counts.
+WEEK_DAYS = 7
+
+
+def _starts_within(event: dict[str, Any], first: date, until: date) -> bool:
+    """Whether a calendar item has a date from `first` up to (not including) `until`: its start, or for a repeating
+    one any of its dates that isn't cancelled. A cancelled item, or one whose time can't be read, has none."""
+    from engine.connectors import moment
+
+    if event.get("cancelled"):
+        return False
+    starts = [o["start"] for o in event.get("occurrences") or [] if not o.get("cancelled")] or [event.get("start")]
+    for stamp in starts:
+        try:
+            at = moment(str(stamp), all_day=bool(event.get("all_day")))
+        except (TypeError, ValueError):
+            continue
+        if first <= (at.astimezone(UTC).date() if isinstance(at, datetime) else at) < until:
+            return True
+    return False
+
+
+def read_counts(store: Any, cfg: Any, today: date) -> tuple[int, int]:
+    """What the first result looked at, for the screen that finds no promise: the messages the mail sources' first
+    reads looked at (their sent mail included), and the meetings the calendar sources hold in the next `WEEK_DAYS`
+    days. Reads only."""
+    said = declared_reads({**CORE, **store.plugins.connectors()})
+    view = store.read()
+    now = datetime(today.year, today.month, today.day, tzinfo=UTC) + timedelta(days=1)
+    messages = meetings = 0
+    for s in _sources(store, cfg):
+        kind = (reads(s.connector, said) or ["other"])[0]
+        if kind == "mail":
+            back_to = _from_date(view, s, today)
+            messages += source_intake.messages_looked_at(view, s.id, back_to, now)
+        elif kind == "calendar":
+            until = today + timedelta(days=WEEK_DAYS)
+            meetings += sum(
+                1
+                for snap in view.find("snapshot", {"source": s.id})
+                if snap.data.get("event")
+                and not snap.data.get("gone")
+                and not snap.data.get("deleted")
+                and _starts_within(snap.data["event"], today, until)
+            )
+    return messages, meetings
+
+
 def go(ws: Any, store: Any, cfg: Any, router: Any = None) -> int:
     """The person's go for the look back: each source's held intake is started (the mail waiting for sorting is sorted
     first), and an intake request waiting on the workspace's first go is approved, since this go covers it. Returns how
@@ -306,4 +357,6 @@ def view(ws: Any, store: Any, cfg: Any, router: Any = None, today: date | None =
         return state
     result = found(store, cfg, cfg.ui.walkthrough.first_promises, today)
     state.promises, state.more, state.follow_up = result.promises, result.more, result.follow_up
+    if not state.promises:
+        state.messages_read, state.meetings_week = read_counts(store, cfg, today or date.today())
     return state

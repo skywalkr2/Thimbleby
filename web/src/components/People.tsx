@@ -42,6 +42,8 @@ export function People() {
   const all = [...(people.data ?? [])].sort((a, b) => (a.is_pm === b.is_pm ? a.name.localeCompare(b.name) : a.is_pm ? -1 : 1));
   const rows = all.filter((p) => org === ALL || (org === NONE ? !p.org : p.org === org));
   const selected = all.find((p) => p.id === chosen) ?? null;
+  const onPersonalSide = (p: S["PersonView"]) => p.side === "personal";
+  const listed = rows;
 
   const menu = (p: S["PersonView"]): MenuAction[] => {
     const left = p.status === "left";
@@ -95,8 +97,16 @@ export function People() {
   const leading: TableColumn<S["PersonView"]>[] = justMe
     ? [{ id: "relation", header: t("people.col.relation"), rank: 1, core: true, cell: (p) => p.relation ?? "" }]
     : [
-        { id: "role", header: t("people.col.role"), rank: 1, core: true, cell: (p) => p.role ?? "" },
-        { id: "org", header: t("people.col.org"), rank: 2, core: true, cell: (p) => p.org_name ?? "" },
+        // With sides of work, someone on the personal side shows who they are to the person in place of a role; a person on a
+        // side of work keeps role and organization.
+        {
+          id: "role",
+          header: t(listed.some(onPersonalSide) ? "people.col.role_or_relation" : "people.col.role"),
+          rank: 1,
+          core: true,
+          cell: (p) => (onPersonalSide(p) ? (p.relation ?? "") : (p.role ?? "")),
+        },
+        { id: "org", header: t("people.col.org"), rank: 2, core: true, cell: (p) => (onPersonalSide(p) ? "" : (p.org_name ?? "")) },
       ];
   const columns: TableColumn<S["PersonView"]>[] = [
     ...leading,
@@ -192,8 +202,8 @@ function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: R
     <>
       <div className="row-end">{props.tags}</div>
       <dl className="details-list">
-        {props.justMe ? fact(t("people.col.relation"), p.relation) : fact(t("people.col.role"), p.role)}
-        {!props.justMe && fact(t("people.col.org"), p.org_name)}
+        {props.justMe || p.side === "personal" ? fact(t("people.col.relation"), p.relation) : fact(t("people.col.role"), p.role)}
+        {!props.justMe && p.side !== "personal" && fact(t("people.col.org"), p.org_name)}
         {fact(t("setup.first_name"), p.first_name)}
         {fact(t("setup.aliases"), p.aliases.join(", "))}
         {fact(t("people.col.reach"), props.reach.length ? props.reach.map((line) => <div key={line}>{line}</div>) : null)}

@@ -109,10 +109,14 @@ from api.schemas import (
     OwnerSuggestionView,
     PanelRow,
     PanelView,
+    PeoplePasteDone,
+    PeoplePasteIn,
+    PeopleSuggestionsView,
     PersonActionView,
     PersonChoice,
     PersonIn,
     PersonPatch,
+    PersonSuggestion,
     PersonView,
     PluginStatusView,
     ProjectEndingChoice,
@@ -140,6 +144,7 @@ from api.schemas import (
     SendBack,
     SentCounts,
     SentText,
+    SetupPersonIn,
     SourceLimit,
     SourceLimitPerson,
     SourceView,
@@ -2042,8 +2047,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if rec.id != except_id and rec.data[field].strip().lower() == value.strip().lower():
                 raise HTTPException(status_code=409, detail=f"{value} already exists.")
 
-    @r.post("/people")
-    def add_person(body: PersonIn) -> Created:
+    def create_person(body: PersonIn, address: str | None = None) -> str:
+        """Add a person on the side the body names, the way the People screen adds one. An address is kept as their
+        email, when the workspace has that kind of contact detail and no one on file has the address already."""
         _same_name("person", "full_name", body.full_name)
         if body.org:
             need("organization", body.org)
@@ -2055,15 +2061,67 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         )
         if why:
             raise HTTPException(status_code=409, detail=why)
+        from engine.applier import contact_kind
+
+        kind = contact_kind(cfg, "email")
+        reach = (kind, " ".join(address.split())) if address and kind and "@" in address else None
 
         def do() -> str:
             with store.transaction() as tx:
                 data = {**body.model_dump(exclude={"sides"}), "name_verified": True, **written}
+                if reach and not any(
+                    reach[1].lower() == str(v).strip().lower()
+                    for p in tx.list("person")
+                    for v in (p.data.get("how_to_reach") or {}).values()
+                ):
+                    data["how_to_reach"] = {reach[0]: reach[1]}
                 return tx.create("person", data, _setup("person.add")).id
 
-        new = guard(do)
+        return guard(do)
+
+    @r.post("/people")
+    def add_person(body: PersonIn) -> Created:
+        new = create_person(body)
         changed()
         return Created(id=new)
+
+    @r.post("/setup/people-add")
+    def add_setup_person(body: SetupPersonIn) -> Created:
+        """Add a person from the people step with the address their mail showed, kept as the way to reach them."""
+        new = create_person(PersonIn(**body.model_dump(exclude={"address"})), body.address)
+        changed()
+        return Created(id=new)
+
+    @r.get("/setup/people-suggestions")
+    def people_suggestions() -> PeopleSuggestionsView:
+        """The people the person's mail shows most (who their sent mail went to, else who wrote to them), not yet on
+        file, for the people step to offer each with an Add. Reads only; nothing is asked of a service."""
+        from engine import people_suggestions
+
+        found = people_suggestions.suggest(store, cfg, cfg.ui.walkthrough.suggested_people)
+        return PeopleSuggestionsView(people=[PersonSuggestion(**asdict(f)) for f in found])
+
+    @r.post("/setup/people-paste")
+    def paste_people(body: PeoplePasteIn) -> PeoplePasteDone:
+        """Add a pasted list of people, one per line (a name, or Name <address>), each on the side given and with no
+        relation, which the person sets afterwards. A name already on file is left out and said so."""
+        from engine import people_suggestions
+
+        added: list[str] = []
+        skipped: list[str] = []
+        for line in people_suggestions.parse_pasted(body.text):
+            name = line.name
+            try:
+                create_person(PersonIn(full_name=name, aliases=[], side=body.side, sides=body.sides), line.address)
+            except HTTPException as err:
+                if err.status_code != 409 or "already exists" not in str(err.detail):
+                    raise
+                skipped.append(name)
+            else:
+                added.append(name)
+        if added:
+            changed()
+        return PeoplePasteDone(added=added, skipped=skipped)
 
     @r.post("/people/{pid}")
     def edit_person(pid: str, body: PersonPatch) -> Ok:

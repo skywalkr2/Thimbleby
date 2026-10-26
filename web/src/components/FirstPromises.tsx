@@ -1,15 +1,15 @@
 // The walkthrough's first result (design 7.8): once a mailbox is connected and an AI account is chosen, it offers to look
 // back over the person's own mail with what that costs shown first; after their Go it lists a handful of the open promises
-// found and has one follow-up ready to copy, through the Follow-ups screen's own route. With nothing found it says so and
-// offers "Missed one". The server says where it stands; nothing here keeps anything.
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+// found and has one follow-up ready to copy, through the Follow-ups screen's own route. With nothing found it says what was
+// read (messages, meetings this week) and offers "Hand something in" and "Missed one". The server says where it stands,
+// and reads the sent folder by itself when a mailbox is connected; nothing here keeps anything.
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { copyMessage } from "../lib/copy";
 import { day } from "../lib/dates";
 import { useEstimate } from "../lib/money";
-import { useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import type { Screen } from "../lib/walkthrough";
 import { useWords } from "../lib/wording";
@@ -21,7 +21,7 @@ import { useMissedOne } from "./MissedOne";
 type Result = S["FirstPromisesView"];
 
 /** The first-result screen's body. `go` moves the walkthrough to another screen (to finish what the first result needs). */
-export function FirstPromises(props: { go: (screen: Screen) => void; onOpenSources: () => void }) {
+export function FirstPromises(props: { go: (screen: Screen) => void; onOpenSources: () => void; onHandIn: () => void }) {
   const { t } = useWords();
   const result = useQuery({
     queryKey: ["first-promises"],
@@ -52,7 +52,7 @@ export function FirstPromises(props: { go: (screen: Screen) => void; onOpenSourc
         </div>
       );
     default:
-      return <Found data={data} onOpenSources={props.onOpenSources} />;
+      return <Found data={data} onOpenSources={props.onOpenSources} onHandIn={props.onHandIn} />;
   }
 }
 
@@ -95,7 +95,7 @@ function Offer(props: { data: Result; onOpenSources: () => void }) {
 }
 
 /** What was found: the promises, one follow-up ready to copy, or the plain empty case with "Missed one". */
-function Found(props: { data: Result; onOpenSources: () => void }) {
+function Found(props: { data: Result; onOpenSources: () => void; onHandIn: () => void }) {
   const { t, tn } = useWords();
   const missed = useMissedOne();
   const { data } = props;
@@ -104,10 +104,21 @@ function Found(props: { data: Result; onOpenSources: () => void }) {
     return (
       <div className="field" data-first-promises="none">
         <p>{t(unread(data) ? "walkthrough.promises.none_partial" : "walkthrough.promises.none")}</p>
+        {data.coverage.length > 0 && (
+          <p>
+            {t("walkthrough.promises.none_read", {
+              messages: tn("walkthrough.promises.none_read_messages", data.messages_read),
+              meetings: tn("walkthrough.promises.none_read_meetings", data.meetings_week),
+            })}
+          </p>
+        )}
         <p className="hint">{t("walkthrough.promises.none_hint")}</p>
         {list}
         <div className="row-end">
           <Button onClick={missed}>{t("missed.open")}</Button>
+          <Button variant="primary" onClick={props.onHandIn}>
+            {t("walkthrough.promises.none_hand_in")}
+          </Button>
         </div>
       </div>
     );
@@ -136,34 +147,6 @@ function Found(props: { data: Result; onOpenSources: () => void }) {
 type Place = Result["coverage"][number];
 type Folder = Place["folders"][number];
 
-/** A mail account whose sent folder isn't read gets it by itself: the folder its server marks as sent mail, tried once for
- * each account, one after the other. Returns whether some account couldn't be done (the server doesn't mark one, or it
- * isn't a mailbox), so the screen can offer the Sources screen for choosing it by hand. */
-function useSentFolders(missing: Place[]): boolean {
-  const client = useQueryClient();
-  const fresh = useFreshFingerprint();
-  const tried = useRef(new Set<string>());
-  const [failed, setFailed] = useState<Set<string>>(new Set());
-  const keys = missing.map((p) => p.folders[0]?.source).filter((x): x is string => !!x);
-  useEffect(() => {
-    const todo = keys.filter((k) => !tried.current.has(k));
-    if (todo.length === 0) return;
-    todo.forEach((k) => tried.current.add(k));
-    void (async () => {
-      for (const source of todo) {
-        try {
-          await api.addSentFolder(source, { fingerprint: await fresh() });
-        } catch {
-          setFailed((old) => new Set(old).add(source));
-        }
-      }
-      await client.invalidateQueries();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keys.join("|")]);
-  return missing.some((p) => !p.folders[0]?.source || failed.has(p.folders[0].source));
-}
-
 /** Whether a folder the person connected wasn't read. A missing sent folder alone isn't that: it has its own line. */
 const unread = (data: Result) => data.coverage.some((p) => p.folders.some((f) => f.outcome !== "read"));
 
@@ -174,8 +157,8 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; onOpenSo
   const { t } = useWords();
   const { data, plan } = props;
   if (data.coverage.length === 0) return null;
+  // A mail account whose sent folder the server couldn't find is read without it: the person chooses it in Connections.
   const missing = data.coverage.filter((p) => p.missing_sent);
-  const unfixed = useSentFolders(missing);
   const place = (p: Place) => t(`walkthrough.coverage.${p.kind}${p.account ? "_at" : ""}`, { account: p.account ?? "" });
   const named = (f: Folder) => (f.folder && f.folder.toLowerCase() !== f.name.toLowerCase() ? t("walkthrough.coverage.folder_named", { name: f.name, folder: f.folder }) : f.name);
   const row = (p: Place, f: Folder) => {
@@ -201,7 +184,7 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; onOpenSo
         ))}
       </ul>
       {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : unread(data) ? "walkthrough.coverage.partial" : "walkthrough.coverage.read_no_sent")}</p>}
-      {unfixed && (
+      {missing.length > 0 && (
         <div className="row-end">
           <Button onClick={props.onOpenSources}>{t("walkthrough.coverage.add_sent")}</Button>
         </div>

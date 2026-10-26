@@ -313,7 +313,7 @@ export function Walkthrough(
               {hasMailSteps && <StepList include={(s) => s.group === "mail" && !!s.plugin && !s.sign_in} {...handlers} />}
             </>
           )}
-          {current === "promises" && <FirstPromises go={go} onOpenSources={props.onOpenSources} />}
+          {current === "promises" && <FirstPromises go={go} onOpenSources={props.onOpenSources} onHandIn={props.onHandIn} />}
           {current === "backup" && <WelcomeBackup local={data.local} />}
           {current === "people" && <WalkthroughPeople />}
           {current === "done" && <DoneScreen go={go} {...handlers} />}

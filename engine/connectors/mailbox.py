@@ -16,6 +16,7 @@ import imaplib
 import re
 import socket
 import ssl
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from email.message import EmailMessage
@@ -383,6 +384,15 @@ def parse_folders(lines: list[Any]) -> Folders:
         if "\\archive" in flags and archive is None:
             archive = name
     return Folders(tuple(names), sent, archive)
+
+
+def find_sent(found: Folders, names: Sequence[str] = ()) -> str | None:
+    """The folder that holds the person's sent mail: the one the server marks as sent mail, else the first of `names`
+    (ignoring capitals) that the mailbox has, in the order given. None when neither is there."""
+    if found.sent is not None:
+        return found.sent
+    have = {n.lower(): n for n in found.names}
+    return next((have[n.lower()] for n in names if n.lower() in have), None)
 
 
 def list_folders(settings: MailboxSettings) -> Folders:

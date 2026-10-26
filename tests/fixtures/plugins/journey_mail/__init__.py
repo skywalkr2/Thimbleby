@@ -14,6 +14,8 @@ from engine.plugin_api import ConnectorError, EventDetails, MessageDetails, Poll
 
 SERVICE = os.environ.get("JOURNEY_SERVICE_ADDRESS", "https://127.0.0.1:1").rstrip("/")
 SIGN_IN = "journey-mail/account"
+#: Whether the sign-in also names the account's sent mail (the journey that finds a promise only there turns it on).
+SENT_MAIL = os.environ.get("JOURNEY_SENT_MAIL") == "1"
 #: The app registration this add-on ships, as the made-up service knows it.
 DEFAULT_CLIENT_ID = "journey-mail-app"
 
@@ -117,5 +119,18 @@ def register(registrar) -> None:
         sources=[
             {"connector": "journey-mail/mail", "label": "Your inbox", "settings": {}, "every_minutes": 15},
             {"connector": "journey-mail/calendar", "label": "Your calendar", "settings": {}, "every_minutes": 15},
+            *(
+                [
+                    {
+                        "connector": "journey-mail/mail",
+                        "label": "Your sent mail",
+                        "settings": {"folder": "sent"},
+                        "every_minutes": 15,
+                        "sent": True,
+                    }
+                ]
+                if SENT_MAIL
+                else []
+            ),
         ],
     )

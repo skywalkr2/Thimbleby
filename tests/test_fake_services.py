@@ -127,6 +127,25 @@ def test_mail_and_calendar_answer_only_to_a_token_the_service_issued_and_stop_at
     assert state.seen["unauthorized"] == 3 and state.seen["mail_reads"] == 1
 
 
+def test_a_mailbox_with_a_sent_folder_lists_the_persons_own_message_only_there(service):
+    state, client = service
+    headers = {"Authorization": f"Bearer {exchange(client, code_from(sign_in_page(client))).json()['access_token']}"}
+
+    def subjects(**params):
+        got = client.get("/mail/v1/messages", headers=headers, params=params).json()["messages"]
+        return {m["subject"] for m in got}
+
+    inbox = subjects()
+    assert subjects(folder=fake_services.SENT_FOLDER) == inbox  # without a sent folder the name changes nothing
+    state.sent_mail = True
+    assert subjects(folder=fake_services.SENT_FOLDER) == {fake_services.SENT_SUBJECT}
+    assert subjects(folder="inbox") == inbox and fake_services.SENT_SUBJECT not in inbox
+    from datetime import UTC, datetime
+
+    taken = fake_services.intake_items(datetime.now(UTC))
+    assert taken["sent"] == [fake_services.SENT_SUBJECT] and fake_services.SENT_SUBJECT not in taken["mail"]
+
+
 def test_the_mailbox_has_recent_and_old_items_in_the_shapes_the_assistant_reads():
     from datetime import UTC, datetime
 

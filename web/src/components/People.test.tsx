@@ -321,3 +321,48 @@ test("with no side besides Personal an empty list asks for the people in your li
   expect(calls.find((c) => c.route === "POST people")?.body).toMatchObject({ full_name: "Cal Person", relation: "my dentist" });
   expect(calls.find((c) => c.route === "POST people")?.body).not.toHaveProperty("role");
 });
+
+// ---- with sides of work, the personal side is said by who they are to you ------------------------------------------
+
+const withSide = {
+  "GET setup/business": () => ({
+    business: true,
+    name: "Shop",
+    personal: "PRJ-personal",
+    sides: [{ project: "PRJ-shop", name: "Shop", kind: "business" }],
+    chosen: "both",
+  }),
+  "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", "Shop")],
+};
+
+test("with a side of work, a person on the personal side shows who they are to you in place of a role, and a person at work keeps role and organization", async () => {
+  const user = userEvent.setup();
+  api(
+    [
+      person("P-1", "Ana Person", { side: "personal", sides: ["PRJ-personal"], relation: "my sister", role: "Editor", org: firstOrg.id, org_name: firstOrg.name }),
+      person("P-2", "Ben Person", { side: "business", sides: ["PRJ-shop"], role: "Supplier", org: firstOrg.id, org_name: firstOrg.name, relation: "my cousin" }),
+    ],
+    withSide,
+  );
+  renderApp(<People />);
+  const personal = await row("Ana Person");
+  const work = await row("Ben Person");
+  expect(screen.getByRole("columnheader", { name: "Role, or who they are to you" })).toBeInTheDocument();
+  expect(personal).toHaveTextContent("my sister");
+  expect(personal).not.toHaveTextContent("Editor");
+  expect(personal).not.toHaveTextContent(firstOrg.name);
+  expect(work).toHaveTextContent("Supplier");
+  expect(work).toHaveTextContent(firstOrg.name);
+  expect(work).not.toHaveTextContent("my cousin");
+  // The detail says the same: the personal side's person has their relation, the work side's person a role and organization.
+  await user.click(within(personal).getByRole("link", { name: "Ana Person" }));
+  const detail = await screen.findByText("Who they are to you");
+  expect(detail.closest("div")).toHaveTextContent("my sister");
+});
+
+test("with a side of work and nobody on the personal side the column is still called Role", async () => {
+  api([person("P-2", "Ben Person", { side: "business", sides: ["PRJ-shop"], role: "Supplier" })], withSide);
+  renderApp(<People />);
+  await row("Ben Person");
+  expect(screen.getByRole("columnheader", { name: "Role" })).toBeInTheDocument();
+});

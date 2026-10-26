@@ -213,8 +213,8 @@ export default defineConfig({
     fakeServices(mail),
     // The new-start journey changes nothing by hand: the catalog is named through the environment, and what the app
     // prints is kept so the restarts can be counted.
-    freshServer(newStart, "--add-ons --catalog-by-environment --log"),
-    fakeServices(newStart, "--catalog journey_mail"),
+    freshServer(newStart, "--add-ons --catalog-by-environment --log --sent-mail"),
+    fakeServices(newStart, "--catalog journey_mail --sent-mail"),
     // The owner's first evening: the same start as the new-start journey, with the fake services' evening mail and model list.
     freshServer(evening, "--add-ons --catalog-by-environment --log"),
     fakeServices(evening, "--catalog journey_mail --evening"),

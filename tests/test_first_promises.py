@@ -249,6 +249,69 @@ def test_with_no_promises_it_is_ready_and_empty(env):
     assert (shown.stage, shown.promises, shown.more, shown.follow_up) == ("ready", [], 0, None)
 
 
+def appointment(key: str, days: float, *, cancelled: bool = False, all_day: bool = False) -> dict:
+    """A fake calendar entry that starts `days` after the test's now."""
+    start = NOW + timedelta(days=days)
+    stamp = start.date().isoformat() if all_day else start.isoformat()
+    event = {"start": stamp, "all_day": all_day, "cancelled": cancelled}
+    return {"key": key, "title": f"Meeting {key}", "text": f"Words about {key}.", "event": event}
+
+
+def test_with_no_promise_it_says_what_was_looked_at_the_messages_of_the_look_back_and_the_meetings_this_week(env):
+    ws, cfg, store = env
+    read(env)
+    first_promises.go(ws, store, cfg)
+    for r in requests_of(store, intake="m"):
+        with_changeset(store, r.id, [("note", "applied")])
+    shown = stage(env)
+    # Two messages fall in the look back; the third is older than it, so it wasn't looked at.
+    assert (shown.promises, shown.messages_read, shown.meetings_week) == ([], 2, 0)
+
+
+def test_the_meetings_this_week_are_those_in_the_next_seven_days_that_are_not_cancelled(tmp_path, monkeypatch):
+    monkeypatch.setattr(first_promises, "reads", lambda c, said=None: ["calendar"] if c == "fake" else [])
+    entries = [
+        appointment("today", 0.1),
+        appointment("later", 3),
+        appointment("all-day", 5, all_day=True),
+        appointment("called-off", 2, cancelled=True),
+        appointment("next-week", first_promises.WEEK_DAYS + 1),
+        appointment("past", -2),
+    ]
+    ws, cfg, store = make(tmp_path, entries, confirm=0.0, price=1000.0, first_run="baseline")
+    try:
+        read((ws, cfg, store))
+        assert first_promises.read_counts(store, cfg, NOW.date()) == (0, 3)
+    finally:
+        store.close()
+
+
+def test_a_repeating_meeting_counts_once_when_any_of_its_dates_falls_in_the_week():
+    start = NOW + timedelta(days=-30)
+    inside = (NOW + timedelta(days=4)).isoformat()
+    repeating = {
+        "start": start.isoformat(),
+        "occurrences": [{"start": start.isoformat()}, {"start": inside}, {"start": inside, "cancelled": True}],
+    }
+    week = (NOW.date(), NOW.date() + timedelta(days=first_promises.WEEK_DAYS))
+    assert first_promises._starts_within(repeating, *week)
+    assert not first_promises._starts_within({**repeating, "occurrences": [{"start": start.isoformat()}]}, *week)
+    assert not first_promises._starts_within({"start": "not a time"}, *week)
+
+
+def test_the_route_gives_what_was_looked_at_only_when_nothing_was_found(api):
+    client, store, ws, cfg = api
+    client.post("/api/watch/m/read")
+    client.post("/api/setup/first-promises/go")
+    for r in requests_of(store, intake="m"):
+        with_changeset(store, r.id, [("note", "applied")])
+    empty = client.get("/api/setup/first-promises").json()
+    assert (empty["stage"], empty["promises"], empty["messages_read"], empty["meetings_week"]) == ("ready", [], 2, 0)
+    promise(store, other(cfg), "Send the floor plan")
+    found = client.get("/api/setup/first-promises").json()
+    assert len(found["promises"]) == 1 and (found["messages_read"], found["meetings_week"]) == (0, 0)
+
+
 # ---- what is read: the account, the folders, the day, and what wasn't ----------------------------------------
 
 

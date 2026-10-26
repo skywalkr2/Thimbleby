@@ -4,14 +4,14 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
-import { Refuse, fakeApi, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
+import { fakeApi, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
 import { FirstPromises } from "./FirstPromises";
 import { MissedOneProvider } from "./MissedOne";
 import { Walkthrough } from "./Walkthrough";
 
 // The walkthrough's first result (design 7.8): once a mailbox is connected and an AI account is chosen it offers the look
 // back over the person's own mail with its estimate first; after their Go it lists a handful of the open promises found
-// with one follow-up ready to copy; with none found it says so and offers "Missed one".
+// with one follow-up ready to copy; with none found it says what was read and offers "Hand something in" and "Missed one".
 
 const view = (over: Partial<S["FirstPromisesView"]> = {}): S["FirstPromisesView"] => ({
   stage: "ready",
@@ -24,6 +24,8 @@ const view = (over: Partial<S["FirstPromisesView"]> = {}): S["FirstPromisesView"
   more: 0,
   coverage: [],
   complete: true,
+  messages_read: 0,
+  meetings_week: 0,
   ...over,
 });
 
@@ -41,11 +43,17 @@ const promise = (id: string, over: Partial<S["FirstPromise"]> = {}): S["FirstPro
 
 const noop = () => undefined;
 
-function show(first: S["FirstPromisesView"], routes: Parameters<typeof fakeApi>[0] = {}, go: (screen: S["WalkthroughView"]["step"]) => void = noop, openSources: () => void = noop) {
+function show(
+  first: S["FirstPromisesView"],
+  routes: Parameters<typeof fakeApi>[0] = {},
+  go: (screen: S["WalkthroughView"]["step"]) => void = noop,
+  openSources: () => void = noop,
+  handIn: () => void = noop,
+) {
   const calls = fakeApi({ "GET setup/first-promises": () => first, ...routes });
   renderApp(
     <MissedOneProvider>
-      <FirstPromises go={go} onOpenSources={openSources} />
+      <FirstPromises go={go} onOpenSources={openSources} onHandIn={handIn} />
     </MissedOneProvider>,
   );
   return calls;
@@ -183,6 +191,31 @@ describe("what was found", () => {
     expect(screen.queryByText(/more promise/)).toBeNull();
   });
 
+  test("with none found it says what was read, the meetings this week and that nothing was promised", async () => {
+    show(view({ messages_read: 7, meetings_week: 2, coverage: [place([folder("Inbox"), folder("Sent", { sent: true })])] }));
+    expect(await screen.findByText("7 messages read, 2 meetings this week, nothing you promised.")).toBeInTheDocument();
+  });
+
+  test("one message and one meeting read in the singular", async () => {
+    show(view({ messages_read: 1, meetings_week: 1, coverage: [place([folder("Inbox")])] }));
+    expect(await screen.findByText("1 message read, 1 meeting this week, nothing you promised.")).toBeInTheDocument();
+  });
+
+  test("with none found it offers Hand something in, which opens the hand-in box, and says what it is for", async () => {
+    const user = userEvent.setup();
+    const handIn = vi.fn();
+    show(view({ messages_read: 7, coverage: [place([folder("Inbox")])] }), {}, noop, noop, handIn);
+    await user.click(await screen.findByRole("button", { name: "Hand something in to see what it does" }));
+    expect(handIn).toHaveBeenCalledTimes(1);
+  });
+
+  test("with promises found there is no Hand something in and no count of what was read", async () => {
+    show(view({ promises: [promise("ACT-2", { mine: true })], messages_read: 7, coverage: [place([folder("Inbox")])] }));
+    await screen.findByRole("list", { name: "Promises found" });
+    expect(screen.queryByRole("button", { name: /Hand something in/ })).toBeNull();
+    expect(screen.queryByText(/nothing you promised/)).toBeNull();
+  });
+
   test("with none found it says so plainly and offers Missed one, which opens its form", async () => {
     const user = userEvent.setup();
     show(view());
@@ -217,30 +250,31 @@ describe("what it reads", () => {
     expect(await screen.findByText(`Your mail: Work mail (folder Sent Items), from ${dated}`)).toBeInTheDocument();
   });
 
-  const SETTINGS = { "GET settings": () => ({ fingerprint: "fp-1", items: [] }) };
   const missingSent = view({ ...planned, complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] });
 
-  test("a mail account with no sent folder gets it by itself, with no button to find", async () => {
-    const calls = show(missingSent, { ...SETTINGS, "POST watch/inbox/sent-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
-    await waitFor(() => expect(calls.some((c) => c.route === "POST watch/inbox/sent-folder")).toBe(true));
-    expect(calls.find((c) => c.route === "POST watch/inbox/sent-folder")!.body).toEqual({ fingerprint: "fp-1" });
-    expect(screen.queryByRole("button", { name: /Sent folder/ })).toBeNull();
+  test("the screen never goes looking for a sent folder: the server reads it when the mailbox is connected", async () => {
+    const calls = show(missingSent);
+    await screen.findByRole("list", { name: "What it will read" });
+    expect(calls.filter((c) => c.route.startsWith("POST"))).toHaveLength(0);
   });
 
-  test("where the sent folder can't be found by itself, the line says what can't be found and offers choosing it", async () => {
+  test("where no sent folder could be found, the line says what can't be found and offers choosing it", async () => {
     const user = userEvent.setup();
     const open = vi.fn();
-    show(missingSent, { ...SETTINGS, "POST watch/inbox/sent-folder": () => new Refuse(409, "The mail server doesn't say which folder holds sent mail.") }, noop, open);
+    show(missingSent, {}, noop, open);
     expect(await screen.findByText("The mail you sent from work@example.com isn't being read, so promises you made in it can't be found until you add its Sent folder.")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
     expect(open).toHaveBeenCalledTimes(1);
   });
 
+  test("where the sent folder is read there is no button to choose it", async () => {
+    show(view({ ...planned, coverage: [place([folder("Inbox", { from_date: from }), folder("Sent", { sent: true, from_date: from })])] }));
+    await screen.findByRole("list", { name: "What it will read" });
+    expect(screen.queryByRole("button", { name: /Sent folder/ })).toBeNull();
+  });
+
   test("with only the sent folder missing, nothing found isn't blamed on something unread: the missing sent folder is said instead", async () => {
-    show(view({ complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }), {
-      "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
-      "POST watch/inbox/sent-folder": () => new Refuse(409, "x"),
-    });
+    show(view({ complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }));
     expect(await screen.findByText("No open promises found in the mail it looked over.")).toBeInTheDocument();
     expect(screen.getByText("Everything listed was read, but not the mail you sent, so this list may be missing promises you made.")).toBeInTheDocument();
     expect(screen.queryByText(/wasn't read, so there may be/)).toBeNull();

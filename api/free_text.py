@@ -129,6 +129,7 @@ ROUTES: dict[str, Declared] = {
     "POST /api/ai/account-check": _local(_ACCOUNT + ", checked before they are saved"),
     "POST /api/data-forms/{name}/file": _local("the values of a data file the person edits as configuration"),
     "POST /api/data-forms/{name}/remove": _local("the values of a data file the person edits as configuration"),
+    "POST /api/setup/people-paste": _local("a list of names the person types, each kept as a person record's name"),
     "POST /api/watch/sources": _local(_SETTING),
     "POST /api/watch/sources/{source_id}": _local(_SETTING),
 }

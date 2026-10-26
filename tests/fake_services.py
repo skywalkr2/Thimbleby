@@ -90,6 +90,7 @@ class State:
         #: The moment the made-up mailbox and calendar are dated from, so reading them again gives the same text.
         self.moment = datetime.now(UTC)
         self.evening = False  # the owner-evening journey's extra mail, event and retired model
+        self.sent_mail = False  # the mailbox also has a sent folder, which the mail service lists by its name
         self.later_mail: list[dict] = []  # messages that arrive after the first read (added by a helper route)
         self.seen = {
             "authorizations": 0,
@@ -464,6 +465,23 @@ def messages(now: datetime, later: list[dict] | None = None, evening: bool = Fal
     ]
 
 
+#: The folder the mail service keeps the person's own sent mail in, as a read names it.
+SENT_FOLDER = "sent"
+#: The promise the person made in mail they sent, which no message they received repeats.
+SENT_PROMISE_FROM = "will send the revised budget by 2026-11-05"
+SENT_SUBJECT = "Revised offsite budget"
+
+
+def sent_messages(now: datetime) -> list[dict]:
+    """The person's own sent mail: one message, from them, a few days old, holding a promise found nowhere else."""
+    me = people()[0]
+    return [
+        message(
+            "s-1", (me, address_of(me)), SENT_SUBJECT, timedelta(days=3), False, f"{me} {SENT_PROMISE_FROM}.", now=now
+        )
+    ]
+
+
 def events(now: datetime, evening: bool = False) -> list[dict]:
     """Three events: two within the hour, and one next week."""
     first, second = people()[1:3]
@@ -531,6 +549,7 @@ def intake_items(now: datetime, days: int = 14) -> dict[str, list[str]]:
         "set_aside": [m["subject"] for m in aside if within(m["received"])],
         "events": [e["title"] for e in events(now)],
         "noted": [m["subject"] for m in mail if not within(m["received"])],
+        "sent": [m["subject"] for m in sent_messages(now) if within(m["received"])],
     }
 
 
@@ -540,6 +559,8 @@ def mail_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["mail_reads"] += 1
+        if state.sent_mail and request.query_params.get("folder") == SENT_FOLDER:
+            return JSONResponse({"messages": sent_messages(state.moment)})
         return JSONResponse({"messages": messages(state.moment, state.later_mail, state.evening)})
 
     return [Route("/messages", listed)]
@@ -785,9 +806,11 @@ def main() -> None:
     parser.add_argument(
         "--evening", action="store_true", help="add the evening journey's mail, event and retired model"
     )
+    parser.add_argument("--sent-mail", action="store_true", help="give the mailbox a sent folder with one message")
     args = parser.parse_args()
     state = State(args.state)
     state.evening = args.evening
+    state.sent_mail = args.sent_mail
     if args.https_port:
         start_secure(state, args.https_port, tuple(name for name in args.catalog.split(",") if name))
     uvicorn.run(build_app(state, args.port), host=HOST, port=args.port, log_level="warning")

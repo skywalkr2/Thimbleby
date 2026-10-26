@@ -159,8 +159,10 @@ test.describe.serial("journey: new start", () => {
     expect(recentMail.length).toBeGreaterThan(0);
     expect(recentNoted.length).toBeGreaterThan(0);
     // The look back takes in the last 14 days of work mail and every event, so each is counted once below.
-    const { mail, events, noted } = seen.intake_items;
-    const handedIn = mail.length + events.length;
+    // The sign-in also names the account's sent mail, which is read with the inbox and credited to me, with no folder chosen.
+    const { mail, events, noted, sent } = seen.intake_items;
+    expect(sent.length).toBeGreaterThan(0);
+    const handedIn = mail.length + events.length + sent.length;
     expect(handedIn).toBeGreaterThan(recentMail.length + recentEvents.length);
     expect(noted).toHaveLength(0);
     // The assistant is asked, once, to read the message that holds a promise: the person's own, to send the venue list.
@@ -185,6 +187,28 @@ test.describe.serial("journey: new start", () => {
       }),
     });
     expect(scripted.ok).toBe(true);
+    // A second promise is only in the mail I sent: nothing I received repeats it.
+    const sentLine = `${info.people[0]} will send the revised budget by 2026-11-05.`;
+    const scriptedSent = await fetch(`${FAKE}/__e2e/script`, {
+      method: "POST",
+      body: JSON.stringify({
+        when: "will send the revised budget by 2026-11-05",
+        answer: {
+          summary: "Read by the journey's script.",
+          ops: [
+            {
+              op: "action.add",
+              text: "Send the revised budget.",
+              owners: ["me"],
+              due: "2026-11-05",
+              basis: "said",
+              evidence: { quote: sentLine },
+            },
+          ],
+        },
+      }),
+    });
+    expect(scriptedSent.ok).toBe(true);
     await main.getByRole("button", { name: "Continue" }).click();
 
     // 5. Your promises, right after mail and before backups or people: the look back over the last 14 days of my own mail
@@ -202,21 +226,30 @@ test.describe.serial("journey: new start", () => {
     await visit(page);
     expect((await requests()).work).toBe(0);
     seen = await service();
-    expect(seen).toMatchObject({ mail_reads: 1, calendar_reads: 1, unauthorized: 0 });
+    // The inbox and the sent folder are each read once; nobody chose a folder.
+    expect(seen).toMatchObject({ mail_reads: 2, calendar_reads: 1, unauthorized: 0 });
 
     // Start: one request for each item taken in, each item once, and then the promise it found is on the screen.
     await offer.getByRole("button", { name: "Start", exact: true }).click();
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
-    // The work mail the rules could not place was sorted in one run for the whole batch; it is not counted as work.
-    expect(asked.sorting).toBe(1);
-    for (const title of [...mail, ...events]) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
+    // The work mail the rules could not place was sorted in one run for each source's batch (the inbox, and the sent mail
+    // when the rules leave it unplaced); sorting is not counted as work.
+    expect(asked.sorting).toBeGreaterThanOrEqual(1);
+    expect(asked.sorting).toBeLessThanOrEqual(2);
+    for (const title of [...mail, ...events, ...sent]) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
     const promises = main.getByRole("list", { name: "Promises found" });
     await expect(promises).toBeVisible({ timeout: 60_000 });
     const mine = promises.locator("li", { hasText: "Send the venue list." });
     await expect(mine).toHaveCount(1);
     await expect(mine).toContainText("You owe this");
     await expect(mine).toContainText(`From: “${promiseLine}”`);
+    // The promise that is only in the mail I sent is found too, though no folder was chosen.
+    const fromSent = promises.locator("li", { hasText: "Send the revised budget." });
+    await expect(fromSent).toHaveCount(1);
+    await expect(fromSent).toContainText("You owe this");
+    await expect(fromSent).toContainText(`From: “${sentLine}”`);
+    await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toHaveCount(0);
     // Nobody else owes anything yet, so there is no follow-up to copy.
     await expect(main.getByRole("region", { name: "One follow-up is ready" })).toHaveCount(0);
     await visit(page);
@@ -274,12 +307,17 @@ test.describe.serial("journey: new start", () => {
       `Look over what was found in Your calendar: ${events.length} items`,
       { timeout: 60_000 },
     );
-    await expect(found).toHaveCount(2);
+    // The sent mail is its own source, so it has its own line.
+    await expect(found.filter({ hasText: "Your sent mail" })).toContainText(
+      `Look over what was found in Your sent mail: ${sent.length} ${sent.length === 1 ? "item" : "items"}`,
+      { timeout: 60_000 },
+    );
+    await expect(found).toHaveCount(3);
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     await visit(page);
 
     // Opening each list marks it seen; after both, what still needs a look is on Today line by line, one for each item.
-    for (const label of ["Your inbox", "Your calendar"]) {
+    for (const label of ["Your inbox", "Your calendar", "Your sent mail"]) {
       await page.getByRole("link", { name: /^Today/ }).first().click();
       await found.filter({ hasText: label }).getByRole("button", { name: "Look over", exact: true }).click();
     }

@@ -9313,6 +9313,18 @@
               }
             ]
           },
+          "meetings_week": {
+            "default": 0,
+            "description": "With no promise found: how many meetings fall in the next seven days.",
+            "title": "Meetings Week",
+            "type": "integer"
+          },
+          "messages_read": {
+            "default": 0,
+            "description": "With no promise found: how many messages the look back covered, sent mail included.",
+            "title": "Messages Read",
+            "type": "integer"
+          },
           "more": {
             "description": "Open promises beyond the ones shown.",
             "title": "More",
@@ -16656,6 +16668,95 @@
         "title": "PartOfIn",
         "type": "object"
       },
+      "PeoplePasteDone": {
+        "properties": {
+          "added": {
+            "description": "The names added, in the order given.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "skipped": {
+            "description": "The names left out because someone of that name is on file already.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "added",
+          "skipped"
+        ],
+        "title": "PeoplePasteDone",
+        "type": "object"
+      },
+      "PeoplePasteIn": {
+        "additionalProperties": false,
+        "description": "A list of people typed or pasted, one per line: a name, or `Name <address>`. They go on the side `side` or\n`sides` names, as PersonIn's do.",
+        "properties": {
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side"
+          },
+          "sides": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sides"
+          },
+          "text": {
+            "maxLength": 20000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PeoplePasteIn",
+        "type": "object"
+      },
+      "PeopleSuggestionsView": {
+        "description": "The people to suggest in the people step, most mail first, at most `ui.walkthrough.suggested_people`.",
+        "properties": {
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonSuggestion"
+            },
+            "title": "People",
+            "type": "array"
+          }
+        },
+        "required": [
+          "people"
+        ],
+        "title": "PeopleSuggestionsView",
+        "type": "object"
+      },
       "PersonActionView": {
         "description": "Something a person can start on a record, a file or the workspace.",
         "properties": {
@@ -17087,6 +17188,35 @@
           "promised_by"
         ],
         "title": "PersonPrepView",
+        "type": "object"
+      },
+      "PersonSuggestion": {
+        "description": "Someone the person's mail shows often and who isn't on file yet: `name` as the mail gives it, `address`, in how\nmany messages they appear (`count`), and whether those were the person's own sent mail.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "from_sent": {
+            "title": "From Sent",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "count",
+          "from_sent"
+        ],
+        "title": "PersonSuggestion",
         "type": "object"
       },
       "PersonView": {
@@ -24266,6 +24396,121 @@
           "items"
         ],
         "title": "SettingsView",
+        "type": "object"
+      },
+      "SetupPersonIn": {
+        "description": "A person added from the people step: as PersonIn, with the `address` their mail showed, kept as the way to reach\nthem (their email), so a later message from that address is known to be theirs.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their email address, from the mail it was seen in.",
+            "title": "Address"
+          },
+          "aliases": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name a greeting uses; empty means the first word of the name.",
+            "title": "First Name"
+          },
+          "full_name": {
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An organization's id, from GET /api/organizations.",
+            "title": "Org"
+          },
+          "relation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How they relate to the person, in plain words ('my sister').",
+            "title": "Relation"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side of life they belong to. Refused for business or both when there is more than one side besides the personal one: name the side in `sides`.",
+            "title": "Side"
+          },
+          "sides": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The ids of the top-level projects that hold the sides they belong to.",
+            "title": "Sides"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "SetupPersonIn",
         "type": "object"
       },
       "SetupStepView": {
@@ -39821,6 +40066,103 @@
         "summary": "Folders"
       }
     },
+    "/api/setup/people-add": {
+      "post": {
+        "description": "Add a person from the people step with the address their mail showed, kept as the way to reach them.",
+        "operationId": "add_setup_person_api_setup_people_add_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupPersonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Setup Person"
+      }
+    },
+    "/api/setup/people-paste": {
+      "post": {
+        "description": "Add a pasted list of people, one per line (a name, or Name <address>), each on the side given and with no\nrelation, which the person sets afterwards. A name already on file is left out and said so.",
+        "operationId": "paste_people_api_setup_people_paste_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeoplePasteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeoplePasteDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paste People"
+      }
+    },
+    "/api/setup/people-suggestions": {
+      "get": {
+        "description": "The people the person's mail shows most (who their sent mail went to, else who wrote to them), not yet on\nfile, for the people step to offer each with an Add. Reads only; nothing is asked of a service.",
+        "operationId": "people_suggestions_api_setup_people_suggestions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeopleSuggestionsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "People Suggestions"
+      }
+    },
     "/api/setup/sides/{project}/remove": {
       "post": {
         "description": "Take a side back out while setup is still open: its project and the projects inside it go, and so does its\nplace in the sides' list. Refused once setup is finished or when anything is filed under it.",
@@ -42034,7 +42376,7 @@
     },
     "/api/watch/sources": {
       "post": {
-        "description": "Start reading a new source, with Undo. Its id comes from its label.",
+        "description": "Start reading a new source, with Undo. Its id comes from its label. A mailbox with no author also reads its\nsent folder, as the person's own mail, when it can be found.",
         "operationId": "watch_add_api_watch_sources_post",
         "requestBody": {
           "content": {
@@ -42519,7 +42861,7 @@
     },
     "/api/watch/{source_id}/sent-folder": {
       "post": {
-        "description": "Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the\nfolder picked from its list, and the person as its author, since what is in it is their own mail. It is taken in\nquietly like any new source.",
+        "description": "Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the\nfolder picked from its list (else the one the server marks, else one of the usual names), and the person as its\nauthor, since what is in it is their own mail. It is taken in quietly like any new source.",
         "operationId": "watch_sent_folder_api_watch__source_id__sent_folder_post",
         "parameters": [
           {
