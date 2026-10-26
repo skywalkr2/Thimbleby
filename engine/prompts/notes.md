@@ -195,6 +195,7 @@ How to answer:
     it is from and the amount to pay as the bill states it ("Pay the Harbor Power bill, $64.20"), with the due day in
     "due_words" copied from the bill. Only that amount: never a balance, a total owed to date, an account number or
     any bank detail. A statement with nothing to pay and no due day records nothing.
+    The to-do's due day is the record of the bill's day: add no "fact" with "on_kind": "bill" beside it.
   - An order confirmation: one "action.add" owned by the user, "Watch for the <shop> order of <what>", with
     "waiting_for": "the order to arrive" and the expected delivery day in "due_words" when the mail gives one. When it
     also gives a return-by day, add a "fact" with "on" and "on_kind": "deadline" for that day, quoting its words.

@@ -295,11 +295,18 @@ def without_filed_by(ops: list[Any]) -> list[Any]:
 
 
 def file_by_people(
-    ops: list[Any], view: Any, cfg: Any, people: Any, sender: str | None, raw_input: str | None = None
+    ops: list[Any],
+    view: Any,
+    cfg: Any,
+    people: Any,
+    sender: str | None,
+    raw_input: str | None = None,
+    settled: str | None = None,
 ) -> list[Any]:
     """The ops with every new action, question, fact or note that names no project filed under a project, each keeping
     why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to both
     sides decides nothing and the next is read:
+    00. the project the person settled for the hand-in (the request's own project), when it has one;
     0. mail the rules know as a bill, an order or a delivery (`engine/mail_kinds.py`): the personal project, whoever
        sent it;
     1. the people the op names and the input's sender, when known: the side every deciding person is on (those on
@@ -327,6 +334,10 @@ def file_by_people(
     for op in ops:
         if not isinstance(op, (ActionAddOp, QuestionAddOp, FactOp, NoteOp)) or op.project:
             out.append(op)
+            continue
+        if settled and view.get("project", settled) is not None:
+            # The person settled which project the hand-in is about (Treat as personal, say): that decides.
+            out.append(op.model_copy(update={"project": settled}))
             continue
         if kind and personal:
             # A bill, an order or a delivery is the person's own life, whoever sent it: the Personal project.

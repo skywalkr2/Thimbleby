@@ -220,7 +220,11 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
             ctx.inputs.raw_input, view, ctx.cfg, ctx.people, contact_kind(ctx.cfg, "phone"), ops
         )
     if ctx.actor != "pm" and not ctx.confirmed_by_pm:
-        ops = sides.file_by_people(ops, view, ctx.cfg, ctx.people, _reporter(ctx), ctx.inputs.raw_input)
+        req = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+        settled = req.data.get("project") if req is not None else None
+        ops = sides.file_by_people(
+            ops, view, ctx.cfg, ctx.people, _reporter(ctx), ctx.inputs.raw_input, settled=settled
+        )
     else:
         # Only the filing above says why an item was filed; a reason arriving any other way is not kept.
         ops = sides.without_filed_by(ops)

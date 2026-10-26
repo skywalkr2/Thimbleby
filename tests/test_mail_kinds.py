@@ -197,3 +197,39 @@ def test_a_tracked_bill_or_order_in_the_cases_is_filed_under_the_personal_projec
         CASE_IDS[2]: "shipping",
         CASE_IDS[3]: None,
     }
+
+
+def test_treat_as_personal_then_the_assistants_action_lands_in_the_personal_project(app):
+    from engine.ai.adapters.stub import set_responder
+    from engine.ai.router import Router
+    from engine.dispatcher import process
+    from tests.test_pipeline import answers
+
+    ws, cfg, store, client, base = app
+    (item,) = client.get(f"{base}/set-aside").json()["items"]
+    personal = sides.personal_project(store.read(), cfg)
+    assert (
+        client.post(f"{base}/set-aside/{item['id']}/personal", json={"read_version": item["version"]}).status_code
+        == 200
+    )
+    (request,) = [r for r in requests_in(store, "queued") if r.data["source"]]
+    owner = store.read().get("person", cfg.workspace.user.person).data["full_name"]
+    answers(
+        {
+            "summary": "A thing to do.",
+            "ops": [
+                {
+                    "op": "action.add",
+                    "text": "Reply about the sale",
+                    "owners": [owner],
+                    "evidence": {"quote": "Plain words."},
+                }
+            ],
+        }
+    )
+    try:
+        process(ws, store, cfg, Router(cfg, store, env={}), request.id, now=NOW)
+    finally:
+        set_responder(None)
+    made = [a for a in store.read().list("action") if a.data["text"] == "Reply about the sale"]
+    assert [a.data["project"] for a in made] == [personal]

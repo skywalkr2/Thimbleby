@@ -246,8 +246,9 @@ aside folder:
   `tests/test_set_aside.py::test_a_rule_written_by_the_corrections_route_applies_to_the_next_matching_item`.
 - [x] **Confirm learns and deletes** (owner, 2026-10-12): confirming a set-aside writes a sender rule (a domain rule
   is offered at three senders). It also removes the message's text from the app, keeping a marker so it isn't read
-  again. The mailbox is never changed. Built:
-  `tests/test_set_aside.py::test_confirming_writes_a_sender_rule_and_the_next_mail_from_that_sender_is_set_aside` and
+  again. The mailbox is never changed. Since change 205 the screen no longer offers Confirm ("Keep it set aside" is
+  gone: leaving a mail in the folder is the confirmation, and "Always set aside mail like this" teaches); the engine
+  step stays. Built:
   `tests/test_set_aside.py::test_after_the_undo_time_no_text_of_a_confirmed_message_remains_and_it_is_never_handed_in_again`.
 - [x] Journey: a mailbox with work mail, a social update and a sales mail. Only the work mail reaches the assistant
   and the first Go. "This is work" hands the sales mail in (`journeys-mail.spec.ts`, J2).
@@ -591,8 +592,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   is offered there, or one sender would hide every contact with a personal address. The list of public domains ships
   with the app as data and is extendable in the person's settings. Built:
   `tests/test_set_aside.py::test_a_public_mail_domain_is_the_shipped_list_plus_the_persons_own_and_matches_exactly`,
-  `test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain`,
-  `test_confirm_all_offers_no_domain_for_three_senders_on_a_public_domain_but_does_for_a_company` and
+  `test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain` and
   `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; the screen hides the domain
   button when none comes: `web/src/components/SetAside.test.tsx` ("offers only Always for this sender when the server sends no
   domain").

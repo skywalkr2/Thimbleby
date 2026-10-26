@@ -29,7 +29,6 @@ from api.schemas import (
     SilentClosesView,
     SilentCloseView,
     SourceSecretView,
-    UnconfirmIn,
     WatchAuthorOption,
     WatchRunView,
     WatchSourceView,
@@ -470,15 +469,5 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         events.changed()
         worker.poke()
         return done(snapshot_id, mark.get("section", "sales"))
-
-    @r.post("/set-aside/unconfirm")
-    def set_aside_unconfirm(body: UnconfirmIn) -> Created:
-        """Undo a confirmation within its undo time: the messages are back in the folder."""
-        try:
-            set_aside.unconfirm_items(store, body.ids)
-        except StoreError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from None
-        events.changed()
-        return Created(id=body.ids[0])
 
     return r

@@ -4415,38 +4415,6 @@ class SortingRuleIn(BaseModel):
     domains: list[str] = Field(default_factory=list)
 
 
-class ConfirmIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    fingerprint: str
-    ids: list[str] = Field(min_length=1)
-
-
-class DomainOffer(BaseModel):
-    domain: str
-    senders: int = Field(description="How many of the confirmed senders are on it.")
-    section: Literal["personal", "sales", "notices"]
-
-
-class ConfirmDone(BaseModel):
-    saved: SettingsSaved
-    confirmed: int = Field(description="How many messages were confirmed.")
-    senders: list[str] = Field(description="The distinct sender addresses a rule was written for.")
-    section: Literal["personal", "sales", "notices"] | None = Field(
-        None, description="The section, when all were in one."
-    )
-    domain_offers: list[DomainOffer] = Field(
-        description="Domains that three or more of the confirmed senders share, for an 'always' rule."
-    )
-    ids: list[str]
-
-
-class UnconfirmIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    ids: list[str] = Field(min_length=1)
-
-
 class FingerprintIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

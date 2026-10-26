@@ -53,10 +53,7 @@ from api.schemas import (
     CloudFolderChoice,
     CloudFoldersView,
     CloudFolderView,
-    ConfirmDone,
-    ConfirmIn,
     DataLevelAllowed,
-    DomainOffer,
     EndpointView,
     FingerprintIn,
     FolderCheckView,
@@ -114,7 +111,6 @@ MEASURE_WHY = {
 
 #: Settings an add-on's setup step may never suggest: where keys come from and which accounts get the work.
 #: How many confirmed senders on one domain make the screen offer a rule for the whole domain.
-DOMAIN_OFFER_AT = 3
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
 #: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, a
@@ -821,57 +817,6 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
             signal(store, "set_aside", [body.mail], f"Always set aside mail like this ({body.choice})")
         return result
-
-    @r.post("/set-aside/confirm")
-    def set_aside_confirm(body: ConfirmIn) -> ConfirmDone:
-        """Confirm set-aside mail was rightly set aside: a sender rule is written for each distinct sender, and the
-        messages leave the folder and are deleted from the app after their undo time."""
-        snaps = [store.read().get("snapshot", i) for i in body.ids]
-        if any(sn is None or not sn.data.get("set_aside") or sn.data.get("deleted") for sn in snaps):
-            raise HTTPException(status_code=404, detail="One of those isn't set aside.")
-        by_section: dict[str, list[str]] = {}
-        for sn in snaps:
-            address = set_aside_mail.address_of(sn, ws)
-            if address and address not in by_section.setdefault(sn.data["set_aside"]["section"], []):
-                by_section[sn.data["set_aside"]["section"]].append(address)
-        rules = triage_now()
-        for section, senders in by_section.items():
-            rules = sorting.with_sender_rules(rules, section, senders, [])
-        done = saved(
-            save(
-                {"watch.triage": rules} if any(by_section.values()) else {},
-                [],
-                body.fingerprint,
-                allow=("watch.triage",),
-            )
-        )
-        try:
-            confirmed = set_aside_mail.confirm_items(store, body.ids)
-        except StoreError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from None
-        set_aside_mail.purge_due(ws, store, current())
-        events.changed()
-        sections = {section for section, senders in by_section.items() if senders} or {
-            sn.data["set_aside"]["section"] for sn in snaps
-        }
-        offers = []
-        for section, senders in by_section.items():
-            domains: dict[str, int] = {}
-            for address in senders:
-                domain = set_aside_mail.offerable_domain(address, current())
-                if domain:
-                    domains[domain] = domains.get(domain, 0) + 1
-            offers += [
-                DomainOffer(domain=d, senders=n, section=section) for d, n in domains.items() if n >= DOMAIN_OFFER_AT
-            ]
-        return ConfirmDone(
-            saved=done,
-            confirmed=len(confirmed),
-            senders=[a for senders in by_section.values() for a in senders],
-            section=next(iter(sections)) if len(sections) == 1 else None,
-            domain_offers=offers,
-            ids=body.ids,
-        )
 
     # ---- turning add-ons on and off -------------------------------------------------------------------------------
 

@@ -6897,90 +6897,6 @@
         "title": "CompletedAction",
         "type": "object"
       },
-      "ConfirmDone": {
-        "properties": {
-          "confirmed": {
-            "description": "How many messages were confirmed.",
-            "title": "Confirmed",
-            "type": "integer"
-          },
-          "domain_offers": {
-            "description": "Domains that three or more of the confirmed senders share, for an 'always' rule.",
-            "items": {
-              "$ref": "#/components/schemas/DomainOffer"
-            },
-            "title": "Domain Offers",
-            "type": "array"
-          },
-          "ids": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Ids",
-            "type": "array"
-          },
-          "saved": {
-            "$ref": "#/components/schemas/SettingsSaved"
-          },
-          "section": {
-            "anyOf": [
-              {
-                "enum": [
-                  "personal",
-                  "sales",
-                  "notices"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The section, when all were in one.",
-            "title": "Section"
-          },
-          "senders": {
-            "description": "The distinct sender addresses a rule was written for.",
-            "items": {
-              "type": "string"
-            },
-            "title": "Senders",
-            "type": "array"
-          }
-        },
-        "required": [
-          "saved",
-          "confirmed",
-          "senders",
-          "domain_offers",
-          "ids"
-        ],
-        "title": "ConfirmDone",
-        "type": "object"
-      },
-      "ConfirmIn": {
-        "additionalProperties": false,
-        "properties": {
-          "fingerprint": {
-            "title": "Fingerprint",
-            "type": "string"
-          },
-          "ids": {
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "title": "Ids",
-            "type": "array"
-          }
-        },
-        "required": [
-          "fingerprint",
-          "ids"
-        ],
-        "title": "ConfirmIn",
-        "type": "object"
-      },
       "ConversationIn": {
         "additionalProperties": false,
         "properties": {
@@ -7676,35 +7592,6 @@
           "blocks"
         ],
         "title": "DocumentView",
-        "type": "object"
-      },
-      "DomainOffer": {
-        "properties": {
-          "domain": {
-            "title": "Domain",
-            "type": "string"
-          },
-          "section": {
-            "enum": [
-              "personal",
-              "sales",
-              "notices"
-            ],
-            "title": "Section",
-            "type": "string"
-          },
-          "senders": {
-            "description": "How many of the confirmed senders are on it.",
-            "title": "Senders",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "domain",
-          "senders",
-          "section"
-        ],
-        "title": "DomainOffer",
         "type": "object"
       },
       "DroppedQuestionView": {
@@ -25541,24 +25428,6 @@
         "title": "TouchView",
         "type": "object"
       },
-      "UnconfirmIn": {
-        "additionalProperties": false,
-        "properties": {
-          "ids": {
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "title": "Ids",
-            "type": "array"
-          }
-        },
-        "required": [
-          "ids"
-        ],
-        "title": "UnconfirmIn",
-        "type": "object"
-      },
       "UndoChoice": {
         "properties": {
           "ops": {
@@ -36231,84 +36100,6 @@
           }
         },
         "summary": "Set Aside Folder"
-      }
-    },
-    "/api/set-aside/confirm": {
-      "post": {
-        "description": "Confirm set-aside mail was rightly set aside: a sender rule is written for each distinct sender, and the\nmessages leave the folder and are deleted from the app after their undo time.",
-        "operationId": "set_aside_confirm_api_set_aside_confirm_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfirmIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfirmDone"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Set Aside Confirm"
-      }
-    },
-    "/api/set-aside/unconfirm": {
-      "post": {
-        "description": "Undo a confirmation within its undo time: the messages are back in the folder.",
-        "operationId": "set_aside_unconfirm_api_set_aside_unconfirm_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UnconfirmIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Created"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Set Aside Unconfirm"
       }
     },
     "/api/set-aside/{snapshot_id}/personal": {

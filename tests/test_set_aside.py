@@ -496,68 +496,12 @@ def test_a_keep_rule_from_this_is_work_always_goes_first_and_beats_the_built_in_
 # ---- confirming: learn the sender, then delete the content ---------------------------------------------------------
 
 
-def confirm(client, base, ids):
-    return client.post(f"{base}/set-aside/confirm", json={"fingerprint": fingerprint(client, base), "ids": ids})
+def confirm(ws, store, ids):
+    """Confirm these messages as rightly set aside, then delete what is due (the engine's own steps)."""
+    from engine.set_aside import confirm_items, purge_due
 
-
-def test_confirming_writes_a_sender_rule_and_the_next_mail_from_that_sender_is_set_aside(app):
-    ws, cfg, store, client, base = app
-    read(ws, store)
-    item = next(i for i in folder(client, base)["items"] if i["title"] == "Subject of social")
-    done = confirm(client, base, [item["id"]])
-    assert done.status_code == 200
-    body = done.json()
-    assert body["confirmed"] == 1 and body["senders"] == [f"b@{SHOP}"] and body["section"] == "sales"
-    assert len(body["saved"]["changes"]) == 1 and body["domain_offers"] == []
-    rules = load_config(ws.config_dir, env={}).watch.triage
-    assert (
-        rules[0].kind == "sender-rule"
-        and rules[0].set_aside == "sales"
-        and rules[0].params == {"senders": [f"b@{SHOP}"]}
-    )
-    # A new mail from that sender, which the service files under nothing special, is set aside by the new rule.
-    settings = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
-    settings["sources"][0]["settings"]["items"].append(mail("next", f"B@{SHOP}", hours=0))
-    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(settings))
-    read(ws, store)
-    nxt = next(s for s in store.read().list("snapshot") if s.data["key"] == "next")
-    assert nxt.data["set_aside"]["section"] == "sales" and not any(
-        r.data["source"] and "next" in r.data["source"] for r in requests_in(store, "queued")
-    )
-
-
-def test_confirm_all_writes_one_save_with_one_undo_and_offers_a_domain_at_three_senders(app):
-    ws, cfg, store, client, base = app
-    items = [mail(f"s{n}", f"person{n}@{SHOP}", categories=["promotions"]) for n in range(3)]
-    items.append(mail("other", f"x@{LISTS}", bulk=True))
-    settings = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
-    settings["sources"][0]["settings"]["items"] += items
-    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(settings))
-    read(ws, store)
-    ids = [i["id"] for i in folder(client, base)["items"]]
-    assert len(ids) == 6
-    before = len(store.read().list("setting_change"))
-    done = confirm(client, base, ids).json()
-    assert done["confirmed"] == 6 and len(done["senders"]) == 6
-    assert len(store.read().list("setting_change")) == before + 1, "one save for all the senders"
-    assert [(o["domain"], o["senders"]) for o in done["domain_offers"]] == [(SHOP, 4)]
-    assert len(load_config(ws.config_dir, env={}).watch.triage[0].params["senders"]) == 6
-    assert folder(client, base)["items"] == []
-    # One Undo: the settings back as they were.
-    change = done["saved"]["changes"][0]
-    assert change["key"] == "watch.triage"
-    undone = client.post(
-        f"{base}/settings",
-        json={"changes": {"watch.triage": change["before"]}, "reset": [], "fingerprint": fingerprint(client, base)},
-    )
-    assert undone.status_code == 200 and load_config(ws.config_dir, env={}).watch.triage == []
-    # A domain rule is one more sorting rule.
-    domain = client.post(
-        f"{base}/watch/sorting",
-        json={"fingerprint": fingerprint(client, base), "choice": "sales", "senders": [], "domains": [SHOP]},
-    )
-    assert domain.status_code == 200
-    assert load_config(ws.config_dir, env={}).watch.triage[0].params == {"domains": [SHOP]}
+    confirm_items(store, ids)
+    purge_due(ws, store, load_config(ws.config_dir, env={}))
 
 
 # ---- no rule for a whole public mail domain -----------------------------------------------------------------------
@@ -604,24 +548,6 @@ def test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain(ap
     assert work["domain"] is None and work["address"] == friend["address"]
     by_hand = client.post(f"{base}/mail/{friend['id']}/set-aside", json={"section": "personal"}).json()
     assert by_hand["domain"] is None and by_hand["address"] == friend["address"]
-
-
-def test_confirm_all_offers_no_domain_for_three_senders_on_a_public_domain_but_does_for_a_company(app):
-    ws, cfg, store, client, base = app
-    add_items(
-        ws,
-        [mail(f"p{n}", f"person{n}@{public_domain()}", bulk=True) for n in range(3)]
-        + [mail(f"c{n}", f"person{n}@{CLUB}", bulk=True) for n in range(3)],
-    )
-    read(ws, store)
-    items = folder(client, base)["items"]
-    public = [i["id"] for i in items if i["domain"] is None]
-    company = [i["id"] for i in items if i["domain"] == CLUB]
-    assert len(public) == 3 and len(company) == 3
-    only_public = confirm(client, base, public).json()
-    assert len(only_public["senders"]) == 3 and only_public["domain_offers"] == []
-    both = confirm(client, base, company).json()
-    assert [(o["domain"], o["senders"]) for o in both["domain_offers"]] == [(CLUB, 3)]
 
 
 def test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved(app):
@@ -675,7 +601,7 @@ def test_after_the_undo_time_no_text_of_a_confirmed_message_remains_and_it_is_ne
     read(ws, store)
     assert UNIQUE in all_text(ws)
     ids = [i["id"] for i in folder(client, base)["items"]]
-    done = confirm(client, base, ids).json()
+    confirm(ws, store, ids)
     # Within the undo time the copy is held, but the messages are gone from the folder.
     assert folder(client, base)["items"] == [] and UNIQUE in all_text(ws)
     from engine.set_aside import purge_due
@@ -699,23 +625,7 @@ def test_after_the_undo_time_no_text_of_a_confirmed_message_remains_and_it_is_ne
     # The next read finds the same message and doesn't hand it in again, or bring it back.
     again = read(ws, store)
     assert again.new == [] and again.changed == []
-    assert folder(client, base)["items"] == [] and done["confirmed"] == 2
-    # Undo after the time is refused.
-    refused = client.post(f"{base}/set-aside/unconfirm", json={"ids": ids})
-    assert refused.status_code == 409
-
-
-def test_undo_within_the_undo_time_brings_the_messages_back(app):
-    ws, cfg, store, client, base = app
-    (ws.config_dir / "watch.yaml").write_text(
-        yaml.safe_dump({**yaml.safe_load((ws.config_dir / "watch.yaml").read_text()), "set_aside_keep_seconds": 60})
-    )
-    read(ws, store)
-    ids = [i["id"] for i in folder(client, base)["items"]]
-    confirm(client, base, ids)
-    assert client.post(f"{base}/set-aside/unconfirm", json={"ids": ids}).status_code == 200
-    assert {i["title"] for i in folder(client, base)["items"]} == {"Subject of bulk", "Subject of social"}
-    assert UNIQUE in all_text(ws)
+    assert folder(client, base)["items"] == []
 
 
 def test_with_no_wait_a_confirmed_message_is_deleted_at_once(app):
@@ -725,7 +635,7 @@ def test_with_no_wait_a_confirmed_message_is_deleted_at_once(app):
     )
     read(ws, store)
     ids = [i["id"] for i in folder(client, base)["items"]]
-    confirm(client, base, ids)
+    confirm(ws, store, ids)
     assert UNIQUE not in all_text(ws) and folder(client, base)["deleted"] == 2
 
 
