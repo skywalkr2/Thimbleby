@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 232. Day mode (2026-10-26; phase U, F7)
+
+| Where | Before | Now |
+|---|---|---|
+| Light theme (7.12) | A filled button on every row, borders and fills on every pane, grey group bands, titles at weight 600, text at 17.9:1 | The reviewer's tokens; tonal row actions with only the selected line's filled; panes with a soft shadow and no border; no bands; titles at 500; outline neutral pills; night unchanged |
+
 ## 231. Sent mail read from the start, an empty first result that says what was read, and people suggested from mail (2026-10-26; phase U, F10, F14, U7, U8)
 
 | Where | Before | Now |
