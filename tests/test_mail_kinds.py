@@ -233,3 +233,19 @@ def test_treat_as_personal_then_the_assistants_action_lands_in_the_personal_proj
         set_responder(None)
     made = [a for a in store.read().list("action") if a.data["text"] == "Reply about the sale"]
     assert [a.data["project"] for a in made] == [personal]
+
+
+@pytest.mark.parametrize(
+    ("sender", "subject", "kind"),
+    [
+        ("customerservice@water.example.com", "Statement for 2026-10-21", "bill"),
+        ("ebill@power.example.com", "Your e-statement is available", "bill"),
+        ("contact@shop.example.com", "Order #405188 confirmed", "order"),
+        ("deals@alerts.example.net", "Collector's Edition $31.51 + Free Shipping", None),
+    ],
+)
+def test_the_shipped_defaults_know_a_dated_statement_from_a_service_desk_and_leave_a_deal_alone(sender, subject, kind):
+    from engine.config.schema import MailKinds
+    from engine.mail_kinds import kind_of
+
+    assert kind_of(MailKinds(), sender, subject, "") == kind
