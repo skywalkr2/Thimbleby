@@ -285,3 +285,18 @@ test("amounts are labeled as US dollars in plain words where a currency is named
   }
   expect(Object.entries(words).filter(([, text]) => /\bUSD\b/.test(text)).map(([key]) => key)).toEqual([]);
 });
+
+// Dropping is not finishing (design 7.7, 6.9; the designer's lessons 9 and point 10): a drop says the item is no longer
+// needed and credits no one, so "Drop" stays its own word on every button, menu entry and toast that offers or reports
+// it, and never reads as Remove, Delete or Done.
+test("Drop stays a distinct word from Done wherever it is offered or reported", () => {
+  const offers = ["action.drop", "action.drop_go", "question.drop", "question.drop_go", "conversation.drop", "conversation.drop_named", "review.drop_all", "queue.choice.drop", "queue.held.a.drop"];
+  expect(offers.filter((key) => !/^Drop\b/.test(words[key] ?? "")).map((key) => `${key}: ${words[key]}`)).toEqual([]);
+  const reports = ["toast.action_dropped", "toast.question_dropped", "queue.reply.dropped_toast", "queue.choice.done.drop", "repeat.ended.dropped", "conversation.toast.dropped", "sources.silent.how.dropped"];
+  expect(reports.filter((key) => !/dropped/i.test(words[key] ?? "")).map((key) => `${key}: ${words[key]}`)).toEqual([]);
+  // Nothing about dropping reads as removing, deleting or finishing, and Done never says dropped.
+  const blurred = Object.entries(words).filter(([key, text]) => /drop/i.test(key) && !/^op\./.test(key) && /\b(remove|removed|delete|deleted|done|finished|completed|resolved)\b/i.test(text));
+  expect(blurred.map(([key, text]) => `${key}: ${text}`)).toEqual([]);
+  const done = Object.entries(words).filter(([key]) => /(^|\.)done$/.test(key));
+  expect(done.filter(([, text]) => /drop/i.test(text)).map(([key]) => key)).toEqual([]);
+});

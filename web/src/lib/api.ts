@@ -124,6 +124,27 @@ export const api = {
   /** How many each list on Handled for you holds, for a line that only counts. */
   handledCounts: () => call<S["HandledCounts"]>("GET", "handled/counts"),
   closerLookUndo: (req: string) => call<S["Created"]>("POST", `requests/${id(req)}/closer-look/undo`),
+  /** What can be said about a watched file (the saved copy `record` came from it): the files it can be linked to. */
+  versions: (record: string) => call<S["VersionsView"]>("GET", `versions/${id(record)}`),
+  /** Same document as another file of its folder. */
+  versionSame: (record: string, other: string) =>
+    call<S["VersionChosen"]>("POST", `versions/${id(record)}/same`, { other } satisfies S["VersionLinkIn"]),
+  /** Not the same document; with the change a rule closed as an older version, that change is handed in after all. */
+  versionApart: (record: string, closed?: { request: string; readVersion: number }) =>
+    call<S["VersionChosen"]>("POST", `versions/${id(record)}/apart`, {
+      request: closed?.request ?? null,
+      read_version: closed?.readVersion ?? null,
+    } satisfies S["VersionApartIn"]),
+  /** The copy named is the current one of its family: the answer to the question about which is current. */
+  versionAnswer: (question: string, file: string) =>
+    call<S["VersionChosen"]>("POST", `versions/answer/${id(question)}`, { file } satisfies S["VersionAnswerIn"]),
+  /** Undo a choice about versions, from what it answered with. */
+  versionUndo: (made: S["VersionChosen"]) =>
+    call<S["VersionChosen"]>("POST", "versions/undo", {
+      changes: made.changes,
+      request: made.request ?? null,
+      asked: made.asked ?? null,
+    } satisfies S["VersionUndoIn"]),
   handledWork: (item: string, readVersion: number) =>
     call<S["HandledDone"]>("POST", `handled/${id(item)}/work`, { read_version: readVersion }),
   handledPersonal: (item: string, readVersion: number) =>

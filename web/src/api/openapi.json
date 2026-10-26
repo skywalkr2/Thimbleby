@@ -9996,6 +9996,12 @@
             "description": "Where the message opens in the person's mail service, when it has one.",
             "title": "Link"
           },
+          "older_version": {
+            "default": false,
+            "description": "A change a rule closed because the file is an older version of another copy: Not the same document is offered on it, and hands it in after all.",
+            "title": "Older Version",
+            "type": "boolean"
+          },
           "reason": {
             "anyOf": [
               {
@@ -26711,6 +26717,208 @@
         "title": "ValueListView",
         "type": "object"
       },
+      "VersionAnswerIn": {
+        "properties": {
+          "file": {
+            "description": "The key of the copy that is the current one.",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "VersionAnswerIn",
+        "type": "object"
+      },
+      "VersionApartIn": {
+        "properties": {
+          "read_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version of that request as listed.",
+            "title": "Read Version"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change a rule closed as an older version, to hand in after all (Handled for you).",
+            "title": "Request"
+          }
+        },
+        "title": "VersionApartIn",
+        "type": "object"
+      },
+      "VersionChosen": {
+        "description": "A choice about versions, as saved: the settings it changed (sent back to Undo it) and the change handed in\nafter all, if there was one.",
+        "properties": {
+          "asked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The question the choice answered.",
+            "title": "Asked"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/SettingChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "VersionChosen",
+        "type": "object"
+      },
+      "VersionFile": {
+        "properties": {
+          "key": {
+            "description": "The file's path inside the watched folder.",
+            "title": "Key",
+            "type": "string"
+          },
+          "title": {
+            "description": "The file's name.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title"
+        ],
+        "title": "VersionFile",
+        "type": "object"
+      },
+      "VersionLinkIn": {
+        "properties": {
+          "other": {
+            "description": "The key of the file it is the same document as.",
+            "title": "Other",
+            "type": "string"
+          }
+        },
+        "required": [
+          "other"
+        ],
+        "title": "VersionLinkIn",
+        "type": "object"
+      },
+      "VersionUndoIn": {
+        "properties": {
+          "asked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A question the choice answered, to open again.",
+            "title": "Asked"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/SettingChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A change handed in after all by the choice, to set aside again.",
+            "title": "Request"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "VersionUndoIn",
+        "type": "object"
+      },
+      "VersionsView": {
+        "description": "What the person can say about a file in a watched folder (design 6.2): which other files of its top folder it\ncan be linked to as one document, and whether it can be split from the copies its name puts it with.",
+        "properties": {
+          "applicable": {
+            "description": "False when the saved copy isn't a file in a watched folder.",
+            "title": "Applicable",
+            "type": "boolean"
+          },
+          "can_split": {
+            "default": false,
+            "description": "It is grouped with other copies, so Not the same document applies.",
+            "title": "Can Split",
+            "type": "boolean"
+          },
+          "family": {
+            "description": "The other copies it is grouped with now.",
+            "items": {
+              "$ref": "#/components/schemas/VersionFile"
+            },
+            "title": "Family",
+            "type": "array"
+          },
+          "file": {
+            "default": "",
+            "description": "The file's name.",
+            "title": "File",
+            "type": "string"
+          },
+          "others": {
+            "description": "The other files in its top folder, to pick from for Same document as.",
+            "items": {
+              "$ref": "#/components/schemas/VersionFile"
+            },
+            "title": "Others",
+            "type": "array"
+          }
+        },
+        "required": [
+          "applicable"
+        ],
+        "title": "VersionsView",
+        "type": "object"
+      },
       "WalkthroughIn": {
         "additionalProperties": false,
         "properties": {
@@ -39960,6 +40168,235 @@
           }
         },
         "summary": "File Unfiled"
+      }
+    },
+    "/api/versions/answer/{question_id}": {
+      "post": {
+        "description": "The answer to \"Which copy is the current one?\": the copy named is kept as the current one.",
+        "operationId": "versions_answer_api_versions_answer__question_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionAnswerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionChosen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versions Answer"
+      }
+    },
+    "/api/versions/undo": {
+      "post": {
+        "description": "Undo a choice about versions: the settings go back as they were, a change handed in after all is set aside\nagain while the assistant hasn't started on it, and an answered question is open again.",
+        "operationId": "versions_undo_api_versions_undo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionUndoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionChosen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versions Undo"
+      }
+    },
+    "/api/versions/{record_id}": {
+      "get": {
+        "description": "What the person can say about a watched file: the files it can be linked to, and whether it can be split.",
+        "operationId": "versions_view_api_versions__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versions View"
+      }
+    },
+    "/api/versions/{record_id}/apart": {
+      "post": {
+        "description": "Not the same document: the file stands on its own. With the change a rule closed as an older version, that\nchange is handed in after all.",
+        "operationId": "versions_apart_api_versions__record_id__apart_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionApartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionChosen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versions Apart"
+      }
+    },
+    "/api/versions/{record_id}/same": {
+      "post": {
+        "description": "Same document as another file of the folder: the two (and the documents their names belong to) are one.",
+        "operationId": "versions_same_api_versions__record_id__same_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionChosen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versions Same"
       }
     },
     "/api/watch": {

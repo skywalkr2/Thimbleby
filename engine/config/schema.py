@@ -1400,6 +1400,7 @@ def _default_lints() -> dict[str, Severity]:
         "due-move-missed": "return",
         "owed-to-missing": "return",
         "project-start-as-fact": "return",
+        "decision-from-list": "return",
         "claim-asked-of-the-person": "return",
         "owner-mail-unanswered": "return",
         "promise-owed-to-reader": "return",
@@ -2860,6 +2861,14 @@ class TriageRule(ConfigModel):
     )
 
 
+class VersionLink(ConfigModel):
+    source: str = Field("", description="The id of the watched folder the files are in.")
+    files: list[str] = Field(
+        default_factory=list,
+        description="The files the person said are one document, as the folder lists them (their paths inside it).",
+    )
+
+
 class VersionFamilies(FileModel):
     enabled: bool = Field(
         True,
@@ -2878,6 +2887,25 @@ class VersionFamilies(FileModel):
         description="Folder names that hold old copies: a file in one is never the current copy, and the folder "
         "doesn't make a new document.",
         json_schema_extra={"advanced": True},
+    )
+    same_document: list[VersionLink] = Field(
+        default_factory=list,
+        description="Files the person said are versions of one document although their names differ. Each entry names "
+        "a watched folder and the files; the documents those files belong to, with versions saved later, are one. "
+        'Made by "Same document as" on a file\'s page and on Handled for you; undone there too.',
+        json_schema_extra={"internal": True},
+    )
+    not_same: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Files the person said are not versions of the document their name suggests, by watched folder: "
+        'each stands on its own, so the name rule never joins it to another again. Made by "Not the same document".',
+        json_schema_extra={"internal": True},
+    )
+    current: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Files the person said are the current copy of their document, by watched folder, when the "
+        'version marks and dates in the names couldn\'t tell. Made by the answer to "Which copy is the current one?".',
+        json_schema_extra={"internal": True},
     )
 
 
@@ -3199,8 +3227,8 @@ class RemindersSettings(ConfigModel):
     )
     missed: Literal["each", "summary"] = Field(
         "each",
-        description="How reminders that came due while this computer was asleep arrive on waking. each: one line for "
-        "each. summary: one line listing them.",
+        description="How overdue reminders, ones that came due while the app wasn't running, arrive on waking. each: "
+        "one line for each. summary: one line listing them.",
     )
     later_today_hours: int = Field(
         3, ge=1, le=12, description="How many hours from now Later today snoozes to, when that is still a working time."
@@ -3687,6 +3715,15 @@ class StewardFile(FileModel):
         description="A part of the app's background work that has not checked in for this many minutes is shown as "
         "stuck, on the assistant's status and on Today. One AI task can run several minutes, so keep this longer "
         "than the longest you expect. The app never restarts itself; you choose Restart now.",
+    )
+    pack_call_limit_seconds: int = Field(
+        20,
+        ge=1,
+        le=600,
+        description="The most seconds an add-on's event handler, validator or Today lines may take for one call. A "
+        "call still running then is given up on and counts as a failure of that add-on, as if it had crashed: it is "
+        "noted on the add-on, and a validator or the third failure in a row turns the add-on off.",
+        json_schema_extra={"internal": True},
     )
     reminders: RemindersSettings = Field(
         default_factory=RemindersSettings, description="When a reminder on a dated thing reaches the person."

@@ -1,0 +1,33 @@
+id: listed-as-decided-is-a-fact
+title: A line a document lists as decided is a fact that says so, never a choice stated as true or asked about
+skills: [evidence]
+received: '2026-10-14'
+# A list a document keeps under "Decided" says what the document lists: nobody in those words is said to have chosen.
+pasted: |-
+  Notes from the Tuesday sync
+
+  - Decided: the cover stays blue
+  - Decision: print the first run in two weeks
+expect:
+- op: fact
+  text_has:
+  - list
+  - cover
+- op: fact
+  text_has:
+  - list
+  - first run
+forbid:
+- op: question.add
+- op: action.add
+stub_answer:
+  summary: The notes list two things as decided.
+  ops:
+  - op: fact
+    text: The notes list the cover staying blue as decided
+    evidence:
+      quote: 'Decided: the cover stays blue'
+  - op: fact
+    text: The notes list printing the first run in two weeks as decided
+    evidence:
+      quote: 'Decision: print the first run in two weeks'

@@ -48,7 +48,9 @@ def build_notification_router(ws: Workspace, cfg: Config, store: Store, events: 
         n = now.ui.notifications
         if not (n.enabled and n.browser):
             return NotifyWaiting(browser=False, keys=[], message="")
-        found = notifications.waiting(ws, store, now, worker.now(), handover=worker.handover_state())
+        found = notifications.waiting(
+            ws, store, now, worker.now(), handover=worker.handover_state(), stuck=worker.stuck_since_text()
+        )
         return NotifyWaiting(
             browser=not notifications.quiet_now(now, worker.now()), keys=found.keys, message=found.message
         )

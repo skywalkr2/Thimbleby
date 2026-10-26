@@ -60,11 +60,14 @@ class Sent:
     problem: str | None = None
 
 
-def decide_keys(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[str]:
-    """A key for each item in Today's Decide group: the core's own lines and the lines add-ons put there."""
+def decide_keys(
+    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None, stuck: str | None = None
+) -> list[str]:
+    """A key for each item in Today's Decide group: the core's own lines and the lines add-ons put there. `stuck` is
+    when background work that stopped checking in last did, so a stuck loop is counted like any other line."""
     from engine.today_queue import queue
 
-    keys = [line.key for line in queue(ws, store, cfg, now, handover=handover) if line.group == "decide"]
+    keys = [line.key for line in queue(ws, store, cfg, now, handover=handover, stuck=stuck) if line.group == "decide"]
     for plugin, line in store.plugins.today():
         if line.group == "decide":
             keys.append(f"plugin:{plugin}:{line.id}")
@@ -175,6 +178,7 @@ def deliver_if_due(
     handover: tuple[str, str] | None = None,
     *,
     env: Any = None,
+    stuck: str | None = None,
 ) -> Sent | None:
     """Send the notice when an item has come into Today's Decide group that the person has not been told about. Returns
     what was sent, or None when nothing was due (off, no address, nothing new, quiet hours, or waiting to try again)."""
@@ -182,7 +186,7 @@ def deliver_if_due(
     if not n.enabled or not n.webhook:
         return None
     state = _state(ws)
-    keys = decide_keys(ws, store, cfg, now, handover)
+    keys = decide_keys(ws, store, cfg, now, handover, stuck)
     told = [k for k in state.get("told", []) if k in keys]
     if not keys:
         if state.get("told"):
@@ -212,7 +216,9 @@ def deliver_if_due(
     return result
 
 
-def waiting(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> Waiting:
+def waiting(
+    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None, stuck: str | None = None
+) -> Waiting:
     """What the open screen shows a notice for."""
-    keys = decide_keys(ws, store, cfg, now, handover)
+    keys = decide_keys(ws, store, cfg, now, handover, stuck)
     return Waiting(keys=keys, message=message_for(cfg, len(keys)) if keys else "")

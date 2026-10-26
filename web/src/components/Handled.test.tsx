@@ -28,6 +28,7 @@ const row = (id: string, extra: Partial<S["HandledRow"]> = {}): S["HandledRow"] 
   item: "mail",
   rule: null,
   change: null,
+  older_version: false,
   ...extra,
 });
 

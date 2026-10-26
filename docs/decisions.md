@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Files said by hand to be one document, the current copy by version then date, and the designer's lessons from running as product rules with tests (P62, P63)
+
+**Decided:** (F36) A person can say by hand that two files in a watched folder are one document ("Same document as…", from a
+list of the files in the same top folder) and that a file is not the document its name suggests ("Not the same document"), on
+the file's own page and on its row of Handled for you; each acts at once with an Undo toast and records a correction. The
+first check came out the other way from what the designer hoped: a `record.edit` of `replaces` can't do it, since a watched
+file is never a `file` record and the families are worked out from the folder's paths. Each choice is instead a change to
+three internal settings, `watch.versions.same_document`, `not_same` and `current`, saved and undone as the Settings screen does,
+so no plugin-visible record changed. Which copy is current: the highest version, then the latest date in the name; when those
+tie or disagree, the person is asked once and nothing closes meanwhile; the modified time decides only as the last resort.
+(Point 4 of the full read) Lesson 3: a stuck loop counts in the notice and the watchdog sends it; the watchdog is watched by
+the loops and the status; a pack's handlers, validators and Today lines run under `steward.pack_call_limit_seconds` and a hang
+is a failure under the existing containment; a pack that is off leaves its records, keeps its held changes held and stops its
+queued requests with a plain line, dropping nothing. Lesson 5 (retry): a corrected answer may fix a failing op and never
+drop one that was fine. Lesson 6: one test over every path others read, which closed a real gap (an event's title and a
+file's folder). Lesson 7: a fact from a document's "Decided:" line goes back to say the document lists it, on shipped words.
+Lesson 11: F17's history row is the person's own. (Point 10) "overdue" leads the late-reminder wording, the Send feedback form
+adds the weekly "Missed something?" count (F8), and "Drop" stays its own word. *Not built:* lessons 4 and 8 and the facts half
+of lesson 5, which need fields on core records and go to the plugin API release (plan step 7). *Why:* the designer's answers
+and full read of 2026-10-26; the hold stays, and none of this needed the API. **Decided by:** the functional designer,
+2026-10-26. **Impact:** design 6.1, 6.2, 6.7, 6.13, 7.14, 7.20, 4.5 and 4.17; new internal settings `watch.versions.same_document`,
+`not_same`, `current` and `steward.pack_call_limit_seconds` with demo values in both workspaces; one lint,
+`decision-from-list`; one shipped data file; five routes; no plugin API change, no change to scope. Change log: section 219.
 ## 2026-10-26: Setup's two choices and work's first screen, a work side's supplier bills, and one Add-ons row for one file (F37, F38)
 
 **Decided:**

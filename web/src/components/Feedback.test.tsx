@@ -214,3 +214,50 @@ test("problems too long for a mail link leave the copy path", async () => {
   expect(screen.getByText(/too long for a mail link/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Copy" })).toHaveClass("primary");
 });
+
+// ---- how often "Missed something?" was used (designer F8) -------------------------------------------------------------
+
+const missedRow = (person: string, week: string, week_end: string, count: number): S["QualityMissedWeek"] => ({ person, person_name: `Person ${person}`, week, week_end, count });
+
+function openWithMissed(rows: S["QualityMissedWeek"][] | "unreadable") {
+  fakeApi({
+    "GET panels": () => [],
+    ...(rows === "unreadable" ? {} : { "GET quality": () => ({ missed: rows }) }),
+  });
+  renderApp(<Feedback onClose={() => {}} view="records/files" version="9.8.7" to={TO} />);
+  return userEvent.setup();
+}
+
+test("the form shows how often Missed something? was used each week, and the message carries only those numbers", async () => {
+  const user = openWithMissed([missedRow("PER-1", "2026-10-12", "2026-10-18", 4), missedRow("PER-1", "2026-10-19", "2026-10-25", 1)]);
+  const box = await screen.findByLabelText("Add how often I used “Missed something?”, week by week");
+  expect(box).toBeChecked();
+  expect(box).toHaveAccessibleDescription(/Only the counts are added, never what you said\..*Oct 12 to Oct 18: 4.*Oct 19 to Oct 25: 1/);
+  await user.type(message(), "It missed my call notes");
+  expect(preview().value).toBe(
+    "It missed my call notes\n\nApp version: 9.8.7\nScreen: Files\n\nMissed something? used Oct 12 to Oct 18: 4\nMissed something? used Oct 19 to Oct 25: 1",
+  );
+  await user.click(box);
+  expect(preview().value).toBe("It missed my call notes\n\nApp version: 9.8.7\nScreen: Files");
+});
+
+test("the counts of the people in one week are added, and a week with none used says so", async () => {
+  const user = openWithMissed([missedRow("PER-1", "2026-10-12", "2026-10-18", 2), missedRow("PER-2", "2026-10-12", "2026-10-18", 3)]);
+  await screen.findByLabelText("Add how often I used “Missed something?”, week by week");
+  await user.type(message(), "x");
+  expect(preview().value).toMatch(/Missed something\? used Oct 12 to Oct 18: 5$/);
+});
+
+test("with nothing counted yet the form still says so", async () => {
+  const user = openWithMissed([]);
+  await screen.findByLabelText("Add how often I used “Missed something?”, week by week");
+  await user.type(message(), "x");
+  expect(preview().value).toMatch(/Missed something\? not used in the weeks counted$/);
+});
+
+test("when the counts can't be read the form offers nothing about them", async () => {
+  const user = openWithMissed("unreadable");
+  await user.type(await screen.findByLabelText("What happened, or what would help?"), "x");
+  expect(screen.queryByLabelText(/Missed something/)).toBeNull();
+  expect(preview().value).toBe("x\n\nApp version: 9.8.7\nScreen: Files");
+});

@@ -6,7 +6,8 @@ Reading an input, each line is looked at on its own:
   is the PM's own. A date written YYYY-MM-DD after "by", "on" or "before" becomes its due date.
 - "We need <something>", "Need to <do something>" or "To do: <something>" becomes an action with no owner, which waits
   for the PM to pick one.
-- "Decided: …", "Agreed: …" or "Decision: …" becomes a fact.
+- "Decided: …", "Agreed: …" or "Decision: …" becomes a fact. In the user's own note it is their choice; in a document it
+  is what the document lists, so the fact says that ("The input lists … as decided") and names no one as having chosen.
 Every one cites its line word for word. Whatever else the input says is kept as one note.
 
 Answering a question, it quotes the first passage of the user guide chosen for the question.
@@ -34,15 +35,22 @@ _DUE = re.compile(r"\b(?:by|on|before) (\d{4}-\d{2}-\d{2})\b")
 _NOT_NAMES = {"We", "They", "You", "He", "She", "It", "This", "That", "Someone", "Everyone", "Nobody"}
 
 
-def input_lines(request: str) -> list[str]:
-    """The lines of the input (outside material and the PM's note), bullets removed, headings and blanks left out."""
+def _lines(request: str) -> list[tuple[str, bool]]:
+    """The lines of the input, each with whether it is the user's own note; bullets removed, headings and blanks left
+    out."""
     lines = []
     for match in _INPUT.finditer(request):
+        own = match.group(1) is None
         for raw in (match.group(1) or match.group(2) or "").splitlines():
             line = _BULLET.sub("", raw).strip()
             if line and not line.startswith(("#", "{")):
-                lines.append(line)
+                lines.append((line, own))
     return lines
+
+
+def input_lines(request: str) -> list[str]:
+    """The lines of the input (outside material and the PM's note), bullets removed, headings and blanks left out."""
+    return [line for line, _ in _lines(request)]
 
 
 def _sentence(text: str) -> str:
@@ -54,7 +62,7 @@ def read(request: str) -> dict[str, Any]:
     """A changeset for one input, by the rules above."""
     ops: list[dict[str, Any]] = []
     rest: list[str] = []
-    for line in input_lines(request):
+    for line, own in _lines(request):
         will, decided = _WILL.match(line), _DECIDED.match(line)
         todo = _NEED_TO.match(line) or _TODO.match(line)
         need = _NEED.match(line)
@@ -66,7 +74,9 @@ def read(request: str) -> dict[str, Any]:
         elif need:
             op = {"op": "action.add", "text": _sentence("get " + need.group("what")), "owners": []}
         elif decided:
-            op = {"op": "fact", "text": _sentence(decided.group("what"))}
+            what = decided.group("what")
+            # The person's own note is a choice they made; a document's line only says what the document lists.
+            op = {"op": "fact", "text": _sentence(what if own else f"the input lists {what.rstrip('.!?')} as decided")}
         else:
             rest.append(line)
             continue

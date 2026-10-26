@@ -7,7 +7,14 @@ Practice for reading notes, minutes and messages (core playbook):
   for whom, never "send it", "follow up on that" or "do the above". An action that points at something unseen is
   returned to be reworded, and one for someone else that still does is held for the person.
 - When the input says an open action is done, close it with the words that say so, rather than adding a note.
-- A fact is something the input states as true (a date, a decision, a number). A note is anything else worth keeping.
+- A fact is something the input states as true (a date, a number, a choice someone is said to have made). A note is
+  anything else worth keeping.
+- A decision is a choice someone made, and the record says who made it. A line a document lists under "Decided",
+  "Decision" or "Agreed" (a bullet, a numbered line or a table row, with nobody choosing in the words) is what the
+  document lists, not a choice anyone made: record a fact that says the document lists it ("The notes list the cover as
+  decided"), quoting the line. Never state it as true, as the user's decision or as a decision to ask about. A sentence
+  that names who chose ("Kit decided to move the launch") is a choice: say who made it. The user's own note saying
+  "Decided: ..." is the user's choice.
 - Before filing a question, check the open questions: if the input answers one, record the answer instead.
 - Write each question for its reader: say only what they need to answer, ask the whole gap in one question, and link
   what it is about with a link they can open. Decisions for the user are questions to the user, except a choice someone asks

@@ -16,6 +16,7 @@ import { Skeleton } from "../ui/Skeleton";
 import styles from "./Handled.module.css";
 import { AssistantCloses } from "./HandledClosed";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { useVersionActs } from "./SameDocument";
 import { useAct } from "../lib/act";
 
 type Tab = S["HandledView"]["tab"];
@@ -202,6 +203,11 @@ function HandledRow(props: { item: Row }) {
         }
       : null;
   const closed = item.tab === "closed";
+  // A file a rule closed: which files are one document, where a wrong grouping is noticed (design 6.2).
+  const versions = useVersionActs(
+    closed && item.item === "file" ? item.saved : null,
+    item.older_version && item.request ? { request: item.request, readVersion: item.version } : undefined,
+  );
   const menu: MenuAction[] = closed
     ? [{ id: "seen", label: t("sources.silent.seen"), run: () => void seen() }]
     : [{ id: "personal", label: t("setaside.personal"), run: () => void choose(isPersonal) }];
@@ -212,6 +218,7 @@ function HandledRow(props: { item: Row }) {
       run: () => void alwaysLikeThis({ id: item.id, title: item.title, section: item.section, address: item.address }),
     });
   }
+  menu.push(...versions.entries);
   if (open) menu.push({ id: "open", label: t(closed ? "handled.open_item" : "setaside.open"), run: open.run });
   const facts = [item.sender, item.received ? when(item.received) : "", item.source, item.change ? t(`sources.closed.change.${item.change}`) : ""].filter(Boolean);
   const why = closed
@@ -246,6 +253,7 @@ function HandledRow(props: { item: Row }) {
           <RowMenu label={item.title} actions={menu} />
         </div>
       </div>
+      {versions.form}
     </li>
   );
 }

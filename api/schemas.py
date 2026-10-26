@@ -4532,6 +4532,11 @@ class HandledRow(BaseModel):
         "configured one (`watch.handled_rule_section`) for mail the assistant read."
     )
     request: str | None = Field(None, description="For mail the assistant read: the request that read it.")
+    older_version: bool = Field(
+        False,
+        description="A change a rule closed because the file is an older version of another copy: Not the same "
+        "document is offered on it, and hands it in after all.",
+    )
 
 
 class HandledGroup(BaseModel):
@@ -4585,6 +4590,54 @@ class HandledDone(BaseModel):
     domain: str | None = Field(
         None, description="The sender's domain, when a rule for the whole domain may be offered."
     )
+
+
+class VersionFile(BaseModel):
+    key: str = Field(description="The file's path inside the watched folder.")
+    title: str = Field(description="The file's name.")
+
+
+class VersionsView(BaseModel):
+    """What the person can say about a file in a watched folder (design 6.2): which other files of its top folder it
+    can be linked to as one document, and whether it can be split from the copies its name puts it with."""
+
+    applicable: bool = Field(description="False when the saved copy isn't a file in a watched folder.")
+    file: str = Field("", description="The file's name.")
+    others: list[VersionFile] = Field(
+        default_factory=list, description="The other files in its top folder, to pick from for Same document as."
+    )
+    can_split: bool = Field(False, description="It is grouped with other copies, so Not the same document applies.")
+    family: list[VersionFile] = Field(default_factory=list, description="The other copies it is grouped with now.")
+
+
+class VersionLinkIn(BaseModel):
+    other: str = Field(description="The key of the file it is the same document as.")
+
+
+class VersionApartIn(BaseModel):
+    request: str | None = Field(
+        None, description="The change a rule closed as an older version, to hand in after all (Handled for you)."
+    )
+    read_version: int | None = Field(None, ge=1, description="The version of that request as listed.")
+
+
+class VersionChosen(BaseModel):
+    """A choice about versions, as saved: the settings it changed (sent back to Undo it) and the change handed in
+    after all, if there was one."""
+
+    changes: list[SettingChangeView]
+    request: str | None = None
+    asked: str | None = Field(None, description="The question the choice answered.")
+
+
+class VersionAnswerIn(BaseModel):
+    file: str = Field(description="The key of the copy that is the current one.")
+
+
+class VersionUndoIn(BaseModel):
+    changes: list[SettingChangeView]
+    request: str | None = Field(None, description="A change handed in after all by the choice, to set aside again.")
+    asked: str | None = Field(None, description="A question the choice answered, to open again.")
 
 
 class SortingRuleIn(BaseModel):

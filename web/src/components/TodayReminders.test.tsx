@@ -98,7 +98,7 @@ test("a reminder that has come due is the task with when it is due, and Done is 
 
 test("a late reminder says the computer was asleep only when the app knows it was not running, and is still shown", async () => {
   show([reminder({ late: true, asleep: true, at: "2026-10-19T09:30:00-04:00" })]);
-  const row = await rowOf(`Send Oren the estimate · late: due ${wallTime("2026-10-19T09:30:00-04:00")}, while the app wasn't running`);
+  const row = await rowOf(`Send Oren the estimate · overdue · due ${wallTime("2026-10-19T09:30:00-04:00")}, while the app wasn't running`);
   expect(within(row).getByRole("button", { name: "Done" })).toBeInTheDocument();
 });
 
@@ -176,7 +176,7 @@ test("a reminder in the digest can be snoozed from its own menu", async () => {
 
 test("reminders missed, when the person chose one summary, are a line with their own title, naming sleep only when it is known", async () => {
   show([digest({ key: "reminder_digest:missed", late: true, asleep: true })]);
-  expect(await rowOf("Missed while the app wasn't running")).toBeInTheDocument();
+  expect(await rowOf("Overdue reminders, missed while the app wasn't running")).toBeInTheDocument();
 });
 
 test("a summary of missed reminders the app knows nothing more about is titled overdue", async () => {

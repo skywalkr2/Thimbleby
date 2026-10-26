@@ -21,6 +21,20 @@ exception is noted on the plugin and never crashes the core.
   `workspace.plugins.failures_before_off` failures in a row there (default 3, 4.1).
 - A plugin that breaks its contract (it reaches outside what its manifest declares) or fails inside a write (an op, a
   validator, a lint, a stage check) is turned off at once, with the reason on its status.
+- **A hang is a failure** (the owner's lesson 3, *built*): an event handler, a validator and a Today line each run for the
+  core on the pack's own thread, and the core waits at most `steward.pack_call_limit_seconds` (20; `engine/pack_calls.py`).
+  A call still running then is given up on and counts as a failure of that place exactly as if it had raised: a handler or
+  Today line is noted on the pack and the third failure in a row turns it off; a validator turns it off at once and refuses
+  the op it was checking. Python can't stop a thread, so a call that never ends leaves the pack's thread busy and its next
+  call fails at once ("an earlier call has not finished") instead of waiting behind it; other packs and the core are
+  untouched, and an exit raised by a pack comes back as an ordinary error. The limit is a core setting outside the plugin
+  guide, so the guide's containment sentence gains it in the plugin API release (`docs/project/plugin-api-release-plan.md`).
+- **What a pack that is off leaves behind** (*built*; `tests/test_pack_call_limits.py`). What it already wrote stays: its
+  records and applied ops are untouched and come back when it runs again. A change of its that is waiting for the person
+  stays held, unapplied and unchanged; releasing one is refused in plain words ("the add-on <name> is turned off, so this waits
+  until it is on again") and works once the add-on is on. A request for one of its task kinds stops with a needs-you line that
+  says the same, and is tried again by the person. Nothing is dropped or applied silently, core ops carry on, and its Today
+  lines, jobs and handlers stop.
 - A turned-off plugin no longer blocks core ops with its validators; its jobs stop and its screens are hidden, and its data
   stays on disk. Stage settings that name it stay in place and show as unavailable; the workspace still starts.
 - A person action's preview tries the whole proposal without keeping anything, so an item that would be refused shows why and
@@ -55,14 +69,37 @@ calendar service that needs its own sign-in) are plugins (6.27).
 `v2.0`), dates (`2026-10-21`, `20261021`) and the words in `watch.versions.ignore_words` (FOR REVIEW, DRAFT, FINAL, ARCHIVE)
 are one family within the same top folder; a folder named in `watch.versions.archive_folders` (Archive, Old, Superseded)
 doesn't make a new family. A bare number of three or more digits is an id, never a version, so "<form> 1234" and
-"<form> 5678" stay apart. The current copy is the highest date, then version, then modified time among the family's files
-that exist outside an archive folder; a deleted file or one in an archive folder is never current. A change to any other
-copy (including a copy moved into an archive folder and the removal at its old place) closes itself under the rule "Older
-version", "an older version; the current one is <file>", listed with the other changes a rule closed on Handled for you (7.20), where Take a closer
-look brings it back and records the usual pulled-back signal (6.22). The current copy's change says which version it
-replaces, and the notes prompt says the newer version wins: record what it says now, write a correction when it contradicts
-an earlier fact, never report a discrepancy against an older copy. Files with unrelated names aren't linked; no existing op
-or setting links two files by hand, so that waits for a plugin API release. Built: `tests/test_versions.py`.
+"<form> 5678" stay apart. **Which copy is current** (the designer's F36): the highest version first, then the latest date
+in the name, among the family's files that exist outside an archive folder; a deleted file or one in an archive folder is
+never current. When the versions and dates tie, or the version says one copy is newer and the date another ("v3 dated
+Oct 1" against "v2 dated Oct 5"), nothing is closed as older and the person is asked once, in one question ("Which copy of
+<name> is the current one?", a decision with the copies to pick from, `resolves.kind` `version`); the answer names the
+current copy (`watch.versions.current`). The modified time decides only as the last resort, when the person set the
+question aside or nobody is set up to be asked, because a sync, a restore or a copy changes it and the real current copy
+would close silently. A change to any other copy (including a copy moved into an archive folder and the removal at its old
+place) closes itself under the rule "Older version", "an older version; the current one is <file>", listed with the other
+changes a rule closed on Handled for you (7.20), where Take a closer look brings it back and records the usual
+pulled-back signal (6.22). The current copy's change says which version it replaces, and the notes prompt says the newer
+version wins: record what it says now, write a correction when it contradicts an earlier fact, never report a discrepancy
+against an older copy.
+
+**Saying by hand which files are one document** (F36). Files with unrelated names aren't linked by the name rule, and the
+rule joins some that aren't one document (two agendas that differ by date). The person says so in two places, the file's own
+page and the "older version" row of Handled for you (Closed by a rule), each a choice with an Undo toast and a recorded
+correction: **Same document as…** (a list of the other files in the same top folder) joins the two documents, with the
+versions saved later under either name; **Not the same document** splits the file from the copies its name puts it with,
+leaves any group the person made, and stays split, so the name rule never joins it again; from the older-version row it also
+hands that change in after all (Take a closer look). The first check of F36, done in the code: a `record.edit` of a `file`
+record's `replaces` can't do this, because a watched file is never a `file` record (`file` records are what the person adds
+or a program writes) and the families are worked out from the folder's own list of paths, never from `replaces`; the record
+a watched file leaves is a `snapshot`, written only by the watcher, and a new field on it is a change to a core record that
+plugins see, which waits for the plugin API release. So each choice is a change to the settings `watch.versions.same_document`,
+`watch.versions.not_same` and `watch.versions.current`, saved the way the Settings screen saves (a `setting_change` records
+what it was and what it became, and Undo puts it back), read by the families on the next read of the folder, and kept in the
+workspace's own configuration like any other. They are not shown on the Settings screen. Signals: `edited` for a link or a
+split from a file's page, `pulled_back` for a split from the older-version row, `answered_assistant` for the answer to the
+question. Built: `tests/test_versions.py`, `tests/test_version_choices.py`, `tests/test_version_choices_api.py`,
+`web/src/components/SameDocument.test.tsx`.
 
 **Structured items.** A calendar or mail item carries what it is as structured fields beside its text: an event's start, end,
 place and whether it was cancelled; a message's sender, received time and whether it is unread. The watcher keeps them on the
@@ -717,6 +754,14 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
 - The model's name never appears in anything a person sees.
 - A question to anyone but the PM has at least one link, and only links they can open (no local files, no cockpit pages).
 - Unreadable output never applies; the dispatcher retries the run (6.6).
+- **A retry may fix a failing op but never drop one** (the owner's lesson 5, *built*; `engine/dispatcher.py`,
+  `tests/test_retry_keeps_ops.py`). When an answer goes back for a problem in some of its ops, the corrected answer must
+  carry every op that had no problem, unchanged (compared op by op, each counted as often as it was); one that left a fine
+  op out is refused and sent back with the problem said again and the ops that were dropped named, and at the last round it
+  is never applied: the work goes to the stronger tier, whose answer starts fresh. A problem that names no op (the answer
+  as a whole) leaves every op open to change, since which one failed isn't known. Facts on any tracked item, so the retry
+  lesson's second half (a bare row or a pack's record with nowhere to keep a fact) is not built here: it needs a field on a
+  core record and waits for the plugin API release.
 - **Outward material never names the assistant** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): an op
   that writes what others read (the text of a shared item, a history line, a reporter or an author) and holds one of the
   names the assistant has gone by is refused, with the reason in plain words (`names-assistant`; never a lint, never
@@ -733,9 +778,22 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
   takes back; it runs when the app starts and after every rename. **Built so far (B-7):**
   `tests/test_outward_never_names_assistant.py::test_an_op_for_what_others_read_naming_the_assistant_is_refused_with_the_reason`,
   `::test_renaming_the_assistant_blocks_the_new_name_and_the_old_one_on_what_others_read`,
-  `::test_closing_someones_action_from_an_unattributed_input_writes_a_row_sourced_by_the_input`. *Not built:* a plugin's own
+  `::test_closing_someones_action_from_an_unattributed_input_writes_a_row_sourced_by_the_input`. **Every path others
+  read, one test** (the designer's lesson 6; `tests/test_outward_paths.py`): the assistant's display name, and every name it
+  has had, is on none of them: the parts of a message, the **title** of a calendar entry and its note, the **folder** and
+  content of a file (the act's target fields as well as its parts; checking only the parts let an event's title through, now
+  closed), what goes out at the send step after a rename, a follow-up message and a nudge, and the ops that write what
+  others read (every entry of `outward.READ_BY_OTHERS_OPS` is an existing op with those fields). A new free-text field of an
+  act's target must be listed in that test as read by others or not, so the way out can't be added unnoticed. The person's own
+  screens may say the assistant did something. *Not built:* a plugin's own
   record types cannot yet say which of their fields others read (the check covers the core's ops and fields); that needs a
   generic extension point.
+- **A date move's history row is the person's own** (the designer's lesson 11, as already built): F17's "moved again (second
+  time since Oct 6)" row, a second move of the same date within `steward.second_move_days`, is part of the person's own
+  history (`changes_for_person`), never of what readers see (`changes_for_readers`, a plugin's `view.changes`, a packet or a
+  copied message). What readers see keeps the earlier rule: a change that only moves a date on an existing item is not news
+  and is left out of their history altogether, second moves included; the ledger keeps every change. The two rules agree
+  because they are about two readers (7.14; `tests/test_second_move_in_history.py`, `tests/test_date_moves_are_not_news.py`).
 - **A title is never an id** (the UI/UX re-review of B-7, R1, check C54; `engine/id_words.py`): an op that writes a title (a
   to-do's words, a question's, a calendar entry's, a series' or a project's name, a report's title; the same fields through
   `record.set`) holding the id of a record that exists is refused with the reason in plain words (`id-in-title`; never a lint,
@@ -973,6 +1031,17 @@ is marked *designed*, with the phase.
 - A fact quoting the start of something named that no project has ("we are starting the Depot Scanner Pilot"), with no
   project proposed, goes back once to propose it (`project-start-as-fact`, *built*; `language.project_start_words`). A
   name inside a project's own counts as that project.
+- **A decision is a choice someone made; what a document lists is a fact** (the owner's lesson 7, *built*;
+  `decision-from-list`, `engine/decision_lines.py`, `engine/defaults/decision_lines.yaml`, `engine/playbook/guidance/notes.md`).
+  A line a document lists under "Decided:", "Decision:" or "Agreed:" (a bullet, a numbered line, a table row; the shipped
+  labels, one list for each language) names no one who chose. A fact whose evidence is such a line, from outside content,
+  worded as a choice stated as true goes back once to say that the document lists it ("The notes list the cover as decided"),
+  quoting the line; a fact that already says so (one of the shipped listing words: list, says, notes, minutes ...) passes.
+  Left alone: a line that names who chose ("Decided by Kit: ...", "Kit decided that ..."), the person's own note (its
+  "Decided: ..." is their choice, as `decision-already-made` shows), their own changes, and a quote that isn't in the
+  outside content. The notes guidance says the same in words for the model, and the stand-in AI now records a document's
+  "Decided:" line as "The input lists ... as decided" while the person's own note stays their choice. Golden case
+  `listed-as-decided-is-a-fact` (both fictional workspaces). Built: `tests/test_decision_from_list.py`.
 - A question to the person about something the input says another person stated ("Jun told me it arrives on the
   10th, but the quote says the 30th") goes back once to ask whoever made the claim (`claim-asked-of-the-person`,
   *built*; `language.claim_words`).
@@ -1740,7 +1809,13 @@ backups, the synced folder) guards every pass, so a failure is noted as an autom
 writes a heartbeat. The watchdog starts a loop again, inside the running app, when its thread has stopped, and the
 assistant's card says it did. A loop whose heartbeat is older than the limit (`steward.background_stuck_after_minutes`, 10 by default) is stuck: it is not started twice, since two
 copies would race; the card and a Today line say since when and offer Restart now, which the person chooses (6.14: the
-app never restarts on its own). A large change is rehearsed first by the applier's dry run, in a transaction that is
+app never restarts on its own). **Nothing is left unwatched** (lesson 3, *built*; `tests/test_background_loops.py`): the
+stuck line counts in the notice like any other Decide line (`notifications.decide_keys` takes the stuck time), and because
+the loop that sends notices may be the one that is stuck, the watchdog sends it, once, when it finds a loop stuck. The
+watchdog has a heartbeat of its own: every pass of every loop checks that its thread is running and has checked in within the
+same limit, and starts it again when not (the card says so, as for a loop); a copy that had only gone quiet leaves when it
+wakes. The status computes the same health, so a watchdog quiet for as long as a stuck loop shows on the card and on Today
+even if every loop were stuck too. A large change is rehearsed first by the applier's dry run, in a transaction that is
 rolled back.
 
 ## 6.14 Scheduler, offline behavior and restart
@@ -3940,7 +4015,7 @@ as late; working hours that end before they start, and quiet hours with equal en
 (`tests/test_reminder_lines.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
 `engine/reminder_lines.py`: an open action that is not on hold, whose `remind_at` has come, is one Today line,
 `{task} · due now`; one that came due and was not shown for the late-after time is `{task} · overdue · due {time}`, shown
-at once and never dropped, and says "late: due {time}, while the app wasn't running" only when the app knows it was not
+at once and never dropped, and adds ", while the app wasn't running" only when the app knows it was not
 running then (a gap in the record of when it was running, below); reminders that fell in
 quiet hours wait, then arrive together as "Saved during quiet hours" with `{task} · was due {day and time}`, and with
 `summary` the late ones are one line too. Each line has Done first and Snooze in its menu with In 1 hour, Later today,

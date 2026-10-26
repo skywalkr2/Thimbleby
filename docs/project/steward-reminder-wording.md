@@ -11,7 +11,7 @@ default). Every resolved time is shown in the person's time zone.
 | Where | Wording |
 | --- | --- |
 | A reminder | `{task} · due now` |
-| A late reminder (came due while the computer slept) | `{task} · late: due {due_time}, while this computer was asleep` |
+| A late reminder | `{task} · overdue · due {due_time}`; when the app knows it was not running then, `{task} · overdue · due {due_time}, while the app wasn't running` |
 
 ## The snooze menu
 
@@ -62,7 +62,7 @@ auto-generated` (`engine/reminder_mail.py`), so the mailbox reader never acts on
 Built in S1-2 (CHANGES.md section 100) beyond the wording above; in the wording sheet (`web/src/wording/en.json`) until
 reviewed:
 
-- The digest for missed reminders in "summary" mode: `Missed while this computer was asleep`
+- The digest for missed reminders in "summary" mode: `Overdue reminders`; when the app knows it was not running for every one, `Overdue reminders, missed while the app wasn't running`
 - The to-do menu: `Remind me…`, `Change reminder…`, `Remove reminder`, and the form's label `Remind me at`
 - The line's pill `Reminder` and the menu's title `Snooze`
 - Toasts: `Snoozed until {when}.`, `Reminder set for {when}.`, `Reminder removed.`

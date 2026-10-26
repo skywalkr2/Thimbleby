@@ -1,0 +1,10 @@
+# Words for telling a choice someone made from what a document lists (design 6.7, "A decision is a choice someone made").
+# One list for each language, named by its primary language tag. Words are whole words and case is ignored.
+#
+# labels: the words a list line is headed by when a document lists something as settled ("Decided: the cover stays
+#   blue"), written for the core by hand. A line headed by one says what the document lists; nothing in it says who chose.
+# listing: words that make a recorded fact say where it comes from ("The notes list the cover as decided"), so it is
+#   what a document lists and not a choice stated as true.
+en:
+  labels: [decided, decision, decisions, agreed, agreement, resolved, resolution, approved, concluded]
+  listing: [list, lists, listed, listing, says, say, notes, minutes, document, page, agenda, table, record, records]

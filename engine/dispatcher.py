@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -31,7 +32,17 @@ from engine.ai.router import (
     route,
 )
 from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN, AiError, AiTask, provider_reason
-from engine.applier import ChangeFailed, Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
+from engine.applier import (
+    ChangeFailed,
+    Context,
+    Inputs,
+    Problem,
+    apply_changeset,
+    check,
+    feedback,
+    needs_another_round,
+    undo,
+)
 from engine.cleaning import quoted_messages
 from engine.config import Config
 from engine.learning import offered_ops, request_learns
@@ -784,6 +795,10 @@ def _rounds(
     shown = base.request  # the request as every round of this task starts from it: with the search results so far
     out = _Outcome()
     searches = 0
+    #: The ops of the answer last sent back that had no problem, and what was wrong with the rest: the next answer
+    #: must keep each of them (a correction fixes the failing op and never drops one that was fine).
+    fine: list[str] | None = None
+    wrong = ""
     for attempt in range(cfg.dispatch.fix_rounds + 1):
         last = attempt == cfg.dispatch.fix_rounds
         if attempt and _closed(store, request_id):
@@ -963,6 +978,12 @@ def _rounds(
                 continue
             stop = "The assistant gave the same answer again after your note. Look at it with them."
             return _Outcome(run_id=out.run_id, stop=stop)
+        if fine and (lost := dropped_ops(fine, changeset)):
+            # A return round that dropped an op which was fine is refused and sent back, never applied.
+            if not last:
+                task = replace(task, request=shown + "\n\n" + wrong + "\n" + DROPPED.format(ops=", ".join(lost)))
+                continue
+            return _Outcome(run_id=out.run_id, stop=DROPPED_STOP, escalate=True, retry=DROPPED_WHY)
         problems = check(changeset, ctx)
         _record_refusals(store, out.run_id, problems)
         out = _Outcome(
@@ -970,7 +991,8 @@ def _rounds(
         )
         if needs_another_round(problems):
             if not last:
-                task = replace(task, request=shown + "\n\n" + feedback(problems))
+                fine, wrong = fine_ops(changeset, problems), feedback(problems)
+                task = replace(task, request=shown + "\n\n" + wrong)
                 continue
             out.escalate = True
         return out
@@ -1083,6 +1105,44 @@ REPEATED = (
     "This answer is the same as the one the user sent back. The user's note in this request is an instruction: act on "
     "it. If the note shows the request was based on a misunderstanding, record what the user said instead of repeating."
 )
+
+
+DROPPED = (
+    "Your corrected answer left out these ops, which had no problem: {ops}. A correction changes the ops that had "
+    "problems and never drops one that was fine. Answer again with the complete JSON object: every op that had no "
+    "problem exactly as before, and the corrected ones."
+)
+DROPPED_WHY = "The assistant's corrected answer left out changes that were fine"
+DROPPED_STOP = (
+    "The assistant's corrected answer left out changes that were fine, so nothing was applied. Try again, or pick "
+    "another account for this work."
+)
+
+
+def _op_text(op: Any) -> str:
+    return json.dumps(op.model_dump(mode="json", exclude_none=True), sort_keys=True)
+
+
+def fine_ops(changeset: ChangesetIn, problems: list[Problem]) -> list[str] | None:
+    """The ops of an answer that had no problem needing another round, as the text each is compared by. None when a
+    problem names no op, because then which op failed isn't known and the next answer may change any of them."""
+    returned = [p for p in problems if p.severity in ("refuse", "return")]
+    if any(p.op is None for p in returned):
+        return None
+    failing = {p.op for p in returned}
+    return [_op_text(op) for index, op in enumerate(changeset.ops) if index not in failing]
+
+
+def dropped_ops(fine: list[str], changeset: ChangesetIn) -> list[str]:
+    """The names of the ops in `fine` that the new answer doesn't carry unchanged, each counted as often as it was."""
+    held = Counter(_op_text(op) for op in changeset.ops)
+    lost = []
+    for text in fine:
+        if held[text] > 0:
+            held[text] -= 1
+        else:
+            lost.append(str(json.loads(text).get("op", "an op")))
+    return lost
 
 
 def _ops_of(changeset: ChangesetIn) -> str:

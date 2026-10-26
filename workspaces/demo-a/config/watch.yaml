@@ -65,6 +65,9 @@ versions:   # copies of one document in a watched folder: only the newest counts
   enabled: true
   ignore_words: [FOR REVIEW, DRAFT, FINAL, ARCHIVE, ARCHIVED, COPY, SUPERSEDED]
   archive_folders: [Archive, Old, Superseded]
+  same_document: []   # files said by hand to be one document: [{source: <folder id>, files: [<path>, <path>]}]
+  not_same: {}   # files said not to belong to the name's document, by folder id
+  current: {}   # the copy said to be current when names couldn't tell, by folder id
 automated_mail:   # one-time-code mail from a no-reply address is set aside with no AI run
   set_aside: true
   senders: [no-reply, noreply, no_reply, do-not-reply, donotreply]   # what an automated address starts with

@@ -25,6 +25,7 @@ import { MeetingPrep } from "./MeetingPrep";
 import { PersonMemory } from "./PersonMemory";
 import { useInvitationActs } from "./InvitationActs";
 import { useMessageActs } from "./MessageActs";
+import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
@@ -63,6 +64,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const menu = [...(kind === "question" ? questionMenu.entries : []), change.entry];
   // A saved message can be replied to, forwarded or filed: each drafts an act that opens in Waiting to go out.
   const message = useMessageActs(id, String(record.data?.fields.title ?? ""), kind === "source");
+  // A saved file from a watched folder can be said to be the same document as another, or not (design 6.2).
+  const versions = useVersionActs(kind === "source" ? id : null);
   // An invitation on a calendar entry can be answered the same way.
   const invite = useInvitationActs(id, kind === "event" && record.data?.fields.invitation === true);
   const [editing, setEditing] = useState(false);
@@ -125,6 +128,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               </button>
             )}
             {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
+            {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
             {invite.buttons}
             {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
           </div>
@@ -132,6 +136,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       </div>
       {data && kind === "question" && questionMenu.form}
       {data && message.form}
+      {data && versions.form}
       {data && invite.form}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}

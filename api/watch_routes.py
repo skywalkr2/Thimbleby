@@ -29,15 +29,23 @@ from api.schemas import (
     SetAsideFolder,
     SetAsideIn,
     SetAsideView,
+    SettingChangeView,
     SilentCloseSeen,
     SilentClosesView,
     SilentCloseView,
     SourceSecretView,
+    VersionAnswerIn,
+    VersionApartIn,
+    VersionChosen,
+    VersionFile,
+    VersionLinkIn,
+    VersionsView,
+    VersionUndoIn,
     WatchAuthorOption,
     WatchRunView,
     WatchSourceView,
 )
-from engine import closes, handled, set_aside, setup, sides, source_intake, watch
+from engine import closes, handled, set_aside, setup, sides, source_intake, version_choices, watch
 from engine import settings as settings_screens
 from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
@@ -561,6 +569,104 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=409, detail=str(err)) from None
         events.changed()
         return handled_done(snapshot_id)
+
+    # ---- files that are one document -----------------------------------------------------------------------------
+
+    def versions_of(record_id: str) -> version_choices.Offer:
+        found = version_choices.offer(store.read(), current(), record_id)
+        if found.file is None:
+            raise HTTPException(status_code=404, detail="That isn't a file in a watched folder.")
+        return found
+
+    def chosen(made: version_choices.Changed | list[dict], **more: str | None) -> VersionChosen:
+        events.changed()
+        worker.poke()
+        changes = made.changes if isinstance(made, version_choices.Changed) else made
+        return VersionChosen(changes=[SettingChangeView(**c) for c in changes], **more)
+
+    @r.get("/versions/{record_id}")
+    def versions_view(record_id: str) -> VersionsView:
+        """What the person can say about a watched file: the files it can be linked to, and whether it can be split."""
+        found = version_choices.offer(store.read(), current(), record_id)
+        if found.file is None:
+            return VersionsView(applicable=False)
+        titles = {c.key: c.title for c in found.others}
+        return VersionsView(
+            applicable=True,
+            file=found.file.title,
+            others=[VersionFile(key=c.key, title=c.title) for c in found.others],
+            can_split=found.can_split,
+            family=[VersionFile(key=k, title=titles.get(k, k)) for k in found.family],
+        )
+
+    @r.post("/versions/{record_id}/same")
+    def versions_same(record_id: str, body: VersionLinkIn) -> VersionChosen:
+        """Same document as another file of the folder: the two (and the documents their names belong to) are one."""
+        versions_of(record_id)
+        try:
+            made = version_choices.link(
+                ws, current(), store, record_id, body.other, now=worker.now(), env=dict(os.environ)
+            )
+        except settings_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
+        return chosen(made)
+
+    @r.post("/versions/{record_id}/apart")
+    def versions_apart(record_id: str, body: VersionApartIn) -> VersionChosen:
+        """Not the same document: the file stands on its own. With the change a rule closed as an older version, that
+        change is handed in after all."""
+        versions_of(record_id)
+        reopened = False
+        try:
+            if body.request and body.read_version:
+                version_choices.reopen(store, body.request, body.read_version)
+                reopened = True
+            made = version_choices.split(
+                ws, current(), store, record_id, now=worker.now(), closed=body.request, env=dict(os.environ)
+            )
+        except (settings_screens.SettingsError, StoreError) as err:
+            if reopened:
+                closes.take_back_closer_look(store, body.request)
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        if body.request:
+            _show_again(body.request)
+        return chosen(made, request=body.request)
+
+    @r.post("/versions/answer/{question_id}")
+    def versions_answer(question_id: str, body: VersionAnswerIn) -> VersionChosen:
+        """The answer to "Which copy is the current one?": the copy named is kept as the current one."""
+        from engine.dispatcher import signal
+
+        try:
+            made = version_choices.keep_answer(ws, current(), store, question_id, body.file, env=dict(os.environ))
+        except settings_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
+        signal(store, "answered_assistant", [question_id], f"Chose {body.file} as the current copy", worker.now())
+        return chosen(made, asked=question_id)
+
+    @r.post("/versions/undo")
+    def versions_undo(body: VersionUndoIn) -> VersionChosen:
+        """Undo a choice about versions: the settings go back as they were, a change handed in after all is set aside
+        again while the assistant hasn't started on it, and an answered question is open again."""
+        try:
+            if body.request:
+                closes.take_back_closer_look(store, body.request)
+            put = version_choices.undo(
+                ws, current(), store, [c.model_dump() for c in body.changes], env=dict(os.environ)
+            )
+            if body.asked:
+                version_choices.reopen_question(store, body.asked)
+        except settings_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except closes.NotAClose as err:
+            raise HTTPException(status_code=404, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        return chosen(put)
 
     @r.post("/set-aside/{snapshot_id}/put-back")
     def set_aside_put_back(snapshot_id: str, body: ReadVersion) -> SetAsideDone:

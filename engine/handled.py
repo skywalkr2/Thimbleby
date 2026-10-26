@@ -28,6 +28,7 @@ from engine import closes, set_aside
 from engine.connectors import CORE, declared_reads, reads
 from engine.mail_kinds import kind_of
 from engine.storage import StoreError, WriteContext
+from engine.watch import VERSION_RULE
 
 Tab = Literal["set_aside", "closed", "read"]
 #: The kinds of item a close can be of; the screen words each.
@@ -170,6 +171,7 @@ def _closed_rows(view: Any, cfg: Any, labels: dict[str, str], said: dict[str, st
                 "item": item_kind_of(cfg, said, watched.get("source")),
                 "rule": mark["rule"],
                 "change": watched.get("change", "new"),
+                "older_version": mark["rule"] == VERSION_RULE,
             }
         )
     return out

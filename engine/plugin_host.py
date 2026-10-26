@@ -192,6 +192,10 @@ class PluginHost:
         self._chain: frozenset = frozenset()
         self._follows: str | None = None  # the change whose event is being delivered
         self._lock = threading.RLock()
+        from engine.pack_calls import PackCalls
+
+        #: What a pack runs for the core (a handler, a validator, a Today line) is held to a time limit.
+        self.pack_calls = PackCalls(lambda: float(self.cfg.steward.pack_call_limit_seconds))
         self._discover(bundled)
         for name in cfg.workspace.plugins.enabled:
             self._load(name, set())
@@ -540,7 +544,9 @@ class PluginHost:
             for name, contributor in sorted(registrar.today_lines.items()):
                 reader = self._with_files(ReadView(self.store.read(), plugin))
                 try:
-                    lines = contributor.lines(reader, registrar.config.model_copy(deep=True))
+                    lines = self.pack_calls.run(
+                        plugin, contributor.lines, reader, registrar.config.model_copy(deep=True)
+                    )
                     for line in lines:
                         if not isinstance(line, TodayLine):
                             raise ValueError("lines must be TodayLine objects")
@@ -1293,6 +1299,11 @@ class PluginHost:
             if self.active(other) and any(dep.name == name for dep in manifest.depends_on):
                 self.disable(other, f"dependency {name} is disabled")
 
+    def off_message(self, plugin: str) -> str:
+        """The plain reason work of a turned-off add-on is refused: held changes and requests of it wait, and this says
+        why (the Add-ons screen says what turned it off)."""
+        return f"the add-on {plugin} is turned off, so this waits until it is on again"
+
     def active(self, name: str) -> bool:
         return name in self.status and self.status[name].state == "enabled"
 
@@ -1784,7 +1795,7 @@ class PluginHost:
 
     def task_kind(self, name: str):
         if "/" in name and not self.active(name.split("/")[0]):
-            raise StoreError("task plugin is disabled")
+            raise StoreError(self.off_message(name.split("/")[0]))
         return self.tasks[name]
 
     def _with_files(self, view: Any) -> Any:
@@ -1955,7 +1966,7 @@ class PluginHost:
         }
         owner = op.op.split("/")[0] if "/" in op.op else None
         if owner and not self.active(owner):
-            problems.append("op plugin is disabled")
+            problems.append(self.off_message(owner))
         for name, registrar in self.registrars.items():
             for fn in registrar.validators.get(op.op, []):
                 if not self.active(name):
@@ -1966,11 +1977,13 @@ class PluginHost:
                     takes = _origin_parameter(fn)
                     extra = {"settings": registrar.config.model_copy(deep=True)} if _takes_settings(fn) else {}
                     if takes == "keyword":
-                        result = fn(op.model_copy(deep=True), read, origin=dict(origin), **extra)
+                        result = self.pack_calls.run(
+                            name, fn, op.model_copy(deep=True), read, origin=dict(origin), **extra
+                        )
                     elif takes == "positional":
-                        result = fn(op.model_copy(deep=True), read, dict(origin), **extra)
+                        result = self.pack_calls.run(name, fn, op.model_copy(deep=True), read, dict(origin), **extra)
                     else:
-                        result = fn(op.model_copy(deep=True), read, **extra)
+                        result = self.pack_calls.run(name, fn, op.model_copy(deep=True), read, **extra)
                     if not isinstance(result, (list, tuple)) or any(not isinstance(p, str) for p in result):
                         raise ValueError("validators return a list of refusal messages")
                     problems.extend(result)
@@ -1982,7 +1995,7 @@ class PluginHost:
     def apply(self, tx: Any, op: Any, context: WriteContext) -> list[dict[str, str]]:
         name = op.op.split("/")[0]
         if not self.active(name):
-            raise StoreError("op plugin is disabled")
+            raise StoreError(self.off_message(name))
         registration = self.registrars[name].ops[op.op]
         writer = OpWriter(
             tx,
@@ -2033,7 +2046,7 @@ class PluginHost:
                         self._chain = chain | {key}
                         try:
                             context = self._with_files(EventContext(self.store.read(), name, registrar.config))
-                            registrar.handlers[event](deepcopy(payload), context)
+                            self.pack_calls.run(name, registrar.handlers[event], deepcopy(payload), context)
                             self._commands(name, context.commands, event, payload)
                         except PluginMisuse as err:
                             self.disable(name, f"event {event} broke the plugin contract: {err}")
@@ -2174,6 +2187,7 @@ class PluginHost:
                 tx.create(kind, data, context)
 
     def close(self) -> None:
+        self.pack_calls.close()
         for key in list(sys.modules):
             if any(key == name or key.startswith(name + ".") for name in self._modules):
                 del sys.modules[key]

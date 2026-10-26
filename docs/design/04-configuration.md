@@ -263,6 +263,11 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
 - `handled_rule_section` (`notices`): the section "Always set aside mail like this" files a sender under when the mail was
   one the assistant read and found nothing to do in, which has no section of its own: `personal`, `sales` or `notices`
   (7.20). A set-aside mail keeps its own section. Advanced.
+- `versions.same_document`, `versions.not_same` and `versions.current` (all empty; internal, live): what the person said by
+  hand about which files of a watched folder are one document, which is not, and which copy is current, each written by a
+  choice on screen and put back by its Undo (6.2, "Saying by hand which files are one document"): `same_document` is a list of
+  `{source, files}` groups, the others map a watched folder's id to a list of files (their paths in the folder). They are not
+  on the Settings screen; the rest of `versions` (`enabled`, `ignore_words`, `archive_folders`) is Advanced.
 - `handled_keep_days` (30): how many days an item stays listed on Handled for you, counted from when the app set it aside,
   a rule closed it or the assistant read it with nothing to do; then it leaves the list (7.20). The list is filtered when
   it is read: no record is changed or deleted, and the original stays where it came from. Advanced.
@@ -341,6 +346,9 @@ Built keys:
   one is offered as a to-do with one click (6.2, 6.32).
 - `steward.second_move_days` (14): a second move of the same date within this many days is shown in the person's own
   history as "moved again" (7.14, 6.33); zero shows none.
+- `steward.pack_call_limit_seconds` (20, from 1 to 600; internal, live): the most seconds an add-on's event handler,
+  validator or Today lines may take for one call; one still running then counts as a failure of that add-on, like a crash
+  (6.1, "A hang is a failure"). It is a core setting outside the plugin guide.
 - `steward.reminders.where` (nowhere, app, calendar or mail), `where_account`, `look_ahead_hours` (24) and `allowed_data`
   (internal): where a reminder reaches the person when the app isn't open (6.12). `app` is an entry on the app's own
   calendar; `calendar` and `mail` go through `where_account`, an account the person let the assistant act on, as drafts
@@ -841,6 +849,10 @@ most 1) is how much of a routing entry's topic an unowned action must hold for t
 workspaces show all three. `tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`,
 `tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`,
 `tests/test_corrections.py::test_the_suggestion_follows_the_configured_share_of_the_topic_and_skips_what_does_not_apply`.
+
+**Built (lesson 7):** `decision-from-list` (default `return`; per project like any lint), a fact whose evidence is a line a
+document lists as decided ("- Decided: ..."), worded as a choice stated as true, goes back once to say that the document lists
+it (6.7); its words are shipped data (`engine/defaults/decision_lines.yaml`), not a setting. `tests/test_decision_from_list.py`.
 
 Lints in the first design that are *designed, not yet built*: `locale-spelling`, `fact-terms-without-asks-for` and
 `unreachable-link`. With the learning slice (phase L): `already-known` (default `return`), a question, outside lookup or report

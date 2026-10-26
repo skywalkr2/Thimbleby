@@ -298,7 +298,10 @@ def part_labels(view: Any, cfg: Any, data: Mapping[str, Any]) -> dict[str, str]:
     """Where each part of the act sits, in the words the name check says it in ("the message to Ana"); with more than
     one part, each is named after the place."""
     where = cfg.language.messages.withheld_where.format(name=_target_name(view, data))
-    parts = data.get("parts") or {}
+    # What an event is called and where a file is written are read by others as much as the parts are.
+    target = data.get("target") or {}
+    named = {"calendar": "title", "file": "folder"}.get(target.get("kind"), "")
+    parts = {**(data.get("parts") or {}), **({named: str(target[named])} if named and target.get(named) else {})}
     return {(f"{where} ({name})" if len(parts) > 1 else where): text for name, text in parts.items()}
 
 

@@ -298,6 +298,11 @@ class Worker:
         self._loop_threads: dict[str, threading.Thread] = {}
         self._beats: dict[str, float] = {}
         self._watchdog: threading.Thread | None = None
+        #: When the watchdog last checked in (monotonic), and which start of it is the current one: the loops start it
+        #: again when it stopped or went quiet, and an older one that wakes up leaves.
+        self._watchdog_beat = time.monotonic()
+        self._watchdog_gen = 0
+        self._watchdog_lock = threading.Lock()
         #: How many times the watchdog started a stopped loop again, and when it last did (the app's clock).
         self.loop_restarts = 0
         self.loop_restarted_at: datetime | None = None
@@ -413,8 +418,7 @@ class Worker:
         self.settle_acts()
         for name in self._loop_fns:
             self._start_loop(name)
-        self._watchdog = threading.Thread(target=self._watchdog_loop, name="cockpit-watchdog", daemon=True)
-        self._watchdog.start()
+        self._start_watchdog()
         self.check_switch_soon()
         self.measure_soon()
 
@@ -433,9 +437,13 @@ class Worker:
         self._beats[name] = time.monotonic()
 
     def _guarded(self, name: str, where: str, step: Any) -> None:
-        """One pass of a loop: a beat first, then the step. Any failure, an exit included, is logged and shown as an
-        automation issue, and the loop goes on to its next pass."""
+        """One pass of a loop: a beat first, the check that the watchdog is still watching, then the step. Any failure,
+        an exit included, is logged and shown as an automation issue, and the loop goes on to its next pass."""
         self._beat_of(name)
+        try:
+            self._ensure_watchdog()
+        except (Exception, SystemExit):
+            log.exception("checking the watchdog failed")
         try:
             step()
         except (Exception, SystemExit):
@@ -460,12 +468,28 @@ class Worker:
                 health[name] = "stuck"
             else:
                 health[name] = "ok"
+        if self._watchdog is not None:
+            # The watchdog is checked the same way, by the loops (each pass) and by the status.
+            if ending:
+                health["watchdog"] = "ok"
+            elif not self._watchdog.is_alive():
+                health["watchdog"] = "stopped"
+            elif now - self._watchdog_beat > self.stuck_limit_seconds():
+                health["watchdog"] = "stuck"
+            else:
+                health["watchdog"] = "ok"
         return health
 
     def stuck_since(self, now_monotonic: float | None = None) -> datetime | None:
         """When the longest-stuck loop last checked in, on the app's clock; none when no loop is stuck."""
         now = time.monotonic() if now_monotonic is None else now_monotonic
-        ages = [now - self._beats[n] for n, h in self.loop_health(now).items() if h == "stuck"]
+        ages = [
+            now - (self._watchdog_beat if n == "watchdog" else self._beats[n])
+            for n, h in self.loop_health(now).items()
+            # a watchdog that is not running counts once it has been quiet as long as a stuck loop would be
+            if h == "stuck"
+            or (n == "watchdog" and h == "stopped" and now - self._watchdog_beat > self.stuck_limit_seconds())
+        ]
         return self.now() - timedelta(seconds=max(ages)) if ages else None
 
     def stuck_since_text(self) -> str | None:
@@ -475,8 +499,9 @@ class Worker:
     def watchdog_check(self, now_monotonic: float | None = None) -> None:
         """Start again, in this process, each loop whose thread ended. A stuck loop is only reported, because a second
         copy would race the first. The app is never restarted from here."""
+        self._watchdog_beat = time.monotonic() if now_monotonic is None else now_monotonic
         for name, health in self.loop_health(now_monotonic).items():
-            if health != "stopped":
+            if health != "stopped" or name not in self._loop_fns:
                 continue
             log.error("The %s loop had stopped; starting it again", name)
             self._start_loop(name)
@@ -493,9 +518,47 @@ class Worker:
             self.events.changed()
         if any(h == "stuck" for h in self.loop_health(now_monotonic).values()):
             self.events.changed()
+            # The loop that sends notices may be the one that is stuck, so the watchdog sends this one: the stuck
+            # line counts in the notice like any other line of Today's Decide group.
+            try:
+                self.notify_if_due()
+            except (Exception, SystemExit):
+                log.exception("telling the person about stuck background work failed")
 
-    def _watchdog_loop(self) -> None:
+    def _start_watchdog(self) -> None:
+        """Start the watchdog, replacing one that stopped or went quiet: an older copy that wakes up later leaves."""
+        with self._watchdog_lock:
+            self._watchdog_gen += 1
+            self._watchdog_beat = time.monotonic()
+            self._watchdog = threading.Thread(
+                target=self._watchdog_loop, args=(self._watchdog_gen,), name="cockpit-watchdog", daemon=True
+            )
+            self._watchdog.start()
+
+    def _ensure_watchdog(self) -> None:
+        """Called on each pass of every loop: when the watchdog's thread ended, or it has not checked in for longer than
+        a loop may, start it again and say so, as for a loop that stopped. A stuck loop and a silent watchdog are
+        therefore never both left unwatched."""
+        if self._watchdog is None or self.loop_health().get("watchdog", "ok") == "ok":
+            return
+        log.error("The watchdog had stopped; starting it again")
+        self._start_watchdog()
+        self.loop_restarts += 1
+        self.loop_restarted_at = self.now()
+        problems.note(
+            self.ws,
+            self.store,
+            self.cfg,
+            "background work",
+            RuntimeError("the watchdog stopped and was started again"),
+            now=self.now(),
+        )
+        self.events.changed()
+
+    def _watchdog_loop(self, generation: int) -> None:
         while not self._stop.wait(timeout=self.WATCHDOG_CHECK_SECONDS):
+            if generation != self._watchdog_gen:
+                return
             try:
                 self.watchdog_check()
             except (Exception, SystemExit):
@@ -706,7 +769,13 @@ class Worker:
         except ConfigError:
             cfg = self.cfg
         sent = notifications.deliver_if_due(
-            self.ws, self.store, cfg, self.now(), handover=self.handover_state(), env=dict(os.environ)
+            self.ws,
+            self.store,
+            cfg,
+            self.now(),
+            handover=self.handover_state(),
+            env=dict(os.environ),
+            stuck=self.stuck_since_text(),
         )
         if sent is not None:
             self.events.changed()

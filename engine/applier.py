@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from engine import (
     acts,
     audience,
+    decision_lines,
     draft_checks,
     endings,
     id_words,
@@ -246,6 +247,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _promise_as_fact(cs, ctx)
     problems += _due_move_missed(cs, ctx)
     problems += _project_start_as_fact(cs, ctx)
+    problems += _decision_from_list(cs, ctx)
     problems += _claim_asked_of_the_person(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
@@ -2695,6 +2697,45 @@ def _project_start_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 )
             )
             break
+    return problems
+
+
+def _decision_from_list(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A fact whose evidence is a line a document lists as decided ("- Decided: the cover stays blue"), worded as a
+    choice stated as true, goes back once: a decision is a choice someone made, and nothing in a listed line says who
+    chose. What a document lists is a fact that says the document lists it ("The notes list the cover as decided").
+    A rule on the words with no AI: a line from outside content headed by one of the shipped decision labels and a
+    colon, and a fact whose words don't say a document lists it. Left alone: a line that names who chose ("Decided by
+    Kit: ..."), the person's own words and changes, and a quote that isn't in the outside content."""
+    name = "decision-from-list"
+    lints = ctx.cfg.checks.lints
+    if lints.get(name, "off") == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    words = decision_lines.shipped(ctx.cfg.workspace.language)
+    outside = normalize(ctx.inputs.raw_input or "")
+    own = normalize(ctx.inputs.note or "")
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if not isinstance(op, FactOp) or not op.evidence.quote.strip():
+            continue
+        level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or lints.get(name, "off")
+        quote = normalize(op.evidence.quote)
+        if level == "off" or not outside or quote not in outside or (own and quote in own):
+            continue
+        line = words.list_line(op.evidence.quote)
+        if line is None or words.says_where_from(op.text):
+            continue
+        problems.append(
+            Problem(
+                name,
+                level,
+                i,
+                f"the words {line!r} are what a document lists as decided: nothing in them says who chose, so this "
+                "is not a decision. Record a fact that says the document lists it (for example 'The notes list the "
+                "cover as decided'), quoting these words, or quote a sentence that names who made the choice",
+                line,
+            )
+        )
     return problems
 
 

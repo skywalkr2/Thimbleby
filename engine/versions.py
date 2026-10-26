@@ -2,16 +2,23 @@
 
 Files whose names differ only by version marks (v3, v3_1, v2.0), dates (2026-10-21, 20261021) and the configured words
 (FOR REVIEW, DRAFT, FINAL) are one family within the same top folder; an archive folder doesn't make a new family. The
-current copy is the highest date, then version, then modified time, among the family's files outside an archive folder.
-A bare number of three or more digits is an id, never a version, so two documents that differ only by an id stay apart.
-Nothing here writes or reads a file: it works on the keys (paths) and modified times a read gave.
+current copy is the highest version, then the latest date in the name, among the family's files outside an archive
+folder. When the versions and dates tie, or one says a copy is newer and the other says another is, nothing is closed
+as older and the person is asked once; the modified time decides only when the person gave no answer, because a sync,
+a restore or a copy changes it. A bare number of three or more digits is an id, never a version, so two documents that
+differ only by an id stay apart.
+
+The person's own choices (design 6.2) are read from the settings: files said to be one document join their families
+(`same_document`), a file said not to belong to its name's family stands alone (`not_same`), and a copy said to be the
+current one is (`current`). Nothing here writes or reads a file: it works on the keys (paths) and modified times a read
+gave.
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Collection, Iterable
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import PurePosixPath
 from typing import Any
@@ -26,13 +33,14 @@ _SEPARATORS = re.compile(r"[\s_\-.]+")
 
 @dataclass(frozen=True)
 class Copy:
-    """One file: its key (path inside the watched folder), family, rank marks and whether it sits in an archive."""
+    """One file: its key (path inside the watched folder), family, rank marks (version, date, modified time) and whether
+    it sits in an archive."""
 
     key: str
     title: str
     family: tuple[str, str]
     archived: bool
-    rank: tuple[str, tuple[int, ...], str]
+    rank: tuple[tuple[int, ...], str, str]
 
 
 def _valid_date(match: re.Match[str]) -> str | None:
@@ -76,13 +84,64 @@ def copy_of(key: str, modified: str | None, ignore: Iterable[str], archives: Ite
     kept = [p for p in folders if p.casefold() not in archive_names]
     name, stamp, version = marks_of(path.stem, ignore)
     top = kept[0].casefold() if kept else ""
-    return Copy(key, path.name, (top, name or path.stem.casefold()), archived, (stamp, version, modified or ""))
+    return Copy(key, path.name, (top, name or path.stem.casefold()), archived, (version, stamp, modified or ""))
+
+
+@dataclass(frozen=True)
+class Decision:
+    """Which copy of a family is current. `current` is None when the family has no copy outside an archive folder, or
+    when the copies can't be told apart (`unclear`, with why in `why`: "tie" or "disagree")."""
+
+    current: Copy | None
+    unclear: tuple[Copy, ...] = ()
+    why: str = ""
+
+
+def decide(copies: Iterable[Copy], pinned: Collection[str] = (), by_time: bool = False) -> Decision:
+    """The current copy of a family: a copy the person named, else the highest version, then the latest date in the
+    name. The versions tying with the dates (or the dates saying another copy is newer than the version does) leaves
+    it unclear. With `by_time`, an unclear family falls back to the modified time among the copies in question."""
+    live = [c for c in copies if not c.archived]
+    if not live:
+        return Decision(None)
+    named = [c for c in live if c.key in pinned]
+    if named:
+        return Decision(max(named, key=lambda c: (c.rank, c.key)))
+    if len(live) == 1:
+        return Decision(live[0])
+    best = max(c.rank[0] for c in live)
+    top = [c for c in live if c.rank[0] == best]
+    latest = max(c.rank[1] for c in top)
+    top = [c for c in top if c.rank[1] == latest]
+    unclear: tuple[Copy, ...] = ()
+    why = ""
+    if len(top) > 1:
+        unclear, why = tuple(sorted(top, key=lambda c: c.key)), "tie"
+    else:
+        winner = top[0]
+        later = [
+            c
+            for c in live
+            if c.key != winner.key
+            and c.rank[0]
+            and winner.rank[0]
+            and c.rank[0] < winner.rank[0]
+            and c.rank[1]
+            and winner.rank[1]
+            and c.rank[1] > winner.rank[1]
+        ]
+        if later:
+            unclear, why = tuple(sorted([winner, *later], key=lambda c: c.key)), "disagree"
+    if not unclear:
+        return Decision(top[0])
+    if by_time:
+        return Decision(max(unclear, key=lambda c: (c.rank[2], c.key)))
+    return Decision(None, unclear, why)
 
 
 def current_of(copies: Iterable[Copy]) -> Copy | None:
-    """The current copy: the highest date, then version, then modified time, outside an archive folder."""
-    live = [c for c in copies if not c.archived]
-    return max(live, key=lambda c: (c.rank, c.key)) if live else None
+    """The current copy when the versions and dates tell, else None."""
+    return decide(copies).current
 
 
 def replaced_by(copies: Iterable[Copy], current: Copy) -> Copy | None:
@@ -91,27 +150,112 @@ def replaced_by(copies: Iterable[Copy], current: Copy) -> Copy | None:
     return max(others, key=lambda c: (not c.archived, c.rank, c.key)) if others else None
 
 
-class Families:
-    """The files a read found, grouped into families."""
+def family_id(family: tuple[str, str]) -> str:
+    """A family as one string, to name it in a question."""
+    return "|".join(family)
 
-    def __init__(self, items: Iterable[Any], settings: Any) -> None:
-        self.copies = [copy_of(i.key, i.changed_at, settings.ignore_words, settings.archive_folders) for i in items]
-        self.by_key = {c.key: c for c in self.copies}
+
+@dataclass(frozen=True)
+class Choices:
+    """What the person said by hand about one watched folder's files."""
+
+    same: tuple[tuple[str, ...], ...] = ()
+    apart: frozenset[str] = frozenset()
+    current: frozenset[str] = frozenset()
+
+
+def choices_of(settings: Any, source: str | None) -> Choices:
+    """The person's choices for one watched folder, from `watch.versions`."""
+    if source is None:
+        return Choices()
+    return Choices(
+        same=tuple(tuple(link.files) for link in settings.same_document if link.source == source and link.files),
+        apart=frozenset(settings.not_same.get(source, ())),
+        current=frozenset(settings.current.get(source, ())),
+    )
+
+
+class Families:
+    """The files a read found, grouped into families. `source` names the watched folder, so the person's choices for
+    it apply; `give_up` holds the families whose question the person set aside, which fall back to the modified time;
+    with `ask` false there is nobody to ask, so every unclear family does."""
+
+    def __init__(
+        self,
+        items: Iterable[Any],
+        settings: Any,
+        source: str | None = None,
+        *,
+        give_up: Collection[str] = (),
+        ask: bool = True,
+    ) -> None:
         self._settings = settings
+        self.choices = choices_of(settings, source)
+        self._joined = self._join()
+        self.copies = [
+            self._place(copy_of(i.key, i.changed_at, settings.ignore_words, settings.archive_folders)) for i in items
+        ]
+        self.by_key = {c.key: c for c in self.copies}
+        self._give_up = frozenset(give_up)
+        self._ask = ask
+
+    def _join(self) -> dict[tuple[str, str], tuple[str, str]]:
+        """The family each name's family joins, from the files the person said are one document."""
+        parent: dict[tuple[str, str], tuple[str, str]] = {}
+
+        def find(x: tuple[str, str]) -> tuple[str, str]:
+            while parent.setdefault(x, x) != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        for group in self.choices.same:
+            names = [
+                self._node(k, copy_of(k, None, self._settings.ignore_words, self._settings.archive_folders).family)
+                for k in group
+            ]
+            for other in names[1:]:
+                a, b = find(names[0]), find(other)
+                if a != b:
+                    parent[max(a, b)] = min(a, b)
+        return {x: find(x) for x in list(parent)}
+
+    def _node(self, key: str, family: tuple[str, str]) -> tuple[str, str]:
+        """What a file joins others as: the family its name puts it in, or, for a file the person split off, itself."""
+        return ("", "apart " + key) if key in self.choices.apart else family
+
+    def _place(self, copy: Copy) -> Copy:
+        """The copy in the family the person's choices put it in."""
+        node = self._node(copy.key, copy.family)
+        return replace(copy, family=self._joined.get(node, node))
+
+    def _copy(self, key: str, modified: str | None = None) -> Copy:
+        return self.by_key.get(key) or self._place(
+            copy_of(key, modified, self._settings.ignore_words, self._settings.archive_folders)
+        )
 
     def family(self, key: str, modified: str | None = None) -> list[Copy]:
-        mine = self.by_key.get(key) or copy_of(
-            key, modified, self._settings.ignore_words, self._settings.archive_folders
-        )
+        mine = self._copy(key, modified)
         return [c for c in self.copies if c.family == mine.family]
 
+    def decision(self, key: str, modified: str | None = None) -> Decision:
+        """Which copy of the file's family is current, or why that can't be told."""
+        mine = self._copy(key, modified)
+        by_time = not self._ask or family_id(mine.family) in self._give_up
+        return decide(self.family(key, modified), self.choices.current, by_time)
+
+    def unclear(self, key: str) -> tuple[str, tuple[Copy, ...], str] | None:
+        """For a file whose family's current copy can't be told: (the family's id, the copies in question, why)."""
+        mine = self._copy(key)
+        found = self.decision(key)
+        return (family_id(mine.family), found.unclear, found.why) if found.unclear else None
+
     def older_than_current(self, key: str, modified: str | None = None, gone: bool = False) -> str | None:
-        """Why this file's change closes itself, or None when it is the current copy (or the family has none and the
-        file isn't in an archive folder)."""
-        mine = self.by_key.get(key) or copy_of(
-            key, modified, self._settings.ignore_words, self._settings.archive_folders
-        )
-        current = current_of(self.family(key, modified))
+        """Why this file's change closes itself, or None when it is the current copy, when the family's current copy
+        can't be told (nothing closes unasked), or when the family has none and the file isn't in an archive folder."""
+        mine = self._copy(key, modified)
+        found = self.decision(key, modified)
+        current = found.current
         if current is not None and current.key != key and (not gone or mine.rank < current.rank):
             return f"an older version; the current one is {current.title}"
         if current is None and mine.archived and not gone:
@@ -121,7 +265,7 @@ class Families:
     def replaces(self, key: str) -> str | None:
         """For the current copy: the title of the version it replaces, if the family has another."""
         family = self.family(key)
-        current = current_of(family)
+        current = self.decision(key).current
         if current is None or current.key != key:
             return None
         older = replaced_by(family, current)

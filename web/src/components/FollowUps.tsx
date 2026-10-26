@@ -42,6 +42,7 @@ import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 import { SideFilter } from "./SideFilter";
 import { FollowUpsByProject } from "./FollowUpsByProject";
 import { ReviewMode } from "./ReviewMode";
+import { CurrentCopy } from "./SameDocument";
 
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
@@ -421,6 +422,8 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
       <div className="full">
         {who ? (
           <AskChooser ask={{ id: q.id, about: q.about ?? "other", options: q.options, name: null }} />
+        ) : q.about === "version" ? (
+          <CurrentCopy question={q.id} copies={q.options} />
         ) : props.check ? (
           <AfterMoveAnswers question={q} check={props.check} move={props.move} />
         ) : (

@@ -41,8 +41,8 @@ A reminder brings an item back at the time you chose. Snooze changes when you ar
 You can choose in one hour, later today, this evening, tomorrow morning, next week, or pick a date and time. Choices
 such as “this evening” use your saved times; if no clear time is available, you are asked to choose one.
 
-Quiet hours hold ordinary reminders for a digest. A reminder that came due while this computer was asleep appears
-when the app resumes, marked late, even during quiet hours. It is not dropped. For a repeating reminder, the app can
+Quiet hours hold ordinary reminders for a digest. An overdue reminder, one that came due while the app wasn't running, appears
+when the app resumes, marked overdue, even during quiet hours. It is not dropped. For a repeating reminder, the app can
 show each missed occurrence or one reminder listing them, according to your choice. A reminder email or calendar alarm
 does not mean the underlying task has been done.
 

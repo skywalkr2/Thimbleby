@@ -2550,7 +2550,11 @@ def _followup_question(q: dict[str, Any], people: People, question_origin: dict[
         held_for_name=q.get("held_for_name"),
         ready_since=q.get("ready_since") if q["status"] == "open" else None,
         about=resolves.get("kind"),
-        options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
+        options=(
+            [Option(id=key, name=key) for key in resolves.get("files", [])]
+            if resolves.get("kind") == "version"
+            else [Option(id=pid, name=people.name(pid)) for pid in q["options"]]
+        ),
         origin=question_origin.get(q["id"]),
         side=q.get("side"),
     )

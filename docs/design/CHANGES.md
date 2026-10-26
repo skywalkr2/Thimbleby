@@ -1027,6 +1027,53 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 219. Files said by hand to be one document, and the designer's lessons from running as rules with tests (2026-10-26; P62, P63)
+
+- **Design 6.2, 7.20, 7.14 and 4.5 (F36):** **Same document as…** and **Not the same document** on a saved file's own page and
+  on a file's row of Handled for you (Closed by a rule), each at once with an Undo toast and a recorded correction (`edited`
+  from the page, `pulled_back` from the older-version row, which also hands that change in after all). The check the designer
+  asked for first, done in the code: a `record.edit` of a `file` record's `replaces` can't do it, because a watched file is never
+  a `file` record and the version families are worked out from the folder's own list of paths, not from `replaces`; a field on
+  the `snapshot` that the watcher writes would be a plugin-visible core change, so it waits for nothing: each choice is a change
+  to the settings `watch.versions.same_document`, `not_same` and `current`, saved as the Settings screen saves (a
+  `setting_change`; Undo puts the old values back), internal, live and in the workspace's own configuration. The current copy
+  is now the highest **version, then the date in the name**; a tie, or a version and a date that disagree, closes nothing and
+  is asked once ("Which copy of <name> is the current one?", a decision with the copies to pick from; the answer is
+  `current`); the modified time decides only when the question was set aside or nobody can be asked. New routes
+  `GET /api/versions/{saved}`, `POST /api/versions/{saved}/same`, `/apart`, `/api/versions/answer/{question}`,
+  `/api/versions/undo`; `HandledRow.older_version`. **Built:** `tests/test_versions.py`, `tests/test_version_choices.py`,
+  `tests/test_version_choices_api.py`, `web/src/components/SameDocument.test.tsx`, `web/src/components/Handled.test.tsx`.
+- **Design 6.1 and 6.13 (lesson 3):** a stuck background loop is a line of the notice's count like any other, and the
+  watchdog sends that notice, once, since the loop that sends notices may be the stuck one; the watchdog has a heartbeat of
+  its own that every loop pass checks (it is started again when stopped or quiet, and the card says so) and that the status
+  shows too. An add-on's event handler, validator and Today lines run on the add-on's own thread and are held to
+  `steward.pack_call_limit_seconds` (20, internal, live): a hang counts as a failure of that place under the existing
+  containment (a handler or Today line noted, the third in a row turns it off; a validator turns it off at once). When an
+  add-on is turned off its records stay, its held changes stay held and are refused in plain words until it is on again, a
+  request for its task kinds stops with a line that says so, and nothing is dropped or applied silently. **Built:**
+  `tests/test_background_loops.py`, `tests/test_pack_call_limits.py`.
+- **Design 6.7 (lesson 5, retry half):** a corrected answer must carry every op of the answer sent back that had no problem,
+  unchanged; one that dropped a fine op is sent back with the ops named and, at the last round, never applied. **Built:**
+  `tests/test_retry_keeps_ops.py`. *Not built:* facts on any tracked item (a core record change; the plugin API release).
+- **Design 6.7 (lesson 6):** one test over every path others read, which found a real gap: an event's **title** and a file's
+  **folder** sit in the act's target and were not checked, so the assistant's name could go out in a calendar entry; both are
+  now checked at the draft's yes, the send step and the confirm. **Built:** `tests/test_outward_paths.py`.
+- **Design 6.7 and the notes guidance (lesson 7):** the lint `decision-from-list` (default `return`) sends back a fact worded
+  as a choice stated as true whose evidence is a line a document lists as "Decided:" and so on, to say that the document lists
+  it; the labels and listing words are shipped data (`engine/defaults/decision_lines.yaml`); the rule is also in the notes
+  playbook; the stand-in AI records a document's "Decided:" line as what the input lists, while the person's own note stays
+  their choice; golden case `listed-as-decided-is-a-fact` in both workspaces. **Built:** `tests/test_decision_from_list.py`.
+- **Design 6.7 (lesson 11):** F17's "moved again" row is the person's own history; what readers see keeps the 10-14 rule (a
+  date-only move is left out of it). Docs only.
+- **Design 7.14, 7.x and the tester form (owner point 10, F8):** an overdue reminder says "overdue" first (`queue.reminder.late`,
+  `queue.reminder.missed`), adding "while the app wasn't running" only when that is known; the Send feedback form adds how
+  often the person used "Missed something?" each week, numbers only (`Feedback.test.tsx`), and the two-week check-in asks for it
+  (`docs/project/tester-feedback-form.md`); "Drop" stays its own word (`wording.test.ts`; the wording sheet never took the
+  review's "Remove"). **Built:** `web/src/components/TodayReminders.test.tsx`, `web/src/components/Feedback.test.tsx`,
+  `web/src/wording/wording.test.ts`.
+- **Not built, waiting for the plugin API release** (`docs/project/plugin-api-release-plan.md`, step 7): lead time on any
+  to-do (lesson 4), an action and its paired risk (lesson 8), and facts on any tracked item (lesson 5). No plugin API,
+  manifest, event, plugin setting or core record changed; the guide is unchanged.
 ## 218. Setup asks "Just me" or "Me and my work" on its own screen; a work side's supplier bills file there; one Add-ons row for one release file (2026-10-26; F37, F38, P62)
 
 - **Design 7.8 (setup), 6.32, 6.5:** two choices, never three. Step 1 (You) asks the person's name and time zone and nothing

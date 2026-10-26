@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api } from "../lib/api";
+import { monthDay } from "../lib/dates";
+import { missedWeeks } from "../lib/missed-weeks";
 
 import { copyMessage } from "../lib/copy";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
@@ -64,10 +66,18 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const found = recent.data?.problems ?? [];
   const addProblems = withProblems && found.length > 0;
 
+  // How often "Missed something?" was used, per week across the window the Quality screen counts; when that can't be read, none.
+  const quality = useQuery({ queryKey: ["quality"], queryFn: api.quality, retry: false, gcTime: 0 });
+  const weeks = missedWeeks(quality.data?.missed);
+  const [withMissed, setWithMissed] = useState(true);
+  const hasMissed = quality.isSuccess;
+  const missedLines = weeks.length === 0 ? [t("feedback.body_missed_none")] : weeks.map((w) => t("feedback.body_missed_week", { from: monthDay(w.week), to: monthDay(w.end), n: w.count }));
+
   const subject = t("feedback.subject", { app: t("app.name") });
   const body = [
     message.trim(),
     ...(include ? ["", t("feedback.body_version", { version: props.version }), t("feedback.body_screen", { screen })] : []),
+    ...(hasMissed && withMissed ? ["", ...missedLines] : []),
     ...(addProblems ? ["", ...problemLines(found, t)] : []),
   ].join("\n");
   const ready = message.trim() !== "";
@@ -92,6 +102,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const requiredId = `${base}-required`;
   const noteId = `${base}-note`;
   const problemsId = `${base}-problems`;
+  const missedId = `${base}-missed`;
   const note = tooLong ? t("feedback.too_long") : noAddress ? t("feedback.no_address") : "";
   return (
     <ModalPanel titleId={titleId} onClose={props.onClose}>
@@ -126,6 +137,17 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} />
           <span>{t("feedback.include")}</span>
         </label>
+        {hasMissed && (
+          <>
+            <label className="check-line">
+              <input type="checkbox" checked={withMissed} aria-describedby={missedId} onChange={(e) => setWithMissed(e.target.checked)} />
+              <span>{t("feedback.missed")}</span>
+            </label>
+            <span id={missedId} className="hint">
+              {[t("feedback.missed_hint"), ...missedLines].join(" ")}
+            </span>
+          </>
+        )}
         {found.length > 0 && (
           <>
             <label className="check-line">
@@ -145,7 +167,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           </div>
           <div className="field">
             <label htmlFor={`${base}-body`}>{t("feedback.preview_body")}</label>
-            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(addProblems ? 14 : 8, body.split("\n").length + 1)} value={body} />
+            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(addProblems ? 14 : 10, body.split("\n").length + 1)} value={body} />
           </div>
         </fieldset>
         {note && (

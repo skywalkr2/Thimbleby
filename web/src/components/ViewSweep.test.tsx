@@ -592,6 +592,7 @@ test("Handled for you, with every kind of group, chip and filter, says names, da
     item: "mail",
     rule: null,
     change: null,
+    older_version: false,
     ...over,
   });
   const kinds: S["HandledRow"]["kind"][] = ["bills", "orders", "deliveries", "personal", "sales", "notices", "other"];
@@ -637,6 +638,7 @@ test("Handled for you, the closed list with a rule's closes and the assistant's 
     request: "REQ-9",
     rule: "Spacing only",
     change: "changed",
+    older_version: false,
   };
   fakeApi({
     "GET handled?tab=set_aside&q=": () => ({ tab: "set_aside", group: "reason", query: "", item: null, kept_days: 30, page_rows: 25, counts: { set_aside: 0, closed: 1, read: 0 }, kinds: [], groups: [] }),

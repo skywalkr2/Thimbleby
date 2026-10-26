@@ -6,6 +6,7 @@ passed in."""
 from __future__ import annotations
 
 import threading
+import time
 from datetime import timedelta
 
 from engine.assistant_status import assistant_state
@@ -158,3 +159,119 @@ def test_a_restart_in_the_last_hour_shows_and_an_older_one_does_not(env):
     assert assistant_state(store, cfg, clock(), loop_restarted_at=at).loop_restarted_at is not None
     old = clock() - timedelta(hours=2)
     assert assistant_state(store, cfg, clock(), loop_restarted_at=old).loop_restarted_at is None
+
+
+# ---- a stuck loop is counted and told; the watchdog is watched --------------------------------------------------
+
+
+def _stuck_worker(env):
+    """A worker with one loop whose last check-in is older than a loop may be quiet (judged at the real time)."""
+    ws, cfg, store, clock = env
+    worker = worker_of(env)
+    alive = threading.Event()
+    holder = threading.Thread(target=alive.wait, daemon=True)
+    holder.start()
+    worker._loop_threads["jobs"] = holder
+    worker._beats["jobs"] = time.monotonic() - cfg.steward.background_stuck_after_minutes * 60 - 5
+    return worker, alive, holder, None
+
+
+def test_a_stuck_loop_is_one_of_the_items_the_notice_counts(env):
+    from engine import notifications
+
+    ws, cfg, store, clock = env
+    worker, alive, holder, late = _stuck_worker(env)
+    try:
+        since = worker.stuck_since(now_monotonic=late)
+        assert since is not None
+        without = notifications.decide_keys(ws, store, cfg, clock())
+        counted = notifications.decide_keys(ws, store, cfg, clock(), stuck=since.isoformat())
+        assert "stuck" not in without and counted.count("stuck") == 1
+        assert notifications.waiting(ws, store, cfg, clock(), stuck=since.isoformat()).count == len(without) + 1
+    finally:
+        alive.set()
+        holder.join(timeout=5)
+
+
+def test_the_watchdog_tells_the_person_once_when_a_loop_is_stuck(env, monkeypatch):
+    import httpx
+
+    import engine.net
+    from engine import notifications
+    from tests.test_notifications import ADDRESS, ENV, Fake
+
+    ws, cfg, store, clock = env
+    for key, value in ENV.items():
+        monkeypatch.setenv(key, value)
+    fake = Fake()
+    monkeypatch.setattr(engine.net, "TRANSPORT", httpx.MockTransport(fake))
+    worker, alive, holder, late = _stuck_worker(env)
+    try:
+        worker.watchdog_check()
+        worker.watchdog_check()
+        assert [str(r.url) for r in fake.sent] == [ADDRESS]
+        n = len(notifications.decide_keys(ws, store, cfg, clock())) + 1
+        assert f'"text": "{n} decisions waiting for you"' in fake.bodies()[0]
+    finally:
+        alive.set()
+        holder.join(timeout=5)
+
+
+def test_a_dead_watchdog_is_started_again_by_the_next_pass_of_any_loop(env):
+    worker = worker_of(env)
+    dead = threading.Thread(target=lambda: None)
+    dead.start()
+    dead.join()
+    worker._watchdog = dead
+    assert worker.loop_health()["watchdog"] == "stopped"
+    ran = []
+    worker._guarded("jobs", "a pass", lambda: ran.append(1))
+    try:
+        assert ran == [1] and worker._watchdog is not dead and worker._watchdog.is_alive()
+        assert worker.loop_restarts == 1 and worker.loop_restarted_at is not None
+        assert worker.loop_health()["watchdog"] == "ok"
+        worker._guarded("jobs", "a pass", lambda: None)
+        assert worker.loop_restarts == 1, "a watchdog that is running is left alone"
+    finally:
+        worker._stop.set()
+        worker._watchdog.join(timeout=5)
+
+
+def test_a_watchdog_that_went_quiet_is_replaced_and_the_old_one_leaves(env):
+    ws, cfg, store, clock = env
+    worker = worker_of(env)
+    release = threading.Event()
+    hung = threading.Thread(target=release.wait, daemon=True)
+    hung.start()
+    worker._watchdog = hung
+    limit = cfg.steward.background_stuck_after_minutes * 60
+    worker._watchdog_beat = 1000.0
+    try:
+        assert worker.loop_health(now_monotonic=1000.0 + limit - 1)["watchdog"] == "ok"
+        assert worker.loop_health(now_monotonic=1000.0 + limit + 1)["watchdog"] == "stuck"
+        worker._watchdog_beat = time.monotonic() - limit - 1
+        generation = worker._watchdog_gen
+        worker._ensure_watchdog()
+        assert worker._watchdog_gen == generation + 1 and worker._watchdog is not hung
+        assert worker.loop_health()["watchdog"] == "ok"
+    finally:
+        release.set()
+        worker._stop.set()
+        worker._watchdog.join(timeout=5)
+        hung.join(timeout=5)
+
+
+def test_a_watchdog_quiet_for_long_shows_as_stuck_on_status_and_today(env):
+    ws, cfg, store, clock = env
+    worker = worker_of(env)
+    dead = threading.Thread(target=lambda: None)
+    dead.start()
+    dead.join()
+    worker._watchdog = dead
+    limit = cfg.steward.background_stuck_after_minutes * 60
+    worker._watchdog_beat = 1000.0
+    assert worker.stuck_since(now_monotonic=1000.0 + limit - 1) is None
+    since = worker.stuck_since(now_monotonic=1000.0 + limit + 5)
+    assert since is not None
+    lines = queue(ws, store, cfg, clock(), stuck=since.isoformat())
+    assert [x.kind for x in lines if x.kind == "stuck"] == ["stuck"]

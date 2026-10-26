@@ -60,17 +60,49 @@ def test_the_same_name_in_another_top_folder_is_another_family():
     assert len({c.family for c in f.copies}) == 2
 
 
-def test_modified_time_breaks_a_tie():
-    f = Families(
-        [Item("Plan.md", "2030-01-01"), Item("Plan DRAFT.md", "2030-01-09")],
-        __import__("engine.config.schema", fromlist=["x"]).VersionFamilies(),
-    )
-    assert current_of(f.copies).key == "Plan DRAFT.md"
+def test_copies_with_the_same_version_and_date_are_unclear_and_nothing_is_closed():
+    f = families("Plan.md", "Plan DRAFT.md")
+    assert current_of(f.copies) is None
+    assert f.older_than_current("Plan.md") is None and f.older_than_current("Plan DRAFT.md") is None
+    family, copies, why = f.unclear("Plan.md")
+    assert why == "tie" and {c.key for c in copies} == {"Plan.md", "Plan DRAFT.md"} and family.endswith("plan")
+
+
+def test_the_modified_time_decides_only_as_the_last_resort():
+    from engine.config.schema import VersionFamilies
+
+    items = [Item("Plan.md", "2030-01-01"), Item("Plan DRAFT.md", "2030-01-09")]
+    asking = Families(items, VersionFamilies(), "s")
+    family = asking.unclear("Plan.md")[0]
+    gave_up = Families(items, VersionFamilies(), "s", give_up={family})
+    assert gave_up.decision("Plan.md").current.key == "Plan DRAFT.md"
+    assert gave_up.older_than_current("Plan.md").endswith("Plan DRAFT.md")
+    nobody_to_ask = Families(items, VersionFamilies(), "s", ask=False)
+    assert nobody_to_ask.decision("Plan.md").current.key == "Plan DRAFT.md"
+
+
+def test_the_version_comes_before_the_date_in_the_name():
+    both = families("Plan v3 2030-01-01.md", "Plan v2 2030-01-02.md")
+    # v3 is newer by its version and v2 by its date: they disagree, so nothing is decided
+    assert current_of(both.copies) is None and both.unclear("Plan v3 2030-01-01.md")[2] == "disagree"
+    one_date = families("Plan v3.md", "Plan v2 2030-05-01.md")
+    assert current_of(one_date.copies).key == "Plan v3.md"  # one date only: nothing to disagree with
+    agreeing = families("Plan v3 2030-01-05.md", "Plan v2 2030-01-02.md")
+    assert current_of(agreeing.copies).key == "Plan v3 2030-01-05.md"
+
+
+def test_a_pinned_copy_is_current_whatever_the_names_say():
+    from engine.config.schema import VersionFamilies
+
+    settings = VersionFamilies(current={"s": ["Plan.md"]})
+    f = Families([Item("Plan.md", "2030-01-01"), Item("Plan v9.md", "2030-01-02")], settings, "s")
+    assert f.decision("Plan v9.md").current.key == "Plan.md"
+    assert f.older_than_current("Plan v9.md").endswith("Plan.md")
 
 
 def test_copy_of_reads_marks():
     c = copy_of("Deck v2.0 FINAL.md", None, ["FINAL"], ["Archive"])
-    assert c.rank[1] == (2, 0) and not c.archived
+    assert c.rank[0] == (2, 0) and not c.archived
 
 
 # ---- through a real folder read ---------------------------------------------------------------------------------

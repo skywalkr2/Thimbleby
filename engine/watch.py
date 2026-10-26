@@ -29,7 +29,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from engine import audience, entry_rules, versions
+from engine import audience, entry_rules, version_choices, versions
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.extract.attached import with_files_read
 from engine.names import People
@@ -380,9 +380,17 @@ def _compare(
     entries: list[_Entry] = []
     unplaced: dict[str, dict[str, Any]] = {}
     plain = entry_rules.Plain(store.read(), cfg, source.id)
+    folder = source.connector in versions.FOLDER_CONNECTORS and cfg.watch.versions.enabled
+    asking = People(store, cfg).pm if folder else None
     families = (
-        versions.Families(poll.items, cfg.watch.versions)
-        if source.connector in versions.FOLDER_CONNECTORS and cfg.watch.versions.enabled
+        versions.Families(
+            poll.items,
+            cfg.watch.versions,
+            source.id,
+            give_up=version_choices.given_up(store.read(), source.id),
+            ask=asking is not None,
+        )
+        if folder
         else None
     )
     for polled in poll.items:
@@ -437,6 +445,8 @@ def _compare(
                 tx.update("snapshot", before.id, data, _WATCHER, read_version=before.version)
             if not entry.handed:
                 continue
+            if families and asking and (unclear := families.unclear(item.key)):
+                version_choices.ask(tx, source.id, asking, *unclear)
             text = _input_text(source, item, entry.change, entry.old, entry.replaces)
             request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed)
         (result.new if entry.change == "new" else result.changed).append(request)
