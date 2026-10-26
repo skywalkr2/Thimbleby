@@ -3,23 +3,29 @@ the files of a kind across the data layers, one file as a form, and saving, remo
 
 from __future__ import annotations
 
+import base64
+
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
+    ActionPreviewItem,
     DataFile,
     DataFileChange,
     DataFileRestore,
     DataFileSaved,
     DataFileView,
+    DataFormPreview,
     DataFormView,
+    DocumentBlock,
     SettingItem,
 )
 from engine import data_forms
+from engine.config import Config
 from engine.settings import _walk
 from engine.storage import Store, StoreError
 
 
-def build_data_form_router(store: Store) -> APIRouter:
+def build_data_form_router(store: Store, cfg: Config) -> APIRouter:
     r = APIRouter(prefix="/api")
     host = store.plugins
 
@@ -34,7 +40,13 @@ def build_data_form_router(store: Store) -> APIRouter:
         """The kinds of data file running add-ons let the person edit through a form."""
         return [
             DataFormView(
-                name=f.name, plugin=plugin, label=f.label, description=f.description, pattern=f.pattern, single=f.single
+                name=f.name,
+                plugin=plugin,
+                label=f.label,
+                description=f.description,
+                pattern=f.pattern,
+                single=f.single,
+                has_preview=f.preview is not None,
             )
             for plugin, registrar in sorted(host.registrars.items())
             if host.active(plugin)
@@ -64,6 +76,29 @@ def build_data_form_router(store: Store) -> APIRouter:
             layers=found["layers"],
             problem=found["problem"],
             items=[SettingItem(**vars(i)) for i in items],
+        )
+
+    @r.get("/data-forms/{name:path}/preview")
+    def preview(name: str, path: str, project: str | None = None) -> DataFormPreview:
+        """The form's preview of one file, run as the person, read only, within the configured time. A preview that
+        fails or runs out of time answers 200 with its state and why, so the screen can say so beside the form."""
+        found = guard(lambda: data_forms.preview(store, cfg, name, path, project))
+        shown = found["preview"]
+        return DataFormPreview(
+            state=found["state"],
+            message=found["message"],
+            preview=(
+                ActionPreviewItem(
+                    name=shown["name"],
+                    media_type=shown["media_type"],
+                    caption=shown["caption"],
+                    alt=shown["alt"],
+                    data_base64=base64.b64encode(shown["data"]).decode("ascii"),
+                )
+                if shown
+                else None
+            ),
+            document=[DocumentBlock(**b) for b in found["document"]] if found["document"] is not None else None,
         )
 
     @r.post("/data-forms/{name:path}/file")

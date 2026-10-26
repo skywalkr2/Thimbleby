@@ -6300,6 +6300,18 @@
             ],
             "title": "Note"
           },
+          "range_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account the estimate is priced on (its name): the first that may see the material and whose model can hold the packet and its answer; none when none was found.",
+            "title": "Range Account"
+          },
           "range_usd": {
             "anyOf": [
               {
@@ -7350,6 +7362,56 @@
         "title": "DataFileView",
         "type": "object"
       },
+      "DataFormPreview": {
+        "description": "A form's preview, as run for the person now. `state` says how it went: `ok` (a picture, text or document is\ngiven), `failed` (the add-on's preview raised or gave something it may not) or `timeout` (it ran past\n`workspace.plugins.preview_seconds`). The reason is the add-on's own, in `message` (plain text, never a screen\nphrase). A preview never holds up or undoes a save.",
+        "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentBlock"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a short document (text/markdown): its blocks, drawn as elements and never as markup.",
+            "title": "Document"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionPreviewItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The picture or text, when the state is ok."
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "failed",
+              "timeout"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "DataFormPreview",
+        "type": "object"
+      },
       "DataFormView": {
         "description": "A kind of data file an add-on lets the person edit through a form.",
         "properties": {
@@ -7357,6 +7419,12 @@
             "default": "",
             "title": "Description",
             "type": "string"
+          },
+          "has_preview": {
+            "default": false,
+            "description": "The add-on shows a preview beside the form (a picture or a page).",
+            "title": "Has Preview",
+            "type": "boolean"
           },
           "label": {
             "title": "Label",
@@ -16102,6 +16170,14 @@
       "PanelView": {
         "description": "A plugin's screen, described as data (design 7.2).",
         "properties": {
+          "column_labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "For a computed column, the wording key of its heading (from the add-on's wording); a column with none is headed by its key made readable.",
+            "title": "Column Labels",
+            "type": "object"
+          },
           "columns": {
             "items": {
               "type": "string"
@@ -31960,6 +32036,71 @@
           }
         },
         "summary": "Files"
+      }
+    },
+    "/api/data-forms/{name}/preview": {
+      "get": {
+        "description": "The form's preview of one file, run as the person, read only, within the configured time. A preview that\nfails or runs out of time answers 200 with its state and why, so the screen can say so beside the form.",
+        "operationId": "preview_api_data_forms__name__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFormPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview"
       }
     },
     "/api/data-forms/{name}/remove": {

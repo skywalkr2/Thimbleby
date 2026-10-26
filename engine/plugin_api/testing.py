@@ -1,5 +1,6 @@
 """Testing a plugin: part of the plugin API, for plugins' own tests. A connector or a channel without a network
-(`connector_context`, `channel_context`, `read`), and everything else in a throwaway workspace (`plugin_workspace`).
+(`connector_context`, `channel_context`, `read`), everything else in a throwaway workspace (`plugin_workspace`), and a
+packet function's context from one (`packet_context`).
 
     from engine.plugin_api.testing import Reply, connector_context, read
 
@@ -29,6 +30,7 @@ from __future__ import annotations
 import json as jsonlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -45,6 +47,7 @@ __all__ = [
     "channel_context",
     "read",
     "plugin_workspace",
+    "packet_context",
     "PluginWorkspace",
     "Outcome",
     "AskResult",
@@ -679,3 +682,49 @@ def plugin_workspace(
                 workspace.close()
 
     return opened()
+
+
+def packet_context(
+    ws: PluginWorkspace,
+    task: str,
+    target: Any = None,
+    *,
+    origin: str = "pm",
+    part: dict[str, Any] | None = None,
+    project: str | None = None,
+) -> Any:
+    """The `PacketContext` the core would give a task kind's packet function for a run of `task` on `target` (a Stored,
+    or (kind, id), or None), from this workspace: the read view, with the knowledge section the core would add
+    (`context.knowledge(...)`, `context.knowledge_chars`) and the core's search (`context.search(...)`) wired exactly as
+    in a run, at the data level of the record the run is about. `origin` is who started it ("pm", "input" or
+    "schedule"), `part` the part of the record it names, `project` the request's project. Nothing is queued or run:
+
+        context = packet_context(ws, "myplugin/read", ("myplugin/chapter", "CH-1"))
+        parts = packet(record, context, settings, "")
+
+    Test the packet function's own cap by returning `PacketParts(max_chars=...)`: the cap is enforced when a run's
+    packet is built (`ws.ask`), where the core trims its own section first."""
+    from engine.packet import _PackKnowledge, _PackSearch
+    from engine.plugin_api import PacketContext
+    from engine.storage import Stored
+    from engine.today import zone
+
+    host = ws.store.plugins
+    kind = host.task_kind(task)
+    ref = None
+    if target is not None:
+        found_kind, found_id = (target.kind, target.id) if hasattr(target, "kind") else target
+        ref = {"kind": found_kind, "id": found_id}
+    record = ws.store.read().get(ref["kind"], ref["id"]) if ref else None
+    data: dict[str, Any] = {"task": task, "origin": origin, "project": project, "part": part, "source": None}
+    if ref:
+        data["about"] = ref
+    request = Stored("request", "REQ-0", 1, False, data)
+    context = host._with_files(
+        PacketContext(ws.store.read(), task.split("/", 1)[0], origin, request=request.id, part=part)
+    )
+    reader = _PackKnowledge(ws.store, ws.cfg, kind, request, record, datetime.now(zone(ws.cfg)).date())
+    context.read_knowledge = reader.read
+    context.size_knowledge = reader.size
+    context.run_search = _PackSearch(ws.ws, ws.store, ws.cfg, request)
+    return context

@@ -45,6 +45,7 @@ class PerInput(NamedTuple):
     ids: list[str]
     left_out_by_scope: list[str]
     facts_left_out: int
+    facts_chars: int = 0  # how many characters of `text` are the facts section
 
 
 # ---- reading the records ---------------------------------------------------------------------------------------------
@@ -387,7 +388,7 @@ def per_input_section(
     if fact_text:
         sections.append(fact_text)
         ids.extend(fact_ids)
-    return PerInput("\n\n".join(sections), ids, sorted(left_out, key=_id_key), cut)
+    return PerInput("\n\n".join(sections), ids, sorted(left_out, key=_id_key), cut, len(fact_text))
 
 
 def _facts_section(

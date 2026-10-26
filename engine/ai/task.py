@@ -88,6 +88,8 @@ class AiTask:
     # A voice note to turn into text (the kind "transcribe"): only an account whose model is listed as taking audio
     # is ever given it, and the answer is the words spoken.
     audio: Audio | None = None
+    # The smallest context window, in tokens, a model must have for this kind of work, whatever the packet's size.
+    min_context: int = 0
 
     @property
     def size(self) -> int:

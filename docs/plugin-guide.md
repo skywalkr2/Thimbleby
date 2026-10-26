@@ -127,7 +127,7 @@ Wind down the plugin's own records when a project ends: `fn(project_id, view)` r
 
 Follow a core record that is dropped: `fn(record_id, view)` returns the plugin's own ops (as for `project_ending`) to apply with the drop, for example dropping the record of the plugin's that is paired with a dropped action. `kind` is "action" for now (`DROP_HOOK_KINDS`). Whenever the applier drops a record of that kind, the ops join the drop's own op group (same Undo, same hold: when the drop waits for the person, so do they). A drop that is part of a project's ending is covered by the `project_ending` hook, not by this one. Time limit, containment, what ops are accepted and purity are as for `project_ending`. One hook per kind per plugin.
 
-#### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | None = None, packet: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = (), learning: str = 'core') -> None`
+#### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | None = None, packet: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = (), learning: str = 'core', min_context: int | None = None) -> None`
 
 Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
@@ -137,9 +137,11 @@ Register AI work: the core or own ops its answer may use, and `label`, what to c
 
 `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft` version for the person's review, runs lints on it (lints on the op "text.draft"), sends a "return" finding back for one fix round, and continues a draft cut off at the output limit once before holding it. With `anchored=True` the draft revises the current text: the run sees it with an id on each unit, starts every paragraph it writes with the ids it came from, and a core check refuses a draft that leaves a unit unaccounted for, names an unknown id, or splits or merges an atomic unit; the paragraph map is kept with the version. The core adds the text with its ids after the packet's parts, as untrusted material: ids are p1, p2, ... in the order of the field format's units over the whole text, so a packet can name the same ids. A request's `part` limits a draft to a span or a place in the text (see `queue_request`). `questions=N` lets a draft end with up to N questions for the person, in a `<questions>` block the core takes off the text and keeps on the version (`questions`), shown beside it; more than N gets a fix round. In an anchored answer the `Removed:` line comes before the `<questions>` block, which is always last.
 
-`role` is "write" (the default: work that writes or changes things), "check" (an independent second opinion on work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`). A check never runs on an account that wrote the record it is about (its accepted and pending text versions and the changes AI runs made to it), unless the person accepts the same account for checks; the run then records which kind of independence it had (`Run.independence`). With no account to take it, the check waits for the person and says why. The packet decides what a check sees: give it the work, never the writing run's own material.
+`role` is "write" (the default: work that writes or changes things), "check" (an independent second opinion on work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`); a tier the kind declares itself wins over its role's. A check never runs on an account that wrote the record it is about (its accepted and pending text versions and the changes AI runs made to it), unless the person accepts the same account for checks; the run then records which kind of independence it had (`Run.independence`). With no account to take it, the check waits for the person and says why. The packet decides what a check sees: give it the work, never the writing run's own material.
 
-`tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them. `tier` is a core tier or one of the plugin's own (`registrar.tier`, "<plugin>/<name>"); naming one the plugin didn't declare refuses the plugin at start.
+`tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them. `tier` is a core tier or one of the plugin's own (`registrar.tier`, "<plugin>/<name>"); naming one the plugin didn't declare refuses the plugin at start. The tier a run uses is decided in this order: the workspace's `ai.tasks.<kind>.tier`, then the `tier` the kind declares (a tier named for the kind is more specific than a role), then its role's tier (`ai.roles`), then the default tier (`routine`). A routing rule (`ai.routing`) that matches a request still sends it to another tier first.
+
+`min_context` is the smallest context window, in tokens, a model must have for this work (a whole chapter read at once, say). The core measures every packet against each model's window anyway (from the account's model list, with the adapter's own token count when it has one) and sends the run only to an account whose window holds the packet and its answer; the estimate names the account it is priced on, and a run that fits nowhere says so before anything is sent. `min_context` lets the estimate be given before a packet is built (a batch of runs priced up front), and keeps the work off a model whose window is smaller however short the packet is. The workspace sets it for a kind in `ai.tasks.<kind>.min_context`.
 
 `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings made in the same answer). Ops held for the person still wait as usual.
 
@@ -159,9 +161,11 @@ Default stages for one of this plugin's record types. The workspace's stages.yam
 
 Declare what a kind of file is for: the details asked for when one is added (a pydantic model), the media types it accepts (within the workspace's), and a size cap (never above the workspace's). `data_level` ("open", "internal" or "restricted"; default internal) is the level a file added under this kind gets when the person doesn't choose one at the upload; a level the manifest's `requires.data_levels` doesn't list refuses the plugin. A person's explicit choice at the upload stands, and only the person changes it afterwards.
 
-#### `registrar.action(name: str, *, label: str, run: Callable, on: str | None = None, file_kinds: tuple[str, ...] = (), where: dict[str, Any] | None = None) -> None`
+#### `registrar.action(name: str, *, label: str, run: Callable, on: str | None = None, file_kinds: tuple[str, ...] = (), where: dict[str, Any] | None = None, show_for: Callable | None = None) -> None`
 
 Something the person starts: on a record of kind `on` (core or own; "file" with optional `file_kinds`), or on the workspace when `on` is None. `where` narrows the records of kind `on` it is offered on and may run on, as for task kinds: {field: value} or {field: (value, ...)}, every field matching. `run(target, context, choices) -> Proposal` is deterministic work (it may run declared programs through `context.tools`); the person reviews the proposal, and what they approve applies as theirs. Raising StoreError or ToolError shows its message to the person; any other exception turns the plugin off.
+
+`show_for(view, target) -> bool` offers the action only while other records allow it (a "Close the chapter" that needs its notes to exist, say): `view` is a read view of core and the plugin's own records and `target` a copy of the record the action is offered on (None for an action on the workspace). It is read only, quick and deterministic and never calls AI; one that raises hides the action and counts as the plugin failing (failure containment). The core asks it again when the action is started, and refuses with the action's own "not available" wording (the wording key `action.unavailable.<action>`; the core's sentence when the plugin sets none) if it no longer holds. `where` is checked first, so `show_for` only sees records that pass it.
 
 #### `registrar.text_format(name: str, units: Callable) -> None`
 
@@ -187,11 +191,11 @@ Provide an interface ("<name>@<major>", listed in `interfaces.provides`), define
 
 Lines for the Today list (listed in `provides.today`): `lines(view, settings) -> list[TodayLine]`, called whenever Today is shown, so it must be quick and deterministic and never call AI. A line's `action` is one of this plugin's person actions or task kinds, or one of the core's own (`CORE_LINE_ACTIONS`), which need `about`: "go" a `request` waiting for the go, "answer" a `question`, "move-stage" a record of a kind with stages, and "open" or "review" any record. A line names the `group` it belongs in (`TODAY_GROUPS`), so it sits among the core's own lines of that kind. A line that counts several items ("three runs wait for your go") names the one record its button acts on as `about`; when no single record fits, use "open" on the most relevant one, or leave `action` unset and let the line inform. A line naming a core action with the wrong `about` fails the contributor like any bad line.
 
-#### `registrar.panel(name: str, *, title: str, kind: str, columns: tuple[str, ...], view: str = 'table', filter: dict[str, Any] | None = None, primary_action: str | None = None, row_actions: tuple[str, ...] = (), tab: str = 'work', new_action: str | None = None, computed: dict[str, Callable] | None = None, show_for: Callable | None = None) -> None`
+#### `registrar.panel(name: str, *, title: str, kind: str, columns: tuple[str, ...], view: str = 'table', filter: dict[str, Any] | None = None, primary_action: str | None = None, row_actions: tuple[str, ...] = (), tab: str = 'work', new_action: str | None = None, computed: dict[str, Callable] | None = None, show_for: Callable | None = None, computed_labels: dict[str, str] | None = None) -> None`
 
 A screen listing records (listed in `provides.panels`), described as data so it looks and behaves like the core's (design 7.2): the records of `kind` (core or own) whose fields equal `filter`, shown as `view` ("list", "table" or "board"; a board groups by the first column) with `columns` (fields of the kind, or names in `computed`). `primary_action` is the one action on a row and `row_actions` the rest, in its menu: this plugin's person actions or task kinds on that kind. `new_action` is a person action of this plugin's on the workspace (`on` None) shown above the rows, to add one. Rows are read through the core, and actions run as they always do.
 
-`computed` adds columns that aren't fields: {"words": fn} where `fn(record, view, settings)` returns a short str, a number, a bool or None (a word count, a stage, "complete for its tier", the last build). A computed column can't be named like a field of the kind (that is a load error). It must be quick and deterministic and never call AI; one that raises shows an empty cell and counts as the plugin failing (failure containment). A function taking a fourth argument gets a dict shared by every cell of one listing, to keep work it would otherwise repeat per row (an index of builds by record); it is new for each listing.
+`computed` adds columns that aren't fields: {"words": fn} where `fn(record, view, settings)` returns a short str, a number, a bool or None (a word count, a stage, "complete for its tier", the last build). A computed column can't be named like a field of the kind (that is a load error). It must be quick and deterministic and never call AI; one that raises shows an empty cell and counts as the plugin failing (failure containment). A function taking a fourth argument gets a dict shared by every cell of one listing, to keep work it would otherwise repeat per row (an index of builds by record); it is new for each listing. `computed_labels={"words": "panel.column.<plugin>/<name>"}` names the wording key (set in one of the plugin's wording files) of a computed column's heading, so the screens show the plugin's own words for it, in the workspace's wording; a computed column with none is headed by its key made readable. A key names a computed column of this panel and a wording key of this plugin's namespace, or the plugin is refused at start.
 
 Filtered by project, a kind with no `project` field follows its `layout_project` reference: a record is in the project its referenced record is in. `show_for(project, view) -> bool` lists the panel only on the projects it returns True for (a panel of what a parent project's children share, say); without it the panel is on every project.
 
@@ -201,13 +205,15 @@ A read-only document panel (listed in `provides.panels`): a page the plugin comp
 
 The screens draw a small Markdown subset as their own elements, never HTML: headings (`#` to `###`), paragraphs, bullet and numbered lists (one level), tables (a header row, then `|---|`), rules (`---`), and inline `**strong**`, `*emphasis*`, `` `code` `` and links. `[text](record:<kind>/<id>)` links to a record the plugin may read (core or its own; one that doesn't exist shows as its text) and opens its page; `[text](https://...)` links to a page outside, shown with its real domain. Anything else, raw HTML included, shows as the characters it is. Up to 200,000 characters. `show_for(project, view) -> bool` lists it only on some projects, as for record panels.
 
-#### `registrar.data_form(name: str, *, label: str, folder: str, schema: type[BaseModel], description: str = '', pattern: str = '*.yaml', single: bool = False) -> None`
+#### `registrar.data_form(name: str, *, label: str, folder: str, schema: type[BaseModel], description: str = '', pattern: str = '*.yaml', single: bool = False, preview: Callable | None = None) -> None`
 
 A kind of data file the person edits through a form (listed in `provides.data_forms`): the files in `folder` of the plugin's data layers (`view.data`) that match `pattern`, each checked against `schema` (a pydantic model; every field needs a default and a description, as in `Settings`). `pattern` is a glob relative to the folder, ending in `.yaml`, with at most one level of subfolder: `*.yaml` (the default), `*/item.yaml` (one folder per item, beside its own files) or `stages.yaml`. With `single=True` the form is that one file (`pattern` names it): it is listed even before it exists, and no other file can be made.
 
 The screens list the files with the layer each comes from (shipped, the workspace's, a project's) and any problem each has, checked as the plugin's loader would and with defaults checked too (a required value left empty shows). They offer a form built from the schema, as for settings: editing a shipped file saves a copy in the workspace's layer (or a project's), never the shipped one; a new file starts from the schema's defaults or from another file of the kind ("start from"); a copy can be removed to fall back to the less specific one. A save writes only the keys the file already had plus those the person set, never the whole model with its defaults, so keys left out stay left out (a template's `extends` keeps following its base). Every save is checked against the schema (a refusal names the field, or says the file's own rule when the model's validator refused it) and offers Undo. The list shows each file's first problem; opening the file shows the form with it. The plugin reads the files as before, with `view.data(path, project=...)`, and must read them with this same schema: a key left out of a file takes the schema's default, so a loader with other defaults (or a field it requires that the form defaults) sees a different file than the form checked.
 
 Every field needs a default because the form builds the model with no values to learn them, so a rule over the whole model ("this is required unless that is set") can't be a model validator: it would refuse that empty model and the form would show no defaults. Put such a rule in the plugin's loader, where the file is read, or in a lint on the ops that use the file.
+
+`preview(view, settings, project, saved_file) -> Preview` shows what the file will look like, beside its form (a sample page set in a template, a rendered cover): `view` is an `ActionContext` (a read view that may run the plugin's declared programs, as person actions do), `settings` the plugin's settings, `project` the record of the project in view (None for the workspace's own file) and `saved_file` the file's name as the form lists it (read it with `view.data(saved_file, project=...)` for the copy in effect). It returns a `Preview` of an image (`image/png`, `image/jpeg`, `image/gif` or `image/webp`), plain text (`text/plain`) or a short document (`text/markdown`, drawn from the same small Markdown subset as `registrar.document`, never as HTML). It runs as the person, changes nothing, after each save and when the person presses Refresh, within `workspace.plugins.preview_seconds` seconds. A preview that raises, returns something else, is too large (`workspace.plugins.actions.preview_mb`) or runs out of time shows that beside the form, and never blocks or undoes the save; it is not counted as the plugin failing.
 
 #### `registrar.job(name: str, *, every_minutes: int, run: Callable) -> None`
 
@@ -719,12 +725,15 @@ Registered with `registrar.task_kind` (see Registering). A task kind with a `pac
 
 What a run of a plugin's task kind sees beyond its instructions. `stable` parts are the same on every run of the kind for the same record (a style sheet, the summaries around a chapter) and go first, so providers can reuse a cached prefix; `request` parts are this run's material (the chapter) and go last. `max_output` and `expected_output` (tokens) size this run when its record says how long the answer will be (a planned word count); the estimate and the call use them unless the workspace sets them for the task kind in `ai.tasks`.
 
+`max_chars` is the pack's own cap on the whole packet's parts, in characters (the pack's own setting, read by its packet function). The knowledge section (`view.knowledge`) is the core's own text, which the pack can size before it builds its parts (`view.knowledge_chars`). After the parts come back, the core adds up every part, its section's included; when the whole is over `max_chars` it trims only its own section, never the pack's parts: the narrowest rules move to the per-input part and facts are cut by rank (both counted on the run's knowledge log and said in the packet), and a packet still over the cap fails the run with that reason before anything is sent.
+
 | Field | Type | Default |
 |---|---|---|
 | `stable` | list[Part] | `[]` |
 | `request` | list[Part] | `[]` |
 | `max_output` | int \| None | `None` |
 | `expected_output` | int \| None | `None` |
+| `max_chars` | int \| None | `None` |
 
 ### Part
 
@@ -748,13 +757,66 @@ The two parts `view.knowledge` returns: `stable` for `PacketParts.stable` and `p
 | `stable` | Part | required |
 | `per_input` | Part | required |
 
+### SearchResult
+
+One result of `PacketContext.search`, with its source. `place` is where it was found (one of `SEARCH_KINDS`), `kind` the record kind it is (`fact`, `rule`, `action`, `source` for a past input), `id` its id, `text` its words (a passage for a past input, cut short), `project` the project it belongs to (or None), `untrusted` whether it rests on outside content (put it in a `Part` that isn't trusted), and `replaced_by` the newer fact that replaced it. Searching never marks anything: the part you build from it carries its own marks.
+
+| Field | Type | Default |
+|---|---|---|
+| `place` | str | required |
+| `kind` | str | required |
+| `id` | str | required |
+| `text` | str | required |
+| `project` | str \| None | `None` |
+| `untrusted` | bool | `False` |
+| `replaced_by` | str \| None | `None` |
+| `score` | float | `0.0` |
+
 ### PacketContext
 
 The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's request). A note from anyone but the person is shown to the run as untrusted material. `request` is the run's request id and `part` the part of the record it names (as given to `queue_request(part=)`), or None.
 
+#### `view.search(words: str, *, kinds: Sequence[str] = (), projects: Sequence[str] = (), limit: int | None = None) -> list[SearchResult]`
+
+The core's own search of the workspace's knowledge, the same bounded local search its runs use: facts, past inputs, records and the standing rules, lessons, glossary and routing, ranked by how many of the words they share (a word many entries hold counts for less). `kinds` limits it to some of `SEARCH_KINDS` (none: all of them), `projects` to material of those projects and material of none, and `limit` is how many results come back (at most `dispatch.knowledge.search_results`, which is also the default). Results are only those at a data level the run's own accounts are allowed (the level of the record the run is about and of its request; a result above it is left out, never raised to), each with its source. A past input and any fact from outside content comes back `untrusted`: put it in a `Part` that isn't trusted. A run may search at most `dispatch.knowledge.pack_searches` times; one more raises `StoreError` with the code `search_limit`, which stops the run with that reason. Every search is logged on the run's knowledge log: the words, the kinds, how many results and which ids were sent. It must be deterministic and quick, like the rest of a packet function.
+
 #### `view.knowledge(text: str = '', *, projects: Sequence[str] = ()) -> KnowledgeParts`
 
 What the workspace has learned that applies to this run, as two parts the packet places: the standing rules, the lessons for this task kind and a small glossary (the `stable` part, the same for every run of the kind), and the rules, lessons, routing, glossary terms and facts that depend on this run (the `per_input` part). Put `stable` in `PacketParts.stable` and `per_input` in `PacketParts.request`; the core logs on the run what the parts gave it, as for its own tasks, and refuses a packet that puts a part in the wrong list. `text` is the words that decide which terms and facts apply (a chapter's text, say); it is only read, never sent. The run's projects are the request's project and the one the record is in; `projects` adds others. A rule or lesson whose scope excludes every one of them is left out, and lessons and rules aimed at this task kind (by its `<plugin>/<name>`) reach it. The facts include those recorded about the record the work is on (a fact's `about`, which any record can have, a pack's own included). For work declared `learning` "own" (a task kind, or the record type it works on), facts are left out and no names are matched against people. A packet that never calls this gets nothing new.
+
+#### `view.knowledge_chars` (a property)
+
+How many characters the core's knowledge section takes in this packet, so a pack with a cap of its own can size its parts before it builds them: the size of what the last `knowledge()` call returned, or, before any call, of what `knowledge()` with no arguments would return. It is the whole section: the standing part and the part for this run. The core trims its own section, never the pack's parts, if the whole packet ends up over `PacketParts.max_chars` (see there).
+
+The places `view.search` looks in: `facts`, `inputs`, `records`, `knowledge`.
+
+## Failures and their codes
+
+The registrar refused a declaration (a duplicate name, a missing callback, a value of the wrong shape). It is a `ValueError`, as before, with a stable `code`: `registration.<method>`, one for each registrar method (the method that refused, `registration.task_kind` for `registrar.task_kind`). Match the code, never the text.
+
+A failure the plugin API raises carries a stable `code` (`error.code`); match the code in tests and in handlers, never the text, which keeps being reworded. These are the failures of `view`, the writer and the contexts (a `StoreError`, `PluginMisuse` or `NeedsPerson`); a failure that isn't the API's own, such as a validator's refusal, has an empty code. A declaration the registrar refuses is a `ValueError` (`RegistrationRefused`) whose code is `registration.<registrar method>`: `registration.task_kind` for `registrar.task_kind`, `registration.name` for an identifier that isn't namespaced.
+
+| Code | Meaning |
+|---|---|
+| `bad_argument` | A call was given a value of the wrong shape (ancestors asked for with no project id, say). |
+| `bad_path` | A data path wasn't a relative path inside the plugin's data. |
+| `bad_search` | A search was given words, kinds, projects or a limit of the wrong shape. |
+| `conflict` | Another write changed the same field since the record was read. |
+| `duplicate_record` | A record with the same values in a `unique` field group already exists. |
+| `event_outside_op` | An event was raised from somewhere other than an op. |
+| `files_unavailable` | Files can't be read where this call runs. |
+| `invalid_record` | The record would not be valid for its kind. |
+| `missing_reference` | A reference field names a record that doesn't exist. |
+| `no_such_file` | There is no file with that id. |
+| `other_plugins_task` | An action asked for the price of another plugin's task kind. |
+| `outside_declared_fields` | An op wrote a record kind or field it didn't declare in `writes`. |
+| `person_only` | An op set a value only the person may set; it is held for them. |
+| `search_limit` | A packet function made more searches than `dispatch.knowledge.pack_searches` allows for one run. |
+| `stage_approval_is_core` | A plugin tried to approve a stage's task; approval belongs to the core. |
+| `still_referred_to` | A record can't be deleted while another record refers to it. |
+| `undeclared_interface` | A plugin read another plugin's records without a declared interface. |
+| `use_set_text` | A long text field was written as a plain value; write it with `writer.set_text`. |
+| `use_stage_move` | A record's stage was changed outside the `stage.move` op. |
 
 ## Lints
 
@@ -900,6 +962,8 @@ A plugin's wording files (`provides.wording`) may set these keys for identifiers
 | `setup_step.{setup step}` | A setup step's title in the setup guide (instead of its label). |
 | `setup_step.{setup step}.explanation` | A setup step's explanation in the setup guide. |
 | `welcome.skip.{setup step}` | The words on a setup step's Skip button. |
+| `action.unavailable.{action}` | What a person is told when they start an action whose `show_for` no longer holds. |
+| `panel.column.{column}` | The heading of a panel's computed column, named by `registrar.panel(computed_labels=)`. |
 
 ## Connectors
 
@@ -1004,7 +1068,7 @@ Why a read failed. `kind`: auth (sign in again), no_access, not_found, outage (t
 
 ### Testing a connector: `engine.plugin_api.testing`
 
-Testing a plugin: part of the plugin API, for plugins' own tests. A connector or a channel without a network (`connector_context`, `channel_context`, `read`), and everything else in a throwaway workspace (`plugin_workspace`).
+Testing a plugin: part of the plugin API, for plugins' own tests. A connector or a channel without a network (`connector_context`, `channel_context`, `read`), everything else in a throwaway workspace (`plugin_workspace`), and a packet function's context from one (`packet_context`).
 
 ```
 from engine.plugin_api.testing import Reply, connector_context, read
@@ -1129,6 +1193,17 @@ The files the synced folder would hold now, by path, as the core writes them (th
 
 #### `ws.close() -> None`
 
+#### `packet_context(ws: 'PluginWorkspace', task: 'str', target: 'Any' = None, *, origin: 'str' = 'pm', part: 'dict[str, Any] | None' = None, project: 'str | None' = None) -> 'Any'`
+
+The `PacketContext` the core would give a task kind's packet function for a run of `task` on `target` (a Stored, or (kind, id), or None), from this workspace: the read view, with the knowledge section the core would add (`context.knowledge(...)`, `context.knowledge_chars`) and the core's search (`context.search(...)`) wired exactly as in a run, at the data level of the record the run is about. `origin` is who started it ("pm", "input" or "schedule"), `part` the part of the record it names, `project` the request's project. Nothing is queued or run:
+
+```
+context = packet_context(ws, "myplugin/read", ("myplugin/chapter", "CH-1"))
+parts = packet(record, context, settings, "")
+```
+
+Test the packet function's own cap by returning `PacketParts(max_chars=...)`: the cap is enforced when a run's packet is built (`ws.ask`), where the core trims its own section first.
+
 #### Outcome
 
 What became of a changeset: its id, its `status` (applied, held, rejected) and one entry per op (`op`, `status` applied/held/refused, `reason`). `refused` lists the reasons of the refused ops; `problems` are those of the changeset as a whole.
@@ -1252,7 +1327,7 @@ The answer to `undo` when the service took the act back.
 
 | Error | Meaning |
 |---|---|
-| `StoreError` | A write can't be made as asked. |
+| `StoreError` | A write can't be made as asked. A failure the plugin API raises carries a stable `code` (the plugin guide's table of failure codes); callers and tests match the code, never the text, which keeps being reworded. A failure with no code has an empty one. |
 | `NeedsPerson` | An op set a value only the person may set; the host holds it for the person instead of applying it. |
 | `PluginMisuse` | The plugin broke its contract (reached outside its scope); the host disables it for the run. |
 | `ToolError` | A run that can't start: an undeclared or missing tool, or a bad file name or pattern. |
@@ -1277,6 +1352,7 @@ In the workspace's `config/workspace.yaml`; the person can change them.
 | `workspace.plugins.tools.output_kb` | int | `512` | How much of a program's output and error stream is kept, in KB. |
 | `workspace.plugins.tools.collect_file_mb` | float | `25` | Largest file a program wrote that is returned to the plugin. |
 | `workspace.plugins.tools.collect_total_mb` | float | `100` | Most a program's returned files may add up to, in MB. |
+| `workspace.plugins.preview_seconds` | float | `10` | How long a preview beside a plugin's data form may take. One that takes longer says so beside the form; the save is never held up. |
 | `workspace.plugins.jobs` | dict[str, JobSettings] | see below | Plugins' scheduled work, by job name: on or off, and how often. |
 | `workspace.plugins.jobs.enabled` | bool | `True` | Off: the job doesn't run. |
 | `workspace.plugins.jobs.every_minutes` | int \| None | `None` | How often it runs; unset means the plugin's default. |
@@ -1528,6 +1604,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `approval` | Literal['required', 'granted'] \| None | `None` | Needs the person's go before dispatch: stage tasks, runs above the amount to confirm, and the first run waiting for a go. A request waiting for the go is `needs_you` with approval `required`; the go sets it to `granted` and queues the request. |
 | `estimate_usd` | float \| None | `None` | What the run was estimated to cost when it asked for a go. |
 | `range_usd` | list[float] \| None | `None` | What the whole request was estimated to cost, low and high, with its fix rounds, searches and the stronger model, when it was last dispatched; none when it can't be priced. |
+| `range_account` | str \| None | `None` | The AI account the estimate was priced on: the first one that may see the material and whose model's context window holds the packet and its answer. |
 | `spend_cap_usd` | float \| None | `None` | The most the request may spend in all under the person's go: what it had spent before the go plus the high figure; none until the first dispatch after a go. |
 | `note` | str \| None | `None` | The person's own words that came with the request. |
 | `source` | str \| None | `None` | The id of the source the request is about, if any. |
@@ -1930,6 +2007,13 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `knowledge.searches[].words` | str | `''` | The words searched for. |
 | `knowledge.searches[].kinds` | list[str] | `[]` | The kinds searched: facts, inputs, records, knowledge. |
 | `knowledge.searches[].results` | int | `0` | How many results came back. |
+| `knowledge.pack_searches` | list[PackSearch] | `[]` | The searches the add-on's own packet function made while building it. |
+| `knowledge.pack_searches[].words` | str | `''` | The words searched for. |
+| `knowledge.pack_searches[].kinds` | list[str] | `[]` | The places searched: facts, inputs, records, knowledge. |
+| `knowledge.pack_searches[].projects` | list[str] | `[]` | The projects it was limited to; none means all. |
+| `knowledge.pack_searches[].results` | int | `0` | How many results came back. |
+| `knowledge.pack_searches[].sent` | list[str] | `[]` | The ids of the results the packet function received. |
+| `knowledge.trimmed_chars` | int | `0` | How many characters the core took out of its own knowledge section so the packet fit its add-on's own limit (rules moved to the part for this run, facts cut by rank). |
 | `knowledge.refused_checks` | list[str] | `[]` | The names of the checks that refused this call's answer, each once, including refusals the answer was sent back to fix. |
 
 ### `signal` (SIG-n)

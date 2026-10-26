@@ -59,6 +59,7 @@ class Query:
     ids: tuple[str, ...] = ()
     project: str | None = None
     kinds: tuple[str, ...] = KINDS
+    projects: tuple[str, ...] = ()  # more than one project: material of any of them, and of none
 
 
 @dataclass(frozen=True)
@@ -328,7 +329,8 @@ def _rank(
     total = sum(weight.values())
     hits = []
     for doc in docs:
-        if query.project and doc.project not in (None, query.project):
+        in_projects = {*([query.project] if query.project else []), *query.projects}
+        if in_projects and doc.project not in (None, *in_projects):
             continue
         common = doc.words & wanted
         found = sum(weight[w] for w in common)

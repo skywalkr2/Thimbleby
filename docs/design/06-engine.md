@@ -468,6 +468,28 @@ facts with 6.18 and 6.19.
   questions, the glossary and the rules are never dropped (only compacted as above); if they alone exceed the budget, an automation problem
   tells the PM to raise it. Whatever is left out is listed in the packet ("12 older log entries omitted") and on the `Run`, so
   a thin answer can be traced to a thin packet.
+- **An add-on's packet** (plugin API 0.3.90; answers 207, 209 and 210). A task kind's packet function gets a `PacketContext`
+  that does three more things. `view.search(words, kinds=, projects=, limit=)` is the same bounded local search the core's
+  own runs use (`engine/search.py`), over facts, past inputs, records and the standing knowledge: it returns only material at
+  or below the data level of the run's own request and record (never raised to a higher one), marks what rests on outside
+  content `untrusted` (and the run's changeset is then untrusted whatever the part's own mark), is capped by
+  `dispatch.knowledge.search_results` and at most `dispatch.knowledge.pack_searches` times for one run (a further call raises
+  `StoreError` coded `search_limit`), and every search is logged on the run (`knowledge.pack_searches`: the words, kinds,
+  projects, how many results and the ids sent). `view.knowledge_chars` is the size of the knowledge section before the pack
+  builds its parts. `PacketParts(max_chars=N)` is the pack's own cap on every part's text together: after the parts come back
+  the core adds them up, and over the cap it trims **only its own section**, first moving the narrowest rules to the part for
+  this run, then cutting facts by rank, counted in the run's knowledge log (`rules_moved`, `facts_left_out`,
+  `trimmed_chars`) and said in the packet; a packet still over the cap fails the run before anything is sent, with that
+  reason on the request, and the pack's own parts are never cut. (A rule moved to the part for this run comes back with
+  every run it covers, so moving it lightens the always-sent part, not the whole; only cut facts shrink the whole.)
+  `engine.plugin_api.testing.packet_context(ws, task, target)` gives a pack's tests the same context, with the section
+  the core would add. **Built:** `tests/test_plugin_api_0390_screens_runs.py::test_a_packet_function_searches_the_core_bounded_by_kind_project_and_limit`,
+  `::test_a_search_keeps_to_the_runs_data_level_and_marks_what_comes_from_outside`,
+  `::test_a_run_logs_what_its_packet_function_searched_for_and_what_it_was_sent`,
+  `::test_a_packet_function_may_search_only_as_often_as_the_setting_allows`,
+  `::test_the_kits_packet_context_has_the_knowledge_section_the_core_would_add`,
+  `::test_over_the_packs_cap_the_core_trims_its_own_facts_and_never_the_packs_parts`,
+  `::test_without_a_cap_nothing_is_trimmed_and_a_packet_still_over_a_cap_fails_before_anything_is_sent`.
 - **Self-check:** validates each changeset with the applier's checks right after the run and sends failures back for one fix
   round. Recovers the request id from unreadable output and re-queues it.
 - Picks the provider and model from `config/ai.yaml`, with the fallback chain on usage limits or auth failures; a request with
@@ -2095,6 +2117,26 @@ registers its own, plugins add theirs (3.3).
 
 Adding a vendor that speaks the common format means adding a `providers:` entry; one with its own API means adding an adapter
 plugin and an entry. Nothing else changes.
+
+**A packet that fits the model's window** (plugin API 0.3.90; answer 191). The context window is read from the account's
+model list (the adapter's catalog, `ModelInfo.context_tokens`), never assumed from a model's name or its vendor. The core counts
+the packet and the answer's limit against each account's window on the tier and sends the run only to an account whose window
+holds both; the count is the app's own corrected for that account's model (`ai.estimates`) and, when the packet is within
+`ai.estimates.context_margin` of the window and the account's service offers a count (`count_tokens`), that count. The estimate is
+priced on the first account that fits (`request.range_account`, and the go's line names the account when it is not the tier's
+first), and a run that fits nowhere stops before anything is sent, saying the largest window there is. A task kind may declare
+`min_context` (`ai.tasks.<kind>.min_context` overrides it) so an estimate before a packet exists (an action pricing a batch,
+`context.estimate`) is priced on an account that fits, and the work stays off a smaller model however short the packet.
+**The tier a run uses** is decided in one order: the workspace's `ai.tasks.<kind>.tier`, then the tier the kind declares (a
+tier named for one kind is more specific than a role, and a pack's own tier is one of these), then its role's tier
+(`ai.roles`), then the default; a routing rule that matches the request still applies first. **Built:**
+`tests/test_plugin_api_0390_screens_runs.py::test_a_run_goes_only_to_an_account_whose_window_holds_the_packet_and_the_estimate_names_it`,
+`::test_a_run_that_fits_nowhere_says_so_before_anything_is_sent`,
+`::test_a_kinds_own_minimum_window_keeps_it_off_a_smaller_model_however_short_the_packet`,
+`::test_the_accounts_own_count_decides_when_the_packet_is_near_the_windows_edge`,
+`::test_the_estimate_before_a_packet_exists_is_priced_on_the_first_account_whose_window_holds_the_work`,
+`::test_the_tier_order_is_the_workspaces_then_the_kinds_own_then_its_roles_then_the_default`,
+`::test_a_pack_tier_a_kind_declares_wins_over_its_role_and_falls_back_until_it_is_mapped`.
 
 **Routing by capability, not by name.** Each task kind declares what it needs (a screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
 checks that model's capabilities and the request's data level against `allowed_data`, and falls through the fallback chain if

@@ -40,7 +40,8 @@ ADD_ONS = "add-ons"
 #: scan for new terms, for each input; the catalogs, tokens and refresh time of the Add-ons screen, for each time it
 #: reads them; whether a switch of account is offered a check, for each switch; how much of a
 #: file is read, for each file; the window and the smallest week of the quality figures, for each time they are asked
-#: for).
+#: for; how long a preview beside a data form may take, and how many searches an add-on's packet function may make,
+#: for each time they are used).
 #: Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
@@ -61,6 +62,7 @@ LIVE_KEYS = (
     "watch.",
     "steward.",
     "workspace.plugins.catalog.",
+    "workspace.plugins.preview_seconds",
     "language.bare_confirmation_words",
     "language.rule_report_phrases",
     "language.new_term_patterns",
@@ -78,6 +80,7 @@ LIVE_KEYS = (
     "dispatch.knowledge.new_terms_per_day",
     "dispatch.knowledge.quality_window_days",
     "dispatch.knowledge.min_corrections_per_week",
+    "dispatch.knowledge.pack_searches",
 )
 
 

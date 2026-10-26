@@ -219,25 +219,27 @@ def task_kind(name: str) -> TaskKind:
 
 
 def settings(cfg: Any, kind: TaskKind | None, name: str | None = None) -> Any:
-    """A task kind's settings: its own defaults, then the tier its role maps to (ai.roles), then whatever the
-    workspace's ai.tasks.<kind> sets."""
+    """A task kind's settings: the tier its role maps to (ai.roles), then the kind's own declared defaults (a tier it
+    names wins over its role's, being the more specific), then whatever the workspace's ai.tasks.<kind> sets."""
     from engine.config.schema import TaskSettings
 
     key = kind.name if kind is not None else name
     configured = cfg.ai.tasks.get(key) if key else None
-    values = dict(kind.defaults) if kind is not None else {}
+    values = {}
     role_tier = getattr(cfg.ai.roles, kind.role).tier if kind is not None else None
     if role_tier is not None:
         values["tier"] = role_tier
+    if kind is not None:
+        values.update(kind.defaults)
     if configured is not None:
         values.update({f: getattr(configured, f) for f in configured.model_fields_set})
     return TaskSettings.model_validate(values)
 
 
 def default_tier(cfg: Any, kind: TaskKind) -> str:
-    """The tier a kind of work uses while the workspace's `ai.tasks.<kind>.tier` says nothing: its role's tier
-    (ai.roles) when that is set, else the tier the kind itself asks for, else the usual one."""
+    """The tier a kind of work uses while the workspace's `ai.tasks.<kind>.tier` says nothing: the tier the kind
+    itself declares, else its role's tier (ai.roles) when that is set, else the usual one."""
     from engine.config.schema import TaskSettings
 
     role_tier = getattr(cfg.ai.roles, kind.role).tier
-    return role_tier or kind.defaults.get("tier") or TaskSettings.model_fields["tier"].get_default()
+    return kind.defaults.get("tier") or role_tier or TaskSettings.model_fields["tier"].get_default()

@@ -4,6 +4,38 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The screens, runs and packets answers of the batched plugin API release (P2, answers 195, 187, 189, 207, 210, 209, 191, 196, 203)
+
+**Decided:** The answers promised to a pack's builder in `docs/project/plugin-answers-34-48.md` for screens, runs, packets and
+models are built as answered, in part B2 of the one batched release. An action may be offered only while other records allow
+it (`show_for(view, target)`, asked again when it is started, refused in the pack's own wording). A data form may have a preview
+beside it (a picture, text or a short document, run as the person after each save and on Refresh within the new setting
+`workspace.plugins.preview_seconds`, 10; a failure or a timeout is said beside the form and never blocks the save). A
+computed column's heading is a wording key the pack names (`computed_labels`). A pack's packet function can search the core
+(`view.search`, bounded, at the run's own data levels, logged on the run), read the knowledge section's size
+(`view.knowledge_chars`) and give its own cap (`PacketParts.max_chars`); over the cap the core trims only its own section and a
+packet still over fails the run before anything is sent. The test kit builds the same context (`testing.packet_context`). The
+core fits a packet to each account's context window (counted with the account's own count near the edge), prices the estimate on
+the first account that fits and names it, and says so before anything is sent when none does; a kind may declare
+`min_context`. The tier order is now the workspace's choice for the kind, then the tier the kind declares (a pack's own
+included), then its role's, then the default (before, a role's tier beat a declared one). A failure the plugin API raises
+carries a stable `code`, from a table in the guide. Choices made while building: the pack's cap is named by the packet
+function (`PacketParts.max_chars`), since the answer named no declaration; a rule moved to the part for the run comes back
+with every run it covers, so trimming it lightens the always-sent part but not the whole, and only cut facts shrink the whole,
+which the design says now; a failing preview or a preview that hangs is not counted against the pack; a form with a preview
+stays open after a save; search results never rise above the level of the run's own request and record; the adapter
+interface's model list is its catalog (`ModelInfo.context_tokens`), not a call named `models()`; a registrar refusal is a
+`RegistrationRefused` (still a `ValueError`) coded by the registrar method. **Decided by:** the owner, 2026-10-26, the one
+batched plugin API release; answers 187 to 210 in plugin-answers-34-48.md. **Why:** the answers were promised and the hold was
+lifted once for them; a role's tier beating a kind's own made a pack's own tier lose to a general setting. **Impact:** design
+3.3, 4.8, 6.6, 6.16 and 7.2; the registrar (`action(show_for=)`, `data_form(preview=)`, `panel(computed_labels=)`,
+`task_kind(min_context=)`), `PacketParts.max_chars`, `PacketContext.search` and `.knowledge_chars`, `SearchResult`,
+`RegistrationRefused`, `FAILURE_CODES`, `StoreError.code`, the test kit (`packet_context`), three routes' views (`GET
+/api/data-forms` gains `has_preview`, the new `GET /api/data-forms/{name}/preview`, `GET /api/panels` gains `column_labels`, a
+request's `range_account`), the run's knowledge log (`pack_searches`, `trimmed_chars`) and four settings
+(`workspace.plugins.preview_seconds`, `dispatch.knowledge.pack_searches`, `ai.estimates.context_margin`,
+`ai.tasks.<kind>.min_context`, all kept behind Advanced); no change to scope. The plugin API version is raised once, at the end
+of the release. Change log: section 223.
 ## 2026-10-26: An add-on's sign-in names its sent mail, an add-on's source can look further back, any to-do has a lead time, any record has facts (plugin API release, part A2)
 
 **Decided:** The second part of the one batched plugin API release. (1) A source a sign-in declares may be marked `sent`: the

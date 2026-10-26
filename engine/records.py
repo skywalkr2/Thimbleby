@@ -1342,6 +1342,11 @@ class Request(Record):
         description="What the whole request was estimated to cost, low and high, with its fix rounds, searches and "
         "the stronger model, when it was last dispatched; none when it can't be priced.",
     )
+    range_account: str | None = Field(
+        None,
+        description="The AI account the estimate was priced on: the first one that may see the material and whose "
+        "model's context window holds the packet and its answer.",
+    )
     spend_cap_usd: float | None = Field(
         None,
         description="The most the request may spend in all under the person's go: what it had spent before the go "
@@ -2042,6 +2047,20 @@ class RunSearch(BaseModel):
     results: int = Field(0, description="How many results came back.")
 
 
+class PackSearch(BaseModel):
+    """One search an add-on's packet function made for the run (`view.search`), what came back and what was sent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    words: str = Field("", description="The words searched for.")
+    kinds: list[str] = Field(
+        default_factory=list, description="The places searched: facts, inputs, records, knowledge."
+    )
+    projects: list[str] = Field(default_factory=list, description="The projects it was limited to; none means all.")
+    results: int = Field(0, description="How many results came back.")
+    sent: list[str] = Field(default_factory=list, description="The ids of the results the packet function received.")
+
+
 class RunKnowledge(BaseModel):
     """The knowledge log of one run (design 6.22): what it was given and what it searched for, so a bad result can be
     traced to knowledge that was missing or ignored."""
@@ -2070,6 +2089,14 @@ class RunKnowledge(BaseModel):
         description="The ids of the rules moved out of the always-sent part because it passed its size budget.",
     )
     searches: list[RunSearch] = Field(default_factory=list, description="The searches it asked for.")
+    pack_searches: list[PackSearch] = Field(
+        default_factory=list, description="The searches the add-on's own packet function made while building it."
+    )
+    trimmed_chars: int = Field(
+        0,
+        description="How many characters the core took out of its own knowledge section so the packet fit its add-on's "
+        "own limit (rules moved to the part for this run, facts cut by rank).",
+    )
     refused_checks: list[str] = Field(
         default_factory=list,
         description="The names of the checks that refused this call's answer, each once, including refusals the answer "

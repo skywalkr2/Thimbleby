@@ -75,6 +75,13 @@ class PackCalls:
     def run(self, pack: str, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """The result of `fn(*args, **kwargs)` run for `pack`. Raises what it raised (`PackExit` for an exit) or
         `PackTimeout` when it was still running after the limit."""
+        return self._run(pack, self._limit(), fn, args, kwargs)
+
+    def run_within(self, pack: str, seconds: float, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        """The same, held to `seconds` instead of the usual limit (work the person waits on for a set time)."""
+        return self._run(pack, seconds, fn, args, kwargs)
+
+    def _run(self, pack: str, limit: float, fn: Callable[..., Any], args: tuple, kwargs: dict) -> Any:
         runner = self._runner(pack)
         if threading.current_thread() is runner.thread:
             return fn(*args, **kwargs)
@@ -84,7 +91,6 @@ class PackCalls:
         context = contextvars.copy_context()
         job = _Job(lambda: context.run(fn, *args, **kwargs))
         runner.jobs.put(job)
-        limit = self._limit()
         if not job.done.wait(limit):
             job.abandoned = True
             raise PackTimeout(f"took longer than {limit:g} seconds")

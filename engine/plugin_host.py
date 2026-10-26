@@ -60,6 +60,8 @@ WORDING_KEYS = {
     "setup_step.{setup step}": "A setup step's title in the setup guide (instead of its label).",
     "setup_step.{setup step}.explanation": "A setup step's explanation in the setup guide.",
     "welcome.skip.{setup step}": "The words on a setup step's Skip button.",
+    "action.unavailable.{action}": "What a person is told when they start an action whose `show_for` no longer holds.",
+    "panel.column.{column}": "The heading of a panel's computed column, named by `registrar.panel(computed_labels=)`.",
 }
 
 

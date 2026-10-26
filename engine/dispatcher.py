@@ -228,9 +228,16 @@ def process(
     estimate, high = request_range(
         cfg, router, packet.task, tier, stronger, data_level=level, use=use, content=content, independent=independent
     )
-    _set(
-        store, request_id, range_usd=[round(estimate, 4), round(high or estimate, 4)] if estimate is not None else None
+    account = router.account_for(
+        packet.task, tier=tier, data_level=level, use=use, content=content, independent=independent
     )
+    _set(
+        store,
+        request_id,
+        range_usd=[round(estimate, 4), round(high or estimate, 4)] if estimate is not None else None,
+        range_account=account.provider if account is not None else None,
+    )
+    named = _named_account(cfg, tier, account, use)
     budgets = cfg.ai.budgets
     if estimate is not None and estimate > budgets.per_run_usd:
         return needs_you(
@@ -268,7 +275,7 @@ def process(
             state="needs_you",
             approval="required",
             estimate_usd=round(estimate, 4),
-            waiting=f"{about(estimate, high)} Waiting for you to start it.",
+            waiting=f"{about(estimate, high, named)} Waiting for you to start it.",
         )
         return None
     kind = store.plugins.task_kind(req.data["task"])
@@ -1427,11 +1434,25 @@ def needs_you(store: Store, request_id: str, why: str, cause: dict | None = None
     return None
 
 
-def about(low: float, high: float | None) -> str:
-    """A request's cost in words: one figure when the high one adds nothing, else the range."""
+def about(low: float, high: float | None, account: str | None = None) -> str:
+    """A request's cost in words: one figure when the high one adds nothing, else the range, and the account it is
+    priced on when that isn't the one the person set first for the work."""
+    on = f" on {account}" if account else ""
     if high is None or round(high, 2) <= round(low, 2):
-        return f"About ${low:.2f}."
-    return f"About ${low:.2f}, at most ${high:.2f}."
+        return f"About ${low:.2f}{on}."
+    return f"About ${low:.2f}{on}, at most ${high:.2f}."
+
+
+def _named_account(cfg: Config, tier: str, account: Any, use: str | None) -> str | None:
+    """The name of the account an estimate is priced on, when it isn't the one the tier names first (the first
+    account's model couldn't hold the packet, say) and the person didn't pick it themselves; else None."""
+    if account is None or use is not None:
+        return None
+    first = cfg.ai.tiers.get(tier)
+    if first is None or f"{account.provider}/{account.model_key}" == first.use:
+        return None
+    settings = cfg.ai.providers.get(account.provider)
+    return (settings.label if settings is not None and settings.label else account.provider) or None
 
 
 def grant_first_go(store: Store) -> int:

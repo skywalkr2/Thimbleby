@@ -31,6 +31,7 @@ const FORM: S["DataFormView"] = {
   description: "How a book looks.",
   pattern: "*.yaml",
   single: false,
+  has_preview: false,
 };
 const file = (name: string, layers: DataFile["layers"], extra: Partial<DataFile> = {}): DataFile => ({
   file: name,
@@ -231,4 +232,80 @@ test("a copy that doesn't fit the form says so on the form and can be saved to f
   const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
   expect(await within(form).findByText(/Your copy couldn't be shown/)).toBeInTheDocument();
   expect(within(form).getByRole("button", { name: "Save classic.yaml" })).toBeEnabled();
+});
+
+const PREVIEW_FORM: S["DataFormView"] = { ...FORM, has_preview: true };
+const markdown = (text: string): S["DataFormPreview"] => ({
+  state: "ok",
+  message: "",
+  preview: { name: "page.md", media_type: "text/markdown", caption: "Sample page", alt: "Sample page", data_base64: "" },
+  document: [{ type: "heading", level: 1, inlines: [{ text, code: false, em: false, strong: false }], items: [], header: [], rows: [], ordered: false }],
+});
+
+function openPreview(extra: Record<string, (body: unknown) => unknown> = {}) {
+  return open({
+    "GET data-forms": () => [PREVIEW_FORM],
+    "GET data-forms/demo/template/preview?path=classic.yaml": () => markdown("Set in Classic"),
+    "POST data-forms/demo/template/file": () => ({ before: null }),
+    ...extra,
+  });
+}
+
+test("a form with a preview shows it beside the fields, runs it again after a save and on Refresh, and stays open", async () => {
+  const { calls, user } = openPreview();
+  await user.click(await screen.findByRole("button", { name: "Change classic.yaml" }));
+  const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
+  const preview = await within(form).findByRole("region", { name: "How it looks" });
+  expect(await within(preview).findByRole("heading", { name: "Set in Classic" })).toBeInTheDocument();
+  const runs = () => calls.filter((c) => c.route === "GET data-forms/demo/template/preview?path=classic.yaml").length;
+  expect(runs()).toBe(1);
+  await user.clear(within(form).getByLabelText("About sizes.body"));
+  await user.type(within(form).getByLabelText("About sizes.body"), "10");
+  await user.click(within(form).getByRole("button", { name: "Save classic.yaml" }));
+  expect(await screen.findByText("Saved your copy of classic.yaml.")).toBeInTheDocument();
+  // The form stays open, and the preview ran again for the saved copy.
+  await waitFor(() => expect(runs()).toBeGreaterThan(1));
+  expect(screen.getByRole("form", { name: "Changing classic.yaml" })).toBeInTheDocument();
+  const before = runs();
+  await user.click(within(preview).getByRole("button", { name: "Refresh" }));
+  await waitFor(() => expect(runs()).toBeGreaterThan(before));
+});
+
+test("a preview that fails or takes too long says so beside the form, and the save still works", async () => {
+  const { calls, user } = openPreview({
+    "GET data-forms/demo/template/preview?path=classic.yaml": () => ({
+      state: "timeout",
+      message: "it took longer than 10 seconds",
+      preview: null,
+      document: null,
+    }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Change classic.yaml" }));
+  const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
+  expect(await within(form).findByText(/The preview took too long: it took longer than 10 seconds\. Your save isn't affected\./)).toBeInTheDocument();
+  await user.clear(within(form).getByLabelText("About sizes.body"));
+  await user.type(within(form).getByLabelText("About sizes.body"), "10");
+  await user.click(within(form).getByRole("button", { name: "Save classic.yaml" }));
+  await waitFor(() => expect(body(calls, "POST data-forms/demo/template/file")).toBeDefined());
+});
+
+test("a new file has no preview until it is saved, and a form without one shows none", async () => {
+  const { calls, user } = openPreview({
+    "GET data-forms/demo/template/file?path=fresh.yaml": () =>
+      view("fresh.yaml", { layer: null, layers: [], items: ITEMS.map((i) => ({ ...i, value: i.default, source: "default" as const })) }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Create a file for Templates" }));
+  await user.type(await screen.findByLabelText("Name of the new file"), "fresh");
+  await user.click(screen.getByRole("button", { name: "Start with the supplied settings" }));
+  const form = await screen.findByRole("form", { name: "Create file fresh.yaml" });
+  expect(await within(form).findByText("Save the file to see how it looks.")).toBeInTheDocument();
+  expect(calls.some((c) => c.route.startsWith("GET data-forms/demo/template/preview"))).toBe(false);
+});
+
+test("a form with no preview has no preview section", async () => {
+  const { user } = open();
+  await user.click(await screen.findByRole("button", { name: "Change classic.yaml" }));
+  const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
+  await within(form).findByLabelText("About title");
+  expect(within(form).queryByRole("region", { name: "How it looks" })).toBeNull();
 });

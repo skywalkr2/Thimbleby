@@ -201,6 +201,14 @@ class PluginSettings(ConfigModel):
         default_factory=ToolSettings,
         description="Limits on the outside programs plugins run (where they are found is set per computer, not here).",
     )
+    preview_seconds: float = Field(
+        10,
+        gt=0,
+        le=600,
+        description="How long a preview beside a plugin's data form may take. One that takes longer says so beside the "
+        "form; the save is never held up.",
+        json_schema_extra={"advanced": True},
+    )
     jobs: dict[str, JobSettings] = Field(
         default_factory=dict, description="Plugins' scheduled work, by job name: on or off, and how often."
     )
@@ -815,12 +823,20 @@ class TaskSettings(ConfigModel):
         description="For a check: accept a run on an account that wrote the work, as a fresh run that sees only its "
         "packet, when no other account can take it. Unset follows the same choice for checks in general.",
     )
+    min_context: int = Field(
+        0,
+        ge=0,
+        description="The smallest context window, in tokens, a model must have for this kind of work, so the estimate "
+        "can name an account that fits before a packet is built. 0 leaves it to the size of each packet.",
+        json_schema_extra={"advanced": True},
+    )
 
 
 class RoleSettings(ConfigModel):
     tier: str | None = Field(
         None,
-        description="The tier for every kind of work in this role, unless tasks.<kind>.tier says otherwise.",
+        description="The tier for every kind of work in this role, unless tasks.<kind>.tier or the tier the kind of "
+        "work declares for itself says otherwise.",
         json_schema_extra={"choices": "tiers"},
     )
     same_account: bool = Field(
@@ -971,6 +987,14 @@ class EstimateSettings(ConfigModel):
         description="How many of an account's latest runs its estimates are corrected from: each run whose service "
         "says how much it read moves the account's estimate toward what was really used, by the average of this many "
         "runs.",
+    )
+    context_margin: float = Field(
+        0.1,
+        ge=0,
+        le=1,
+        description="When a packet comes within this share of a model's context window, by the app's own count, the "
+        "account's own count is asked for (where its service offers one) before the run goes to that model.",
+        json_schema_extra={"advanced": True},
     )
 
 
@@ -1182,6 +1206,14 @@ class KnowledgeSettings(ConfigModel):
         2, ge=0, le=5, description="How many times a run may ask to search the workspace before it must answer."
     )
     search_results: int = Field(20, ge=1, le=200, description="Results returned for each search a run asks for.")
+    pack_searches: int = Field(
+        5,
+        ge=0,
+        le=50,
+        description="How many times an add-on's packet function may search the workspace for one run. Each search "
+        "is logged on the run.",
+        json_schema_extra={"advanced": True},
+    )
     refusals_to_packet: RefusalsToPacketSettings = Field(
         default_factory=RefusalsToPacketSettings,
         description="When a check that always refuses keeps refusing a kind of work, its fuller guidance joins that "

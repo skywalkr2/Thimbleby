@@ -12,7 +12,10 @@ import { projectChoices } from "../lib/project-choices";
 import { addonLabel, changedValues, type Draft } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { Preview } from "./ActionReview";
+import { Document } from "./Panel";
 import { restoreFocus } from "./ModalPanel";
+import { SafeText } from "./SafeText";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { ItemFields } from "./SettingRow";
 import { Skeleton } from "../ui/Skeleton";
@@ -302,6 +305,8 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
   const [edits, setEdits] = useState<Record<string, Draft>>({});
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  // A new file has nothing to preview until it is saved.
+  const [savedOnce, setSavedOnce] = useState(false);
   const loaded = !!view.data;
   // The cursor starts in the form's first field once it has loaded.
   const formEl = useRef<HTMLFormElement>(null);
@@ -331,7 +336,14 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
           await client.invalidateQueries();
         },
       });
-      props.onClose();
+      if (form.has_preview) {
+        // The form stays open beside its preview, which runs again for what was just saved.
+        setEdits({});
+        setSavedOnce(true);
+        setBusy(false);
+      } else {
+        props.onClose();
+      }
     } catch (err) {
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
       setBusy(false);
@@ -366,6 +378,7 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
             </p>
           )}
           <ItemFields items={items} edits={edits} onEdit={(key, draft) => setEdits((all) => ({ ...all, [key]: draft }))} disabled={busy} idPrefix={`${base}-`} />
+          {form.has_preview && <FormPreview form={form} file={file} project={project} enabled={!isNew || savedOnce} />}
         </>
       )}
       {problem && (
@@ -382,5 +395,52 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
         </button>
       </div>
     </form>
+  );
+}
+
+/** What the add-on's preview shows for the file: a picture, text or a short document, run for the saved copy. It
+ * never holds up a save: when it fails or takes too long it says so here, with the add-on's own reason. */
+function FormPreview(props: { form: Form; file: string; project: string; enabled: boolean }) {
+  const { t } = useWords();
+  const { form, file, project, enabled } = props;
+  const base = useId();
+  const shown = useQuery({
+    queryKey: ["data-forms", form.name, "preview", file, project],
+    queryFn: () => api.dataFormPreview(form.name, file, project || undefined),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+  const titleId = `${base}-preview`;
+  let body;
+  if (!enabled) body = <p className="hint">{t("dataform.preview_unsaved")}</p>;
+  else if (shown.isPending || shown.isFetching) body = <p className="hint">{t("loading")}</p>;
+  else if (shown.isError) body = <p className="problem-note">{t("dataform.preview_failed", { reason: t("dataform.preview_no_reason") })}</p>;
+  else if (shown.data.state !== "ok") {
+    body = (
+      <p className="problem-note" role="status">
+        <Icon name="alert" size={16} />
+        <SafeText text={t(shown.data.state === "timeout" ? "dataform.preview_slow" : "dataform.preview_failed", { reason: shown.data.message })} />
+      </p>
+    );
+  } else if (shown.data.document) {
+    body = (
+      <figure className="preview">
+        <Document blocks={shown.data.document} onOpenRecord={() => undefined} />
+        {shown.data.preview?.caption && <figcaption aria-hidden="true">{shown.data.preview.caption}</figcaption>}
+      </figure>
+    );
+  } else if (shown.data.preview) body = <Preview item={shown.data.preview} />;
+  return (
+    <section className="data-file-preview" aria-labelledby={titleId}>
+      <div className="heading">
+        <h6 id={titleId}>{t("dataform.preview_title")}</h6>
+        <button type="button" className="btn quiet" disabled={!enabled || shown.isFetching} onClick={() => void shown.refetch()}>
+          {t("dataform.preview_refresh")}
+        </button>
+      </div>
+      {body}
+    </section>
   );
 }

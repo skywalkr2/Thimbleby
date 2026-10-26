@@ -123,8 +123,73 @@ def available(store: Store, kind: str | None = None, record_id: str | None = Non
                 continue
             if action.where and (target is None or not action.offered_on(target, text_presence(store, view, target))):
                 continue
+            if not _allowed_now(store, view, name, action, target):
+                continue
             found.append(action)
     return sorted(found, key=lambda a: a.label)
+
+
+def _allowed_now(store: Store, view: Any, plugin: str, action: Any, target: Any) -> bool:
+    """Whether the action's `show_for` lets it be offered now (true when it has none). The call is contained: one that
+    raises or doesn't return in time hides the action and counts as a failure of that place, like any contained call."""
+    if action.show_for is None:
+        return True
+    from copy import deepcopy
+
+    from engine.plugin_api import ReadView
+
+    where = f"action {action.name} show_for"
+    try:
+        shown = store.plugins.pack_calls.run(
+            plugin,
+            action.show_for,
+            store.plugins._with_files(ReadView(view, plugin)),
+            deepcopy(target) if target is not None else None,
+        )
+    except Exception as err:
+        store.plugins.failed(plugin, where, err)
+        return False
+    store.plugins.succeeded(plugin, where)
+    return bool(shown)
+
+
+def unavailable_words(store: Store, action: Any, what: str) -> str:
+    """What the person is told when an action they started no longer holds: the plugin's own wording for it
+    (`action.unavailable.<action>`), else the core's sentence."""
+    own = store.plugins.wording().get(f"action.unavailable.{action.name}")
+    return own or f"{action.label} isn't available for this {what} now."
+
+
+def action_context(store: Store, cfg: Config, plugin: str, view: Any | None = None) -> Any:
+    """What a person action (or a data form's preview) sees: the read view, the plugin's settings, its declared
+    programs, the limits a proposal works within, the workspace's clock and the price of a run."""
+    from engine.plugin_api import ActionContext
+
+    view = view if view is not None else store.read()
+    registrar = store.plugins.registrars[plugin]
+    actions, files = cfg.workspace.plugins.actions, cfg.storage.files
+    limits = {
+        "max_items": actions.max_items,
+        "max_requests": actions.max_requests,
+        "max_previews": actions.max_previews,
+        "preview_mb": actions.preview_mb,
+        "keep_minutes": actions.keep_minutes,
+        "max_file_mb": files.max_file_mb,
+        "max_total_mb": files.max_total_mb,
+        "room_mb": max(0.0, files.max_total_mb - sum(f.data["size"] for f in view.list("file")) / (1024 * 1024)),
+        "accepted_types": list(files.accepted_types),
+    }
+    return store.plugins._with_files(
+        ActionContext(
+            view,
+            plugin,
+            registrar.config,
+            store.plugins.tool_box(plugin),
+            limits,
+            now=_workspace_now(cfg),
+            estimator=_estimator(store, cfg),
+        )
+    )
 
 
 def _registration(store: Store, name: str) -> tuple[str, Any]:
@@ -148,7 +213,7 @@ def preview(
     """Run an action and keep its proposal for the person's review. `previous` is the review this one replaces (after a
     choice changed): its ticks carry over to items with the same id and the same ops. `kept` then sets ticks by item
     id."""
-    from engine.plugin_api import ActionContext, Proposal
+    from engine.plugin_api import Proposal
     from engine.tools import ToolError
 
     plugin, action = _registration(store, name)
@@ -171,30 +236,12 @@ def preview(
             raise StoreError(f"{action.label} doesn't work on this kind of file")
         if not action.offered_on(record, text_presence(store, view, record)):
             raise StoreError(f"{action.label} isn't for this {what}")
-    registrar = store.plugins.registrars[plugin]
-    actions, files = cfg.workspace.plugins.actions, cfg.storage.files
-    limits = {
-        "max_items": actions.max_items,
-        "max_requests": actions.max_requests,
-        "max_previews": actions.max_previews,
-        "preview_mb": actions.preview_mb,
-        "keep_minutes": actions.keep_minutes,
-        "max_file_mb": files.max_file_mb,
-        "max_total_mb": files.max_total_mb,
-        "room_mb": max(0.0, files.max_total_mb - sum(f.data["size"] for f in view.list("file")) / (1024 * 1024)),
-        "accepted_types": list(files.accepted_types),
-    }
-    context = store.plugins._with_files(
-        ActionContext(
-            view,
-            plugin,
-            registrar.config,
-            store.plugins.tool_box(plugin),
-            limits,
-            now=_workspace_now(cfg),
-            estimator=_estimator(store, cfg),
-        )
-    )
+    if action.show_for is not None and not _allowed_now(store, view, plugin, action, record):
+        from engine.records import kind_label
+
+        what = kind_label(store.plugins.records.get(action.on), action.on) if action.on else "workspace"
+        raise StoreError(unavailable_words(store, action, what))
+    context = action_context(store, cfg, plugin, view)
     try:
         result = action.run(record, context, dict(choices))
     except (ToolError, StoreError) as err:

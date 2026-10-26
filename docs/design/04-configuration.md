@@ -514,7 +514,14 @@ content_levels:                  # kinds of material some accounts won't take, b
   Native vendor adapters and the aggregator-specific layer in the first design are *designed, not yet built*; none is needed
   for the features above.
 - **Tasks and roles.** The core's task kinds are `notes` (reading a hand-in or a watched change) and `ask` (6.25). A task kind
-  declares a role; `ai.roles.<role>.tier` maps the role to a tier and `ai.tasks.<kind>` overrides any of it. `same_account`
+  declares a role; `ai.roles.<role>.tier` maps the role to a tier and `ai.tasks.<kind>` overrides any of it. The tier a run
+  uses is decided in this order: `ai.tasks.<kind>.tier`, then the tier the kind itself declares, then its role's tier, then
+  `routine` (plugin API 0.3.90; before it a role's tier beat a kind's declared one). `ai.tasks.<kind>.min_context` is the
+  smallest context window, in tokens, a model must have for that work (0: the size of each packet decides, 6.16);
+  `ai.estimates.context_margin` (0.1) is how near a model's window a packet may come, by the app's own count, before the
+  account's own count is asked for; `dispatch.knowledge.pack_searches` (5) is how many times an add-on's packet function may
+  search the workspace for one run; and `workspace.plugins.preview_seconds` (10) is how long a preview beside an add-on's data
+  form may take (7.2). `same_account`
   (on a role or a kind) lets a check run as a fresh run on the account that wrote the work, when no other account can take
   it (6.16; decisions, 2026-10-12, "Roles, and second opinions on one account").
 - **An add-on's own tiers** (plugin API 0.3.90; decisions, 2026-10-26): an add-on may declare tiers of its own

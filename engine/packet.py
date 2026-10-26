@@ -12,6 +12,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date
 from html import escape
+from typing import Any
 
 from engine import areas, audience
 from engine.ai.task import AiTask
@@ -26,7 +27,7 @@ from engine.names import People
 from engine.ops import reach_choices, reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
-from engine.records import Rule, RunKnowledge
+from engine.records import PackSearch, Rule, RunKnowledge
 from engine.refusals import seed_section
 from engine.storage import Store, Stored, StoreError
 from engine.tasks import TaskKind, settings
@@ -240,6 +241,7 @@ class _Learned:
     log: RunKnowledge
     stable_log: RunKnowledge  # the part of the log the stable text accounts for
     per_input_log: RunKnowledge  # and the part the per-input text accounts for
+    facts_chars: int = 0  # how much of `per_input` is the facts section
 
 
 def _learned(
@@ -255,11 +257,13 @@ def _learned(
     learns: bool = True,
     hide: Callable[[Mapping], bool] | None = None,
     about: tuple[str, ...] = (),
+    budgets: Any = None,
 ) -> _Learned:
     """What the workspace has learned that applies to this run (design 6.22), and the log of it for the run's record.
     The input's projects are the one it was handed in for and the ones its source names; its people are those the text
-    mentions. Work the core's learning doesn't run on (`learns` False) is matched to no people and gets no facts."""
-    settings = cfg.dispatch.knowledge
+    mentions. Work the core's learning doesn't run on (`learns` False) is matched to no people and gets no facts.
+    `budgets` replaces the configured knowledge settings, to fit a pack's packet to its own limit."""
+    settings = budgets or cfg.dispatch.knowledge
     view = store.read()
     named = [*projects, *(source.data.get("projects", []) if source is not None else [])]
     in_input = [p for p in dict.fromkeys(named) if view.get("project", p) is not None]
@@ -301,7 +305,14 @@ def _learned(
         facts_left_out=per_input.facts_left_out,
         rules_present=rules(per_input.ids),
     )
-    return _Learned(stable_text, per_input.text, _merged_logs([stable_log, per_input_log]), stable_log, per_input_log)
+    return _Learned(
+        stable_text,
+        per_input.text,
+        _merged_logs([stable_log, per_input_log]),
+        stable_log,
+        per_input_log,
+        per_input.facts_chars,
+    )
 
 
 def _merged_logs(logs: list[RunKnowledge]) -> RunKnowledge:
@@ -545,6 +556,7 @@ def _task(cfg: Config, store: Store, kind: TaskKind, instructions: str, stable: 
         temperature=chosen.temperature,
         max_output=chosen.max_output,
         output="text" if drafting else "json",
+        min_context=chosen.min_context,
     )
 
 
@@ -595,7 +607,11 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         PacketContext(store.read(), plugin, req.data["origin"], request=req.id, part=req.data.get("part"))
     )
     config = store.plugins.registrars[plugin].config.model_copy(deep=True)
-    view.read_knowledge = _knowledge_reader(store, cfg, kind, req, target, today)
+    reader = _PackKnowledge(store, cfg, kind, req, target, today)
+    searcher = _PackSearch(ws, store, cfg, req)
+    view.read_knowledge = reader.read
+    view.size_knowledge = reader.size
+    view.run_search = searcher
     try:
         parts = kind.packet(target, view, config, note)
     except StoreError as err:
@@ -614,6 +630,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     if placed_wrong or any(p._given is None for p in knowledge):
         store.plugins.disable(plugin, f"packet for {kind.name} placed a knowledge part in the wrong list")
         raise PacketRefused("the add-on this work belongs to failed, and was turned off")
+    _fit_to_cap(parts, every, reader, kind)
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     drafting = kind.output == "draft"
     stable_parts = [
@@ -678,6 +695,9 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     )
     task = _sized(cfg, kind, task, parts)
     log = _merged_logs([p._given for p in {id(p): p for p in knowledge}.values()]) if knowledge else None
+    if searcher.log or reader.trimmed:
+        log = (log or RunKnowledge()).model_copy(update={"trimmed_chars": reader.trimmed})
+        log.pack_searches = [PackSearch(**entry) for entry in searcher.log]
     if log is not None:
         task = replace(task, knowledge=log.model_dump())
     base = None
@@ -694,7 +714,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         empty,
         note,
         too_long=False,
-        untrusted_material=any(not p.trusted for p in every),
+        untrusted_material=any(not p.trusted for p in every) or searcher.untrusted,
         cites=f"{target.kind}:{target.id}" if target is not None else kind.name,
         about=(target.kind, target.id) if target is not None else None,
         draft_base=base,
@@ -704,33 +724,152 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     )
 
 
-def _knowledge_reader(store: Store, cfg: Config, kind: TaskKind, req: Stored, target: Stored | None, today: date):
+class _PackKnowledge:
     """What `view.knowledge` calls in a plugin's packet function: the knowledge section for this task kind, the
     request's project and the record's project (and any the plugin adds), and the text the plugin names, as parts
-    that carry what they give to the run's log."""
-    from engine.plugin_api import KnowledgePart, KnowledgeParts
+    that carry what they give to the run's log. It remembers what it handed out, so that when the whole packet is over
+    the plugin's own limit the core can trim its own section (and only that) and put the smaller text in the same
+    parts."""
 
-    def read(text: str, more: list[str]) -> KnowledgeParts:
-        record = target.data.get("project") if target is not None else None
-        projects = [p for p in (req.data.get("project"), record, *more) if isinstance(p, str)]
-        learned = _learned(
-            store,
-            cfg,
-            kind,
-            People(store, cfg),
+    def __init__(self, store: Store, cfg: Config, kind: TaskKind, req: Stored, target: Stored | None, today: date):
+        self.store, self.cfg, self.kind, self.req, self.target, self.today = store, cfg, kind, req, target, today
+        #: Each `knowledge()` call: (the words, the projects added, the two parts handed out).
+        self.calls: list[tuple[str, list[str], Any]] = []
+        self.trimmed = 0
+
+    def _learn(self, text: str, more: list[str], budgets: Any = None) -> _Learned:
+        record = self.target.data.get("project") if self.target is not None else None
+        projects = [p for p in (self.req.data.get("project"), record, *more) if isinstance(p, str)]
+        return _learned(
+            self.store,
+            self.cfg,
+            self.kind,
+            People(self.store, self.cfg),
             projects=projects,
             source=None,
             text=text,
-            today=today,
-            learns=request_learns(store, req.data),
-            about=(target.id,) if target is not None else (),
+            today=self.today,
+            learns=request_learns(self.store, self.req.data),
+            about=(self.target.id,) if self.target is not None else (),
+            budgets=budgets,
         )
-        return KnowledgeParts(
+
+    def read(self, text: str, more: list[str]) -> Any:
+        from engine.plugin_api import KnowledgePart, KnowledgeParts
+
+        learned = self._learn(text, more)
+        parts = KnowledgeParts(
             KnowledgePart("Standing knowledge", learned.stable, True, section="stable", _given=learned.stable_log),
             KnowledgePart("Knowledge for this run", learned.per_input, True, _given=learned.per_input_log),
         )
+        self.calls.append((text, list(more), parts))
+        return parts
 
-    return read
+    def size(self) -> int:
+        """The characters `knowledge()` with no arguments would give, without handing anything out."""
+        learned = self._learn("", [])
+        return len(learned.stable) + len(learned.per_input)
+
+    def fit(self, excess: int) -> None:
+        """Cut this section back by `excess` characters if it can be: first the narrowest rules leave the standing part
+        for the part for this run (where only those that apply come back), then facts are cut by rank. What was
+        handed out is changed in place, and what it now gives the run is logged."""
+        if not self.calls:
+            return
+        base = self.cfg.dispatch.knowledge
+
+        def whole() -> int:
+            return sum(len(p.stable.text) + len(p.per_input.text) for _, _, p in self.calls)
+
+        def relearn(budgets: Any) -> int:
+            facts = 0
+            for text, more, parts in self.calls:
+                learned = self._learn(text, more, budgets)
+                parts.stable.text, parts.stable._given = learned.stable, learned.stable_log
+                parts.per_input.text, parts.per_input._given = learned.per_input, learned.per_input_log
+                facts = max(facts, learned.facts_chars)
+            return facts
+
+        before = whole()
+        standing = max(len(p.stable.text) for _, _, p in self.calls)
+        tight = max(0, standing - excess)
+        facts = relearn(base.model_copy(update={"stable_budget": tight}))
+        left = excess - (before - whole())
+        if left > 0:
+            # Past the rules only facts can go; the line that says how many were left out takes some room itself.
+            relearn(base.model_copy(update={"stable_budget": tight, "facts_budget": max(0, facts - left - 80)}))
+        self.trimmed = max(0, before - whole())
+
+
+class _PackSearch:
+    """What `view.search` calls in a plugin's packet function: the core's own bounded local search, at the levels the
+    run's accounts may see, a few times for one run, each one logged for the run's knowledge log."""
+
+    def __init__(self, ws: Workspace, store: Store, cfg: Config, req: Stored):
+        from engine.dispatcher import _data_level
+
+        self.ws, self.store, self.cfg, self.req = ws, store, cfg, req
+        #: The material at or below this level may be returned: the level the run's own accounts are chosen for.
+        self.level = _data_level(store, req.data)
+        self.log: list[dict[str, Any]] = []
+        self.untrusted = False
+
+    def __call__(self, words: str, kinds: tuple[str, ...], projects: tuple[str, ...], limit: int) -> list[Any]:
+        from engine import search as workspace_search
+        from engine.plugin_api import SearchResult
+
+        limits = self.cfg.dispatch.knowledge
+        if len(self.log) >= limits.pack_searches:
+            raise StoreError(
+                f"this work searched {limits.pack_searches} times already, which is as often as is allowed for one run",
+                code="search_limit",
+            )
+        query = workspace_search.Query(words=words, projects=projects, kinds=kinds or workspace_search.KINDS)
+        asked = limit if limit else limits.search_results
+        hits = workspace_search.search(
+            self.ws,
+            self.store,
+            query,
+            limit=min(asked, limits.search_results),
+            level=self.level,
+            exclude_sources=[self.req.data["source"]] if self.req.data.get("source") else (),
+        )
+        self.untrusted = self.untrusted or any(h.untrusted for h in hits)
+        self.log.append(
+            {
+                "words": words,
+                "kinds": list(query.kinds),
+                "projects": list(projects),
+                "results": len(hits),
+                "sent": [h.id for h in hits],
+            }
+        )
+        return [
+            SearchResult(h.kind, h.record_kind, h.id, h.text, h.project, h.untrusted, h.replaced_by, round(h.score, 4))
+            for h in hits
+        ]
+
+
+def _fit_to_cap(parts: Any, every: list[Any], reader: _PackKnowledge, kind: TaskKind) -> None:
+    """Hold the packet to the plugin's own cap (`PacketParts.max_chars`, in characters over every part). Over it, the
+    core trims its own knowledge section first and never the plugin's parts; a packet still over fails the run, with
+    that reason, before anything is sent."""
+    cap = getattr(parts, "max_chars", None)
+    if cap is None:
+        return
+    if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
+        raise PacketRefused("the packet's max_chars must be a whole number of characters")
+
+    def whole() -> int:
+        return sum(len(p.text) for p in every)
+
+    if whole() > cap:
+        reader.fit(whole() - cap)
+    if whole() > cap:
+        raise PacketRefused(
+            f"this is too long for the add-on's own limit: {whole():,} characters against {cap:,}, even with what "
+            "was learned cut back as far as it goes. Nothing was sent"
+        )
 
 
 def _sized(cfg: Config, kind: TaskKind, task: AiTask, parts: object) -> AiTask:

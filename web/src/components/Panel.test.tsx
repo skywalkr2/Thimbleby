@@ -54,6 +54,21 @@ test("a table has readable column headers, plain-text cells and the record's tit
   expect(within(within(table).getAllByRole("row")[2]).getAllByRole("cell")[0]).toHaveTextContent("—");
 });
 
+test("a computed column is headed by the add-on's own words when its wording has them, else by its key made readable", async () => {
+  const labelled = panel({ columns: ["title", "word_count", "page_count"], column_labels: { word_count: "panel.column.demo/words" } });
+  fakeApi(routes(labelled));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />, { "panel.column.demo/words": "Words so far" });
+  const table = await screen.findByRole("table");
+  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Title", "Words so far", "Page count", "Actions"]);
+});
+
+test("a heading key the wording doesn't have falls back to the readable key", async () => {
+  fakeApi(routes(panel({ columns: ["title", "word_count"], column_labels: { word_count: "panel.column.demo/missing" } })));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  const table = await screen.findByRole("table");
+  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Title", "Word count", "Actions"]);
+});
+
 test("the title opens the record's page", async () => {
   const user = userEvent.setup();
   const open = vi.fn();

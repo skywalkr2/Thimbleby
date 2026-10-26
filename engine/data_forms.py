@@ -232,3 +232,85 @@ def _write(path: Path, text: str) -> None:
     temporary = path.with_suffix(".yaml.saving")
     temporary.write_text(text, encoding="utf-8")
     temporary.replace(path)
+
+
+#: What a preview may be: pictures, plain text, and a short document in the small Markdown subset (never markup).
+PREVIEW_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "text/plain", "text/markdown"}
+#: The most characters a text or document preview may hold.
+PREVIEW_TEXT_CHARS = 20000
+
+
+def preview(store: Any, cfg: Any, name: str, file: str, project: str | None = None) -> dict[str, Any]:
+    """Run the form's preview for one file as the person (the plugin's declared programs allowed), read only, within
+    `workspace.plugins.preview_seconds`. Never raises for the preview's own trouble: returns {state, message, preview,
+    document} where `state` is "ok", "failed" (it raised, or returned something it may not) or "timeout", and
+    `message` says why in plain words. A preview is never counted as the plugin failing, and never holds up a save."""
+    from copy import deepcopy
+
+    from engine.actions import action_context
+    from engine.documents import DocumentError, blocks
+    from engine.pack_calls import PackExit, PackTimeout
+    from engine.plugin_api import Preview
+
+    host = store.plugins
+    form = _form(host, name)
+    file = _file_name(form, file)
+    if form.preview is None:
+        raise StoreError(f"{form.label} has no preview")
+    plugin = name.split("/", 1)[0]
+    seconds = float(cfg.workspace.plugins.preview_seconds)
+    view = store.read()
+    record = view.get("project", project) if project else None
+    if project and record is None:
+        raise StoreError(f"there is no project {project}")
+    registrar = host.registrars[plugin]
+    context = action_context(store, cfg, plugin, view)
+
+    def failed(state: str, message: str) -> dict[str, Any]:
+        return {"state": state, "message": message, "preview": None, "document": None}
+
+    try:
+        shown = host.pack_calls.run_within(
+            plugin,
+            seconds,
+            form.preview,
+            context,
+            registrar.config.model_copy(deep=True),
+            deepcopy(record) if record is not None else None,
+            file,
+        )
+    except PackTimeout:
+        return failed("timeout", f"it took longer than {seconds:g} seconds")
+    except (StoreError, DocumentError) as err:
+        return failed("failed", str(err))
+    except PackExit:
+        return failed("failed", "it tried to end the program")
+    except Exception as err:
+        log.warning("Plugin %s: the preview of %s failed: %s", plugin, name, err)
+        return failed("failed", str(err) or type(err).__name__)
+    limit = cfg.workspace.plugins.actions.preview_mb * 1024 * 1024
+    if not isinstance(shown, Preview) or shown.media_type not in PREVIEW_TYPES or not isinstance(shown.data, bytes):
+        return failed("failed", "it didn't give a picture, text or a short document")
+    if len(shown.data) > limit:
+        return failed("failed", f"it is larger than {cfg.workspace.plugins.actions.preview_mb:g} MB")
+    item = {
+        "name": shown.name,
+        "media_type": shown.media_type,
+        "caption": shown.caption,
+        "alt": shown.alt or shown.caption,
+        "data": shown.data,
+    }
+    document = None
+    if shown.media_type in ("text/plain", "text/markdown"):
+        try:
+            text = shown.data.decode("utf-8")
+        except UnicodeDecodeError:
+            return failed("failed", "its text isn't readable")
+        if len(text) > PREVIEW_TEXT_CHARS:
+            return failed("failed", f"its text is longer than {PREVIEW_TEXT_CHARS:,} characters")
+        if shown.media_type == "text/markdown":
+            try:
+                document = blocks(text, lambda kind, record_id: False)
+            except DocumentError as err:
+                return failed("failed", str(err))
+    return {"state": "ok", "message": "", "preview": item, "document": document}

@@ -410,7 +410,7 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
 }
 
 /** A picture or plain text the action rendered. Nothing else is ever shown, and nothing is rendered as markup. */
-function Preview(props: { item: S["ActionPreviewItem"] }) {
+export function Preview(props: { item: S["ActionPreviewItem"] }) {
   const { item } = props;
   const label = item.caption || item.name;
   if (IMAGE_TYPES.has(item.media_type)) {

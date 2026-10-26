@@ -145,6 +145,15 @@ function RowActions(props: { panel: S["PanelView"]; row: S["PanelRow"]; label: s
   );
 }
 
+/** A column's heading: the add-on's own words for a computed column when its wording has them, else the key made readable. */
+function useColumnLabel(panel: S["PanelView"]) {
+  const { t, has } = useWords();
+  return (column: string) => {
+    const key = panel.column_labels?.[column];
+    return key && has(key) ? t(key) : readable(column);
+  };
+}
+
 function useCells() {
   const lines = useValueLines();
   const { t } = useWords();
@@ -163,6 +172,7 @@ function Table(props: ViewProps) {
   const { t } = useWords();
   const { panel } = props;
   const cell = useCells();
+  const heading = useColumnLabel(panel);
   return (
     <div className="table-wrap" role="region" aria-labelledby="panel-title" tabIndex={0}>
       <table className="panel-table">
@@ -170,7 +180,7 @@ function Table(props: ViewProps) {
           <tr>
             {panel.columns.map((c) => (
               <th key={c} scope="col">
-                {readable(c)}
+                {heading(c)}
               </th>
             ))}
             <th scope="col">
@@ -208,6 +218,7 @@ function Table(props: ViewProps) {
 function Card(props: ViewProps & { row: S["PanelRow"]; titleColumn: string; skip: string[] }) {
   const { panel, row } = props;
   const cell = useCells();
+  const heading = useColumnLabel(panel);
   const title = cell(row, props.titleColumn);
   const facts = panel.columns.filter((c) => c !== props.titleColumn && !props.skip.includes(c));
   return (
@@ -221,7 +232,7 @@ function Card(props: ViewProps & { row: S["PanelRow"]; titleColumn: string; skip
             <dl className="facts">
               {facts.map((c) => (
                 <div key={c}>
-                  <dt>{readable(c)}</dt>
+                  <dt>{heading(c)}</dt>
                   <dd>{cell(row, c)}</dd>
                 </div>
               ))}
@@ -312,7 +323,7 @@ function Runs(props: { inlines: Inline[]; onOpenRecord: (kind: string, id: strin
 /** A document's headings sit under the panel's own h2: levels 1 to 3 are h3 to h5. */
 const HEADINGS = ["h3", "h4", "h5"] as const;
 
-function Document(props: { blocks: Block[]; onOpenRecord: (kind: string, id: string) => void }) {
+export function Document(props: { blocks: Block[]; onOpenRecord: (kind: string, id: string) => void }) {
   const { onOpenRecord } = props;
   return (
     <div className="document">

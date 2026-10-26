@@ -73,6 +73,62 @@ Part B3 (install, setup, tiers and the guide's corrections):
   a model validator, because the forms build the model with no values; and the request record says a request waiting for the
   go is `needs_you` with approval `required`.
 
+Part B2 (screens, runs, packets and models):
+
+- **An action offered only when other records allow it (195).** `registrar.action(..., show_for=fn(view, target))`: `view` is
+  a read view, `target` a copy of the record the action is offered on (None for an action on the workspace). It is read only
+  and quick, never calls AI, and is checked after `where`. One that raises hides the action and counts as the plugin failing
+  (like a panel's `show_for`). The core asks again when the person starts the action and refuses with the plugin's own
+  wording `action.unavailable.<action>` (the core's sentence when there is none). Every listing of actions on a record
+  (`GET /api/plugin-actions`, a panel row's menu, a Today line's action) goes through it.
+- **A preview beside a data form (187).** `registrar.data_form(..., preview=fn(view, settings, project, saved_file))` returns a
+  `Preview` of a picture (`image/png`, `image/jpeg`, `image/gif`, `image/webp`), plain text (`text/plain`) or a short document
+  (`text/markdown`, the small subset of `registrar.document`, never HTML). `view` is an `ActionContext` (a read view that may
+  run the plugin's declared programs), `project` the record of the project in view (None for the workspace's own file) and
+  `saved_file` the file's name as the form lists it. It runs as the person, read only, after each save and on Refresh, within
+  the setting `workspace.plugins.preview_seconds` (default 10); one that raises, returns something else, is over
+  `workspace.plugins.actions.preview_mb` or runs out of time shows that beside the form (`GET
+  /api/data-forms/{name}/preview?path=` answers 200 with `state` `ok`, `failed` or `timeout`, `message`, and the picture,
+  text or `document` blocks), never blocks the save, and is not counted as the plugin failing. `GET /api/data-forms` gains
+  `has_preview`. A form with a preview stays open after a save.
+- **A computed column's heading (189).** `registrar.panel(..., computed_labels={"words": "panel.column.<plugin>/<name>"})`: the
+  wording key, set in one of the plugin's wording files (the new key pattern `panel.column.{column}`), of the heading of a
+  computed column. A key names a computed column of the panel and lives in the plugin's namespace, or the registrar refuses it.
+  A column with no label, or a key the wording lacks, is headed by its key made readable. `GET /api/panels` gains
+  `column_labels`.
+- **The core's search in a packet function (207).** `view.search(words, kinds=(...), projects=(...), limit=N)` on the
+  `PacketContext` returns `SearchResult`s (`place`, `kind`, `id`, `text`, `project`, `untrusted`, `replaced_by`, `score`): the
+  same bounded local search the core's own runs use, over facts, past inputs, records and the standing knowledge
+  (`SEARCH_KINDS`). Only material at or below the level of the run's own request and record comes back, never raised to a
+  higher one; what rests on outside content comes back `untrusted`, and the run's changeset is then untrusted whatever the
+  part's own mark. `limit` is capped at `dispatch.knowledge.search_results`; a run may search `dispatch.knowledge.pack_searches`
+  times (default 5); one more raises `StoreError` coded `search_limit`. Each search is logged on the run's knowledge log
+  (`knowledge.pack_searches`: words, kinds, projects, how many results, and the ids sent).
+- **The knowledge section against the pack's own cap (210).** `view.knowledge_chars` is the size of the section before the
+  pack builds its parts (the last `knowledge()` call's size, or what `knowledge()` with no words would give).
+  `PacketParts(max_chars=N)` is the pack's own cap on every part's text together, its section's included. Over it, the core
+  trims only its own section, first moving the narrowest rules to the part for this run and then cutting facts by rank,
+  counting what it did (`knowledge.rules_moved`, `knowledge.facts_left_out`, `knowledge.trimmed_chars` on the run, and the
+  packet's own line saying how many facts were left out); a packet still over the cap fails the run before anything is sent,
+  with that reason on the request. The pack's own parts are never cut.
+- **`testing.packet_context(ws, task, target=None, *, origin="pm", part=None, project=None)` (209).** Builds the
+  `PacketContext` the core would give the task kind's packet function from the test workspace, with the knowledge section
+  (`knowledge()`, `knowledge_chars`) and the core's search wired as in a run, at the data level of the record the run is about.
+- **A packet fitted to the model's window (191).** The core measures the packet and the answer's limit against each account's
+  model window (from the account's model list), with the account's own token count when its service offers one and the
+  packet is within `ai.estimates.context_margin` of the window (else the app's count corrected for that model), and sends the run
+  only to an account whose window holds it; the estimate is priced on that account (`range_account` on the request, and the
+  go's line names it when it isn't the tier's first). A run that fits nowhere stops before anything is sent, saying the
+  largest window. `registrar.task_kind(..., min_context=<tokens>)` (the setting `ai.tasks.<kind>.min_context`) gives the
+  estimate a floor before a packet exists, so a batch priced up front (`context.estimate`) is priced on an account that fits.
+- **The tier order (196).** The workspace's `ai.tasks.<kind>.tier`, then the tier the task kind declares (a pack's own tier
+  included), then its role's tier (`ai.roles`), then `routine`. Before, a role's tier beat the kind's declared one. `ai.routing`
+  rules still apply first, and an unmapped pack tier still runs on its fallback tier.
+- **Stable failures (203).** A failure the plugin API raises carries a `code` (`error.code`) from the guide's table
+  (`FAILURE_CODES`): the contract is the code, never the text. The core's `StoreError` has an empty `code` unless the API set one
+  (`ConflictError` is `conflict`, `InvalidRecord` is `invalid_record`). A declaration the registrar refuses is a
+  `RegistrationRefused` (still a `ValueError`) with the code `registration.<registrar method>`.
+
 - **The account's sent mail (`registrar.sign_in`):** a declared source may carry `"sent": True` beside `connector`, `label`,
   `settings` and `every_minutes`. It reads the folder or label the service keeps the person's own sent mail in (named in
   `settings`; the same connector as the inbox). The core starts it with the account's other sources, once for each account,

@@ -786,6 +786,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                         kind=p.kind,
                         view=p.view,
                         columns=list(p.columns),
+                        column_labels=dict(p.computed_labels),
                         primary_action=p.primary_action,
                         row_actions=list(p.row_actions),
                         new_action=p.new_action,
@@ -1496,6 +1497,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     first_go=waits_on_first_go(d),
                     estimate_usd=d.get("estimate_usd"),
                     range_usd=d.get("range_usd"),
+                    range_account=_account_name(cfg, d.get("range_account")),
                     spent_usd=spent.get(req.id),
                     refused=d["state"] == "needs_you" and _last_refused(req.id),
                     cause=_cause_view(d),
@@ -2306,6 +2308,14 @@ def _existing(tx: Any, kind: str, record_id: str) -> Any:
     if rec is None:
         raise StoreError(f"{kind} {record_id} doesn't exist")
     return rec
+
+
+def _account_name(cfg: Config, account: str | None) -> str | None:
+    """An AI account by the name the person gave it (its label, else its id); None when there is none."""
+    if not account:
+        return None
+    found = cfg.ai.providers.get(account)
+    return (found.label if found is not None and found.label else account) or None
 
 
 def _cause_view(request: dict[str, Any]) -> StopCauseView | None:

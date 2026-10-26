@@ -530,6 +530,12 @@ export const api = {
       "GET",
       `data-forms/${named(form)}/file?path=${id(path)}${project ? `&project=${id(project)}` : ""}`,
     ),
+  /** What the form's preview shows for one file now: a picture, text or a short document, or why it can't. */
+  dataFormPreview: (form: string, path: string, project?: string) =>
+    call<S["DataFormPreview"]>(
+      "GET",
+      `data-forms/${named(form)}/preview?path=${id(path)}${project ? `&project=${id(project)}` : ""}`,
+    ),
   saveDataFile: (form: string, body: S["DataFileChange"]) =>
     call<S["DataFileSaved"]>("POST", `data-forms/${named(form)}/file`, body),
   removeDataFile: (form: string, body: S["DataFileChange"]) =>

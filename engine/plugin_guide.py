@@ -291,10 +291,23 @@ def build() -> str:
                 _join(f"### {cls.__name__}", _para(_doc(cls)))
                 + "\n\n"
                 + _table(["Field", "Type", "Default"], _dataclass_rows(cls))
-                for cls in (api.PacketParts, api.Part, api.KnowledgeParts)
+                for cls in (api.PacketParts, api.Part, api.KnowledgeParts, api.SearchResult)
             ),
             "### PacketContext\n\n" + _para(_doc(api.PacketContext)),
             _methods(api.PacketContext, "view"),
+            _join("#### `view.knowledge_chars` (a property)", _para(_doc(api.PacketContext.knowledge_chars.fget))),
+            "The places `view.search` looks in: " + ", ".join(f"`{k}`" for k in api.SEARCH_KINDS) + ".",
+        ),
+        _section(
+            "Failures and their codes",
+            _para(_doc(api.RegistrationRefused)),
+            "A failure the plugin API raises carries a stable `code` (`error.code`); match the code in tests and in "
+            "handlers, never the text, which keeps being reworded. These are the failures of `view`, the writer and "
+            "the contexts (a `StoreError`, `PluginMisuse` or `NeedsPerson`); a failure that isn't the API's own, such "
+            "as a validator's refusal, has an empty code. A declaration the registrar refuses is a `ValueError` "
+            f"(`RegistrationRefused`) whose code is `{api.REGISTRATION_CODE}`: `registration.task_kind` for "
+            "`registrar.task_kind`, `registration.name` for an identifier that isn't namespaced.",
+            _table(["Code", "Meaning"], [[f"`{code}`", text] for code, text in sorted(api.FAILURE_CODES.items())]),
         ),
         _section(
             "Lints",
@@ -374,6 +387,10 @@ def build() -> str:
             ),
             _para(_doc(testing.PluginWorkspace)),
             _methods(testing.PluginWorkspace, "ws"),
+            _join(
+                f"#### `packet_context{inspect.signature(testing.packet_context)}`",
+                _para(_doc(testing.packet_context)),
+            ),
             "\n\n".join(
                 _join(f"#### {cls.__name__}", _para(_doc(cls)))
                 for cls in (

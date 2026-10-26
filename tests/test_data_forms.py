@@ -79,6 +79,7 @@ def test_a_shipped_file_is_listed_and_shown_as_a_form(env):
         "description": "",
         "pattern": "*.yaml",
         "single": False,
+        "has_preview": False,
     }
     assert forms["p18/stages"]["single"] is True and forms["p18/items"]["pattern"] == "*/item.yaml"
     assert c.get(f"{api}/data-forms/p18/templates/files").json() == [

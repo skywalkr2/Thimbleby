@@ -765,6 +765,11 @@ class ChangeItem(BaseModel):
     range_usd: list[float] | None = Field(
         None, description="What the whole request was estimated to cost, low and high; none when it couldn't be priced."
     )
+    range_account: str | None = Field(
+        None,
+        description="The account the estimate is priced on (its name): the first that may see the material and whose "
+        "model can hold the packet and its answer; none when none was found.",
+    )
     spent_usd: float | None = Field(
         None,
         description="What its AI work has cost so far, leaving out runs an outage cut off; none when nothing priced "
@@ -3179,6 +3184,11 @@ class PanelView(BaseModel):
     kind: str
     view: str = Field(description='"list", "table" or "board" for records; "document" for a composed page.')
     columns: list[str]
+    column_labels: dict[str, str] = Field(
+        default_factory=dict,
+        description="For a computed column, the wording key of its heading (from the add-on's wording); a column "
+        "with none is headed by its key made readable.",
+    )
     primary_action: str | None
     row_actions: list[str]
     new_action: str | None = Field(None, description="A person action on the workspace that adds one, shown above.")
@@ -5179,6 +5189,7 @@ class DataFormView(BaseModel):
     description: str = ""
     pattern: str = Field("*.yaml", description="Which files are of this kind, relative to its folder.")
     single: bool = Field(False, description="The kind is one file, named by the pattern; no other can be made.")
+    has_preview: bool = Field(False, description="The add-on shows a preview beside the form (a picture or a page).")
 
 
 class DataFile(BaseModel):
@@ -5202,6 +5213,20 @@ class DataFileView(BaseModel):
     layers: list[Literal["shipped", "workspace", "project"]]
     problem: ScreenText | None = None
     items: list[SettingItem]
+
+
+class DataFormPreview(BaseModel):
+    """A form's preview, as run for the person now. `state` says how it went: `ok` (a picture, text or document is
+    given), `failed` (the add-on's preview raised or gave something it may not) or `timeout` (it ran past
+    `workspace.plugins.preview_seconds`). The reason is the add-on's own, in `message` (plain text, never a screen
+    phrase). A preview never holds up or undoes a save."""
+
+    state: Literal["ok", "failed", "timeout"]
+    message: str = ""
+    preview: ActionPreviewItem | None = Field(None, description="The picture or text, when the state is ok.")
+    document: list[DocumentBlock] | None = Field(
+        None, description="For a short document (text/markdown): its blocks, drawn as elements and never as markup."
+    )
 
 
 class DataFileChange(BaseModel):

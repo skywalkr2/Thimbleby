@@ -91,6 +91,45 @@ class PluginMisuse(StoreError):
     """The plugin broke its contract (reached outside its scope); the host disables it for the run."""
 
 
+class RegistrationRefused(ValueError):
+    """The registrar refused a declaration (a duplicate name, a missing callback, a value of the wrong shape). It is a
+    `ValueError`, as before, with a stable `code`: `registration.<method>`, one for each registrar method (the method
+    that refused, `registration.task_kind` for `registrar.task_kind`). Match the code, never the text."""
+
+    def __init__(self, where: str, message: str):
+        super().__init__(message)
+        self.code = f"registration.{where}"
+
+
+#: The stable codes of the failures the plugin API raises, with what each means. Every one of these failures (a
+#: `StoreError`, `PluginMisuse` or `NeedsPerson` raised by `view`, the writer or a context, and `RegistrationRefused`
+#: from the registrar) carries its code in `.code`; the text beside it keeps improving, so tests and callers match the
+#: code. The guide lists this table. A failure that is not the API's own (a validator's refusal, say) has an empty code.
+FAILURE_CODES: dict[str, str] = {
+    "bad_argument": "A call was given a value of the wrong shape (ancestors asked for with no project id, say).",
+    "bad_path": "A data path wasn't a relative path inside the plugin's data.",
+    "bad_search": "A search was given words, kinds, projects or a limit of the wrong shape.",
+    "conflict": "Another write changed the same field since the record was read.",
+    "duplicate_record": "A record with the same values in a `unique` field group already exists.",
+    "event_outside_op": "An event was raised from somewhere other than an op.",
+    "files_unavailable": "Files can't be read where this call runs.",
+    "invalid_record": "The record would not be valid for its kind.",
+    "missing_reference": "A reference field names a record that doesn't exist.",
+    "no_such_file": "There is no file with that id.",
+    "other_plugins_task": "An action asked for the price of another plugin's task kind.",
+    "outside_declared_fields": "An op wrote a record kind or field it didn't declare in `writes`.",
+    "person_only": "An op set a value only the person may set; it is held for them.",
+    "search_limit": "A packet function made more searches than `dispatch.knowledge.pack_searches` allows for one run.",
+    "stage_approval_is_core": "A plugin tried to approve a stage's task; approval belongs to the core.",
+    "still_referred_to": "A record can't be deleted while another record refers to it.",
+    "undeclared_interface": "A plugin read another plugin's records without a declared interface.",
+    "use_set_text": "A long text field was written as a plain value; write it with `writer.set_text`.",
+    "use_stage_move": "A record's stage was changed outside the `stage.move` op.",
+}
+#: What `RegistrationRefused.code` looks like, for the guide's table.
+REGISTRATION_CODE = "registration.<registrar method>"
+
+
 class _Any:
     def __repr__(self) -> str:
         return "ANY"
@@ -105,7 +144,7 @@ def _data_path(path: str) -> str:
 
     clean = PurePosixPath(path.replace("\\", "/"))
     if not path or clean.is_absolute() or ".." in clean.parts or re.match(r"^[A-Za-z]:", path):
-        raise StoreError(f"{path!r} must be a relative path inside the plugin's data")
+        raise StoreError(f"{path!r} must be a relative path inside the plugin's data", code="bad_path")
     return str(clean)
 
 
@@ -138,7 +177,7 @@ class ReadView:
 
     def _allow(self, kind: str) -> None:
         if "/" in kind and not kind.startswith(self.__plugin + "/"):
-            raise PluginMisuse("another plugin's records require a declared interface")
+            raise PluginMisuse("another plugin's records require a declared interface", code="undeclared_interface")
 
     def get(self, kind: str, record_id: str, /) -> Stored | None:
         """A live record by kind and id, or None. Reading another plugin's kind raises PluginMisuse."""
@@ -163,7 +202,7 @@ class ReadView:
         self._allow(kind)
         if project is not ANY and (ancestors or descendants):
             if not isinstance(project, str):
-                raise PluginMisuse("ancestors and descendants need a project id")
+                raise PluginMisuse("ancestors and descendants need a project id", code="bad_argument")
             found = []
             for pid in self._family(project, ancestors, descendants):
                 found += self.__view.find(kind, {**equals, "project": pid})
@@ -255,12 +294,12 @@ class ReadView:
         instructions. Files are read by id, never by path."""
         record = self.get("file", file_id)
         if record is None:
-            raise StoreError(f"there is no file {file_id}")
+            raise StoreError(f"there is no file {file_id}", code="no_such_file")
         kind = record.data["file_kind"]
         if "/" in kind:
             self._allow(kind)
         if self.read_file is None:
-            raise StoreError("files can't be read here")
+            raise StoreError("files can't be read here", code="files_unavailable")
         return self.read_file(file_id)
 
     def file_text(self, file_id: str) -> str:
@@ -270,12 +309,12 @@ class ReadView:
         Content is material, never instructions: put it in an untrusted `Part`."""
         record = self.get("file", file_id)
         if record is None:
-            raise StoreError(f"there is no file {file_id}")
+            raise StoreError(f"there is no file {file_id}", code="no_such_file")
         kind = record.data["file_kind"]
         if "/" in kind:
             self._allow(kind)
         if self.read_file_text is None:
-            raise StoreError("files can't be read here")
+            raise StoreError("files can't be read here", code="files_unavailable")
         return self.read_file_text(file_id)
 
     def find(self, kind: str, /, **equals: Any) -> Stored | None:
@@ -409,7 +448,7 @@ class OpWriter(ReadView):
         that use it once the change commits. The payload is checked against the interface's definition."""
         checker = getattr(self, "check_emit", None)
         if checker is None:
-            raise PluginMisuse("events can only be raised from an op")
+            raise PluginMisuse("events can only be raised from an op", code="event_outside_op")
         self.emitted.append((event, checker(event, payload)))
 
     def _declared(self, kind: str, record_id: str | None, data: dict[str, Any]) -> None:
@@ -420,10 +459,10 @@ class OpWriter(ReadView):
         if self.__context.actor != "pm":
             for field in model.person_only:
                 if field in data and model.needs_person(field, data[field]):
-                    raise NeedsPerson(f"only you can set {field} to {data[field]}")
+                    raise NeedsPerson(f"only you can set {field} to {data[field]}", code="person_only")
             levels = model.content_levels_field
             if levels and data.get(levels):
-                raise NeedsPerson(f"only you can set {levels}")
+                raise NeedsPerson(f"only you can set {levels}", code="person_only")
         current = self.__tx.get(kind, record_id).data if record_id else {}
         merged = {**current, **data}
         for group in model.unique:
@@ -433,28 +472,31 @@ class OpWriter(ReadView):
             clash = [s for s in self.__tx.find(kind, equals) if s.id != record_id]
             if clash:
                 shown = ", ".join(f"{f}={v}" for f, v in equals.items())
-                raise StoreError(f"there is already a {kind} with {shown}")
+                raise StoreError(f"there is already a {kind} with {shown}", code="duplicate_record")
         for path, target in ref_fields(model):
             field = path.split(".")[0].removesuffix("[]")
             if field not in data:
                 continue
             for value in values_at(data, path):
                 if value is not None and self.__tx.get(target, value) is None:
-                    raise StoreError(f"{path.replace('[]', '')} refers to {target} {value}, which doesn't exist")
+                    raise StoreError(
+                        f"{path.replace('[]', '')} refers to {target} {value}, which doesn't exist",
+                        code="missing_reference",
+                    )
 
     def _write(self, kind: str, fields: set[str]) -> None:
         self._allow(kind)
         allowed = self.__writes.get(kind, ())
         if not allowed or ("*" not in allowed and not fields <= set(allowed)):
-            raise PluginMisuse("op attempted to write outside its declared fields")
+            raise PluginMisuse("op attempted to write outside its declared fields", code="outside_declared_fields")
 
     def create(self, kind: str, data: dict[str, Any]) -> Stored:
         """Create one of this plugin's records (the op declares `("*",)` for the kind). The record type's rules are
         enforced: person-only values from anyone but the person hold the op, unique groups and references refuse it."""
         if kind == "request" and (data.get("stage_start") is not None or data.get("approval") is not None):
-            raise PluginMisuse("stage task approval belongs to the core")
+            raise PluginMisuse("stage task approval belongs to the core", code="stage_approval_is_core")
         if data.get("stage") is not None:
-            raise PluginMisuse("stage changes require stage.move")
+            raise PluginMisuse("stage changes require stage.move", code="use_stage_move")
         self._write(kind, {"*"})
         self._no_long_text(kind, data)
         self._declared(kind, None, data)
@@ -468,7 +510,9 @@ class OpWriter(ReadView):
         model = self.__models.get(kind)
         written = set(long_text_fields(model)) & {k for k, v in data.items() if v is not None} if model else set()
         if written:
-            raise PluginMisuse(f"{', '.join(sorted(written))} is long text: write it with writer.set_text")
+            raise PluginMisuse(
+                f"{', '.join(sorted(written))} is long text: write it with writer.set_text", code="use_set_text"
+            )
 
     def set_text(self, kind: str, record_id: str, field: str, text: str) -> Stored:
         """Write a new version of one of this plugin's long text fields (the op declares the field in `writes`). From
@@ -497,9 +541,9 @@ class OpWriter(ReadView):
         """Change fields of one of this plugin's records, stating the version that was read; a newer version refuses
         the op. Only fields the op declares in `writes` may change; long text fields change with `set_text`."""
         if kind == "request" and {"approval", "stage_start"} & set(changes):
-            raise PluginMisuse("stage task approval belongs to the core")
+            raise PluginMisuse("stage task approval belongs to the core", code="stage_approval_is_core")
         if "stage" in changes:
-            raise PluginMisuse("stage changes require stage.move")
+            raise PluginMisuse("stage changes require stage.move", code="use_stage_move")
         self._write(kind, set(changes))
         self._no_long_text(kind, changes)
         self._declared(kind, record_id, changes)
@@ -513,7 +557,9 @@ class OpWriter(ReadView):
         self._write(kind, {"*"})
         users = self.__referrers(kind, record_id)
         if users:
-            raise StoreError(f"{kind} {record_id} is still referred to by {users[0][0]} {users[0][1]}")
+            raise StoreError(
+                f"{kind} {record_id} is still referred to by {users[0][0]} {users[0][1]}", code="still_referred_to"
+            )
         self.__tx.delete(kind, record_id, self.__context, read_version=read_version)
         self.touched.append({"kind": kind, "id": record_id})
 
@@ -580,7 +626,10 @@ class EventContext(ReadView):
             data["needs_go"] = True
         if item is not None:
             if about is not None or not isinstance(item, InterfaceItem) or not item.key:
-                raise PluginMisuse("name what the work is about with about= or with an item read from view.interface")
+                raise PluginMisuse(
+                    "name what the work is about with about= or with an item read from view.interface",
+                    code="bad_argument",
+                )
             data["item"] = item.key
             provider = provider or item.provider
         if provider is not None:
@@ -608,6 +657,28 @@ class EventContext(ReadView):
         self.commands.append(("question", {"title": title, "text": text}))
 
 
+#: The places `PacketContext.search` looks in.
+SEARCH_KINDS = ("facts", "inputs", "records", "knowledge")
+
+
+@dataclass(frozen=True)
+class SearchResult:
+    """One result of `PacketContext.search`, with its source. `place` is where it was found (one of `SEARCH_KINDS`),
+    `kind` the record kind it is (`fact`, `rule`, `action`, `source` for a past input), `id` its id, `text` its words
+    (a passage for a past input, cut short), `project` the project it belongs to (or None), `untrusted` whether it
+    rests on outside content (put it in a `Part` that isn't trusted), and `replaced_by` the newer fact that replaced
+    it. Searching never marks anything: the part you build from it carries its own marks."""
+
+    place: str
+    kind: str
+    id: str
+    text: str
+    project: str | None = None
+    untrusted: bool = False
+    replaced_by: str | None = None
+    score: float = 0.0
+
+
 class PacketContext(ReadView):
     """The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the
     note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's
@@ -624,6 +695,51 @@ class PacketContext(ReadView):
 
     #: Set by the host: builds the knowledge section for `knowledge`.
     read_knowledge: Callable[[str, list[str]], KnowledgeParts] | None = None
+    #: Set by the host: the size of the knowledge section a `knowledge()` call with no arguments would give.
+    size_knowledge: Callable[[], int] | None = None
+    #: Set by the host: the core's search, `(words, kinds, projects, limit) -> list[SearchResult]`.
+    run_search: Callable[[str, tuple[str, ...], tuple[str, ...], int], list[SearchResult]] | None = None
+    _last_knowledge: KnowledgeParts | None = None
+
+    @property
+    def knowledge_chars(self) -> int:
+        """How many characters the core's knowledge section takes in this packet, so a pack with a cap of its own
+        can size its parts before it builds them: the size of what the last `knowledge()` call returned, or, before
+        any call, of what `knowledge()` with no arguments would return. It is the whole section: the standing part
+        and the part for this run. The core trims its own section, never the pack's parts, if the whole packet ends up
+        over `PacketParts.max_chars` (see there)."""
+        last = self._last_knowledge
+        if last is not None:
+            return len(last.stable.text) + len(last.per_input.text)
+        return int(self.size_knowledge()) if self.size_knowledge is not None else 0
+
+    def search(
+        self, words: str, *, kinds: Sequence[str] = (), projects: Sequence[str] = (), limit: int | None = None
+    ) -> list[SearchResult]:
+        """The core's own search of the workspace's knowledge, the same bounded local search its runs use: facts, past
+        inputs, records and the standing rules, lessons, glossary and routing, ranked by how many of the words they
+        share (a word many entries hold counts for less). `kinds` limits it to some of `SEARCH_KINDS` (none: all of
+        them), `projects` to material of those projects and material of none, and `limit` is how many results come back
+        (at most `dispatch.knowledge.search_results`, which is also the default). Results are only those at a data level
+        the run's own accounts are allowed (the level of the record the run is about and of its request; a result above
+        it is left out, never raised to), each with its source. A past input and any fact from outside content comes
+        back `untrusted`: put it in a `Part` that isn't trusted. A run may search at most
+        `dispatch.knowledge.pack_searches` times; one more raises `StoreError` with the code `search_limit`, which stops
+        the run with that reason. Every search is logged on the run's knowledge log: the words, the kinds, how many
+        results and which ids were sent. It must be deterministic and quick, like the rest of a packet function."""
+        if not isinstance(words, str) or not words.strip():
+            raise PluginMisuse("a search needs words", code="bad_search")
+        chosen = tuple(kinds) if isinstance(kinds, (list, tuple)) else None
+        if chosen is None or not all(k in SEARCH_KINDS for k in chosen):
+            raise PluginMisuse(f"search kinds are among {', '.join(SEARCH_KINDS)}", code="bad_search")
+        named = tuple(projects) if isinstance(projects, (list, tuple)) else None
+        if named is None or not all(isinstance(p, str) and p for p in named):
+            raise PluginMisuse("projects is a list of project ids", code="bad_search")
+        if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 1):
+            raise PluginMisuse("limit is a whole number of results, at least 1", code="bad_search")
+        if self.run_search is None:
+            return []
+        return list(self.run_search(words.strip(), chosen, named, 0 if limit is None else limit))
 
     def knowledge(self, text: str = "", *, projects: Sequence[str] = ()) -> KnowledgeParts:
         """What the workspace has learned that applies to this run, as two parts the packet places: the standing
@@ -639,15 +755,18 @@ class PacketContext(ReadView):
         kind, or the record type it works on), facts are left out and no names are matched against people. A packet
         that never calls this gets nothing new."""
         if not isinstance(text, str):
-            raise PluginMisuse("the text knowledge is chosen by must be a string")
+            raise PluginMisuse("the text knowledge is chosen by must be a string", code="bad_argument")
         named = list(projects) if isinstance(projects, (list, tuple)) else None
         if named is None or not all(isinstance(p, str) for p in named):
-            raise PluginMisuse("projects must be a list of project ids")
+            raise PluginMisuse("projects must be a list of project ids", code="bad_argument")
         if self.read_knowledge is None:
-            return KnowledgeParts(
+            found = KnowledgeParts(
                 KnowledgePart("Knowledge", "", True, section="stable"), KnowledgePart("Knowledge", "")
             )
-        return self.read_knowledge(text, named)
+        else:
+            found = self.read_knowledge(text, named)
+        self._last_knowledge = found
+        return found
 
 
 class ActionContext(ReadView):
@@ -684,7 +803,7 @@ class ActionContext(ReadView):
         Sum it over the runs an action queues to say what the whole series would cost; each run still waits for the
         person's go."""
         if "/" in task and not task.startswith(self._own + "/"):
-            raise PluginMisuse("an action estimates core work or its own plugin's")
+            raise PluginMisuse("an action estimates core work or its own plugin's", code="other_plugins_task")
         if self._estimator is None:
             return None
         return self._estimator(task, int(input_tokens), None if output_tokens is None else int(output_tokens))
@@ -892,6 +1011,7 @@ class PanelRegistration:
     computed: dict[str, Callable] = field(default_factory=dict)
     show_for: Callable | None = None
     render: Callable | None = None  # a document panel's `render(view, settings, project)`
+    computed_labels: dict[str, str] = field(default_factory=dict)  # computed column -> the wording key of its heading
 
 
 @dataclass(frozen=True)
@@ -905,6 +1025,7 @@ class DataFormRegistration:
     description: str = ""
     pattern: str = "*.yaml"
     single: bool = False
+    preview: Callable | None = None  # (view, settings, project, saved_file) -> Preview
 
 
 @dataclass(frozen=True)
@@ -1063,23 +1184,35 @@ class PacketParts:
     kind for the same record (a style sheet, the summaries around a chapter) and go first, so providers can reuse a
     cached prefix; `request` parts are this run's material (the chapter) and go last. `max_output` and
     `expected_output` (tokens) size this run when its record says how long the answer will be (a planned word count);
-    the estimate and the call use them unless the workspace sets them for the task kind in `ai.tasks`."""
+    the estimate and the call use them unless the workspace sets them for the task kind in `ai.tasks`.
+
+    `max_chars` is the pack's own cap on the whole packet's parts, in characters (the pack's own setting, read by its
+    packet function). The knowledge section (`view.knowledge`) is the core's own text, which the pack can size before it
+    builds its parts (`view.knowledge_chars`). After the parts come back, the core adds up every part, its section's
+    included; when the whole is over `max_chars` it trims only its own section, never the pack's parts: the narrowest
+    rules move to the per-input part and facts are cut by rank (both counted on the run's knowledge log and said in
+    the packet), and a packet still over the cap fails the run with that reason before anything is sent."""
 
     stable: list[Part] = field(default_factory=list)
     request: list[Part] = field(default_factory=list)
     max_output: int | None = None
     expected_output: int | None = None
+    max_chars: int | None = None
 
 
 def _narrowed(where: dict[str, Any] | None, on: str | None) -> dict[str, tuple[Any, ...]]:
     """A `where` filter as {field: (values...)}, checked to be plain values on a record kind."""
     if where is not None and (on is None or not where):
-        raise ValueError("where narrows the records of kind `on`; it needs `on` and at least one field")
+        raise RegistrationRefused(
+            "where", "where narrows the records of kind `on`; it needs `on` and at least one field"
+        )
     narrowed = {}
     for key, value in (where or {}).items():
         values = tuple(value) if isinstance(value, (list, tuple, set, frozenset)) else (value,)
         if not values or not all(v is None or v is ANY or isinstance(v, (str, int, float, bool)) for v in values):
-            raise ValueError("where matches fields against plain values, ANY (has a value) or None (has none)")
+            raise RegistrationRefused(
+                "where", "where matches fields against plain values, ANY (has a value) or None (has none)"
+            )
         narrowed[str(key)] = values
     return narrowed
 
@@ -1094,6 +1227,7 @@ class ActionRegistration:
     run: Callable
     file_kinds: tuple[str, ...] = ()
     where: dict[str, tuple[Any, ...]] = field(default_factory=dict)
+    show_for: Callable | None = None  # (view, target) -> bool: offered only while other records allow it
 
     def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this action applies to a record (of kind `on`): every `where` field holds one of its values."""
@@ -1212,16 +1346,16 @@ class Registrar:
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
-            raise ValueError(f"identifier must be namespaced {self.name}/<name>: {name}")
+            raise RegistrationRefused("name", f"identifier must be namespaced {self.name}/<name>: {name}")
 
     def record_type(self, model: type[Record]) -> None:
         """Register a record kind: a `Record` subclass with `record_kind` ("<plugin>/<name>") and an id `prefix`
         (capital letters, unique in the workspace)."""
         if not issubclass(model, Record):
-            raise ValueError("record_type requires a Record model")
+            raise RegistrationRefused("record_type", "record_type requires a Record model")
         self._name(model.record_kind)
         if model.record_kind in self.records or not re.fullmatch(r"[A-Z]+", model.prefix):
-            raise ValueError("duplicate record kind or invalid id prefix")
+            raise RegistrationRefused("record_type", "duplicate record kind or invalid id prefix")
         self.records[model.record_kind] = model
 
     def op(
@@ -1247,23 +1381,24 @@ class Registrar:
         (recently changed, still open), since only the first 50 reach the run; an empty list leaves the run nothing
         to name, so it can only create."""
         if not issubclass(model, OpModel) or "op" not in model.model_fields:
-            raise ValueError("op requires an OpModel with a literal op identifier")
+            raise RegistrationRefused("op", "op requires an OpModel with a literal op identifier")
         annotation = model.model_fields["op"].annotation
         names = get_args(annotation)
         if get_origin(annotation) is not Literal or len(names) != 1 or not isinstance(names[0], str):
-            raise ValueError("op identifier must be a single literal")
+            raise RegistrationRefused("op", "op identifier must be a single literal")
         name = names[0]
         self._name(name)
         writes = getattr(model, "writes", None)
         if name in self.ops or tier not in ("data", "system") or not callable(apply) or not writes:
-            raise ValueError(
-                "duplicate op, invalid tier (outbound ops wait for the publisher), callback, or missing model.writes"
+            raise RegistrationRefused(
+                "op",
+                "duplicate op, invalid tier (outbound ops wait for the publisher), callback, or missing model.writes",
             )
         for kind in writes:
             if "/" in kind:
                 self._name(kind)
         if candidates is not None and (not notes or not callable(candidates)):
-            raise ValueError("candidates is a function, for an op offered to notes")
+            raise RegistrationRefused("op", "candidates is a function, for an op offered to notes")
         self.ops[name] = OpRegistration(model, tier, apply, writes, bool(notes), candidates)
 
     def op_validator(self, op_name: str, fn: Callable) -> None:
@@ -1284,7 +1419,7 @@ class Registrar:
         bounded size), never by record id or version alone, since the changeset so far may change what a version
         holds."""
         if not callable(fn):
-            raise ValueError("validator must be callable")
+            raise RegistrationRefused("op_validator", "validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
 
     def project_ending(self, fn: Callable) -> None:
@@ -1303,7 +1438,7 @@ class Registrar:
         the project are listed as left open for the add-on to close, never as resolved. A hook must be pure and
         quick: it reads and returns ops, it never writes. One hook per plugin; the plugin needs no manifest entry."""
         if self.project_ending_hook is not None or not callable(fn):
-            raise ValueError("one project-ending hook per plugin, and it must be callable")
+            raise RegistrationRefused("project_ending", "one project-ending hook per plugin, and it must be callable")
         self.project_ending_hook = fn
 
     def on_drop(self, kind: str, fn: Callable) -> None:
@@ -1315,9 +1450,9 @@ class Registrar:
         Time limit, containment, what ops are accepted and purity are as for `project_ending`. One hook per kind per
         plugin."""
         if kind not in DROP_HOOK_KINDS:
-            raise ValueError(f"a drop hook follows one of: {', '.join(DROP_HOOK_KINDS)}")
+            raise RegistrationRefused("on_drop", f"a drop hook follows one of: {', '.join(DROP_HOOK_KINDS)}")
         if kind in self.drop_hooks or not callable(fn):
-            raise ValueError("one drop hook per kind per plugin, and it must be callable")
+            raise RegistrationRefused("on_drop", "one drop hook per kind per plugin, and it must be callable")
         self.drop_hooks[kind] = fn
 
     def task_kind(
@@ -1344,6 +1479,7 @@ class Registrar:
         all_or_nothing: bool = False,
         requires_ops: tuple[str, ...] | list[str] = (),
         learning: str = "core",
+        min_context: int | None = None,
     ) -> None:
         """Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
@@ -1380,7 +1516,8 @@ class Registrar:
         anchored answer the `Removed:` line comes before the `<questions>` block, which is always last.
 
         `role` is "write" (the default: work that writes or changes things), "check" (an independent second opinion on
-        work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`). A
+        work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`); a
+        tier the kind declares itself wins over its role's. A
         check never runs on an account that wrote the record it is about (its accepted and pending text versions and
         the changes AI runs made to it), unless the person accepts the same account for checks; the run then records
         which kind of independence it had (`Run.independence`). With no account to take it, the check waits for the
@@ -1390,7 +1527,18 @@ class Registrar:
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
         before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them.
         `tier` is a core tier or one of the plugin's own (`registrar.tier`, "<plugin>/<name>"); naming one the plugin
-        didn't declare refuses the plugin at start.
+        didn't declare refuses the plugin at start. The tier a run uses is decided in this order: the workspace's
+        `ai.tasks.<kind>.tier`, then the `tier` the kind declares (a tier named for the kind is more specific than a
+        role), then its role's tier (`ai.roles`), then the default tier (`routine`). A routing rule
+        (`ai.routing`) that matches a request still sends it to another tier first.
+
+        `min_context` is the smallest context window, in tokens, a model must have for this work (a whole chapter read
+        at once, say). The core measures every packet against each model's window anyway (from the account's model
+        list, with the adapter's own token count when it has one) and sends the run only to an account whose window
+        holds the packet and its answer; the estimate names the account it is priced on, and a run that fits nowhere
+        says so before anything is sent. `min_context` lets the estimate be given before a packet is built (a batch of
+        runs priced up front), and keeps the work off a model whose window is smaller however short the packet is.
+        The workspace sets it for a kind in `ai.tasks.<kind>.min_context`.
 
         `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is
         recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings
@@ -1409,29 +1557,29 @@ class Registrar:
 
         self._name(name)
         if output not in ("ops", "draft"):
-            raise ValueError('a task kind\'s output is "ops" or "draft"')
+            raise RegistrationRefused("task_kind", 'a task kind\'s output is "ops" or "draft"')
         if (anchored or questions) and output != "draft":
-            raise ValueError("only a draft task kind is anchored or asks questions")
+            raise RegistrationRefused("task_kind", "only a draft task kind is anchored or asks questions")
         if role not in ("write", "check", "research"):
-            raise ValueError('a task kind\'s role is "write", "check" or "research"')
+            raise RegistrationRefused("task_kind", 'a task kind\'s role is "write", "check" or "research"')
         if learning not in ("core", "own"):
-            raise ValueError('a task kind\'s learning is "core" or "own"')
+            raise RegistrationRefused("task_kind", 'a task kind\'s learning is "core" or "own"')
         if not isinstance(questions, int) or not 0 <= questions <= 20:
-            raise ValueError("questions is how many a draft may ask, from 0 to 20")
+            raise RegistrationRefused("task_kind", "questions is how many a draft may ask, from 0 to 20")
         narrowed = _narrowed(where, on)
         start_narrowed = _narrowed(start_where, on)
         if output == "draft":
             if on is None or not field or ops:
-                raise ValueError(
-                    "a draft task kind names the record kind it works on and the long text field it drafts"
+                raise RegistrationRefused(
+                    "task_kind", "a draft task kind names the record kind it works on and the long text field it drafts"
                 )
             ops = ("text.draft",)
         if name in self.tasks or not ops:
-            raise ValueError("duplicate task kind or empty op list")
+            raise RegistrationRefused("task_kind", "duplicate task kind or empty op list")
         if not set(requires_ops) <= set(ops):
-            raise ValueError("requires_ops names ops the task kind's answers may use")
+            raise RegistrationRefused("task_kind", "requires_ops names ops the task kind's answers may use")
         if packet is not None and not callable(packet):
-            raise ValueError("packet must be callable")
+            raise RegistrationRefused("task_kind", "packet must be callable")
         defaults = {
             key: value
             for key, value in (
@@ -1439,12 +1587,15 @@ class Registrar:
                 ("max_output", max_output),
                 ("expected_output", expected_output),
                 ("temperature", temperature),
+                ("min_context", min_context),
             )
             if value is not None
         }
         TaskSettings.model_validate(defaults)
         if tier is not None and "/" in tier and not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", tier):
-            raise ValueError("a task kind may name a core tier or one of the plugin's own, never another plugin's")
+            raise RegistrationRefused(
+                "task_kind", "a task kind may name a core tier or one of the plugin's own, never another plugin's"
+            )
         prompt_file = self._own_file(prompt, "prompts")
         guidance_file = self._own_file(playbook, "guidance")
         self.tasks[name] = TaskKind(
@@ -1476,10 +1627,10 @@ class Registrar:
             return None
         self._name(name)
         if self.root is None:
-            raise ValueError(f"{name} needs the plugin's folder")
+            raise RegistrationRefused("prompt_file", f"{name} needs the plugin's folder")
         path = self.root / folder / f"{name.split('/', 1)[1]}.md"
         if not path.is_file():
-            raise ValueError(f"{folder}/{path.name} is missing from the plugin")
+            raise RegistrationRefused("prompt_file", f"{folder}/{path.name} is missing from the plugin")
         return path
 
     def stage_check(self, id: str, fn: Callable) -> None:
@@ -1488,7 +1639,7 @@ class Registrar:
         beside others."""
         self._name(id)
         if id in self.stage_checks or not callable(fn):
-            raise ValueError("duplicate stage check or invalid callback")
+            raise RegistrationRefused("stage_check", "duplicate stage check or invalid callback")
         self.stage_checks[id] = fn
 
     def stages(self, record_type: str, stages: list[StageDefinition | dict], *, moves=None) -> None:
@@ -1496,7 +1647,7 @@ class Registrar:
         is "person" (the default: only the person moves items) or "rule" (stage checks move items forward)."""
         self._name(record_type)
         if record_type in self.stage_defaults:
-            raise ValueError("duplicate default stages")
+            raise RegistrationRefused("stages", "duplicate default stages")
         self.stage_defaults[record_type] = TypeStages(stages=stages, moves=moves)
 
     def file_kind(
@@ -1518,11 +1669,11 @@ class Registrar:
 
         self._name(name)
         if name in self.file_kinds:
-            raise ValueError("duplicate file kind")
+            raise RegistrationRefused("file_kind", "duplicate file kind")
         if details is not None and not issubclass(details, BaseModel):
-            raise ValueError("file kind details must be a pydantic model")
+            raise RegistrationRefused("file_kind", "file kind details must be a pydantic model")
         if data_level not in (None, "open", "internal", "restricted"):
-            raise ValueError("a file kind's data_level must be open, internal or restricted")
+            raise RegistrationRefused("file_kind", "a file kind's data_level must be open, internal or restricted")
         self.file_kinds[name] = FileKind(name, details or AnyDetails, tuple(accept), max_mb, label, data_level)
 
     def action(
@@ -1534,19 +1685,32 @@ class Registrar:
         on: str | None = None,
         file_kinds: tuple[str, ...] = (),
         where: dict[str, Any] | None = None,
+        show_for: Callable | None = None,
     ) -> None:
         """Something the person starts: on a record of kind `on` (core or own; "file" with optional `file_kinds`), or
         on the workspace when `on` is None. `where` narrows the records of kind `on` it is offered on and may run on,
         as for task kinds: {field: value} or {field: (value, ...)}, every field matching. `run(target, context,
         choices) -> Proposal` is deterministic work (it may run declared programs through `context.tools`); the person
         reviews the proposal, and what they approve applies as theirs. Raising StoreError or ToolError shows its
-        message to the person; any other exception turns the plugin off."""
+        message to the person; any other exception turns the plugin off.
+
+        `show_for(view, target) -> bool` offers the action only while other records allow it (a "Close the chapter"
+        that needs its notes to exist, say): `view` is a read view of core and the plugin's own records and `target` a
+        copy of the record the action is offered on (None for an action on the workspace). It is read only, quick and
+        deterministic and never calls AI; one that raises hides the action and counts as the plugin failing (failure
+        containment). The core asks it again when the action is started, and refuses with the action's own "not
+        available" wording (the wording key `action.unavailable.<action>`; the core's sentence when the plugin
+        sets none) if it no longer holds. `where` is checked first, so `show_for` only sees records that pass it."""
         self._name(name)
         if name in self.actions or not callable(run) or not label.strip():
-            raise ValueError("duplicate action, missing label or invalid callback")
+            raise RegistrationRefused("action", "duplicate action, missing label or invalid callback")
         if file_kinds and on != "file":
-            raise ValueError("file_kinds applies only to actions on files")
-        self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds), _narrowed(where, on))
+            raise RegistrationRefused("action", "file_kinds applies only to actions on files")
+        if show_for is not None and not callable(show_for):
+            raise RegistrationRefused("action", "show_for is a function of (view, target)")
+        self.actions[name] = ActionRegistration(
+            name, label.strip(), on, run, tuple(file_kinds), _narrowed(where, on), show_for
+        )
 
     def text_format(self, name: str, units: Callable) -> None:
         """A long text format: `units(text) -> list[Unit]`, spans that cover the text exactly, in order, each with a
@@ -1554,7 +1718,7 @@ class Registrar:
         The core ships "plain" (blank-line paragraphs) and "markdown" (its blocks)."""
         self._name(name)
         if name in self.text_formats or not callable(units):
-            raise ValueError("duplicate text format or invalid callback")
+            raise RegistrationRefused("text_format", "duplicate text format or invalid callback")
         self.text_formats[name] = units
 
     def working_copy(
@@ -1578,9 +1742,11 @@ class Registrar:
         one the workspace accepts (storage.files.accepted_types)."""
         self._name(name)
         if name in self.working_copies or not callable(hand_out) or not callable(take_back) or not label.strip():
-            raise ValueError("duplicate working-copy format, missing label or invalid callback")
+            raise RegistrationRefused(
+                "working_copy", "duplicate working-copy format, missing label or invalid callback"
+            )
         if not re.fullmatch(r"\.[a-z0-9]{1,8}", extension):
-            raise ValueError("a working-copy extension is like .docx")
+            raise RegistrationRefused("working_copy", "a working-copy extension is like .docx")
         self.working_copies[name] = WorkingCopyRegistration(
             name, label.strip(), extension, media_type, tuple(text_formats), hand_out, take_back
         )
@@ -1604,8 +1770,9 @@ class Registrar:
             or not types
             or any(not re.fullmatch(r"[a-z]+/[a-z0-9][a-z0-9.+_-]*", t) for t in types)
         ):
-            raise ValueError(
-                "duplicate extractor, missing label, invalid function, or media types that aren't like text/plain"
+            raise RegistrationRefused(
+                "extractor",
+                "duplicate extractor, missing label, invalid function, or media types that aren't like text/plain",
             )
         self.extractors[name] = ExtractorRegistration(name, " ".join(label.split()), types, extract)
 
@@ -1625,21 +1792,25 @@ class Registrar:
         may also provide and use it."""
         self._name(name)
         if name in self.interface_definitions:
-            raise ValueError("duplicate interface definition")
+            raise RegistrationRefused("define_interface", "duplicate interface definition")
         if not re.fullmatch(r"[0-9]+\.[0-9]+", version):
-            raise ValueError('an interface version is "<major>.<minor>", like "1.0"')
+            raise RegistrationRefused("define_interface", 'an interface version is "<major>.<minor>", like "1.0"')
         if not isinstance(item, type) or not issubclass(item, BaseModel):
-            raise ValueError("an interface's item is a pydantic model")
+            raise RegistrationRefused("define_interface", "an interface's item is a pydantic model")
         for event, model in (events or {}).items():
             if (
                 not re.fullmatch(r"[a-z][a-z0-9_]*", event)
                 or not isinstance(model, type)
                 or not issubclass(model, BaseModel)
             ):
-                raise ValueError("interface events are lowercase names with pydantic payload models")
+                raise RegistrationRefused(
+                    "define_interface", "interface events are lowercase names with pydantic payload models"
+                )
         for kind in task_kinds:
             if not re.fullmatch(r"[a-z][a-z0-9-]*", kind):
-                raise ValueError("an interface's task kinds are short lowercase names like short-blurb")
+                raise RegistrationRefused(
+                    "define_interface", "an interface's task kinds are short lowercase names like short-blurb"
+                )
         self.interface_definitions[name] = InterfaceDefinition(
             name, version, item, dict(events or {}), tuple(task_kinds)
         )
@@ -1666,14 +1837,14 @@ class Registrar:
         plugin defining the interface running, nothing reads it."""
         match = re.fullmatch(r"([a-z0-9-]+/[a-z0-9-]+)@([0-9]+)", interface)
         if match is None:
-            raise ValueError('provide an interface as "<plugin>/<name>@<major>"')
+            raise RegistrationRefused("provide_interface", 'provide an interface as "<plugin>/<name>@<major>"')
         if match.group(1) in self.interface_provisions or not callable(items):
-            raise ValueError("duplicate interface provision or invalid items function")
+            raise RegistrationRefused("provide_interface", "duplicate interface provision or invalid items function")
         for own in (task_kinds or {}).values():
             if not own.startswith(self.name + "/"):
-                raise ValueError("an interface offers this plugin's own task kinds")
+                raise RegistrationRefused("provide_interface", "an interface offers this plugin's own task kinds")
         if about is not None and not callable(about):
-            raise ValueError("an interface's about is a function")
+            raise RegistrationRefused("provide_interface", "an interface's about is a function")
         self.interface_provisions[match.group(1)] = InterfaceProvision(
             match.group(1), int(match.group(2)), items, dict(task_kinds or {}), about
         )
@@ -1690,7 +1861,7 @@ class Registrar:
         `about` fails the contributor like any bad line."""
         self._name(name)
         if name in self.today_lines or not callable(lines):
-            raise ValueError("duplicate Today contributor or invalid lines function")
+            raise RegistrationRefused("today", "duplicate Today contributor or invalid lines function")
         self.today_lines[name] = TodayRegistration(name, lines)
 
     def panel(
@@ -1708,6 +1879,7 @@ class Registrar:
         new_action: str | None = None,
         computed: dict[str, Callable] | None = None,
         show_for: Callable | None = None,
+        computed_labels: dict[str, str] | None = None,
     ) -> None:
         """A screen listing records (listed in `provides.panels`), described as data so it looks and behaves like
         the core's (design 7.2): the records of `kind` (core or own) whose fields equal `filter`, shown as `view`
@@ -1723,6 +1895,10 @@ class Registrar:
         and never call AI; one that raises shows an empty cell and counts as the plugin failing (failure
         containment). A function taking a fourth argument gets a dict shared by every cell of one listing, to keep
         work it would otherwise repeat per row (an index of builds by record); it is new for each listing.
+        `computed_labels={"words": "panel.column.<plugin>/<name>"}` names the wording key (set in one of the plugin's
+        wording files) of a computed column's heading, so the screens show the plugin's own words for it, in the
+        workspace's wording; a computed column with none is headed by its key made readable. A key names a computed
+        column of this panel and a wording key of this plugin's namespace, or the plugin is refused at start.
 
         Filtered by project, a kind with no `project` field follows its `layout_project` reference: a record is in the
         project its referenced record is in. `show_for(project, view) -> bool` lists the panel only on the projects it
@@ -1730,16 +1906,29 @@ class Registrar:
         project."""
         self._name(name)
         if name in self.panels or not title.strip() or not columns:
-            raise ValueError("duplicate panel, missing title or no columns")
+            raise RegistrationRefused("panel", "duplicate panel, missing title or no columns")
         if view not in ("list", "table", "board"):
-            raise ValueError('a panel view is "list", "table" or "board"')
+            raise RegistrationRefused("panel", 'a panel view is "list", "table" or "board"')
         if tab not in ("today", "work", "people", "settings"):
-            raise ValueError('a panel tab is "today", "work", "people" or "settings"')
+            raise RegistrationRefused("panel", 'a panel tab is "today", "work", "people" or "settings"')
         computed = dict(computed or {})
         if any(not isinstance(k, str) or not k or not callable(fn) for k, fn in computed.items()):
-            raise ValueError("computed maps column names to functions of (record, view, settings)")
+            raise RegistrationRefused("panel", "computed maps column names to functions of (record, view, settings)")
         if show_for is not None and not callable(show_for):
-            raise ValueError("show_for is a function of (project, view)")
+            raise RegistrationRefused("panel", "show_for is a function of (project, view)")
+        labels = dict(computed_labels or {})
+        if any(
+            key not in computed
+            or not isinstance(text, str)
+            or not text.startswith("panel.column.")
+            or f"{self.name}/" not in text
+            for key, text in labels.items()
+        ):
+            raise RegistrationRefused(
+                "panel",
+                "computed_labels maps a computed column to a wording key like panel.column.<plugin>/<name>, "
+                "in the plugin's namespace",
+            )
         self.panels[name] = PanelRegistration(
             name,
             title.strip(),
@@ -1753,6 +1942,8 @@ class Registrar:
             new_action,
             computed,
             show_for,
+            None,
+            labels,
         )
 
     def document(
@@ -1780,11 +1971,11 @@ class Registrar:
         it only on some projects, as for record panels."""
         self._name(name)
         if name in self.panels or not str(title).strip() or not callable(render):
-            raise ValueError("duplicate panel, missing title or invalid render function")
+            raise RegistrationRefused("document", "duplicate panel, missing title or invalid render function")
         if tab not in ("today", "work", "people", "settings"):
-            raise ValueError('a panel tab is "today", "work", "people" or "settings"')
+            raise RegistrationRefused("document", 'a panel tab is "today", "work", "people" or "settings"')
         if show_for is not None and not callable(show_for):
-            raise ValueError("show_for is a function of (project, view)")
+            raise RegistrationRefused("document", "show_for is a function of (project, view)")
         self.panels[name] = PanelRegistration(
             name, str(title).strip(), "", "document", (), {}, None, (), tab, None, {}, show_for, render
         )
@@ -1799,6 +1990,7 @@ class Registrar:
         description: str = "",
         pattern: str = "*.yaml",
         single: bool = False,
+        preview: Callable | None = None,
     ) -> None:
         """A kind of data file the person edits through a form (listed in `provides.data_forms`): the files in
         `folder` of the plugin's data layers (`view.data`) that match `pattern`, each checked against `schema` (a
@@ -1823,24 +2015,42 @@ class Registrar:
         Every field needs a default because the form builds the model with no values to learn them, so a rule over the
         whole model ("this is required unless that is set") can't be a model validator: it would refuse that empty
         model and the form would show no defaults. Put such a rule in the plugin's loader, where the file is read, or
-        in a lint on the ops that use the file."""
+        in a lint on the ops that use the file.
+
+        `preview(view, settings, project, saved_file) -> Preview` shows what the file will look like, beside its form
+        (a sample page set in a template, a rendered cover): `view` is an `ActionContext` (a read view that may run
+        the plugin's declared programs, as person actions do), `settings` the plugin's settings, `project` the record
+        of the project in view (None for the workspace's own file) and `saved_file` the file's name as the form lists
+        it (read it with `view.data(saved_file, project=...)` for the copy in effect). It returns a `Preview` of an
+        image (`image/png`, `image/jpeg`, `image/gif` or `image/webp`), plain text (`text/plain`) or a short document
+        (`text/markdown`, drawn from the same small Markdown subset as `registrar.document`, never as HTML). It runs
+        as the person, changes nothing, after each save and when the person presses Refresh, within
+        `workspace.plugins.preview_seconds` seconds. A preview that raises, returns something else, is too large
+        (`workspace.plugins.actions.preview_mb`) or runs out of time shows that beside the form, and never blocks or
+        undoes the save; it is not counted as the plugin failing."""
         self._name(name)
         folder = str(folder).strip("/")
         if name in self.data_forms or not str(label).strip():
-            raise ValueError("duplicate data form or missing label")
+            raise RegistrationRefused("data_form", "duplicate data form or missing label")
         if not re.fullmatch(r"[a-z0-9_-]+(/[a-z0-9_-]+)*", folder):
-            raise ValueError("a data form's folder is a relative path of lowercase names, like templates")
+            raise RegistrationRefused(
+                "data_form", "a data form's folder is a relative path of lowercase names, like templates"
+            )
         if not re.fullmatch(r"([a-z0-9_*-]+/)?[a-z0-9_*-]+\.yaml", str(pattern)):
-            raise ValueError("a data form's pattern names YAML files and has at most one folder level")
+            raise RegistrationRefused(
+                "data_form", "a data form's pattern names YAML files and has at most one folder level"
+            )
         if single and "*" in pattern:
-            raise ValueError("a single-file data form names its file in pattern, with no *")
+            raise RegistrationRefused("data_form", "a single-file data form names its file in pattern, with no *")
         if not isinstance(schema, type) or not issubclass(schema, BaseModel):
-            raise ValueError("a data form's schema is a pydantic model")
+            raise RegistrationRefused("data_form", "a data form's schema is a pydantic model")
         for key, info in schema.model_fields.items():
             if info.is_required() or not info.description:
-                raise ValueError(f"data form field {key} needs a default and a description")
+                raise RegistrationRefused("data_form", f"data form field {key} needs a default and a description")
+        if preview is not None and not callable(preview):
+            raise RegistrationRefused("data_form", "preview is a function of (view, settings, project, saved_file)")
         self.data_forms[name] = DataFormRegistration(
-            name, " ".join(str(label).split()), folder, schema, description, str(pattern), bool(single)
+            name, " ".join(str(label).split()), folder, schema, description, str(pattern), bool(single), preview
         )
 
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
@@ -1851,7 +2061,7 @@ class Registrar:
         only while the app runs, and each run is recorded."""
         self._name(name)
         if name in self.jobs or not callable(run) or not isinstance(every_minutes, int) or every_minutes < 5:
-            raise ValueError("duplicate job, invalid run function, or a schedule under 5 minutes")
+            raise RegistrationRefused("job", "duplicate job, invalid run function, or a schedule under 5 minutes")
         self.jobs[name] = JobRegistration(name, every_minutes, run)
 
     def connector(
@@ -1911,15 +2121,15 @@ class Registrar:
         out, the estimate calls `older` and counts what comes back."""
         self._name(name)
         if name in self.connectors or not callable(poll):
-            raise ValueError("duplicate connector or invalid poll function")
+            raise RegistrationRefused("connector", "duplicate connector or invalid poll function")
         if (older is not None and not callable(older)) or (older_count is not None and not callable(older_count)):
-            raise ValueError("older and older_count are functions")
+            raise RegistrationRefused("connector", "older and older_count are functions")
         if older_count is not None and older is None:
-            raise ValueError("older_count goes with older")
+            raise RegistrationRefused("connector", "older_count goes with older")
         if reads not in (None, "mail", "calendar"):
-            raise ValueError("a connector reads mail or a calendar, or says nothing")
+            raise RegistrationRefused("connector", "a connector reads mail or a calendar, or says nothing")
         if not isinstance(settings, type) or not issubclass(settings, BaseModel):
-            raise ValueError("a connector's settings are a pydantic model")
+            raise RegistrationRefused("connector", "a connector's settings are a pydantic model")
         from engine.connectors import Connector
 
         self.connectors[name] = Connector(
@@ -2000,23 +2210,24 @@ class Registrar:
         `act.draft` from a person action."""
         self._name(name)
         if name in self.channels or not callable(send):
-            raise ValueError("duplicate channel or invalid send function")
+            raise RegistrationRefused("channel", "duplicate channel or invalid send function")
         if not kinds or not set(kinds) <= {"message", "mailbox", "calendar", "file"}:
-            raise ValueError("a channel takes message, mailbox, calendar or file targets")
+            raise RegistrationRefused("channel", "a channel takes message, mailbox, calendar or file targets")
         from engine.ops import ACT_ACTIONS
 
         declared: dict[str, tuple[str, ...]] = {}
         for kind, names in (actions or {}).items():
             if kind not in kinds or not names or not set(names) <= set(ACT_ACTIONS[kind]):
-                raise ValueError(
+                raise RegistrationRefused(
+                    "channel",
                     "actions names, for each kind the channel takes, some of that kind's actions: "
-                    + "; ".join(f"{k}: {', '.join(v)}" for k, v in ACT_ACTIONS.items())
+                    + "; ".join(f"{k}: {', '.join(v)}" for k, v in ACT_ACTIONS.items()),
                 )
             declared[kind] = tuple(dict.fromkeys(names))
         if not all(isinstance(a, str) and a.strip() for a in accounts):
-            raise ValueError("accounts are the names of the kinds of account the channel serves")
+            raise RegistrationRefused("channel", "accounts are the names of the kinds of account the channel serves")
         if any(fn is not None and not callable(fn) for fn in (status, undo, template_version)):
-            raise ValueError("a channel's status, undo and template_version are functions")
+            raise RegistrationRefused("channel", "a channel's status, undo and template_version are functions")
         from engine.channels import ChannelRegistration
 
         self.channels[name] = ChannelRegistration(
@@ -2135,35 +2346,37 @@ class Registrar:
         sign-in, and "Start reading" brings it back."""
         self._name(name)
         if name in self.sign_ins or not str(label).strip() or not scopes:
-            raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
+            raise RegistrationRefused("sign_in", "duplicate sign-in, or a sign-in without a label or scopes")
         if not all(isinstance(s, str) and s.strip() for s in scopes):
-            raise ValueError("a sign-in's scopes are words")
+            raise RegistrationRefused("sign_in", "a sign-in's scopes are words")
         if len(allows) > 10 or not all(isinstance(a, str) and a.strip() and len(a) <= 80 for a in allows):
-            raise ValueError("allows lists up to 10 short lines of what the person is asked to allow")
+            raise RegistrationRefused(
+                "sign_in", "allows lists up to 10 short lines of what the person is asked to allow"
+            )
         if account is not None and not callable(account):
-            raise ValueError("account is a function")
+            raise RegistrationRefused("sign_in", "account is a function")
         if default_client_secret and not default_client_id:
-            raise ValueError("default_client_secret comes with default_client_id")
+            raise RegistrationRefused("sign_in", "default_client_secret comes with default_client_id")
         if default_client_id is not None and not str(default_client_id).strip():
-            raise ValueError("default_client_id is the add-on's client id, not empty")
+            raise RegistrationRefused("sign_in", "default_client_id is the add-on's client id, not empty")
         if default_app_note is not None and not (str(default_app_note).strip() and len(default_app_note) <= 300):
-            raise ValueError("default_app_note is one or two short sentences")
+            raise RegistrationRefused("sign_in", "default_app_note is one or two short sentences")
         steps: list[tuple[str, str | None]] = []
         for step in own_app_steps:
             text, link = (step, None) if isinstance(step, str) else tuple(step)
             if not str(text).strip() or len(text) > 300:
-                raise ValueError("each of own_app_steps is a short line")
+                raise RegistrationRefused("sign_in", "each of own_app_steps is a short line")
             if link is not None and not str(link).startswith("https://"):
-                raise ValueError("a link in own_app_steps is an https address")
+                raise RegistrationRefused("sign_in", "a link in own_app_steps is an https address")
             steps.append((" ".join(str(text).split()), link))
         if len(steps) > 12:
-            raise ValueError("own_app_steps lists up to 12 steps")
+            raise RegistrationRefused("sign_in", "own_app_steps lists up to 12 steps")
         if any(not str(a).startswith(("http://", "https://")) for a in default_redirects):
-            raise ValueError("default_redirects are full http(s) callback addresses")
+            raise RegistrationRefused("sign_in", "default_redirects are full http(s) callback addresses")
         if default_redirects and not default_client_id:
-            raise ValueError("default_redirects describe default_client_id's registration")
+            raise RegistrationRefused("sign_in", "default_redirects describe default_client_id's registration")
         if not all(isinstance(s, str) and s.strip() for s in acting_scopes):
-            raise ValueError("a sign-in's acting_scopes are words")
+            raise RegistrationRefused("sign_in", "a sign-in's acting_scopes are words")
         started = []
         for source in sources:
             if not isinstance(source, dict) or not set(source) <= {
@@ -2173,17 +2386,21 @@ class Registrar:
                 "every_minutes",
                 "sent",
             }:
-                raise ValueError("each of sources is {connector, label, settings, every_minutes, sent}")
+                raise RegistrationRefused(
+                    "sign_in", "each of sources is {connector, label, settings, every_minutes, sent}"
+                )
             connector, title = source.get("connector"), str(source.get("label") or "").strip()
             if not isinstance(connector, str) or not connector.startswith(self.name + "/") or not title:
-                raise ValueError("each of sources names one of this plugin's connectors and a label")
+                raise RegistrationRefused(
+                    "sign_in", "each of sources names one of this plugin's connectors and a label"
+                )
             every = source.get("every_minutes", 15)
             if not isinstance(every, int) or not 1 <= every <= 1440:
-                raise ValueError("a source's every_minutes is a whole number from 1 to 1440")
+                raise RegistrationRefused("sign_in", "a source's every_minutes is a whole number from 1 to 1440")
             if not isinstance(source.get("settings", {}), dict):
-                raise ValueError("a source's settings are a mapping")
+                raise RegistrationRefused("sign_in", "a source's settings are a mapping")
             if not isinstance(source.get("sent", False), bool):
-                raise ValueError("a source's sent is true or false")
+                raise RegistrationRefused("sign_in", "a source's sent is true or false")
             started.append(
                 {
                     "connector": connector,
@@ -2229,7 +2446,7 @@ class Registrar:
         quick; it never calls AI. The person sees what it closed and why, and can take a closer look."""
         self._name(name)
         if name in self.triage_matchers or not callable(match):
-            raise ValueError("duplicate triage matcher or invalid match function")
+            raise RegistrationRefused("triage_matcher", "duplicate triage matcher or invalid match function")
         self.triage_matchers[name] = match
 
     def scorer(self, name: str, fn: Callable) -> None:
@@ -2244,7 +2461,7 @@ class Registrar:
         its case only."""
         self._name(name)
         if name in self.scorers or not callable(fn):
-            raise ValueError("duplicate scorer or invalid function")
+            raise RegistrationRefused("scorer", "duplicate scorer or invalid function")
         self.scorers[name] = fn
 
     def value_list(self, name: str, *, label: str, values: Sequence[str] = ()) -> None:
@@ -2257,10 +2474,10 @@ class Registrar:
         sees; a value a record already holds stays valid after it is retired."""
         self._name(name)
         if name in self.value_lists or not str(label).strip():
-            raise ValueError("duplicate value list, or a list without a label")
+            raise RegistrationRefused("value_list", "duplicate value list, or a list without a label")
         cleaned = [" ".join(str(v).split()) for v in values]
         if any(not v or len(v) > 80 for v in cleaned) or len({v.casefold() for v in cleaned}) != len(cleaned):
-            raise ValueError("a list's values are distinct words of up to 80 characters")
+            raise RegistrationRefused("value_list", "a list's values are distinct words of up to 80 characters")
         self.value_lists[name] = {"label": " ".join(str(label).split()), "values": cleaned}
 
     def setup_step(
@@ -2297,20 +2514,26 @@ class Registrar:
         self._name(name)
         label = " ".join(str(label).split())
         if name in self.setup_steps or not callable(done) or not label or len(label) > 80:
-            raise ValueError("duplicate setup step, invalid done function, or a label that isn't one short line")
+            raise RegistrationRefused(
+                "setup_step", "duplicate setup step, invalid done function, or a label that isn't one short line"
+            )
         suggested = dict(settings or {})
         if any(not isinstance(k, str) or "." not in k or "/" in k for k in suggested):
-            raise ValueError("a setup step suggests core settings by their dotted keys")
+            raise RegistrationRefused("setup_step", "a setup step suggests core settings by their dotted keys")
         added: dict[str, tuple[Any, ...]] = {}
         for key, values in dict(adds or {}).items():
             if not isinstance(key, str) or "." not in key or "/" in key or key in suggested:
-                raise ValueError("a setup step adds to core list settings by their dotted keys, apart from settings=")
+                raise RegistrationRefused(
+                    "setup_step", "a setup step adds to core list settings by their dotted keys, apart from settings="
+                )
             if (
                 not isinstance(values, (list, tuple))
                 or not values
                 or any(isinstance(v, bool) or not isinstance(v, (str, int, float)) for v in values)
             ):
-                raise ValueError("a setup step adds a non-empty list of text or numbers to a list setting")
+                raise RegistrationRefused(
+                    "setup_step", "a setup step adds a non-empty list of text or numbers to a list setting"
+                )
             added[key] = tuple(dict.fromkeys(values))
         self.setup_steps[name] = SetupStepRegistration(
             name, label, " ".join(str(explanation).split()), done, action, suggested, added
@@ -2329,9 +2552,11 @@ class Registrar:
         self._name(name)
         label = " ".join(str(label).split())
         if "." in name or name in self.pack_tiers or not label or len(label) > 80:
-            raise ValueError("duplicate tier, a name with a dot in it, or a label that isn't one short line")
+            raise RegistrationRefused(
+                "tier", "duplicate tier, a name with a dot in it, or a label that isn't one short line"
+            )
         if not isinstance(falls_back_to, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", falls_back_to):
-            raise ValueError("a tier falls back to a core tier by its name")
+            raise RegistrationRefused("tier", "a tier falls back to a core tier by its name")
         self.pack_tiers[name] = TierRegistration(name, label, " ".join(str(description).split()), falls_back_to)
 
     def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
@@ -2345,7 +2570,9 @@ class Registrar:
 
         self._name(name)
         if name in self.derived_files or not callable(render) or not depends_on:
-            raise ValueError("duplicate generated file, invalid render function or nothing it depends on")
+            raise RegistrationRefused(
+                "derived_file", "duplicate generated file, invalid render function or nothing it depends on"
+            )
         check_derived_path(path)
         self.derived_files[name] = DerivedFileRegistration(name, path, tuple(depends_on), render)
 
@@ -2358,16 +2585,16 @@ class Registrar:
         invariants, which are validators."""
         self._name(name)
         if name in self.lints or not callable(fn) or not ops:
-            raise ValueError("duplicate lint, invalid callback or no ops to check")
+            raise RegistrationRefused("lint", "duplicate lint, invalid callback or no ops to check")
         if severity not in ("return", "warn", "off"):
-            raise ValueError('a lint\'s default severity is "return", "warn" or "off"')
+            raise RegistrationRefused("lint", 'a lint\'s default severity is "return", "warn" or "off"')
         self.lints[name] = LintRegistration(name, fn, tuple(ops), severity)
 
     def subscribe(self, event: str, fn: Callable) -> None:
         """Handle an event after the change behind it is committed: `fn(payload, context)` with an `EventContext`.
         One handler per event; route by `payload["kind"]` when it handles several kinds."""
         if event in self.handlers or not callable(fn):
-            raise ValueError("duplicate subscription or invalid handler")
+            raise RegistrationRefused("subscribe", "duplicate subscription or invalid handler")
         self.handlers[event] = fn
 
 

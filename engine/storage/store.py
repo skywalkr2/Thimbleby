@@ -32,11 +32,22 @@ PERSON_EDIT_OPS = ("record.edit", "record.set")
 
 
 class StoreError(Exception):
-    """A write can't be made as asked."""
+    """A write can't be made as asked. A failure the plugin API raises carries a stable `code` (the plugin guide's
+    table of failure codes); callers and tests match the code, never the text, which keeps being reworded. A failure
+    with no code has an empty one."""
+
+    code: str = ""
+
+    def __init__(self, *args: object, code: str | None = None) -> None:
+        super().__init__(*args)
+        if code is not None:
+            self.code = code
 
 
 class ConflictError(StoreError):
     """Another write changed the same field since this one read the record."""
+
+    code = "conflict"
 
     def __init__(self, kind: str, record_id: str, fields: list[str]):
         self.kind, self.record_id, self.fields = kind, record_id, fields
@@ -45,6 +56,8 @@ class ConflictError(StoreError):
 
 class InvalidRecord(StoreError):
     """The record would not be valid for its kind."""
+
+    code = "invalid_record"
 
 
 @dataclass(frozen=True)

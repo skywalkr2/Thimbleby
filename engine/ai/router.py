@@ -11,11 +11,11 @@ from typing import Any
 
 from engine.ai.adapters import Adapter, make_adapter
 from engine.ai.borrow import Borrowed, borrowed_path, chain
-from engine.ai.calibration import Calibration, estimate_tokens, learn_from_run, lookup, scaled, tokens_for
+from engine.ai.calibration import Calibration, learn_from_run, lookup, scaled, tokens_for
 from engine.ai.catalog import Catalogs
 from engine.ai.checked import folder_of
 from engine.ai.pauses import Pauses, pauses_path, waiting_text
-from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
+from engine.ai.task import AiError, AiResult, AiTask, CountNotOffered, ModelInfo
 from engine.config import Config
 from engine.secrets import SecretError, resolve_secret
 from engine.storage import Store, WriteContext
@@ -289,6 +289,8 @@ class Router:
         calibration_from: Any = None,
     ):
         self.sleep = sleep
+        #: What an account's own service counted for a request, kept so a packet is counted once.
+        self._counts: dict[tuple[str, str, int], int | None] = {}
         #: Where what was measured about the accounts is read from, when it isn't beside this store: an estimate that
         #: prices a practice workspace is corrected by what the person's own workspace measured.
         self.calibration_from = calibration_from
@@ -564,6 +566,24 @@ class Router:
     ) -> float | None:
         """What a run would cost in USD on the account it would use, or None when the price isn't known.
         Input from the packet's size; output from past runs of this kind, or its configured typical size."""
+        choice = self.account_for(
+            task, tier=tier, data_level=data_level, use=use, content=content, independent=independent
+        )
+        return self._price_of(task, choice) if choice is not None else None
+
+    def account_for(
+        self,
+        task: AiTask,
+        *,
+        tier: str | None = None,
+        data_level: str = "internal",
+        use: str | None = None,
+        content: frozenset[str] = frozenset(),
+        independent: Independence | None = None,
+    ) -> Choice | None:
+        """The account a run would go to first, which is the one the estimate is priced on: the first on its tier that
+        may see the material and whose model's context window holds the packet and its answer. None when no account
+        takes it (including when none has a window that fits)."""
         try:
             options = choices(
                 self.cfg,
@@ -575,10 +595,9 @@ class Router:
                 independent=independent,
                 unchecked=self._unchecked(),
             )
-            choice = self._first_choice(task, options, data_level, independent)
+            return self._first_choice(task, options, data_level, independent)
         except NoProvider:
             return None
-        return self._price_of(task, choice)
 
     def _price_of(self, task: AiTask, choice: Choice) -> float | None:
         """What this task would cost in USD on this account, or None when its price isn't known."""
@@ -601,27 +620,33 @@ class Router:
         USD on the account it would use first, priced as the request's go will be; None when the price isn't known
         or no account takes the work."""
         try:
-            options = list(choices(self.cfg, kind, data_level, tier=self._pack_tier(kind), unchecked=self._unchecked()))
+            options = list(choices(self.cfg, kind, data_level, tier=self._tier_for(kind), unchecked=self._unchecked()))
         except NoProvider:
             return None
-        if not options:
-            return None
-        info = self.model_info(options[0])
-        if info.input_per_million is None or info.output_per_million is None:
-            return None
         output = self.typical_output(kind) if output_tokens is None else output_tokens
-        read = scaled(input_tokens, self.calibration(options[0]))
-        return (read * info.input_per_million + max(0, output) * info.output_per_million) / 1e6
+        from engine.tasks import settings
 
-    def _pack_tier(self, kind: str) -> str | None:
-        """For a kind of work that names a plugin's own tier: the tier its work runs on now (the tier itself once the
-        person mapped it, else the core tier it falls back to); None for any other work."""
+        floor = settings(self.cfg, self.store.plugins.tasks.get(kind), kind).min_context
+        for choice in options:
+            window = self.model_info(choice, need_limits=True).context_tokens
+            read = scaled(input_tokens, self.calibration(choice))
+            if window is not None and window < max(read + max(0, output), floor):
+                continue  # this account's model can't hold it: the estimate is for the first one that can
+            info = self.model_info(choice)
+            if info.input_per_million is None or info.output_per_million is None:
+                return None
+            return (read * info.input_per_million + max(0, output) * info.output_per_million) / 1e6
+        return None
+
+    def _tier_for(self, kind: str) -> str:
+        """The tier a kind of work runs on now: the workspace's `ai.tasks.<kind>.tier`, then the tier the kind declares,
+        then its role's tier, then the usual one; a plugin's own tier, once the person mapped it, is itself, and else
+        the core tier it falls back to."""
         from engine import pack_tiers
         from engine.tasks import settings
 
-        registered = self.store.plugins.tasks.get(kind)
-        named = settings(self.cfg, registered, kind).tier if registered is not None else ""
-        return pack_tiers.effective(self.cfg, self.store.plugins, named) if "/" in named else None
+        named = settings(self.cfg, self.store.plugins.tasks.get(kind), kind).tier
+        return pack_tiers.effective(self.cfg, self.store.plugins, named)
 
     def calibration(self, choice: Choice) -> Calibration:
         """How this account's model counts compared with the app's own count, and the fixed tokens its adapter adds to
@@ -714,19 +739,63 @@ class Router:
         return self._that_transcribe(choices(self.cfg, kind, data_level, content=content, unchecked=self._unchecked()))
 
     def _that_fit(self, task: AiTask, options: list[Choice]) -> list[Choice]:
-        """Drop accounts whose model can't hold this request plus its answer, by the catalog's context size.
-        A model with no known context size is kept."""
-        needed = estimate_tokens(task.size) + task.max_output
+        """Drop accounts whose model can't hold this request plus its answer, by the account's model list (the catalog's
+        context size), and any whose window is under the kind of work's own minimum (`min_context`). The request is
+        counted with the account's own count where its service offers one and the packet is near the window's edge,
+        else by the app's own count corrected for this account's model. A model with no known context size is kept."""
         fitting = []
+        windows: list[int] = []
+        needed_most = 0
         for choice in options:
             context = self.model_info(choice, need_limits=True).context_tokens
-            if context is None or context >= needed:
+            if context is None:
+                fitting.append(choice)
+                continue
+            needed = max(self._tokens_needed(task, choice, context), task.min_context)
+            needed_most = max(needed_most, needed)
+            windows.append(context)
+            if context >= needed:
                 fitting.append(choice)
         if not fitting:
+            if task.min_context and windows and max(windows) < task.min_context:
+                raise NoProvider(
+                    f"this work needs a model that reads at least {task.min_context:,} tokens at once, and none of "
+                    f"the accounts on this tier does (the largest reads {max(windows):,})"
+                )
             raise NoProvider(
-                f"this is too long for every account on this tier (about {needed:,} tokens with the answer)"
+                f"this is too long for every account on this tier (about {needed_most:,} tokens with the answer; the "
+                f"largest account reads {max(windows):,})"
             )
         return fitting
+
+    def _tokens_needed(self, task: AiTask, choice: Choice, window: int) -> int:
+        """What this request needs of a model's window on this account: its tokens (the app's own count corrected for
+        the account's model, or the account's own count when the packet is within `ai.estimates.context_margin` of the
+        window and the service offers one) plus the most its answer may use."""
+        guess = tokens_for(task.size, self.calibration(choice)) + task.max_output
+        if abs(guess - window) <= self.cfg.ai.estimates.context_margin * window:
+            counted = self._counted(task, choice)
+            if counted is not None:
+                return counted + task.max_output
+        return guess
+
+    def _counted(self, task: AiTask, choice: Choice) -> int | None:
+        """The tokens the account's own service counts for this request, where its adapter can count one without
+        running it; None when it can't, or the count fails (the app's own count then stands). Kept for the request."""
+        key = (choice.provider, choice.model_id, hash((task.instructions, task.stable, task.request)))
+        if key in self._counts:
+            return self._counts[key]
+        found: int | None = None
+        settings = self.cfg.ai.providers[choice.provider]
+        try:
+            adapter = self.adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, self.env))
+            counter = getattr(adapter, "count_tokens", None)
+            if callable(counter):
+                found = int(counter(task, choice.model_id))
+        except (SecretError, AiError, CountNotOffered, ValueError):
+            found = None
+        self._counts[key] = found
+        return found
 
     def model_info(self, choice: Choice, *, need_limits: bool = False) -> ModelInfo:
         """What is known about the chosen model: the provider's catalog, with prices in config taking precedence.

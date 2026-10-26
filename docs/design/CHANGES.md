@@ -1027,6 +1027,69 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 223. The screens, runs and packets answers of the batched plugin API release: `show_for` on an action, a preview beside a data form, a computed column's heading, search and a cap in a pack's packet, a packet fitted to the model's window, the tier order, and failure codes (2026-10-26; plugin API release part B2; P2, answers 195, 187, 189, 207, 210, 209, 191, 196, 203)
+
+Part B2 of the one batched plugin API release (`docs/project/plugin-api-release-plan.md`; the version and the guide's regeneration
+are finished once at the end). Answers are in `docs/project/plugin-answers-34-48.md`.
+
+- **Design 3.3 and 7.2 (195), an action offered only when other records allow it.** `registrar.action(show_for=fn(view, target))`:
+  read only, quick, no AI, checked after `where`; a failure hides the action and is a contained failure of that place. Every listing
+  of actions on a record goes through it (`engine/actions.py::available`), and the core asks again when the action is started,
+  refusing in the plugin's wording `action.unavailable.<action>` or the core's own sentence. **Built:**
+  `tests/test_plugin_api_0390_screens_runs.py::test_an_action_is_offered_only_while_its_show_for_holds_and_is_checked_again_when_started`,
+  `::test_a_show_for_that_raises_hides_its_action_and_is_a_contained_failure_noted_on_the_pack`,
+  `::test_the_core_says_it_in_its_own_words_when_the_pack_sets_none_and_the_routes_list_and_start_it`.
+- **Design 3.3 and 7.2 (187), a preview beside a data form.** `registrar.data_form(preview=fn(view, settings, project, saved_file))`
+  returns a `Preview` (a picture, plain text, or a short Markdown document), run as the person with an `ActionContext`, after each
+  save and on Refresh, within `workspace.plugins.preview_seconds` (10, live). `GET /api/data-forms/{name}/preview` answers 200 with
+  `state` ok, failed or timeout and the add-on's own reason; `DataFormView.has_preview`. The screen keeps a form with a preview
+  open after a save and shows "How it looks" with Refresh. **Built:**
+  `tests/test_plugin_api_0390_screens_runs.py::test_a_preview_is_a_short_document_run_after_a_save_and_never_blocks_the_save`,
+  `::test_a_preview_that_fails_or_runs_out_of_time_says_so_and_the_save_still_works`,
+  `::test_an_image_preview_comes_back_as_the_packs_picture`,
+  `::test_the_time_a_preview_may_take_is_a_setting_with_a_default`,
+  `web/src/components/DataForms.test.tsx` (the four preview tests).
+- **Design 3.3 and 7.2 (189), a computed column's heading.** `registrar.panel(computed_labels={column: "panel.column.<plugin>/<name>"})`;
+  the new wording key pattern `panel.column.{column}`; `PanelView.column_labels`; the panel heads the column with `t(key)` and falls
+  back to the readable key. **Built:** `tests/test_plugin_api_0390_screens_runs.py::test_a_computed_columns_heading_is_the_wording_key_the_pack_names`,
+  `::test_a_label_names_a_computed_column_and_a_key_in_the_packs_own_namespace`,
+  `web/src/components/Panel.test.tsx` (the two heading tests).
+- **Design 3.3 and 6.6 (207, 210, 209), a pack's packet.** `view.search(words, kinds=, projects=, limit=)` (`SearchResult`, bounded by
+  `dispatch.knowledge.search_results` and `dispatch.knowledge.pack_searches`, at the run's own data level, outside content marked
+  untrusted, logged on the run as `knowledge.pack_searches`); `view.knowledge_chars`; `PacketParts.max_chars`, the pack's own cap, over
+  which the core trims its own knowledge section (rules out of the always-sent part, then facts by rank; `knowledge.trimmed_chars`) and
+  fails a packet still over it before anything is sent; `testing.packet_context`. `engine/search.py`'s `Query` takes `projects`.
+  **Built:** `tests/test_plugin_api_0390_screens_runs.py::test_a_packet_function_searches_the_core_bounded_by_kind_project_and_limit`,
+  `::test_a_search_keeps_to_the_runs_data_level_and_marks_what_comes_from_outside`,
+  `::test_a_run_logs_what_its_packet_function_searched_for_and_what_it_was_sent`,
+  `::test_the_kits_packet_context_has_the_knowledge_section_the_core_would_add`,
+  `::test_over_the_packs_cap_the_core_trims_its_own_facts_and_never_the_packs_parts`,
+  `::test_without_a_cap_nothing_is_trimmed_and_a_packet_still_over_a_cap_fails_before_anything_is_sent`.
+- **Design 4.8 and 6.16 (191), a packet fitted to the model's window.** `Router._that_fit` counts per account (the app's count
+  corrected for the model, or the account's own `count_tokens` within `ai.estimates.context_margin` of the window) and applies the
+  kind's `min_context` (`registrar.task_kind(min_context=)`, `ai.tasks.<kind>.min_context`); `Router.account_for` names the account
+  an estimate is priced on (`request.range_account`, the go's line when it isn't the tier's first); `estimate_for` skips an account
+  whose window can't hold the work; a run that fits nowhere stops before anything is sent, saying the largest window. **Built:**
+  `tests/test_plugin_api_0390_screens_runs.py::test_a_run_goes_only_to_an_account_whose_window_holds_the_packet_and_the_estimate_names_it`,
+  `::test_a_run_that_fits_nowhere_says_so_before_anything_is_sent`,
+  `::test_a_kinds_own_minimum_window_keeps_it_off_a_smaller_model_however_short_the_packet`,
+  `::test_the_accounts_own_count_decides_when_the_packet_is_near_the_windows_edge`,
+  `::test_the_estimate_before_a_packet_exists_is_priced_on_the_first_account_whose_window_holds_the_work`.
+- **Design 4.8 and 6.16 (196), the tier order.** `engine/tasks.py::settings` and `default_tier`: the workspace's `ai.tasks.<kind>.tier`,
+  then the kind's declared tier, then its role's, then the default; `Router._tier_for` (used by `estimate_for`) follows it and a pack's
+  tier that isn't mapped falls back as before. **Built:** `tests/test_plugin_api_0390_screens_runs.py::test_the_tier_order_is_the_workspaces_then_the_kinds_own_then_its_roles_then_the_default`,
+  `::test_a_pack_tier_a_kind_declares_wins_over_its_role_and_falls_back_until_it_is_mapped`.
+- **Design 3.3 (203), stable failures.** `StoreError.code`; `FAILURE_CODES` (the guide's table); `RegistrationRefused(ValueError)` coded
+  `registration.<registrar method>`; `PackCalls.run_within` for work held to its own time. **Built:**
+  `tests/test_plugin_api_0390_screens_runs.py::test_a_failure_the_plugin_api_raises_carries_a_code_from_the_documented_table`,
+  `::test_the_cores_own_store_failures_have_codes_and_an_uncoded_failure_has_an_empty_one`,
+  `::test_every_declaration_the_registrar_refuses_is_a_value_error_with_the_method_in_its_code`,
+  `::test_the_codes_the_api_raises_are_all_in_the_table`.
+- Four new settings, behind Advanced: `workspace.plugins.preview_seconds`, `dispatch.knowledge.pack_searches`,
+  `ai.estimates.context_margin`, `ai.tasks.<kind>.min_context`. The adapter interface has no `models()`: the model list is its
+  `catalog()` (`ModelInfo.context_tokens`), which is what the window is read from. Plugin API 0.3.90 notes and the guide are finished once
+  for the release.
+
 ## 222. An add-on sign-in's sent mail, an add-on's look further back, lead time on any to-do, facts about any record (2026-10-26; plugin API release part A2; P40 point 13, P48, the designer's lessons 4 and 5)
 
 - **Design 3.3, 3.12 and 6.33 (P40 point 13):** a source a sign-in declares may be marked `sent` (`registrar.sign_in(sources=[{...,
