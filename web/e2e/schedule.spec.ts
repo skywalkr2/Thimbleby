@@ -13,6 +13,8 @@ const SIZES = [
 const LONG = "Quarterly".repeat(12);
 
 async function seed(page: Page): Promise<string> {
+  // Signed in first, so the requests below carry the session.
+  await page.goto("?token=e2e-token");
   const today = ((await (await page.request.get("api/schedule")).json()) as { today: string }).today;
   for (const [what, time] of [
     [LONG, "09:30"],
