@@ -217,6 +217,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       ) : (
         <ListDetail
           title={selected ? changeTitle(selected, t, has) : ""}
+          titleHref={selected?.mail_item && selected.source ? viewHref(recordView("source", selected.source)) : undefined}
           onClose={choice.close}
           fit={CHANGES_FIT}
           detail={

@@ -260,6 +260,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   level a watched source's items carry when the source sets none. It is kept on each source record (5.1).
 - `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
+- `handled_rule_section` (`notices`): the section "Always set aside mail like this" files a sender under when the mail was
+  one the assistant read and found nothing to do in, which has no section of its own: `personal`, `sales` or `notices`
+  (7.20). A set-aside mail keeps its own section. Advanced.
 - `public_mail_domains_extra` (empty list): mail domains anyone can have an address at, added to the list the app ships. No
   sorting rule is offered or saved for a whole public mail domain, only for a sender (6.5).
 - `acting` (empty list): the accounts the assistant may act on after the person's yes (6.12), picked from the accounts
@@ -592,6 +595,8 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
+- `handled_group` (`kind`): how Handled for you groups mail to start with, `kind` or `sender`; the other grouping is one button
+  away on the screen (7.20). Advanced.
 - `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add
   (7, Help); the app keeps five times that many app errors in the workspace's private folder (`problems.jsonl`).
 - `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only), `schedule_days` (3; 1 to 7): how many days the schedule screen shows at once (7.7), and

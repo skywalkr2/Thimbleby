@@ -234,12 +234,14 @@ test.describe.serial("journey: mail", () => {
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
     expect((await requests()).work).toBe(handedIn);
 
-    // The Set aside folder lists both messages, each with why it was set aside.
+    // Handled for you lists both messages, grouped and collapsed, each with why it was set aside.
     const social = aside.find((t) => /neighbors/i.test(t)) ?? "";
     const sales = aside.find((t) => /sale/i.test(t)) ?? "";
     await came.getByRole("button", { name: "2 set aside" }).click();
-    const folder = page.locator("#set-aside");
-    await expect(folder.getByRole("heading", { level: 3, name: "Set aside" })).toBeVisible();
+    const folder = page.locator("[data-handled]");
+    await expect(folder.getByRole("heading", { level: 1, name: "Handled for you" })).toBeVisible();
+    const collapsed = folder.locator("[data-group] > h2 button[aria-expanded=false]");
+    for (let closed = await collapsed.count(); closed > 0; closed = await collapsed.count()) await collapsed.first().click();
     const socialRow = folder.locator("li.line", { hasText: social });
     const salesRow = folder.locator("li.line", { hasText: sales });
     await expect(socialRow).toContainText("Set aside because: your mail service files it under social");

@@ -14,6 +14,7 @@ import { Today } from "./Today";
 import { Addons } from "./Addons";
 import { Files } from "./Files";
 import { FollowUps } from "./FollowUps";
+import { Handled } from "./Handled";
 import { Handover } from "./Handover";
 import { Quality } from "./Quality";
 import { RecordPage } from "./RecordPage";
@@ -428,10 +429,6 @@ test("Sources, with every kind of read and the closes nobody saw, says names, da
       ],
       measure: { days: 28, since: at("2026-09-13", 9), until: at("2026-10-11", 9), total: 12, silent: 3, by_person: 6, approved: 3, rate: 0.25, kinds: [{ kind: "rule", silent: 1, total: 4 }] },
     }),
-    "GET set-aside": () => ({
-      items: [{ id: "SA-1", version: 3, section: "sales", title: "Offer one", sender: `Sender <one${AT}lists.example.com>`, source: "Inbox", received: at("2026-10-11", 8, 30), reason: "it was sent to many people", address: `one${AT}lists.example.com`, domain: "lists.example.com" }, { id: "SA-2", version: 3, section: "personal", title: "Offer two", source: "Inbox", received: null, reason: "you set it aside as personal mail", address: `two${AT}example.com`, domain: null }],
-      deleted: 0,
-    }),
     "GET sign-ins": () => [
       { name: "demo/one", label: "Service one", status: "signed_in", ready: true, callback: "http://localhost:8080/auth/demo/one/callback", app: "workspace", account: `pat${AT}example.com`, missing: ["Mail.Read"] },
       { name: "demo/two", label: "Service two", status: "expired", ready: true, callback: "http://localhost:8080/auth/demo/two/callback", app: "workspace", allows: ["Read your mail"] },
@@ -444,7 +441,6 @@ test("Sources, with every kind of read and the closes nobody saw, says names, da
   const view = renderApp(<Sources onAsk={vi.fn()} />);
   await screen.findByText("Switched off");
   await screen.findByText("Send the proof");
-  await screen.findByText("Offer two");
   sweep(view.container);
 });
 
@@ -583,6 +579,44 @@ test("Since yesterday, with every kind of act and reason, says names, dates and 
   const view = renderApp(<SinceYesterday onOpenRecord={vi.fn()} />);
   await screen.findByRole("list", { name: "What changed since yesterday" });
   expect(screen.getAllByRole("listitem").length).toBeGreaterThanOrEqual(entries.length);
+  sweep(view.container);
+});
+
+test("Handled for you, with both lists and every kind of group, says names, dates and words", async () => {
+  const AT = "@";
+  const mail = (id: string, over: Partial<S["HandledRow"]>): S["HandledRow"] => ({
+    id,
+    version: 3,
+    tab: "set_aside",
+    kind: "sales",
+    title: `Offer ${id}`,
+    sender: `Sender <one${AT}lists.example.com>`,
+    source: "Inbox",
+    received: at("2026-10-11", 8, 30),
+    reason: "it was sent to many people",
+    link: null,
+    saved: null,
+    address: `one${AT}lists.example.com`,
+    domain: "lists.example.com",
+    section: "sales",
+    request: null,
+    ...over,
+  });
+  const kinds: S["HandledRow"]["kind"][] = ["bills", "orders", "deliveries", "personal", "sales", "notices", "other"];
+  const rows = kinds.map((kind) => mail(`m-${kind}`, { kind, received: kind === "other" ? null : at("2026-10-11", 8, 30) }));
+  fakeApi({
+    "GET handled?tab=set_aside&q=": () => ({
+      tab: "set_aside",
+      group: "kind",
+      query: "",
+      counts: { set_aside: rows.length, read: 1 },
+      groups: rows.map((row) => ({ key: row.kind, label: null, count: 1, items: [row] })),
+    }),
+  });
+  const view = renderApp(<Handled />);
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  for (const header of await screen.findAllByRole("button", { name: /· 1$/, expanded: false })) await user.click(header);
+  expect(screen.getAllByRole("listitem")).toHaveLength(rows.length);
   sweep(view.container);
 });
 

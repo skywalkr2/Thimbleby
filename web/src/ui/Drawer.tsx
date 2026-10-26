@@ -13,6 +13,8 @@ import styles from "./Drawer.module.css";
 export function Drawer(props: {
   open: boolean;
   title: string;
+  /** Makes the title a link, to the thing the drawer is about. */
+  titleHref?: string;
   onClose: () => void;
   /** Unsaved text: closing then asks "keep editing or discard". */
   dirty?: boolean;
@@ -72,7 +74,7 @@ export function Drawer(props: {
         <Dialog ref={cursor} className={styles.dialog} aria-labelledby={titleId}>
           <div className={styles.head}>
             <Heading slot="title" id={titleId} className={styles.title}>
-              {props.title}
+              {props.titleHref ? <a href={props.titleHref}>{props.title}</a> : props.title}
             </Heading>
             <IconButton icon="close" label={t("action.close")} onPress={attempt} />
           </div>

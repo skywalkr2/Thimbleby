@@ -548,6 +548,7 @@ test.describe("screen use and the shell", () => {
     const expected: Record<string, string> = {
       "#today": "Today",
       "#work/changed": "What changed",
+      "#work/handled": "Handled for you",
       "#work/followups": "Follow-ups",
       "#work/open": "To-dos and questions",
       "#work/outgoing": "Waiting to go out",
@@ -594,6 +595,7 @@ test.describe("screen use and the shell", () => {
     { name: "Today", hash: "today", queue: true },
     { name: "What changed", hash: "work/changed" },
     { name: "Since yesterday", hash: "work/since" },
+    { name: "Handled for you", hash: "work/handled", field: (page) => page.getByRole("searchbox", { name: "Search by sender, subject or kind" }) },
     { name: "Follow-ups", hash: "work/followups" },
     { name: "Waiting to go out", hash: "work/outgoing" },
     { name: "Stages", hash: "work/stages" },

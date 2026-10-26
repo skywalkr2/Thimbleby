@@ -32,6 +32,7 @@ async function open(page: Page, hash: string) {
 const SCREENS = [
   { name: "What changed", hash: "work/changed" },
   { name: "Since yesterday", hash: "work/since" },
+  { name: "Handled for you", hash: "work/handled" },
   { name: "Follow-ups", hash: "work/followups" },
   { name: "Drafts to approve", hash: "work/outgoing" },
   { name: "Stages", hash: "work/stages" },

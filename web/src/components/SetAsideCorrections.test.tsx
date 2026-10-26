@@ -45,12 +45,12 @@ function today(extra: Routes = {}, setAside = 6) {
 const column = (name: string) => screen.findByRole("region", { name });
 const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
-test("Came in shows the count of what was set aside as a link to the folder, and nothing when none was", async () => {
+test("Came in shows the count of what was set aside as a link to Handled for you, and nothing when none was", async () => {
   const user = userEvent.setup();
   const { onView } = today();
   const col = await column("Came in");
   await user.click(await within(col).findByRole("button", { name: "6 set aside" }));
-  expect(onView).toHaveBeenCalledWith("sources");
+  expect(onView).toHaveBeenCalledWith("work/handled");
 });
 
 test("no set-aside line when nothing is set aside", async () => {

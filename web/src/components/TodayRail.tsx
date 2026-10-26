@@ -586,11 +586,8 @@ function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () =>
   const leftOut = arrived.data?.left_out ?? 0;
   const setAside = arrived.data?.set_aside ?? 0;
   const { setAside: moveToFolder } = useSetAside();
-  // The folder is a section of the Sources screen; once that shows, the page goes to it.
-  const openFolder = () => {
-    props.onView("sources");
-    window.setTimeout(() => document.getElementById("set-aside")?.scrollIntoView?.({ block: "start" }), 50);
-  };
+  // The mail set aside is the first list of Handled for you.
+  const openFolder = () => props.onView("work/handled");
   const sourceName = useSourceNames(items.map((m) => m.source));
   const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
 

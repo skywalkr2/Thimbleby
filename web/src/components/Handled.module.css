@@ -1,0 +1,13 @@
+/* Handled for you: the two lists, the search and grouping controls, and the groups, which stay inside the window at any width. */
+.bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3) var(--space-4); min-width: 0; }
+.search { display: grid; gap: var(--space-1); flex: 1 1 16rem; min-width: 0; margin: 0; }
+.search input { width: 100%; max-width: 32rem; min-width: 0; }
+.tabs { max-width: 100%; flex-wrap: wrap; }
+.groups { display: grid; gap: var(--space-3); min-width: 0; }
+.group { min-width: 0; }
+.group h2 { margin: 0 0 var(--space-1); font-size: var(--text-md); line-height: var(--lh-md); }
+.head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.head strong { overflow-wrap: anywhere; min-width: 0; }
+.chevron { flex: none; display: inline-flex; transition: transform 120ms; }
+.chevron[data-open] { transform: rotate(90deg); }
+.text { min-width: 0; overflow-wrap: anywhere; }

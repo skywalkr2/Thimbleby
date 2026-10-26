@@ -40,6 +40,7 @@ import { StyleGuide } from "./components/StyleGuide";
 import { Stages } from "./components/Stages";
 import { Today } from "./components/Today";
 import { ShortcutHelp } from "./components/ShortcutHelp";
+import { Handled } from "./components/Handled";
 import { SinceYesterday } from "./components/SinceYesterday";
 import { WaitingToGoOut } from "./components/WaitingToGoOut";
 import { WhatChanged } from "./components/WhatChanged";
@@ -158,9 +159,9 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       return;
     }
     window.scrollTo?.(0, 0);
-    // Settings puts the cursor in the open section's first field itself.
+    // Settings and Handled for you put the cursor in their first field themselves.
     const now = parseView(view);
-    if (now.type === "core" && now.view === "settings") {
+    if (now.type === "core" && (now.view === "settings" || now.view === "work/handled")) {
       ownFocus.current = false;
       return;
     }
@@ -229,6 +230,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <WhatChanged onOpenGuide={openGuide} />;
       case "work/since":
         return <SinceYesterday onOpenRecord={openRecord} />;
+      case "work/handled":
+        return <Handled />;
       case "work/followups":
         return <FollowUps />;
       case "work/open":

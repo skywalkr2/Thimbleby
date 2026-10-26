@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Handled for you: one screen for mail set aside and mail read with nothing to do (P45, P46, P47, P41)
+
+**Decided:** Mail the app handled sits on one screen under Work, **Handled for you**, with two tabs, each with a one-line
+explanation: *Set aside* (sorted away before the assistant read it) and *Read, nothing to do*. Rows are grouped by kind
+by default (bills, orders, deliveries, personal, sales, automated notices, other), collapsed, with a count; by sender is one
+click away; newest first; a search box. The Set aside list leaves Connections, which keeps its accounts, sources and the
+rule closes. Each row offers exactly Treat as personal, Treat as work, Always set aside mail like this and Open the message,
+each recording a signal; there is no "Keep set aside" on a row or for the list, because leaving a mail there is the
+confirmation. On What changed a mail's title opens the message's saved page (P41). Both proposals were approved with
+their proposed defaults. Two proposal facts were not true in the code and were handled as follows: no setting purges
+set-aside mail by days (the only one is a seconds-long window after a confirmation that no screen offers now), so "Kept for
+{n} days" is not shown until a retention period is decided and built; and "Closed without you seeing" sits on Connections, not on
+What changed, so it stays there with the rule closes (it holds closes of any item, not only mail), while mail the assistant
+read with nothing to do, which sat only among the finished changes, is the second tab. New settings: `ui.handled_group`
+(default `kind`) and `watch.handled_rule_section` (default `notices`, where "Always set aside" files mail the assistant
+already read). *Why:* the owner's first real use: two long lists that read as duplicates, one inside Connections.
+Impact: no record, op or plugin API change; the side menu gains an entry. **Decided by:** the owner, 2026-10-26: both
+proposals approved with their proposed defaults. Change log: section 215.
 ## 2026-10-26: The agenda becomes a schedule: Today's card is its first days, with a full screen of three days (P49)
 
 **Decided:** Today's Agenda card stays as the first days of the schedule and gains "Open the schedule", which leads to a full

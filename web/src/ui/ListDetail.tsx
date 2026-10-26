@@ -12,7 +12,9 @@ import styles from "./ListDetail.module.css";
 /** The gap between the list and the pane, as the layout sets it (--gutter, 24px from 1024px). */
 const GAP = 24;
 
-export function ListDetail(props: { children: ReactNode; detail: ReactNode | null; title: string; onClose: () => void; fit?: number }) {
+/** `titleHref` makes the detail's title a link to the thing the detail is about (a message's saved page); without one the
+ * title is plain text and nothing about it looks clickable. */
+export function ListDetail(props: { children: ReactNode; detail: ReactNode | null; title: string; titleHref?: string; onClose: () => void; fit?: number }) {
   const { t } = useWords();
   const beside = useMediaQuery("(min-width: 1024px)");
   const open = props.detail !== null;
@@ -61,13 +63,13 @@ export function ListDetail(props: { children: ReactNode; detail: ReactNode | nul
               }}
             >
               <div className={styles.head}>
-                <h2 className={styles.title}>{props.title}</h2>
+                <h2 className={styles.title}>{props.titleHref ? <a href={props.titleHref}>{props.title}</a> : props.title}</h2>
                 <IconButton icon="close" label={t("action.close")} onPress={props.onClose} />
               </div>
               <div className={styles.body}>{props.detail}</div>
             </aside>
           ) : (
-            <Drawer open title={props.title} onClose={props.onClose}>
+            <Drawer open title={props.title} titleHref={props.titleHref} onClose={props.onClose}>
               <div className={styles.body}>{props.detail}</div>
             </Drawer>
           ))}

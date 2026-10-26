@@ -20,6 +20,7 @@ const VIEW_LABEL: Record<CoreView, string> = {
   schedule: "schedule.title",
   "work/changed": "nav.changed",
   "work/since": "since.title",
+  "work/handled": "nav.handled",
   "work/followups": "nav.followups",
   "work/open": "nav.open",
   "work/outgoing": "nav.outgoing",

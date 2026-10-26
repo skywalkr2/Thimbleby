@@ -4,6 +4,7 @@ const routes = [
   "today",
   "schedule",
   "work/changed",
+  "work/handled",
   "work/followups",
   "work/open",
   "work/outgoing",

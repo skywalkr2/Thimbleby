@@ -605,7 +605,7 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | Install | The route existed; the screen had no button | Install, Update now and Remove (3.11). Only updating a running pack holds work until the restart. **Built (A2):** `tests/test_pack_install.py` |
 | Acceptance scenario, step 7 | The header chip said "Backup needed" until a backup succeeded and then only "Live", with the age in the popover; Today never mentioned a backup | A backup line on Today while a backup needs attention (a bar then, an At risk queue line since section 127), and the age on the chip itself (7.1, 7.7). **Built (A3):** `StatusMenu.test.tsx`; the line: `TodayFirstScreen.test.tsx` |
 | Personal and sales mail | Nothing tells it apart; it reaches the assistant like work mail | A Set aside folder: the person's rules, the mail's own category and bulk headers, then a header-only sorting run; it never reaches the assistant or learning (6.5, L0) |
-| Sales and social mail set aside by rules | Every mail item reached the assistant, one AI run each, and the service's tabs can't be relied on | Mail items carry `bulk` and `categories` (plugin API 0.3.57); the core sets aside bulk, promotions, social and forums mail as sales mail with no AI run, built in and turned off by one setting (`watch.set_aside_defaults`), after the person's own sender and domain rules (`sender-rule`; `set_aside: never` keeps mail). A Set aside folder in Sources, Came in's "N set aside", one-click "Set aside: personal"/"sales" and "This is work", each offering "Always for this sender/domain"; Confirm learns a sender rule and deletes the message's content from the app after the undo time, keeping a marker (6.5; A5, **Built**: `tests/test_set_aside.py`, `src/components/SetAside.test.tsx`, J2 in `web/e2e/journeys-mail.spec.ts`). The header-only sorting run and the learning proof stay in L0 |
+| Sales and social mail set aside by rules | Every mail item reached the assistant, one AI run each, and the service's tabs can't be relied on | Mail items carry `bulk` and `categories` (plugin API 0.3.57); the core sets aside bulk, promotions, social and forums mail as sales mail with no AI run, built in and turned off by one setting (`watch.set_aside_defaults`), after the person's own sender and domain rules (`sender-rule`; `set_aside: never` keeps mail). A Set aside folder in Sources, Came in's "N set aside", one-click "Set aside: personal"/"sales" and "This is work", each offering "Always for this sender/domain"; Confirm learns a sender rule and deletes the message's content from the app after the undo time, keeping a marker (6.5; A5, **Built**: `tests/test_set_aside.py`, `src/components/Handled.test.tsx`, J2 in `web/e2e/journeys-mail.spec.ts`). The header-only sorting run and the learning proof stay in L0 |
 | Onboarding | A setup guide reached from a line on Today; mail and calendar last, add-ons installed elsewhere, a restart per step | A new-start walkthrough that opens by itself: You, AI account, Mail and calendar (install, one restart, sign in), Backups, People, Done on the first-Go line; and a getting-started page (7.8, A4) |
 | Mail and calendar services | The walkthrough told a mail or calendar connector from a word list in its name | A connector declares what it reads, in its registration and in the manifest, so an add-on in a catalog is offered too; the word list stays only for a connector that does not declare it (3.2, 3.3, 7.8; plugin API 0.3.56) |
 | Wording | Checked only in the screens' own wording file | Screen text typed in the API models and checked when it leaves, in tests and development. **Built (A2):** the audit's 47 strings and every further leak the tests found rewritten; a secret field's input hint is the one exemption until phase B (`tests/test_screen_text.py`, `web/src/wording/wording.test.ts`) |
@@ -712,7 +712,7 @@ yet follow, that it is *designed*, with its phase.
 
 | Item | What the code did | What it does now |
 |---|---|---|
-| "Always for this domain" for a personal address | Offered for any sender's domain, so one click could set aside or keep every contact at a free mail service | A shipped list of public mail domains (`engine/defaults/public_mail_domains.yaml`) plus `watch.public_mail_domains_extra` (empty by default, live). For a public domain the Set aside rows, "This is work", "Set aside" and Confirm all carry no domain, so only the sender rule is offered; the sorting-rule save refuses a public domain in plain words. A match is exact (case ignored), not by parent domain (4.x, 6.5). Built: `tests/test_set_aside.py::test_a_public_mail_domain_is_the_shipped_list_plus_the_persons_own_and_matches_exactly`, `test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain`, `test_confirm_all_offers_no_domain_for_three_senders_on_a_public_domain_but_does_for_a_company`, `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; `src/components/SetAside.test.tsx` |
+| "Always for this domain" for a personal address | Offered for any sender's domain, so one click could set aside or keep every contact at a free mail service | A shipped list of public mail domains (`engine/defaults/public_mail_domains.yaml`) plus `watch.public_mail_domains_extra` (empty by default, live). For a public domain the Set aside rows, "This is work", "Set aside" and Confirm all carry no domain, so only the sender rule is offered; the sorting-rule save refuses a public domain in plain words. A match is exact (case ignored), not by parent domain (4.x, 6.5). Built: `tests/test_set_aside.py::test_a_public_mail_domain_is_the_shipped_list_plus_the_persons_own_and_matches_exactly`, `test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain`, `test_confirm_all_offers_no_domain_for_three_senders_on_a_public_domain_but_does_for_a_company`, `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; `src/components/Handled.test.tsx` |
 
 ## 36. Copy puts formatted text and plain text on the clipboard together (2026-10-13)
 
@@ -1027,6 +1027,31 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 215. Handled for you: one screen for mail set aside and mail read with nothing to do (2026-10-26; P41, P45, P46, P47)
+
+- **Design 7.20 (new) and 7.1:** a sidebar entry under Work, **Handled for you**, with two tabs, each with a one-line
+  explanation: Set aside (mail sorted away before the assistant read it) and Read, nothing to do (mail the assistant read and
+  found nothing in). Rows are grouped by kind by default (setting `ui.handled_group`, `kind` or `sender`), collapsed, with a
+  count; the other grouping is one button away; newest first; a search by sender, subject and kind. The Set aside folder
+  leaves Connections (P45), which keeps its accounts, sources and the rule closes. Every row, on both tabs, offers the same
+  four choices, each recording a signal, and no "Keep set aside" anywhere: Treat as work, Treat as personal, Always set aside
+  mail like this and Open the message. A mail is on one tab at most (P47). **Built:** `tests/test_handled.py`,
+  `web/src/components/Handled.test.tsx`, `web/src/components/ViewSweep.test.tsx` ("Handled for you"),
+  `web/e2e/handled.spec.ts` (written, not yet run).
+- **Design 6.5 and 6.32:** a mail the assistant read with nothing to do can be read again (Treat as work, or filed under
+  Personal), a correction recorded as a `pulled_back` signal on the earlier read and undone while the new read is waiting;
+  "Always set aside mail like this" on such a mail files the sender under `watch.handled_rule_section` (default notices,
+  advanced). No new record field, op or plugin API name: the request, signal and sorting-rule paths that exist.
+  **Built:** `tests/test_handled.py::test_treat_as_work_on_mail_read_with_nothing_to_do_reads_it_again_and_records_a_signal`,
+  `::test_undo_takes_the_new_read_back_while_it_is_waiting_and_not_after_it_started`,
+  `::test_always_set_aside_on_a_read_row_files_it_in_the_configured_section_and_records_a_signal`.
+- **Design 7.3 (P41):** the title of a change made from a mail the app holds is a link to the message's saved page in the
+  detail (a title with nothing to open is plain text). **Built:** `web/src/components/WhatChangedFold.test.tsx`.
+- **Moved tests:** the tests of the old Set aside folder component are now `web/src/components/Handled.test.tsx`; earlier entries that cited
+  `SetAside.test.tsx` cite it.
+- **Not built:** the proposal's "Kept for {n} days": no setting purges set-aside mail by age (the one that existed ran only
+  after a confirmation that has no screen since "Keep set aside" went), so the screen states no period. Settings:
+  `watch.handled_rule_section`, `ui.handled_group` (04 configuration).
 ## 214. The agenda becomes a schedule (2026-10-26; P49)
 
 - **Design 7.7 (the schedule), 4.0:** the owner approved the proposal with its proposed defaults. Today's Agenda panel is the
@@ -1151,7 +1176,7 @@ Built: `tests/test_versions.py`. (The log's top entry was 211, so this takes 212
 - **Design 7 and 6.5 (the Set aside screen):** a row offers Treat as work, and in its menu Treat as personal, Always set aside
   mail like this and Open the message; "Keep it set aside" and "Keep them all set aside" are gone. **Built:**
   `tests/test_mail_kinds.py::test_treat_as_personal_hands_it_in_for_the_personal_project_and_records_a_signal`,
-  `::test_always_set_aside_records_a_signal_and_the_row_carries_its_link`, `web/src/components/SetAside.test.tsx`.
+  `::test_always_set_aside_records_a_signal_and_the_row_carries_its_link`, `web/src/components/Handled.test.tsx`.
 - **Golden set:** `tests/test_mail_kinds.py::test_the_mail_kind_cases_pass_on_their_ideal_answers` runs the four cases.
 
 ## 204. One-time-code mail is set aside by rules; a read with nothing to record closes itself; each mail in one list (2026-10-26; P42, P47)

@@ -5,6 +5,7 @@ narrow_below_px: 700   # below this width: the phone layout, with a bottom bar
 toast_seconds: 0
 links: [{name: Planning board, address: "https://planning-board.example.com/spring"}, {name: Shared schedule, address: "https://shared-schedule.example.com/team"}]   # links to your own pages, shown in the header
 feedback_to: feedback@example.com   # where the feedback button writes
+handled_group: kind   # how Handled for you groups mail to start with: kind or sender
 feedback_problem_days: 3   # how far back Send feedback offers to add failed work
 feedback_problem_max: 20   # the most failures it offers to add
 today: {mail_hours: 48, mail_max: 40, agenda_days_ahead: 2, schedule_days: 3, stale_after_days: 21, top_priorities_lines: 5, top_priorities_ahead_days: 14}   # what Today's agenda and what came in cover

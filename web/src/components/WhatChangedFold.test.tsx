@@ -193,3 +193,15 @@ test("a title whose click would change nothing (its row is already chosen) is no
   expect(rowButton("First thing")).toHaveAttribute("data-inert");
   expect(rowButton("Second thing")).not.toHaveAttribute("data-inert");
 });
+
+test("the title of a received mail opens the message's saved page, and a change with no saved message has a title that is not a link", async () => {
+  const user = userEvent.setup();
+  show([change("A", "First thing", { mail_item: "SNAP-A" }), change("B", "Second thing")]);
+  renderApp(<WhatChanged />);
+  const pane = await screen.findByRole("complementary");
+  const link = await within(pane).findByRole("link", { name: /First thing/ });
+  expect(link).toHaveAttribute("href", expect.stringMatching(/#records\/source\/SRC-1$/));
+  await user.click(rowButton("Second thing"));
+  expect(await screen.findByText("Send Second thing")).toBeInTheDocument();
+  expect(within(screen.getByRole("complementary")).queryByRole("link", { name: /Second thing/ })).toBeNull();
+});

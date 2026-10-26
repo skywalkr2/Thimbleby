@@ -178,10 +178,12 @@ test.describe.serial("journey: the owner's first evening", () => {
     await visit(page);
 
     // The one-time code is set aside under notices, and is not under Needs attention.
-    // The set-aside list is still inside Connections (its own screen, P45, is not built yet).
-    await openView(page, "Connections");
-    const notices = page.locator('[data-section="notices"]');
-    await expect(notices.getByText("Your verification code")).toBeVisible({ timeout: 60_000 });
+    // It is on Handled for you, under Automated notices, which is collapsed until it is opened.
+    await openView(page, "Handled for you");
+    const notices = page.locator('[data-group="notices"]');
+    await expect(notices).toBeVisible({ timeout: 60_000 });
+    await notices.getByRole("button", { name: /^Automated notices/ }).click();
+    await expect(notices.getByText("Your verification code")).toBeVisible();
     await openView(page, "What changed");
     await page.getByRole("button", { name: /^Needs attention/ }).click();
     await expect(page.getByText("Your verification code")).toHaveCount(0);

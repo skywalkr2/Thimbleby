@@ -4444,6 +4444,74 @@ class SetAsideDone(BaseModel):
     )
 
 
+class HandledRow(BaseModel):
+    """One mail on the Handled for you screen: set aside before the assistant read it, or read with nothing to do."""
+
+    id: str = Field(description="The mail item's snapshot, which every choice names.")
+    version: int
+    tab: Literal["set_aside", "read"]
+    kind: Literal["bills", "orders", "deliveries", "personal", "sales", "notices", "other"] = Field(
+        description="What the mail is, for grouping and the search. The screen words it."
+    )
+    title: str
+    sender: str | None = None
+    source: str = Field(description="The watched source's label.")
+    received: str | None = Field(None, description="ISO 8601 date-time with its offset, as the service gave it.")
+    reason: str | None = Field(
+        None, description="Why it was set aside, in plain words; empty for mail the assistant read."
+    )
+    link: str | None = Field(None, description="Where the message opens in the person's mail service, when it has one.")
+    saved: str | None = Field(None, description="The saved source record of the message, whose page opens it.")
+    address: str = Field("", description="The sender's address, when the mail holds one.")
+    domain: str | None = Field(
+        None,
+        description="The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no "
+        "address or the domain is a public mail domain.",
+    )
+    section: Literal["personal", "sales", "notices"] = Field(
+        description="The section Always set aside mail like this files it in: its own for set-aside mail, the "
+        "configured one (`watch.handled_rule_section`) for mail the assistant read."
+    )
+    request: str | None = Field(None, description="For mail the assistant read: the request that read it.")
+
+
+class HandledGroup(BaseModel):
+    key: str = Field(description="The kind (by kind) or the sender's address (by sender); empty for no known sender.")
+    label: str | None = Field(
+        None, description="By sender: the sender's name or address. Empty by kind (the screen words the kind)."
+    )
+    count: int
+    items: list[HandledRow] = Field(description="Newest first.")
+
+
+class HandledCounts(BaseModel):
+    set_aside: int = Field(description="Mail set aside before it was read, whatever the search.")
+    read: int = Field(description="Mail read with nothing to do, whatever the search.")
+
+
+class HandledView(BaseModel):
+    """Mail handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest mail."""
+
+    tab: Literal["set_aside", "read"]
+    group: Literal["kind", "sender"] = Field(description="How the groups were made.")
+    query: str = Field(description="The search the rows match; empty for all.")
+    counts: HandledCounts
+    groups: list[HandledGroup]
+
+
+class HandledDone(BaseModel):
+    """What a choice on a mail did: the mail, its version now, and the request made for it, if one was."""
+
+    id: str
+    version: int
+    section: Literal["personal", "sales", "notices"]
+    request: str | None = Field(None, description="The request now waiting for the assistant, if the choice made one.")
+    address: str = Field("", description="The sender's address, when the mail holds one.")
+    domain: str | None = Field(
+        None, description="The sender's domain, when a rule for the whole domain may be offered."
+    )
+
+
 class SortingRuleIn(BaseModel):
     """Always set aside mail from these senders and domains in a section, or never set it aside (work)."""
 

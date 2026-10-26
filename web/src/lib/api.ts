@@ -114,13 +114,22 @@ export const api = {
   closeSeen: (ref: string) => call<S["Created"]>("POST", "silent-closes/seen", { ref } satisfies S["SilentCloseSeen"]),
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),
-  setAside: () => call<S["SetAsideFolder"]>("GET", "set-aside"),
+  /** Mail handled for the person: one list (`tab`), grouped by `group` (the configured one when empty), narrowed by `q`. */
+  handled: (tab: S["HandledView"]["tab"], group: S["HandledView"]["group"] | null, q: string) => {
+    const query = new URLSearchParams({ tab, q });
+    if (group) query.set("group", group);
+    return call<S["HandledView"]>("GET", `handled?${query.toString()}`);
+  },
+  handledWork: (item: string, readVersion: number) =>
+    call<S["HandledDone"]>("POST", `handled/${id(item)}/work`, { read_version: readVersion }),
+  handledPersonal: (item: string, readVersion: number) =>
+    call<S["HandledDone"]>("POST", `handled/${id(item)}/personal`, { read_version: readVersion }),
+  handledUndo: (item: string, readVersion: number) =>
+    call<S["HandledDone"]>("POST", `handled/${id(item)}/undo`, { read_version: readVersion }),
   setAsideMail: (item: string, section: S["SetAsideIn"]["section"]) =>
     call<S["SetAsideDone"]>("POST", `mail/${id(item)}/set-aside`, { section } satisfies S["SetAsideIn"]),
   isWork: (item: string, readVersion: number) =>
     call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/work`, { read_version: readVersion }),
-  isPersonal: (item: string, readVersion: number) =>
-    call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/personal`, { read_version: readVersion }),
   putBack: (item: string, readVersion: number) =>
     call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/put-back`, { read_version: readVersion }),
   sortingRule: (body: S["SortingRuleIn"]) => call<S["SettingsSaved"]>("POST", "watch/sorting", body),

@@ -23,6 +23,7 @@ const SHAPES = {
     </>
   ),
   folder: <path d="M3 6h6l2 2h10v11H3z" />,
+  archive: <path d="M3 4h18v4H3z M5 8v12h14V8 M10 12h4" />,
   book: <path d="M4 5a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2z M4 19a2 2 0 0 0 2 2h14v-4" />,
   rss: (
     <>

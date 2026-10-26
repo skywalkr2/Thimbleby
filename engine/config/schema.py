@@ -2514,6 +2514,11 @@ class UiFile(FileModel):
         default_factory=lambda: dict(DEFAULT_SHORTCUTS),
         description="Single-key shortcuts by action; they never fire while typing.",
     )
+    handled_group: Literal["kind", "sender"] = Field(
+        "kind",
+        description="How the Handled for you screen groups mail to start with: by kind (bills, orders, newsletters, "
+        "sales, automated notices) or by sender. The other grouping is one click away.",
+    )
     narrow_below_px: int = Field(
         640,
         ge=320,
@@ -3075,6 +3080,12 @@ class WatchFile(FileModel):
         ge=0,
         description="After you confirm set-aside mail is not work for you, how long the app keeps its copy so Undo can "
         "bring it back; then the copy is deleted from the app (it stays in your mailbox). 0 deletes at once.",
+    )
+    handled_rule_section: Literal["personal", "sales", "notices"] = Field(
+        "notices",
+        description="Where mail goes when you choose Always set aside mail like this on mail the assistant already "
+        "read and found nothing to do in (that mail has no section of its own): personal, sales or notices "
+        "(automated notices).",
     )
     public_mail_domains_extra: list[str] = Field(
         default_factory=list,

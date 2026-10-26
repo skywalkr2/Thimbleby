@@ -9744,6 +9744,326 @@
         "title": "HandedOver",
         "type": "object"
       },
+      "HandledCounts": {
+        "properties": {
+          "read": {
+            "description": "Mail read with nothing to do, whatever the search.",
+            "title": "Read",
+            "type": "integer"
+          },
+          "set_aside": {
+            "description": "Mail set aside before it was read, whatever the search.",
+            "title": "Set Aside",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "set_aside",
+          "read"
+        ],
+        "title": "HandledCounts",
+        "type": "object"
+      },
+      "HandledDone": {
+        "description": "What a choice on a mail did: the mail, its version now, and the request made for it, if one was.",
+        "properties": {
+          "address": {
+            "default": "",
+            "description": "The sender's address, when the mail holds one.",
+            "title": "Address",
+            "type": "string"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sender's domain, when a rule for the whole domain may be offered.",
+            "title": "Domain"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The request now waiting for the assistant, if the choice made one.",
+            "title": "Request"
+          },
+          "section": {
+            "enum": [
+              "personal",
+              "sales",
+              "notices"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "section"
+        ],
+        "title": "HandledDone",
+        "type": "object"
+      },
+      "HandledGroup": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "description": "Newest first.",
+            "items": {
+              "$ref": "#/components/schemas/HandledRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "key": {
+            "description": "The kind (by kind) or the sender's address (by sender); empty for no known sender.",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "By sender: the sender's name or address. Empty by kind (the screen words the kind).",
+            "title": "Label"
+          }
+        },
+        "required": [
+          "key",
+          "count",
+          "items"
+        ],
+        "title": "HandledGroup",
+        "type": "object"
+      },
+      "HandledRow": {
+        "description": "One mail on the Handled for you screen: set aside before the assistant read it, or read with nothing to do.",
+        "properties": {
+          "address": {
+            "default": "",
+            "description": "The sender's address, when the mail holds one.",
+            "title": "Address",
+            "type": "string"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no address or the domain is a public mail domain.",
+            "title": "Domain"
+          },
+          "id": {
+            "description": "The mail item's snapshot, which every choice names.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What the mail is, for grouping and the search. The screen words it.",
+            "enum": [
+              "bills",
+              "orders",
+              "deliveries",
+              "personal",
+              "sales",
+              "notices",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the message opens in the person's mail service, when it has one.",
+            "title": "Link"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it was set aside, in plain words; empty for mail the assistant read.",
+            "title": "Reason"
+          },
+          "received": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 8601 date-time with its offset, as the service gave it.",
+            "title": "Received"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For mail the assistant read: the request that read it.",
+            "title": "Request"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The saved source record of the message, whose page opens it.",
+            "title": "Saved"
+          },
+          "section": {
+            "description": "The section Always set aside mail like this files it in: its own for set-aside mail, the configured one (`watch.handled_rule_section`) for mail the assistant read.",
+            "enum": [
+              "personal",
+              "sales",
+              "notices"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender"
+          },
+          "source": {
+            "description": "The watched source's label.",
+            "title": "Source",
+            "type": "string"
+          },
+          "tab": {
+            "enum": [
+              "set_aside",
+              "read"
+            ],
+            "title": "Tab",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "tab",
+          "kind",
+          "title",
+          "source",
+          "section"
+        ],
+        "title": "HandledRow",
+        "type": "object"
+      },
+      "HandledView": {
+        "description": "Mail handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest mail.",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/HandledCounts"
+          },
+          "group": {
+            "description": "How the groups were made.",
+            "enum": [
+              "kind",
+              "sender"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/HandledGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "query": {
+            "description": "The search the rows match; empty for all.",
+            "title": "Query",
+            "type": "string"
+          },
+          "tab": {
+            "enum": [
+              "set_aside",
+              "read"
+            ],
+            "title": "Tab",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tab",
+          "group",
+          "query",
+          "counts",
+          "groups"
+        ],
+        "title": "HandledView",
+        "type": "object"
+      },
       "HandoverChoice": {
         "properties": {
           "which": {
@@ -31503,6 +31823,231 @@
           }
         },
         "summary": "Handin Audio"
+      }
+    },
+    "/api/handled": {
+      "get": {
+        "description": "One of the two lists of mail handled for the person, in groups: by kind or by sender (the configured\ngrouping when none is asked for), newest first, narrowed by the words of `q`, with the counts of both lists.",
+        "operationId": "handled_list_api_handled_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "default": "set_aside",
+              "enum": [
+                "set_aside",
+                "read"
+              ],
+              "title": "Tab",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "kind",
+                    "sender"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandledView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handled List"
+      }
+    },
+    "/api/handled/{snapshot_id}/personal": {
+      "post": {
+        "description": "Treat as personal: as Treat as work, filed under the Personal project.",
+        "operationId": "handled_personal_api_handled__snapshot_id__personal_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandledDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handled Personal"
+      }
+    },
+    "/api/handled/{snapshot_id}/undo": {
+      "post": {
+        "description": "Undo Treat as work or Treat as personal on a mail read with nothing to do, while the assistant hasn't\nstarted on it: the mail is listed as read with nothing to do again.",
+        "operationId": "handled_undo_api_handled__snapshot_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandledDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handled Undo"
+      }
+    },
+    "/api/handled/{snapshot_id}/work": {
+      "post": {
+        "description": "Treat as work: a set-aside mail is handed in after all; a mail read with nothing to do is read again.",
+        "operationId": "handled_work_api_handled__snapshot_id__work_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandledDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handled Work"
       }
     },
     "/api/health": {

@@ -50,6 +50,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
   expect(links.map((l) => l.label)).toEqual([
     "Today",
     "What changed",
+    "Handled for you",
     "Follow-ups",
     "To-dos and questions",
     "Waiting to go out",

@@ -239,10 +239,10 @@ aside folder:
   `test_sender_rule_matches_an_address_or_a_domain_and_its_subdomains_in_any_case`,
   `test_a_workspace_with_its_own_rules_or_written_earlier_still_sets_aside_bulk_and_category_mail`).
 - [x] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count. Built:
-  `SetAside.test.tsx`, `SetAsideCorrections.test.tsx` and `tests/test_set_aside.py::test_the_folder_lists_what_was_set_aside_with_its_sender_and_reason`.
+  `Handled.test.tsx`, `SetAsideCorrections.test.tsx` and `tests/test_set_aside.py::test_the_folder_lists_what_was_set_aside_with_its_sender_and_reason`.
 - [x] One-click corrections: "Set aside: personal or sales" on any item and "This is work" in the folder, each offering
   "always for this sender or domain" as a sorting rule with a read-back and Undo. Built:
-  `SetAsideCorrections.test.tsx`, `SetAside.test.tsx` and
+  `SetAsideCorrections.test.tsx`, `Handled.test.tsx` and
   `tests/test_set_aside.py::test_a_rule_written_by_the_corrections_route_applies_to_the_next_matching_item`.
 - [x] **Confirm learns and deletes** (owner, 2026-10-12): confirming a set-aside writes a sender rule (a domain rule
   is offered at three senders). It also removes the message's text from the app, keeping a marker so it isn't read
@@ -255,7 +255,7 @@ aside folder:
 
 Built: `tests/test_set_aside.py` (22 tests, including a workspace made before this change and the deleted
 text gone from the whole database and every file), `test_the_mailbox_connector_marks_bulk_messages_from_their_headers`,
-`SetAside.test.tsx`, `SetAsideCorrections.test.tsx` and journey J2. Also fixed: Undo after a guided save (a source, an
+`Handled.test.tsx`, `SetAsideCorrections.test.tsx` and journey J2. Also fixed: Undo after a guided save (a source, an
 add-on on or off, your name) was refused (`tests/test_settings_undo.py`).
 
 The sorting run on headers for mail the rules can't place, and the proof that learning never reads set-aside mail, stay
@@ -594,7 +594,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `tests/test_set_aside.py::test_a_public_mail_domain_is_the_shipped_list_plus_the_persons_own_and_matches_exactly`,
   `test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain` and
   `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; the screen hides the domain
-  button when none comes: `web/src/components/SetAside.test.tsx` ("offers only Always for this sender when the server sends no
+  button when none comes: `web/src/components/Handled.test.tsx` ("offers only Always for this sender when the server sends no
   domain").
 - [x] **What the browser-test failures found** (2026-10-13; the walkthrough's screen race and J4's restart race are fixed:
   `tests/test_setup.py::test_setup_state_survives_changes_made_at_the_same_time`):

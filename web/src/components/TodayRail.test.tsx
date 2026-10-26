@@ -370,6 +370,8 @@ test("came in: unread shows a New label, today's mail its time and older mail it
   expect(rows[1].querySelector("time")!.textContent).toBe("Fri");
   await user.click(within(col).getByRole("button", { name: "3 closed by your rules" }));
   expect(onView).toHaveBeenCalledWith("sources");
+  await user.click(within(col).getByRole("button", { name: "2 set aside" }));
+  expect(onView).toHaveBeenLastCalledWith("work/handled");
 });
 
 test("no closed-by-rules line when nothing was closed", async () => {

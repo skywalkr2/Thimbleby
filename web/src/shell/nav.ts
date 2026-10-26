@@ -50,6 +50,7 @@ export function useNav(): NavModel {
     today: { view: "today", label: t("nav.home"), icon: "home", count: some(needsYou) },
     work: [
       { view: "work/changed", label: t("nav.changed"), icon: "inbox", count: some(counts.changed) },
+      { view: "work/handled", label: t("nav.handled"), icon: "archive" },
       { view: "work/followups", label: t("nav.followups"), icon: "send", count: some(counts.followups) },
       { view: "work/open", label: t("nav.open"), icon: "check" },
       { view: "work/outgoing", label: t("nav.outgoing"), icon: "upload" },

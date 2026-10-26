@@ -267,7 +267,7 @@ It is sorted in this order, first match wins:
      batch counts as work;
    - **where items wait:** an item isn't written or handed in until its batch has its answer, so a sorted message is set
      aside from the start and never queued for the assistant. Personal and sales answers set it aside with the reason "the
-     assistant sorted it as personal mail" or "... sales mail" and `by: assistant`, shown in the Set aside folder; "This is
+     assistant sorted it as personal mail" or "... sales mail" and `by: assistant`, shown in the Set aside folder (the first tab of Handled for you, 7.20); "This is
      work" and the sorting rules from a correction work exactly as for mail a rule set aside. "Look at the last day" sorts
      the mail a first read only noted in the same way;
    - **cost is the person's choice, as for any run (6.16):** the run is the task kind `sort-mail`, role `write`, at the
@@ -3710,7 +3710,7 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   return-by day when it gives one. A *shipping or delivery notice* never makes a second one: it moves the watched order
   (a new expected day), closes it ("delivered") or is news on it ("shipped" with no new day); only a notice with no matching
   open to-do makes the watch. These use ops that exist (`action.add`, `action.move`, `action.close`, `action.news`, `fact`);
-  nothing in the plugin API changed. On the Set aside screen a row offers *Treat as work*, and in its menu *Treat as
+  nothing in the plugin API changed. On the Set aside tab of Handled for you (7.20) a row offers *Treat as work*, and in its menu *Treat as
   personal* (handed in for the Personal project), *Always set aside mail like this* (a rule for the sender) and *Open the
   message*, each recording a signal; there is no "Keep it set aside", because leaving a mail there is the confirmation.
   Golden set: `bill-statement-becomes-a-reminder`, `order-confirmation-is-watched-until-it-arrives`,
@@ -3757,7 +3757,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     counts it as a kind). An input the assistant read that recorded nothing and asked nothing closes by itself, Done
     with Undo (a `pulled_back` signal), and never waits under Needs attention (decision 2026-10-26, section 204).
   - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Connections screen under "Closed
-    without you seeing", below the Set aside folder and the rule closes. The measure, silent closes out of all closes in
+    without you seeing", below the rule closes (the Set aside folder is now the first tab of Handled for you, 7.20). The measure, silent closes out of all closes in
     the quality window with the counts for each kind, is `closes.measure`, shown on the Quality screen (see Measures).
   - Tests: `tests/test_silent_closes.py::test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_what_when_by_and_why`,
     `::test_the_persons_own_close_is_not_silent_but_is_counted_in_all_closes`,

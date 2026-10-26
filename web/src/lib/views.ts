@@ -1,6 +1,6 @@
 // Which screen is showing (design 7.1). Every view has a real link in the address's #fragment, so one build works at any
 // base path with no server routes, and a view can be bookmarked and opened in a new tab:
-//   #today  #schedule  #work/changed  #work/since  #work/followups  #work/open  #work/outgoing  #work/stages  #work/panel/<name>
+//   #today  #schedule  #work/changed  #work/since  #work/handled  #work/followups  #work/open  #work/outgoing  #work/stages  #work/panel/<name>
 //   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
 //   #sources  #addons  #settings  #settings/<section> (you, ai, backups, today, appearance, lists, files, advanced, addon/<name>)
@@ -11,6 +11,7 @@ export type CoreView =
   | "schedule"
   | "work/changed"
   | "work/since"
+  | "work/handled"
   | "work/followups"
   | "work/open"
   | "work/outgoing"
@@ -39,6 +40,7 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "schedule",
   "work/changed",
   "work/since",
+  "work/handled",
   "work/followups",
   "work/open",
   "work/outgoing",
