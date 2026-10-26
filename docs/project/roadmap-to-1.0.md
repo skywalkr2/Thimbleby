@@ -1595,7 +1595,9 @@ schedule when both are on, and is a plain list of milestones when it is alone.
 - [ ] [C3] **Marketing, scope to settle when the pack is scoped** (owner, 2026-10-26: "Publishing pack will include
   marketing as a stage"): marketing as a stage of a title (the stages are config, design 6.26), its milestones in the
   launch plan template, drafted by `publishing/promo-draft` (design 9.7) and posted through the social media pack when it
-  is on (copied to paste when it isn't, so the pack still works alone).
+  is on (copied to paste when it isn't, so the pack still works alone). **Open, to be designed** (owner, 2026-10-26):
+  marketing may instead be its own pack that the publishing pack works with through an interface (the launch plan's
+  marketing milestones handed to it), each working alone; decided when the publishing pack is scoped.
 - Staying with the writing pack: the cover wrap specification and advance reader editions.
 
 C3c. **A business analysis pack and a systems architect pack** (owner, 2026-10-14: "pretty much barely disguised
