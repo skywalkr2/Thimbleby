@@ -27,6 +27,18 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 says what each batch covers, what passes at its end and how big it is. A batch is one meaningful piece of scope, with
 one full test run and one push (CLAUDE.md, "Usage and machine load").
 
+## Where things stand (2026-10-26)
+
+- **Phase S and the fix batch are built and pushed.** The owner's first evening on a fresh workspace (2026-10-22) found the
+  app not ready; everything batched from it (open promises P34 to P50, the lessons P51 to P54) and the functional
+  designer's 2026-10-26 answers that need no plugin API change (F33 to F38 "now" parts, lessons 3, 5, 6, 7 and 11) are
+  built, each with its test, and pass the full suites and the browser tests.
+- **Next, in order** (decisions, 2026-10-26, "The owner's answers to the designer's full read"): the UI/UX review of the
+  whole app (P56, with the designer's settings and one-place-to-act points in its hand-over); the one batched plugin API
+  release alongside it (P64, `docs/project/plugin-api-release-plan.md`); then the gate week, once its pass bar is set
+  (P65); then phase I, which starts only after roadmap I-0c and I-0d.
+- **Status lives here and in `open-promises.md`;** finished promises move to `open-promises-done.md`.
+
 ## Where things stand (2026-10-20)
 
 - **Done** (all in `roadmap-done.md`): phase 0; phase A (2026-10-13); phase L-core's code, L0 to L7, apart from the
