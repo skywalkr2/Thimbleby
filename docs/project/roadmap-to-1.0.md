@@ -1170,6 +1170,28 @@ person through their own calendar or a mail to themselves, no third-party push, 
 first audience is independent professionals juggling clients and personal life, tested first by the owner's colleagues
 and people answering a LinkedIn post. Areas stay inside one workspace.
 
+## Phase U: the UI/UX review's findings (review of 45f7102, 2026-10-26)
+
+The reviewer walked the whole app as two beginners ("Just me" and "Me and my work" for a small business); the review is
+in `reviews/ui-ux-2026-10/review-45f7102/` (README: verdict, findings F1 to F27, one place to act, the proposals;
+`settings.md`: every on-screen field with a verdict; `day-mode.md` and its tokens). Its setup checks and C57, copied here
+as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't clash with the open promises):
+
+- [ ] [U1] The first screen says what the app does for the person, what they'll need and the time, with no PM words.
+- [ ] [U2] Progress reads "n of 7" in the wizard, on Done and on Today. All three agree.
+- [ ] [U3] A step is ticked only when its thing happened. Otherwise it reads "Skipped".
+- [ ] [U4] "Just me": no screen shows Work, Project, Stage, Organization, Owner or Template.
+- [ ] [U5] No sorting rule sets aside mail for being personal.
+- [ ] [U6] "My own business" asks the business's name, what it works on (paste allowed) and, per mailbox, which side it
+  belongs to.
+- [ ] [U7] People on the personal side: a relation box that starts empty, suggestions from mail, and paste a list.
+- [ ] [U8] The first result reads sent mail by default. An empty result says what was read and offers "Hand something in".
+- [ ] [U9] The assistant is introduced by name before anything refers to it. The workspace never shows as "Workspace".
+- [ ] [U10] Today shows each item once (C57), with at most three rail cards.
+- [ ] [U11] At 390px, setup's first field is above the fold, and the step list is one line.
+- [ ] [U12] Settings: at most 26 basic fields, at most 30 advanced, and no ids or key names (see `settings.md`).
+- [ ] [C57] An item appears once on Today.
+
 ## Phase I: installers for Windows and macOS (after phase S)
 
 - [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches
