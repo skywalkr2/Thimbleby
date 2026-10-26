@@ -240,6 +240,8 @@ test.describe.serial("journey: mail", () => {
     await came.getByRole("button", { name: "2 set aside" }).click();
     const folder = page.locator("[data-handled]");
     await expect(folder.getByRole("heading", { level: 1, name: "Handled for you" })).toBeVisible();
+    // The groups arrive after the heading; open each once they are there.
+    await expect(folder.locator("[data-group]").first()).toBeVisible();
     const collapsed = folder.locator("[data-group] > h2 button[aria-expanded=false]");
     for (let closed = await collapsed.count(); closed > 0; closed = await collapsed.count()) await collapsed.first().click();
     const socialRow = folder.locator("li.line", { hasText: social });
@@ -276,8 +278,12 @@ test.describe.serial("journey: mail", () => {
     await cameIn.getByRole("button", { name: "Check now" }).click();
     await expect(cameIn.getByRole("button", { name: "2 set aside" })).toBeVisible({ timeout: 30_000 });
     await expect(cameIn.getByText(later.subject)).toHaveCount(0);
-    await openView(page, "Connections");
-    await expect(page.locator("#set-aside").locator("li.line", { hasText: later.subject })).toContainText(
+    await openView(page, "Handled for you");
+    const handled = page.locator("[data-handled]");
+    await expect(handled.locator("[data-group]").first()).toBeVisible();
+    const shut = handled.locator("[data-group] > h2 button[aria-expanded=false]");
+    for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();
+    await expect(handled.locator("li.line", { hasText: later.subject })).toContainText(
       `Set aside because: it is from ${later.sender}`,
     );
     // Counted by input: on a busy computer a call that times out goes to the next account with the same input, which is

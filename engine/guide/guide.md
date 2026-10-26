@@ -13,6 +13,7 @@ People say "panel", "page", "screen", "tab" or "view" for the same thing: a scre
 
 - Today: the home screen. What needs you now, each line starting with what to do.
 - What changed: the assistant's work to look over, and what it did since you last looked. Keep it, change it, send it back or undo it.
+- Handled for you: mail the app dealt with for you: what it set aside before reading, and what it read and found nothing to do in. Treat one as work or as personal, or set mail like it aside from now on.
 - Follow-ups: messages waiting for you to send, and replies you are waiting for.
 - To-dos and questions: every open to-do and every open question, with owners and dates.
 - Waiting to go out: messages, pages and files that wait for your approval of exactly what will go.
@@ -21,7 +22,7 @@ People say "panel", "page", "screen", "tab" or "view" for the same thing: a scre
 - People: the people the assistant knows, who they are to you and what they own.
 - Files: the files you added and the ones add-ons made, and the actions they offer.
 - Knowledge: the knowledge panel. What the assistant has learned from your corrections and the rules it follows; you keep, change or retire each one, and review the rules in it.
-- Connections: the sources the assistant keeps reading, such as your mail and calendar, and whether each is working.
+- Connections: the sources the assistant keeps reading, such as your mail and calendar, and whether each is working. Set-aside mail is under Handled for you.
 - Add-ons: kinds of work you can add, what each one reaches and stores, and where to turn it on or off.
 - Settings: every setting, the setup walkthrough, accounts, backups and spending. Quality is reached from Settings.
 - Quality: the quality screen. How well the assistant is doing, counted from the work itself, such as how often you correct it.

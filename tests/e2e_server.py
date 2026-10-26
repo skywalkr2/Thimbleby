@@ -29,6 +29,7 @@ from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.cleaning import normalize
 from engine.cli import KEEP_ALIVE
+from engine.config.yaml_edit import set_key
 from engine.evaluate import load_cases
 from engine.storage import WriteContext
 from engine.workspace import init_workspace
@@ -281,8 +282,6 @@ def main() -> None:
         "storage.backups.targets": [{"path": str(tmp / "offsite"), "label": "test folder"}],
         # Backups only on request, so the browser tests see the state before the first one.
         "storage.backups.automatic": False,
-        # The browser tests never read the product's own catalog feed over the network.
-        "workspace.plugins.catalog.shipped_feed": False,
         # A stage that starts work when entered, so the browser tests can exercise waiting for the go.
         "stages.types.project.stages": [
             {"id": "planned", "label": "Planned"},
@@ -315,6 +314,12 @@ def main() -> None:
             "work_data": "not_now",
         }
         path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    # The browser tests never read the product's own catalog feed over the network. In the settings file, since the
+    # Add-ons screen reads the saved settings.
+    path = ws.config_dir / "workspace.yaml"
+    path.write_text(
+        set_key(path.read_text(encoding="utf-8"), ["plugins", "catalog", "shipped_feed"], False), encoding="utf-8"
+    )
     cfg = ws.config(env={}, flags=flags)
     cases = load_cases(DEMO_B)
     project = fixture_records(DEMO_B, "project")[0]["id"]
