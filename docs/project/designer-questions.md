@@ -11,7 +11,7 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
-## Open: F33 to F38 (asked 2026-10-26, after the fix batch)
+## Answered: F33 to F38 (asked and answered 2026-10-26; the answers in `designer-answers-2026-10-26.md`)
 
 Each says what the app does today and the default the build follows if the answer is "yes, that's fine".
 
