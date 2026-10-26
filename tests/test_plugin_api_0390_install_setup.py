@@ -478,6 +478,6 @@ def test_the_guide_says_what_the_answers_promised_it_would(tmp_path):
     assert "needs_you` with approval `required`" in guide  # 206
     assert "a label is None only when there is no such stage" in guide  # 172
     assert "Saving closes the workspace's store" in guide  # 172
-    assert "proposal.apply(kept: Mapping[str, bool] | None = None)" in guide  # 172
+    assert "proposal.apply(kept: Mapping[str, bool] | None = None" in guide  # 172
     assert "`provides.tiers`" in guide and "registrar.tier(" in guide  # 219
     assert "`adds` suggests values to add to a list setting" in guide  # 185

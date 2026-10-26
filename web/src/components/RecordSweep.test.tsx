@@ -18,7 +18,7 @@ import { Unfiled } from "./Unfiled";
 const WEB = "https" + "://";
 
 const field = (name: string, type: S["FieldView"]["type"], extra: Partial<S["FieldView"]> = {}): S["FieldView"] => ({ name, description: `Help for ${name}.`, type, required: false, editable: true, ...extra });
-const ref = (kind: string, id: string, name: string) => ({ kind, id, name });
+const ref = (kind: string, id: string, name: string) => ({ kind, id, name, removed: false });
 const robin = ref("person", "PER-1", "Robin Sample");
 const harbor = ref("project", "PRJ-1", "Harbor");
 const team = ref("team", "TEAM-1", "Quarry Editorial");

@@ -63,7 +63,9 @@ class TaskKind:
     prompt: str
     playbook: str
     label: str = ""
-    on: str | None = None  # the record kind a run is about, if any
+    on: str | None = None  # the record kind a run is about, if any (the first, for work about either of two kinds)
+    kinds: tuple[str, ...] = ()  # every record kind a run may be about: empty, one, or two for work about either
+    groups: Callable[..., Any] | None = None  # (op, view) -> label or None: how an answer's ops are grouped to review
     packet: Callable[..., Any] | None = None  # (target, view, settings, note) -> PacketParts, from a plugin
     defaults: dict[str, Any] = field(default_factory=dict)  # TaskSettings fields the plugin sets
     prompt_file: Path | None = None  # a plugin's own prompt template
@@ -80,6 +82,11 @@ class TaskKind:
     learning: str = "core"  # "own": the core's own learning steps don't run on this work (engine/learning.py)
     max_ops: int | None = None  # an answer may hold at most this many ops; more is refused as a whole
 
+    @property
+    def on_kinds(self) -> tuple[str, ...]:
+        """The record kinds a run of this work may be about (none when it isn't about a record)."""
+        return self.kinds or ((self.on,) if self.on else ())
+
     def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""
         return where_matches(self.where, record, texts)
@@ -89,17 +96,53 @@ class TaskKind:
         return self.offered_on(record, texts) and where_matches(self.start_where, record, texts)
 
 
+#: The most a plugin's small flat mapping (a part's `address`, a request's `tag`) may hold: how many entries, how long a
+#: key or a text value, and how many bytes in all, written as compact JSON.
+FLAT_MAX_ENTRIES, FLAT_MAX_KEY, FLAT_MAX_TEXT, FLAT_MAX_BYTES = 20, 40, 200, 1024
+
+
+def flat_mapping(value: Any, what: str) -> dict[str, Any] | None:
+    """A plugin's small flat mapping, checked: short text keys and values that are short text, numbers or yes/no (no
+    nesting, no empty value), at most 1 KB. Returns a copy, None for None; raises ValueError saying why."""
+    import json
+
+    if value is None:
+        return None
+    if not isinstance(value, dict) or not value:
+        raise ValueError(f"{what} is a small mapping of names to short text, numbers or yes/no")
+    if len(value) > FLAT_MAX_ENTRIES:
+        raise ValueError(f"{what} holds at most {FLAT_MAX_ENTRIES} entries")
+    for key, item in value.items():
+        if not isinstance(key, str) or not key or len(key) > FLAT_MAX_KEY:
+            raise ValueError(f"a name in {what} is short text, up to {FLAT_MAX_KEY} characters")
+        ok = isinstance(item, (bool, int, float)) or (isinstance(item, str) and 0 < len(item) <= FLAT_MAX_TEXT)
+        if not ok:
+            raise ValueError(
+                f"a value in {what} is short text (up to {FLAT_MAX_TEXT} characters), a number or yes/no: {key}"
+            )
+    if len(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()) > FLAT_MAX_BYTES:
+        raise ValueError(f"{what} is larger than {FLAT_MAX_BYTES} bytes")
+    return dict(value)
+
+
 def where_matches(
     where: dict[str, tuple[Any, ...]], record: Any, texts: Callable[[str], bool | None] | None = None
 ) -> bool:
     """Whether a record passes a `where` filter: each field holds one of its values, where ANY means "has a value"
     and None "has none". For a long text field, `texts(field)` says whether the record has text in it (None for a
-    field that isn't long text)."""
+    field that isn't long text). A key `"<reference field>.<field>"` reads the field on the record the reference points
+    at (`texts.through`, which `engine.texts.text_presence` gives): a reference that is empty or points at nothing has
+    no value."""
     from engine.plugin_api import ANY
 
     for key, values in where.items():
-        has_text = texts(key) if texts is not None else None
-        value = record.data.get(key)
+        if "." in key:
+            ref, _, sub = key.partition(".")
+            through = getattr(texts, "through", None)
+            has_text, value = through(ref, sub) if through is not None else (None, None)
+        else:
+            has_text = texts(key) if texts is not None else None
+            value = record.data.get(key)
         present = has_text if has_text is not None else value not in (None, "", [], {})
         if not any(
             (v is ANY and present) or (v is None and not present) or (has_text is None and v is not ANY and v == value)

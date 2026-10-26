@@ -247,7 +247,7 @@ def _id_order(record_id: str) -> tuple[int, str]:
 
 def readable_files(store: Any, view: Any) -> tuple[dict[str, bytes | Blob], dict[str, Entry]]:
     """The readable layout: {path in the folder: content} and {path: what it holds}."""
-    from engine.projects import project_of
+    from engine.placement import project_for
     from engine.texts import long_text_fields
 
     files: dict[str, bytes | Blob] = {}
@@ -263,14 +263,7 @@ def readable_files(store: Any, view: Any) -> tuple[dict[str, bytes | Blob], dict
         names.taken.add(path.casefold())
 
     def base_of(record: Any) -> str:
-        project = project_of(record)
-        via = getattr(store.plugins.records.get(record.kind), "layout_project", None)
-        if project is None and via and record.data.get(via):
-            from engine.records import ref_fields
-
-            target = dict(ref_fields(store.plugins.records[record.kind])).get(via)
-            referred = view.get(target, record.data[via]) if target else None
-            project = project_of(referred) if referred is not None else None
+        project = project_for(store.plugins, view, record)
         return folders.get(project, WORKSPACE) if project else WORKSPACE
 
     models = {k: m for k, m in store.plugins.records.items() if getattr(m, "layout", None) and k != "project"}
@@ -438,9 +431,10 @@ def _file_copies(
         owner = view.get(copy.data["owner_kind"], copy.data["owner_id"])
         if handed is None or owner is None:
             continue
-        from engine.projects import project_of
+        from engine.placement import project_for
 
-        rel = names.claim(f"{base(project_of(owner))}/working/{safe_name(handed.data['name'], copy.id)}", copy.id)
+        owner_project = project_for(store.plugins, view, owner)
+        rel = names.claim(f"{base(owner_project)}/working/{safe_name(handed.data['name'], copy.id)}", copy.id)
         files[rel] = Blob(handed.data["sha256"], blob_path(store, handed.data["sha256"]))
         index[rel] = Entry("working", "working_copy", copy.id)
 

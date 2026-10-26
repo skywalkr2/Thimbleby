@@ -426,6 +426,7 @@ def process(
             now=now,
             extra=extra,
             all_or_nothing=getattr(kind, "all_or_nothing", False),
+            labeler=store.plugins.answer_labels(kind),
         )
     except ChangeFailed as failed:
         # Nothing of the change was kept: the work goes back to the assistant to be done again, as a failed run does.

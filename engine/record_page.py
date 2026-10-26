@@ -13,7 +13,7 @@ from engine import repeats, sides
 from engine.history import changes_for_person
 from engine.names import render_owner
 from engine.origin import origins
-from engine.records import ref_fields, values_at
+from engine.records import ref_fields, soft_ref_paths, values_at
 from engine.texts import long_text_fields
 
 ACTIVITY_MAX = 60
@@ -79,12 +79,18 @@ def page(
             names[key] = display_name(target.data) if target is not None else ""
         return names[key]
 
+    def removed(ref_kind: str, ref_id: str) -> bool:
+        """Whether the record a reference names is gone (only a reference that doesn't block deleting can be)."""
+        target = view.get(ref_kind, ref_id, include_deleted=True)
+        return target is None or target.deleted
+
     def owner_of(entry: dict[str, Any]) -> str:
         person = view.get("person", entry["person"], include_deleted=True)
         team = entry.get("team") or (person.data.get("team") if person is not None else None)
         return render_owner(owner_format, name_of("person", entry["person"]), name_of("team", team) if team else None)
 
     refs = ref_fields(model)
+    soft = soft_ref_paths(model)
     long_text = set(long_text_fields(model))
     details = []
     for field, info in model.model_fields.items():
@@ -96,11 +102,12 @@ def page(
         found = []
         for path, target in refs:
             if path.split(".")[0].removesuffix("[]") == field:
-                found += [
-                    {"kind": target, "id": v, "name": name_of(target, v)}
-                    for v in values_at({field: value}, path)
-                    if isinstance(v, str)
-                ]
+                for v in values_at({field: value}, path):
+                    if isinstance(v, str):
+                        gone = path in soft and removed(target, v)
+                        found.append(
+                            {"kind": target, "id": v, "name": "" if gone else name_of(target, v), "removed": gone}
+                        )
         if not found:
             found = _ids_named(view, store, value, name_of)
         details.append({"field": field, "value": value, "type": _type_of(info.annotation), "refs": found})

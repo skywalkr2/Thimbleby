@@ -595,16 +595,25 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     plugin = kind.name.split("/", 1)[0]
     about = target_of(store, req.data)
     target = store.read().get(*about) if about else None
-    if kind.on is not None and (target is None or target.kind != kind.on):
-        raise PacketRefused(f"this work needs a {kind.on} to work on, and the one it was asked for is gone")
+    if kind.on_kinds and (target is None or target.kind not in kind.on_kinds):
+        wanted = " or ".join(kind.on_kinds)
+        raise PacketRefused(f"this work needs a {wanted} to work on, and the one it was asked for is gone")
     started = req.data["origin"] == "pm" and not req.data.get("part")
     if target is not None:
         texts = text_presence(store, store.read(), target)
         if not (kind.startable_on(target, texts) if started else kind.offered_on(target, texts)):
-            raise PacketRefused(f"this work isn't for this {kind.on} any more")
+            raise PacketRefused(f"this work isn't for this {target.kind} any more")
     note = req.data.get("note") or ""
     view = store.plugins._with_files(
-        PacketContext(store.read(), plugin, req.data["origin"], request=req.id, part=req.data.get("part"))
+        PacketContext(
+            store.read(),
+            plugin,
+            req.data["origin"],
+            request=req.id,
+            part=req.data.get("part"),
+            tag=req.data.get("tag"),
+            target_kind=target.kind if target is not None else None,
+        )
     )
     config = store.plugins.registrars[plugin].config.model_copy(deep=True)
     reader = _PackKnowledge(store, cfg, kind, req, target, today)

@@ -640,6 +640,11 @@ class OpView(BaseModel):
     status: Literal["applied", "held", "refused", "undone"]
     reason: ScreenText | None
     group: str
+    answer_group: str | None = Field(
+        None,
+        description="The label its task kind gave it when it grouped the answer for review; ops with the same label "
+        "are one row, with Keep and Drop for all of them (see `ChangesetView.groups`).",
+    )
     title: str
     meta: OpMeta
     evidence: Evidence | None = None
@@ -676,6 +681,31 @@ class MadeView(BaseModel):
     record: RecordRef
 
 
+class AnswerGroupView(BaseModel):
+    """One group of an answer the task kind grouped for review: a row with `label`, Keep (while some op `held` waits)
+    and Drop (while some op is `applied` or `held`) for all of its `ops` (their indexes)."""
+
+    id: int = Field(description="The group's place among the answer's groups, for Keep and Drop.")
+    label: str
+    ops: list[int]
+    applied: int
+    held: int
+    refused: int
+    undone: int
+
+
+class AnswerGroupDone(BaseModel):
+    """What Keep, Drop or Release all did to an answer's ops, by index."""
+
+    released: list[int] = Field(description="Held ops that were applied (released).")
+    restored: list[int] = Field(description="Applied ops that were undone.")
+    declined: list[int] = Field(description="Held ops that were kept as they were.")
+    skipped: list[Any] = Field(
+        description="Ops left as they were, each {ops, reason}: one that waits on a choice only the person makes, or "
+        "an Undo that would overwrite a later change."
+    )
+
+
 class ChangesetView(BaseModel):
     id: str
     summary: str
@@ -683,6 +713,11 @@ class ChangesetView(BaseModel):
     reviewed: bool
     trust: Literal["trusted", "untrusted"]
     ops: list[OpView]
+    groups: list[AnswerGroupView] = Field(
+        default_factory=list,
+        description="When the task kind grouped its answer for review: one row for each group, with Keep and Drop for "
+        "all of its ops. The ops in a group are not listed again on their own; ops with no group stay in `ops` alone.",
+    )
     made: list[MadeView] = Field(
         default_factory=list,
         description="The drafts and files this change made that still exist, in the order made, so its card links "
@@ -1330,6 +1365,11 @@ class RecordRefName(BaseModel):
     kind: str
     id: str
     name: str
+    removed: bool = Field(
+        False,
+        description="The record this names has been deleted (a reference that doesn't block deleting keeps the id): "
+        "the screen says it was removed, and `name` is empty.",
+    )
 
 
 class FiledView(BaseModel):

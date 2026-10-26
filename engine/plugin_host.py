@@ -41,7 +41,7 @@ from engine.plugin_api import (
     StageCheckResult,
 )
 from engine.plugin_manifest import MANIFEST_PARTS, NOT_YET, Manifest, installed_manifest, plain_error, read_manifest
-from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
+from engine.records import REFERENCES, REGISTRY, ref_fields, soft_ref_paths, values_at
 from engine.rules import rule_names
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
@@ -112,6 +112,7 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
             "authorship": "Words by kind of author: {person, assistant, assistant_edit}, all three always present.",
             "request": "The request whose run drafted the version, or None (the person's own edit, an import).",
             "part": "The part of the text that request named (as given to queue_request(part=)), or None.",
+            "tag": "The tag the plugin put on that request (as given to queue_request(tag=)), or None.",
         },
     ),
     "request.queued": ("AI work was queued.", {"id": "The request's id."}),
@@ -126,6 +127,7 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
             "request": "The request it answered.",
             "task": "That request's kind of work.",
             "part": "The part of a text that request named (as given to queue_request(part=)), or None.",
+            "tag": "The tag the plugin put on that request (as given to queue_request(tag=)), or None.",
             "about": "The record the request was about, as {kind, id}, or None.",
         },
     ),
@@ -587,6 +589,14 @@ class PluginHost:
                 found += [(plugin, line) for line in lines]
         return found
 
+    def answer_labels(self, kind: Any) -> AnswerLabels | None:
+        """How a task kind's answer is grouped for the review: an object whose `label(op)` gives each op its group, or
+        None for a kind that declares no grouping or whose plugin isn't running."""
+        plugin = kind.name.split("/", 1)[0] if "/" in kind.name else None
+        if kind.groups is None or plugin is None or not self.active(plugin):
+            return None
+        return AnswerLabels(self, plugin, kind)
+
     def ending_ops(self, project: str, view: Any) -> list[Any]:
         """The ops every running plugin's project-ending hook returns for a project that is ending, as op models, in
         the order of the plugins' names. A hook that fails or times out adds nothing and is noted on its plugin."""
@@ -653,6 +663,17 @@ class PluginHost:
                     continue
             kept.append(line)
         return kept
+
+    def placement(self, kind: str) -> tuple[str, str | None]:
+        """How a record kind is placed in the synced folder: ("default", None) by its project, ("field", name) by one
+        reference field, or ("workspace", None) always at the workspace level (see `engine.placement`)."""
+        from engine.placement import BY_FIELD, DEFAULT, WORKSPACE_LEVEL
+
+        for registrar in self.registrars.values():
+            if kind in registrar.placements:
+                field = registrar.placements[kind]
+                return (WORKSPACE_LEVEL, None) if field is None else (BY_FIELD, field)
+        return DEFAULT, None
 
     def _project_of(self, view: Any, record: Any) -> str | None:
         """The project a record belongs to: its `project` field, or for a kind kept under another record's project the
@@ -1246,9 +1267,14 @@ class PluginHost:
         model = self.records.get(panel.kind)
         has_project = model is not None and "project" in model.model_fields
         via = getattr(model, "layout_project", None)
-        equals = dict(panel.filter) | ({"project": project} if project and has_project else {})
+        placed = self.placement(panel.kind)[0] != "default"
+        equals = dict(panel.filter) | ({"project": project} if project and has_project and not placed else {})
         records = view.find(panel.kind, equals) if equals else view.list(panel.kind)
-        if project and not has_project:
+        if project and placed:
+            from engine.placement import project_for
+
+            records = [r for r in records if project_for(self, view, r) == project]
+        elif project and not has_project:
             if not via:
                 raise StoreError(f"{panel.kind} isn't kept per project, so this panel can't be filtered by one")
             records = [r for r in records if self._project_through(view, panel.kind, via, r) == project]
@@ -1797,28 +1823,27 @@ class PluginHost:
                 raise ValueError("a task may only draft an act: the person's yes and the publisher's states are theirs")
             if "file.add" in task.ops:
                 raise ValueError("file.add is made only by person actions, never by a task")
-            if task.on is not None and task.on not in REGISTRY and task.on not in registrar.records:
-                raise ValueError(f"task {task.name} is on an unknown record kind {task.on}")
-            if task.where:
-                fields = (registrar.records.get(task.on) or REGISTRY[task.on]).model_fields
-                unknown = sorted(set(task.where) - set(fields))
-                if unknown:
-                    raise ValueError(f"task {task.name} narrows {task.on} by {unknown[0]}, which it doesn't have")
+            for on_kind in task.on_kinds:
+                if on_kind not in REGISTRY and on_kind not in registrar.records:
+                    raise ValueError(f"task {task.name} is on an unknown record kind {on_kind}")
+            for narrowing in (task.where, task.start_where):
+                for on_kind in task.on_kinds:
+                    _check_where(narrowing, on_kind, registrar.records, f"task {task.name}")
             if task.output == "draft":
                 from engine.texts import long_text_fields
 
-                model = registrar.records.get(task.on) or REGISTRY.get(task.on)
-                if task.field not in long_text_fields(model):
-                    raise ValueError(f"task {task.name} drafts {task.on}.{task.field}, which isn't a long text field")
+                for on_kind in task.on_kinds:
+                    model = registrar.records.get(on_kind) or REGISTRY.get(on_kind)
+                    if task.field not in long_text_fields(model):
+                        raise ValueError(
+                            f"task {task.name} drafts {on_kind}.{task.field}, which isn't a long text field"
+                        )
             for name in (task.prompt, task.playbook):
                 if "/" in name and not name.startswith(registrar.name + "/"):
                     raise ValueError("a task's prompt and guidance are core ones or the plugin's own")
         for action in registrar.actions.values():
             if action.where:
-                model = registrar.records.get(action.on) or REGISTRY.get(action.on)
-                unknown = sorted(set(action.where) - set(model.model_fields)) if model is not None else []
-                if model is None or unknown:
-                    raise ValueError(f"action {action.name} narrows {action.on} by a field it doesn't have")
+                _check_where(action.where, action.on, registrar.records, f"action {action.name}")
         for panel in registrar.panels.values():
             if panel.view == "document":
                 continue
@@ -1833,7 +1858,8 @@ class PluginHost:
                 raise ValueError(f"panel {panel.name}: computed column {clash[0]} is already a field of {panel.kind}")
             for action in (*([panel.primary_action] if panel.primary_action else []), *panel.row_actions):
                 target = registrar.actions.get(action) or registrar.tasks.get(action)
-                if target is None or getattr(target, "on", None) != panel.kind:
+                works_on = getattr(target, "on_kinds", None) or (getattr(target, "on", None),)
+                if target is None or panel.kind not in works_on:
                     raise ValueError(f"panel {panel.name}: {action} isn't this plugin's action or task on {panel.kind}")
             if panel.new_action is not None:
                 action = registrar.actions.get(panel.new_action)
@@ -2060,18 +2086,20 @@ class PluginHost:
                 kinds.update(registrar.file_kinds)
         return kinds
 
-    def references(self) -> dict[str, list[tuple[str, str]]]:
-        """Every declared reference, core and plugin: kind -> [(field path, kind it points to)]."""
+    def references(self, *, blocking: bool = False) -> dict[str, list[tuple[str, str]]]:
+        """Every declared reference, core and plugin: kind -> [(field path, kind it points to)]. With `blocking`, only
+        those that keep the record they point at from being deleted (a `RefTo(blocks_delete=False)` doesn't)."""
         refs = {kind: list(paths) for kind, paths in REFERENCES.items()}
         for kind, model in self.records.items():
             if "/" in kind:
-                refs.setdefault(kind, []).extend(ref_fields(model))
+                soft = soft_ref_paths(model) if blocking else frozenset()
+                refs.setdefault(kind, []).extend((p, t) for p, t in ref_fields(model) if p not in soft)
         return refs
 
     def _referrers(self, view: Any) -> Any:
         def find(kind: str, record_id: str) -> list[tuple[str, str]]:
             found = []
-            for other, paths in self.references().items():
+            for other, paths in self.references(blocking=True).items():
                 for path, target in paths:
                     if target != kind or other not in self.records:
                         continue
@@ -2092,6 +2120,7 @@ class PluginHost:
             "about": None,
             "request": None,
             "part": None,
+            "tag": None,
             **(origin or {"actor": "pm", "trust": "trusted", "via": "screen"}),
         }
         owner = op.op.split("/")[0] if "/" in op.op else None
@@ -2255,6 +2284,13 @@ class PluginHost:
                 data["part"] = check_part(self.task_kind(task), data["part"])
             except ValueError as err:
                 raise StoreError(str(err)) from None
+        if data.get("tag") is not None:
+            from engine.tasks import flat_mapping
+
+            try:
+                data["tag"] = flat_mapping(data["tag"], "a request's tag")
+            except ValueError as err:
+                raise StoreError(str(err)) from None
         return data
 
     def _write_commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
@@ -2272,6 +2308,7 @@ class PluginHost:
                         "needs_go",
                         "item",
                         "part",
+                        "tag",
                     },
                     "question": {"title", "text"},
                 }
@@ -2323,6 +2360,73 @@ class PluginHost:
                 del sys.modules[key]
 
 
+#: The longest a group's label may be, in characters.
+GROUP_LABEL_MAX = 120
+
+
+class AnswerLabels:
+    """A task kind's `groups` function, run once for each op of an answer, contained like a hook: the first call that
+    raises, hangs or returns something other than a short line of text (or None) is noted on the plugin and leaves the
+    whole answer ungrouped (`ok` turns False, and the applier then drops every label)."""
+
+    def __init__(self, host: PluginHost, plugin: str, kind: Any):
+        self.host, self.plugin, self.kind = host, plugin, kind
+        self.ok = True
+        self.where = f"task {kind.name} groups"
+
+    def label(self, op: Any) -> str | None:
+        from engine.plugin_api import PluginMisuse, ReadView
+
+        if not self.ok:
+            return None
+        try:
+            read = self.host._with_files(ReadView(self.host.store.read(), self.plugin))
+            found = self.host.pack_calls.run(self.plugin, self.kind.groups, op, read)
+            if found is None:
+                return None
+            if not isinstance(found, str):
+                raise ValueError("a group's label is a line of text, or None for an op that has no group")
+            text = " ".join(found.split())
+            if len(text) > GROUP_LABEL_MAX:
+                raise ValueError(f"a group's label is one line of up to {GROUP_LABEL_MAX} characters")
+        except PluginMisuse as err:
+            self.ok = False
+            self.host.disable(self.plugin, f"{self.where} broke the plugin contract: {err}")
+            return None
+        except Exception as err:
+            self.ok = False
+            self.host.failed(self.plugin, self.where, err)
+            return None
+        self.host.succeeded(self.plugin, self.where)
+        return text or None
+
+
+def _check_where(
+    where: dict[str, tuple[Any, ...]], kind: str | None, plugin_records: dict[str, Any], what: str
+) -> None:
+    """Refuse a `where` that names a field the record kind doesn't have, or a path through a reference whose first
+    part isn't a field holding one reference or whose second part isn't a field of the record it points at."""
+    from engine.records import REGISTRY, ref_fields
+
+    if not where:
+        return
+    model = plugin_records.get(kind) or REGISTRY.get(kind)
+    if model is None:
+        raise ValueError(f"{what} narrows {kind} by a field it doesn't have")
+    single = {p: t for p, t in ref_fields(model) if "." not in p and "[]" not in p}
+    for key in where:
+        head, dot, tail = key.partition(".")
+        if head not in model.model_fields:
+            raise ValueError(f"{what} narrows {kind} by {head}, which it doesn't have")
+        if not dot:
+            continue
+        if head not in single:
+            raise ValueError(f"{what} narrows {kind} through {head}, which isn't a field that refers to one record")
+        target = plugin_records.get(single[head]) or REGISTRY.get(single[head])
+        if target is None or tail not in target.model_fields:
+            raise ValueError(f"{what} narrows {kind} by {key}, but {single[head]} has no field {tail}")
+
+
 def _source_text(store: Any, digest: str) -> str:
     path = store.path.parent / "sources" / f"{digest}.txt"
     return path.read_text(encoding="utf-8") if path.exists() and re.fullmatch(r"[0-9a-f]+", digest) else ""
@@ -2331,26 +2435,26 @@ def _source_text(store: Any, digest: str) -> str:
 def check_about(view: Any, kind: Any, about: dict[str, str] | None, store: Any = None, starting: bool = False) -> None:
     """A request for a task kind declared `on` a record kind must name a live record of that kind that its `where`
     matches (and its `start_where`, when the person is `starting` it); others name none."""
-    if kind.on is None:
+    if not kind.on_kinds:
         if about is not None:
             raise StoreError(f"{kind.name} doesn't work on a record")
         return
     from engine.records import REGISTRY, kind_label
 
     models = store.plugins.records if store is not None else REGISTRY
-    what = kind_label(models.get(kind.on), kind.on)
-    if about is None or about.get("kind") != kind.on:
+    what = " or ".join(kind_label(models.get(k), k) for k in kind.on_kinds)
+    if about is None or about.get("kind") not in kind.on_kinds:
         raise StoreError(f"{kind.label or kind.name} works on a {what}")
     record = view.get(about["kind"], about["id"])
     if record is None:
-        raise StoreError(f"there is no {what} {about['id']}")
+        raise StoreError(f"there is no {kind_label(models.get(about['kind']), about['kind'])} {about['id']}")
     texts = None
     if store is not None:
         from engine.texts import text_presence
 
         texts = text_presence(store, view, record)
     if not (kind.startable_on(record, texts) if starting else kind.offered_on(record, texts)):
-        raise StoreError(f"{kind.label or kind.name} isn't for this {what}")
+        raise StoreError(f"{kind.label or kind.name} isn't for this {kind_label(models.get(record.kind), record.kind)}")
 
 
 def _accounts_per_role(ai: Any) -> dict[str, int]:

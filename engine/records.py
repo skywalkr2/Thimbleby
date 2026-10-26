@@ -81,9 +81,14 @@ class Record(BaseModel):
 class RefTo:
     """Marks a field as holding the id of another record: `Annotated[str | None, RefTo("project")]`. Honored up to six
     levels into a record (its own fields, then models nested in them); a reference deeper than that is a plain id,
-    which the plugin's own validator must check."""
+    which the plugin's own validator must check.
+
+    A reference blocks deleting the record it points at while it holds that record's id. With `blocks_delete=False`
+    the target can be deleted and the id stays: reading it finds no record (never an error) and the screens show it as
+    removed. Writing the reference still needs the target to exist."""
 
     kind: str
+    blocks_delete: bool = True
 
 
 @dataclass(frozen=True)
@@ -126,18 +131,24 @@ MAX_REF_DEPTH = 6
 
 def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> list[tuple[str, str]]:
     """The reference paths of a model, worked out once per model class (they depend only on the class) and copied for
-    each caller. See `_ref_fields`."""
-    return list(_ref_fields(model, _prefix, _depth))
+    each caller. See `_ref_marks`."""
+    return [(path, kind) for path, kind, _ in _ref_marks(model, _prefix, _depth)]
+
+
+def soft_ref_paths(model: type[BaseModel]) -> frozenset[str]:
+    """The reference paths of a model whose `RefTo` says `blocks_delete=False`: the target may be deleted while the
+    record still holds its id."""
+    return frozenset(path for path, _, blocks in _ref_marks(model, "", 0) if not blocks)
 
 
 @functools.cache
-def _ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> tuple[tuple[str, str], ...]:
+def _ref_marks(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> tuple[tuple[str, str, bool], ...]:
     """References are honored (checked on write, guarded on delete, rendered as names) up to MAX_REF_DEPTH levels into
     a record: its own fields, models in them, and models in those, and so on.
 
-    (path, kind it points to) for every field marked with RefTo: "field" for a single reference, "field[]" for a
-    list of references (`list[Annotated[str, RefTo("kind")]]`), optional or not, and paths into nested models such as
-    "relations[].person" for a list of models whose `person` field is a reference."""
+    (path, kind it points to, whether it blocks deleting the target) for every field marked with RefTo: "field" for a
+    single reference, "field[]" for a list of references (`list[Annotated[str, RefTo("kind")]]`), optional or not, and
+    paths into nested models such as "relations[].person" for a list of models whose `person` field is a reference."""
     from typing import Annotated, Union, get_args, get_origin
 
     def ref_meta(annotation: Any) -> list[RefTo]:
@@ -145,19 +156,19 @@ def _ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> t
             return [m for m in annotation.__metadata__ if isinstance(m, RefTo)]
         return []
 
-    def in_list(annotation: Any) -> list[str]:
+    def in_list(annotation: Any) -> list[RefTo]:
         origin = get_origin(annotation)
         if origin in (list, tuple, set):
-            return [m.kind for arg in get_args(annotation) for m in ref_meta(arg)]
+            return [m for arg in get_args(annotation) for m in ref_meta(arg)]
         if origin is Union or type(annotation).__name__ == "UnionType":
-            return [k for arg in get_args(annotation) for k in in_list(arg)]
+            return [m for arg in get_args(annotation) for m in in_list(arg)]
         return []
 
-    def single_in_union(annotation: Any) -> list[str]:
+    def single_in_union(annotation: Any) -> list[RefTo]:
         """A single reference written as one member of a union: `Annotated[str, RefTo("k")] | None`."""
         origin = get_origin(annotation)
         if origin is Union or type(annotation).__name__ == "UnionType":
-            return [m.kind for arg in get_args(annotation) for m in ref_meta(arg)]
+            return [m for arg in get_args(annotation) for m in ref_meta(arg)]
         return []
 
     def nested(annotation: Any) -> list[tuple[type[BaseModel], bool]]:
@@ -171,20 +182,22 @@ def _ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> t
             return [found for arg in get_args(annotation) for found in nested(arg)]
         return []
 
-    found = []
+    found: list[tuple[str, str, bool]] = []
     for name, info in model.model_fields.items():
         # A reference path names the key the record is stored under: the alias only for a model stored by alias.
         path = f"{_prefix}{info.alias if info.alias and model.model_config.get('serialize_by_alias') else name}"
         for meta in info.metadata:
             if isinstance(meta, RefTo):
-                found.append((path, meta.kind))
-        found += [(path, kind) for kind in single_in_union(info.annotation)]
+                found.append((path, meta.kind, meta.blocks_delete))
+        singles = single_in_union(info.annotation)
+        found += [(path, m.kind, m.blocks_delete) for m in singles]
+        single_kinds = {m.kind for m in singles}
         found += [
-            (f"{path}[]", kind) for kind in in_list(info.annotation) if kind not in single_in_union(info.annotation)
+            (f"{path}[]", m.kind, m.blocks_delete) for m in in_list(info.annotation) if m.kind not in single_kinds
         ]
         if _depth < MAX_REF_DEPTH - 1:
             for inner, many in nested(info.annotation):
-                found += _ref_fields(inner, f"{path}[]." if many else f"{path}.", _depth + 1)
+                found += _ref_marks(inner, f"{path}[]." if many else f"{path}.", _depth + 1)
     return tuple(found)
 
 
@@ -1382,7 +1395,15 @@ class Request(Record):
         None,
         description="The part of a long text the work is about: {first, last} paragraphs (by number) an anchored "
         'draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the '
-        "end); with the {base} version number they refer to.",
+        "end); with the {base} version number they refer to, a plugin's own {label} for it, and an {address}, a small "
+        "flat mapping the plugin defines, compared for equality and never shown (work that answers with ops may name "
+        "a part by its address alone).",
+    )
+    tag: dict[str, Any] | None = Field(
+        None,
+        description="A small flat mapping the plugin that filed the request put on it (short text, numbers or yes/no, "
+        "up to 1 KB): returned to the plugin in `origin`, `PacketContext.tag` and the events about the work, never "
+        "shown and never sent to a model.",
     )
     project: str | None = Field(None, description="The project the person said a hand-in is about, if they did.")
     auto_closed: dict[str, str] | None = Field(

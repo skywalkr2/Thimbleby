@@ -107,9 +107,11 @@ Base for a plugin's settings, read from `config/plugins/<plugin>.yaml`. Every fi
 
 A staging registry: the host installs it only after checking the manifest. `register(registrar)` may read `registrar.config` (the plugin's settings, already checked) to decide what to register; registration is fixed until the app restarts. The app never restarts on its own: a change to a plugin's settings, or turning plugins on or off, makes it say a restart is needed and hold new AI work until the person chooses "Restart now". Until then the plugin keeps the settings it registered with and isn't told of the change. Data the workspace adds later (its own lists, profiles) is read per call, not at registration.
 
-#### `registrar.record_type(model: type[Record]) -> None`
+#### `registrar.record_type(model: type[Record], *, placed_by: str | None = 'project') -> None`
 
 Register a record kind: a `Record` subclass with `record_kind` ("<plugin>/<name>") and an id `prefix` (capital letters, unique in the workspace).
+
+Where a record is written in the synced folder (the kind needs a `layout` to be written at all): by default, `placed_by="project"`, in the folder of the project its `project` field names, else (when the kind declares `layout_project`) in the folder of the project that reference's record is in, else at the workspace level. `placed_by="<field>"` names the reference field that places it instead, whatever `project` says: the record is written in the folder of the project the record that field points at is in (or of that project, when it points at a project), and at the workspace level when the field is empty. `placed_by=None` writes every record of the kind at the workspace level. The field must hold one reference (not a list). The rule is the same for the record's working copies, and for the project a panel's rows are filtered by.
 
 #### `registrar.op(model: type[OpModel], tier: Tier, apply: Callable, *, notes: bool = False, candidates: Callable | None = None) -> None`
 
@@ -117,7 +119,7 @@ Register an op: an `OpModel` subclass with a single literal `op` id and a `write
 
 #### `registrar.op_validator(op_name: str, fn: Callable) -> None`
 
-Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far. `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via": "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind, "about": the record it works on as {"kind", "id"} or None, "request": the run's request id or None, "part": the part of the record the request names (as given to `queue_request(part=)`) or None}; ops a plugin's event handler or job staged with `apply_op` have actor "plugin" and via "handler" or "job". A validator with a parameter named `settings` (or `**kwargs`) also gets the plugin's settings by keyword, so a check that depends on a setting is a validator, and its refusal is fed back in a fix round like any other; a refusal raised from an op's `apply` refuses the op without a fix round. Before anything applies, the core dry-runs the whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check at the write boundary, a validator usually runs about three times per op, so it must be pure and quick. There is no cache the core keeps for a pass: the view is made anew for each call. Cache costly derived data by its content (a hash of the text it comes from, say, in a module-level dictionary of bounded size), never by record id or version alone, since the changeset so far may change what a version holds.
+Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far. `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via": "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind, "about": the record it works on as {"kind", "id"} or None, "request": the run's request id or None, "part": the part of the record the request names (as given to `queue_request(part=)`) or None, "tag": the request's tag (as given to `queue_request(tag=)`) or None}; ops a plugin's event handler or job staged with `apply_op` have actor "plugin" and via "handler" or "job". A validator with a parameter named `settings` (or `**kwargs`) also gets the plugin's settings by keyword, so a check that depends on a setting is a validator, and its refusal is fed back in a fix round like any other; a refusal raised from an op's `apply` refuses the op without a fix round. Before anything applies, the core dry-runs the whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check at the write boundary, a validator usually runs about three times per op, so it must be pure and quick. There is no cache the core keeps for a pass: the view is made anew for each call. Cache costly derived data by its content (a hash of the text it comes from, say, in a module-level dictionary of bounded size), never by record id or version alone, since the changeset so far may change what a version holds.
 
 #### `registrar.project_ending(fn: Callable) -> None`
 
@@ -127,13 +129,13 @@ Wind down the plugin's own records when a project ends: `fn(project_id, view)` r
 
 Follow a core record that is dropped: `fn(record_id, view)` returns the plugin's own ops (as for `project_ending`) to apply with the drop, for example dropping the record of the plugin's that is paired with a dropped action. `kind` is "action" for now (`DROP_HOOK_KINDS`). Whenever the applier drops a record of that kind, the ops join the drop's own op group (same Undo, same hold: when the drop waits for the person, so do they). A drop that is part of a project's ending is covered by the `project_ending` hook, not by this one. Time limit, containment, what ops are accepted and purity are as for `project_ending`. One hook per kind per plugin.
 
-#### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | None = None, packet: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = (), learning: str = 'core', min_context: int | None = None) -> None`
+#### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | tuple[str, str] | None = None, packet: Callable | None = None, groups: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = (), learning: str = 'core', min_context: int | None = None) -> None`
 
 Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
 `prompt` names the instructions: a core prompt ("notes") or the plugin's own, "<plugin>/<name>", read from `prompts/<name>.md` in the plugin's folder. `playbook` names its guidance the same way, from `guidance/<name>.md`. The workspace overrides a plugin's prompt with `prompts/<plugin>/<name>.md`.
 
-`on` is the record kind a run is about (core or own), when it works on one record: the request then carries that record, and the person can start it from the record. `packet(target, view, settings, note) -> PacketParts` says what the run sees (without it, the run sees what reading notes sees); `view` is a PacketContext, whose `origin` says who started the run. It runs before every call, so it must be deterministic and quick; raising StoreError stops the run with that message for the person: the request waits with it as the reason, and no retry, fix round or escalation follows. `where` narrows which records of kind `on` the work is offered on and may start on: {field: value} or {field: (value, ...)}, every field matching; ANY means the field has a value and None that it has none, which for a long text field asks whether the record has text in it. `start_where`, in the same form, narrows further only the runs the person starts (from a record, or offered to them there): requests a plugin, an action or a stage queues, and any request naming a `part`, check `where` alone, so a kind the person starts only on an empty record can still continue part by part. The packet's `max_output` hint is never below 256 tokens.
+`on` is the record kind a run is about (core or own), when it works on one record: the request then carries that record, and the person can start it from the record. `on=("<kind a>", "<kind b>")` is work about either of two kinds, with one set of prompts, guidance and evaluation cases: the run is about one record of either kind (the packet function's `view.target_kind` says which), the person can start it from a record of either, `where` and `start_where` may name only fields both kinds have, and a draft's `field` must be a long text field of both. `packet(target, view, settings, note) -> PacketParts` says what the run sees (without it, the run sees what reading notes sees); `view` is a PacketContext, whose `origin` says who started the run. It runs before every call, so it must be deterministic and quick; raising StoreError stops the run with that message for the person: the request waits with it as the reason, and no retry, fix round or escalation follows. `where` narrows which records of kind `on` the work is offered on and may start on: {field: value} or {field: (value, ...)}, every field matching; ANY means the field has a value and None that it has none, which for a long text field asks whether the record has text in it. A key may also be `"<reference field>.<field>"`: a field of the record the reference points at, one step only ("the chapter's book is in the draft stage"); an empty reference, or one whose record is gone, has no value, so it matches None and not ANY. `start_where`, in the same form, narrows further only the runs the person starts (from a record, or offered to them there): requests a plugin, an action or a stage queues, and any request naming a `part`, check `where` alone, so a kind the person starts only on an empty record can still continue part by part. The packet's `max_output` hint is never below 256 tokens.
 
 `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft` version for the person's review, runs lints on it (lints on the op "text.draft"), sends a "return" finding back for one fix round, and continues a draft cut off at the output limit once before holding it. With `anchored=True` the draft revises the current text: the run sees it with an id on each unit, starts every paragraph it writes with the ids it came from, and a core check refuses a draft that leaves a unit unaccounted for, names an unknown id, or splits or merges an atomic unit; the paragraph map is kept with the version. The core adds the text with its ids after the packet's parts, as untrusted material: ids are p1, p2, ... in the order of the field format's units over the whole text, so a packet can name the same ids. A request's `part` limits a draft to a span or a place in the text (see `queue_request`). `questions=N` lets a draft end with up to N questions for the person, in a `<questions>` block the core takes off the text and keeps on the version (`questions`), shown beside it; more than N gets a fix round. In an anchored answer the `Removed:` line comes before the `<questions>` block, which is always last.
 
@@ -142,6 +144,10 @@ Register AI work: the core or own ops its answer may use, and `label`, what to c
 `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them. `tier` is a core tier or one of the plugin's own (`registrar.tier`, "<plugin>/<name>"); naming one the plugin didn't declare refuses the plugin at start. The tier a run uses is decided in this order: the workspace's `ai.tasks.<kind>.tier`, then the `tier` the kind declares (a tier named for the kind is more specific than a role), then its role's tier (`ai.roles`), then the default tier (`routine`). A routing rule (`ai.routing`) that matches a request still sends it to another tier first.
 
 `min_context` is the smallest context window, in tokens, a model must have for this work (a whole chapter read at once, say). The core measures every packet against each model's window anyway (from the account's model list, with the adapter's own token count when it has one) and sends the run only to an account whose window holds the packet and its answer; the estimate names the account it is priced on, and a run that fits nowhere says so before anything is sent. `min_context` lets the estimate be given before a packet is built (a batch of runs priced up front), and keeps the work off a model whose window is smaller however short the packet is. The workspace sets it for a kind in `ai.tasks.<kind>.min_context`.
+
+`groups(op, view) -> str | None` labels each op of an answer, so the review shows the answer as a few rows, one per label, each with Keep and Drop for all of its ops, instead of one row for every op: `op` is the op as a model (the same one a validator gets) and `view` a read view; the label is words for the person, from the plugin's wording (one line, up to 120 characters), and ops given the same label are one group; an op given None stays on its own row. It runs once for each op when the answer is recorded; it must be quick and deterministic and never call AI, and one that raises, hangs or returns something else leaves the answer ungrouped and is noted on the plugin. Drop undoes the group's applied ops and declines its held ones (they stay as they were), each recorded as a signal like any other rejection of the assistant's work, and names any op it can't take back without overwriting a later change; Keep releases the group's held ops as the person's own go. The ops are applied or held as usual before the person chooses; Undo of the whole answer still takes everything back in one step, and "Release all" on the review applies every held op of an answer together (except one that waits on a choice only the person makes there), also with one Undo.
+
+In an answer's ops (and in a proposal's), a field may hold `"$new:<n>"`, the whole value, to name the record op `n` of the same answer created, counting from 0: a chapter's `book` can name the book op 0 made. The applier resolves it in order and keeps the real id on the op, so an answer that builds a book, its chapters and their notes applies, shows and undoes as one. The op it names must come before it and must have been applied and made a record; one that was refused, is waiting for the person or made none refuses the op that names it, saying which change it depended on. A validator or a lint sees the id, never the placeholder. The core's op reference does not describe `$new:<n>` to the model: the task kind's own prompt or guidance says when to use it.
 
 `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings made in the same answer). Ops held for the person still wait as usual.
 
@@ -197,7 +203,7 @@ A screen listing records (listed in `provides.panels`), described as data so it 
 
 `computed` adds columns that aren't fields: {"words": fn} where `fn(record, view, settings)` returns a short str, a number, a bool or None (a word count, a stage, "complete for its tier", the last build). A computed column can't be named like a field of the kind (that is a load error). It must be quick and deterministic and never call AI; one that raises shows an empty cell and counts as the plugin failing (failure containment). A function taking a fourth argument gets a dict shared by every cell of one listing, to keep work it would otherwise repeat per row (an index of builds by record); it is new for each listing. `computed_labels={"words": "panel.column.<plugin>/<name>"}` names the wording key (set in one of the plugin's wording files) of a computed column's heading, so the screens show the plugin's own words for it, in the workspace's wording; a computed column with none is headed by its key made readable. A key names a computed column of this panel and a wording key of this plugin's namespace, or the plugin is refused at start.
 
-Filtered by project, a kind with no `project` field follows its `layout_project` reference: a record is in the project its referenced record is in. `show_for(project, view) -> bool` lists the panel only on the projects it returns True for (a panel of what a parent project's children share, say); without it the panel is on every project.
+Filtered by project, a kind with no `project` field follows its `layout_project` reference: a record is in the project its referenced record is in. A kind registered with `placed_by` is in the project that places it. `show_for(project, view) -> bool` lists the panel only on the projects it returns True for (a panel of what a parent project's children share, say); without it the panel is on every project.
 
 #### `registrar.document(name: str, *, title: str, render: Callable, tab: str = 'work', show_for: Callable | None = None) -> None`
 
@@ -314,6 +320,8 @@ Base for every stored record. A plugin's record type subclasses it and sets `rec
 ### References
 
 Marks a field as holding the id of another record: `Annotated[str | None, RefTo("project")]`. Honored up to six levels into a record (its own fields, then models nested in them); a reference deeper than that is a plain id, which the plugin's own validator must check.
+
+A reference blocks deleting the record it points at while it holds that record's id. With `blocks_delete=False` the target can be deleted and the id stays: reading it finds no record (never an error) and the screens show it as removed. Writing the reference still needs the target to exist.
 
 ## Ops
 
@@ -521,6 +529,7 @@ A long text field got a new current version: the person's edit, an accepted draf
 | `authorship` | Words by kind of author: {person, assistant, assistant_edit}, all three always present. |
 | `request` | The request whose run drafted the version, or None (the person's own edit, an import). |
 | `part` | The part of the text that request named (as given to queue_request(part=)), or None. |
+| `tag` | The tag the plugin put on that request (as given to queue_request(tag=)), or None. |
 
 ### `request.queued`
 
@@ -557,6 +566,7 @@ The person accepted the assistant's answer to a request, or sent it back with a 
 | `request` | The request it answered. |
 | `task` | That request's kind of work. |
 | `part` | The part of a text that request named (as given to queue_request(part=)), or None. |
+| `tag` | The tag the plugin put on that request (as given to queue_request(tag=)), or None. |
 | `about` | The record the request was about, as {kind, id}, or None. |
 
 ### `changeset.undone`
@@ -572,11 +582,15 @@ Ops of a changeset were undone.
 
 What an event handler gets: a read view, the plugin's settings, and two commands the core carries out after the handler returns (never direct writes or sends). If the handler raises, its commands are dropped.
 
-#### `context.queue_request(task: str, note: str, about: Stored | tuple[str, str] | None = None, *, needs_go: bool = False, part: dict[str, Any] | None = None) -> None`
+#### `context.queue_request(task: str, note: str, about: Stored | tuple[str, str] | None = None, *, needs_go: bool = False, part: dict[str, Any] | None = None, tag: dict[str, Any] | None = None) -> None`
 
 Queue AI work of one of this plugin's task kinds (or a core one). `about` is the record it works on, as a record or (kind, id), required for a task kind declared `on` a kind. The note reaches the assistant as untrusted material, and system ops from it wait for the person. After a stage move, or with `needs_go`, it waits for the person's go whatever it costs.
 
 `part` limits a draft to part of its long text. For an anchored draft, `{"first": n, "last": m}`: the run sees and must account for paragraphs p<n>..p<m> only (numbered as in the whole text), and the pending version is the whole text with that span replaced. For any other draft, `{"after": n}` (0 for the start, "end" for the end): the run writes only new text, and the pending version is the text with it added there. Add `"base": <version number>` so a text that moved on since the part was chosen refuses the run instead of revising the wrong paragraphs. The packet function adds whatever read-only context the run needs.
+
+A part may also carry `"address"`, a small flat mapping the plugin defines (short text, numbers or yes/no; at most 1 KB), compared for equality and never shown, and `"label"`, the words for the screen. Work that answers with ops (not a draft) may name a part by its `address` alone, for a part that isn't in a long text: it comes back in `view.part` and `origin["part"]`.
+
+`tag` is a small flat mapping of the same kind that the plugin puts on the request, to know it again: it is returned in the validators' `origin["tag"]`, in `PacketContext.tag` and in the `tag` of `text.accepted` and `changeset.reviewed`, and is never shown and never sent to a model.
 
 #### `context.request_from(interface: str, task: str, note: str, about: Stored | tuple[str, str] | None = None, *, provider: str | None = None, needs_go: bool = False, item: InterfaceItem | None = None) -> None`
 
@@ -774,7 +788,7 @@ One result of `PacketContext.search`, with its source. `place` is where it was f
 
 ### PacketContext
 
-The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's request). A note from anyone but the person is shown to the run as untrusted material. `request` is the run's request id and `part` the part of the record it names (as given to `queue_request(part=)`), or None.
+The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's request). A note from anyone but the person is shown to the run as untrusted material. `request` is the run's request id and `part` the part of the record it names (as given to `queue_request(part=)`, with its `address` if it has one), or None. `tag` is the small mapping the plugin put on the request when it filed it (`queue_request(tag=)`), or None: never shown to the person and never sent to a model. `target_kind` is the kind of the record the run is about (for work declared `on` either of two kinds, which of the two), or None when it isn't about a record.
 
 #### `view.search(words: str, *, kinds: Sequence[str] = (), projects: Sequence[str] = (), limit: int | None = None) -> list[SearchResult]`
 
@@ -1141,9 +1155,9 @@ A ReadView as the plugin sees it (the first plugin given, unless named).
 
 Apply ops as the person (their own change, applied at once) or as the assistant (checked by validators and lints first, `trusted=False` for work from outside content), and say what became of each.
 
-#### `ws.ask(task: str, *, answer: Any, about: tuple[str, str] | None = None, part: dict[str, Any] | None = None, note: str = '') -> AskResult`
+#### `ws.ask(task: str, *, answer: Any, about: tuple[str, str] | None = None, part: dict[str, Any] | None = None, note: str = '', tag: dict[str, Any] | None = None) -> AskResult`
 
-Run a task kind with a scripted answer, through the dispatcher: the packet, the checks, the fix round and the review. `answer` is the answer's text, a dict (sent as JSON) or a function of the run's task, whose `request` carries the fix round's feedback, so it can answer differently each round.
+Run a task kind with a scripted answer, through the dispatcher: the packet, the checks, the fix round and the review. `answer` is the answer's text, a dict (sent as JSON) or a function of the run's task, whose `request` carries the fix round's feedback, so it can answer differently each round. `tag` is the small mapping a plugin puts on a request (`queue_request(tag=)`).
 
 #### `ws.action(name: str, target: Any = None, choices: dict[str, Any] | None = None) -> ActionResult`
 
@@ -1176,6 +1190,18 @@ The records of running plugins that refer to a project, which the ending lists a
 #### `ws.undo(outcome: Outcome) -> Outcome`
 
 Undo a whole changeset with one Undo, as the person would, and return it as it stands after.
+
+#### `ws.keep_group(outcome: Outcome, group: int | str) -> GroupDone`
+
+Keep a group of an answer as the person would on the review (`group` is its label or its id from `outcome.groups`): its held ops are released as the person's own go.
+
+#### `ws.drop_group(outcome: Outcome, group: int | str) -> GroupDone`
+
+Drop a group of an answer: its applied ops are undone and its held ops kept as they were, each recorded as a signal like any other rejection of the assistant's work.
+
+#### `ws.release_all(outcome: Outcome) -> GroupDone`
+
+Release every held op of an answer together, as the person's own go (one Undo takes them all back); an op that waits on a choice only the person makes there is left and named in `skipped`.
 
 #### `ws.emit(event: str, payload: dict[str, Any]) -> list[dict[str, Any]]`
 
@@ -1214,7 +1240,7 @@ A run of a task kind: the request's `state` (review: the answer waits for the pe
 
 #### ActionResult
 
-A person action's proposal as the review shows it: `summary`, and `topic`, the few words that name it for the item's title (empty when the action gave none); `ops`, the ops it would apply, as dicts; `notes`, what the person should know; `items`, the changes the person keeps or drops, each a dict with `id`, `label`, `group` (the id of the group it sits under, or None), `kept` (the tick the review starts with) and `ops`; `groups`, the headings that gather choices and items, each a dict with `id`, `heading` and `explanation`; `requests`, the work it would queue, each a dict with `task`, `about` ({"kind", "id"} or None) and `note`; and `problems`, why ops outside the items would be refused if applied now. `apply(kept=...)` applies it as the person would.
+A person action's proposal as the review shows it: `summary`, and `topic`, the few words that name it for the item's title (empty when the action gave none); `ops`, the ops it would apply, as dicts; `notes`, what the person should know; `items`, the changes the person keeps or drops, each a dict with `id`, `label`, `group` (the id of the group it sits under, or None), `kept` (the tick the review starts with) and `ops`; `groups`, the headings that gather choices and items, each a dict with `id`, `heading` and `explanation`; `requests`, the work it would queue, each a dict with `id`, `task`, `about` ({"kind", "id"}, or {"op"} or {"item"} for a record the proposal makes, or None), `note`, `part`, `tag`, `group` and `kept` (the tick it starts with); and `problems`, why ops outside the items would be refused if applied now. `apply(kept=..., requests=...)` applies it as the person would.
 
 #### PluginState
 
@@ -1228,11 +1254,13 @@ A workspace saved with `ws.save()`, to start tests from fresh copies of: `plugin
 
 A plugin given to `plugin_workspace` didn't start: `plugin` names it and `reason` says why, as its status on the Add-ons screen would.
 
-#### `proposal.apply(kept: Mapping[str, bool] | None = None) -> Outcome`
+#### `proposal.apply(kept: Mapping[str, bool] | None = None, requests: Sequence[int | str] | None = None) -> Outcome`
 
 Apply the proposal as the person would (their own change, actor `pm`) and say what became of each op.
 
 `kept` maps an item's id to True (keep) or False (drop): the ticks the person sets on the review. An item left out keeps the tick it came with (`kept` on the item); an id that names no item raises StoreError, as it does on screen. With no `kept`, the proposal applies as it was proposed.
+
+`requests` names the requests to keep, each by its position in `requests` or by its id; the others are dropped as they are on screen, and nothing is queued for them. One that names no request raises StoreError. With no `requests`, every request keeps the tick it came with.
 
 ## Channels
 
@@ -1492,7 +1520,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
-| `promised_to` | list[Annotated[str, RefTo(kind='person')]] | `[]` | For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33). |
+| `promised_to` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33). |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said outright, or inferred by the assistant; never a confidence score. |
 | `said_by` | str \| None | `None` | The id of the person who said it, when the input names them. |
 | `due_words` | str \| None | `None` | The exact words its due date was read from. |
@@ -1623,7 +1651,8 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `cause.idle` | int \| None | `None` | For retry after runs that did no work: how many such runs in a row there have been. |
 | `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, or whose moved date or replaced fact a follow-on run answers, if any. |
 | `sensitivity` | Literal['open', 'internal', 'restricted'] \| None | `None` | How sensitive the person said what they handed in is; it only ever raises the level. |
-| `part` | dict[str, Any] \| None | `None` | The part of a long text the work is about: {first, last} paragraphs (by number) an anchored draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} version number they refer to. |
+| `part` | dict[str, Any] \| None | `None` | The part of a long text the work is about: {first, last} paragraphs (by number) an anchored draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} version number they refer to, a plugin's own {label} for it, and an {address}, a small flat mapping the plugin defines, compared for equality and never shown (work that answers with ops may name a part by its address alone). |
+| `tag` | dict[str, Any] \| None | `None` | A small flat mapping the plugin that filed the request put on it (short text, numbers or yes/no, up to 1 KB): returned to the plugin in `origin`, `PacketContext.tag` and the events about the work, never shown and never sent to a model. |
 | `project` | str \| None | `None` | The project the person said a hand-in is about, if they did. |
 | `auto_closed` | dict[str, str] \| None | `None` | For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it. |
 | `set_aside` | dict[str, str \| None] \| None | `None` | For a watched mail item set aside as not work: {section, rule, reason}, and for one the person set aside after it was handed in, {from_state, from_waiting} to put it back. It is never queued for the assistant while this is set. This is work clears it. |
@@ -1704,10 +1733,10 @@ A standing instruction the assistant follows, kept as a record so changing one h
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `check` | str \| None | `None` | A deterministic check that implements the rule; a rule with none is prose, and prose alone never lets a stage move. |
 | `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | Where it came from: seed (the starting set), person (the person's own words), input (content), assistant (its own generalization), pack or import. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it was proposed from outside content, until the person keeps it. |
@@ -1758,7 +1787,7 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `response` | str \| None | `None` | The person's own answer to the invitation, when the attendee list holds them. |
 | `notes` | list[str] | `[]` | What had to be guessed in reading it (a time zone, a repeat rule). |
 | `plain` | bool | `False` | Nobody else is invited and it has no description, so the rules kept it without the assistant reading it. A plain entry whose title starts with a task verb is offered as a to-do, and one whose title names a known person or a promise's words is linked to them. |
-| `people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The known people its title names, linked by rule when it is plain. |
+| `people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The known people its title names, linked by rule when it is plain. |
 | `agenda` | list[AgendaItem] | `[]` | What is to be taken up at it, each item linked to the action, question or note it came from; added by `agenda.add`. |
 | `agenda[].action` | str \| None | `None` | The id of the action it came from. |
 | `agenda[].question` | str \| None | `None` | The id of the question it came from. |
@@ -1844,10 +1873,10 @@ What went wrong, why, and the guard that prevents a repeat. Added by `lesson.add
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `guard` | str \| None | `None` | The check or behavior that prevents a repeat, in plain words. |
 | `signal` | str \| None | `None` | The correction it came from. |
 
@@ -1882,10 +1911,10 @@ A term or acronym and what it means here. Added by `glossary.add`, changed by `g
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `term` | str | required | The term, acronym or name as it is written. |
 | `meaning` | str | required | What it means. |
 | `confidence` | Literal['confirmed', 'assumed', 'unknown'] | `'assumed'` | confirmed: someone who knows said so. assumed: a reasonable reading. unknown: not yet. |
@@ -1923,10 +1952,10 @@ Who answers a kind of question, or who doesn't. Added by `routing.add`.
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `topic` | str | required | The topic, area or kind of question. |
 | `person` | str \| None | `None` | The person it is about. |
 | `team` | str \| None | `None` | The team it is about, instead of a person. |
@@ -1964,10 +1993,10 @@ What a recipient or audience wants or avoids in what is written for them. Added 
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `audience` | str | required | A person's id, or a kind of audience in words. |
 | `observation` | str | required | What they want or avoid. |
 
@@ -2316,8 +2345,8 @@ A message the person copied to send, kept exactly as copied: who it was for, whe
 | `person` | str \| None | `None` | The person it was for; none when the reply is to a sender nobody knows (it is never matched). |
 | `text` | str | required | The message exactly as copied. |
 | `at` | datetime | required | When it was copied; copying the same message again moves it forward. |
-| `questions` | list[Annotated[str, RefTo(kind='question')]] | `[]` | The questions the message covered. |
-| `actions` | list[Annotated[str, RefTo(kind='action')]] | `[]` | The actions the message covered (for a reply, the one it answers). |
+| `questions` | list[Annotated[str, RefTo(kind='question', blocks_delete=True)]] | `[]` | The questions the message covered. |
+| `actions` | list[Annotated[str, RefTo(kind='action', blocks_delete=True)]] | `[]` | The actions the message covered (for a reply, the one it answers). |
 | `sent_source` | str \| None | `None` | The sent message it was matched to, once there is one. |
 | `matched_at` | datetime \| None | `None` | When it was matched to a sent message. |
 | `settled` | Literal['sent_another_way', 'not_sent'] \| None | `None` | The person's own answer to whether it went out, when no sent message was found. |
@@ -2385,7 +2414,7 @@ One thing the app does outside the workspace on the person's behalf (design 6.12
 | `reminder` | str \| None | `None` | For a reminder act: the to-do it reminds the person of. Only the engine's reminders make one; the standing yes approves only an act that has this. |
 | `reminder_at` | AwareDatetime \| None | `None` | For a reminder act: the reminder time it was drafted for, so one reminder time never gets two acts and a snooze is noticed. |
 | `run` | str \| None | `None` | The AI run that wrote the draft, if one did. |
-| `sources` | list[Annotated[str, RefTo(kind='source')]] | `[]` | The saved inputs the content draws on. |
+| `sources` | list[Annotated[str, RefTo(kind='source', blocks_delete=True)]] | `[]` | The saved inputs the content draws on. |
 | `in_reply_to` | str \| None | `None` | The message this answers; the people in that thread are people it may address. |
 | `project` | str \| None | `None` | The project it is about, if any. |
 | `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | The most sensitive level of what it draws on. |
@@ -2881,10 +2910,10 @@ Keep a glossary entry: a term or acronym and what it means here. From the person
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -2905,10 +2934,10 @@ Change a glossary entry that is proposed or active. A system op: from anyone but
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 
 ### `knowledge.retire`
 
@@ -2933,10 +2962,10 @@ Keep a lesson: what went wrong, why, and the guard that stops it happening again
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -2954,10 +2983,10 @@ Change a lesson that is proposed or active: its wording, its guard or what it ap
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 
 ### `list.add`
 
@@ -3261,10 +3290,10 @@ Keep a routing entry: who answers a kind of question, or who doesn't (`negative`
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -3281,10 +3310,10 @@ Add a standing rule: an instruction the assistant follows from now on. A system 
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `check` | str \| None | `None` | The id of a deterministic check that implements the rule, when one exists. |
 | `constrains` | list[str] | `[]` | What the rule is about: op kinds (`question.add`) or op fields (`action.add.owners`). |
 | `evidence` | EvidenceIn \| None | see below | The words from the input that justify the rule, if any. |
@@ -3309,7 +3338,7 @@ A meeting or check-in that repeats, when the input says so ("every Tuesday"). `e
 | `title` | str | required | What the series is, in a few words. |
 | `repeats` | str \| None | `None` | How often, in the input's words. |
 | `project` | str \| None | `None` | Project id, if the series belongs to one. |
-| `events` | list[Annotated[str, RefTo(kind='event')]] | `[]` | The ids of existing entries that are instances of it. |
+| `events` | list[Annotated[str, RefTo(kind='event', blocks_delete=True)]] | `[]` | The ids of existing entries that are instances of it. |
 | `evidence` | EvidenceIn | required | The exact words from the input that say it repeats. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -3406,10 +3435,10 @@ Keep a style note: what a recipient or audience wants or avoids in what is writt
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
 | `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
-| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
-| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The people it is about; empty means anyone. |
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
-| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

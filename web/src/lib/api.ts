@@ -216,6 +216,11 @@ export const api = {
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),
   sendBack: (cs: string, note: string, undoFirst = true) =>
     call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, undoFirst ? { note } : { note, undo_first: false }),
+  /** Keep a group of an answer the task kind grouped (its held ops are applied), drop it (its applied ops are undone and its
+   * held ones kept as they were), or release every held op of the answer together. */
+  keepGroup: (cs: string, group: number) => call<S["AnswerGroupDone"]>("POST", `changesets/${id(cs)}/groups/${group}/keep`),
+  dropGroup: (cs: string, group: number) => call<S["AnswerGroupDone"]>("POST", `changesets/${id(cs)}/groups/${group}/drop`),
+  releaseAll: (cs: string) => call<S["AnswerGroupDone"]>("POST", `changesets/${id(cs)}/release-all`),
   release: (cs: string, index: number, person?: string) =>
     call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/release`, { person: person ?? null }),
   newPersonForm: (q: string) => call<S["NewPersonPrefillView"]>("GET", `questions/${id(q)}/new-person`),

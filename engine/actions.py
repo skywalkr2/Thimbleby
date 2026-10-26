@@ -277,8 +277,7 @@ def _trial(store: Store, cfg: Config, pending: Pending) -> None:
 
     first = store.read().sequences().get("file", 1)
     ids = [f"FILE-{first + i}" for i in range(len(pending.files))]
-    in_items = [op for item in pending.items for op in item["ops"]]
-    ops = [*_file_ops(pending.files, ids), *(_substituted(op, ids) for op in [*pending.ops, *in_items])]
+    ops = _arranged(pending, ids, everything=True)
     found = refusals(_validated(ops, store, pending.summary), _person_context(store, cfg, pending.plugin, ""))
     start = len(pending.files) + len(pending.ops)
     pending.problems = list(dict.fromkeys(found[i] for i in range(start) if i in found))
@@ -469,6 +468,7 @@ def _checked(
         raise StoreError("item ids must be unique")
     stand_ins = [f"FILE-{i + 1}" for i in range(len(files))]
     every = [*ops, *(op for i in items for op in i["ops"])]
+    _new_refs_checked(every)
     _validated([*_file_ops(files, stand_ins), *(_substituted(op, stand_ins) for op in every)], store, summary)
     target = {"kind": record.kind, "id": record.id, "version": record.version} if record is not None else None
     keep = cfg.workspace.plugins.actions.keep_minutes
@@ -516,17 +516,33 @@ def _resolved(store: Store, pending: Pending, cs_id: str) -> list[dict[str, Any]
             span = first_item_op[about["item"]]
         else:
             continue
-        on = store.plugins.task_kind(request["task"]).on
-        made = [
-            record
-            for outcome in outcomes[span[0] : span[1]]
-            if outcome["status"] == "applied"
-            for record in outcome.get("records", [])
-            if record["kind"] == on
-        ]
+        kinds = store.plugins.task_kind(request["task"]).on_kinds
+        made = _about_made(store, cs_id, outcomes[span[0] : span[1]], kinds)
         if made:
-            found.append({**request, "about": {"kind": made[0]["kind"], "id": made[0]["id"]}})
+            found.append({**request, "about": {"kind": made[0], "id": made[1]}})
     return found
+
+
+def _about_made(
+    store: Store, cs_id: str, outcomes: list[dict[str, Any]], kinds: tuple[str, ...]
+) -> tuple[str, str] | None:
+    """The record a span of applied ops stands for, as (kind, id): the record of one of `kinds` they created, else, for
+    an edit, the first record of one of those kinds they changed. None when no applied op touched one."""
+    records = [
+        record
+        for outcome in outcomes
+        if outcome["status"] == "applied"
+        for record in outcome.get("records", [])
+        if record["kind"] in kinds
+    ]
+    if not records:
+        return None
+    view = store.read()
+    for record in records:
+        written = view.ledger(kind=record["kind"], record_id=record["id"])
+        if any(e["changeset"] == cs_id and e["version"] == 1 for e in written):
+            return record["kind"], record["id"]
+    return records[0]["kind"], records[0]["id"]
 
 
 def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
@@ -542,6 +558,7 @@ def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
                     "about": r["about"],
                     "note": r["note"] or None,
                     "part": r.get("part"),
+                    "tag": r.get("tag"),
                     "origin": "pm",
                     "state": "needs_you",
                     "approval": "required",
@@ -563,6 +580,7 @@ def _requests_checked(
     """A proposal's requests, each naming one of the plugin's own task kinds and a record it may work on, with an id
     for the review, kept unless the person drops it, and the `group` it belongs to, if any."""
     from engine.plugin_host import check_about
+    from engine.tasks import flat_mapping
     from engine.texts import check_part
 
     limit = store.plugins.cfg.workspace.plugins.actions.max_requests
@@ -582,7 +600,7 @@ def _requests_checked(
         kind = store.plugins.task_kind(task)
         if isinstance(about, dict) and ("op" in about or "item" in about):
             # A record this proposal creates: resolved when it applies, and dropped with its item.
-            if kind.on is None:
+            if not kind.on_kinds:
                 raise StoreError(f"{task} doesn't work on a record")
             if "op" in about and not (isinstance(about["op"], int) and 0 <= about["op"] < len(ops)):
                 raise StoreError(f"a request names op {about.get('op')}, which the proposal doesn't have")
@@ -593,6 +611,7 @@ def _requests_checked(
             check_about(view, kind, about, store)
         try:
             part = check_part(store.plugins.task_kind(task), r.get("part"))
+            tag = flat_mapping(r.get("tag"), "a request's tag")
         except ValueError as err:
             raise StoreError(str(err)) from None
         note = " ".join(str(r.get("note", "")).split())[:2000]
@@ -606,11 +625,26 @@ def _requests_checked(
                 "about": about,
                 "note": note,
                 "part": part,
+                "tag": tag,
                 "kept": True,
                 "group": group,
             }
         )
     return checked
+
+
+def _new_refs_checked(every: list[dict[str, Any]]) -> None:
+    """Each `$new:<n>` names an op of the proposal that comes before the one naming it (the proposal's own ops, then
+    the items' ops, counted from 0)."""
+    from engine.new_refs import referenced
+
+    for position, op in enumerate(every):
+        for n, dropped in referenced(op):
+            if dropped or not 0 <= n < position:
+                raise StoreError(
+                    f"op {position} names $new:{n}, which isn't an op that comes before it (the proposal's own ops "
+                    "and then the items' ops, counted from 0)"
+                )
 
 
 def _placeholders_checked(value: Any, count: int) -> Any:
@@ -649,10 +683,35 @@ def _validated(ops: list[dict[str, Any]], store: Store, summary: str, topic: str
         raise StoreError(error_problem(first) or f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
 
 
+def _arranged(pending: Pending, ids: list[str], *, everything: bool = False) -> list[dict[str, Any]]:
+    """The changeset's ops in order: the files, the proposal's own ops, then the items' ops (only the kept items',
+    unless `everything`). A `$new:<n>` value counts the proposal's own ops and then every item's ops in order, kept or
+    not, so it names the same op whatever the person drops; it is renumbered to the op's place in the changeset, and
+    one that names an op in a dropped item becomes a reference the applier refuses, saying that change was left
+    out."""
+    from engine.new_refs import replaced
+
+    every = [*pending.ops, *(op for item in pending.items for op in item["ops"])]
+    flags = [True] * len(pending.ops) + [
+        bool(everything or item["kept"]) for item in pending.items for _ in item["ops"]
+    ]
+    place, count = [], len(pending.files)
+    for flag in flags:
+        place.append(count if flag else None)
+        count += bool(flag)
+
+    def renumber(n: int, dropped: bool) -> str:
+        return f"$new:{place[n]}" if place[n] is not None else f"$new:dropped:{n}"
+
+    return [
+        *_file_ops(pending.files, ids),
+        *(_substituted(replaced(op, renumber), ids) for op, flag in zip(every, flags, strict=True) if flag),
+    ]
+
+
 def to_apply(pending: Pending, ids: list[str]) -> list[dict[str, Any]]:
     """Every op that applies with the ticks as they are: the files, the proposal's own ops, then kept items' ops."""
-    kept = [op for item in pending.items if item["kept"] for op in item["ops"]]
-    return [*_file_ops(pending.files, ids), *(_substituted(op, ids) for op in [*pending.ops, *kept])]
+    return _arranged(pending, ids)
 
 
 def labels(store: Store, pending: Pending, ops: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:

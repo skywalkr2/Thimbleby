@@ -146,6 +146,50 @@ Part B2 (screens, runs, packets and models):
   work must start. This week counts the to-do from then; a meeting to set up with the field empty takes
   `steward.meetings.setup_lead_working_days`. It is the person's own edit (`record.edit`); `record.set` doesn't offer it.
 
+Part B1 (reviewing, applying and records):
+
+- **An answer grouped for review (170).** `registrar.task_kind(..., groups=fn)`, `fn(op, view)` returning a label (one line, up
+  to 120 characters, from the plugin's wording) or None. The review shows one row for each label with Keep and Drop for the whole
+  group; an op with no label keeps its own row. Drop undoes the group's applied ops and declines its held ones, each recorded as
+  a signal like any other rejection of the assistant's work (`undone`, `held_declined`), and names an op it can't take back
+  without overwriting a later change; Keep releases the group's held ops. **Release all** applies every held op of an answer
+  together with one Undo, leaving (and naming) an op that waits on a choice only the person makes there. A function that raises,
+  hangs or returns something that isn't a short line leaves the answer ungrouped and is noted on the plugin. Routes: `POST
+  /api/changesets/{id}/groups/{n}/keep`, `.../groups/{n}/drop` and `.../release-all`; `ChangesetView.groups` and
+  `OpView.answer_group`.
+- **A record made earlier in the same change (194).** An op's field may hold `"$new:<n>"` (the whole value; the first op is 0) to
+  name the record op `n` of the same answer or proposal creates. The applier resolves it in order, so validators and lints see the
+  id, the changeset keeps the real id and Undo takes everything back together. An op that names one that doesn't come before it,
+  was refused, waits for the person or made no record is refused, saying which change it depended on. In a `Proposal` the
+  numbers count its `ops` and then every item's ops in order, so an item may name what a main op or an earlier item creates, and a
+  dropped item refuses what names it.
+- **The test kit (201).** `ActionResult.apply(kept=..., requests=...)` (`requests` names the requests to keep, by position or id,
+  and the rest are dropped); `ws.keep_group(outcome, group)`, `ws.drop_group(outcome, group)`, `ws.release_all(outcome)` (each
+  returns a `GroupDone`) and `Outcome.groups`; `ws.ask(..., tag=)`.
+- **`about: {item}` (205).** A request about an item is about the record the item creates, or for an edit the record of the
+  request's kind that it changes; an item that creates one and edits another is about the one it created.
+- **A reference that doesn't block deleting (197).** `RefTo(kind, blocks_delete=False)`: the target can be deleted while the
+  record holds its id. A read finds no record (never an error), the record's page says "Removed" (`RecordRefName.removed`),
+  Undo of the delete brings the record back, and writing the reference still needs its target to exist.
+- **Where a record is written (200).** `registrar.record_type(Model, placed_by="<reference field>")` writes a record in the folder
+  of the project the record that field points at is in (that project itself when it points at one), and at the workspace level
+  when the field is empty; `placed_by=None` writes every record of the kind at the workspace level; the default
+  (`placed_by="project"`) is the folder of the project its `project` field names (else its `layout_project`, else the workspace).
+  The field must hold one reference. The same rule places its working copies and the project a panel filters it by.
+- **`where` through one reference (204).** On `registrar.action` and `task_kind` (`where` and `start_where`), a key may be
+  `"<reference field>.<field>"`, a field of the record the reference points at; an empty reference, or one whose record is gone,
+  has no value (it matches None, never ANY). A deeper path, a field that isn't one reference, or a field the target lacks refuses
+  the plugin when it loads.
+- **A task kind about either of two kinds (193).** `task_kind(..., on=("<kind a>", "<kind b>"))`; `PacketContext.target_kind` says
+  which the run is about; the person can start it from a record of either; `where` may name only fields both kinds have, and a
+  draft's `field` must be long text on both. `TaskKind.on_kinds` lists them.
+- **A part's `address` (199) and a request's `tag` (188).** A part may carry `"address"`, a small flat mapping the pack defines
+  (short text, numbers or yes/no; at most 20 entries and 1 KB), compared for equality and never shown; work that answers with ops
+  (not a draft) may name a part by its address alone. `queue_request(..., tag=)` (and a `Proposal` request's `"tag"`) puts the same
+  kind of mapping on a request: it comes back in the validators' `origin["tag"]`, `PacketContext.tag` and the `tag` of
+  `text.accepted` and `changeset.reviewed`, and is never shown or sent to a model. `PacketContext.part` carries the address, and
+  `PacketContext.request` is still the request's id. `Request.tag` is a new core field.
+
 ## What 0.3.89 adds
 
 - `context.web` (connectors and channels) also has `.put`, `.patch` and `.delete`, with the same host limits, errors

@@ -581,6 +581,7 @@ class EventContext(ReadView):
         *,
         needs_go: bool = False,
         part: dict[str, Any] | None = None,
+        tag: dict[str, Any] | None = None,
     ) -> None:
         """Queue AI work of one of this plugin's task kinds (or a core one). `about` is the record it works on, as a
         record or (kind, id), required for a task kind declared `on` a kind. The note reaches the assistant as
@@ -592,10 +593,21 @@ class EventContext(ReadView):
         is the whole text with that span replaced. For any other draft, `{"after": n}` (0 for the start, "end" for
         the end): the run writes only new text, and the pending version is the text with it added there. Add
         `"base": <version number>` so a text that moved on since the part was chosen refuses the run instead of
-        revising the wrong paragraphs. The packet function adds whatever read-only context the run needs."""
+        revising the wrong paragraphs. The packet function adds whatever read-only context the run needs.
+
+        A part may also carry `"address"`, a small flat mapping the plugin defines (short text, numbers or yes/no; at
+        most 1 KB), compared for equality and never shown, and `"label"`, the words for the screen. Work that answers
+        with ops (not a draft) may name a part by its `address` alone, for a part that isn't in a long text: it comes
+        back in `view.part` and `origin["part"]`.
+
+        `tag` is a small flat mapping of the same kind that the plugin puts on the request, to know it again: it is
+        returned in the validators' `origin["tag"]`, in `PacketContext.tag` and in the `tag` of `text.accepted` and
+        `changeset.reviewed`, and is never shown and never sent to a model."""
         data: dict[str, Any] = {"task": task, "note": note}
         if needs_go:
             data["needs_go"] = True
+        if tag is not None:
+            data["tag"] = dict(tag)
         if part is not None:
             data["part"] = dict(part)
         if about is not None:
@@ -683,15 +695,28 @@ class PacketContext(ReadView):
     """The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the
     note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's
     request). A note from anyone but the person is shown to the run as untrusted material. `request` is the run's
-    request id and `part` the part of the record it names (as given to `queue_request(part=)`), or None."""
+    request id and `part` the part of the record it names (as given to `queue_request(part=)`, with its `address` if
+    it has one), or None. `tag` is the small mapping the plugin put on the request when it filed it
+    (`queue_request(tag=)`), or None: never shown to the person and never sent to a model. `target_kind` is the kind
+    of the record the run is about (for work declared `on` either of two kinds, which of the two), or None when it
+    isn't about a record."""
 
     def __init__(
-        self, view: Any, plugin: str, origin: str, request: str | None = None, part: dict[str, Any] | None = None
+        self,
+        view: Any,
+        plugin: str,
+        origin: str,
+        request: str | None = None,
+        part: dict[str, Any] | None = None,
+        tag: dict[str, Any] | None = None,
+        target_kind: str | None = None,
     ):
         super().__init__(view, plugin)
         self.origin = origin
         self.request = request
         self.part = dict(part) if part else None
+        self.tag = dict(tag) if tag else None
+        self.target_kind = target_kind
 
     #: Set by the host: builds the knowledge section for `knowledge`.
     read_knowledge: Callable[[str, list[str]], KnowledgeParts] | None = None
@@ -885,7 +910,13 @@ class Proposal:
     choices the person can flip, and anything the person should know (notes)."""
 
     summary: str
-    ops: list[dict[str, Any]] = field(default_factory=list)  # always applied
+    #: Always applied. An op's field may hold `"$new:<n>"` (the whole value) to name the record op `n` of this proposal
+    #: creates, counting these ops first and then the items' ops in order, from 0 (an item's ops may name what a main
+    #: op or an earlier item creates, an op never what comes after it). The applier puts the record's id there when it
+    #: reaches the op. If the op it names isn't applied (an item the person dropped, a refusal, a wait for the
+    #: person), the op naming it is refused, with the reason and which change it depended on; Undo of the proposal
+    #: takes all back.
+    ops: list[dict[str, Any]] = field(default_factory=list)
     #: A few words naming what it is about, for its title on Today and What changed (cut at a word to 60 characters).
     topic: str = ""
     files: list[NewFile] = field(default_factory=list)
@@ -897,12 +928,14 @@ class Proposal:
     #: The ops only make sense together (an import): if any is refused when applied, none applies.
     all_or_nothing: bool = False
     #: AI work to queue when the person applies it: {"task": one of this plugin's task kinds, "about": (kind, id)
-    #: or None, "note": "", "part": the part of a text it is about, "group": a group id}. Each waits for the
+    #: or None, "note": "", "part": the part of a text it is about, "tag": a small flat mapping to know it by,
+    #: "group": a group id}. Each waits for the
     #: person's go, whatever it costs. The person keeps or drops each one on the review (a request in a group is
     #: set with its group); one about an item is dropped with that item. A group stays on the review while it has
     #: items, choices or requests, even when all are dropped, so the person can keep them again; dropping them all
-    #: queues nothing for it. An item's ops can't name a record a main op creates by id: they apply after the main
-    #: ops in the same transaction, so an own op's `apply` finds that record by its natural key (`writer.find`).
+    #: queues nothing for it. A request's `about` may be `{"item": id}` or `{"op": n}`: the record that item (or main
+    #: op) creates, or for an edit the record of the request's kind it changes; a request about an item that creates
+    #: a record of that kind and edits another is about the one it created.
     requests: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -1200,14 +1233,22 @@ class PacketParts:
     max_chars: int | None = None
 
 
-def _narrowed(where: dict[str, Any] | None, on: str | None) -> dict[str, tuple[Any, ...]]:
-    """A `where` filter as {field: (values...)}, checked to be plain values on a record kind."""
-    if where is not None and (on is None or not where):
+def _narrowed(where: dict[str, Any] | None, on: str | tuple[str, ...] | None) -> dict[str, tuple[Any, ...]]:
+    """A `where` filter as {field: (values...)}, checked to be plain values on a record kind. A key may be a field of
+    the record or `"<reference field>.<field>"`, a field of the record one of its references points at (one step: a
+    deeper path is refused)."""
+    if where is not None and (not on or not where):
         raise RegistrationRefused(
             "where", "where narrows the records of kind `on`; it needs `on` and at least one field"
         )
     narrowed = {}
     for key, value in (where or {}).items():
+        parts = str(key).split(".")
+        if len(parts) > 2 or not all(parts):
+            raise RegistrationRefused(
+                "where",
+                f'where names a field of the record or one step through a reference, "<reference>.<field>": {key!r}',
+            )
         values = tuple(value) if isinstance(value, (list, tuple, set, frozenset)) else (value,)
         if not values or not all(v is None or v is ANY or isinstance(v, (str, int, float, bool)) for v in values):
             raise RegistrationRefused(
@@ -1215,6 +1256,18 @@ def _narrowed(where: dict[str, Any] | None, on: str | None) -> dict[str, tuple[A
             )
         narrowed[str(key)] = values
     return narrowed
+
+
+def _kinds_of(on: str | tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
+    """The record kinds a task kind is about: none, one, or one of two."""
+    if on is None:
+        return ()
+    if isinstance(on, str):
+        return (on,)
+    kinds = tuple(on) if isinstance(on, (tuple, list)) else ()
+    if len(kinds) != 2 or not all(isinstance(k, str) and k for k in kinds) or kinds[0] == kinds[1]:
+        raise RegistrationRefused("task_kind", "on is a record kind, or a pair of two different record kinds")
+    return kinds
 
 
 @dataclass(frozen=True)
@@ -1314,6 +1367,7 @@ class Registrar:
     def __init__(self, name: str, config: Settings, root: Path | None = None):
         self.name, self.config, self.root = name, config, root
         self.records: dict[str, type[Record]] = {}
+        self.placements: dict[str, str | None] = {}
         self.ops: dict[str, OpRegistration] = {}
         self.validators: dict[str, list[Callable]] = {}
         self.tasks: dict[str, TaskKind] = {}
@@ -1348,14 +1402,36 @@ class Registrar:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
             raise RegistrationRefused("name", f"identifier must be namespaced {self.name}/<name>: {name}")
 
-    def record_type(self, model: type[Record]) -> None:
+    def record_type(self, model: type[Record], *, placed_by: str | None = "project") -> None:
         """Register a record kind: a `Record` subclass with `record_kind` ("<plugin>/<name>") and an id `prefix`
-        (capital letters, unique in the workspace)."""
+        (capital letters, unique in the workspace).
+
+        Where a record is written in the synced folder (the kind needs a `layout` to be written at all): by default,
+        `placed_by="project"`, in the folder of the project its `project` field names, else (when the kind declares
+        `layout_project`) in the folder of the project that reference's record is in, else at the workspace level.
+        `placed_by="<field>"` names the reference field that places it instead, whatever `project` says: the record is
+        written in the folder of the project the record that field points at is in (or of that project, when it points
+        at a project), and at the workspace level when the field is empty. `placed_by=None` writes every record of the
+        kind at the workspace level. The field must hold one reference (not a list). The rule is the same for the
+        record's working copies, and for the project a panel's rows are filtered by."""
         if not issubclass(model, Record):
             raise RegistrationRefused("record_type", "record_type requires a Record model")
         self._name(model.record_kind)
         if model.record_kind in self.records or not re.fullmatch(r"[A-Z]+", model.prefix):
             raise RegistrationRefused("record_type", "duplicate record kind or invalid id prefix")
+        if placed_by != "project":
+            if placed_by is not None:
+                from engine.placement import check_placed_by
+
+                if not isinstance(placed_by, str):
+                    raise RegistrationRefused("record_type", "placed_by is the name of a reference field, or None")
+                try:
+                    check_placed_by(model, placed_by)
+                except RegistrationRefused:
+                    raise
+                except ValueError as err:
+                    raise RegistrationRefused("record_type", str(err)) from None
+            self.placements[model.record_kind] = placed_by
         self.records[model.record_kind] = model
 
     def op(
@@ -1407,7 +1483,8 @@ class Registrar:
         `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via":
         "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind,
         "about": the record it works on as {"kind", "id"} or None, "request": the run's request id or None, "part":
-        the part of the record the request names (as given to `queue_request(part=)`) or None}; ops a plugin's event
+        the part of the record the request names (as given to `queue_request(part=)`) or None, "tag": the request's
+        tag (as given to `queue_request(tag=)`) or None}; ops a plugin's event
         handler or job staged with `apply_op` have actor "plugin" and via "handler" or "job". A validator with a
         parameter named `settings` (or `**kwargs`) also gets the plugin's settings by keyword, so a check that
         depends on a setting is a validator, and its refusal is fed back in a fix round like any other; a refusal
@@ -1470,8 +1547,9 @@ class Registrar:
         role: str = "write",
         prompt: str = "notes",
         playbook: str = "notes",
-        on: str | None = None,
+        on: str | tuple[str, str] | None = None,
         packet: Callable | None = None,
+        groups: Callable | None = None,
         tier: str | None = None,
         max_output: int | None = None,
         expected_output: int | None = None,
@@ -1489,13 +1567,20 @@ class Registrar:
         The workspace overrides a plugin's prompt with `prompts/<plugin>/<name>.md`.
 
         `on` is the record kind a run is about (core or own), when it works on one record: the request then carries that
-        record, and the person can start it from the record. `packet(target, view, settings, note) -> PacketParts` says
+        record, and the person can start it from the record. `on=("<kind a>", "<kind b>")` is work about either of two
+        kinds, with one set of prompts, guidance and evaluation cases: the run is about one record of either kind (the
+        packet function's `view.target_kind` says which), the person can start it from a record of either, `where` and
+        `start_where` may name only fields both kinds have, and a draft's `field` must be a long text field of both.
+        `packet(target, view, settings, note) -> PacketParts` says
         what the run sees (without it, the run sees what reading notes sees); `view` is a PacketContext, whose `origin`
         says who started the run. It runs before every call, so it must be deterministic and quick; raising StoreError
         stops the run with that message for the person: the request waits with it as the reason, and no retry, fix
         round or escalation follows. `where` narrows which records of kind `on` the work is offered on and may start
         on: {field: value} or {field: (value, ...)}, every field matching; ANY means the field has a value and None
-        that it has none, which for a long text field asks whether the record has text in it. `start_where`, in the
+        that it has none, which for a long text field asks whether the record has text in it. A key may also be
+        `"<reference field>.<field>"`: a field of the record the reference points at, one step only ("the chapter's
+        book is in the draft stage"); an empty reference, or one whose record is gone, has no value, so it matches
+        None and not ANY. `start_where`, in the
         same form, narrows further only the runs the person starts (from a record, or offered to them there):
         requests a plugin, an action or a stage queues, and any request naming a `part`, check `where` alone, so a
         kind the person starts only on an empty record can still continue part by part. The packet's `max_output`
@@ -1540,6 +1625,27 @@ class Registrar:
         runs priced up front), and keeps the work off a model whose window is smaller however short the packet is.
         The workspace sets it for a kind in `ai.tasks.<kind>.min_context`.
 
+        `groups(op, view) -> str | None` labels each op of an answer, so the review shows the answer as a few rows, one
+        per label, each with Keep and Drop for all of its ops, instead of one row for every op: `op` is the op as a
+        model (the same one a validator gets) and `view` a read view; the label is words for the person, from the
+        plugin's wording (one line, up to 120 characters), and ops given the same label are one group; an op given
+        None stays on its own row. It runs once for each op when the answer is recorded; it must be quick and
+        deterministic and never call AI, and one that raises, hangs or returns something else leaves the answer
+        ungrouped and is noted on the plugin. Drop undoes the group's applied ops and declines its held ones (they
+        stay as they were), each recorded as a signal like any other rejection of the assistant's work, and names any
+        op it can't take back without overwriting a later change; Keep releases the group's held ops as the person's
+        own go. The ops are applied or held as usual before the person chooses; Undo of the whole answer still takes
+        everything back in one step, and "Release all" on the review applies every held op of an answer together
+        (except one that waits on a choice only the person makes there), also with one Undo.
+
+        In an answer's ops (and in a proposal's), a field may hold `"$new:<n>"`, the whole value, to name the record
+        op `n` of the same answer created, counting from 0: a chapter's `book` can name the book op 0 made. The applier
+        resolves it in order and keeps the real id on the op, so an answer that builds a book, its chapters and their
+        notes applies, shows and undoes as one. The op it names must come before it and must have been applied and made
+        a record; one that was refused, is waiting for the person or made none refuses the op that names it, saying
+        which change it depended on. A validator or a lint sees the id, never the placeholder. The core's op reference
+        does not describe `$new:<n>` to the model: the task kind's own prompt or guidance says when to use it.
+
         `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is
         recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings
         made in the same answer). Ops held for the person still wait as usual.
@@ -1566,10 +1672,15 @@ class Registrar:
             raise RegistrationRefused("task_kind", 'a task kind\'s learning is "core" or "own"')
         if not isinstance(questions, int) or not 0 <= questions <= 20:
             raise RegistrationRefused("task_kind", "questions is how many a draft may ask, from 0 to 20")
-        narrowed = _narrowed(where, on)
-        start_narrowed = _narrowed(start_where, on)
+        on_kinds = _kinds_of(on)
+        narrowed = _narrowed(where, on_kinds)
+        start_narrowed = _narrowed(start_where, on_kinds)
+        if groups is not None and (not callable(groups) or output != "ops"):
+            raise RegistrationRefused(
+                "task_kind", "groups is a function that labels an answer's ops, for work that answers with ops"
+            )
         if output == "draft":
-            if on is None or not field or ops:
+            if not on_kinds or not field or ops:
                 raise RegistrationRefused(
                     "task_kind", "a draft task kind names the record kind it works on and the long text field it drafts"
                 )
@@ -1604,7 +1715,9 @@ class Registrar:
             prompt,
             playbook,
             label=label.strip(),
-            on=on,
+            on=on_kinds[0] if on_kinds else None,
+            kinds=on_kinds if len(on_kinds) > 1 else (),
+            groups=groups,
             packet=packet,
             defaults=defaults,
             prompt_file=prompt_file,
@@ -1901,9 +2014,9 @@ class Registrar:
         column of this panel and a wording key of this plugin's namespace, or the plugin is refused at start.
 
         Filtered by project, a kind with no `project` field follows its `layout_project` reference: a record is in the
-        project its referenced record is in. `show_for(project, view) -> bool` lists the panel only on the projects it
-        returns True for (a panel of what a parent project's children share, say); without it the panel is on every
-        project."""
+        project its referenced record is in. A kind registered with `placed_by` is in the project that places it.
+        `show_for(project, view) -> bool` lists the panel only on the projects it returns True for (a panel of what a
+        parent project's children share, say); without it the panel is on every project."""
         self._name(name)
         if name in self.panels or not title.strip() or not columns:
             raise RegistrationRefused("panel", "duplicate panel, missing title or no columns")

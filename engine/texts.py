@@ -707,15 +707,23 @@ def check_part(kind: Any, part: dict[str, Any] | None) -> dict[str, Any] | None:
     """A request's part of a text, checked against its task kind: a span ({first, last}, paragraph numbers from 1) for
     an anchored draft or for work that answers with ops (which reads that part; the core passes it on and uses it for
     nothing else), a place ({after}: a paragraph number, 0 for the start or "end") for any other draft; with the
-    {base} version number they refer to, if given, and a plugin's own `label` for it ("3 of 5", up to 80 characters),
-    which comes back on `text.accepted`. Raises ValueError with the reason."""
+    {base} version number they refer to, if given, a plugin's own `label` for it ("3 of 5", up to 80 characters),
+    which comes back on `text.accepted`, and an `address`, a small flat mapping the plugin defines (short text, numbers
+    or yes/no, up to 1 KB), kept as it is, compared for equality and never shown. Work that answers with ops may name
+    a part by its `address` alone, for a part that isn't in a long text. Raises ValueError with the reason."""
     if part is None:
         return None
+    from engine.tasks import flat_mapping
+
     drafting = getattr(kind, "output", "ops") == "draft"
     label = part.get("label")
     if label is not None and (not isinstance(label, str) or not label.strip() or len(label) > 80):
         raise ValueError("a part's label is a short line of text")
-    part = {k: v for k, v in part.items() if k != "label"}
+    address = flat_mapping(part.get("address"), "a part's address")
+    part = {k: v for k, v in part.items() if k not in ("label", "address")}
+    extras = {**({"label": label.strip()} if label else {}), **({"address": address} if address else {})}
+    if address and not part and not drafting:
+        return extras
     base = part.get("base")
     if base is not None and (not isinstance(base, int) or base < 1):
         raise ValueError("base is a version number")
@@ -725,15 +733,15 @@ def check_part(kind: Any, part: dict[str, Any] | None) -> dict[str, Any] | None:
             raise ValueError(
                 "an anchored draft's part is {first, last}: the paragraph numbers it revises"
                 if drafting
-                else "this work's part is {first, last}: the paragraph numbers it reads"
+                else "this work's part is {first, last}, the paragraph numbers it reads, or an address alone"
             )
         if not 1 <= first <= last:
             raise ValueError("a span runs from paragraph first to paragraph last, counting from 1")
-        return {"first": first, "last": last, "base": base, **({"label": label.strip()} if label else {})}
+        return {"first": first, "last": last, "base": base, **extras}
     after = part.get("after")
     if set(part) - {"after", "base"} or not (after == "end" or (isinstance(after, int) and after >= 0)):
         raise ValueError('a draft\'s part is {after}: the paragraph number new text goes after, 0 or "end"')
-    return {"after": after, "base": base, **({"label": label.strip()} if label else {})}
+    return {"after": after, "base": base, **extras}
 
 
 def splice_span(
@@ -770,15 +778,35 @@ def splice_after(base: str, units: list[Unit], after: int | str, added: str, add
     return text, [*existing[:position], *new, *existing[position:]]
 
 
-def text_presence(store: Any, view: Any, record: Any) -> Callable[[str], bool | None]:
-    """For `where` filters: whether a record has text in one of its long text fields (None for other fields)."""
-    model = store.plugins.records.get(record.kind)
-    fields = long_text_fields(model) if model is not None else {}
+class Presence:
+    """For `where` filters: whether a record has text in one of its long text fields (calling it with a field gives
+    None for other fields), and the value of a field on the record one of its references points at."""
 
-    def has(field: str) -> bool | None:
-        if field not in fields:
+    def __init__(self, store: Any, view: Any, record: Any):
+        self.store, self.view, self.record = store, view, record
+        model = store.plugins.records.get(record.kind)
+        self.model = model
+        self.fields = long_text_fields(model) if model is not None else {}
+
+    def __call__(self, field: str) -> bool | None:
+        if field not in self.fields:
             return None
-        latest = current(view, record.kind, record.id, field)
-        return latest is not None and bool(read_text(store, latest.data["sha256"]).strip())
+        latest = current(self.view, self.record.kind, self.record.id, field)
+        return latest is not None and bool(read_text(self.store, latest.data["sha256"]).strip())
 
-    return has
+    def through(self, reference: str, field: str) -> tuple[bool | None, Any]:
+        """(whether the long text `field` has text, its value) on the record `reference` points at; nothing when the
+        reference is empty or the record is gone."""
+        from engine.records import ref_fields
+
+        kind = dict(ref_fields(self.model)).get(reference) if self.model is not None else None
+        record_id = self.record.data.get(reference)
+        found = self.view.get(kind, record_id) if kind and isinstance(record_id, str) and record_id else None
+        if found is None:
+            return None, None
+        return Presence(self.store, self.view, found)(field), found.data.get(field)
+
+
+def text_presence(store: Any, view: Any, record: Any) -> Presence:
+    """For `where` filters: whether a record has text in one of its long text fields (None for other fields)."""
+    return Presence(store, view, record)

@@ -85,6 +85,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     ...(people.data ?? []).map((p) => [p.id, p.name] as [string, string]),
     ...(projects.data ?? []).map((p) => [p.id, p.name] as [string, string]),
     ...(page.data?.details ?? []).flatMap((d) => (d.refs ?? []).filter((r) => r.name).map((r) => [r.id, r.name] as [string, string])),
+    // A record a reference still names after it was deleted is said to be removed, never shown as its id.
+    ...(page.data?.details ?? []).flatMap((d) => (d.refs ?? []).filter((r) => r.removed).map((r) => [r.id, t("record.removed")] as [string, string])),
   ]);
   const shown = (name: string, value: unknown): string[] =>
     lines(value).map((line) => (info.get(name)?.refers_to && names.has(line) ? names.get(line)! : line));

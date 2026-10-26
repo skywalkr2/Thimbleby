@@ -4347,6 +4347,97 @@
         "title": "AnswerCorrectionIn",
         "type": "object"
       },
+      "AnswerGroupDone": {
+        "description": "What Keep, Drop or Release all did to an answer's ops, by index.",
+        "properties": {
+          "declined": {
+            "description": "Held ops that were kept as they were.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Declined",
+            "type": "array"
+          },
+          "released": {
+            "description": "Held ops that were applied (released).",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Released",
+            "type": "array"
+          },
+          "restored": {
+            "description": "Applied ops that were undone.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Restored",
+            "type": "array"
+          },
+          "skipped": {
+            "description": "Ops left as they were, each {ops, reason}: one that waits on a choice only the person makes, or an Undo that would overwrite a later change.",
+            "items": {},
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "released",
+          "restored",
+          "declined",
+          "skipped"
+        ],
+        "title": "AnswerGroupDone",
+        "type": "object"
+      },
+      "AnswerGroupView": {
+        "description": "One group of an answer the task kind grouped for review: a row with `label`, Keep (while some op `held` waits)\nand Drop (while some op is `applied` or `held`) for all of its `ops` (their indexes).",
+        "properties": {
+          "applied": {
+            "title": "Applied",
+            "type": "integer"
+          },
+          "held": {
+            "title": "Held",
+            "type": "integer"
+          },
+          "id": {
+            "description": "The group's place among the answer's groups, for Keep and Drop.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ops": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Ops",
+            "type": "array"
+          },
+          "refused": {
+            "title": "Refused",
+            "type": "integer"
+          },
+          "undone": {
+            "title": "Undone",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "ops",
+          "applied",
+          "held",
+          "refused",
+          "undone"
+        ],
+        "title": "AnswerGroupView",
+        "type": "object"
+      },
       "AnswerVerdictIn": {
         "additionalProperties": false,
         "properties": {
@@ -6492,6 +6583,14 @@
             ],
             "description": "The name of the AI account when this was the first run on an account that stands in a fallback chain, so the card can say so.",
             "title": "First On Account"
+          },
+          "groups": {
+            "description": "When the task kind grouped its answer for review: one row for each group, with Keep and Drop for all of its ops. The ops in a group are not listed again on their own; ops with no group stay in `ops` alone.",
+            "items": {
+              "$ref": "#/components/schemas/AnswerGroupView"
+            },
+            "title": "Groups",
+            "type": "array"
           },
           "id": {
             "title": "Id",
@@ -14159,6 +14258,18 @@
       },
       "OpView": {
         "properties": {
+          "answer_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The label its task kind gave it when it grouped the answer for review; ops with the same label are one row, with Keep and Drop for all of them (see `ChangesetView.groups`).",
+            "title": "Answer Group"
+          },
           "ask": {
             "anyOf": [
               {
@@ -21249,6 +21360,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "removed": {
+            "default": false,
+            "description": "The record this names has been deleted (a reference that doesn't block deleting keeps the id): the screen says it was removed, and `name` is empty.",
+            "title": "Removed",
+            "type": "boolean"
           }
         },
         "required": [
@@ -31079,6 +31196,104 @@
         "summary": "Changes"
       }
     },
+    "/api/changesets/{cs_id}/groups/{group}/drop": {
+      "post": {
+        "description": "Drop a group of an answer: its applied ops are undone and its held ops kept as they were, each recorded\nas the correction it is.",
+        "operationId": "drop_group_api_changesets__cs_id__groups__group__drop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "group",
+            "required": true,
+            "schema": {
+              "title": "Group",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerGroupDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Drop Group"
+      }
+    },
+    "/api/changesets/{cs_id}/groups/{group}/keep": {
+      "post": {
+        "description": "Keep a group of an answer the task kind grouped: its held ops are applied as the person's own go.",
+        "operationId": "keep_group_api_changesets__cs_id__groups__group__keep_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "group",
+            "required": true,
+            "schema": {
+              "title": "Group",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerGroupDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Keep Group"
+      }
+    },
     "/api/changesets/{cs_id}/looks-good": {
       "post": {
         "operationId": "approve_api_changesets__cs_id__looks_good_post",
@@ -31604,6 +31819,46 @@
           }
         },
         "summary": "Undecline Op"
+      }
+    },
+    "/api/changesets/{cs_id}/release-all": {
+      "post": {
+        "description": "Release every held op of an answer together (Undo of the answer takes them all back at once), except ones\nthat wait on a choice only the person makes there, which are listed as left.",
+        "operationId": "release_all_api_changesets__cs_id__release_all_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerGroupDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Release All"
       }
     },
     "/api/changesets/{cs_id}/reopen": {

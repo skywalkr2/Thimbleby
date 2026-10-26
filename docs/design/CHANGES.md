@@ -1027,6 +1027,54 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 224. The reviewing, applying and records answers of the batched plugin API release: groups of an answer, a record made earlier in the same change, references that don't block deleting, where a record is written, and a part's address and a request's tag (2026-10-26; P2, answers 170, 194, 201, 205, 197, 200, 204, 193, 199, 188)
+
+Part B1 of the one batched plugin API release (`docs/project/plugin-api-release-plan.md`; the version and the guide's
+regeneration are finished once at the end). Answers are in `docs/project/plugin-answers-34-48.md`.
+
+- **Design 3.3, 6.7 and 7.3 (170), an answer grouped for review.** `task_kind(groups=fn)`, `fn(op, view)` returning a label or None:
+  the applier keeps the label on each op's outcome (`answer_group`), and What changed shows one row for each label with Keep (the
+  group's held ops are released as the person's own go) and Drop (in the row's menu: the applied ops are undone, the held ones
+  declined, one `undone` or `held_declined` signal each, and an op that can't be taken back without overwriting a later change is
+  left and named). **Release all** applies every held op of an answer together with one Undo and leaves, naming them, the ops that
+  wait on a choice only the person makes there (who someone is, the end of a project). A function that fails, hangs or returns a
+  wrong value leaves the answer ungrouped and is noted on the plugin. Routes `POST /api/changesets/{id}/groups/{n}/keep`,
+  `.../groups/{n}/drop` and `.../release-all`; `ChangesetView.groups`, `OpView.answer_group`. **Built:**
+  `tests/test_plugin_api_0390_review_records.py`, `web/src/components/WhatChangedGroups.test.tsx`.
+- **Design 6.7 (194), `$new:<n>`.** An op's field may hold `$new:<n>` (a whole value) to name the record op `n` of the same answer
+  or proposal creates, resolved in order by the applier (`engine/new_refs.py`) in the dry run, the trial and the apply, kept as the
+  real id on the op, and undone with everything else in one Undo. An op naming one that doesn't come before it, was refused, waits
+  for the person or made no record is refused, saying which change it depended on; in a proposal the numbers count the
+  proposal's ops and then every item's ops, so a dropped item refuses what names it ("left out"). The core's own ops may use
+  it too (the checks that read saved records find a record a placeholder named; a guessed id is still refused). **Built:**
+  `tests/test_plugin_api_0390_review_records.py`.
+- **Test kit (201).** `ActionResult.apply(kept=..., requests=...)`: `requests` names the requests to keep by position or id, the
+  rest dropped as on screen; `ws.keep_group`, `ws.drop_group`, `ws.release_all` and `Outcome.groups` for the review of an answer;
+  `ws.ask(tag=)`. **Built:** `tests/test_plugin_api_0390_review_records.py`.
+- **Design 6.7 (205), `about: {item}`.** A request about an item is about the record the item creates, and for an edit the
+  record of the request's kind it changes; an item that creates one and edits another is about the one it created. **Built:**
+  `tests/test_plugin_api_0390_review_records.py`.
+- **Design 3.3 and 5.1 (197), `RefTo(kind, blocks_delete=False)`.** The target may be deleted while the record holds its id: a
+  read finds no record, the record's page says "Removed" (`RecordRefName.removed`), Undo of the delete brings it back, and a write
+  of the reference still needs the target to exist. **Built:** `tests/test_plugin_api_0390_review_records.py`,
+  `web/src/components/RecordPageNames.test.tsx`.
+- **Design 3.3 and 5.0 (200), `placed_by`.** `registrar.record_type(Model, placed_by="<reference field>")` places a record in
+  the folder of the project that field's record is in (that project itself when it points at one); `placed_by=None` always at
+  the workspace level; the default is unchanged (the project its `project` field names, else `layout_project`). The same rule
+  places the record's working copies and the project a panel filters it by (`engine/placement.py`). **Built:**
+  `tests/test_plugin_api_0390_review_records.py`.
+- **Design 3.3 (204), `where` through a reference.** `where` (and `start_where`) on actions and task kinds accepts
+  `"<reference field>.<field>"`; an empty reference or one whose record is gone has no value; a deeper path, a field that isn't
+  one reference, or a field the target lacks is refused when the plugin loads. **Built:**
+  `tests/test_plugin_api_0390_review_records.py`.
+- **Design 3.3 (193), `on=("<kind a>", "<kind b>")`.** One task kind about either of two record kinds (`TaskKind.on_kinds`;
+  `PacketContext.target_kind` says which); `where` may name only fields both kinds have and a draft's field must be long text on
+  both; the person can start it from a record of either kind. **Built:** `tests/test_plugin_api_0390_review_records.py`.
+- **Design 6.7 (199 and 188), a part's `address` and a request's `tag`.** A part may carry an `address` and work that answers with
+  ops may name a part by it alone; a request carries a `tag`; both a small flat mapping (short text, numbers or yes/no, at most
+  20 entries and 1 KB), checked when the request is filed, returned in `origin`, `PacketContext` (`part`, `tag`) and the events
+  `text.accepted` and `changeset.reviewed`, never shown and never sent to a model. `Request.tag` is a new core field. **Built:**
+  `tests/test_plugin_api_0390_review_records.py`.
 ## 223. The screens, runs and packets answers of the batched plugin API release: `show_for` on an action, a preview beside a data form, a computed column's heading, search and a cap in a pack's packet, a packet fitted to the model's window, the tier order, and failure codes (2026-10-26; plugin API release part B2; P2, answers 195, 187, 189, 207, 210, 209, 191, 196, 203)
 
 Part B2 of the one batched plugin API release (`docs/project/plugin-api-release-plan.md`; the version and the guide's regeneration

@@ -18,12 +18,13 @@ def learns_on(plugins: Any, *, task_kind: str | None = None, record_type: str | 
     """Whether the core's learning steps run on this work: False when the task kind declares `learning: own`, when the
     record type does, or when the task kind works on a record type that does. Names that aren't known learn."""
     kind = plugins.tasks.get(task_kind) if task_kind else None
+    kinds = [record_type] if record_type else []
     if kind is not None:
         if kind.learning == "own":
             return False
-        record_type = record_type or kind.on
-    model = plugins.records.get(record_type) if record_type else None
-    return model is None or model.learning != "own"
+        kinds = kinds or list(kind.on_kinds)
+    models = [plugins.records.get(k) for k in kinds]
+    return all(model is None or model.learning != "own" for model in models)
 
 
 def request_learns(store: Any, request: dict[str, Any]) -> bool:

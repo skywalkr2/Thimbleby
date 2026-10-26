@@ -47,6 +47,7 @@ from engine.config.yaml_edit import set_key
 from engine.intake import is_reported, source_text
 from engine.learning import request_learns
 from engine.names import People
+from engine.new_refs import NewRefs, WithMade, created_in
 from engine.ops import (
     ACT_OPS,
     ACT_PUBLISHER_OPS,
@@ -244,7 +245,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     cs = endings.wind_down(endings.read_endings(restatements(cs, ctx), ctx), ctx)
-    problems: list[Problem] = _validate_in_order(cs, ctx)
+    problems, cs, made = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
     problems += _learning_reach(cs, ctx)
@@ -259,7 +260,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _project_start_as_fact(cs, ctx)
     problems += _decision_from_list(cs, ctx)
     problems += _claim_asked_of_the_person(cs, ctx)
-    view = ctx.store.read()
+    view = WithMade(ctx.store.read(), made) if made else ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
     known_actions = view.list("action")
@@ -1701,6 +1702,7 @@ class OpOutcome:
     problems: list[dict[str, Any]] = field(default_factory=list)
     label: str | None = None
     reporter: str | None = None  # for a held ending: who the input says reported it, credited when it is kept
+    answer_group: str | None = None  # the label its task kind gave it, so the review shows the answer by group
 
 
 def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | None:
@@ -1878,9 +1880,12 @@ def apply_changeset(
     now: datetime | None = None,
     extra: dict[str, Any] | None = None,
     all_or_nothing: bool = False,
+    labeler: Any = None,
 ) -> str:
     """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id. With `all_or_nothing`,
-    one refused op rolls everything back, and the changeset is recorded as rejected with every op refused."""
+    one refused op rolls everything back, and the changeset is recorded as rejected with every op refused. A `labeler`
+    (a task kind's grouping of its answer, `PluginHost.answer_labels`) gives each op its group for the review; if it
+    fails on any op, none is grouped."""
     now = now or datetime.now(UTC)
     ctx.run = run
     cs = endings.wind_down(endings.read_endings(restatements(cs, ctx), ctx), ctx)
@@ -1899,8 +1904,14 @@ def apply_changeset(
             cs_id = tx.new_id("changeset")
             outcomes: list[OpOutcome] = []
             removed: set[tuple[str, str]] = set()  # what earlier steps of this change already removed
+            news = NewRefs()  # the records earlier steps made, for the `$new:<n>` values of the steps after them
             for i, op in enumerate(cs.ops):
                 mine = list(by_op.get(i, [])) + [replace(p, op=i) for p in whole]
+                try:
+                    op = news.resolve(op, i, ctx.store)
+                except StoreError as err:
+                    if not any(p.check == "new-reference" for p in mine):
+                        mine.append(Problem("new-reference", "refuse", i, str(err)))
                 known = {p.message for p in mine if p.check == "plugin-validator"}
                 mine += [
                     Problem("plugin-validator", "refuse", i, message)
@@ -1943,6 +1954,7 @@ def apply_changeset(
                         )
                         outcome.records, question = _apply_op(tx, ready, ctx, wctx, today)
                         outcome.question = question
+                        made = created_in(tx.pending[pending:])
                         stopped = _rule_problems(tx, ctx, i, op, outcome.records)
                         if stopped:
                             # What the op wrote breaks a rule the earlier check didn't see: none of it is kept.
@@ -1965,16 +1977,31 @@ def apply_changeset(
                         tx.sql("RELEASE plugin_op")
                     if outcome.status == "applied" and gone is not None:
                         removed.add(gone)
+                    if outcome.status == "applied":
+                        news.made(i, op.op, made)
                 elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
                     outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
                     outcome.reason = "Waiting for you to say who this is"
                 if outcome.status == "held" and isinstance(op, ENDING_OPS):
                     outcome.reporter = _reporter(ctx)
+                if labeler is not None:
+                    outcome.answer_group = labeler.label(op)
                 outcomes.append(outcome)
+                if outcome.status != "applied":
+                    news.failed(
+                        i,
+                        op.op,
+                        "is waiting for you" if outcome.status == "held" else f"was refused: {outcome.reason}",
+                    )
+                elif i not in news.names:
+                    news.made(i, op.op, None)
                 if outcome.status == "applied":
                     proposed = _proposed_reminder(tx, op, outcome.records, ctx, now)
                     if proposed is not None:
                         cs.ops.append(proposed)  # read as the next op: a reminder waits for the person's yes
+            if labeler is not None and not labeler.ok:
+                for outcome in outcomes:
+                    outcome.answer_group = None
             status = "held" if any(o.status == "held" for o in outcomes) else "applied"
             if whole:
                 status = "rejected"
@@ -3000,13 +3027,15 @@ def _rejects_asking(ctx: Context) -> bool:
 
 def origin_of(ctx: Context) -> dict[str, Any]:
     """Who asked for a change, as plugin validators see it, with the run's `task` kind, the record it is `about`
-    ({kind, id} or None), the `request` id and the `part` of the record the request names (or None)."""
+    ({kind, id} or None), the `request` id, the `part` of the record the request names (or None) and the `tag` the
+    plugin that filed it put on it (or None)."""
     request = ctx.store.read().get("request", ctx.inputs.request) if ctx.inputs.request else None
     run = {
         "task": request.data.get("task") if request else None,
         "about": request.data.get("about") if request else None,
         "request": request.id if request else None,
         "part": request.data.get("part") if request else None,
+        "tag": request.data.get("tag") if request else None,
     }
     if ctx.actor == "pm":
         return {"actor": "pm", "trust": "trusted", "via": "action", **run}
@@ -3060,41 +3089,61 @@ class _DryRun(Exception):
     pass
 
 
-def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+def _validate_in_order(cs: ChangesetIn, ctx: Context) -> tuple[list[Problem], ChangesetIn, dict[tuple[str, str], Any]]:
     """Run plugin validators op by op against a transaction where the earlier ops are applied, then roll it all back,
     so a validator sees what earlier ops in the same changeset created. The checks of the active rules run on what
-    each op wrote there. Nothing is kept and no event is published."""
+    each op wrote there. Nothing is kept and no event is published. Returns the problems found and the changeset with
+    each `$new:<n>` value replaced by the id the earlier op made there, which the rest of the checks read, and those
+    records as they were when made, so the checks that read saved records find them (`new_refs.WithMade`)."""
     found: list[Problem] = []
+    news = NewRefs()
+    resolved = list(cs.ops)
     try:
         with ctx.store.transaction(notify=False) as tx:
             earlier: list[tuple[str, list[dict[str, Any]]]] = []
             for i, op in enumerate(cs.ops):
+                try:
+                    op = resolved[i] = news.resolve(op, i, ctx.store)
+                except StoreError as err:
+                    found.append(Problem("new-reference", "refuse", i, str(err)))
+                    news.failed(i, op.op, f"was refused: {err}")
+                    earlier.append((op.op, []))
+                    continue
                 messages = ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
                 found += [Problem("plugin-validator", "refuse", i, m) for m in messages]
                 if messages or not _allowed(op, ctx):
+                    news.failed(i, op.op, f"was refused: {'; '.join(messages) or 'not an op this task may use'}")
                     earlier.append((op.op, []))
                     continue
                 tx.sql("SAVEPOINT dry_op")
                 written: list[dict[str, Any]] = []
+                start = len(tx.pending)
                 try:
                     if isinstance(op, ActionRepeatOp):
                         try:
                             op = _resolved_repeat(tx, op, ctx, earlier)
                         except StoreError as err:
                             found.append(Problem("targets", "refuse", i, str(err)))
+                            news.failed(i, op.op, f"was refused: {err}")
                             continue
                     written, _ = _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), datetime.now(UTC).date())
                     found += _rule_problems(tx, ctx, i, op, written)
+                    news.made(i, op.op, created_in(tx.pending[start:]), tx)
+                except NeedsPerson:  # held for the person by the real apply
+                    tx.sql("ROLLBACK TO dry_op")
+                    written = []
+                    news.failed(i, op.op, "is waiting for you")
                 except (Exception, SystemExit):  # the real apply meets the same failure and reports it
                     tx.sql("ROLLBACK TO dry_op")
                     written = []
+                    news.failed(i, op.op, "was refused")
                 finally:
                     tx.sql("RELEASE dry_op")
                     earlier.append((op.op, written))
             raise _DryRun
     except _DryRun:
         pass
-    return found
+    return found, (cs if resolved == list(cs.ops) else cs.model_copy(update={"ops": resolved})), news.seen()
 
 
 def _rule_problems(tx: Tx, ctx: Context, i: int, op: OpModel, refs: list[dict[str, Any]]) -> list[Problem]:
@@ -3119,15 +3168,25 @@ def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:
         if p.severity == "refuse" and p.op is not None:
             found.setdefault(p.op, p.message)
     today = datetime.now(UTC).date()
+    news = NewRefs()
     try:
         with ctx.store.transaction(notify=False) as tx:
             earlier: list[tuple[str, list[dict[str, Any]]]] = []
             for i, op in enumerate(cs.ops):
                 written: list[dict[str, Any]] = []
                 if i in found:
+                    news.failed(i, op.op, f"was refused: {found[i]}")
+                    earlier.append((op.op, written))
+                    continue
+                try:
+                    op = news.resolve(op, i, ctx.store)
+                except StoreError as err:
+                    found[i] = str(err)
+                    news.failed(i, op.op, f"was refused: {err}")
                     earlier.append((op.op, written))
                     continue
                 tx.sql("SAVEPOINT trial_op")
+                start = len(tx.pending)
                 try:
                     written, _ = _apply_op(
                         tx,
@@ -3136,11 +3195,14 @@ def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:
                         _wctx(ctx, "dry-run", i, op),
                         today,
                     )
+                    news.made(i, op.op, created_in(tx.pending[start:]))
                 except NeedsPerson:
                     tx.sql("ROLLBACK TO trial_op")
+                    news.failed(i, op.op, "is waiting for you")
                 except StoreError as err:
                     tx.sql("ROLLBACK TO trial_op")
                     found[i] = str(err)
+                    news.failed(i, op.op, f"was refused: {err}")
                 finally:
                     tx.sql("RELEASE trial_op")
                     earlier.append((op.op, written))

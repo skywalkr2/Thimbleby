@@ -96,6 +96,7 @@ def test_accepting_or_sending_back_an_answer_raises_changeset_reviewed(env):
         "request": accepted.id,
         "task": "p18/apart",
         "part": None,
+        "tag": None,
         "about": None,
     }
     again = ask(ws, store, cfg, "p18/apart")

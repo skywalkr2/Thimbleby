@@ -142,6 +142,14 @@ invariants:
       never make an id up. A record that an earlier op in the same answer creates doesn't exist yet when the checks
       run. Change only the fields the op reference allows, with a value the field accepts. When you are not sure a
       record exists, leave the op out and say so in a note.
+  new-reference:
+    ops: []
+    line: A value $new:N names the record the Nth op of this answer created (the first op is 0); it must come after that op, and is refused when that op was refused, waits for the person or made no record.
+    seed: >-
+      To refer to a record that an earlier op in the same answer creates, write its place in the answer, counted from
+      0, as $new:N where the id would go, for example $new:0 for the record the first op creates. Put the op that
+      creates it before the op that names it. If the op it names is refused, or waits for the person, or doesn't
+      create a record, the op that names it is refused too, so leave the dependent op out then.
   record-changed:
     ops: [text.accept, text.discard, record.delete]
     line: A record that changed since it was read is refused; the op must rest on its current version.

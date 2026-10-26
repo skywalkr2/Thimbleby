@@ -28,7 +28,7 @@ watcher does.
 from __future__ import annotations
 
 import json as jsonlib
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -39,6 +39,7 @@ import httpx
 
 from engine.channels import ChannelContext
 from engine.connectors import ConnectorContext, ConnectorError, Poll, checked_poll
+from engine.storage import StoreError
 
 __all__ = [
     "Asked",
@@ -50,6 +51,7 @@ __all__ = [
     "packet_context",
     "PluginWorkspace",
     "Outcome",
+    "GroupDone",
     "AskResult",
     "ActionResult",
     "PluginDidNotStart",
@@ -205,6 +207,28 @@ class Outcome:
     def refused(self) -> list[str]:
         return [str(o.get("reason") or "") for o in self.ops if o.get("status") == "refused"]
 
+    @property
+    def groups(self) -> list[dict[str, Any]]:
+        """The groups the task kind gave its answer (`task_kind(groups=...)`), as the review lists them: each a dict
+        with `id`, `label`, `ops` (their indexes) and how many of them are `applied`, `held`, `refused` and `undone`.
+        Empty when the answer wasn't grouped."""
+        from engine.answer_groups import groups_of
+
+        return [dict(vars(group)) for group in groups_of(self.ops)]
+
+
+@dataclass(frozen=True)
+class GroupDone:
+    """What keeping or dropping a group (or releasing all) did: the answer as it stands after (`outcome`), the ops
+    `released`, `restored` (undone) and `declined` (held ops kept as they were), and `skipped`: ops left as they were,
+    each a dict with `ops` and a plain `reason`."""
+
+    outcome: Outcome
+    released: list[int]
+    restored: list[int]
+    declined: list[int]
+    skipped: list[dict[str, Any]]
+
 
 @dataclass(frozen=True)
 class AskResult:
@@ -224,8 +248,9 @@ class ActionResult:
     should know; `items`, the changes the person keeps or drops, each a dict with `id`, `label`, `group` (the id of the
     group it sits under, or None), `kept` (the tick the review starts with) and `ops`; `groups`, the headings that
     gather choices and items, each a dict with `id`, `heading` and `explanation`; `requests`, the work it would queue,
-    each a dict with `task`, `about` ({"kind", "id"} or None) and `note`; and `problems`, why ops outside the items
-    would be refused if applied now. `apply(kept=...)` applies it as the person would."""
+    each a dict with `id`, `task`, `about` ({"kind", "id"}, or {"op"} or {"item"} for a record the proposal makes, or
+    None), `note`, `part`, `tag`, `group` and `kept` (the tick it starts with); and `problems`, why ops outside the
+    items would be refused if applied now. `apply(kept=..., requests=...)` applies it as the person would."""
 
     summary: str
     ops: list[dict[str, Any]]
@@ -237,13 +262,17 @@ class ActionResult:
     topic: str = ""
     groups: list[dict[str, Any]] = field(default_factory=list)
 
-    def apply(self, kept: Mapping[str, bool] | None = None) -> Outcome:
+    def apply(self, kept: Mapping[str, bool] | None = None, requests: Sequence[int | str] | None = None) -> Outcome:
         """Apply the proposal as the person would (their own change, actor `pm`) and say what became of each op.
 
         `kept` maps an item's id to True (keep) or False (drop): the ticks the person sets on the review. An item left
         out keeps the tick it came with (`kept` on the item); an id that names no item raises StoreError, as it does on
-        screen. With no `kept`, the proposal applies as it was proposed."""
-        return self._apply(dict(kept) if kept is not None else None)
+        screen. With no `kept`, the proposal applies as it was proposed.
+
+        `requests` names the requests to keep, each by its position in `requests` or by its id; the others are dropped
+        as they are on screen, and nothing is queued for them. One that names no request raises StoreError. With no
+        `requests`, every request keeps the tick it came with."""
+        return self._apply(dict(kept) if kept is not None else None, list(requests) if requests is not None else None)
 
 
 class PluginDidNotStart(RuntimeError):
@@ -465,10 +494,12 @@ class PluginWorkspace:
         about: tuple[str, str] | None = None,
         part: dict[str, Any] | None = None,
         note: str = "",
+        tag: dict[str, Any] | None = None,
     ) -> AskResult:
         """Run a task kind with a scripted answer, through the dispatcher: the packet, the checks, the fix round and
         the review. `answer` is the answer's text, a dict (sent as JSON) or a function of the run's task, whose
-        `request` carries the fix round's feedback, so it can answer differently each round."""
+        `request` carries the fix round's feedback, so it can answer differently each round. `tag` is the small mapping
+        a plugin puts on a request (`queue_request(tag=)`)."""
         from datetime import UTC, datetime
 
         from engine.ai.adapters.stub import set_responder
@@ -491,6 +522,13 @@ class PluginWorkspace:
             data["about"] = {"kind": about[0], "id": about[1]}
         if part is not None:
             data["part"] = part
+        if tag is not None:
+            from engine.tasks import flat_mapping
+
+            try:
+                data["tag"] = flat_mapping(tag, "a request's tag")
+            except ValueError as err:
+                raise StoreError(str(err)) from None
         with self.store.transaction() as tx:
             request = tx.create("request", data, WriteContext("pm", "trusted", "test"))
         set_responder(respond)
@@ -514,8 +552,23 @@ class PluginWorkspace:
             ref = {"kind": kind, "id": record_id}
         pending = actions.preview(self.store, self.cfg, name, ref, choices)
 
-        def apply(kept: dict[str, bool] | None) -> Outcome:
-            return self._outcome(actions.apply(self.store, self.cfg, pending.token, kept))
+        def apply(kept: dict[str, bool] | None, requests: list[int | str] | None = None) -> Outcome:
+            kept_requests = None
+            if requests is not None:
+                ids = [r["id"] for r in pending.requests]
+                named = set()
+                for ref in requests:
+                    if isinstance(ref, bool) or not isinstance(ref, (int, str)):
+                        raise StoreError("name a request by its position or its id")
+                    if isinstance(ref, int):
+                        if not 0 <= ref < len(ids):
+                            raise StoreError(f"there is no request {ref} in this review")
+                        ref = ids[ref]
+                    if ref not in ids:
+                        raise StoreError(f"there is no request {ref} in this review")
+                    named.add(ref)
+                kept_requests = {each: each in named for each in ids}
+            return self._outcome(actions.apply(self.store, self.cfg, pending.token, kept, kept_requests))
 
         return ActionResult(
             pending.summary,
@@ -607,6 +660,46 @@ class PluginWorkspace:
 
         undo_changeset(self.store, outcome.changeset)
         return self._outcome(outcome.changeset)
+
+    def _group_id(self, outcome: Outcome, group: int | str) -> int:
+        """A group of an answer by its label or its id."""
+        for each in outcome.groups:
+            if group in (each["id"], each["label"]) and not isinstance(group, bool):
+                return each["id"]
+        raise StoreError(f"there is no group {group!r} in this answer")
+
+    def _group_done(self, outcome: Outcome, done: Any) -> GroupDone:
+        return GroupDone(
+            self._outcome(outcome.changeset),
+            list(done.released),
+            list(done.restored),
+            list(done.declined),
+            list(done.skipped),
+        )
+
+    def keep_group(self, outcome: Outcome, group: int | str) -> GroupDone:
+        """Keep a group of an answer as the person would on the review (`group` is its label or its id from
+        `outcome.groups`): its held ops are released as the person's own go."""
+        from engine import answer_groups
+
+        done = answer_groups.keep(self.store, self.cfg, outcome.changeset, self._group_id(outcome, group), ws=self.ws)
+        return self._group_done(outcome, done)
+
+    def drop_group(self, outcome: Outcome, group: int | str) -> GroupDone:
+        """Drop a group of an answer: its applied ops are undone and its held ops kept as they were, each recorded as a
+        signal like any other rejection of the assistant's work."""
+        from engine import answer_groups
+
+        done = answer_groups.drop(self.store, outcome.changeset, self._group_id(outcome, group))
+        return self._group_done(outcome, done)
+
+    def release_all(self, outcome: Outcome) -> GroupDone:
+        """Release every held op of an answer together, as the person's own go (one Undo takes them all back); an op
+        that waits on a choice only the person makes there is left and named in `skipped`."""
+        from engine import answer_groups
+
+        done = answer_groups.release_all(self.store, self.cfg, outcome.changeset, ws=self.ws)
+        return self._group_done(outcome, done)
 
     def emit(self, event: str, payload: dict[str, Any]) -> list[dict[str, Any]]:
         """Raise an event as the core would and return the work the handlers queued: one dict per new request

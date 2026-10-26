@@ -630,6 +630,7 @@ def _reviewed(cs_id: str, outcome: str, view: Any) -> dict[str, Any]:
         "request": request.id if request is not None else None,
         "task": data.get("task"),
         "part": data.get("part"),
+        "tag": data.get("tag"),
         "about": {"kind": about["kind"], "id": about["id"]} if isinstance(about, dict) else None,
     }
 
@@ -652,6 +653,7 @@ def _text_accepted(version: Stored, view: Any) -> dict[str, Any]:
         "authorship": counts,
         "request": request.id if request is not None else None,
         "part": request.data.get("part") if request is not None else None,
+        "tag": request.data.get("tag") if request is not None else None,
     }
 
 

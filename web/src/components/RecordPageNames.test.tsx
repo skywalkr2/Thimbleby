@@ -32,7 +32,7 @@ const page = (kind: string, id: string, name: string, details: S["RecordPageView
   activity: [],
 });
 
-const ref = (kind: string, id: string, name: string) => ({ kind, id, name });
+const ref = (kind: string, id: string, name: string) => ({ kind, id, name, removed: false });
 
 function serve(kind: string, id: string, fields: Record<string, unknown>, fieldViews: S["FieldView"][], shown: S["RecordPageView"]) {
   const k = encodeURIComponent(kind);
@@ -121,4 +121,23 @@ test("an empty value is no row, and a list of maps shows each map's parts joined
   expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Name", "Roles"]);
   const lines = within(details).getByText("Roles").closest(".detail")!.querySelectorAll("dd > div");
   expect([...lines].map((l) => l.textContent)).toEqual(["Robin Sample · Run", "Robin Sample"]);
+});
+
+test("a reference to a record that was deleted says it was removed, never its id", async () => {
+  serve(
+    "person",
+    "PER-1",
+    { full_name: "Robin Sample", aliases: [], role: "Editor", team: "TEAM-9", org: "ORG-1", how_to_reach: {}, name_verified: true, status: "active" },
+    personFields,
+    page("person", "PER-1", "Robin Sample", [
+      { field: "team", value: "TEAM-9", type: "text", refs: [{ kind: "team", id: "TEAM-9", name: "", removed: true }] },
+      { field: "org", value: "ORG-1", type: "text", refs: [ref("organization", "ORG-1", "Quarry House")] },
+    ]),
+  );
+  renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  await within(details).findByText("Quarry House");
+  const value = (term: string) => within(details).getByText(term).closest(".detail")!.querySelector("dd")!.textContent;
+  expect(value("Team")).toBe("Removed");
+  expect(details.textContent).not.toMatch(/\b[A-Z]{2,5}-\d+\b/);
 });

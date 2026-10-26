@@ -33,6 +33,8 @@ from api.schemas import (
     AgendaSpanView,
     AiState,
     Answer,
+    AnswerGroupDone,
+    AnswerGroupView,
     Applied,
     AppliedEntryView,
     ArrivedView,
@@ -173,7 +175,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import catch_up, endings, held_ask, learned, new_terms, repeats, source_intake
+from engine import answer_groups, catch_up, endings, held_ask, learned, new_terms, repeats, source_intake
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -842,12 +844,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             for name, k in store.plugins.tasks.items()
             if "/" in name
             and store.plugins.active(name.split("/", 1)[0])
-            and k.on == kind
+            and ((kind in k.on_kinds) if kind else not k.on_kinds)
             and (record is None or k.startable_on(record, text_presence(store, store.read(), record)))
         ]
         return [
             TaskKindView(
-                name=k.name, label=k.label or k.name.rsplit("/", 1)[-1].replace("-", " ").capitalize(), on=k.on
+                name=k.name, label=k.label or k.name.rsplit("/", 1)[-1].replace("-", " ").capitalize(), on=kind
             )
             for k in sorted(found, key=lambda k: k.label or k.name)
         ]
@@ -1471,6 +1473,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     reviewed=cs.data["reviewed"],
                     trust=cs.data["trust"],
                     ops=[_op_view(o, store, people, projects, cfg, to_send) for o in cs.data["ops"]],
+                    groups=[AnswerGroupView(**vars(g)) for g in answer_groups.groups_of(cs.data["ops"])],
                     made=[
                         MadeView(
                             kind=m.kind, id=m.id, label=m.label, record=RecordRef(kind=m.record[0], id=m.record[1])
@@ -1564,6 +1567,32 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         worker.poke()
         return Requeued(request=new)
+
+    @r.post("/changesets/{cs_id}/groups/{group}/keep")
+    def keep_group(cs_id: str, group: int) -> AnswerGroupDone:
+        """Keep a group of an answer the task kind grouped: its held ops are applied as the person's own go."""
+        need("changeset", cs_id)
+        done = guard(lambda: answer_groups.keep(store, cfg, cs_id, group, ws=ws))
+        changed()
+        return AnswerGroupDone(**vars(done))
+
+    @r.post("/changesets/{cs_id}/groups/{group}/drop")
+    def drop_group(cs_id: str, group: int) -> AnswerGroupDone:
+        """Drop a group of an answer: its applied ops are undone and its held ops kept as they were, each recorded
+        as the correction it is."""
+        need("changeset", cs_id)
+        done = guard(lambda: answer_groups.drop(store, cs_id, group))
+        changed()
+        return AnswerGroupDone(**vars(done))
+
+    @r.post("/changesets/{cs_id}/release-all")
+    def release_all(cs_id: str) -> AnswerGroupDone:
+        """Release every held op of an answer together (Undo of the answer takes them all back at once), except ones
+        that wait on a choice only the person makes there, which are listed as left."""
+        need("changeset", cs_id)
+        done = guard(lambda: answer_groups.release_all(store, cfg, cs_id, ws=ws))
+        changed()
+        return AnswerGroupDone(**vars(done))
 
     @r.post("/changesets/{cs_id}/ops/{index}/release")
     def release_op(cs_id: str, index: int, body: PersonChoice) -> Ok:
@@ -2463,6 +2492,7 @@ def _op_view(
         reason=held_ask.reason_of(o) if asked else o.get("reason"),
         held=asked,
         group=o["group"],
+        answer_group=o.get("answer_group"),
         title=title,
         meta=meta,
         evidence={"quote": evidence["quote"]} if evidence else None,

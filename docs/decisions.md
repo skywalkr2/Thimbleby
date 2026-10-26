@@ -4,6 +4,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The reviewing, applying and records answers of the batched plugin API release (P2, answers 170, 194, 201, 205, 197, 200, 204, 193, 199, 188)
+
+**Decided:** The answers promised to a pack's builder in `docs/project/plugin-answers-34-48.md` for reviewing and applying, and
+for records, references and placement, are built as answered, in part B1 of the one batched release: a task kind may group the ops
+of its answer (`task_kind(groups=fn)`) so the review is a row for each group with Keep and Drop for the whole group, and a change
+with several held ops can be released together with one Undo; an op's field may name a record created earlier in the same answer
+or proposal (`$new:<n>`); the test kit applies a proposal with some of its requests kept; a request about an item is about the
+record the item creates or changes; a reference may leave its target deletable (`RefTo(blocks_delete=False)`); a record type names
+where it is written (`placed_by`); `where` reads through one reference; a task kind may be about either of two record kinds
+(`on=(a, b)`); a part may carry an `address` and a request a `tag`. Choices made while building: Drop undoes the group's applied
+ops and declines its held ones, so it records the same two signals every other rejection of the assistant's work records (`undone`,
+`held_declined`) and no new kind; Release all and Keep leave, and name, the ops that wait on a choice only the person makes there
+(who someone is, the end of a project); the label of a group is kept on the op's outcome, so a grouped answer reads the same after
+the pack changes; `$new:<n>` counts from 0, an op that depends on one that was refused, is waiting or made no record is refused
+(never held, since what it needs has nothing to release), and a proposal counts its own ops and then every item's ops so that a
+dropped item refuses what names it; `placed_by` defaults to `"project"` (the rule as it was) and places the record's working
+copies and its panel's project filter too; for a pair of kinds `where` may name only fields both have; the tag comes back as
+`PacketContext.tag` (`PacketContext.request` stays the request's id); a part's address and a tag are at most 20 short entries and
+1 KB. **Decided by:** the owner, 2026-10-26, the one batched plugin API release; answers 170 to 205 in plugin-answers-34-48.md.
+**Why:** the answers were promised and the hold was lifted once for them. **Impact:** design 3.3, 5.0, 6.7 and 7.3; the registrar
+(`task_kind(groups=, on=)`, `record_type(placed_by=)`, `queue_request(tag=)`), `RefTo(blocks_delete=)`, `PacketContext`
+(`tag`, `target_kind`), the test kit (`apply(requests=)`, `keep_group`, `drop_group`, `release_all`, `Outcome.groups`,
+`ask(tag=)`), one new core field (`Request.tag`), three routes (`POST /api/changesets/{id}/groups/{n}/keep`, `.../drop`,
+`.../release-all`) and the views `ChangesetView.groups`, `OpView.answer_group` and `RecordRefName.removed`; no new setting and no
+change to scope. The plugin API version is raised once, at the end of the release. Change log: section 224.
 ## 2026-10-26: The screens, runs and packets answers of the batched plugin API release (P2, answers 195, 187, 189, 207, 210, 209, 191, 196, 203)
 
 **Decided:** The answers promised to a pack's builder in `docs/project/plugin-answers-34-48.md` for screens, runs, packets and

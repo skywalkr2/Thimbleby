@@ -565,15 +565,21 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
           )}
           {cs && <Because cs={cs} />}
           {cs && cs.ops.length === 0 && <p className="hint">{t("changes.nothing_done")}</p>}
+          {cs && cs.ops.filter((o) => o.status === "held").length > 1 && <ReleaseAll cs={cs} />}
           {cs && cs.ops.length > 0 && (
             <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>
-              {cs.ops.map((op) =>
-                op.op === "project.add" && op.status === "held" ? (
-                  <ProjectProposalRow key={op.index} op={op} changeset={cs.id} />
-                ) : (
-                  <OpRow key={op.index} op={op} cs={cs} source={item.source} />
-                ),
-              )}
+              {(cs.groups ?? []).map((group) => (
+                <GroupRow key={`g-${group.id}`} group={group} cs={cs} />
+              ))}
+              {cs.ops
+                .filter((op) => !op.answer_group)
+                .map((op) =>
+                  op.op === "project.add" && op.status === "held" ? (
+                    <ProjectProposalRow key={op.index} op={op} changeset={cs.id} />
+                  ) : (
+                    <OpRow key={op.index} op={op} cs={cs} source={item.source} />
+                  ),
+                )}
             </ul>
           )}
           {sendingBack && cs && <SendBackForm cs={cs.id} onDone={() => setSendingBack(false)} />}
@@ -777,6 +783,87 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         </div>
       )}
     </li>
+  );
+}
+
+/** What a Keep, a Drop or a Release all left alone, said as one toast: the ops that wait on the person's own choice, or whose
+ * Undo would overwrite a later change. */
+function leftMessage(done: S["AnswerGroupDone"], done_key: string, t: T, tn: TN): string {
+  return done.skipped.length
+    ? t("toast.group_partial", { skipped: tn("toast.skipped", done.skipped.length) })
+    : t(done_key);
+}
+
+/** One row for a group of an answer the task kind grouped: what it is, how its ops stand, Keep for all of them (while some
+ * wait) and Drop for all of them in the menu. */
+function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"] }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const { group, cs } = props;
+  const ref = useRef<HTMLLIElement>(null);
+  const counts = [
+    group.applied ? tn("changes.group.applied", group.applied) : "",
+    group.held ? tn("changes.held", group.held) : "",
+    group.undone ? tn("changes.group.undone", group.undone) : "",
+    group.refused ? tn("changes.group.refused", group.refused) : "",
+  ].filter(Boolean);
+  const keep = () =>
+    act(
+      () => api.keepGroup(cs.id, group.id),
+      (done) => ({
+        message: leftMessage(done, "toast.group_kept", t, tn),
+        undo: done.released.length ? () => api.undo(cs.id, done.released) : undefined,
+      }),
+    );
+  const drop = () =>
+    act(
+      () => api.dropGroup(cs.id, group.id),
+      (done) => ({ message: leftMessage(done, "toast.group_dropped", t, tn) }),
+    );
+  const menu: MenuAction[] = [];
+  if (group.applied || group.held) menu.push({ id: "drop", label: t("changes.group.drop"), run: () => void drop() });
+  useRowKeys(ref, { primary: group.held ? () => void keep() : undefined });
+  return (
+    <li className="child" data-row tabIndex={-1} ref={ref}>
+      <div>
+        <div className="title">{group.label}</div>
+        <div className="meta">{counts.join(" · ")}</div>
+      </div>
+      <div className="acts">
+        {group.held > 0 && (
+          <button type="button" className="btn primary" onClick={() => void keep()}>
+            {t("changes.group.keep")}
+          </button>
+        )}
+        <RowMenu label={group.label} actions={menu} />
+      </div>
+    </li>
+  );
+}
+
+/** Release every held change of one answer together, with one Undo. */
+function ReleaseAll(props: { cs: S["ChangesetView"] }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const { cs } = props;
+  return (
+    <div className="row-end">
+      <button
+        type="button"
+        className="btn"
+        onClick={() =>
+          void act(
+            () => api.releaseAll(cs.id),
+            (done) => ({
+              message: leftMessage(done, "toast.released_all", t, tn),
+              undo: done.released.length ? () => api.undo(cs.id, done.released) : undefined,
+            }),
+          )
+        }
+      >
+        {t("changes.release_all")}
+      </button>
+    </div>
   );
 }
 

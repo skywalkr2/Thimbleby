@@ -545,6 +545,39 @@ pack's own ops, checked by the applier with their validators, write scopes and t
 list of allowed ops (the task didn't choose them). **Built:** `tests/test_pack_hooks.py`. A pack's line naming no record
 and its chasing outside Today lines still can't be matched.
 
+**A record made earlier in the same change (plugin API 0.3.90, answer 194).** An op's field may hold `$new:<n>`, the whole
+value, to name the record op `n` of the same answer or proposal creates (the first op is 0): a book, its chapters and their
+notes in one answer, or an item that names what a main op made. The applier resolves it in order, in the dry run that
+checks the answer (so validators and lints see the id), in the trial of a proposal and in the apply, and the changeset keeps the
+real id on the op, so it reads the same later and Undo of the whole takes everything back, newest first. The record is the first one
+the op created (found from what it wrote in the same transaction, never guessed from its name). An op that names one that
+doesn't come before it, that was refused, that waits for the person or that made none is refused, saying which change it
+depended on and why (a dependant is never held, since the change it needs has nothing to release); in a proposal, `$new:<n>` counts
+the proposal's own ops and then every item's ops in order, so it names the same op whatever the person drops, and one that names an
+op in an item the person dropped is refused with "left out". Only a whole value that is exactly the placeholder is replaced, never
+words that contain it. The core's own ops may use it too: the checks that read saved records (does this project exist?) find a
+record a placeholder named (`engine/new_refs.py`, `WithMade`), while an id that was only guessed is refused as before. **Built:** `tests/test_plugin_api_0390_review_records.py`.
+
+**An answer grouped for review (plugin API 0.3.90, answer 170).** A task kind may label the ops of its answer
+(`task_kind(groups=fn)`, `fn(op, view)` returning a label from the plugin's wording, or None). The applier keeps each op's
+label on its outcome (`answer_group`), and the card in What changed shows one row for each label (counts of what stands, waits,
+was taken back or was not done) instead of one row for every op, with **Keep** (releases the group's held ops as the person's own
+go) and **Drop** in the row's menu (undoes the group's applied ops and declines its held ones, one `undone` or `held_declined`
+signal each, the same signals as any other rejection of the assistant's work; an op whose Undo would overwrite a later change is
+left and named). An op with no label keeps its own row. The ops apply or wait as they always did before the person chooses.
+**Release all** applies every held op of an answer together with one Undo, except an op that waits on a choice only the person
+makes there (who someone is, or the end of a project, which has its own question), which is left and named. A function that
+raises, hangs (`steward.pack_call_limit_seconds`) or returns something that isn't a short line leaves the whole answer
+ungrouped and is noted on the plugin. **Built:** `tests/test_plugin_api_0390_review_records.py`,
+`web/src/components/WhatChangedGroups.test.tsx`.
+
+**A request's part and tag (plugin API 0.3.90, answers 199 and 188).** A part may carry an `address`, a small flat mapping the pack
+defines (short text, numbers or yes/no; at most 20 entries and 1 KB), compared for equality and never shown, and work that answers
+with ops (not a draft) may name a part by its address alone, for work that isn't on long text; `label` stays the words for the
+screen. A request carries a `tag` of the same kind, set when the pack files it and returned to the pack in the validators' `origin`,
+in `PacketContext.tag` and in `text.accepted` and `changeset.reviewed`; neither is ever shown or sent to a model.
+**Built:** `tests/test_plugin_api_0390_review_records.py`.
+
 **Text stays text.** Every field of an op that holds text is a string, and a mapping or a list that arrives where text
 belongs is refused in plain words, never turned into a string: "action.text has to be text, but it arrived as a mapping of
 names to values. A ': ' inside text makes it read as a mapping, so put text with ': ' in quotes." The usual cause is a

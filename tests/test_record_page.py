@@ -36,7 +36,7 @@ def test_a_person_page_resolves_names_and_lists_what_is_open_with_them(api):
     page = client.get(f"/api/record-pages/{person.id}", params={"kind": "person"}).json()
     assert page["name"] == person.data["full_name"]
     org_detail = next(d for d in page["details"] if d["field"] == "org")
-    assert org_detail["refs"] == [{"kind": "organization", "id": org.id, "name": org.data["name"]}]
+    assert org_detail["refs"] == [{"kind": "organization", "id": org.id, "name": org.data["name"], "removed": False}]
     assert all(d["field"] not in ("full_name", "aliases") for d in page["details"])
 
 
@@ -47,12 +47,12 @@ def test_a_field_holding_a_records_id_shows_that_records_name_whether_or_not_it_
     team = view.get("team", person.data["team"])
     page = client.get(f"/api/record-pages/{person.id}", params={"kind": "person"}).json()
     detail = next(d for d in page["details"] if d["field"] == "team")
-    assert detail["refs"] == [{"kind": "team", "id": team.id, "name": team.data["name"]}]
+    assert detail["refs"] == [{"kind": "team", "id": team.id, "name": team.data["name"], "removed": False}]
     project = next(p for p in view.list("project") if p.data.get("owner"))
     owner = view.get("person", project.data["owner"])
     page = client.get(f"/api/record-pages/{project.id}", params={"kind": "project"}).json()
     detail = next(d for d in page["details"] if d["field"] == "owner")
-    assert detail["refs"] == [{"kind": "person", "id": owner.id, "name": owner.data["full_name"]}]
+    assert detail["refs"] == [{"kind": "person", "id": owner.id, "name": owner.data["full_name"], "removed": False}]
 
 
 def test_a_project_page_shows_its_open_actions_and_activity(api):

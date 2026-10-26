@@ -155,6 +155,17 @@ repositories, so neither ever lives in the synced folder:
 - **Collections and generated files:** a record type can put all its records for one path in a single YAML list
   (`layout_collection`), and a layout can use a field of a referenced record (`{chapter.order:02}`). A plugin can declare
   generated read-only files rendered from its records; an edit made to one outside is reported and it is rebuilt.
+- **Where a record is written (plugin API 0.3.90, answer 200).** A record is written in the folder of the project its `project`
+  field names (else, for a kind that declares `layout_project`, the project of the record that reference points at), else at the
+  workspace level. A record type may name the reference that places it instead (`registrar.record_type(Model,
+  placed_by="<field>")`: the project of the record the field points at, or that project itself, and the workspace level when the
+  field is empty) or say it is always at the workspace level (`placed_by=None`). The same rule places its working copies and
+  decides which project a panel's rows belong to. **Built:** `tests/test_plugin_api_0390_review_records.py`.
+- **A reference that doesn't block deleting (plugin API 0.3.90, answer 197).** A reference to another record normally keeps
+  that record from being deleted. `RefTo(kind, blocks_delete=False)` leaves it deletable: the id stays in the field, a read of
+  that record finds nothing (never an error), a record's page says the reference was removed instead of showing its id, and
+  Undo of the delete brings the record back. Writing the reference still needs its target to exist. **Built:**
+  `tests/test_plugin_api_0390_review_records.py`, `web/src/components/RecordPageNames.test.tsx`.
 
 **Working copies.** People often write and edit long text in the desktop tools they already use, not in the cockpit. A plugin
 that registers a working-copy format (3.3) can hand a `long_text` field out as a file in that tool's format and take it back:
