@@ -9,6 +9,22 @@ track of what the person promised and what was promised to them, across mail, no
 ready, with the person approving everything outward. Project support is one use of it, not the whole product. The design
 is in `docs/design/` (6.32, the daily steward, is the core of it).
 
+## Mission: what Thimbleby promises the person (owner, 2026-10-26)
+
+For the product's own page on the website (each content brief carries it, roadmap I-2). Each line must stay true of the
+app as built; a change that would break one is a decision for the owner first.
+- **Your data stays on your computer.** Everything is kept in the app's own database on your machine, and backups go to a
+  folder you choose.
+- **It goes only to the AI accounts you chose.** Only for the job at hand, one item per run, at the privacy level you
+  allowed for each account; mail set aside before reading never goes to the AI at all.
+- **Nothing goes to us.** There is no server of ours in the loop, no account with us, and no usage data collected. Your
+  data isn't mined or sold.
+- **AI helps; it doesn't run the show.** Rules sort what they can at no AI cost, a fixed checker validates every change the
+  AI proposes, claims quote their source, everything can be undone, and nothing goes out until you approve the exact text.
+
+These describe the app on the person's own computer. A hosted install (design Part 11, not in 1.0) would need its own
+wording before it is offered.
+
 ## End state, beyond 1.0 (owner, 2026-10-14)
 
 **The intent:** to do with this tool what used to take many people and a large budget, and to finish real delivery, not

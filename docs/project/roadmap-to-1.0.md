@@ -1243,8 +1243,9 @@ plan (phase I, "The website").
 **The website (owner, 2026-10-18).** The product's public website lives in its own repository, worked by its own
 session; today it is a coming-soon page. This plan feeds it what to say, and it never says more than the app does:
 - [ ] [I-2] A content brief for the website's session at each milestone that changes what's true (the tester milestone,
-  each release, 1.0): what the product does today, what it doesn't yet, who it's for, how to join the testers, and
-  where downloads are. Written here from the release state; sent with `send_message`; the website's repository never
+  each release, 1.0): what the product does today, what it doesn't yet, who it's for, how to join the testers,
+  where downloads are, and the mission's promises to the person (`docs/project/charter.md`, "Mission"), each checked
+  against the release before it is sent. Written here from the release state; sent with `send_message`; the website's repository never
   receives code or private details from this one.
 - [ ] [I-2] Keeping the two in step: the release workflow publishes the facts the website shows (latest version, download
   links and their checksums, release notes) in a form the website reads, so the site is never edited by hand to
