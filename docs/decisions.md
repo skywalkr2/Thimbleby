@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The Settings cut follows the reviewer's field-by-field list
+
+**Decided:** The UI/UX reviewer's `settings.md` is built as written: about 23 basic fields on five pages (26 with a
+business), 28 advanced fields in eight plain topics, and the rest off the screen. A removed or automated field keeps its
+config key, schema and default and stays settable in files and the environment (design 4.0), so CLAUDE.md's rule that
+anything a person might want different is a setting still holds; it simply isn't on the screen. Merged settings show one
+on screen, and the others follow it unless a file sets them.
+
+**Decided by:** the owner, sending the reviewer's findings to be built (P69); how removed fields stay settable is the main
+session's call.
+
+**Why:** 188 fields, many internal or duplicated, made Settings a dump of the configuration files.
+
+**Impact:** Design 7.9 and 4.0; roadmap U12 (and U4's lowercase leftovers); open promise P69. Change log: section 230.
+
 ## 2026-10-26: One place to act; Today shows each thing once with three cards; Connections and Add-ons move into Settings
 
 **Decided:** Every thing has one home where it is acted on, and everywhere else links to it: a decision or question on

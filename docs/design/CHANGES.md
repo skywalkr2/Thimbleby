@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 230. The Settings cut (2026-10-26; phase U, F8; designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Settings (7.9) | 32 basic fields on seven pages and 156 advanced in 40 groups named after code prefixes, with ids and key names | Five basic pages (and Your business), 23 fields (26 with a business); eight advanced topics, 28 fields; short labels in plain words; the rest files-only with their keys kept; Quality in the user menu; the Lists on the business page |
+
 ## 229. One place to act, each thing once on Today, three rail cards, Connections and Add-ons in Settings (2026-10-26; phase U, the reviewer's section 4, F6, F16, F17; designed)
 
 | Where | Before | Now |
