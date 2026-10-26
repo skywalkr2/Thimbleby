@@ -1829,7 +1829,6 @@
   "sources.silent.by_rule": "By the rule {rule}",
   "sources.silent.by_assistant": "By {assistant}",
   "sources.silent.why": "Because: {reason}",
-  "sources.silent.in_folder": "Review it in the Set aside folder above.",
   "sources.silent.seen": "Looks right",
   "sources.silent.seen_named": "Looks right: {title}",
   "sources.silent.toast": "Marked as seen: {title}.",

@@ -60,6 +60,10 @@ default_data_level: internal   # how sensitive a watched source's items are when
 connector_data_levels: {mailbox: restricted}   # per kind of source; a source's own data_level wins over this
 set_aside_defaults: true   # mailing lists and promotions are set aside with no AI run
 sorting: ai   # a low-cost run sorts the mail the rules cannot place, from sender, subject and category only
+automated_mail:   # one-time-code mail from a no-reply address is set aside with no AI run
+  set_aside: true
+  senders: [no-reply, noreply, no_reply, do-not-reply, donotreply]   # what an automated address starts with
+  words: [verification code, one-time code, one-time password, security code, sign-in code, login code, passcode]
 sorting_batch: 25   # messages covered by one sorting run
 set_aside_keep_seconds: 60   # how long a confirmed message's copy is kept so Undo can bring it back
 public_mail_domains_extra: [mail.example.net]   # more free mail domains, so no rule is offered for the whole domain

@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 204. One-time-code mail is set aside by rules; a read with nothing to record closes itself; each mail in one list (2026-10-26; P42, P47)
+
+- **Design 6.5 (built-in sorting):** after the workspace's rules, automated one-time-code mail (a no-reply sender and a code
+  phrase, `watch.automated_mail`) is set aside with no AI run, like bulk mail. **Built:**
+  `tests/test_nothing_to_do.py::test_several_code_mails_from_one_no_reply_sender_are_all_set_aside_whatever_the_order`,
+  `::test_a_no_reply_bill_is_not_caught_and_the_setting_turns_the_rule_off`; golden case
+  `workspaces/demo-b/evals/not-work-one-time-code.yaml`.
+- **Design 6.32 (what the assistant read):** an input that recorded nothing and asked nothing is Done with Undo (a
+  `pulled_back` signal), never Review. **Built:** `tests/test_nothing_to_do.py::test_a_read_with_nothing_recorded_and_nothing_asked_closes_by_itself_and_undo_brings_it_back`.
+- **Design 6.32 and 7 (closed list):** mail set aside is left out of "Closed without you seeing". **Built:**
+  `tests/test_nothing_to_do.py::test_mail_set_aside_is_listed_only_in_the_set_aside_folder_and_never_as_closed`,
+  `tests/test_silent_closes.py::test_mail_a_rule_sets_aside_is_silent_until_confirmed_and_what_the_person_sets_aside_never_is`.
+
 ## 203. Sign-ins in their own window, a way back to setup, Your promises kept, the sent folder by itself (2026-10-26; P40, P37)
 
 - **Design 7.8 (setup):** every sign-in opens in its own window or tab; a screen the walkthrough sends the person to

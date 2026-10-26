@@ -183,9 +183,10 @@ def test_mail_a_rule_sets_aside_is_silent_until_confirmed_and_what_the_person_se
         assert rows[by_rule.id].kind == "set_aside" and rows[by_rule.id].silent
         assert rows[by_rule.id].rule and rows[by_rule.id].why
         assert rows[by_hand.id].by_person and not rows[by_hand.id].silent
-        assert [c.snapshot for c in closes.silent(store.read())] == [by_rule.id]
+        assert closes.silent(store.read()) == [], "set-aside mail is listed in its folder, never as closed"
+        assert [c.snapshot for c in closes.collect(store.read()) if c.silent] == [by_rule.id]
         confirm_items(store, [by_rule.id])
-        assert closes.silent(store.read()) == []
+        assert [c for c in closes.collect(store.read()) if c.silent] == []
     finally:
         store.close()
 

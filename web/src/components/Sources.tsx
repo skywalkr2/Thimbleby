@@ -898,22 +898,19 @@ function SilentCloseRow(props: { item: SilentClose }) {
           <strong id={titleId}>{item.title}</strong>
           <span className="sub">{facts.join(" · ")}</span>
           {item.why ? <span className="sub">{t("sources.silent.why", { reason: item.why })}</span> : null}
-          {item.kind === "set_aside" ? <span className="sub">{t("sources.silent.in_folder")}</span> : null}
         </div>
-        {item.kind === "set_aside" ? null : (
-          <div className="acts">
-            <button
-              type="button"
-              className="btn primary"
-              data-key="primary"
-              disabled={busy}
-              aria-label={t("sources.silent.seen_named", { title: item.title })}
-              onClick={() => void seen()}
-            >
-              {t("sources.silent.seen")}
-            </button>
-          </div>
-        )}
+        <div className="acts">
+          <button
+            type="button"
+            className="btn primary"
+            data-key="primary"
+            disabled={busy}
+            aria-label={t("sources.silent.seen_named", { title: item.title })}
+            onClick={() => void seen()}
+          >
+            {t("sources.silent.seen")}
+          </button>
+        </div>
       </div>
     </li>
   );

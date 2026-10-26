@@ -100,6 +100,22 @@ def bulk_mail(change: dict[str, Any], params: dict[str, Any]) -> str | None:
     return None
 
 
+def automated_code_mail(change: dict[str, Any], params: dict[str, Any]) -> str | None:
+    """An automated one-time-code mail: the sender's address starts with one of the `senders` words (no-reply and the
+    like), and the subject or text holds one of the `words` (a verification code, say). Both are needed, so a bill or
+    an order from a no-reply address stays with the assistant."""
+    address = sender_address(change)
+    local = address.partition("@")[0]
+    if not local or not any(
+        local.startswith(str(w).strip().lower()) for w in params.get("senders", []) if str(w).strip()
+    ):
+        return None
+    text = f"{change.get('title') or ''}\n{change.get('now') or ''}".lower()
+    if any(str(w).strip().lower() in text for w in params.get("words", []) if str(w).strip()):
+        return "it is an automated mail with a one-time code"
+    return None
+
+
 def service_category(change: dict[str, Any], params: dict[str, Any]) -> str | None:
     """One of the mail service's own categories for the message is among the rule's `categories`."""
     wanted = {str(c).strip().lower() for c in params.get("categories", []) if str(c).strip()}
@@ -136,6 +152,7 @@ CORE: dict[str, Matcher] = {
     "name-matches": name_matches,
     "bulk-mail": bulk_mail,
     "service-category": service_category,
+    "automated-code-mail": automated_code_mail,
     "sender-rule": sender_rule,
 }
 
@@ -189,7 +206,16 @@ def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, st
         return closed, kept
     if kept or not change.get("message") or not cfg.watch.set_aside_defaults:
         return None, kept
-    for kind, params, name, section in BUILT_IN_SET_ASIDE:
+    auto = cfg.watch.automated_mail
+    built_in = (
+        *BUILT_IN_SET_ASIDE,
+        *(
+            (("automated-code-mail", {"senders": auto.senders, "words": auto.words}, "Automated codes", "sales"),)
+            if auto.set_aside
+            else ()
+        ),
+    )
+    for kind, params, name, section in built_in:
         reason = CORE[kind](change, params)
         if reason:
             return {"rule": name, "reason": reason, "section": section}, kept

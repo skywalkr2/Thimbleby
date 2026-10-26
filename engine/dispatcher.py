@@ -415,6 +415,8 @@ def process(
     if run_id is not None:
         record_applied(store, run_id, cs_id)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
+    if _nothing_to_do(req.data, kind.name, changeset, problems):
+        close_nothing_to_do(store, cs_id)
     if learn.is_learning(kind.name):
         learn.finish(store, request_id, cs_id)
     if kind.name == follow_on.TASK:
@@ -1487,6 +1489,40 @@ def undismiss(store: Store, request_id: str, read_version: int) -> None:
 # ---- review ----------------------------------------------------------------------------------------------------------
 
 _PM = WriteContext(actor="pm", trust="trusted", op="review")
+
+
+def _nothing_to_do(request: dict, kind_name: str, changeset: ChangesetIn, problems: list) -> bool:
+    """Whether an input the assistant read gave nothing to record and nothing to ask: no op, no question, no note of
+    what it lacked. Such a read closes by itself; the person's own notes and the assistant's own learning tasks
+    never do."""
+    if not request.get("source") or request.get("origin") == "pm" or learn.is_learning(kind_name):
+        return False
+    if kind_name == follow_on.TASK:
+        return False
+    return not (changeset.ops or changeset.ask or changeset.missing or problems)
+
+
+def close_nothing_to_do(store: Store, changeset_id: str) -> None:
+    """Close a read that recorded nothing and asked nothing: it counts as looked over, so it never waits under
+    Needs attention. Reopening it (Undo) puts it back for a look and is a signal."""
+    with store.transaction() as tx:
+        cs = tx.get("changeset", changeset_id)
+        tx.update("changeset", changeset_id, {"reviewed": True}, _ENGINE, read_version=cs.version)
+        req = tx.get("request", cs.data["request"])
+        tx.update("request", req.id, {"state": "done", "waiting": None}, _ENGINE, read_version=req.version)
+
+
+def reopened_nothing_to_do(store: Store, changeset_id: str) -> None:
+    """Record the signal when the person reopens a read that recorded nothing."""
+    cs = store.read().get("changeset", changeset_id)
+    if cs is not None and not cs.data["ops"]:
+        signal(
+            store,
+            "pulled_back",
+            [cs.data["request"]],
+            "Closed by the assistant with nothing to record",
+            changeset=changeset_id,
+        )
 
 
 def looks_good(store: Store, changeset_id: str) -> None:

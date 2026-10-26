@@ -2815,6 +2815,32 @@ class TriageRule(ConfigModel):
     )
 
 
+class AutomatedMail(FileModel):
+    set_aside: bool = Field(
+        True,
+        description="Set aside automated mail that carries a one-time code (a verification or sign-in code) from a "
+        "no-reply address, with no AI run. It applies after the rules above, so a rule that keeps mail from a "
+        "sender wins.",
+    )
+    senders: list[str] = Field(
+        default_factory=lambda: ["no-reply", "noreply", "no_reply", "do-not-reply", "donotreply"],
+        description="Words an automated sender's address starts with, before the @ sign.",
+    )
+    words: list[str] = Field(
+        default_factory=lambda: [
+            "verification code",
+            "one-time code",
+            "one-time password",
+            "security code",
+            "sign-in code",
+            "login code",
+            "passcode",
+        ],
+        description="Words in the subject or text that say a mail carries a one-time code. A no-reply mail without "
+        "one of them stays with the assistant.",
+    )
+
+
 class WatchFile(FileModel):
     sources: list[WatchSource] = Field(default_factory=list, description="The places the assistant keeps reading.")
     triage: list[TriageRule] = Field(
@@ -2826,6 +2852,10 @@ class WatchFile(FileModel):
         description="Set aside mail the mail itself says is not work, with no AI run: mailing lists and bulk mail, and "
         "mail the mail service files under promotions, social or forums. It applies after the rules above, so a rule "
         "that keeps mail from a sender wins.",
+    )
+    automated_mail: AutomatedMail = Field(
+        default_factory=AutomatedMail,
+        description="How automated mail with a one-time code is recognized and set aside by rules.",
     )
     sorting: Literal["ai", "rules"] = Field(
         "ai",

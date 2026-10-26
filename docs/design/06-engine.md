@@ -190,6 +190,10 @@ and has a one-click way to send it back ("Take a closer look" queues it and reco
 tuned, 6.20). A closed mail item is left out of Today's list of what came in, and counted. A matcher that fails counts as no
 match and is contained like any plugin call (6.1).
 
+**One-time-code mail** (section 204): after the workspace's rules, the built-in sorting sets aside, by rules with no AI run,
+mail from a no-reply address (`watch.automated_mail.senders`) whose subject or text holds a code phrase (`words`); `set_aside`
+turns it off. A no-reply bill or order has no code phrase and goes on to the assistant.
+
 **Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**, `tests/test_set_aside.py`; the sorting run and the
 proof that learning never reads it are phase L0, **built**, `tests/test_mail_sorting.py`). Mail that isn't work goes into a **Set aside** folder in the app, in two
 sections: *Personal*, and *Sales and promotions*. The person's mailbox is never changed; the add-ons read only. Set-aside mail
@@ -3681,6 +3685,9 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     saw and approved it (confirmed the set-aside mail, marked a rule's close as seen, "Looks good" on the changeset,
     released the op from held). An undone close, or one the person took a closer look at, is no longer a close. Each says
     what, when, which rule or run, and why.
+  - Mail set aside is left out of that list, which has its own folder: each mail shows in one place (the measure still
+    counts it as a kind). An input the assistant read that recorded nothing and asked nothing closes by itself, Done
+    with Undo (a `pulled_back` signal), and never waits under Needs attention (decision 2026-10-26, section 204).
   - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Connections screen under "Closed
     without you seeing", below the Set aside folder and the rule closes. The measure, silent closes out of all closes in
     the quality window with the counts for each kind, is `closes.measure`, shown on the Quality screen (see Measures).

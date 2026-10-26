@@ -209,8 +209,9 @@ def collect(view: Any, since: datetime | None = None, until: datetime | None = N
 
 
 def silent(view: Any, since: datetime | None = None, until: datetime | None = None) -> list[Close]:
-    """The closes nobody has seen, newest first."""
-    return [c for c in collect(view, since, until) if c.silent]
+    """The closes nobody has seen, newest first. Mail set aside is left out: it is listed in the Set aside folder, so
+    each mail shows in one place (`measure` still counts it)."""
+    return [c for c in collect(view, since, until) if c.silent and c.kind != "set_aside"]
 
 
 def measure(view: Any, since: datetime | None = None, until: datetime | None = None) -> CloseMeasure:

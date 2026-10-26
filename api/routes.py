@@ -181,6 +181,7 @@ from engine.dispatcher import (
     grant_first_go,
     is_waiting_for_network,
     looks_good,
+    reopened_nothing_to_do,
     retry,
     send_back,
     spent_by_request,
@@ -1533,6 +1534,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 tx.update("request", req.id, {"state": "review"}, _PM, read_version=req.version)
 
         guard(do)
+        guard(lambda: reopened_nothing_to_do(store, cs_id))
         changed()
         return Ok(ok=cs_id)
 

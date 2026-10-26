@@ -323,12 +323,11 @@ describe("closes nobody has seen", () => {
   const two = [
     silent("changeset:CS-1:0", { title: "Send the proof", why: "the printer said so", run: "RUN-1" }),
     silent("request:REQ-2", { kind: "rule", how: "closed", title: "Plan", rule: "Spacing", why: "only spacing changed" }),
-    silent("snapshot:SN-3", { kind: "set_aside", how: "set_aside", title: "A newsletter", rule: "Bulk mail", why: "bulk" }),
   ];
 
   test("each shows what, by whom, when and why, with the count out of all closes", async () => {
     open([source("a")], [], {
-      "GET silent-closes": () => ({ count: 3, closes: two, measure: measure({ total: 12, silent: 3, rate: 0.25 }) }),
+      "GET silent-closes": () => ({ count: 2, closes: two, measure: measure({ total: 12, silent: 3, rate: 0.25 }) }),
     });
     const assistant = await row("Send the proof");
     expect(assistant).toHaveTextContent("Dropped");
@@ -343,15 +342,6 @@ describe("closes nobody has seen", () => {
       "GET silent-closes": () => ({ count: 0, closes: [], measure: measure({ total: 1, silent: 0, rate: 0 }) }),
     });
     expect(await screen.findByTestId("silent-measure")).toHaveTextContent("You saw everything closed in the last 28 days.");
-  });
-
-  test("set-aside mail points to its folder instead of offering Looks right", async () => {
-    open([source("a")], [], {
-      "GET silent-closes": () => ({ count: 1, closes: [two[2]], measure: measure({ total: 1, silent: 1, rate: 1 }) }),
-    });
-    const mail = await row("A newsletter");
-    expect(mail).toHaveTextContent("Review it in the Set aside folder above.");
-    expect(within(mail).queryByRole("button")).toBeNull();
   });
 
   test("Looks right sends the close's reference and says it was marked", async () => {

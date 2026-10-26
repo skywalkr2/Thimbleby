@@ -1,0 +1,17 @@
+id: not-work-one-time-code
+title: "Nothing to record: a one-time sign-in code"
+skills: [owners, evidence]
+received: "2026-11-10"
+given_file: promise-people.yaml
+pasted: |-
+  From: Example Service <no-reply@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Your verification code
+
+  Your verification code is 482913. It expires in ten minutes. If you did not ask for it, ignore this message.
+forbid:
+- op: action.add
+- op: question.add
+stub_answer:
+  summary: "An automated one-time code; nothing to record."
+  ops: []

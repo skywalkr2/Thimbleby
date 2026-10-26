@@ -4,6 +4,26 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: One-time-code mail is set aside by rules, a read with nothing to record closes itself, and each mail shows in one list (P42, P47)
+
+**Decided:** (1) The built-in sorting after the workspace's rules also sets aside automated one-time-code mail with no AI
+run: the sender's address starts with a no-reply word and the subject or text holds a code phrase (`watch.automated_mail`:
+`set_aside`, `senders`, `words`); a no-reply bill or order has no code phrase and stays with the assistant. Before, such
+mail carried no bulk header and went to the AI sorting, which counts unsure as work, so some of a run of identical
+mails were kept as work. (2) An input read from a source whose changeset has no op, no question, no ask and no note of what
+was missing closes by itself: it is Done (looked over) with Undo, never Review under Needs attention; Undo records a
+`pulled_back` signal. (3) The "Closed without you seeing" list leaves out mail set aside, which has its own folder, so each
+mail shows in exactly one place; the line "Review it in the Set aside folder above" goes. The measure still counts set-aside
+mail as a close kind.
+
+**Decided by:** the owner (P42, P47 defect).
+
+**Why:** The owner saw one code mail under Needs attention while the assistant said nothing needed recording, and the same
+mails in both the set-aside and the closed lists.
+
+**Impact:** Design 6.5 (built-in sorting) and 6.32 (silent closes), 7 (the closed list). One new setting group with a
+default and demo values; no plugin API, record or op change. Change log: section 204.
+
 ## 2026-10-26: Every sign-in opens in its own window; setup has a way back, shows Your promises and reads the sent folder by itself (phase B)
 
 **Decided:** (1) The app's own window never navigates to a service: every sign-in (Connections, Sign-ins, Today's
