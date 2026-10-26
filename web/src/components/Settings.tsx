@@ -30,6 +30,7 @@ import {
   matches,
   switchOf,
   toDraft,
+  topicLabel,
   type Draft,
   type Item,
 } from "../lib/settings";
@@ -55,6 +56,7 @@ import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
 import { BrandContrast } from "./BrandContrast";
+import { BusinessSides } from "./BusinessSides";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
 import { Notifications } from "./Notifications";
 import { PageLinks } from "./PageLinks";
@@ -74,26 +76,19 @@ type Edits = Record<string, Draft>;
 const FIRST_FIELD =
   "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled])";
 
-/** The sections listed down the side of Settings (Connections and Add-ons among them), with the Quality screen that opens
- * inside Settings. The pages reached from Settings (Quality, what each account can do) show it too, so the person can go to
- * any other section from where they are. */
+/** The sections listed down the side of Settings (Connections and Add-ons among them). The pages reached from Settings
+ * (what each account can do) show it too, so the person can go to any other section from where they are. */
 export function SettingsNav(props: {
   listed: SettingsSection[];
   /** The section whose page is open; none when the page is one of the screens reached from Settings. */
   current: SettingsSection | null;
-  /** The screen reached from Settings that is open, to mark it in the list. */
-  page?: "quality" | null;
   choose: (section: SettingsSection) => void;
-  onOpenQuality?: () => void;
 }) {
   const { t, has } = useWords();
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
       ? addonLabel(s.slice("addon/".length), t, has)
       : t(`settings.section.${s}`);
-  const lastOwn = [...props.listed]
-    .reverse()
-    .find((id) => !id.startsWith("addon/"));
   const follow = (e: MouseEvent, run: () => void) => {
     // A plain click moves within the app; a modified one (a new tab) keeps its link.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
@@ -104,7 +99,7 @@ export function SettingsNav(props: {
   return (
     <nav aria-label={t("settings.sections")}>
       <ul className="settings-nav">
-        {props.listed.flatMap((id) => [
+        {props.listed.map((id) => (
           <li key={id}>
             <a
               href={viewHref(settingsView(id))}
@@ -113,23 +108,8 @@ export function SettingsNav(props: {
             >
               {label(id)}
             </a>
-          </li>,
-          ...(id === lastOwn
-            ? [
-                <li key="quality">
-                  <a
-                    href={viewHref("quality")}
-                    aria-current={props.page === "quality" ? "page" : undefined}
-                    onClick={(e) =>
-                      props.onOpenQuality && follow(e, props.onOpenQuality)
-                    }
-                  >
-                    {t("quality.open")}
-                  </a>
-                </li>,
-              ]
-            : []),
-        ])}
+          </li>
+        ))}
       </ul>
     </nav>
   );
@@ -137,22 +117,20 @@ export function SettingsNav(props: {
 
 /** A screen reached from Settings, shown beside the Settings side bar. */
 export function SettingsFrame(props: {
-  /** The section this page belongs under, marked in the list; none for Quality, which is listed. */
+  /** The section this page belongs under, marked in the list. */
   under?: SettingsSection;
-  page?: "quality";
   choose: (section: SettingsSection) => void;
-  onOpenQuality: () => void;
   children: ReactNode;
 }) {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
-  const lists = useValueLists();
+  const { sides } = useSides();
   const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
   const keyed = useQuery({
     queryKey: ["addon-secrets"],
     queryFn: api.addonSecrets,
   });
   const listed = navSections(settings.data?.items ?? [], {
-    lists: (lists.data?.length ?? 0) > 0,
+    business: sides.length > 0,
     files: (forms.data?.length ?? 0) > 0,
     keyed: (keyed.data ?? [])
       .filter((a) => a.secrets.length > 0)
@@ -165,9 +143,7 @@ export function SettingsFrame(props: {
           <SettingsNav
             listed={listed}
             current={props.under ?? null}
-            page={props.page ?? null}
             choose={props.choose}
-            onOpenQuality={props.onOpenQuality}
           />
         </div>
         <div className="settings-content">{props.children}</div>
@@ -184,7 +160,6 @@ export function Settings(props: {
   onOpenKnowledge?: () => void;
   /** Opens the grid of what each AI account can do. */
   onOpenCompare?: () => void;
-  onOpenQuality?: () => void;
   /** The section the address names; the first when it names none. */
   section?: SettingsSection | null;
   /** Called with the section the person chose, to put it in the address; without it the screen keeps the choice itself. */
@@ -222,7 +197,6 @@ export function Settings(props: {
     acknowledge?.();
   }, [requested, acknowledge]);
   const [chosen, setChosen] = useState<SettingsSection>("you");
-  const [more, setMore] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState("");
   const [edits, setEdits] = useState<Edits>({});
@@ -239,7 +213,7 @@ export function Settings(props: {
 
   // With no side beside Personal, the settings that name which project is whose side are left out: nothing in them can be
   // changed to any use until there is one.
-  const { justMe } = useSides();
+  const { justMe, sides } = useSides();
   const everything = (settings.data?.items ?? []).filter((i) => !(justMe && i.key.startsWith("workspace.project.")));
   // The accent color as it stands on screen: what is typed, else what is saved.
   const brand = everything.find((i) => i.key === "ui.brand.color");
@@ -248,7 +222,7 @@ export function Settings(props: {
     : "";
   const canList = useFolderListing(everything.some((i) => i.picker));
   const listed = navSections(everything, {
-    lists: (lists.data?.length ?? 0) > 0,
+    business: sides.length > 0,
     files: (forms.data?.length ?? 0) > 0,
     keyed: (keyed.data ?? [])
       .filter((a) => a.secrets.length > 0)
@@ -279,7 +253,7 @@ export function Settings(props: {
     settings.isSuccess &&
     (section === "ai"
       ? !accounts.isPending
-      : section === "lists"
+      : section === "business"
         ? !lists.isPending
         : section === "files"
           ? !forms.isPending
@@ -291,7 +265,7 @@ export function Settings(props: {
     const field = root.querySelector<HTMLElement>(FIRST_FIELD);
     const heading = root.querySelector<HTMLElement>("[data-section-heading]");
     const target =
-      section === "ai" || section === "lists" || section === "files"
+      section === "ai" || section === "files"
         ? heading
         : (field ?? heading);
     target?.focus({ preventScroll: true });
@@ -358,6 +332,7 @@ export function Settings(props: {
                     ...item,
                     value: change.after,
                     source: change.is_default ? "default" : "file",
+                    by_setup: false,
                   }
                 : item;
             }),
@@ -440,12 +415,19 @@ export function Settings(props: {
     });
   };
 
+  // With one side, the words that mean it are named for it, by the name of its project.
+  const sideLabel = (item: Item): string | undefined =>
+    item.key === "workspace.project.side_words.business" && sides.length === 1
+      ? t("settings.business.words_named", { name: sides[0].name })
+      : undefined;
+
   const row = (item: Item) => {
     const gate = switchOf(item, everything);
     return (
       <SettingRow
         key={item.key}
         item={item}
+        label={sideLabel(item)}
         draft={draftOf(item)}
         onChange={(draft) => edit(item.key, draft)}
         commit={(draft) => commit(item, draft)}
@@ -471,51 +453,20 @@ export function Settings(props: {
         aria-labelledby={heading ? titleId : undefined}
       >
         {heading && <h3 id={titleId}>{groupLabel(name, t, has)}</h3>}
-        {name === "rules" && props.onOpenKnowledge && (
-          <p className="hint">
-            {t("settings.rules_link")}{" "}
-            <button
-              type="button"
-              className="link-button"
-              onClick={props.onOpenKnowledge}
-            >
-              {t("settings.rules_open")}
-            </button>
-          </p>
-        )}
         {items.map(row)}
       </div>
     );
   };
 
-  /** A section of settings: its basic ones, and the rest behind More settings (a section with no basic one shows all). */
+  /** A page of settings: the rows the app places on it, with a heading for each group only where the page is the AI page
+   * or an add-on's own. */
   const form = (id: SettingsSection) => {
-    const all = sectionItems(everything, id);
-    const hasBasic = all.some((i) => i.basic);
-    const extra = hasBasic && all.some((i) => !i.basic);
-    const shown = !hasBasic || more[id] ? all : all.filter((i) => i.basic);
-    const byTopic = topics(shown);
-    const headings = byTopic.length > 1 || id === "ai";
-    const listId = `settings-more-${id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+    const byTopic = topics(sectionItems(everything, id));
+    const headings = id === "ai" || (id.startsWith("addon/") && byTopic.length > 1);
     return (
-      <>
-        <div id={listId} className="settings-groups">
-          {byTopic.map((topic) => group(topic.group, topic.items, headings))}
-        </div>
-        {extra && (
-          <div className="row-end">
-            <button
-              type="button"
-              className="btn"
-              aria-expanded={!!more[id]}
-              aria-controls={listId}
-              onClick={() => setMore({ ...more, [id]: !more[id] })}
-            >
-              {t(more[id] ? "settings.fewer" : "settings.more")}
-            </button>
-          </div>
-        )}
-      </>
+      <div className="settings-groups">
+        {byTopic.map((topic) => group(topic.group, topic.items, headings))}
+      </div>
     );
   };
 
@@ -534,7 +485,7 @@ export function Settings(props: {
               aria-controls={id}
               onClick={() => setOpen({ ...open, [key]: !open[key] })}
             >
-              {groupLabel(topic.group, t, has)}
+              {topicLabel(topic.group, t, has)}
             </button>
           </h3>
           <div
@@ -544,6 +495,20 @@ export function Settings(props: {
             aria-labelledby={`${id}-title`}
           >
             {open[key] && group(topic.group, topic.items, false)}
+            {open[key] && topic.group === "learns" && props.onOpenKnowledge && (
+              <p className="hint">
+                {t("settings.rules_link")}{" "}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={props.onOpenKnowledge}
+                >
+                  {t("settings.rules_open")}
+                </button>
+              </p>
+            )}
+            {open[key] && topic.group === "appearance" && <BrandContrast color={brandColor} />}
+            {open[key] && topic.group === "notices" && <Notifications part="webhook" />}
           </div>
         </div>
       );
@@ -607,7 +572,16 @@ export function Settings(props: {
         </>
       );
     }
-    if (section === "lists") return <ValueLists level={2} />;
+    if (section === "business") {
+      return (
+        <>
+          {heading("business")}
+          <BusinessSides />
+          {form("business")}
+          <ValueLists level={3} />
+        </>
+      );
+    }
     if (section === "files") return <DataForms level={2} />;
     if (section === "advanced") {
       return (
@@ -622,7 +596,6 @@ export function Settings(props: {
       <>
         {heading(section)}
         {form(section)}
-        {section === "appearance" && <BrandContrast color={brandColor} />}
         {section === "appearance" && <PageLinks />}
         {section.startsWith("addon/") && (
           <AddonSecrets
@@ -632,7 +605,7 @@ export function Settings(props: {
         )}
         {section === "you" && <ActingAccounts />}
         {section === "today" && <ReminderWhere />}
-        {section === "today" && <Notifications />}
+        {section === "today" && <Notifications part="browser" />}
         {section === "backups" && (
           <>
             <BackupKey />
@@ -678,7 +651,6 @@ export function Settings(props: {
             listed={listed}
             current={!query.trim() ? section : null}
             choose={choose}
-            onOpenQuality={props.onOpenQuality}
           />
         </div>
         <div className="settings-content" ref={content}>

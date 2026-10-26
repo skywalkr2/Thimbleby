@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from engine import kept_secrets
 from engine.config import load_config
+from engine.config.yaml_edit import set_key
 from engine.setup import keep_secret, secret_name
 from engine.storage import Store
 from tests.test_setup import client, make
@@ -13,6 +14,12 @@ from tests.test_typed_secrets import TYPED, _added_with_password, mailbox_kind, 
 # The settings saves in these tests are stamped with the real clock, so the sweep's clock starts an hour after them,
 # past the Undo grace, whatever day the tests run on.
 NOW = datetime.now(UTC).replace(microsecond=0) + timedelta(hours=1)
+
+
+def set_in_file(ws, name, path, value):
+    """Set a key in its settings file, as a person who keeps these only in files does."""
+    target = ws.config_dir / f"{name}.yaml"
+    target.write_text(set_key(target.read_text(encoding="utf-8"), path, value), encoding="utf-8")
 
 
 def keys_of(ws):
@@ -45,9 +52,11 @@ def test_the_settings_for_keeping_old_secrets_have_defaults_and_descriptions(tmp
     assert (kept.keep_days, kept.undo_grace_minutes) == (30, 10)
     from engine.settings import describe
 
-    shown = {s.key: s for s in describe(cfg)}
-    for key in ("storage.kept_secrets.keep_days", "storage.kept_secrets.undo_grace_minutes"):
-        assert shown[key].description and shown[key].editable
+    # Housekeeping intervals are kept only in files: their key, default and description stay, and no screen lists them.
+    shown = {s.key for s in describe(cfg)}
+    for name in ("keep_days", "undo_grace_minutes"):
+        assert f"storage.kept_secrets.{name}" not in shown
+        assert type(kept).model_fields[name].description
 
 
 def test_an_old_kept_secret_nothing_refers_to_is_removed_after_the_configured_days(tmp_path):
@@ -73,11 +82,8 @@ def test_the_days_are_a_setting(tmp_path):
     c, api = client(ws, cfg, store)
     added, _ = _added_with_password(c, api)
     first = secret_name("source", "work-mail", "password")
-    done = changed_password(c, api, added["fingerprint"])
-    fp = c.post(
-        f"{api}/settings", json={"changes": {"storage.kept_secrets.keep_days": 2}, "fingerprint": done["fingerprint"]}
-    )
-    assert fp.status_code == 200, fp.text
+    changed_password(c, api, added["fingerprint"])
+    set_in_file(ws, "storage", ["kept_secrets", "keep_days"], 2)
     cfg = live(ws)
     sweep(ws, cfg, NOW)
     assert sweep(ws, cfg, NOW + timedelta(days=3)) == [first]
@@ -180,11 +186,9 @@ def test_with_no_grace_a_removed_sources_secrets_go_at_once(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     added, _ = _added_with_password(c, api)
-    fp = c.post(
-        f"{api}/settings",
-        json={"changes": {"storage.kept_secrets.undo_grace_minutes": 0}, "fingerprint": added["fingerprint"]},
-    ).json()
-    removed = c.post(f"{api}/watch/sources/work-mail/remove", json={"fingerprint": fp["fingerprint"]}).json()
+    set_in_file(ws, "storage", ["kept_secrets", "undo_grace_minutes"], 0)
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    removed = c.post(f"{api}/watch/sources/work-mail/remove", json={"fingerprint": fingerprint}).json()
     assert removed["kept_secrets_going"] == 1 and keys_of(ws) == []
 
 

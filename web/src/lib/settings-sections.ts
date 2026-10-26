@@ -1,39 +1,21 @@
 // The sections of Settings (design 7.9): which section each setting belongs to, which sections are listed down the side,
-// and how a long section is grouped by topic. A setting lives in exactly one section.
+// and how Advanced is grouped by topic. A setting lives in exactly one section, the page the app places it on.
 import type { Item } from "./settings";
 import { SETTINGS_SECTIONS, type SettingsSection } from "./views";
 
-type Fixed = (typeof SETTINGS_SECTIONS)[number];
+/** The topics of Advanced, in the order they are listed. */
+export const TOPICS = ["ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings"] as const;
 
-/** The section for a settings group, by its name or the front of it; the longest front wins. A group that no section
- * claims is under Advanced. */
-const BY_GROUP: Array<[front: string, section: Fixed]> = [
-  ["workspace.plugins", "advanced"],
-  ["workspace", "you"],
-  ["ai", "ai"],
-  ["storage", "backups"],
-  ["ui.today", "today"],
-  ["ui.followups", "today"],
-  ["ui.notifications", "today"],
-  ["ui.walkthrough", "you"],
-  ["steward", "today"],
-  ["ui", "appearance"],
-];
-
-const within = (group: string, front: string) => group === front || group.startsWith(`${front}.`);
-
-/** The section a setting is shown in: an add-on's settings are in its own section. */
-export function sectionOfItem(item: Pick<Item, "group" | "plugin" | "advanced">): SettingsSection {
+/** The section a setting is shown in: the page the app places it on, or an add-on's own section. */
+export function sectionOfItem(item: Pick<Item, "plugin" | "page">): SettingsSection {
   if (item.plugin) return `addon/${item.plugin}`;
-  // A technical setting is under Advanced, whatever its group, so no other section shows it.
-  if (item.advanced) return "advanced";
-  const found = BY_GROUP.filter(([front]) => within(item.group, front)).sort((a, b) => b[0].length - a[0].length)[0];
-  return found ? found[1] : "advanced";
+  return (item.page ?? "advanced") as SettingsSection;
 }
 
 /** Settings that a part of their section edits in its own way, so they aren't also listed as rows: the tier each kind of
  * work uses, what a tier tries once more on, the routing rules (Which model does what), the backup key, the keys an
- * add-on needs (password boxes of their own), the notices' address and the list of the person's own pages. */
+ * add-on needs (password boxes of their own), the notices' address and the list of the person's own pages, and the
+ * business, its sides and the words that name them. */
 const OWN_PART = [
   "ai.tasks",
   "ai.tiers",
@@ -49,27 +31,30 @@ const OWN_PART = [
   "watch.acting",
   // The cloud drives the backup step looks for are a list of records, changed in the file; the step shows what it found.
   "storage.backups.cloud_folders",
+  // The business is its name with Rename and Remove, and the words that mean each side are two lists beside it.
+  "workspace.project.business",
+  "workspace.project.sides",
 ];
 
-/** Whether a setting is listed as a row of its own. */
-export const isListed = (item: Pick<Item, "key">): boolean => !OWN_PART.includes(item.key);
+/** Whether a setting is listed as a row of its own: an add-on's, or one the app places on a page or under a topic that no
+ * part of a screen edits in its own way. The rest are kept in files. */
+export const isListed = (item: Pick<Item, "key" | "plugin" | "page">): boolean =>
+  !OWN_PART.includes(item.key) && (item.plugin != null || item.page != null);
 
-/** A section's settings, the basic ones first. */
-export function sectionItems(items: Item[], section: SettingsSection): Item[] {
-  const mine = items.filter((i) => isListed(i) && sectionOfItem(i) === section);
-  return [...mine.filter((i) => i.basic), ...mine.filter((i) => !i.basic)];
-}
+/** A section's settings, in the order the app lists them. */
+export const sectionItems = (items: Item[], section: SettingsSection): Item[] =>
+  items.filter((i) => isListed(i) && sectionOfItem(i) === section);
 
-/** The sections to list down the side, in order: the basic ones first, then Lists and the add-on files where there are
- * some, Advanced, then one for each add-on that has settings. AI accounts, Connections and Add-ons are always there: they
- * hold lists of their own rather than settings. */
-export function navSections(items: Item[], has: { lists: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
-  const present = new Set(items.map(sectionOfItem));
+/** The sections to list down the side, in order: the pages of the basic settings, Your business where there is one,
+ * Connections and Add-ons, the add-on files where there are some, Advanced, then one for each add-on that has settings.
+ * AI accounts, Connections and Add-ons are always there: they hold lists of their own rather than settings. */
+export function navSections(items: Item[], has: { business: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
+  const present = new Set(items.filter(isListed).map(sectionOfItem));
   // An add-on that needs keys has a section for them even when it has no settings of its own.
   for (const plugin of has.keyed ?? []) present.add(`addon/${plugin}`);
   const out: SettingsSection[] = [];
   for (const id of SETTINGS_SECTIONS) {
-    const shown = id === "ai" || id === "connections" || id === "addons" || (id === "lists" ? has.lists : id === "files" ? has.files : present.has(id));
+    const shown = id === "ai" || id === "connections" || id === "addons" || (id === "business" ? has.business : id === "files" ? has.files : present.has(id));
     if (shown) out.push(id);
   }
   const addons = [...present].filter((s) => s.startsWith("addon/"));
@@ -81,9 +66,17 @@ export interface Topic {
   items: Item[];
 }
 
-/** A section's settings by topic (one topic for each group), in the order the groups first appear. */
+/** A section's settings by topic: the topics of Advanced in their order, then any other group in the order it first
+ * appears. A topic holds its settings in the order the app lists them. */
 export function topics(items: Item[]): Topic[] {
   const out = new Map<string, Item[]>();
-  for (const item of items) out.set(item.group, [...(out.get(item.group) ?? []), item]);
-  return [...out].map(([group, list]) => ({ group, items: list }));
+  for (const item of items) {
+    const name = item.topic ?? item.group;
+    out.set(name, [...(out.get(name) ?? []), item]);
+  }
+  const rank = (name: string) => {
+    const at = (TOPICS as readonly string[]).indexOf(name);
+    return at < 0 ? TOPICS.length : at;
+  };
+  return [...out].map(([group, list]) => ({ group, items: list })).sort((a, b) => rank(a.group) - rank(b.group));
 }

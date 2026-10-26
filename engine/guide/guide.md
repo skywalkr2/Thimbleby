@@ -22,8 +22,8 @@ People say "panel", "page", "screen", "tab" or "view" for the same thing: a scre
 - People: the people the assistant knows, who they are to you and what they own.
 - Files: the files you added and the ones add-ons made, and the actions they offer.
 - Knowledge: the knowledge panel. What the assistant has learned from your corrections and the rules it follows; you keep, change or retire each one, and review the rules in it.
-- Settings: every setting, the setup walkthrough, accounts, backups and spending. Its Connections section lists the sources the assistant keeps reading, such as your mail and calendar, and whether each is working (set-aside mail is under Handled for you); its Add-ons section lists kinds of work you can add, what each one reaches and stores, and where to turn it on or off. Quality is reached from Settings.
-- Quality: the quality screen. How well the assistant is doing, counted from the work itself, such as how often you correct it.
+- Settings: every setting, the setup walkthrough, accounts, backups and spending. Its Connections section lists the sources the assistant keeps reading, such as your mail and calendar, and whether each is working (set-aside mail is under Handled for you); its Add-ons section lists kinds of work you can add, what each one reaches and stores, and where to turn it on or off.
+- Quality: the quality screen, opened from the menu under your initials as "How the assistant is doing". How well the assistant is doing, counted from the work itself, such as how often you correct it.
 - Ask: the question box; it answers from this guide and your records.
 
 If someone asks about a "panel", "page", "screen" or "tab" by a name above, it is that screen; say what it is for and where it is in the side menu.
@@ -126,9 +126,10 @@ once and has Undo, and nothing is closed or sent for you.
 
 ## Settings
 
-Settings shows every setting with what it does, its default and where its value comes from. Common settings come first;
-More settings shows the rest. A setting set by an environment variable or a command-line flag is locked on the screen
-and says so. Saving checks the whole set of settings before anything is written, keeps the comments in your settings
+Settings has a page for what most people set in their first week (You, AI and spending, Notices, Backups and Appearance,
+and Your business when you have one) and Advanced for the rest, in a few plain topics. Each setting says what it does; a
+setting you changed shows Changed with a way back to its default, and one setup set for you does not. A setting set by
+an environment variable or a command-line flag is locked on the screen and says so. Saving checks the whole set of settings before anything is written, keeps the comments in your settings
 files, and lets you undo the change. The app restarts itself a few seconds later to use the new settings; the screen
 reconnects on its own. The server's address, port and mode are changed only in their file, so the app can't lock you out.
 

@@ -135,7 +135,7 @@ describe("the ways of getting a notice", () => {
 });
 
 describe("Settings", () => {
-  test("the Today section has the ways of getting notices under its settings, and the address is not a row of its own", async () => {
+  test("the Notices page has the browser's way of getting notices under its settings, and the address is not a row of its own", async () => {
     stubNotification("granted");
     const item = (key: string, over: Partial<S["SettingItem"]> = {}): S["SettingItem"] => ({
       key,
@@ -156,7 +156,10 @@ describe("Settings", () => {
       routes({
         "GET settings": () => ({
           fingerprint: "fp-1",
-          items: [item("ui.notifications.enabled", { type: "yes_no", value: false, default: false, description: "Tell me when something needs me." }), item("ui.notifications.webhook", { secret: true, description: "The address." })],
+          items: [
+            item("ui.notifications.enabled", { type: "yes_no", value: false, default: false, description: "Tell me when something needs me.", page: "today" }),
+            item("ui.notifications.webhook", { secret: true, description: "The address.", basic: false, page: "advanced", topic: "notices" }),
+          ],
         }),
       }),
     );

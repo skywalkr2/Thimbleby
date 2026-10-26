@@ -119,9 +119,9 @@ MEASURE_WHY = {
 #: How many confirmed senders on one domain make the screen offer a rule for the whole domain.
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
-#: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, a
-#: release's read token, an add-on's secret, the person's own name). The general save accepts them too, because a
-#: screen's Undo saves the values from before there.
+#: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, the
+#: catalogs listed, a release's read token, an add-on's secret, the person's own name). The general save accepts them
+#: too, because a screen's Undo saves the values from before there.
 GUIDED = (
     "ai.providers.",
     "ai.tiers.",
@@ -129,6 +129,7 @@ GUIDED = (
     "watch.sources",
     "watch.triage",
     "workspace.plugins.enabled",
+    "workspace.plugins.catalog.feeds",
     "workspace.plugins.catalog.release_tokens",
     "workspace.plugins.secrets.",
     "workspace.user.",
@@ -221,9 +222,15 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """The secrets kept for what was just removed go once no Undo points at them (design 12.3)."""
         return kept_secrets.release(ws, store, current(), owner=owner, before=before)
 
-    def save(changes: dict[str, Any], reset: list[str], fingerprint: str, allow: tuple[str, ...] = ()) -> Any:
+    def save(
+        changes: dict[str, Any],
+        reset: list[str],
+        fingerprint: str,
+        allow: tuple[str, ...] = (),
+        by_setup: bool = False,
+    ) -> Any:
         try:
-            return config_screens.save(
+            done = config_screens.save(
                 ws,
                 cfg,
                 store,
@@ -233,6 +240,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 env=dict(os.environ),
                 allow=allow,
             )
+            # What a setup step wrote reads as set up in Settings; what the person saves themselves reads as theirs.
+            setup.forget_set_by_setup(ws, [c["key"] for c in done.changes])
+            if by_setup:
+                setup.note_set_by_setup(ws, {c["key"]: c["after"] for c in done.changes if not c["is_default"]})
+            return done
         except config_screens.SettingsConflict as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         except StoreError as err:
@@ -255,11 +267,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/settings")
     def settings_view() -> SettingsView:
+        # A value a setup step wrote and nobody has changed since reads as set up, not as changed.
+        set_up = setup.set_by_setup(ws)
         return SettingsView(
             fingerprint=config_screens.fingerprint(ws.config_dir),
             changed_at=config_screens.changed_at(ws.config_dir),
             items=[
-                SettingItem(**vars(s))
+                SettingItem(**{**vars(s), "by_setup": s.key in set_up and set_up[s.key] == s.value})
                 for s in config_screens.describe(current(), store.plugins, ws.config_dir, _live_lists())
             ],
         )
@@ -277,7 +291,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.post("/settings")
     def settings_save(body: SettingsSave) -> SettingsSaved:
         # The keys the guided steps write are accepted here too, so their Undo (the values from before) works.
-        result = saved(save(body.changes, body.reset, body.fingerprint, allow=GUIDED))
+        # What a setup step wrote can be undone here too, though no screen lists it.
+        allow = (*GUIDED, *setup.set_by_setup(ws))
+        result = saved(save(body.changes, body.reset, body.fingerprint, allow=allow, by_setup=body.by_setup is True))
         if "workspace.user.person" in body.changes:
             person_named()
         return result
@@ -349,7 +365,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         workspace_name = " ".join((body.workspace_name or "").split())
         if workspace_name and current().workspace.name == WORKSPACE_DEFAULT_NAME:
             try:
-                save({"workspace.name": workspace_name}, [], config_screens.fingerprint(ws.config_dir))
+                save(
+                    {"workspace.name": workspace_name},
+                    [],
+                    config_screens.fingerprint(ws.config_dir),
+                    by_setup=True,
+                )
                 worker.apply_live()  # the name is a live setting: the header shows it at once
             except HTTPException as err:  # a name fixed by the environment stays; the person is named either way
                 log.info("The workspace wasn't named after the person: %s", err.detail)
@@ -509,7 +530,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             mine = now.value(key)
             mine = list(mine) if isinstance(mine, list) else []
             changes[key] = [*mine, *(v for v in values if v not in mine)]
-        return saved(save(changes, [], body.fingerprint, allow=("",)))
+        return saved(save(changes, [], body.fingerprint, allow=("",), by_setup=True))
 
     @r.post("/setup/{step:path}/skip")
     def setup_skip(step: str) -> Ok:
@@ -1024,7 +1045,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if address in listed:
             raise HTTPException(status_code=409, detail="That catalog is listed already.")
         key = "workspace.plugins.catalog.feeds"
-        return saved(save({key: [*listed, address]}, [], body.fingerprint))
+        return saved(save({key: [*listed, address]}, [], body.fingerprint, allow=(key,)))
 
     @r.post("/packs/catalogs/remove")
     def catalog_remove(body: CatalogAddress) -> SettingsSaved:
@@ -1033,7 +1054,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.address not in listed:
             raise HTTPException(status_code=404, detail="That catalog isn't in the list you added.")
         key = "workspace.plugins.catalog.feeds"
-        return saved(save({key: [a for a in listed if a != body.address]}, [], body.fingerprint))
+        return saved(save({key: [a for a in listed if a != body.address]}, [], body.fingerprint, allow=(key,)))
 
     @r.post("/packs/{pack_id}/token")
     def pack_token(pack_id: str, body: PackTokenIn) -> SettingsSaved:

@@ -56,7 +56,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     const fullName = main.getByLabel("Your full name");
     await expect(fullName).toBeFocused();
     await page.keyboard.type(me);
-    await expect(main.getByLabel("Workspace name")).toHaveCount(0);
+    await expect(main.getByLabel("This workspace's name")).toHaveCount(0);
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
     await expect(main.getByRole("radio")).toHaveCount(0);
     const zone = main.getByRole("combobox", { name: "Your time zone" });

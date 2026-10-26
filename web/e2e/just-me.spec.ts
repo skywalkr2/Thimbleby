@@ -71,12 +71,11 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
   { name: "Files", hash: () => "records/files", ready: (page) => heading(page, "Files") },
   { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections") },
   { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons") },
-  { name: "Settings: You and the workspace", hash: () => "settings/you", ready: (page) => section(page, "You and the workspace") },
+  { name: "Settings: You", hash: () => "settings/you", ready: (page) => section(page, "You") },
   { name: "Settings: AI accounts", hash: () => "settings/ai", ready: (page) => section(page, "AI accounts") },
-  { name: "Settings: Backups and sync", hash: () => "settings/backups", ready: (page) => section(page, "Backups and sync") },
-  { name: "Settings: Today", hash: () => "settings/today", ready: (page) => section(page, "Today") },
+  { name: "Settings: Backups", hash: () => "settings/backups", ready: (page) => section(page, "Backups") },
+  { name: "Settings: Notices", hash: () => "settings/today", ready: (page) => section(page, "Notices") },
   { name: "Settings: Appearance", hash: () => "settings/appearance", ready: (page) => section(page, "Appearance") },
-  { name: "Settings: Lists", hash: () => "settings/lists", ready: (page) => section(page, "Lists") },
 ];
 
 test.describe('"Just me" sees no work words', () => {

@@ -11,7 +11,7 @@ function below1440() {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width:\s*1439px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
 }
 
-function show(over: { changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide", () => void>> } = {}) {
+function show(over: { changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide" | "onOpenQuality", () => void>> } = {}) {
   fakeApi({
     "GET settings": () => ({ fingerprint: "fp", items: over.links === undefined ? [] : [linksItem(over.links)] }),
     "GET status": () => statusFixture(),
@@ -34,6 +34,7 @@ function show(over: { changes?: unknown[]; demo?: boolean; logo?: boolean; narro
         onHelp={h.onHelp ?? noop}
         onFeedback={h.onFeedback ?? noop}
         onOpenGuide={h.onOpenGuide ?? noop}
+        onOpenQuality={h.onOpenQuality ?? noop}
       />
     </RestartProvider>,
   );
@@ -225,7 +226,7 @@ test("the header has no Your pages button: the links are the first group of the 
   expect(screen.queryByRole("menuitem", { name: "Odd one" })).toBeNull();
   // The links come first, under their own title, then the appearance choices.
   const groups = screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
-  expect(groups.slice(0, 2)).toEqual(["Your pages", "Theme"]);
+  expect(groups.slice(0, 3)).toEqual(["Your pages", "How Helper is doing", "Theme"]);
 });
 
 test("with no links the person's menu is only the appearance choices", async () => {
@@ -234,6 +235,15 @@ test("with no links the person's menu is only the appearance choices", async () 
   await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
   expect(screen.queryByRole("group", { name: "Your pages" })).toBeNull();
   expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
+});
+
+test("the person's menu has How the assistant is doing, which opens the figures, and Quality is no longer in Settings' list", async () => {
+  const user = userEvent.setup();
+  const onOpenQuality = vi.fn();
+  show({ handlers: { onOpenQuality } });
+  await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
+  await user.click(screen.getByRole("menuitem", { name: "How Helper is doing" }));
+  expect(onOpenQuality).toHaveBeenCalledTimes(1);
 });
 
 test("the missed-something button has its words (kept for screen readers where the row is tight), not only an icon", async () => {

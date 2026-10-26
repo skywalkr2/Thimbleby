@@ -201,9 +201,14 @@ def test_the_settings_offer_the_projects_to_pick_from_and_an_undone_business_cou
     client, ws, store = api
     made = client.post("/api/setup/business", json={"name": BUSINESS_NAME}).json()
     shown = {s["key"]: s for s in client.get("/api/settings").json()["items"]}
-    for key in ("workspace.project.personal", "workspace.project.business"):
-        assert shown[key]["type"] == "choice" and shown[key]["choices"] == "projects"
-        assert set(shown[key]["options"]) == {p.id for p in store.read().list("project")}
+    # Personal's project is made at setup and never changed: no screen lists it. The business is on its own page.
+    assert "workspace.project.personal" not in shown
+    assert shown["workspace.project.business"]["page"] == "business"
+    assert (
+        shown["workspace.project.business"]["type"] == "choice"
+        and shown["workspace.project.business"]["choices"] == "projects"
+    )
+    assert set(shown["workspace.project.business"]["options"]) == {p.id for p in store.read().list("project")}
     assert client.post(f"/api/changesets/{made['changeset']}/undo", json={}).status_code == 200
     assert sides.business_project(store.read(), ws.config(env={})) is None
     remade = client.post("/api/setup/business", json={"name": BUSINESS_NAME}).json()

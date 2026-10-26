@@ -334,19 +334,20 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     // The sections are down the side; the first has the cursor in its first field, and nothing waits behind a Save button.
     const sections = page.getByRole("navigation", { name: "Settings sections" });
-    await expect(sections.getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("textbox", { name: "Workspace name" })).toBeFocused();
+    await expect(sections.getByRole("link", { name: "You", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("textbox", { name: "This workspace's name" })).toBeFocused();
+    // Quality is no longer in the list: it is "How the assistant is doing" in the person's menu.
+    await expect(sections.getByRole("link", { name: "Quality" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
     await checkAccessibility(page);
     await sections.getByRole("link", { name: "Appearance" }).click();
     await expect(page).toHaveURL(/#settings\/appearance$/);
-    await expect(page.getByRole("textbox", { name: "Seconds a message stays on screen" })).toBeVisible();
-    await page.getByRole("button", { name: "More settings" }).click();
-    await expect(page.getByRole("button", { name: "Fewer settings" })).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("combobox", { name: "Light or dark" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "More settings" })).toHaveCount(0);
     await checkAccessibility(page);
     await page.getByRole("searchbox", { name: "Search settings" }).fill("backup");
-    await expect(page.getByRole("textbox", { name: "Hours between backups" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Workspace name" })).toHaveCount(0);
+    await expect(page.getByRole("checkbox", { name: "Back up automatically" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "This workspace's name" })).toHaveCount(0);
     await page.getByRole("button", { name: "Open the setup guide" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await pressStart(page);

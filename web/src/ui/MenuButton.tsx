@@ -24,6 +24,8 @@ export interface MenuGroup {
   id: string;
   /** A small heading over the group. */
   title?: string;
+  /** What a screen reader calls a group that has no visible heading; the group's id when there is neither. */
+  label?: string;
   entries: MenuEntry[];
   /** The one chosen entry's id, for a group that picks a value (theme, density); it shows a check. */
   selected?: string;
@@ -45,7 +47,7 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
               {index > 0 && <Separator className={styles.sep} />}
               <MenuSection
                 className={styles.group}
-                aria-label={group.title ?? group.id}
+                aria-label={group.title ?? group.label ?? group.id}
                 selectionMode={group.checked !== undefined ? "multiple" : group.selected !== undefined ? "single" : "none"}
                 selectedKeys={group.checked !== undefined ? group.checked : group.selected !== undefined ? [group.selected] : undefined}
               >

@@ -36,7 +36,7 @@ function setting(key: string, extra: Partial<S["SettingItem"]> = {}): S["Setting
 const ITEMS = [
   setting("storage.backups.encrypt", { secret: true, description: "Where the backup key is kept." }),
   setting("workspace.plugins.secrets", { type: "other", editable: false, description: "Each add-on's secrets." }),
-  setting("storage.backups.keep", { type: "integer", value: 14, default: 14, description: "How many backups to keep." }),
+  setting("storage.backups.automatic", { type: "yes_no", value: true, default: true, page: "backups", description: "Back up on a schedule." }),
 ];
 
 const key = (where: S["BackupKeyView"]["where"] = "none", name: string | null = null): S["BackupKeyView"] => ({ where, name });

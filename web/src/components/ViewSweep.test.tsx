@@ -21,6 +21,7 @@ import { RecordPage } from "./RecordPage";
 import { Knowledge } from "./Knowledge";
 import { Settings } from "./Settings";
 import { SinceYesterday } from "./SinceYesterday";
+import { project } from "../lib/records-fixtures";
 import { Sources } from "./Sources";
 import { Stages } from "./Stages";
 import { WhatChanged } from "./WhatChanged";
@@ -405,7 +406,20 @@ test("Sources, with every kind of read, says names, dates and words", async () =
 
 function setting(key: string, over: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
   const [file] = key.split(".");
-  return { key, file, group: "workspace", description: `What ${key} does.`, type: "text", options: [], value: "", default: "", source: "default", locked: false, basic: true, editable: true, ...over };
+  const made: S["SettingItem"] = { key, file, group: "workspace", description: `What ${key} does.`, type: "text", options: [], value: "", default: "", source: "default", locked: false, basic: true, editable: true, ...over };
+  // The page the app places a setting on, by its group; one that is not basic is behind Advanced, under a topic.
+  const page: S["SettingItem"]["page"] = !made.basic
+    ? "advanced"
+    : made.group.startsWith("steward") || made.group.startsWith("ui.today")
+      ? "today"
+      : made.group.startsWith("ui")
+        ? "appearance"
+        : made.group.startsWith("storage")
+          ? "backups"
+          : made.group.startsWith("ai")
+            ? "ai"
+            : "you";
+  return { page, topic: made.basic ? null : "learns", ...made };
 }
 
 const STANCES = ["manage", "alongside", "report_to", "watch"];
@@ -476,16 +490,18 @@ test("Settings, in every section, says names, dates and words", async () => {
       { name: "demo/never-ran", plugin: "demo", enabled: true, every_minutes: 15, last_run_at: null, last_outcome: null, last_error: null },
     ],
     "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: [] }],
+    "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-1", sides: [{ project: "PRJ-2", kind: "business", name: "Orchard Press", removable: false }], chosen: "work" }),
+    "GET projects": () => [project("PRJ-1", "Personal"), project("PRJ-2", "Orchard Press")],
   });
   const user = userEvent.setup();
   const view = renderApp(<SettingsScreen />);
   const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-  await within(nav).findByRole("link", { name: "You and the workspace" });
-  await within(nav).findByRole("link", { name: "Lists" });
+  await within(nav).findByRole("link", { name: "You" });
+  await within(nav).findByRole("link", { name: "Your business" });
   const seen: string[] = [];
   for (const name of within(nav).getAllByRole("link").map((a) => a.textContent ?? "")) {
     const link = within(nav).getByRole("link", { name });
-    // Connections and Quality are screens of their own; the rest are sections of this one.
+    // Connections is a screen of its own; the rest are sections of this one.
     if (!/^(#|\/)?(settings|$)/.test(link.getAttribute("href") ?? "") && !/#settings/.test(link.getAttribute("href") ?? "")) continue;
     await user.click(link);
     seen.push(name);

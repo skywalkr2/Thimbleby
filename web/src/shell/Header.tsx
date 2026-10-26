@@ -1,6 +1,7 @@
 // The header (design 7.1): one row, 56px, at every width. Left to right: the brand (a link to Today), a Demo chip, Ask as a
 // search-style field, the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
-// Hand something in, Help and the person's initials, which open the user menu: the person's own pages, then theme and density.
+// Hand something in, Help and the person's initials, which open the user menu: the person's own pages, how the assistant is
+// doing, then theme and density.
 // Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the Ask field becomes
 // an icon; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
 // before the Ask field gives any up.
@@ -67,11 +68,13 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
 }
 
 /** The person's name for the avatar: their own, when the workspace knows it, else the workspace's. */
-/** The person's menu: their own pages first when they have any, then this device's appearance. */
-export function useUserMenuGroups(): MenuGroup[] {
+/** The person's menu: their own pages first when they have any, how the assistant is doing, then this device's appearance. */
+export function useUserMenuGroups(onOpenQuality: () => void): MenuGroup[] {
+  const { t } = useWords();
   const pages = usePagesGroup();
   const appearance = useAppearanceGroups();
-  return pages ? [pages, ...appearance] : appearance;
+  const doing: MenuGroup = { id: "doing", label: t("quality.open"), entries: [{ id: "quality", label: t("quality.open"), icon: "check", run: onOpenQuality }] };
+  return [...(pages ? [pages] : []), doing, ...appearance];
 }
 
 export function usePersonName(workspace: string): string {
@@ -89,11 +92,13 @@ export function Header(props: {
   onHelp: () => void;
   onFeedback: () => void;
   onOpenGuide: (step?: string) => void;
+  /** Opens the figures for how the assistant is doing. */
+  onOpenQuality: () => void;
 }) {
   const { t } = useWords();
   const { rc } = props;
   const person = usePersonName(rc.workspace_name);
-  const userMenu = useUserMenuGroups();
+  const userMenu = useUserMenuGroups(props.onOpenQuality);
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   const askKey = props.shortcuts.ask ?? "/";
   const missed = useMissedOne();

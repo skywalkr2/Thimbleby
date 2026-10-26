@@ -24079,6 +24079,18 @@
             "title": "Basic",
             "type": "boolean"
           },
+          "by_setup": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The value held in the files was written by setup, so it reads as set up for the person, never as changed by them (no Changed mark, no Reset); false once they change it or put it back.",
+            "title": "By Setup"
+          },
           "choices": {
             "anyOf": [
               {
@@ -24149,6 +24161,27 @@
             "title": "Options",
             "type": "array"
           },
+          "page": {
+            "anyOf": [
+              {
+                "enum": [
+                  "you",
+                  "ai",
+                  "today",
+                  "backups",
+                  "appearance",
+                  "business",
+                  "advanced"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The page of Settings it is a row of, or advanced for one behind Advanced; empty for a setting that is no row (an add-on's, or one a part of a screen edits in its own way).",
+            "title": "Page"
+          },
           "picker": {
             "anyOf": [
               {
@@ -24210,6 +24243,28 @@
             ],
             "title": "Source",
             "type": "string"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ai",
+                  "backups",
+                  "appearance",
+                  "learns",
+                  "followups",
+                  "notices",
+                  "mail",
+                  "meetings"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Behind Advanced: the topic it is listed under.",
+            "title": "Topic"
           },
           "type": {
             "enum": [
@@ -24286,6 +24341,18 @@
       "SettingsSave": {
         "additionalProperties": false,
         "properties": {
+          "by_setup": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when a setup step makes the save: the values it writes read as set up in Settings, not as changed by the person.",
+            "title": "By Setup"
+          },
           "changes": {
             "additionalProperties": true,
             "description": "Key to its new value.",

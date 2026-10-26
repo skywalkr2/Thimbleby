@@ -14,10 +14,10 @@ const WEB = "https" + "://";
 
 function item(key: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
   const [file] = key.split(".");
-  return {
+  const made: S["SettingItem"] = {
     key,
     file,
-    // The test settings sit in the section for "You and the workspace" unless a test says otherwise.
+    // The test settings sit on the You page unless a test says otherwise.
     group: "workspace",
     description: `What ${key} does`,
     type: "text",
@@ -30,6 +30,20 @@ function item(key: string, extra: Partial<S["SettingItem"]> = {}): S["SettingIte
     editable: true,
     ...extra,
   };
+  // The page the app would place a setting on, by its group; one that is not basic is behind Advanced, in the topic its
+  // test names (AI and spending unless it says).
+  const page: S["SettingItem"]["page"] = !made.basic
+    ? "advanced"
+    : made.group.startsWith("ui.notifications") || made.group.startsWith("steward")
+      ? "today"
+      : made.group.startsWith("ui")
+        ? "appearance"
+        : made.group.startsWith("storage")
+          ? "backups"
+          : made.group.startsWith("ai")
+            ? "ai"
+            : "you";
+  return { page, topic: made.basic ? null : "ai", ...made };
 }
 
 const ITEMS: S["SettingItem"][] = [
@@ -45,6 +59,17 @@ const ITEMS: S["SettingItem"][] = [
   item("demo.server", { value: "local", editable: false }),
   item("demo.advanced", { value: "deep", basic: false, description: "A rarely needed thing." }),
 ];
+
+const BUSINESS = {
+  "GET setup/business": () => ({
+    business: true,
+    name: "Orchard Press",
+    personal: "PRJ-1",
+    sides: [{ project: "PRJ-2", kind: "business", name: "Orchard Press", removable: false }],
+    chosen: "work",
+  }),
+  "GET projects": () => [project("PRJ-1", "Personal"), { ...project("PRJ-2", "Orchard Press"), parent: null }, { ...project("PRJ-3", "Spring catalog"), parent: "PRJ-2" }],
+};
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
 
@@ -88,68 +113,83 @@ const posted = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.rout
 const saveButtons = () => screen.queryAllByRole("button", { name: /^Save/ });
 const rowOf = (label: string) => screen.getByText(label).closest(".setting") as HTMLElement;
 
-test("a section shows its basic settings, and More settings reveals the rest of that section", async () => {
-  const user = userEvent.setup();
+test("a page shows the settings the app places on it, and the ones behind Advanced are not on it", async () => {
   api();
   open();
   expect(await screen.findByLabelText("The display name.")).toBeInTheDocument();
   expect(screen.queryByLabelText("A rarely needed thing.")).toBeNull();
-  await user.click(screen.getByRole("button", { name: "More settings" }));
-  expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Fewer settings" })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.queryByRole("button", { name: "More settings" })).toBeNull();
 });
-
-test("the section list sits down the side, one link for each section that has something in it, the open one marked", async () => {
-  api([...ITEMS, item("ui.theme", { group: "ui" }), item("storage.sync.folder", { group: "storage.sync" })], {
-    "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: [] }],
-  });
+test("the section list sits down the side: the pages, Your business only with a business, and no Quality; the open one is marked", async () => {
+  api(
+    [
+      ...ITEMS,
+      item("ui.theme", { group: "ui" }),
+      item("steward.reminders.quiet_start", { group: "steward.reminders" }),
+      item("storage.sync.folder", { group: "storage.sync" }),
+    ],
+    BUSINESS,
+  );
   open();
   const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-  await waitFor(() => expect(within(nav).getByRole("link", { name: "Lists" })).toBeInTheDocument());
+  await waitFor(() => expect(within(nav).getByRole("link", { name: "Your business" })).toBeInTheDocument());
   expect(within(nav).getAllByRole("link").map((a) => a.textContent)).toEqual([
-    "You and the workspace",
-    "AI accounts",
+    "You",
+    "AI and spending",
+    "Notices",
+    "Backups",
+    "Appearance",
+    "Your business",
     "Connections",
     "Add-ons",
-    "Backups and sync",
-    "Appearance",
-    "Lists",
-    "Quality",
+    "Advanced",
   ]);
-  expect(within(nav).getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
-  expect(within(nav).getByRole("link", { name: "Quality" })).toHaveAttribute("href", expect.stringMatching(/#quality$/));
-  expect(within(nav).getByRole("link", { name: "Backups and sync" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
+  expect(within(nav).getByRole("link", { name: "You" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).queryByRole("link", { name: "Quality" })).toBeNull();
+  expect(within(nav).getByRole("link", { name: "Backups" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
   expect(within(nav).getByRole("link", { name: "Connections" })).toHaveAttribute("href", expect.stringMatching(/#settings\/connections$/));
   expect(within(nav).getByRole("link", { name: "Add-ons" })).toHaveAttribute("href", expect.stringMatching(/#settings\/addons$/));
 });
 
+test("without a business there is no Your business page and no Lists", async () => {
+  api([...ITEMS], {
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-1", "Personal")],
+    "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] }],
+  });
+  open();
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+  await screen.findByLabelText("The display name.");
+  expect(within(nav).queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(within(nav).queryByRole("link", { name: "Lists" })).toBeNull();
+});
 test("choosing a section shows that section's settings and no others; the choice goes to the address when the screen asks", async () => {
   const user = userEvent.setup();
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
   const chosen = vi.fn();
   renderApp(<Settings section="you" onSection={chosen} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByLabelText("The display name.");
-  expect(screen.queryByLabelText("How it looks.")).toBeNull();
+  expect(screen.queryByLabelText("Light or dark")).toBeNull();
   await user.click(screen.getByRole("link", { name: "Appearance" }));
   expect(chosen).toHaveBeenCalledWith("appearance");
 });
 
-test("Appearance shows the measured contrast of the text on the accent color, and warns when it fails AA", async () => {
+test("behind Advanced, Appearance shows the measured contrast of the text on the accent color, and warns when it fails AA", async () => {
   const user = userEvent.setup();
-  const color = (value: string) => item("ui.brand.color", { group: "ui.brand", value, default: "", description: "The accent color." });
+  const color = (value: string) => item("ui.brand.color", { group: "ui.brand", value, default: "", description: "The accent color.", basic: false, topic: "appearance" });
   api([...ITEMS, color("#4f46e5")]);
-  open("appearance");
+  open("advanced");
+  await user.click(await screen.findByRole("button", { name: "Appearance" }));
   const line = await screen.findByRole("status", { name: "Contrast of the accent color" });
   expect(line).toHaveTextContent(/Text on your accent color has a contrast of \d+\.\d to 1, which meets the 4\.5 to 1 that WCAG AA asks for\./);
   expect(line).not.toHaveTextContent("under");
   // Typing a color that fails shows the warning at once, before it is saved, in words as well as color.
-  const box = screen.getByLabelText("The accent color.");
+  const box = screen.getByLabelText("Accent color");
   await user.clear(box);
   await user.type(box, "#7a7a7a");
   const warning = await screen.findByRole("status", { name: "Contrast of the accent color" });
   expect(warning).toHaveTextContent(/Warning: text on your accent color has a contrast of \d+\.\d to 1, under the 4\.5 to 1 that WCAG AA asks for\. Choose a lighter or a darker color\./);
 });
-
 test("Appearance has the list of the person's own pages as a part of its own, not as a read-only row", async () => {
   const links = item("ui.links", { group: "ui", type: "other", value: [{ name: "Planning board", address: `${WEB}boards.example.org/plan` }], default: [], description: "Links to your own pages." });
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." }), links]);
@@ -165,7 +205,7 @@ test("without an address to change, the section list still moves between section
   renderApp(<Settings onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByLabelText("The display name.");
   await user.click(screen.getByRole("link", { name: "Appearance" }));
-  expect(await screen.findByLabelText("How it looks.")).toBeInTheDocument();
+  expect(await screen.findByLabelText("Light or dark")).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
   expect(screen.getByRole("heading", { level: 2, name: "Appearance" })).toBeInTheDocument();
 });
@@ -185,7 +225,7 @@ test("the search looks at every setting in every section by its key and descript
   expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
   await user.clear(search);
   await user.type(search, "looks");
-  expect(screen.getByLabelText("How it looks.")).toBeInTheDocument();
+  expect(screen.getByLabelText("Light or dark")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 3, name: "Appearance" })).toBeInTheDocument();
   await user.clear(search);
   await user.type(search, "zzz");
@@ -202,14 +242,15 @@ test("each type has its own control, with its default shown", async () => {
   expect(screen.getByLabelText("What demo.on does")).toBeChecked();
   expect(screen.getByLabelText("What demo.mode does")).toHaveValue("person");
   expect(screen.getByLabelText("What demo.names does")).toHaveValue("a\nb");
+  // The default is shown only on a value the person changed.
   expect(screen.getByText("Default: Workspace")).toBeInTheDocument();
-  expect(screen.getByText("Default: Yes")).toBeInTheDocument();
+  expect(screen.queryByText("Default: Yes")).toBeNull();
 });
 
 test("a setting's description is the help beside its field, not a line under it, and the field is still described by it", async () => {
   api([item("workspace.name", { value: "Lantern", default: "Workspace", description: "The name shown at the top of every screen." })]);
   open();
-  const field = await screen.findByLabelText("Workspace name");
+  const field = await screen.findByLabelText("This workspace's name");
   const row = field.closest(".setting") as HTMLElement;
   const help = row.querySelector("[data-help]") as HTMLElement;
   expect(help).toHaveTextContent("The name shown at the top of every screen.");
@@ -354,6 +395,28 @@ test("a changed setting says Changed with a Reset beside its label; one at its d
   expect(within(rowOf("What demo.fixed does")).queryByRole("button", { name: /^Reset/ })).toBeNull();
 });
 
+test("a value that setup wrote reads as set up, not as changed: no Changed, no Reset and no Default, until the person changes it", async () => {
+  const user = userEvent.setup();
+  api([
+    item("workspace.name", { value: "Orchard Press", default: "Workspace", source: "file", by_setup: true, description: "The workspace's display name." }),
+    item("workspace.language", { value: "en-GB", default: "en-US", source: "file", description: "Which kind of English." }),
+  ]);
+  open();
+  const set = await screen.findByLabelText("This workspace's name");
+  const row = set.closest(".setting") as HTMLElement;
+  expect(within(row).queryByText("Changed")).toBeNull();
+  expect(within(row).queryByRole("button", { name: /^Reset/ })).toBeNull();
+  expect(row).not.toHaveTextContent("Default:");
+  // The same value the person set themselves is a change, with its default beside it.
+  const own = (screen.getByLabelText("English spelling").closest(".setting")) as HTMLElement;
+  expect(within(own).getByText("Changed")).toBeInTheDocument();
+  expect(own).toHaveTextContent("Default:");
+  // Once the person types another value into the one setup wrote, it is theirs.
+  await user.type(set, "s");
+  expect(within(row).getByText("Changed")).toBeInTheDocument();
+  expect(row).toHaveTextContent("Default: Workspace");
+});
+
 test("Reset puts the setting back to its default at once, says so, and can be undone", async () => {
   const user = userEvent.setup();
   const calls = api();
@@ -426,14 +489,12 @@ test("how an owner is shown is a list of examples, and the file types that may b
 });
 
 test("a setting that holds a date format is a list showing today's date in each format, not the codes", async () => {
-  const user = userEvent.setup();
   const formats = ["%a, %b %d", "%Y-%m-%d"];
   api([
     ...ITEMS,
     item("language.messages.date_format", { group: "language.messages", type: "choice", choices: "date_formats", options: formats, value: "%a, %b %d", default: "%a, %b %d", description: "How dates appear.", basic: true }),
   ]);
-  open("advanced");
-  await user.click(await screen.findByRole("button", { name: /messages/i }));
+  open();
   const list = await screen.findByLabelText("How dates appear.");
   expect(list.tagName).toBe("SELECT");
   const labels = within(list).getAllByRole("option").map((o) => o.textContent);
@@ -696,19 +757,27 @@ test("Connections and Add-ons are sections of Settings, chosen like any other, a
   expect(chosen).toHaveBeenLastCalledWith("connections");
 });
 
-test("Lists is a section of its own, where the choices dropdowns offer can be changed", async () => {
-  api(ITEMS, {
-    "GET lists": () => [
-      { id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] },
+test("the business page holds its sides with Rename, the words that mean it, and the Lists the choices dropdowns offer", async () => {
+  api(
+    [
+      ...ITEMS,
+      item("workspace.project.side_words.business", { group: "workspace.project.side_words", type: "list", value: ["spring catalog"], default: [], page: "business" }),
     ],
-  });
-  open("lists");
-  expect(await screen.findByRole("heading", { level: 2, name: "Lists" })).toBeInTheDocument();
-  expect(screen.getByText("Project status")).toBeInTheDocument();
+    {
+      ...BUSINESS,
+      "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] }],
+    },
+  );
+  open("business");
+  expect(await screen.findByRole("heading", { level: 2, name: "Your business" })).toBeInTheDocument();
+  expect(await screen.findByText("Orchard Press")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rename Orchard Press" })).toBeInTheDocument();
+  // With one side, the words that mean it are named for it.
+  expect(screen.getByLabelText("Words that mean Orchard Press")).toHaveValue("spring catalog");
+  expect(await screen.findByText("Project status")).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Add a choice to Project status" })).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
 });
-
 // ---- an add-on's settings ------------------------------------------------------------------------------------------
 
 function addonItem(name: string, field: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
@@ -779,29 +848,29 @@ test("the search finds an add-on's settings by the add-on's name", async () => {
   expect(screen.queryByLabelText("What greeting does for the add-on")).toBeNull();
 });
 
-test("Advanced groups the rest by topic, each topic closed until it is opened, and the standing instructions point to Knowledge", async () => {
+test("Advanced groups the rest by its topics, each closed until it is opened, and the standing instructions point to Knowledge", async () => {
   const user = userEvent.setup();
   const onOpenKnowledge = vi.fn();
   api([
-    item("rules.rules", { type: "list", group: "rules", value: [], default: [], basic: false }),
-    item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false, description: "Learn from corrections." }),
+    item("ai.budgets.per_run_usd", { type: "number", group: "ai.budgets", value: 1, default: 1, basic: false, topic: "ai", description: "The most one run may cost." }),
+    item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false, topic: "learns", description: "Learn from corrections." }),
   ]);
   renderApp(
     <Settings section="advanced" onOpenGuide={() => undefined} onChooseSource={() => undefined} onOpenKnowledge={onOpenKnowledge} />,
   );
-  const topic = await screen.findByRole("button", { name: "Rules" });
+  const topic = await screen.findByRole("button", { name: "What the assistant learns" });
   expect(topic).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByLabelText("Learn from corrections.")).toBeNull();
+  expect(screen.queryByLabelText("Learn from your corrections")).toBeNull();
   await user.click(topic);
   expect(topic).toHaveAttribute("aria-expanded", "true");
-  const region = screen.getByRole("group", { name: "Rules" });
+  const region = screen.getByRole("group", { name: "What the assistant learns" });
+  expect(within(region).getByLabelText("Learn from your corrections")).toBeInTheDocument();
   expect(region).toHaveTextContent("Review what Helper has learned and your saved rules in Knowledge.");
   await user.click(within(region).getByRole("button", { name: "Open Knowledge" }));
   expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
   // The other topic is still closed.
-  expect(screen.getByRole("button", { name: "What the assistant has learned", expanded: false })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "AI and spending", expanded: false })).toBeInTheDocument();
 });
-
 const ACCOUNT: S["AiAccountView"] = {
   name: "main",
   label: "Main account",
@@ -895,12 +964,11 @@ test("with no add-on data files there is no Add-on files section in the list", a
 });
 
 test("the AI section keeps its spending settings below the accounts, and puts the cursor on its heading", async () => {
-  api([item("ai.budgets.per_run_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "The most one run may cost." })], AI_ROUTES);
+  api([item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "Stop starting new work for the day above this." })], AI_ROUTES);
   open("ai");
-  expect(await screen.findByLabelText("Most one piece of work may cost")).toHaveValue("1");
+  expect(await screen.findByLabelText("Most to spend in a day")).toHaveValue("1");
   await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: /AI accounts/ })).toHaveFocus());
 });
-
 test("a setting that picks a language shows each tag by its name, sorted by name, and saves the tag", async () => {
   const user = userEvent.setup();
   const calls = api(
@@ -964,45 +1032,43 @@ test("a time zone is picked by its city, with a search, and the setting still ho
   expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.timezone": "America/New_York" } });
 });
 
-test("a technical setting is listed under Advanced and not in its own section", async () => {
+test("a technical setting is listed under Advanced and not on its page", async () => {
   api([
-    item("ai.budgets.per_run_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "Never start more than this.", basic: true }),
-    item("ai.budgets.confirm_unpriced", { group: "ai.budgets", type: "yes_no", value: false, default: false, description: "Ask before work whose cost can't be seen.", advanced: true }),
+    item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "Never start more than this in a day." }),
+    item("ai.budgets.confirm_unpriced", { group: "ai.budgets", type: "yes_no", value: false, default: false, description: "Ask before work whose cost can't be seen.", basic: false, topic: "ai" }),
   ], AI_ROUTES);
   open("ai");
-  await screen.findByLabelText("Most one piece of work may cost");
+  await screen.findByLabelText("Most to spend in a day");
   expect(screen.queryByLabelText("Ask me before work whose cost I can't see")).toBeNull();
   expect(screen.queryByRole("button", { name: "More settings" })).toBeNull();
 });
-
-test("the notices switch is labelled Turn on notices, and the spending settings use plain words", async () => {
+test("the notices switch is labelled in the words of what the person gets, and the spending settings use plain words", async () => {
   api(
     [
-      item("ui.notifications.enabled", { group: "ui.notifications", type: "yes_no", value: false, default: false, description: "Tell me when something needs me. A notice goes out only for what Today's Decide group holds.", basic: true }),
-      item("ai.budgets.confirm_above_usd", { group: "ai.budgets", type: "number", value: 0.1, default: 0.1, description: "Ask me before starting work estimated to cost more than this.", basic: true }),
+      item("ui.notifications.enabled", { group: "ui.notifications", type: "yes_no", value: false, default: false, description: "Tell me when something needs me. A notice goes out only for what Today's Decide group holds." }),
+      item("ai.budgets.confirm_above_usd", { group: "ai.budgets", type: "number", value: 0.1, default: 0.1, description: "Ask me before starting work estimated to cost more than this." }),
     ],
     AI_ROUTES,
   );
   renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  expect(await screen.findByRole("checkbox", { name: "Turn on notices" })).toBeInTheDocument();
+  expect(await screen.findByRole("checkbox", { name: "Tell me when something needs me" })).toBeInTheDocument();
   expect(document.body.textContent ?? "").not.toMatch(/Turn on “/);
 });
-
-test("Advanced topics have plain names", async () => {
+test("Advanced topics have plain names, in their order, and none is named after a group of the files", async () => {
+  const adv = (key: string, topic: S["SettingItem"]["topic"], group: string) => item(key, { type: "yes_no", group, value: true, default: true, basic: false, topic });
   api([
-    item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false }),
-    item("checks.tuning.x", { type: "yes_no", group: "checks.tuning", value: true, default: true, basic: false }),
-    item("watch.x", { type: "yes_no", group: "watch", value: true, default: true, basic: false }),
-    item("language.reported_speech.x", { type: "yes_no", group: "language.reported_speech", value: true, default: true, basic: false }),
+    adv("steward.dates.suggest_reminders", "meetings", "steward.dates"),
+    adv("dispatch.knowledge.learn", "learns", "dispatch.knowledge"),
+    adv("watch.sorting", "mail", "watch"),
+    adv("steward.attention.daily_cap", "notices", "steward.attention"),
+    adv("ui.followups.question_after_days", "followups", "ui.followups"),
   ]);
   renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  await screen.findByRole("button", { name: "What the assistant has learned" });
-  for (const name of ["How strict the checks are", "How mail and connections are read", "Wording of quoted speech"]) {
-    expect(screen.getByRole("button", { name })).toBeInTheDocument();
-  }
-  expect(screen.queryByRole("button", { name: /Dispatch|tuning|Watch|reported speech/i })).toBeNull();
+  await screen.findByRole("button", { name: "What the assistant learns" });
+  const names = screen.getAllByRole("button", { expanded: false }).map((b) => b.textContent);
+  expect(names).toEqual(["What the assistant learns", "Follow-ups and reminders", "Notices", "Mail", "Meetings"]);
+  expect(screen.queryByRole("button", { name: /Dispatch|Watch|Steward|^Ui /i })).toBeNull();
 });
-
 test("a choice setting that doesn't name a list keeps its own order and wording", async () => {
   api();
   open();
@@ -1010,7 +1076,7 @@ test("a choice setting that doesn't name a list keeps its own order and wording"
   expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["person", "rule"]);
 });
 
-test("the Today section holds the reminder settings as lists, and the button that asks the browser for notifications", async () => {
+test("the Notices page holds the reminder settings as lists, and the button that asks the browser for notifications", async () => {
   const user = userEvent.setup();
   const request = vi.fn(async () => "granted");
   vi.stubGlobal("Notification", Object.assign(function Notification() {}, { permission: "default", requestPermission: request }));
@@ -1020,43 +1086,32 @@ test("the Today section holds the reminder settings as lists, and the button tha
     item("steward.reminders.working_first_day", { group: "steward.reminders", type: "choice", options: ["monday", "tuesday"], value: "monday", default: "monday" }),
   ]);
   renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  expect(await screen.findByRole("combobox", { name: "Quiet hours start" })).toHaveValue("21:00");
-  const first = screen.getByRole("combobox", { name: "First working day" });
+  expect(await screen.findByRole("combobox", { name: "Quiet hours start at" })).toHaveValue("21:00");
+  const first = screen.getByRole("combobox", { name: "Your working week starts on" });
   expect(within(first).getAllByRole("option").map((o) => o.textContent)).toEqual(["Monday", "Tuesday"]);
   expect(request).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Allow notifications" }));
   expect(request).toHaveBeenCalledTimes(1);
   vi.unstubAllGlobals();
 });
-
-test("who people are to you is a list in words, and what you keep track of is ticked from a fixed set, never typed", async () => {
-  const user = userEvent.setup();
-  const calls = api(
-    [
-      item("steward.default_stance", { group: "steward", type: "choice", options: ["manage", "alongside", "report_to", "watch"], value: "alongside", default: "alongside" }),
-      item("steward.tracks", { group: "steward", type: "list", options: ["dates", "decisions", "design"], value: ["dates", "decisions"], default: ["dates", "decisions"] }),
-    ],
-    { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
-  );
+test("what the app keeps only in files is no row on any page, though the API lists it", async () => {
+  api([
+    ...ITEMS,
+    item("steward.reminders.quiet_start", { group: "steward.reminders", type: "choice", options: ["20:00", "21:00"], value: "21:00", default: "21:00" }),
+    item("steward.default_stance", { group: "steward", type: "choice", options: ["manage", "alongside"], value: "alongside", default: "alongside", page: null, description: "Who people are." }),
+    item("steward.tracks", { group: "steward", type: "list", options: ["dates"], value: ["dates"], default: ["dates"], page: null, description: "What you keep track of." }),
+  ]);
   renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  const stance = await screen.findByRole("combobox", { name: "Who people are to you until you say otherwise" });
-  expect(within(stance).getAllByRole("option").map((o) => o.textContent)).toEqual(["I manage them", "I work alongside them", "I report to them", "I only watch them"]);
-  const group = screen.getByRole("group", { name: "What you keep track of" });
-  expect(within(group).getByRole("checkbox", { name: "Delivery dates" })).toBeChecked();
-  expect(within(group).getByRole("checkbox", { name: "Design quality" })).not.toBeChecked();
-  expect(screen.queryByRole("textbox", { name: "What you keep track of" })).toBeNull();
-  await user.click(within(group).getByRole("checkbox", { name: "Design quality" }));
-  await waitFor(() => expect(posted(calls)).toHaveLength(1));
-  expect(posted(calls)[0]).toMatchObject({ changes: { "steward.tracks": ["dates", "decisions", "design"] } });
+  expect(document.body.textContent ?? "").not.toMatch(/Who people are/);
+  expect(screen.queryByText("What you keep track of.")).toBeNull();
+  await screen.findByRole("heading", { level: 2, name: "Notices" });
 });
-
 // ---- with no side besides Personal (design 6.32, 7.8) ------------------------------------------------------------------
 
 test("with no side besides Personal the settings that name whose side a project is on are not listed, and with a side they are", async () => {
   const items = [
     ...ITEMS,
-    item("workspace.project.personal", { group: "workspace.project", description: "The project that holds the person's own life.", value: "PRJ-1" }),
-    item("workspace.project.sides", { group: "workspace.project", description: "The sides of the person's work.", value: [], editable: false }),
+    item("workspace.project.side_words.personal", { group: "workspace.project.side_words", type: "list", description: "Words that mean your own life.", value: [], default: [] }),
   ];
   api(items, {
     "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
@@ -1064,13 +1119,10 @@ test("with no side besides Personal the settings that name whose side a project 
   });
   const first = open();
   expect(await screen.findByText("The display name.")).toBeInTheDocument();
-  await waitFor(() => expect(screen.queryByText("The project that holds the person's own life.")).toBeNull());
-  expect(screen.queryByText("The sides of the person's work.")).toBeNull();
+  await waitFor(() => expect(screen.queryByLabelText("Words that mean personal")).toBeNull());
   first.unmount();
-  api(items, {
-    "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-1", sides: [{ project: "PRJ-2", kind: "business", name: "Orchard Press" }], chosen: "work" }),
-  });
+  api(items, BUSINESS);
   open();
-  expect(await screen.findByText("The project that holds the person's own life.")).toBeInTheDocument();
-  expect(screen.getByText("The sides of the person's work.")).toBeInTheDocument();
+  expect(await screen.findByText("The display name.")).toBeInTheDocument();
+  expect(await screen.findByLabelText("Words that mean personal")).toBeInTheDocument();
 });

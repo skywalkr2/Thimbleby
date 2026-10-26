@@ -48,7 +48,7 @@ test.describe.serial("journeys", () => {
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
     await main.getByLabel("Your full name").fill(info.people[0]);
     await expect(main.getByLabel("Your time zone")).toBeVisible();
-    await expect(main.getByLabel("Workspace name")).toHaveCount(0);
+    await expect(main.getByLabel("This workspace's name")).toHaveCount(0);
     // The assistant is introduced by name, with Rename; the name isn't a box until I ask to change it.
     await expect(main.getByText("Your assistant is called Reginald.")).toBeVisible();
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);

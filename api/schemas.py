@@ -3589,6 +3589,19 @@ class SettingItem(BaseModel):
         description="True when it is technical: a form lists it only behind Advanced, and Settings lists it under "
         "Advanced, so the setup path never shows it.",
     )
+    page: Literal["you", "ai", "today", "backups", "appearance", "business", "advanced"] | None = Field(
+        None,
+        description="The page of Settings it is a row of, or advanced for one behind Advanced; empty for a setting "
+        "that is no row (an add-on's, or one a part of a screen edits in its own way).",
+    )
+    topic: Literal["ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings"] | None = Field(
+        None, description="Behind Advanced: the topic it is listed under."
+    )
+    by_setup: bool | None = Field(
+        None,
+        description="The value held in the files was written by setup, so it reads as set up for the person, never as "
+        "changed by them (no Changed mark, no Reset); false once they change it or put it back.",
+    )
 
 
 class SettingsView(BaseModel):
@@ -3607,6 +3620,11 @@ class SettingsSave(BaseModel):
     changes: dict[str, Any] = Field(default_factory=dict, description="Key to its new value.")
     reset: list[str] = Field(default_factory=list, description="Keys going back to their defaults.")
     fingerprint: str
+    by_setup: bool | None = Field(
+        None,
+        description="True when a setup step makes the save: the values it writes read as set up in Settings, not as "
+        "changed by the person.",
+    )
 
 
 class SettingChangeView(BaseModel):

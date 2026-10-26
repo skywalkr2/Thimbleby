@@ -320,3 +320,20 @@ test("no wording the walkthrough uses says workspace", () => {
 test("the walkthrough's title is Getting started", () => {
   expect(words["walkthrough.title"]).toBe("Getting started");
 });
+
+// The Settings cut: the pages and the topics of Advanced are named in plain words, short, and never after a code prefix,
+// an id or a word of the files. The same holds for the labels of the settings placed on them
+// (tests/test_settings_cut.py reaches those, because only the server knows which settings are placed).
+const FILE_WORDS = /^Ui |^Watch |^Steward |PRJ-|PER-|tasks\.|json|tier/;
+
+test("the headings of Settings' pages and Advanced's topics are short and use no word of the files", () => {
+  const headings = Object.entries(words).filter(([key]) => key.startsWith("settings.section.") || key.startsWith("settings.topic."));
+  expect(headings.length).toBeGreaterThanOrEqual(18);
+  for (const [key, text] of headings) {
+    expect(text.length, key).toBeLessThanOrEqual(60);
+    expect(text, key).not.toMatch(FILE_WORDS);
+  }
+  for (const topic of ["ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings"]) {
+    expect(words[`settings.topic.${topic}`], topic).toBeTruthy();
+  }
+});

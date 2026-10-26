@@ -162,8 +162,10 @@ def test_a_project_with_the_configured_done_status_is_marked_completed(api):
     rows = client.get("/api/projects").json()
     assert not any(r["completed"] for r in rows)
     project = store.read().list("project")[0]
-    done = client.get("/api/settings").json()
-    wanted = next(i["value"] for i in done["items"] if i["key"] == "workspace.project.completed_status")
+    from engine.config.schema import WorkspaceFile
+
+    # The word for finished is the app's: kept in files, so it is read from the configuration, not a screen.
+    wanted = WorkspaceFile().project.completed_status
     with store.transaction() as tx:
         tx.update("project", project.id, {"status": wanted}, _PM, read_version=project.version)
     rows = {r["id"]: r for r in client.get("/api/projects").json()}
@@ -171,13 +173,11 @@ def test_a_project_with_the_configured_done_status_is_marked_completed(api):
     assert sum(r["completed"] for r in rows.values()) == 1
 
 
-def test_the_setting_that_names_the_done_status_picks_from_the_projects_status_list(api):
-    client, store = api
-    item = next(
-        i for i in client.get("/api/settings").json()["items"] if i["key"] == "workspace.project.completed_status"
-    )
-    statuses = next(v for v in store.read().list("value_list") if v.data["name"] == "project-status").data["values"]
-    assert item["type"] == "choice" and set(statuses) <= set(item["options"])
+def test_the_setting_that_names_the_done_status_is_kept_in_files_and_no_screen_lists_it(api):
+    client, _ = api
+    keys = {i["key"] for i in client.get("/api/settings").json()["items"]}
+    assert "workspace.project.completed_status" not in keys
+    assert "workspace.owner_format" not in keys
 
 
 def test_an_item_on_a_series_names_the_meeting_it_is_for(api):

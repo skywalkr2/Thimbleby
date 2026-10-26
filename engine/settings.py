@@ -36,32 +36,9 @@ from engine.yaml_load import load_yaml
 
 log = logging.getLogger(__name__)
 
-#: Keys shown first; the rest sit behind "More settings".
-BASIC = frozenset(
-    {
-        "workspace.name",
-        "workspace.assistant_name",
-        "workspace.user.timezone",
-        "workspace.language",
-        "storage.backups.every_hours",
-        "storage.backups.keep",
-        "storage.backups.automatic",
-        "storage.sync.folder",
-        "ai.budgets.per_run_usd",
-        "ai.budgets.first_go",
-        "ai.budgets.confirm_above_usd",
-        "ai.budgets.per_day_usd",
-        "ai.budgets.per_month_usd",
-        "ui.toast_seconds",
-        "ui.theme",
-        "ui.density",
-        "ui.brand.color",
-        "ui.brand.logo",
-        "ui.notifications.enabled",
-        "ui.notifications.browser",
-    }
-    | levels.BASIC_EXTRA
-)
+#: Keys on a page of Settings (the basic ones); the rest are behind Advanced or kept only in files
+#: (`engine.config.levels`).
+BASIC = frozenset(levels.BASIC)
 #: Keys the screens never change: a wrong value would stop the app from being reached or starting, or the setting is
 #: not offered yet (the export's remote).
 FILE_ONLY = ("server.", "storage.backend", "storage.export.remote")
@@ -101,6 +78,9 @@ class Setting:
     )
     file_types: list[str] = field(default_factory=list)  # with picker "file": the endings it offers (".ics")
     renamed_from: str | None = None  # the old name still in use for it (a file, an environment variable or a flag)
+    page: str | None = None  # the page of Settings it is a row of (or "advanced"); None for one that is no row
+    topic: str | None = None  # behind Advanced: the topic it is listed under
+    by_setup: bool = False  # the value now in the files was written by setup, so it reads as set up, not as changed
 
 
 @dataclass
@@ -193,6 +173,8 @@ def describe(
     old_names = {new: old for old, new in (getattr(cfg, "deprecated", None) or {}).items()}
     for setting in found:
         setting.renamed_from = old_names.get(setting.key)
+    # The rows of the pages come in the order the pages list them; everything else keeps its place after them.
+    found.sort(key=lambda setting: levels.order_of(setting.key))
     for plugin, model in (plugin_models(plugins) if config_dir is not None else {}).items():
         file = PLUGIN_PREFIX + plugin
         raw = _plugin_raw(config_dir, plugin)
@@ -297,6 +279,8 @@ def _walk(
                 choices=list_name,
                 secret=isinstance(info.description, SecretHint),
                 advanced=extra.get("advanced") is True,
+                page=levels.place_of(dotted)[0],
+                topic=levels.place_of(dotted)[1],
                 file_types=[str(x) for x in extra.get("file_types") or [] if isinstance(x, str)],
             )
         )

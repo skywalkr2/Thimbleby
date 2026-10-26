@@ -318,6 +318,32 @@ def work_choice(ws: Any, cfg: Any, view: Any) -> str | None:
     return chosen if chosen in WORK_CHOICES else None
 
 
+def note_set_by_setup(ws: Any, values: dict[str, Any]) -> None:
+    """Keep the settings a setup step just wrote, with the values it wrote, so Settings reads them as set up and not as
+    changed by the person. A later change by the person to another value reads as theirs."""
+    if not values:
+        return
+    with _changing(ws) as state:
+        mine = dict(state["set_by_setup"]) if isinstance(state.get("set_by_setup"), dict) else {}
+        state["set_by_setup"] = {**mine, **values}
+
+
+def forget_set_by_setup(ws: Any, keys: list[str]) -> None:
+    """The person saved these settings themselves, so they no longer read as set up."""
+    held = _state(ws).get("set_by_setup")
+    if not isinstance(held, dict) or not any(k in held for k in keys):
+        return
+    with _changing(ws) as state:
+        mine = dict(state["set_by_setup"]) if isinstance(state.get("set_by_setup"), dict) else {}
+        state["set_by_setup"] = {k: v for k, v in mine.items() if k not in keys}
+
+
+def set_by_setup(ws: Any) -> dict[str, Any]:
+    """The settings a setup step wrote and the values it wrote, as kept on this computer."""
+    held = _state(ws).get("set_by_setup")
+    return dict(held) if isinstance(held, dict) else {}
+
+
 def keep_work_choice(ws: Any, choice: str) -> None:
     """Keep the answer to the work question on this computer, beside the skips."""
     if choice not in WORK_CHOICES:

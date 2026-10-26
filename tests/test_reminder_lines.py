@@ -336,10 +336,13 @@ def test_the_settings_are_offered_as_lists_and_take_effect_without_a_restart(tmp
     ws, cfg, store = build(tmp_path)
     try:
         items = {i.key: i for i in describe(cfg, store.plugins, ws.config_dir)}
-        for key in ("working_start", "working_end", "quiet_start", "quiet_end", "evening"):
+        for key in ("working_start", "working_end", "quiet_start", "quiet_end"):
             item = items[f"steward.reminders.{key}"]
             assert item.type == "choice" and "09:00" in item.options and "21:00" in item.options
-        assert items["steward.reminders.missed"].options == ["each", "summary"]
+        # The timings the app works out for itself are kept in files, not offered.
+        assert not {"missed", "evening", "later_today_hours", "late_after_minutes"} & {
+            k.rsplit(".", 1)[1] for k in items if k.startswith("steward.reminders.")
+        }
         assert "sunday" in items["steward.reminders.working_first_day"].options
         assert all(is_live(k) for k in items if k.startswith("steward.reminders."))
     finally:

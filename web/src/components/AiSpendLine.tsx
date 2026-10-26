@@ -60,7 +60,7 @@ export function useSpendLine(enabled = true): SpendLine {
     if (!settings.data || !pending || bad) return !bad;
     setProblem("");
     try {
-      const saved = await api.saveSettings({ changes, reset: [], fingerprint: settings.data.fingerprint });
+      const saved = await api.saveSettings({ changes, reset: [], fingerprint: settings.data.fingerprint, by_setup: enabled });
       setEdits({});
       setEditing(false);
       await afterSave(saved);

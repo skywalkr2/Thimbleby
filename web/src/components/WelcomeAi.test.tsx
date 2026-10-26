@@ -602,7 +602,7 @@ test("a changed amount is saved with Save, together with the account, and a bad 
   await user.type(day, "5");
   await user.click(save());
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
-  expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { "ai.budgets.per_day_usd": 5 }, reset: [], fingerprint: "fp-1" });
+  expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { "ai.budgets.per_day_usd": 5 }, reset: [], fingerprint: "fp-1", by_setup: true });
   expect(body(calls)).toBeDefined();
 });
 

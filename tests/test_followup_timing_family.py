@@ -59,22 +59,23 @@ def test_the_settings_screen_notes_an_old_name_and_saving_the_new_one_takes_it_o
     from fastapi.testclient import TestClient
 
     from api.app import create_app
+    from engine.config.yaml_edit import set_key
     from tests.test_setup import make
 
+    old, chase = "ui.today.nudge_after_days", "ui.followups.question_after_days"
     ws, cfg, store = make(tmp_path)
     store.close()
-    steward = ws.config_dir / "steward.yaml"
-    steward.write_text(steward.read_text(encoding="utf-8") + "chase_dated_days: 3\n", encoding="utf-8")
+    target = ws.config_dir / "ui.yaml"
+    target.write_text(set_key(target.read_text(encoding="utf-8"), ["today", "nudge_after_days"], 3), encoding="utf-8")
     cfg = ws.config(env={})
     c = TestClient(create_app(ws, cfg, "t", start_worker=False))
     c.headers["Authorization"] = "Bearer t"
     api = cfg.server.base_path.rstrip("/") + "/api"
     shown = c.get(f"{api}/settings").json()
     items = {i["key"]: i for i in shown["items"]}
-    assert items[WITHIN]["renamed_from"] == DATED and items[WITHIN]["value"] == cfg.value(WITHIN)
-    assert items[AFTER]["renamed_from"] is None
-    saved = c.post(f"{api}/settings", json={"changes": {WITHIN: 6}, "reset": [], "fingerprint": shown["fingerprint"]})
+    assert items[chase]["renamed_from"] == old and items[chase]["value"] == cfg.value(chase) == 3
+    saved = c.post(f"{api}/settings", json={"changes": {chase: 6}, "reset": [], "fingerprint": shown["fingerprint"]})
     assert saved.status_code == 200, saved.text
-    assert "chase_dated_days" not in steward.read_text(encoding="utf-8")
+    assert "nudge_after_days" not in target.read_text(encoding="utf-8")
     again = {i["key"]: i for i in c.get(f"{api}/settings").json()["items"]}
-    assert again[WITHIN]["value"] == 6 and again[WITHIN]["renamed_from"] is None
+    assert again[chase]["value"] == 6 and again[chase]["renamed_from"] is None

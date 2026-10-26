@@ -235,25 +235,24 @@ def test_a_stance_pair_needs_the_persons_keep_for_the_next_input_to_be_read_with
 # ---- Settings ----------------------------------------------------------------------------------------------------
 
 
-def test_settings_offer_the_default_stance_and_what_is_tracked_as_lists_to_pick_from(env):
+def test_the_default_stance_is_no_row_and_what_is_tracked_is_kept_in_files(env):
     from engine.settings import describe
 
     ws, cfg, store = env
     items = {s.key: s for s in describe(cfg, store.plugins, ws.config_dir)}
-    stance, tracks = items["steward.default_stance"], items["steward.tracks"]
-    assert (stance.type, stance.editable, stance.options) == (
-        "choice",
-        True,
-        ["manage", "alongside", "report_to", "watch"],
-    )
-    assert (tracks.type, tracks.editable, tracks.options) == ("list", True, ["dates", "decisions", "design"])
+    stance = items["steward.default_stance"]
+    assert (stance.type, stance.options) == ("choice", ["manage", "alongside", "report_to", "watch"])
+    # How a person is treated is asked per person, so no page lists the default; what is tracked is the product's.
+    assert stance.page is None and stance.topic is None and "steward.tracks" not in items
 
 
-def test_the_tracked_list_saves_through_settings(env):
-    from engine.settings import fingerprint, save
+def test_the_tracked_list_still_reads_from_its_file(env):
+    from engine.config.yaml_edit import set_key
 
     ws, cfg, store = env
-    save(ws, cfg, store, changes={"steward.tracks": ["dates"]}, reset=[], read_fingerprint=fingerprint(ws.config_dir))
+    target = ws.config_dir / "steward.yaml"
+    text = target.read_text(encoding="utf-8") if target.exists() else "version: 1\n"
+    target.write_text(set_key(text, ["tracks"], ["dates"]), encoding="utf-8")
     assert ws.config(env={}).steward.tracks == ["dates"]
 
 

@@ -952,6 +952,7 @@ describe("each screen", () => {
       changes: { "ai.budgets.per_day_usd": 5 },
       reset: [],
       fingerprint: "fp-1",
+      by_setup: true,
     });
     expect(await screen.findByRole("heading", { level: 2, name: "Mail and calendar" }, { timeout: 5000 })).toBeInTheDocument();
   });
@@ -1974,6 +1975,7 @@ describe("names", () => {
       changes: { "workspace.assistant_name": "Pilot" },
       reset: [],
       fingerprint: "fp-1",
+      by_setup: true,
     });
   });
 

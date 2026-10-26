@@ -1,0 +1,44 @@
+# What the app works out for settings no one sets (design 7.9, "The Settings cut"): a value a file, an environment
+# variable or a flag sets always wins, so a person who keeps one of these in a file never loses it.
+
+# How dates are written, by the language the assistant writes in: the day before the month for the varieties of English
+# that put it first. A language not listed here keeps the setting's own default (the month first, as in US English).
+date_formats_by_language:
+  en-GB: {date_format: "%a, %d %b", date_time_format: "%a, %d %b %Y, %H:%M"}
+  en-AU: {date_format: "%a, %d %b", date_time_format: "%a, %d %b %Y, %H:%M"}
+  en-IE: {date_format: "%a, %d %b", date_time_format: "%a, %d %b %Y, %H:%M"}
+  en-NZ: {date_format: "%a, %d %b", date_time_format: "%a, %d %b %Y, %H:%M"}
+  en-IN: {date_format: "%a, %d %b", date_time_format: "%a, %d %b %Y, %H:%M"}
+  en-ZA: {date_format: "%a, %d %b", date_time_format: "%a, %d %b %Y, %H:%M"}
+
+# The holiday calendar that goes with a time zone: the zone names of the place, or the front of a name that ends in a
+# slash. A zone listed for no calendar leaves the one for the language.
+holiday_calendar_zones:
+  en-GB:
+    - Europe/London
+    - Europe/Belfast
+    - Europe/Jersey
+    - Europe/Guernsey
+    - Europe/Isle_of_Man
+    - GB
+  en-US:
+    - America/New_York
+    - America/Chicago
+    - America/Denver
+    - America/Phoenix
+    - America/Los_Angeles
+    - America/Anchorage
+    - America/Adak
+    - America/Boise
+    - America/Detroit
+    - America/Juneau
+    - America/Menominee
+    - America/Metlakatla
+    - America/Nome
+    - America/Sitka
+    - America/Yakutat
+    - America/Indiana/
+    - America/Kentucky/
+    - America/North_Dakota/
+    - Pacific/Honolulu
+    - US/

@@ -33,6 +33,7 @@ from engine import audience, entry_rules, version_choices, versions
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.extract.attached import with_files_read
 from engine.names import People
+from engine.own_accounts import own_names
 from engine.storage import StoreError, WriteContext
 from engine.triage import classify, classify_placed
 
@@ -760,7 +761,7 @@ def is_own_work(cfg: Any, source: Any, item: SourceItem) -> bool:
     person = cfg.workspace.user.person
     if person and source.author == person:
         return True
-    return _named_in(item.author, cfg.workspace.user.accounts)
+    return _named_in(item.author, own_names(cfg))
 
 
 def _hand_in(

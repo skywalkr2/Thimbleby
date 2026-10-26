@@ -300,7 +300,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
 
 /** A side already saved: its name and kind, what is inside it, Rename (an edit of its project) and, while setup is open and
  * nothing is filed under it, Remove. */
-function SavedSide(props: {
+export function SavedSide(props: {
   side: Side;
   position: number;
   inside: string[];

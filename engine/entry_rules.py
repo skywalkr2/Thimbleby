@@ -15,6 +15,7 @@ from typing import Any
 
 from engine.connectors import EventDetails, EventPerson, SourceItem
 from engine.due_phrases import names_title
+from engine.own_accounts import own_names
 
 
 def identity(view: Any, cfg: Any) -> tuple[set[str], set[str]]:
@@ -23,7 +24,7 @@ def identity(view: Any, cfg: Any) -> tuple[set[str], set[str]]:
 
     mine = {a.email.casefold() for a in my_addresses(view, cfg)}
     me = view.get("person", cfg.workspace.user.person) if cfg.workspace.user.person else None
-    names = {n.casefold() for n in [*cfg.workspace.user.accounts, me.data["full_name"] if me else ""] if n}
+    names = {n.casefold() for n in [*own_names(cfg), me.data["full_name"] if me else ""] if n}
     return mine, names
 
 

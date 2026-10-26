@@ -1,63 +1,125 @@
-"""Where each setting is shown (design 7.9, "What a setting is shown as").
+"""Where each setting is shown (design 7.9, "The Settings cut").
 
-Every setting of the app's own files is one of three kinds:
+Every setting of the app's own files is one of these:
 
-- basic: on screen, the first thing a section shows (`engine.settings.BASIC`);
-- advanced: behind Advanced, in the words the person who set it up uses (`advanced` marker on the field);
-- internal: kept only in files, never listed on a screen (`internal` marker on the field): addresses, ids, callback
-  addresses, limits, timeouts, retry counts, ports, cache sizes, similarity cut-offs, word and pattern lists the
-  program reads, and format versions.
+- basic: on a page of Settings (You, AI and spending, Notices, Backups, Appearance, and Your business when there is
+  one), named in `BASIC` with the page it is on;
+- advanced: behind Advanced, in one of eight plain topics, named in `ADVANCED` with its topic;
+- own part: listed for the screens that edit it in their own way (a key box, a list of records), never a row of its own;
+- internal: kept only in files, never listed on a screen: removed, automated, a word list or a number the program
+  reads, an address, an id, a limit, a format version. Its key, schema and default stay, and it is settable in files,
+  environment variables, flags and profiles.
 
-A field's own marker wins. Otherwise the longest matching front below decides, so a new field in a group takes the
-group's kind; a field matching nothing here is neither, and the schema test fails until it is placed.
+A field's own marker wins. Otherwise a key named in `BASIC`, `ADVANCED` or `OWN_PART` is that kind, and the longest
+matching front of `INTERNAL` or `GROUPS_IN_FILES` decides for the rest, so a new field in a group is kept only in
+files until someone places it; a field matching nothing here is none of these, and the schema test fails until it is
+placed.
 """
 
 from __future__ import annotations
 
+import types
+import typing
 from typing import Any
 
 from pydantic import BaseModel
 
-#: Fronts of dotted keys (a front matches a key equal to it or starting with it plus a dot) that are advanced.
-ADVANCED = (
-    "ui.today",
-    "ui.followups",
-    "ui.walkthrough",
-    "ui.series",
-    "steward",
-    "watch.automated_mail",
-    "watch.mail_kinds",
-    "watch.propose_days",
-    "watch.propose_slots",
-    "watch.propose_round_minutes",
-    "watch.look_back_max_items",
+#: The page of each basic setting, in the order the page lists them.
+BASIC: dict[str, str] = {
+    "workspace.name": "you",
+    "workspace.assistant_name": "you",
+    "workspace.user.timezone": "you",
+    "workspace.language": "you",
+    "ai.budgets.confirm_above_usd": "ai",
+    "ai.budgets.per_day_usd": "ai",
+    "ai.budgets.per_month_usd": "ai",
+    "ui.notifications.enabled": "today",
+    "ui.notifications.browser": "today",
+    "steward.reminders.working_first_day": "today",
+    "steward.reminders.working_last_day": "today",
+    "steward.reminders.working_start": "today",
+    "steward.reminders.working_end": "today",
+    "steward.hold_outside_hours": "today",
+    "steward.reminders.quiet_start": "today",
+    "steward.reminders.quiet_end": "today",
+    "steward.brief.enabled": "today",
+    "steward.reminders.where": "today",
+    "steward.reminders.where_account": "today",
+    "storage.backups.automatic": "backups",
+    "storage.sync.folder": "backups",
+    "ui.theme": "appearance",
+    "ui.density": "appearance",
+    "workspace.project.business": "business",
+    "workspace.project.side_words.personal": "business",
+    "workspace.project.side_words.business": "business",
+}
+
+#: The topic of each advanced setting, in the order its topic lists them. The topics themselves are in `TOPICS`.
+ADVANCED: dict[str, str] = {
+    "ai.budgets.per_run_usd": "ai",
+    "ai.budgets.confirm_unpriced": "ai",
+    "ai.models.follow_newest": "ai",
+    "storage.backups.keep": "backups",
+    "storage.sync.shared": "backups",
+    "ui.brand.color": "appearance",
+    "ui.brand.logo": "appearance",
+    "dispatch.knowledge.learn": "learns",
+    "dispatch.knowledge.follow_on": "learns",
+    "dispatch.knowledge.check_on_switch": "learns",
+    "ui.followups.question_after_days": "followups",
+    "steward.people.snooze_days": "followups",
+    "steward.brief.morning_from": "notices",
+    "steward.brief.evening_from": "notices",
+    "steward.brief.weekly_day": "notices",
+    "steward.attention.daily_cap": "notices",
+    "steward.reminders.allowed_data": "notices",
+    "ui.notifications.webhook": "notices",
+    "ui.notifications.webhook_format": "notices",
+    "watch.automated_mail.set_aside": "mail",
+    "watch.mail_kinds.enabled": "mail",
+    "watch.sorting": "mail",
+    "steward.meetings.prep_hours_before": "meetings",
+    "steward.capacity.buffer_minutes": "meetings",
+    "steward.clashes.travel_minutes": "meetings",
+    "steward.capacity.tentative_is_free": "meetings",
+    "steward.dates.bookings_to_calendar": "meetings",
+    "steward.dates.suggest_reminders": "meetings",
+}
+
+#: The eight topics of Advanced, in the order they are listed.
+TOPICS = ("ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings")
+
+#: Listed for the part of a screen that edits them in its own way (a key box, a list of records, a switch on each
+#: account), never as a row of their own.
+OWN_PART = (
+    "workspace.plugins.secrets",
+    "storage.backups.encrypt",
+    "watch.acting",
+    "workspace.project.sides",
+    "steward.default_stance",
+)
+
+#: Removed, automated and moved-without-a-home fields: kept only in files, with their key, schema and default.
+FILES_ONLY = (
+    # Removed from the screen.
     "workspace.user.person",
-    "workspace.user.accounts",
     "workspace.owner_format",
     "workspace.project.completed_status",
-    "workspace.project.side_words",
     "workspace.plugins.enabled",
-    "workspace.plugins.catalog.enabled",
-    "workspace.plugins.catalog.feeds",
-    "workspace.our_accounts",
-    "storage.files.accepted_types",
-    "storage.kept_secrets",
+    "server.mode",
+    "server.base_path",
+    "server.open_browser",
     "storage.export.every_minutes",
     "storage.export.commit",
-    "storage.sync.watch_outside_edits",
-    "storage.sync.shared",
-    "ai.roles",
-    "ai.budgets.warn_at",
-    "ai.models.follow_newest",
-    "ai.borrow_other_tier",
-    "ai.credential_warn_days",
-    "dispatch.cleaning.remove_quoted",
-    "dispatch.knowledge.learn",
-    "dispatch.knowledge.follow_on",
-    "dispatch.knowledge.check_on_switch",
-    "language.messages.greeting",
+    "storage.kept_secrets.keep_days",
+    "storage.kept_secrets.undo_grace_minutes",
+    "ai.roles.write.tier",
+    "ai.roles.write.same_account",
+    "ai.roles.check.tier",
+    "ai.roles.check.same_account",
+    "ai.roles.research.tier",
+    "ai.roles.research.same_account",
     "language.messages.actions_heading",
-    "language.messages.closing",
     "language.messages.quiet_intro",
     "language.messages.quiet_subject",
     "language.messages.nudge_intro",
@@ -67,71 +129,126 @@ ADVANCED = (
     "language.messages.nudge_overdue",
     "language.messages.nudge_second_intro",
     "language.messages.nudge_second_ask",
-    "language.messages.date_format",
-    "language.messages.date_time_format",
     "language.self_words",
-    "language.known_terms",
+    "language.rejecting_words",
+    "language.blocked_phrases",
     "language.known_terms_shipped",
     "language.never_shown",
-    "language.holiday_calendar",
-    "language.rejecting_words",
     "language.limit_markings",
-    "language.blocked_phrases",
+    "ui.toast_seconds",
     "ui.feedback_to",
-    "ui.handled_group",
-    "ui.handled_rows_shown",
-    "ui.today.mail_hours",
-    "ui.today.agenda_days_ahead",
-    "ui.today.schedule_days",
-    "ui.today.stale_after_days",
-    "ui.today.top_priorities_lines",
-    "ui.followups.action_due_within_days",
-    "ui.followups.undated_after_days",
-    "ui.followups.question_after_days",
+    "ui.walkthrough.first_promises",
+    "ui.series.usually_with_share",
+    "ui.series.usually_with_min_meetings",
+    "ui.series.usually_with_max",
+    "ui.notifications.quiet_hours.start",
+    "ui.notifications.quiet_hours.end",
     "ui.notifications.message_one",
     "ui.notifications.message_many",
     "ui.notifications.test_message",
     "stages.moves",
-    "watch.set_aside_defaults",
-    "watch.automated_mail.set_aside",
-    "watch.mail_kinds.enabled",
-    "watch.sorting",
-    "watch.acting",
+    "watch.automated_mail.senders",
+    "watch.automated_mail.words",
+    "watch.mail_kinds.bill.senders",
+    "watch.mail_kinds.bill.subject_words",
+    "watch.mail_kinds.bill.words",
+    "watch.mail_kinds.order.senders",
+    "watch.mail_kinds.order.subject_words",
+    "watch.mail_kinds.order.words",
+    "watch.mail_kinds.shipping.senders",
+    "watch.mail_kinds.shipping.subject_words",
+    "watch.mail_kinds.shipping.words",
     "watch.public_mail_domains_extra",
-    "watch.handled_rule_section",
-    "watch.handled_keep_days",
+    "steward.version",
+    "steward.tracks",
+    "steward.meetings.setup_words",
+    "steward.people.date_words",
+    "steward.patterns.snooze_days",
+    # Automated: the app works the value out or fixes it.
+    "workspace.user.accounts",
+    "workspace.project.personal",
+    "workspace.our_accounts",
+    "storage.backups.every_hours",
+    "storage.files.accepted_types",
+    "storage.sync.watch_outside_edits",
+    "ai.budgets.first_go",
+    "ai.budgets.warn_at",
+    "ai.borrow_other_tier",
+    "ai.credential_warn_days",
+    "dispatch.cleaning.remove_quoted",
+    "language.messages.date_format",
+    "language.messages.date_time_format",
+    "language.holiday_calendar",
+    "ui.today.mail_hours",
+    "ui.today.mail_max",
+    "ui.today.agenda_days_ahead",
+    "ui.today.schedule_days",
+    "ui.today.stale_after_days",
+    "ui.today.top_priorities_lines",
+    "ui.today.top_priorities_ahead_days",
+    "ui.followups.action_due_within_days",
+    "ui.followups.undated_after_days",
+    "ui.followups.second_nudge_items",
+    "ui.followups.escalate_after_chases",
+    "watch.set_aside_defaults",
+    "watch.propose_days",
+    "watch.propose_slots",
+    "watch.propose_round_minutes",
+    "watch.look_back_max_items",
     "watch.stale_after_hours",
     "watch.default_data_level",
-    "steward.tracks",
     "steward.reminders.missed",
     "steward.reminders.later_today_hours",
     "steward.reminders.evening",
-    "steward.reminders.where",
-    "steward.reminders.where_account",
-    "steward.reminders.allowed_data",
-    "steward.hold_outside_hours",
-    "steward.brief.morning_from",
-    "steward.brief.evening_from",
+    "steward.reminders.late_after_minutes",
+    "steward.reminders.look_ahead_hours",
     "steward.brief.overnight_from",
-    "steward.brief.weekly_day",
     "steward.brief.max_lines",
     "steward.brief.goals_min",
     "steward.brief.goals_max",
     "steward.brief.offer_reminders",
-    "steward.meetings.prep_hours_before",
+    "steward.brief.remind_within_days",
+    "steward.meetings.prep_min_open",
     "steward.meetings.capture_hours_after",
+    "steward.meetings.max_items",
+    "steward.meetings.setup_lead_working_days",
+    "steward.meetings.invitation_days_ahead",
     "steward.people.quiet_promise_days",
-    "steward.capacity.buffer_minutes",
-    "steward.capacity.tentative_is_free",
-    "steward.clashes.travel_minutes",
+    "steward.people.max_facts",
+    "steward.clashes.days_ahead",
     "steward.attention.quiet",
-    "steward.attention.daily_cap",
-    "steward.dates.bookings_to_calendar",
-    "steward.dates.suggest_reminders",
-    "steward.dates.lead_days",
+    "steward.dates.lead_days.deadline",
+    "steward.dates.lead_days.renewal",
+    "steward.dates.lead_days.expiry",
+    "steward.dates.lead_days.warranty",
+    "steward.dates.lead_days.bill",
+    "steward.areas.propose_after",
+    "steward.patterns.moved_times",
+    "steward.patterns.redated_times",
+    "steward.patterns.owed_replies",
+    # Fields no cut named: screen tuning, and word lists and thresholds the program reads.
+    "workspace.plugins.preview_seconds",
+    "ai.estimates.context_margin",
+    "dispatch.knowledge.pack_searches",
+    "ui.handled_group",
+    "ui.handled_rows_shown",
+    "watch.versions.enabled",
+    "watch.versions.ignore_words",
+    "watch.versions.archive_folders",
+    "watch.handled_rule_section",
+    "watch.handled_keep_days",
+    # Moved to a screen that has no place for them yet: the catalog feeds (Add-ons, For developers), the message style
+    # (Follow-ups) and the glossary words (Knowledge).
+    "workspace.plugins.catalog.enabled",
+    "workspace.plugins.catalog.shipped_feed",
+    "workspace.plugins.catalog.feeds",
+    "workspace.plugins.catalog.release_tokens",
+    "language.messages.greeting",
+    "language.messages.closing",
+    "language.known_terms",
 )
 
-#: Fronts that are kept only in files. A longer advanced front above wins over a shorter front here.
+#: Fronts of dotted keys (a front matches a key equal to it or starting with it plus a dot) kept only in files.
 INTERNAL = (
     "workspace.project",
     "workspace.plugins",
@@ -177,23 +294,32 @@ INTERNAL = (
     "steward.reply_thread_days",
 )
 
-#: Basic keys that are not in `engine.settings.BASIC`'s own first list: promoted here so the three kinds sit together.
-BASIC_EXTRA = frozenset(
-    {
-        "workspace.project.personal",
-        "workspace.project.business",
-        "workspace.project.sides",
-        "ui.notifications.quiet_hours.start",
-        "ui.notifications.quiet_hours.end",
-        "steward.default_stance",
-        "steward.reminders.working_start",
-        "steward.reminders.working_end",
-        "steward.reminders.working_first_day",
-        "steward.reminders.working_last_day",
-        "steward.reminders.quiet_start",
-        "steward.reminders.quiet_end",
-        "steward.brief.enabled",
-    }
+#: Groups whose plain values used to show by default: only what `BASIC` and `ADVANCED` name is shown now, and the
+#: rest of the group is kept in files. A list of records in these groups keeps being edited by its own screen.
+GROUPS_IN_FILES = (
+    "ui.today",
+    "ui.followups",
+    "ui.walkthrough",
+    "ui.series",
+    "ui.feedback_to",
+    "ui.notifications",
+    "ui.toast_seconds",
+    "ui.handled_group",
+    "ui.handled_rows_shown",
+    "steward",
+    "watch",
+    "workspace.user",
+    "workspace.owner_format",
+    "workspace.our_accounts",
+    "server",
+    "storage.export",
+    "storage.kept_secrets",
+    "storage.backups",
+    "storage.sync",
+    "storage.files",
+    "ai.roles",
+    "ai.budgets",
+    "stages",
 )
 
 
@@ -207,17 +333,39 @@ def _front(key: str, fronts: tuple[str, ...]) -> int:
 
 
 def level_of(key: str) -> str | None:
-    """ "basic", "advanced", "internal", or None for a key no front places."""
-    if key in BASIC_EXTRA:
+    """ "basic", "advanced", "internal", or None for a key no front places. An own part is advanced: listed, flagged so
+    no page counts it, and never a row of its own."""
+    if key in BASIC:
         return "basic"
-    adv, internal = _front(key, ADVANCED), _front(key, INTERNAL)
-    if adv < 0 and internal < 0:
-        return None
-    return "advanced" if adv >= internal else "internal"
+    if key in ADVANCED or key in OWN_PART:
+        return "advanced"
+    if _front(key, FILES_ONLY + INTERNAL + GROUPS_IN_FILES) >= 0:
+        return "internal"
+    return None
+
+
+def place_of(key: str) -> tuple[str | None, str | None]:
+    """The page and the topic a setting is shown under: a basic setting's page, ("advanced", topic) for an advanced one,
+    and (None, None) for one that is no row."""
+    if key in BASIC:
+        return BASIC[key], None
+    if key in ADVANCED:
+        return "advanced", ADVANCED[key]
+    return None, None
+
+
+_ORDER = {key: n for n, key in enumerate([*BASIC, *ADVANCED])}
+
+
+def order_of(key: str) -> int:
+    """Where a setting sits among the shown ones: its page's order, then its topic's."""
+    return _ORDER.get(key, len(_ORDER))
 
 
 def apply(files: dict[str, type[BaseModel]]) -> None:
-    """Put the marker on every field of the files' models that has none, from the fronts above."""
+    """Put the marker on every field of the files' models from the lists above. A field that is shown (basic, advanced
+    or an own part) loses any marker it carried, so the lists alone decide; a field kept only in files takes
+    `internal`."""
     seen: dict[tuple[type, str], str] = {}
 
     def walk(model: type[BaseModel], path: list[str]) -> None:
@@ -228,17 +376,36 @@ def apply(files: dict[str, type[BaseModel]]) -> None:
                 walk(inner, here)
                 continue
             extra: dict[str, Any] = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
-            if extra.get("internal") is True or extra.get("advanced") is True:
+            key = ".".join(here)
+            level = level_of(key)
+            # A group front keeps only the plain values of its group in files: a list of records is edited by its own
+            # screen, so a front never changes it.
+            if level is None or (level == "internal" and not _plain(info.annotation) and not _named(key)):
                 continue
-            level = level_of(".".join(here))
-            if level in ("advanced", "internal"):
-                if seen.get((model, name), level) != level:
-                    raise RuntimeError(f"{'.'.join(here)} is shared by models that place it differently")
-                seen[(model, name)] = level
-                info.json_schema_extra = {**extra, level: True}
+            if seen.get((model, name), level) != level:
+                raise RuntimeError(f"{'.'.join(here)} is shared by models that place it differently")
+            seen[(model, name)] = level
+            kept = {k: v for k, v in extra.items() if k not in ("advanced", "internal")}
+            info.json_schema_extra = {**kept, level: True} if level in ("advanced", "internal") else kept or None
 
     for file, model in files.items():
         walk(model, [file])
+
+
+def _named(key: str) -> bool:
+    """Whether the key is kept in files by name or by a front that holds any field, not only by a group's front."""
+    return _front(key, FILES_ONLY + INTERNAL) >= 0
+
+
+def _plain(annotation: Any) -> bool:
+    """Whether a field holds a plain value (text, a number, a choice, a switch, a list of words) a form can show."""
+    args = [a for a in typing.get_args(annotation) if a is not type(None)]
+    origin = typing.get_origin(annotation)
+    if origin is typing.Literal or annotation in (bool, int, float, str):
+        return True
+    if origin in (typing.Union, getattr(types, "UnionType", None)) and len(args) == 1:
+        return _plain(args[0])
+    return origin is list and len(args) == 1 and (args[0] is str or typing.get_origin(args[0]) is typing.Literal)
 
 
 def _model_of(annotation: Any) -> type[BaseModel] | None:

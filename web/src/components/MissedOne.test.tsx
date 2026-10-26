@@ -28,7 +28,7 @@ function header(routes: Parameters<typeof fakeApi>[0] = {}) {
   renderApp(
     <RestartProvider hellos={1}>
       <MissedOneProvider>
-        <Header rc={rc} live={{ state: "live", lastUpdate: null, refresh: noop }} narrow={false} shortcuts={rc.shortcuts} onHandIn={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />
+        <Header rc={rc} live={{ state: "live", lastUpdate: null, refresh: noop }} narrow={false} shortcuts={rc.shortcuts} onHandIn={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} onOpenQuality={noop} />
       </MissedOneProvider>
     </RestartProvider>,
   );

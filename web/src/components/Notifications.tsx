@@ -117,12 +117,23 @@ function WebhookTarget(props: { local: boolean }) {
   );
 }
 
-/** The ways of getting a notice, under the settings that turn notices on. */
-export function Notifications() {
+/** The ways of getting a notice, under the settings that turn notices on. `part` shows only the browser's way (on the
+ * Notices page) or only the person's own chat or phone app (behind Advanced); left out, both. */
+export function Notifications(props: { part?: "browser" | "webhook" }) {
   const { t } = useWords();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const view = useQuery({ queryKey: ["notifications"], queryFn: api.notifications });
   const base = useId();
+  if (props.part === "webhook") {
+    return (
+      <section className="notice-targets" aria-labelledby={`${base}-title`}>
+        <h4 id={`${base}-title`}>{t("notices.advanced")}</h4>
+        <ul className={styles.targets}>
+          <WebhookTarget local={setup.data?.local ?? true} />
+        </ul>
+      </section>
+    );
+  }
   return (
     <section className="notice-targets" aria-labelledby={`${base}-title`}>
       <h3 id={`${base}-title`}>{t("notices.title")}</h3>
@@ -130,14 +141,16 @@ export function Notifications() {
       {view.data && !view.data.enabled && <p className="hint">{t("notices.off")}</p>}
       <ul className={styles.targets}>
         <BrowserTarget />
-        <li className={styles.target}>
-          <details className="more-options advanced">
-            <summary>{t("notices.advanced")}</summary>
-            <ul className={styles.targets}>
-              <WebhookTarget local={setup.data?.local ?? true} />
-            </ul>
-          </details>
-        </li>
+        {props.part === undefined && (
+          <li className={styles.target}>
+            <details className="more-options advanced">
+              <summary>{t("notices.advanced")}</summary>
+              <ul className={styles.targets}>
+                <WebhookTarget local={setup.data?.local ?? true} />
+              </ul>
+            </details>
+          </li>
+        )}
         {!view.data?.mail_ready && (
           <li className={styles.target} aria-labelledby={`${base}-mail`}>
             <h4 id={`${base}-mail`}>{t("notices.mail.title")}</h4>

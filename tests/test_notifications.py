@@ -323,8 +323,8 @@ def test_the_worker_sends_the_notice_from_the_settings_as_the_files_hold_them(tm
             json={
                 "changes": {
                     "ui.notifications.enabled": True,
-                    "ui.notifications.quiet_hours.start": "01:00",
-                    "ui.notifications.quiet_hours.end": "02:00",
+                    "steward.reminders.quiet_start": "01:00",
+                    "steward.reminders.quiet_end": "02:00",
                 },
                 "fingerprint": fingerprint(c, base),
             },

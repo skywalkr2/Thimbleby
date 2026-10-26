@@ -395,7 +395,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
       }
       if (zoneChanged) {
         const fresh = nameChanged ? await api.settings() : settings.data!;
-        const saved = await api.saveSettings({ changes: { [TIMEZONE]: zone.trim() }, reset: [], fingerprint: fresh.fingerprint });
+        const saved = await api.saveSettings({ changes: { [TIMEZONE]: zone.trim() }, reset: [], fingerprint: fresh.fingerprint, by_setup: true });
         setZoneEdit(null);
         await afterSave(saved);
       } else {

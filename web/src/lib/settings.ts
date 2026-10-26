@@ -74,6 +74,12 @@ export function addonLabel(name: string, t: T, has: Has): string {
   return has(key) ? t(key) : readable(name);
 }
 
+/** A heading for a topic of Advanced: the wording sheet's name for it, otherwise the group's heading. */
+export function topicLabel(topic: string, t: T, has: Has): string {
+  const key = `settings.topic.${topic}`;
+  return has(key) ? t(key) : groupLabel(topic, t, has);
+}
+
 /** A heading for a group: an add-on's name, the wording sheet's, otherwise its dotted name made readable. */
 export function groupLabel(group: string, t: T, has: Has): string {
   const addon = addonOf(group);
@@ -204,6 +210,18 @@ export function prefill(items: Item[], values: unknown): Item[] {
 export function isDefault(item: Item, value: unknown): boolean {
   const norm = (v: unknown) => (v === null || v === undefined ? (item.type === "yes_no" ? false : item.type === "list" ? [] : "") : v);
   return JSON.stringify(norm(value)) === JSON.stringify(norm(item.default));
+}
+
+/** Whether what is on screen counts as changed by the person: it differs from the default, except a value setup wrote
+ * that is still as setup left it. Something that can't be read yet (a number half typed) is a change. */
+export function isChanged(item: Item, edited: Parsed | null): boolean {
+  if (edited === null) return false;
+  if (!edited.ok) return true;
+  if (item.by_setup === true) {
+    const saved = fromDraft(item, toDraft(item));
+    if (saved.ok && JSON.stringify(saved.value) === JSON.stringify(edited.value)) return false;
+  }
+  return !isDefault(item, edited.value);
 }
 
 /** Whether a control can be edited in a form of items: the item itself says so. */

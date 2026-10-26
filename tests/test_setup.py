@@ -62,18 +62,20 @@ def test_a_key_inside_a_one_line_mapping_still_gets_the_right_value():
 
 
 def test_settings_are_described_for_the_forms(tmp_path, monkeypatch):
-    monkeypatch.setenv("COCKPIT__UI__TOAST_SECONDS", "3")
-    ws, cfg, store = make(tmp_path, env={"COCKPIT__UI__TOAST_SECONDS": "3"})
+    monkeypatch.setenv("COCKPIT__UI__DENSITY", "compact")
+    ws, cfg, store = make(tmp_path, env={"COCKPIT__UI__DENSITY": "compact"})
     c, api = client(ws, cfg, store)
     view = c.get(f"{api}/settings").json()
     items = {i["key"]: i for i in view["items"]}
     assert items["workspace.name"]["type"] == "text" and items["workspace.name"]["basic"]
+    assert items["workspace.name"]["page"] == "you" and items["workspace.name"]["topic"] is None
+    assert items["ui.brand.color"]["page"] == "advanced" and items["ui.brand.color"]["topic"] == "appearance"
     assert "server.port" not in items  # an address or port is kept only in files
     assert "storage.export.remote" not in items  # not offered until it is built
-    assert items["storage.export.every_minutes"]["editable"] is True
-    assert items["stages.moves"]["type"] == "choice" and items["stages.moves"]["options"] == ["person", "rule"]
+    assert "storage.export.every_minutes" not in items  # the backup's job in files words: files only
+    assert "stages.moves" not in items  # a template's choice, not a setting
     assert items["ai.providers"]["type"] == "other" and not items["ai.providers"]["editable"]
-    assert items["ui.toast_seconds"]["locked"] and items["ui.toast_seconds"]["source"] == "env"
+    assert items["ui.density"]["locked"] and items["ui.density"]["source"] == "env"
     assert "workspace.version" not in items and view["fingerprint"]
 
 
@@ -93,7 +95,7 @@ def test_a_feature_switch_comes_first_and_its_settings_name_it(tmp_path):
         assert switch.type in ("yes_no", "text"), f"{s.enabled_by} can't be on or off"
         assert order[switch.key] < order[s.key], f"{s.enabled_by} must come before {s.key}"
         assert switch.basic or not s.basic, f"{s.key} is shown first but its switch {s.enabled_by} isn't"
-    assert by_key["storage.backups.every_hours"].enabled_by == "storage.backups.automatic"
+    assert "storage.backups.every_hours" not in by_key  # daily, automatically: the app's own schedule
     backups = [s.key for s in found if s.group == "storage.backups"]
     assert backups[0] == "storage.backups.automatic"
     assert by_key["storage.sync.folder"].picker == "folder"
@@ -101,13 +103,14 @@ def test_a_feature_switch_comes_first_and_its_settings_name_it(tmp_path):
     assert all(s.type == "text" for s in found if s.picker)
 
 
-def test_the_appearance_settings_are_shown_first_so_that_section_has_something_without_more_settings(tmp_path):
+def test_the_appearance_page_holds_light_or_dark_and_density_and_the_brand_is_behind_advanced(tmp_path):
     from engine import settings
 
     _, cfg, store = make(tmp_path)
     store.close()
-    basic = {s.key for s in settings.describe(cfg) if s.basic}
-    assert {"ui.theme", "ui.density", "ui.brand.color", "ui.brand.logo"} <= basic
+    found = settings.describe(cfg)
+    assert {s.key for s in found if s.page == "appearance"} == {"ui.theme", "ui.density"}
+    assert {s.key for s in found if s.topic == "appearance"} == {"ui.brand.color", "ui.brand.logo"}
 
 
 def test_saves_in_a_row_each_use_the_fingerprint_the_one_before_answered_with(tmp_path):
@@ -119,13 +122,13 @@ def test_saves_in_a_row_each_use_the_fingerprint_the_one_before_answered_with(tm
     first = c.post(f"{api}/settings", json={"changes": {"workspace.name": "First"}, "fingerprint": fingerprint})
     assert first.status_code == 200, first.text
     second = c.post(
-        f"{api}/settings", json={"changes": {"ui.toast_seconds": 9}, "fingerprint": first.json()["fingerprint"]}
+        f"{api}/settings", json={"changes": {"ui.density": "compact"}, "fingerprint": first.json()["fingerprint"]}
     )
     assert second.status_code == 200, second.text
     stale = c.post(f"{api}/settings", json={"changes": {"workspace.name": "Stale"}, "fingerprint": fingerprint})
     assert stale.status_code == 409
     now = load_config(ws.config_dir, env={})
-    assert now.workspace.name == "First" and now.ui.toast_seconds == 9
+    assert now.workspace.name == "First" and now.ui.density == "compact"
     # Reset is a save like any other: the key goes back to its default, and the answer says it is the default now.
     reset = c.post(f"{api}/settings", json={"reset": ["workspace.name"], "fingerprint": second.json()["fingerprint"]})
     assert reset.status_code == 200 and reset.json()["changes"][0]["is_default"] is True
@@ -152,15 +155,15 @@ def test_a_save_writes_the_file_records_the_change_and_never_races(tmp_path):
 
 
 def test_a_bad_value_or_a_locked_key_writes_nothing(tmp_path, monkeypatch):
-    monkeypatch.setenv("COCKPIT__UI__TOAST_SECONDS", "3")
-    ws, cfg, store = make(tmp_path, env={"COCKPIT__UI__TOAST_SECONDS": "3"})
+    monkeypatch.setenv("COCKPIT__UI__DENSITY", "compact")
+    ws, cfg, store = make(tmp_path, env={"COCKPIT__UI__DENSITY": "compact"})
     c, api = client(ws, cfg, store)
     before = (ws.config_dir / "storage.yaml").read_text()
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     bad = c.post(f"{api}/settings", json={"changes": {"storage.backups.keep": 0}, "fingerprint": fingerprint})
     assert bad.status_code == 400 and "How many backups to keep" in bad.json()["detail"]
     assert (ws.config_dir / "storage.yaml").read_text() == before
-    locked = c.post(f"{api}/settings", json={"changes": {"ui.toast_seconds": 9}, "fingerprint": fingerprint})
+    locked = c.post(f"{api}/settings", json={"changes": {"ui.density": "comfortable"}, "fingerprint": fingerprint})
     assert locked.status_code == 400 and "set by an environment variable" in locked.json()["detail"]
     server = c.post(f"{api}/settings", json={"changes": {"server.port": 9000}, "fingerprint": fingerprint})
     assert server.status_code == 400
@@ -1282,7 +1285,8 @@ def test_a_choice_list_includes_the_current_value_when_it_is_not_one_of_the_list
 def test_a_setting_whose_value_is_a_secret_reference_is_marked_secret():
     items = _described()
     assert items["workspace.name"].secret is False
-    assert any(s.secret for s in items.values() if s.key.startswith("workspace.plugins.catalog.release_tokens"))
+    assert items["workspace.plugins.secrets"].secret
+    assert any(s.secret for s in items.values() if s.key == "ui.notifications.webhook")
 
 
 def test_setup_state_survives_changes_made_at_the_same_time(tmp_path):

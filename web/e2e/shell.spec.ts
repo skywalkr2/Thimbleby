@@ -650,7 +650,7 @@ test.describe("screen use and the shell", () => {
     { name: "Rules review", hash: "records/rules-review" },
     { name: "Connections", hash: "settings/connections" },
     { name: "Add-ons", hash: "settings/addons" },
-    { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "Workspace name" }) },
+    { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "This workspace's name" }) },
     { name: "What each account can do", hash: "settings/ai-compare" },
     { name: "Quality", hash: "quality", field: (page) => page.locator("main form input[type=date]").first() },
     { name: "Handover", hash: "handover" },
@@ -836,25 +836,25 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
 
   test("Settings saves each change as it is made, with Changed and Reset, a toast with Undo, and no Save button", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await signIn(page, "settings/appearance");
-    const seconds = page.getByRole("textbox", { name: "Seconds a message stays on screen" });
-    await expect(seconds).toBeFocused();
+    await signIn(page, "settings/you");
+    const name = page.getByRole("textbox", { name: "This workspace's name" });
+    await expect(name).toBeFocused();
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
-    const before = await seconds.inputValue();
-    await seconds.fill("17");
-    await seconds.press("Enter");
+    const before = await name.inputValue();
+    await name.fill("Harbor workspace");
+    await name.press("Enter");
     const toasts = page.getByRole("region", { name: "Notifications" });
-    await expect(toasts).toContainText("Seconds a message stays on screen: 17", SAVED);
-    const row = page.locator(".setting", { has: seconds });
+    await expect(toasts).toContainText("This workspace's name: Harbor workspace", SAVED);
+    const row = page.locator(".setting", { has: name });
     await expect(row.getByText("Changed", { exact: true })).toBeVisible();
     await toasts.getByRole("button", { name: "Undo" }).first().click();
     // An Undo is done when it says so: it saves, then reloads what every screen shows, which a busy computer takes longer over.
     await expect(toasts).toContainText("Undone.", SAVED);
-    await expect(seconds).toHaveValue(before);
+    await expect(name).toHaveValue(before);
     // Reset puts it back to its default at once, and says so.
-    await seconds.fill("19");
-    await seconds.press("Enter");
-    await expect(toasts).toContainText("Seconds a message stays on screen: 19", SAVED);
+    await name.fill("Second harbor");
+    await name.press("Enter");
+    await expect(toasts).toContainText("This workspace's name: Second harbor", SAVED);
     await row.getByRole("button", { name: /^Reset/ }).click();
     await expect(row.getByText("Changed", { exact: true })).toHaveCount(0, SAVED);
     await expectNoViolations(page);
@@ -862,7 +862,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
 
   test("Settings: the help sits beside each setting on a wide screen and under it on a phone, and the section list stacks above", async ({ page }) => {
     await signIn(page, "settings/backups");
-    const row = page.locator(".setting").filter({ hasText: "Hours between backups" }).first();
+    const row = page.locator(".setting").filter({ hasText: "Back up automatically" }).first();
     await expect(row).toBeVisible();
     await page.setViewportSize({ width: 1440, height: 900 });
     const wide = { field: (await row.locator("[data-main]").boundingBox())!, help: (await row.locator("[data-help]").boundingBox())! };

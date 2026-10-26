@@ -75,10 +75,9 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
       await expect(page.getByRole("group", { name: "Rule 1" })).toBeVisible(LOADED);
     },
   },
-  { name: "Settings: Backups and sync", hash: "settings/backups", ready: (page) => section(page, "Backups and sync") },
-  { name: "Settings: Today", hash: "settings/today", ready: (page) => section(page, "Today") },
+  { name: "Settings: Backups", hash: "settings/backups", ready: (page) => section(page, "Backups") },
+  { name: "Settings: Notices", hash: "settings/today", ready: (page) => section(page, "Notices") },
   { name: "Settings: Appearance", hash: "settings/appearance", ready: (page) => section(page, "Appearance") },
-  { name: "Settings: Lists", hash: "settings/lists", ready: (page) => section(page, "Lists") },
   { name: "Settings: Advanced", hash: "settings/advanced", ready: (page) => section(page, "Advanced") },
 ];
 

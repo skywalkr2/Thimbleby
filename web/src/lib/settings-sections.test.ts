@@ -1,11 +1,11 @@
 import type { S } from "./api";
 import { isListed, navSections, sectionItems, sectionOfItem, topics } from "./settings-sections";
 
-function item(key: string, group: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
+function item(key: string, page: S["SettingItem"]["page"], extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
   return {
     key,
     file: key.split(".")[0],
-    group,
+    group: key.split(".").slice(0, 2).join("."),
     description: `What ${key} does`,
     type: "text",
     options: [],
@@ -13,77 +13,105 @@ function item(key: string, group: string, extra: Partial<S["SettingItem"]> = {})
     default: "",
     source: "default",
     locked: false,
-    basic: true,
+    basic: page !== "advanced",
     editable: true,
+    page,
     ...extra,
   };
 }
 
 const ITEMS = [
-  item("workspace.name", "workspace"),
-  item("workspace.user.timezone", "workspace.user"),
-  item("workspace.plugins.catalog.enabled", "workspace.plugins.catalog", { basic: false }),
-  item("ai.budgets.per_run_usd", "ai.budgets"),
-  item("ai.roles.cheap", "ai.roles", { basic: false }),
-  item("storage.sync.folder", "storage.sync"),
-  item("ui.theme", "ui"),
-  item("ui.brand.color", "ui.brand", { basic: false }),
-  item("ui.today.lines", "ui.today", { basic: false }),
-  item("dispatch.knowledge.learn", "dispatch.knowledge", { basic: false }),
-  item("plugins/sample-pack.greeting", "plugins/sample-pack", { plugin: "sample-pack" }),
+  item("workspace.name", "you"),
+  item("workspace.user.timezone", "you"),
+  item("ai.budgets.per_day_usd", "ai"),
+  item("ai.budgets.per_run_usd", "advanced", { topic: "ai" }),
+  item("storage.sync.folder", "backups"),
+  item("storage.sync.shared", "advanced", { topic: "backups" }),
+  item("ui.theme", "appearance"),
+  item("ui.brand.color", "advanced", { topic: "appearance" }),
+  item("steward.reminders.quiet_start", "today"),
+  item("steward.meetings.prep_hours_before", "advanced", { topic: "meetings" }),
+  item("dispatch.knowledge.learn", "advanced", { topic: "learns" }),
+  item("workspace.project.side_words.personal", "business"),
+  // A setting the app keeps only in files is listed to the API for a part of a screen, and has no page.
+  item("watch.acting", null, { type: "list" }),
+  item("plugins/sample-pack.greeting", null, { plugin: "sample-pack", group: "plugins/sample-pack" }),
 ];
 
-test("each setting belongs to one section, by its group", () => {
+test("each setting belongs to the one section the app places it on, and an add-on's settings to its own", () => {
   const by = Object.fromEntries(ITEMS.map((i) => [i.key, sectionOfItem(i)]));
-  expect(by).toEqual({
+  expect(by).toMatchObject({
     "workspace.name": "you",
-    "workspace.user.timezone": "you",
-    "workspace.plugins.catalog.enabled": "advanced",
-    "ai.budgets.per_run_usd": "ai",
-    "ai.roles.cheap": "ai",
+    "ai.budgets.per_day_usd": "ai",
+    "ai.budgets.per_run_usd": "advanced",
     "storage.sync.folder": "backups",
     "ui.theme": "appearance",
-    "ui.brand.color": "appearance",
-    "ui.today.lines": "today",
-    "dispatch.knowledge.learn": "advanced",
+    "steward.reminders.quiet_start": "today",
+    "workspace.project.side_words.personal": "business",
     "plugins/sample-pack.greeting": "addon/sample-pack",
   });
 });
 
-test("a section lists its basic settings first, and every setting is in exactly one section", () => {
-  const you = sectionItems(ITEMS, "you").map((i) => i.key);
-  expect(you).toEqual(["workspace.name", "workspace.user.timezone"]);
-  const ai = sectionItems(ITEMS, "ai").map((i) => i.key);
-  expect(ai).toEqual(["ai.budgets.per_run_usd", "ai.roles.cheap"]);
-  const all = navSections(ITEMS, { lists: true, files: true }).flatMap((s) => sectionItems(ITEMS, s));
-  expect(all.length).toBe(ITEMS.length);
+test("a section lists the settings placed on it, in the order the app sends them, and every listed setting is in exactly one section", () => {
+  expect(sectionItems(ITEMS, "you").map((i) => i.key)).toEqual(["workspace.name", "workspace.user.timezone"]);
+  expect(sectionItems(ITEMS, "ai").map((i) => i.key)).toEqual(["ai.budgets.per_day_usd"]);
+  const sections = navSections(ITEMS, { business: true, files: true });
+  const all = sections.flatMap((s) => sectionItems(ITEMS, s));
+  expect(all.length).toBe(ITEMS.filter(isListed).length);
 });
 
-test("the section list has the basic sections first, then lists and files where there are some, Advanced, then each add-on", () => {
-  expect(navSections(ITEMS, { lists: true, files: true })).toEqual([
-    "you", "ai", "connections", "addons", "backups", "today", "appearance", "lists", "files", "advanced", "addon/sample-pack",
+test("the section list has the pages of basic settings, Your business where there is one, Connections and Add-ons, Advanced, then each add-on", () => {
+  expect(navSections(ITEMS, { business: true, files: true })).toEqual([
+    "you",
+    "ai",
+    "today",
+    "backups",
+    "appearance",
+    "business",
+    "connections",
+    "addons",
+    "files",
+    "advanced",
+    "addon/sample-pack",
   ]);
+  // Without a business there is no page for one, and the Lists that sit on it are not offered either.
+  expect(navSections(ITEMS, { business: false, files: false })).not.toContain("business");
   // Nothing to show means no entry, except AI accounts, Connections and Add-ons, which always have their lists.
-  expect(navSections([item("workspace.name", "workspace")], { lists: false, files: false })).toEqual(["you", "ai", "connections", "addons"]);
+  expect(navSections([item("workspace.name", "you")], { business: false, files: false })).toEqual(["you", "ai", "connections", "addons"]);
 });
 
-test("Advanced is grouped by topic, one topic for each group, in the order the groups first appear", () => {
-  const adv = sectionItems(ITEMS, "advanced");
-  expect(topics(adv).map((t) => [t.group, t.items.length])).toEqual([
-    ["workspace.plugins.catalog", 1],
-    ["dispatch.knowledge", 1],
+test("Advanced is grouped by topic, in the order of the eight topics, each topic holding its settings in the order sent", () => {
+  const more = [item("dispatch.knowledge.follow_on", "advanced", { topic: "learns" }), item("steward.attention.daily_cap", "advanced", { topic: "notices" })];
+  const adv = sectionItems([...ITEMS, ...more], "advanced");
+  expect(topics(adv).map((t) => [t.group, t.items.map((i) => i.key)])).toEqual([
+    ["ai", ["ai.budgets.per_run_usd"]],
+    ["backups", ["storage.sync.shared"]],
+    ["appearance", ["ui.brand.color"]],
+    ["learns", ["dispatch.knowledge.learn", "dispatch.knowledge.follow_on"]],
+    ["notices", ["steward.attention.daily_cap"]],
+    ["meetings", ["steward.meetings.prep_hours_before"]],
   ]);
 });
 
-test("the tier of each kind of work, what a tier tries once more on and the routing rules are not rows of their own: a part of the AI section edits them", () => {
-  const own = [item("ai.tasks", "ai", { type: "other" }), item("ai.tiers", "ai", { type: "other" }), item("ai.routing", "ai", { type: "other" })];
-  expect(own.map(isListed)).toEqual([false, false, false]);
-  expect(sectionItems([...ITEMS, ...own], "ai").map((i) => i.key)).not.toEqual(expect.arrayContaining(["ai.routing"]));
-  expect(sectionItems([...ITEMS, ...own], "ai").map((i) => i.key)).toContain("ai.budgets.per_run_usd");
+test("the tier of each kind of work, the routing rules and the business are not rows of their own: a part of a screen edits them", () => {
+  const own = [
+    item("ai.tasks", null, { type: "other" }),
+    item("ai.routing", null, { type: "other" }),
+    item("workspace.project.business", "business"),
+    item("steward.reminders.where", "today", { type: "choice" }),
+    item("ui.notifications.webhook", "advanced", { topic: "notices" }),
+  ];
+  expect(own.map(isListed)).toEqual([false, false, false, false, false]);
+  expect(sectionItems([...ITEMS, ...own], "business").map((i) => i.key)).toEqual(["workspace.project.side_words.personal"]);
 });
 
 test("the accounts the assistant may act on are a switch on each account, not a row of their own", () => {
-  const acting = item("watch.acting", "watch", { type: "list" });
+  const acting = item("watch.acting", null, { type: "list" });
   expect(isListed(acting)).toBe(false);
   expect(sectionItems([...ITEMS, acting], "advanced").map((i) => i.key)).not.toContain("watch.acting");
+});
+
+test("a setting with no page is no row: it is kept in files", () => {
+  expect(isListed(item("storage.export.commit", null))).toBe(false);
+  expect(isListed(item("ui.theme", "appearance"))).toBe(true);
 });

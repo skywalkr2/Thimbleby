@@ -42,7 +42,7 @@ const SCREENS = [
   { name: "Connections", hash: "settings/connections" },
   { name: "Add-ons", hash: "settings/addons" },
   { name: "Settings", hash: "settings" },
-  { name: "Settings, Today", hash: "settings/today" },
+  { name: "Settings, Notices", hash: "settings/today" },
   { name: "Quality", hash: "quality" },
   { name: "Handover", hash: "handover" },
 ];

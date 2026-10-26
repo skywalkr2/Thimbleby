@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../lib/api";
 import { useTierName } from "../lib/ai-routing";
-import { depthOf, fileName, formatValue, fromDraft, isDefault, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
+import { depthOf, fileName, formatValue, fromDraft, isChanged, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
 import { zoneChoices } from "../lib/time-zones";
 import { dateFormatChoices } from "../lib/date-formats";
 import { languageChoices } from "../lib/languages";
@@ -16,6 +16,8 @@ import { SecretField, type SecretInput } from "./SecretField";
 
 export function SettingRow(props: {
   item: Item;
+  /** The words for the label when the screen knows better than the sheet (a name it holds); else the sheet's. */
+  label?: string;
   draft: Draft;
   onChange: (draft: Draft) => void;
   /** Puts the setting back to its default; "Reset" is shown beside the label only while the value differs from it. */
@@ -42,7 +44,7 @@ export function SettingRow(props: {
   const chooser = useRef<HTMLButtonElement>(null);
   const { item, draft } = props;
   const id = `${props.idPrefix ?? ""}setting-${item.key}`;
-  const label = labelOf(item, t, has);
+  const label = props.label ?? labelOf(item, t, has);
   const readOnly = item.type === "other" || (!item.locked && !item.editable);
   const note = item.locked
     ? t(item.source === "env" ? "settings.locked_env" : "settings.locked_flag")
@@ -56,9 +58,11 @@ export function SettingRow(props: {
   const hint = label !== item.description ? item.description : null;
   const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft) : null;
   const invalid = parsed && !parsed.ok ? t(`settings.invalid.${parsed.problem}`) : null;
-  // Changed from the default: what is on screen, so it shows as soon as it is typed and Reset undoes it.
+  // Changed from the default by the person: what is on screen, so it shows as soon as it is typed and Reset undoes it. A
+  // value setup wrote is the person's answer to a question, not a change.
   const edited = !readOnly && !item.locked ? fromDraft(item, draft) : null;
-  const changed = edited !== null && (!edited.ok || !isDefault(item, edited.value));
+  const changed = isChanged(item, edited);
+  const showDefault = changed && item.type !== "other";
   const problem = props.problem || null;
   const waiting = props.gate ? t(props.gate.type === "yes_no" ? "settings.needs_on" : "settings.needs_value", { label: labelOf(props.gate, t, has) }) : null;
   const describedBy = [
@@ -68,7 +72,7 @@ export function SettingRow(props: {
     invalid && `${id}-bad`,
     problem && `${id}-problem`,
     note && `${id}-note`,
-    `${id}-default`,
+    showDefault && `${id}-default`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -339,7 +343,7 @@ export function SettingRow(props: {
             {hint}
           </p>
         )}
-        {item.type !== "other" && (
+        {showDefault && (
           <p className="hint" id={`${id}-default`}>
             {t("settings.default", { value: valueWords(item.default) })}
           </p>

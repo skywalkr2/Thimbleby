@@ -127,8 +127,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     setView(recordView(kind, id));
   };
   const shown = parseView(view);
-  // The grid of what each account can do and the quality figures belong to Settings, so Settings stays marked in the navigation.
-  const navView: View = view === "schedule" ? "today" : view === "settings/ai-compare" || view === "quality" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
+  // The grid of what each account can do belongs to Settings, so Settings stays marked in the navigation.
+  const navView: View = view === "schedule" ? "today" : view === "settings/ai-compare" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened
@@ -201,8 +201,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;
     }
     // A screen reached from Settings keeps the Settings side bar, so every other section is one choice away.
-    const framed = (page: "quality" | undefined, under: SettingsSection | undefined, body: ReactNode) => (
-      <SettingsFrame page={page} under={under} choose={(section) => setView(settingsView(section))} onOpenQuality={() => setView("quality")}>
+    const framed = (under: SettingsSection | undefined, body: ReactNode) => (
+      <SettingsFrame under={under} choose={(section) => setView(settingsView(section))}>
         {body}
       </SettingsFrame>
     );
@@ -254,7 +254,6 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         // Connections and Add-ons are sections of Settings: each shows its own screen beside the Settings side bar.
         if (shown.section === "connections") {
           return framed(
-            undefined,
             "connections",
             <Sources
               onAsk={(question) => setAsk({ question })}
@@ -264,14 +263,13 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             />,
           );
         }
-        if (shown.section === "addons") return framed(undefined, "addons", <Addons />);
+        if (shown.section === "addons") return framed("addons", <Addons />);
         return (
           <Settings
             onOpenGuide={openGuide}
             onChooseSource={openAddSource}
             onOpenKnowledge={() => setView("records/knowledge")}
             onOpenCompare={() => setView("settings/ai-compare")}
-            onOpenQuality={() => setView("quality")}
             section={shown.section}
             onSection={(section) => setView(settingsView(section))}
             addAccount={addAccount}
@@ -279,11 +277,11 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           />
         );
       case "settings/ai-compare":
-        return framed(undefined, "ai", <AiCompare onBack={() => setView(settingsView("ai"))} />);
+        return framed("ai", <AiCompare onBack={() => setView(settingsView("ai"))} />);
       case "handover":
         return <Handover />;
       case "quality":
-        return framed("quality", undefined, <Quality onBack={() => setView("settings")} />);
+        return <Quality onBack={() => setView("today")} />;
       case "styleguide":
         return styleGuideShown(rc) ? <StyleGuide /> : null;
       default:
@@ -372,6 +370,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           onHelp={() => setHelp(true)}
           onFeedback={openFeedback}
           onOpenGuide={openGuide}
+          onOpenQuality={() => setView("quality")}
         />
         {!narrow && <Sidebar current={navView} expanded={sidebar.expanded} onToggle={sidebar.toggle} />}
         <main id="main" className={shell.main} tabIndex={-1}>

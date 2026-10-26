@@ -110,7 +110,9 @@ def test_what_stays_technical_is_marked_advanced_and_still_listed(tmp_path):
     # Settings that name a secret reference, a token or a command-line way of working are reachable, behind Advanced.
     for key in ("ai.budgets.confirm_unpriced", "storage.backups.encrypt", "ui.notifications.webhook"):
         assert items[key].advanced, key
-    assert not items["ai.budgets.per_run_usd"].advanced and items["ai.budgets.per_run_usd"].basic
+    # The most one piece of work may cost is behind Advanced too: the day and the month are what people think in.
+    assert items["ai.budgets.per_run_usd"].advanced and items["ai.budgets.per_run_usd"].topic == "ai"
+    assert items["ai.budgets.per_day_usd"].basic and not items["ai.budgets.per_day_usd"].advanced
     assert not items["ai.budgets.confirm_unpriced"].basic
 
 

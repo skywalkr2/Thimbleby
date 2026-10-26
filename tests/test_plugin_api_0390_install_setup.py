@@ -57,6 +57,14 @@ def fingerprint(c, api):
 # ---- 185 and 183: values added to a list setting ---------------------------------------------------------------------
 
 
+def put_types(ws, value):
+    """The accepted file types as a person who keeps them in the file sets them: no screen lists this setting."""
+    from engine.config.yaml_edit import set_key
+
+    target = ws.config_dir / "storage.yaml"
+    target.write_text(set_key(target.read_text(encoding="utf-8"), ["files", "accepted_types"], value), encoding="utf-8")
+
+
 def test_a_step_adds_values_to_the_persons_own_list_and_shows_only_what_is_missing(env):
     ws, cfg, store = env
     from engine import setup
@@ -69,10 +77,7 @@ def test_a_step_adds_values_to_the_persons_own_list_and_shows_only_what_is_missi
     assert shown["p18/types"]["adds"] == {"storage.files.accepted_types": [EXTRA]}
     # The person's own list has an entry the step never heard of, and it keeps its place.
     mine = [*cfg.storage.files.accepted_types, "image/x-mine"]
-    saved = c.post(
-        f"{api}/settings", json={"changes": {"storage.files.accepted_types": mine}, "fingerprint": fingerprint(c, api)}
-    )
-    assert saved.status_code == 200, saved.text
+    put_types(ws, mine)
     done = c.post(f"{api}/setup/p18/types/apply-settings", json={"fingerprint": fingerprint(c, api)})
     assert done.status_code == 200, done.text
     after = load_config(ws.config_dir, env={}).storage.files.accepted_types
@@ -100,13 +105,7 @@ def test_a_step_reads_the_effective_list_and_a_list_with_everything_has_nothing_
     assert seen["storage.files.accepted_types"] == list(cfg.storage.files.accepted_types)
     c, api = web(ws, cfg, store)
     full = [*cfg.storage.files.accepted_types, EXTRA]
-    assert (
-        c.post(
-            f"{api}/settings",
-            json={"changes": {"storage.files.accepted_types": full}, "fingerprint": fingerprint(c, api)},
-        ).status_code
-        == 200
-    )
+    put_types(ws, full)
     cfg = load_config(ws.config_dir, env={})
     from engine.storage import Store
 

@@ -51,7 +51,7 @@ export function RenameName(props: {
     setProblem("");
     try {
       const fingerprint = knownFingerprint(client, settings.data!.fingerprint) ?? settings.data!.fingerprint;
-      const saved = await api.saveSettings({ changes: { [props.settingKey]: text }, reset: [], fingerprint });
+      const saved = await api.saveSettings({ changes: { [props.settingKey]: text }, reset: [], fingerprint, by_setup: true });
       setDraft(null);
       await afterSave(saved);
     } catch (err) {

@@ -18,6 +18,7 @@ from typing import Any
 from engine.automatic_mail import classify_automatic
 from engine.blocked import standing_hold
 from engine.mail_threads import ThreadCandidate, normalize_subject, thread_key
+from engine.own_accounts import own_names
 from engine.replies_owed import Address, Message, reply_owed
 from engine.reply_split import split_message
 
@@ -139,7 +140,7 @@ def my_addresses(view: Any, cfg: Any) -> list[Address]:
     found: dict[str, Address] = {}
     person = view.get("person", cfg.workspace.user.person) if cfg.workspace.user.person else None
     values = list((person.data.get("how_to_reach") or {}).values()) if person is not None else []
-    for value in [*values, *cfg.workspace.user.accounts]:
+    for value in [*values, *own_names(cfg)]:
         parsed = _address(str(value))
         if parsed is not None:
             found.setdefault(parsed.email.casefold(), parsed)

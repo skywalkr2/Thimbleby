@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, ValidationError
 
+from engine.config import automatic
 from engine.config.schema import CURRENT_VERSIONS, FILES, FileModel
 from engine.yaml_load import load_yaml
 
@@ -159,6 +160,7 @@ def load_config(
         _set_dotted(raw, key, value)
         sources[key] = "flag"
 
+    automatic.apply(raw, sources)
     files: dict[str, FileModel] = {}
     for name, model in FILES.items():
         try:

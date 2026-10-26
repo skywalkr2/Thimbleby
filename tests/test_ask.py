@@ -102,7 +102,7 @@ def test_a_handle_resolves_among_the_current_settings_and_an_unknown_one_is_refu
 
 
 def test_handles_that_collide_get_longer_so_each_names_one_setting(monkeypatch):
-    first, second, third = "storage.backups.keep", "storage.backups.every_hours", "ui.toast_seconds"
+    first, second, third = "storage.backups.keep", "storage.sync.shared", "ui.density"
     real = config_screens._digest
 
     def colliding(key):
@@ -164,7 +164,8 @@ def test_a_setting_the_screens_dont_change_is_never_suggested(app):
         {"op": "answer", "text": "The address prefix is set in its file.", "cites": [{"quote": BACKUP_WORDS}]},
         {
             "op": "setting.propose",
-            "setting": code_of(load_config(ws.config_dir, env={}), "server.base_path"),
+            # Kept only in files, so the assistant is never given a code for it: a code made up for it names nothing.
+            "setting": config_screens.handle_of("server.base_path"),
             "value": "/other",
             "why": "Another prefix.",
         },

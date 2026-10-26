@@ -176,23 +176,16 @@ def test_the_held_project_in_the_change_list_carries_the_not_read_note(env):
 # ---- dates are lists ----------------------------------------------------------------------------------------
 
 
-def test_the_date_formats_are_lists_of_known_formats_that_keep_a_value_set_outside_them(tmp_path):
+def test_the_date_formats_are_kept_in_files_and_a_value_set_there_still_loads(tmp_path):
     from engine.config import load_config
     from engine.settings import describe
 
     ws, cfg, store = make(tmp_path)
     store.close()
-    shown = {s.key: s for s in describe(cfg)}
-    for key, name in (
-        ("language.messages.date_format", "date_formats"),
-        ("language.messages.date_time_format", "date_time_formats"),
-    ):
-        assert shown[key].type == "choice" and shown[key].choices == name
-        assert getattr(cfg.language.messages, key.rsplit(".", 1)[1]) in shown[key].options
-        assert len(shown[key].options) > 3
+    shown = {s.key for s in describe(cfg)}
+    assert not shown & {"language.messages.date_format", "language.messages.date_time_format"}
     odd = load_config(ws.config_dir, env={}, flags={"language.messages.date_format": "%d.%m.%y"})
-    kept = {s.key: s for s in describe(odd)}["language.messages.date_format"]
-    assert kept.options[-1] == "%d.%m.%y"
+    assert odd.language.messages.date_format == "%d.%m.%y"
 
 
 # ---- found by the first journeys ----------------------------------------------------------------------------
@@ -227,34 +220,21 @@ def _screen_items(tmp_path):
     return {i["key"]: i for i in c.get(f"{api}/settings").json()["items"]}, people, cfg
 
 
-def test_the_persons_own_record_and_a_roles_tier_are_picked_from_the_people_and_tiers_that_exist(tmp_path):
-    items, people, cfg = _screen_items(tmp_path)
-    me = items["workspace.user.person"]
-    assert me["type"] == "choice" and me["choices"] == "people" and set(people) <= set(me["options"])
-    for role in ("write", "check", "research"):
-        tier = items[f"ai.roles.{role}.tier"]
-        assert tier["type"] == "choice" and tier["choices"] == "tiers"
-        assert set(cfg.ai.tiers) <= set(tier["options"])
-
-
-def test_how_an_owner_is_shown_is_picked_from_the_ways_it_can_be_written_and_keeps_one_written_by_hand(tmp_path):
+def test_what_a_person_never_picks_is_kept_in_files_and_still_loads(tmp_path):
+    """The person's own record, a role's tier, how an owner is shown and the accepted file types are set once by the app
+    or a deployment: none is a row on a screen, and each still reads from its file."""
     from engine.config import load_config
-    from engine.settings import describe
 
     items, _, cfg = _screen_items(tmp_path)
-    shown = items["workspace.owner_format"]
-    assert shown["type"] == "choice" and shown["choices"] == "owner_formats"
-    assert {"{full_name}", "{team} ({full_name})"} <= set(shown["options"])
-    ws, own, store = make(tmp_path / "other")
+    for key in (
+        "workspace.user.person",
+        "workspace.owner_format",
+        "storage.files.accepted_types",
+        "ai.roles.write.tier",
+        "ai.roles.check.same_account",
+    ):
+        assert key not in items, key
+    ws, _, store = make(tmp_path / "other")
     store.close()
     odd = load_config(ws.config_dir, env={}, flags={"workspace.owner_format": "{full_name} of {team}"})
-    kept = {s.key: s for s in describe(odd)}["workspace.owner_format"]
-    assert kept.options[-1] == "{full_name} of {team}"
-
-
-def test_the_file_types_that_may_be_added_are_ticked_from_the_known_types_and_keep_one_added_by_hand(tmp_path):
-    items, _, cfg = _screen_items(tmp_path)
-    types = items["storage.files.accepted_types"]
-    assert types["type"] == "list" and types["choices"] == "media_types"
-    assert set(cfg.storage.files.accepted_types) <= set(types["options"])
-    assert "application/pdf" in types["options"] and "text/csv" in types["options"]
+    assert odd.workspace.owner_format == "{full_name} of {team}"

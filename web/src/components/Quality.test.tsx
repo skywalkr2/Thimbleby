@@ -265,6 +265,6 @@ test("a load that fails says so with Try again, and Back goes back", async () =>
   show(quality(), { "GET quality": () => new Refuse(500, "broken") }, back);
   expect(await screen.findByText("This page didn't load.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Back to Settings" }));
+  await user.click(screen.getByRole("button", { name: "Back to Today" }));
   expect(back).toHaveBeenCalledTimes(1);
 });
