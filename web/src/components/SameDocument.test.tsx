@@ -33,13 +33,13 @@ const older = (extra: Partial<S["HandledRow"]> = {}): S["HandledRow"] => ({
 });
 
 const CLOSED = (row: S["HandledRow"]): S["HandledView"] => ({
-  tab: "closed",
+  tab: "set_aside",
   group: "reason",
   query: "",
   item: null,
   kept_days: 30,
   page_rows: 25,
-  counts: { set_aside: 0, closed: 1, read: 0 },
+  counts: { set_aside: 1, read: 0 },
   kinds: [{ item: "file", count: 1 }],
   groups: [{ key: REASON, label: REASON, count: 1, items: [row] }],
 });
@@ -68,8 +68,7 @@ const CHOSEN: S["VersionChosen"] = {
 
 function open(extra: Routes = {}, row: S["HandledRow"] = older()) {
   const calls = fakeApi({
-    "GET handled?tab=set_aside&q=": () => ({ ...CLOSED(row), tab: "set_aside", groups: [] }),
-    "GET handled?tab=closed&q=": () => CLOSED(row),
+    "GET handled?tab=set_aside&q=": () => CLOSED(row),
     "GET silent-closes": () => NO_CLOSES,
     "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
     "GET versions/SRC-a": () => VIEW,
@@ -82,7 +81,6 @@ function open(extra: Routes = {}, row: S["HandledRow"] = older()) {
 const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
 async function menuOfRow(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
   const header = await screen.findByRole("button", { name: new RegExp(`^${REASON} · 1$`) });
   if (header.getAttribute("aria-expanded") === "false") await user.click(header);
   const row = within(header.closest("section") as HTMLElement).getByRole("listitem");
@@ -134,7 +132,6 @@ test("Same document as lists the files of the folder, links the one chosen, and 
 test("a file that is not in a watched folder offers neither choice", async () => {
   const user = userEvent.setup();
   open({ "GET versions/SRC-a": () => ({ applicable: false }) });
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
   const header = await screen.findByRole("button", { name: new RegExp(`^${REASON} · 1$`) });
   await user.click(header);
   await user.click(await screen.findByRole("button", { name: "More actions for Plan.md" }));

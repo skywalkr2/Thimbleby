@@ -413,8 +413,8 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/mail/{snapshot_id}/set-aside")
     def set_aside_mail(snapshot_id: str, body: SetAsideIn) -> SetAsideDone:
-        """Move a mail item to the Set aside folder, as personal or sales mail, and close its request if one is
-        waiting for the assistant."""
+        """Move a mail item to the Set aside folder, as sales mail or automated notices (personal is accepted for Undo
+        of an older row only), and close its request if one is waiting for the assistant."""
         from engine.dispatcher import signal
 
         mail_snapshot(snapshot_id)
@@ -487,13 +487,13 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/handled")
     def handled_list(
         tab: Literal["set_aside", "closed", "read"] = "set_aside",
-        group: Literal["reason", "sender"] | None = None,
+        group: Literal["kind", "reason", "sender"] | None = None,
         q: str = "",
         item: Literal["mail", "calendar", "file", "page", "action", "question", "other"] | None = None,
     ) -> HandledView:
-        """One of the three lists of what was handled for the person, in groups: by reason or by sender (the
+        """One of the two lists of what was handled for the person, in groups: by kind, by reason or by sender (the
         configured grouping when none is asked for), newest first, narrowed by the words of `q` and by the kind of
-        item, with the counts of all three lists."""
+        item, with the counts of both lists. The tab `closed` of an earlier version reads as `set_aside`."""
         set_aside.purge_due(ws, store, cfg)
         config = current()
         found = handled.listing(ws, store, config, tab, group or config.ui.handled_group, q.strip(), worker.now(), item)
@@ -501,7 +501,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/handled/counts")
     def handled_counts() -> HandledCounts:
-        """How many each of the three lists holds, for a line that only counts."""
+        """How many each of the two lists holds, for a line that only counts."""
         return HandledCounts.model_validate(handled.counts(ws, store, current(), worker.now()))
 
     def handled_done(snapshot_id: str, request: str | None = None) -> HandledDone:

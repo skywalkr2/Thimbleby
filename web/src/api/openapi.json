@@ -10008,25 +10008,19 @@
       },
       "HandledCounts": {
         "properties": {
-          "closed": {
-            "description": "Changes a rule closed before they were read, whatever the search.",
-            "title": "Closed",
-            "type": "integer"
-          },
           "read": {
             "description": "Mail read with nothing to do, whatever the search.",
             "title": "Read",
             "type": "integer"
           },
           "set_aside": {
-            "description": "Mail set aside before it was read, whatever the search.",
+            "description": "Mail set aside and changes a rule closed, both before they were read, whatever the search.",
             "title": "Set Aside",
             "type": "integer"
           }
         },
         "required": [
           "set_aside",
-          "closed",
           "read"
         ],
         "title": "HandledCounts",
@@ -10106,7 +10100,7 @@
             "type": "array"
           },
           "key": {
-            "description": "The reason (by reason; `kind:` and the mail's kind for mail read with nothing to do) or the sender's address (by sender); empty for none known.",
+            "description": "By kind: `kind:` and the mail's kind, or `item:` and the kind of item for anything but mail. By reason: the reason (`kind:` and the mail's kind for mail read with nothing to do). By sender: the sender's address. Empty for none known. Unique within a list.",
             "title": "Key",
             "type": "string"
           },
@@ -10309,9 +10303,8 @@
             "title": "Saved"
           },
           "section": {
-            "description": "The section Always set aside mail like this files it in: its own for set-aside mail, the configured one (`watch.handled_rule_section`) for mail the assistant read.",
+            "description": "The section Always set aside mail like this files it in: its own for set-aside mail (the configured one, `watch.handled_rule_section`, for a message an earlier version set aside as personal), the configured one for mail the assistant read.",
             "enum": [
-              "personal",
               "sales",
               "notices"
             ],
@@ -10335,6 +10328,7 @@
             "type": "string"
           },
           "tab": {
+            "description": "How it was handled: mail set aside, a change a rule closed, or mail read with nothing to do. Set aside and closed rows are both listed on the Set aside tab; this decides the choices the row offers.",
             "enum": [
               "set_aside",
               "closed",
@@ -10374,6 +10368,7 @@
           "group": {
             "description": "How the groups were made.",
             "enum": [
+              "kind",
               "reason",
               "sender"
             ],
@@ -10434,7 +10429,6 @@
           "tab": {
             "enum": [
               "set_aside",
-              "closed",
               "read"
             ],
             "title": "Tab",
@@ -23470,6 +23464,7 @@
         "additionalProperties": false,
         "properties": {
           "section": {
+            "description": "Where the message is set aside. The screens offer sales and notices; personal is accepted so Undo of Treat as work puts back a message an earlier version set aside as personal.",
             "enum": [
               "personal",
               "sales",
@@ -24952,7 +24947,6 @@
         "properties": {
           "choice": {
             "enum": [
-              "personal",
               "sales",
               "notices",
               "never"
@@ -33397,7 +33391,7 @@
     },
     "/api/handled": {
       "get": {
-        "description": "One of the three lists of what was handled for the person, in groups: by reason or by sender (the\nconfigured grouping when none is asked for), newest first, narrowed by the words of `q` and by the kind of\nitem, with the counts of all three lists.",
+        "description": "One of the two lists of what was handled for the person, in groups: by kind, by reason or by sender (the\nconfigured grouping when none is asked for), newest first, narrowed by the words of `q` and by the kind of\nitem, with the counts of both lists. The tab `closed` of an earlier version reads as `set_aside`.",
         "operationId": "handled_list_api_handled_get",
         "parameters": [
           {
@@ -33423,6 +33417,7 @@
               "anyOf": [
                 {
                   "enum": [
+                    "kind",
                     "reason",
                     "sender"
                   ],
@@ -33498,7 +33493,7 @@
     },
     "/api/handled/counts": {
       "get": {
-        "description": "How many each of the three lists holds, for a line that only counts.",
+        "description": "How many each of the two lists holds, for a line that only counts.",
         "operationId": "handled_counts_api_handled_counts_get",
         "responses": {
           "200": {
@@ -34674,7 +34669,7 @@
     },
     "/api/mail/{snapshot_id}/set-aside": {
       "post": {
-        "description": "Move a mail item to the Set aside folder, as personal or sales mail, and close its request if one is\nwaiting for the assistant.",
+        "description": "Move a mail item to the Set aside folder, as sales mail or automated notices (personal is accepted for Undo\nof an older row only), and close its request if one is waiting for the assistant.",
         "operationId": "set_aside_mail_api_mail__snapshot_id__set_aside_post",
         "parameters": [
           {
@@ -41350,7 +41345,7 @@
     },
     "/api/watch/sorting": {
       "post": {
-        "description": "Always set aside mail from these senders and domains as personal or sales, or never set it aside, as the\nperson's own rule, with Undo. Keeping mail goes first in the list; the rule applies to the next mail.",
+        "description": "Always set aside mail from these senders and domains as sales or notices, or never set it aside, as the\nperson's own rule, with Undo. Keeping mail goes first in the list; the rule applies to the next mail.",
         "operationId": "sorting_rule_api_watch_sorting_post",
         "requestBody": {
           "content": {

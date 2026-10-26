@@ -261,8 +261,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
 - `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
 - `handled_rule_section` (`notices`): the section "Always set aside mail like this" files a sender under when the mail was
-  one the assistant read and found nothing to do in, which has no section of its own: `personal`, `sales` or `notices`
-  (7.20). A set-aside mail keeps its own section. Advanced.
+  one the assistant read and found nothing to do in, which has no section of its own: `sales` or `notices` (7.20;
+  `personal`, from before personal mail stopped being set aside, reads as `notices`). A set-aside mail keeps its own
+  section. Advanced.
 - `versions.same_document`, `versions.not_same` and `versions.current` (all empty; internal, live): what the person said by
   hand about which files of a watched folder are one document, which is not, and which copy is current, each written by a
   choice on screen and put back by its Undo (6.2, "Saying by hand which files are one document"): `same_document` is a list of
@@ -626,9 +627,9 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
-- `handled_group` (`reason`): how Handled for you groups what it lists to start with, `reason` (why it was handled) or
-  `sender`; the other grouping is one button away on the screen (7.20). A file that says `kind`, the first name, reads as
-  `reason`. Advanced.
+- `handled_group` (`kind`): how Handled for you groups what it lists to start with, `kind` (what the item is: bills,
+  orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled) or
+  `sender`; the others are one button away on the screen (7.20). Advanced.
 - `handled_rows_shown` (25): how many rows a group on Handled for you draws before "Show more" (7.20). Advanced.
 - `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add
   (7, Help); the app keeps five times that many app errors in the workspace's private folder (`problems.jsonl`).

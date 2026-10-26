@@ -78,7 +78,7 @@ test("key families built at run time are complete", () => {
     ...(s.SinceEntryView.properties.because.enum ?? []).map((x) => `since.why.${x}`),
     ...(s.HandledRow.properties.kind.enum ?? []).map((x) => `handled.kind.${x}`),
     ...(s.HandledView.properties.tab.enum ?? []).flatMap((x) => [`handled.tab.${x}`, `handled.explain.${x}`, `handled.empty.${x}`]),
-    ...(s.HandledRow.properties.item.enum ?? []).map((x) => `handled.item.${x}`),
+    ...(s.HandledRow.properties.item.enum ?? []).flatMap((x) => [`handled.item.${x}`, `handled.item_group.${x}`]),
     ...(s.HandledView.properties.group.enum ?? []).map((x) => `handled.group.${x}`),
     ...(s.SettingProposalView.properties.status.enum ?? []).filter((x) => x !== "open").map((x) => `ask.proposal.${x}`),
     ...(s.ReportView.properties.status.enum ?? []).filter((x) => x !== "draft").map((x) => `ask.report_status.${x}`),
@@ -116,6 +116,14 @@ test("key families built at run time are complete", () => {
     ...["action.add", "action.close", "question.add", "question.done", "fact", "note", "record.set", "record.log", "person.add"].map((x) => `op.${x}`),
   ];
   expect(expected.filter((k) => !(k in words))).toEqual([]);
+});
+
+test("the mail step never says personal mail is set aside", () => {
+  const step = Object.entries(words).filter(([key]) => key.startsWith("walkthrough.mail.sorting") || key === "walkthrough.mail.set_aside");
+  expect(step.map(([key]) => key)).toEqual(expect.arrayContaining(["walkthrough.mail.sorting", "walkthrough.mail.sorting_hint"]));
+  expect(step.filter(([, text]) => /personal/i.test(text))).toEqual([]);
+  expect(words["walkthrough.mail.sorting"]).toBe("Set aside newsletters, sales and mailing lists");
+  expect(words["walkthrough.mail.sorting_hint"]).toMatch(/Uncertain messages stay with you\.$/);
 });
 
 test("no internal terms reach the screen", () => {

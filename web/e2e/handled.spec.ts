@@ -1,6 +1,6 @@
 // Handled for you is never wider than the window (the project's UI rules): at the phone, laptop and wide desktop widths, with
-// long unbroken text from outside (the layout stress strings) as a subject, a sender, a reason and a group's sender name, all
-// three lists, both groupings, the kind filter and every group open, and again with the text set wider. The lists are answered here (the layout server holds no
+// long unbroken text from outside (the layout stress strings) as a subject, a sender, a reason and a group's sender name, both
+// tabs, all three groupings, the kind filter and every group open, and again with the text set wider. The lists are answered here (the layout server holds no
 // mail), so the measure is of the screen, not of the data. It runs with the layout project's server.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -20,45 +20,55 @@ const SIZES = [
 ];
 const KINDS = ["bills", "orders", "deliveries", "personal", "sales", "notices", "other"] as const;
 
-type Tab = "set_aside" | "closed" | "read";
+type Tab = "set_aside" | "read";
+/** How a row was handled: the Set aside tab holds mail set aside and changes a rule closed. */
+type How = "set_aside" | "closed" | "read";
+type Grouping = "kind" | "reason" | "sender";
 const ITEMS = ["mail", "calendar", "file", "page", "action", "question", "other"] as const;
-const row = (tab: Tab, kind: (typeof KINDS)[number], n: number) => ({
-  id: `SNAP-${tab}-${kind}-${n}`,
-  item: tab === "closed" ? ITEMS[KINDS.indexOf(kind)] : "mail",
-  rule: tab === "closed" ? "Spacing" : null,
-  change: tab === "closed" ? "changed" : null,
+const row = (how: How, kind: (typeof KINDS)[number], n: number) => ({
+  id: `SNAP-${how}-${kind}-${n}`,
+  item: how === "closed" ? ITEMS[KINDS.indexOf(kind)] : "mail",
+  rule: how === "closed" ? "Spacing" : null,
+  change: how === "closed" ? "changed" : null,
   version: 2,
-  tab,
+  tab: how,
   kind,
   title: n === 0 ? strings["web-01"] : `A short subject ${n}`,
   sender: n === 0 ? strings["token-01"] : "Sender <sender@example.com>",
   source: "Inbox",
   received: "2026-10-11T08:30:00+00:00",
-  reason: tab === "read" ? null : n === 0 ? strings["web-02"] : `it is ${kind} mail`,
+  reason: how === "read" ? null : n === 0 ? strings["web-02"] : `it is ${kind} mail`,
   link: null,
   saved: `SRC-${n}`,
   address: n === 0 ? "" : "sender@example.com",
   domain: null,
   section: "sales",
-  request: tab === "set_aside" ? null : `REQ-${n}`,
+  request: how === "set_aside" ? null : `REQ-${n}`,
 });
 
-const view = (tab: Tab, group: "reason" | "sender") => {
-  const rows = KINDS.flatMap((kind) => [row(tab, kind, 0), row(tab, kind, 1)]);
-  const groups =
-    group === "reason"
-      ? KINDS.map((kind) => {
-          const items = rows.filter((r) => r.kind === kind);
-          // Each group's key is its own, as the app's are: one reason per kind here.
-          const reason = String(items[0].reason);
-          const key = tab === "read" ? `kind:${kind}` : `${reason}#${kind}`;
-          return { key, label: tab === "read" ? null : reason, count: 2, items };
-        })
-      : [
-          { key: "long", label: strings["token-02"], count: KINDS.length, items: rows.filter((r) => r.title === strings["web-01"]) },
-          { key: "sender@example.com", label: "Sender", count: KINDS.length, items: rows.filter((r) => r.title !== strings["web-01"]) },
-        ];
-  const counts = { set_aside: rows.length, closed: rows.length, read: rows.length };
+type Row = ReturnType<typeof row>;
+const rowsOf = (how: How) => KINDS.flatMap((kind) => [row(how, kind, 0), row(how, kind, 1)]);
+/** The rows each tab holds: the Set aside tab holds set-aside mail and what a rule closed, of every kind of item. */
+const rowsIn = (tab: Tab): Row[] => (tab === "read" ? rowsOf("read") : [...rowsOf("set_aside"), ...rowsOf("closed")]);
+
+/** The key a row is grouped under, as the app's are: one group for each key, so no two groups of a view share one. */
+const keyOf = (r: Row, group: Grouping): { key: string; label: string | null } => {
+  if (group === "kind") return { key: r.item === "mail" ? `kind:${r.kind}` : `item:${r.item}`, label: null };
+  if (group === "reason") return r.tab === "read" ? { key: `kind:${r.kind}`, label: null } : { key: String(r.reason), label: String(r.reason) };
+  return r.title === strings["web-01"] ? { key: "long", label: strings["token-02"] } : { key: "sender@example.com", label: "Sender" };
+};
+
+const view = (tab: Tab, group: Grouping) => {
+  const rows = rowsIn(tab);
+  const found = new Map<string, { key: string; label: string | null; count: number; items: Row[] }>();
+  for (const r of rows) {
+    const { key, label } = keyOf(r, group);
+    const g = found.get(key) ?? { key, label, count: 0, items: [] };
+    g.items.push(r);
+    g.count += 1;
+    found.set(key, g);
+  }
+  const counts = { set_aside: rowsIn("set_aside").length, read: rowsIn("read").length };
   return {
     tab,
     group,
@@ -68,7 +78,7 @@ const view = (tab: Tab, group: "reason" | "sender") => {
     page_rows: 25,
     counts,
     kinds: [...new Set(rows.map((r) => r.item))].map((item) => ({ item, count: rows.filter((r) => r.item === item).length })),
-    groups,
+    groups: [...found.values()],
   };
 };
 
@@ -87,13 +97,13 @@ const overflow = (page: Page) =>
   });
 const tooWide = (found: Awaited<ReturnType<typeof overflow>>) => found.page > found.window || found.body > found.window || found.cut.length > 0;
 
-test("Handled for you stays inside the window at every width, on all three lists and both groupings, with every group open", async ({ page }) => {
+test("Handled for you stays inside the window at every width, on both tabs and all three groupings, with every group open", async ({ page }) => {
   test.setTimeout(180_000);
   await page.route(/\/api\/handled\?/, async (route) => {
     const query = new URL(route.request().url()).searchParams;
-    const asked = query.get("tab");
-    const tab: Tab = asked === "read" || asked === "closed" ? asked : "set_aside";
-    const group = query.get("group") === "sender" ? "sender" : "reason";
+    const tab: Tab = query.get("tab") === "read" ? "read" : "set_aside";
+    const asked = query.get("group");
+    const group: Grouping = asked === "sender" || asked === "reason" ? asked : "kind";
     await route.fulfill({ json: view(tab, group) });
   });
   const wide: string[] = [];
@@ -103,12 +113,15 @@ test("Handled for you stays inside the window at every width, on all three lists
     await expect(page.getByRole("heading", { level: 1, name: "Handled for you", exact: true })).toBeVisible(LOADED);
     // The cursor starts in the search box.
     await expect(page.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" })).toBeFocused(LOADED);
-    for (const tab of [/^Set aside before reading/, /^Closed by a rule/, /^Read, nothing to do/]) {
-      for (const group of ["Reason", "Sender"]) {
+    for (const tab of [/^Set aside before reading/, /^Read, nothing to do/]) {
+      for (const group of ["Kind", "Reason", "Sender"]) {
         await page.getByRole("button", { name: tab }).click();
         await page.getByRole("button", { name: group, exact: true }).click();
         const collapsed = page.locator("[data-group] > h2 button[aria-expanded=false]");
         await expect(collapsed.first()).toBeVisible(LOADED);
+        // Every group of a view has a key of its own.
+        const keys = await page.locator("[data-group]").evaluateAll((els) => els.map((e) => e.getAttribute("data-group")));
+        if (new Set(keys).size !== keys.length) wide.push(`${tab} by ${group}: group keys repeat: ${keys.join(", ")}`);
         for (let closed = await collapsed.count(); closed > 0; closed = await collapsed.count()) await collapsed.first().click();
         await expect(page.locator("main li.line").first()).toBeVisible(LOADED);
         const found = await overflow(page);

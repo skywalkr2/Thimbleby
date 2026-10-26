@@ -34,7 +34,7 @@ from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError,
 from engine.extract.attached import with_files_read
 from engine.names import People
 from engine.storage import StoreError, WriteContext
-from engine.triage import classify
+from engine.triage import classify, classify_placed
 
 #: The name a close carries when the change is to an older copy of a document's versions.
 VERSION_RULE = "Older version"
@@ -361,6 +361,7 @@ class _Entry:
     closed: dict[str, str] | None
     handed: bool  # it is handed in now, not only noted
     replaces: str | None = None  # for the current copy of a document's versions: the version it replaces
+    personal: bool = False  # a rule says the mail is personal: handed in and filed under the Personal project
 
 
 def _compare(
@@ -411,7 +412,7 @@ def _compare(
         change = "new" if before is None else "changed"
         old = _read_text(ws, before.data["content_hash"]) if before is not None else None
         facts = _change(cfg, source, item, change, old)
-        closed, kept = classify(store, cfg, facts)
+        closed, kept, personal = classify_placed(store, cfg, facts)
         older = families.older_than_current(item.key, item.changed_at) if families else None
         if older and closed is None:
             closed = {"rule": VERSION_RULE, "reason": older}
@@ -423,8 +424,9 @@ def _compare(
             closed = _carried_sorting(before)
         if handed and closed is None and not kept and before is None and item.message is not None:
             unplaced[item.key] = facts
-        entries.append(_Entry(item, digest, before, details, change, old, closed, handed, replaces))
-    marks, result.note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+        entries.append(_Entry(item, digest, before, details, change, old, closed, handed, replaces, personal))
+    marks, personal_keys, result.note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+    home = _personal_home(store, cfg)
     for entry in entries:
         item, before, closed = entry.item, entry.before, entry.closed or marks.get(entry.item.key)
         with store.transaction() as tx:
@@ -448,7 +450,8 @@ def _compare(
             if families and asking and (unclear := families.unclear(item.key)):
                 version_choices.ask(tx, source.id, asking, *unclear)
             text = _input_text(source, item, entry.change, entry.old, entry.replaces)
-            request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed)
+            filed = {"project": home} if home and (entry.personal or item.key in personal_keys) else None
+            request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed, extra=filed)
         (result.new if entry.change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
     for key in gone_keys:
@@ -472,15 +475,16 @@ def _compare(
 
 def _assistant_sorted(
     ws: Any, store: Any, cfg: Any, source: Any, router: Any, unplaced: dict[str, dict[str, Any]], go: bool = False
-) -> tuple[dict[str, dict[str, str]], str | None]:
+) -> tuple[dict[str, dict[str, str]], set[str], str | None]:
     """The assistant's sorting (design 6.5, step 3) of the mail the rules couldn't place, as {item key: facts}: one
     run per batch of headers, never the text. Returns, by item key, the set-aside match of each message it set aside,
-    and a note when some mail wasn't sorted by it (that mail is handed in as work)."""
+    the keys it answered personal (handed in and filed under the Personal project, never set aside), and a note when
+    some mail wasn't sorted by it (that mail is handed in as work)."""
     from engine import mail_sorting
     from engine.set_aside import SECTION_WORDS
 
     if cfg.watch.sorting != "ai" or not unplaced:
-        return {}, None
+        return {}, set(), None
     sorted_ = mail_sorting.sort(
         ws,
         store,
@@ -499,7 +503,14 @@ def _assistant_sorted(
         }
         for key, section in sorted_.sections.items()
     }
-    return marks, sorted_.note
+    return marks, sorted_.personal, sorted_.note
+
+
+def _personal_home(store: Any, cfg: Any) -> str | None:
+    """The Personal project mail that is personal is filed under, when the workspace has one."""
+    from engine import sides
+
+    return sides.personal_project(store.read(), cfg)
 
 
 def _awaiting_sorting(
@@ -601,12 +612,15 @@ def sort_before_first_go(
     sources = {s.id: s for s in cfg.watch.sources}
     set_aside = 0
     for source_id, found in waiting.items():
-        marks, _note = _assistant_sorted(
+        marks, personal_keys, _note = _assistant_sorted(
             ws, store, cfg, sources[source_id], router, {item.key: facts for _, _, item, facts in found}, go=go
         )
+        home = _personal_home(store, cfg)
         for req, snap, item, _facts in found:
             mark = marks.get(item.key)
             if mark is None:
+                if home and item.key in personal_keys:
+                    _file_under(store, req.id, home)
                 continue
             try:
                 with store.transaction() as tx:
@@ -632,6 +646,18 @@ def sort_before_first_go(
             except StoreError:
                 continue  # it changed meanwhile (the worker took it, or the person acted); it stays as work
     return set_aside
+
+
+def _file_under(store: Any, request_id: str, project: str) -> None:
+    """File a request that names no project under this one, as the sorting's personal answer does for mail handed in
+    before the first go. A request that changed meanwhile is left as it is."""
+    try:
+        with store.transaction() as tx:
+            current = tx.get("request", request_id)
+            if current is not None and not current.data.get("project"):
+                tx.update("request", current.id, {"project": project}, _SORTER, read_version=current.version)
+    except StoreError:
+        pass
 
 
 def _carried_sorting(before: Any) -> dict[str, str] | None:
@@ -1075,7 +1101,7 @@ def _hand_in_window(
         for s in store.read().list("source")
         if (s.data.get("watched") or {}).get("source") == source_id
     }
-    pending: list[tuple[Any, SourceItem, dict[str, str] | None]] = []
+    pending: list[tuple[Any, SourceItem, dict[str, str] | None, bool]] = []
     unplaced: dict[str, dict[str, Any]] = {}
     plain = entry_rules.Plain(store.read(), cfg, source_id)
     for snap in store.read().find("snapshot", {"source": source_id}):
@@ -1097,14 +1123,18 @@ def _hand_in_window(
         if plain.of(item):
             continue  # a plain calendar entry is kept by rule, so the assistant has nothing to read
         facts = _change(cfg, source, item, "new", None)
-        closed, kept = classify(store, cfg, facts)
+        closed, kept, personal = classify_placed(store, cfg, facts)
         if closed is None and not kept and item.message is not None:
             unplaced[item.key] = facts
-        pending.append((snap, item, closed))
-    marks, _note = _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, None)
+        pending.append((snap, item, closed, personal))
+    marks, personal_keys, _note = (
+        _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, set(), None)
+    )
+    home = _personal_home(store, cfg)
     made = []
-    for snap, item, closed in pending:
+    for snap, item, closed, by_rule in pending:
         sorted_aside = marks.get(item.key) if closed is None else None
+        filed = {"project": home} if home and (by_rule or item.key in personal_keys) else None
         with store.transaction() as tx:
             if sorted_aside:
                 tx.update(
@@ -1122,7 +1152,7 @@ def _hand_in_window(
                     _input_text(source, item, "new", None),
                     now,
                     closed or sorted_aside,
-                    extra=extra,
+                    extra={**(extra or {}), **(filed or {})} or None,
                 )
             )
     return made

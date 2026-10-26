@@ -1,7 +1,9 @@
-"""The person's own sorting rules for mail (design 6.5): "always set aside mail from this sender or domain as personal
-(or sales)" and "never set aside mail from ...". They are rules of the triage list, written through the settings save
-path. The app keeps one rule of its own per choice, so the list stays short: the sender and domain lists of that rule
-grow, and a sender or domain moves out of the other rules when the person changes their mind.
+"""The person's own sorting rules for mail (design 6.5): "always set aside mail from this sender or domain as sales (or
+automated notices)" and "never set aside mail from ...". A rule an earlier version wrote for personal mail is still
+read (it files the mail under the Personal project), and a sender moves out of it when the person chooses another.
+They are rules of the triage list, written through the settings save path. The app keeps one rule of its own per
+choice, so the list stays short: the sender and domain lists of that rule grow, and a sender or domain moves out of
+the other rules when the person changes their mind.
 """
 
 from __future__ import annotations
@@ -15,7 +17,8 @@ NAMES = {
     "notices": "Automated notices you set aside",
     "never": "Mail you keep",
 }
-CHOICES = tuple(NAMES)
+#: What a rule can be made for. Personal mail is never set aside, so no new rule is made for it.
+CHOICES = ("sales", "notices", "never")
 
 
 def _managed(rule: dict[str, Any], choice: str) -> bool:
@@ -25,15 +28,15 @@ def _managed(rule: dict[str, Any], choice: str) -> bool:
 def with_sender_rules(
     triage: list[dict[str, Any]], choice: str, senders: list[str], domains: list[str]
 ) -> list[dict[str, Any]]:
-    """The triage list with these senders and domains added to the app's rule for `choice` (personal, sales or
-    never) and taken out of its rules for the other choices. A choice to keep goes first in the list; one to set
-    aside goes after every rule that keeps mail, so keeping always wins."""
+    """The triage list with these senders and domains added to the app's rule for `choice` (sales, notices or
+    never) and taken out of its rules for the other choices, including an older rule for personal mail. A choice to
+    keep goes first in the list; one to set aside goes after every rule that keeps mail, so keeping always wins."""
     if choice not in CHOICES:
-        raise ValueError("choose personal, sales, notices or never")
+        raise ValueError("choose sales, notices or never")
     senders = _unique(s.strip().lower() for s in senders if s.strip())
     domains = _unique(d.strip().lower().removeprefix("@") for d in domains if d.strip())
     rules = [dict(r) for r in triage]
-    for other in CHOICES:
+    for other in NAMES:
         if other == choice:
             continue
         for rule in rules:

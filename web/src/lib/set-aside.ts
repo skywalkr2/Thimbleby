@@ -7,7 +7,8 @@ import { useAct } from "./act";
 import { useAfterSave, useFreshFingerprint } from "./settings-save";
 import { useWords } from "./wording";
 
-export type Section = S["SetAsideIn"]["section"];
+/** What a screen sets mail aside as: sales mail or automated notices. Personal mail is never set aside. */
+export type Section = S["SortingRuleIn"]["choice"] & S["SetAsideIn"]["section"];
 type Choice = S["SortingRuleIn"]["choice"];
 /** What the screen needs of a message to correct it: its id in the app and its title for the toast. */
 export interface MailRef {
@@ -57,7 +58,7 @@ export function useSetAside() {
     [always, t],
   );
 
-  /** "Set aside: personal" or "Set aside: sales" on a message in Came in or What changed. */
+  /** "Set aside: sales" on a message in Came in or What changed. */
   const setAside = useCallback(
     (mail: MailRef, section: Section) =>
       act(

@@ -4606,7 +4606,10 @@ class SetAsideFolder(BaseModel):
 class SetAsideIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    section: Literal["personal", "sales", "notices"]
+    section: Literal["personal", "sales", "notices"] = Field(
+        description="Where the message is set aside. The screens offer sales and notices; personal is accepted so Undo "
+        "of Treat as work puts back a message an earlier version set aside as personal."
+    )
 
 
 class SetAsideDone(BaseModel):
@@ -4632,7 +4635,10 @@ class HandledRow(BaseModel):
         "request."
     )
     version: int
-    tab: Literal["set_aside", "closed", "read"]
+    tab: Literal["set_aside", "closed", "read"] = Field(
+        description="How it was handled: mail set aside, a change a rule closed, or mail read with nothing to do. Set "
+        "aside and closed rows are both listed on the Set aside tab; this decides the choices the row offers."
+    )
     item: ItemKind = Field(description="What kind of item it is (mail, a file, a page...); the screen words it.")
     rule: str | None = Field(None, description="For a change a rule closed: the rule's name.")
     change: Literal["new", "changed", "removed"] | None = Field(
@@ -4657,9 +4663,10 @@ class HandledRow(BaseModel):
         description="The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no "
         "address or the domain is a public mail domain.",
     )
-    section: Literal["personal", "sales", "notices"] = Field(
-        description="The section Always set aside mail like this files it in: its own for set-aside mail, the "
-        "configured one (`watch.handled_rule_section`) for mail the assistant read."
+    section: Literal["sales", "notices"] = Field(
+        description="The section Always set aside mail like this files it in: its own for set-aside mail (the "
+        "configured one, `watch.handled_rule_section`, for a message an earlier version set aside as personal), the "
+        "configured one for mail the assistant read."
     )
     request: str | None = Field(None, description="For mail the assistant read: the request that read it.")
     older_version: bool = Field(
@@ -4671,8 +4678,9 @@ class HandledRow(BaseModel):
 
 class HandledGroup(BaseModel):
     key: str = Field(
-        description="The reason (by reason; `kind:` and the mail's kind for mail read with nothing to do) or the "
-        "sender's address (by sender); empty for none known."
+        description="By kind: `kind:` and the mail's kind, or `item:` and the kind of item for anything but mail. By "
+        "reason: the reason (`kind:` and the mail's kind for mail read with nothing to do). By sender: the sender's "
+        "address. Empty for none known. Unique within a list."
     )
     label: str | None = Field(
         None,
@@ -4684,8 +4692,9 @@ class HandledGroup(BaseModel):
 
 
 class HandledCounts(BaseModel):
-    set_aside: int = Field(description="Mail set aside before it was read, whatever the search.")
-    closed: int = Field(description="Changes a rule closed before they were read, whatever the search.")
+    set_aside: int = Field(
+        description="Mail set aside and changes a rule closed, both before they were read, whatever the search."
+    )
     read: int = Field(description="Mail read with nothing to do, whatever the search.")
 
 
@@ -4698,8 +4707,8 @@ class HandledView(BaseModel):
     """What the app handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest
     row."""
 
-    tab: Literal["set_aside", "closed", "read"]
-    group: Literal["reason", "sender"] = Field(description="How the groups were made.")
+    tab: Literal["set_aside", "read"]
+    group: Literal["kind", "reason", "sender"] = Field(description="How the groups were made.")
     query: str = Field(description="The search the rows match; empty for all.")
     item: ItemKind | None = Field(None, description="The kind of item the rows are narrowed to; empty for all.")
     kept_days: int = Field(description="How many days an item stays listed before it leaves the list.")
@@ -4776,7 +4785,7 @@ class SortingRuleIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fingerprint: str
-    choice: Literal["personal", "sales", "notices", "never"]
+    choice: Literal["sales", "notices", "never"]
     mail: str | None = Field(
         None, description="The set-aside message the choice was made on, so the choice is kept as a correction."
     )

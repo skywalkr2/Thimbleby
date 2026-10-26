@@ -1069,7 +1069,7 @@ describe("Mail and calendar", () => {
       },
     });
     open();
-    const box = await screen.findByRole("checkbox", { name: "Set aside newsletters and personal mail automatically" });
+    const box = await screen.findByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" });
     await waitFor(() => expect(box).toBeChecked());
     expect(screen.getByText(/not the message body/)).toBeInTheDocument();
     await user.click(box);
@@ -1206,7 +1206,7 @@ describe("Mail and calendar", () => {
     // The old second sentence, and the mail-sorting choices that mean nothing before any mail is read, are not there.
     expect(screen.queryByText(/No services listed/)).toBeNull();
     expect(screen.queryByText(/Connect another service/)).toBeNull();
-    expect(screen.queryByRole("checkbox", { name: "Set aside newsletters and personal mail automatically" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" })).toBeNull();
     const buttons = within(document.querySelector<HTMLElement>("[data-mail-none]")!).getAllByRole("button");
     expect(buttons.map((b) => b.textContent)).toEqual(["Connect one"]);
     await user.click(buttons[0]);

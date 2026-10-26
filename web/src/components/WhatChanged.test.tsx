@@ -752,12 +752,12 @@ test("a change from a note with a topic is titled Your note and the topic, as on
 });
 
 test("a quiet count of what was handled for the person links to Handled for you, and is left out when nothing was", async () => {
-  fakeApi({ "GET changes": () => [], "GET handled/counts": () => ({ set_aside: 4, closed: 2, read: 5 }) });
+  fakeApi({ "GET changes": () => [], "GET handled/counts": () => ({ set_aside: 6, read: 5 }) });
   const view = renderApp(<WhatChanged />);
   const link = await screen.findByRole("link", { name: "11 handled for you" });
   expect(link.getAttribute("href")).toMatch(/#work\/handled$/);
   view.unmount();
-  fakeApi({ "GET changes": () => [], "GET handled/counts": () => ({ set_aside: 0, closed: 0, read: 0 }) });
+  fakeApi({ "GET changes": () => [], "GET handled/counts": () => ({ set_aside: 0, read: 0 }) });
   renderApp(<WhatChanged />);
   await screen.findByText(/Nothing/);
   expect(screen.queryByRole("link", { name: /handled for you/ })).not.toBeInTheDocument();

@@ -4,7 +4,8 @@ After the person's rules and the built-in sorting, mail that is still unplaced i
 of headers: for each message an opaque id, the sender, the subject line and the mail service's own categories, all
 marked as outside content. The run never sees a message's text, its thread or its attachments. It answers work,
 personal, sales or notice for each id; an answer that is missing or isn't one of those words counts as work, so
-nothing is hidden on a guess.
+nothing is hidden on a guess. Only sales and notice answers set mail aside: personal mail is handed in like work and
+filed under the Personal project.
 
 The run goes through the same estimate, configured amount, budgets and escalation rule as any other. When it can't
 run (no account for its tier, a budget used up, the person's go not given, an account paused or failing), or its answer
@@ -27,8 +28,8 @@ from engine.tasks import settings, task_kind
 
 KIND = "sort-mail"
 ANSWERS = ("work", "personal", "sales", "notice")
-#: The section each answer that sets mail aside puts it in.
-SECTION_OF = {"personal": "personal", "sales": "sales", "notice": "notices"}
+#: The section each answer that sets mail aside puts it in. A personal answer sets nothing aside.
+SECTION_OF = {"sales": "sales", "notice": "notices"}
 #: The rule name shown for mail the assistant sorted.
 RULE = "The assistant's sorting"
 #: How much of a sender, a subject or a category a run is shown.
@@ -67,10 +68,12 @@ class Header:
 
 @dataclass
 class Sorted:
-    """What sorting a read's unplaced mail came to: the messages the assistant set aside by key (to personal or
-    sales), and, when some mail wasn't sorted by the assistant, why, in plain words."""
+    """What sorting a read's unplaced mail came to: the messages the assistant set aside by key (to sales or
+    notices), the keys it answered personal (handed in, filed under the Personal project), and, when some mail wasn't
+    sorted by the assistant, why, in plain words."""
 
     sections: dict[str, str] = field(default_factory=dict)
+    personal: set[str] = field(default_factory=set)
     note: str | None = None
 
 
@@ -180,8 +183,11 @@ def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], leve
             why, stopped = tried.why, tried.stop
             continue
         for name, answer in tried.answers.items():
-            if answer != "work":
-                out.sections[batch[int(name[1:]) - 1].key] = SECTION_OF[answer]
+            key = batch[int(name[1:]) - 1].key
+            if answer == "personal":
+                out.personal.add(key)
+            elif answer != "work":
+                out.sections[key] = SECTION_OF[answer]
     if unsorted:
         out.note = _note(unsorted, why)
     return out

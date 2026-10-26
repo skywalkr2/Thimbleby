@@ -1,7 +1,7 @@
-// Handled for you (design 7.20): what the app dealt with so the person didn't have to, on three lists by how it was
-// handled: mail set aside before the assistant read it, changes a rule closed, and mail read with nothing to do. Rows are
-// grouped by the reason they were handled (or by sender), collapsed, with a count and a Show more past a page of rows;
-// a kind-of-item filter and a search narrow them. Every row says what kind of item it is and why, and offers Take a
+// Handled for you (design 7.20): what the app dealt with so the person didn't have to, on two tabs by whether the
+// assistant read it: what was sorted away before it read it (mail set aside and changes a rule closed, of any kind of
+// item) and mail it read with nothing to do. Rows are grouped by kind, by the reason they were handled or by sender,
+// collapsed, with a count and a Show more past a page of rows; a kind-of-item filter and a search narrow them. Every row says what kind of item it is and why, and offers Take a
 // closer look (or Treat as work for set-aside mail) in one click with Undo, each recording a correction. Leaving an item
 // where it is is the confirmation, so there is no choice that keeps it.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -23,8 +23,8 @@ type Tab = S["HandledView"]["tab"];
 type Group = S["HandledView"]["group"];
 type Row = S["HandledRow"];
 type Item = S["HandledRow"]["item"];
-const TABS: Tab[] = ["set_aside", "closed", "read"];
-const GROUPS: Group[] = ["reason", "sender"];
+const TABS: Tab[] = ["set_aside", "read"];
+const GROUPS: Group[] = ["kind", "reason", "sender"];
 /** How long typing waits before the list is asked for again. */
 const TYPING_MS = 250;
 
@@ -50,7 +50,7 @@ export function Handled() {
   }, [typed]);
 
   const list = useQuery({ queryKey: ["handled", tab, group, query, item], queryFn: () => api.handled(tab, group, query, item), placeholderData: keepPreviousData });
-  const shownGroup: Group = group ?? list.data?.group ?? "reason";
+  const shownGroup: Group = group ?? list.data?.group ?? "kind";
   const pageRows = list.data?.page_rows ?? 25;
   // A kind that the list no longer holds stops narrowing it.
   const kinds = list.data?.kinds ?? [];
@@ -128,7 +128,9 @@ export function Handled() {
               g.label ??
               (g.key.startsWith("kind:")
                 ? t(`handled.kind.${g.key.slice(5) as Row["kind"]}`)
-                : t(shownGroup === "reason" ? "handled.reason_unknown" : "handled.sender_unknown"));
+                : g.key.startsWith("item:")
+                  ? t(`handled.item_group.${g.key.slice(5) as Item}`)
+                  : t(shownGroup === "sender" ? "handled.sender_unknown" : "handled.reason_unknown"));
             return (
               <section key={key} className={styles.group} data-group={g.key}>
                 <h2>
@@ -160,7 +162,7 @@ export function Handled() {
           })}
         </div>
       )}
-      {tab === "closed" && <AssistantCloses />}
+      {tab === "read" && <AssistantCloses />}
     </section>
   );
 }
@@ -224,7 +226,7 @@ function HandledRow(props: { item: Row }) {
   const why = closed
     ? t("handled.closed_why", { rule: item.rule ?? "", reason: item.reason ?? "" })
     : item.reason
-      ? t("sources.closed.why", { reason: item.reason })
+      ? t("handled.set_aside_why", { reason: item.reason.replace(/[.\s]+$/, "") })
       : t("handled.read_why");
   // Set-aside mail is handed in as work; a mail read with nothing to do, or a change a rule closed, gets a closer look.
   const look = item.tab !== "set_aside";

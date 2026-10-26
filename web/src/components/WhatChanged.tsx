@@ -53,7 +53,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
   // A quiet count of what was handled without the person, a link to the screen that lists it.
   const handled = useQuery({ queryKey: ["handled", "counts"], queryFn: api.handledCounts });
-  const handledCount = handled.data ? handled.data.set_aside + handled.data.closed + handled.data.read : 0;
+  const handledCount = handled.data ? handled.data.set_aside + handled.data.read : 0;
   const own = useOwnRequests();
   const stageToday = useStageToday();
   const [filter, setFilter] = useState<Filter>("attention");
@@ -385,10 +385,7 @@ function useChangeActions(item: S["ChangeItem"], hooks: { onOpenGuide?: (step: s
   if (cs && live.length) menu.push({ id: "undoall", label: t("changes.undo_all"), run: () => void undoAll() });
   if (item.mail_item) {
     const mail = { id: item.mail_item, title };
-    menu.push(
-      { id: "aside-personal", label: t("setaside.menu_personal"), run: () => void moveToFolder(mail, "personal") },
-      { id: "aside-sales", label: t("setaside.menu_sales"), run: () => void moveToFolder(mail, "sales") },
-    );
+    menu.push({ id: "aside-sales", label: t("setaside.menu_sales"), run: () => void moveToFolder(mail, "sales") });
   }
   return { gated, cs, title, primary, menu, canSendBack: !!cs && item.state === "review" };
 }

@@ -1,16 +1,17 @@
-"""What the app handled for the person (design 7.20): three lists on one screen, by how each item was handled, and the
-choices a row offers.
+"""What the app handled for the person (design 7.20): two lists on one screen, by whether the assistant read the item,
+and the choices a row offers.
 
-- **Set aside before reading**: mail sorted away before the assistant read it, by a rule or by the sorting
-  (`snapshot.set_aside`, not confirmed). The folder itself is `engine.set_aside`; this module only lists it.
-- **Closed by a rule**: a change a triage rule closed before the assistant read it (`request.auto_closed`), of any kind
-  of item (mail, a file, a page, a calendar entry). `item_kind_of` says which.
+- **Set aside before reading**: what was sorted away before the assistant read it. Mail sorted away by a rule or by the
+  sorting (`snapshot.set_aside`, not confirmed; the folder itself is `engine.set_aside`), and a change a triage rule
+  closed (`request.auto_closed`), of any kind of item (mail, a file, a page, a calendar entry; `item_kind_of` says
+  which). A row's `tab` says how it was handled (`set_aside` or `closed`), which decides the choices it offers.
 - **Read, nothing to do**: mail the assistant read and found nothing to record or ask in. Its latest request is done,
   not dismissed, made by an outside input, and its changeset recorded no op and is marked looked over.
 
 An item is in one list at most: a set-aside mail never has a read request closed that way, and a mail handed in again
-leaves the third list as soon as its new request exists. Rows are grouped by reason (the rule's own words) or by sender,
-newest first, filtered by the kind of item, and searched by sender, subject, kind and reason.
+leaves the second list as soon as its new request exists. Rows are grouped by kind (a mail by its kind, any other item
+by its kind of item), by reason (the rule's own words) or by sender, newest first, filtered by the kind of item, and
+searched by sender, subject, kind and reason. The tab `closed` of an earlier version reads as `set_aside`.
 
 An item stays listed for `watch.handled_keep_days` after it was handled, then leaves the list. That is a filter made
 when the list is read: no record is changed or deleted, so the ledger and Undo are whole, and the original stays
@@ -36,9 +37,11 @@ ITEM_KINDS = ("mail", "calendar", "file", "page", "action", "question", "other")
 #: What a connector with no declaration of what it reads is, by its name.
 _FILE_CONNECTORS = frozenset({"folder", "capture"})
 _PAGE_CONNECTORS = frozenset({"feed"})
-Grouping = Literal["reason", "sender"]
-TABS: tuple[Tab, ...] = ("set_aside", "closed", "read")
-#: The kind a set-aside section is listed under, and the kind of mail the rules track.
+Grouping = Literal["kind", "reason", "sender"]
+#: The two lists; `closed` is accepted as the first.
+TABS: tuple[Literal["set_aside", "read"], ...] = ("set_aside", "read")
+#: The kind a set-aside section is listed under, and the kind of mail the rules track. Personal stays for rows an
+#: earlier version stored; nothing sets mail aside as personal now.
 SECTION_KIND = {"personal": "personal", "sales": "sales", "notices": "notices"}
 TRACKED_KIND = {"bill": "bills", "order": "orders", "shipping": "deliveries"}
 OTHER = "other"
@@ -69,6 +72,12 @@ def _stamp(value: Any) -> datetime | None:
     except (TypeError, ValueError):
         return None
     return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+
+
+def _rule_section(cfg: Any, section: str) -> str:
+    """The section Always set aside mail like this files a row's sender under: the row's own, except for a mail an
+    earlier version set aside as personal, which no rule sets aside, so the configured one."""
+    return cfg.watch.handled_rule_section if section == "personal" else section
 
 
 def kept_since(cfg: Any, now: datetime | None) -> datetime:
@@ -186,9 +195,8 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
     labels = {s.id: s.label or s.id for s in cfg.watch.sources}
     out: list[dict[str, Any]] = []
     requests = _mail_requests(view)
-    if tab == "closed":
+    if tab in ("set_aside", "closed"):
         out = _closed_rows(view, cfg, labels, declared(store), cutoff)
-    elif tab == "set_aside":
         for item in set_aside.folder(ws, store, cfg):
             snap = view.get("snapshot", item["id"])
             mark = snap.data.get("set_aside") or {}
@@ -205,7 +213,7 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
                     labels,
                     {
                         "reason": item["reason"],
-                        "section": item["section"],
+                        "section": _rule_section(cfg, item["section"]),
                         "saved": held[-1].data.get("source") if held else None,
                         "request": None,
                     },
@@ -297,6 +305,15 @@ def item_of_close(view: Any, cfg: Any, said: dict[str, str | None], close: close
     return kind if kind in ("action", "question") else "other"
 
 
+def kind_group(row: dict[str, Any]) -> tuple[str, str | None]:
+    """The key rows are grouped under by kind, and the words to show (none: the screen words the key). A mail is
+    grouped by its mail kind (`kind:bills`, `kind:other`, ...), any other item by its kind of item (`item:file`,
+    `item:page`, ...), so a key names one group and no two kinds share one."""
+    if row["item"] == "mail":
+        return (f"kind:{row['kind']}", None)
+    return (f"item:{row['item']}", None)
+
+
 def reason_group(row: dict[str, Any]) -> tuple[str, str | None]:
     """The key rows are grouped under by reason, and the words to show. Set-aside and closed rows are grouped by why
     they were handled (the rule's own words); a mail read with nothing to do has no recorded reason, so it is grouped by
@@ -317,10 +334,11 @@ def listing(
     now: datetime | None = None,
     item: str | None = None,
 ) -> dict[str, Any]:
-    """One list for the screen: the counts of all three lists (whatever the search or kind), the kinds of item the
-    chosen list holds with a count each, and the rows that match the search and the kind, in groups. A group is ordered
-    by its newest row; rows in it are newest first."""
+    """One list for the screen: the counts of both lists (whatever the search or kind), the kinds of item the chosen
+    list holds with a count each, and the rows that match the search and the kind, in groups. A group is ordered by its
+    newest row; rows in it are newest first. The tab `closed` reads as `set_aside`."""
     now = now or datetime.now(UTC)
+    tab = "set_aside" if tab == "closed" else tab
     all_rows = {t: rows(ws, store, cfg, t, now) for t in TABS}
     kinds: dict[str, int] = {}
     for found in all_rows[tab]:
@@ -328,7 +346,7 @@ def listing(
     shown = [r for r in all_rows[tab] if matches(r, query) and (not item or r["item"] == item)]
     groups: dict[str, dict[str, Any]] = {}
     for row in shown:
-        key, label = reason_group(row) if group == "reason" else sender_key(row)
+        key, label = kind_group(row) if group == "kind" else reason_group(row) if group == "reason" else sender_key(row)
         found = groups.setdefault(key, {"key": key, "label": label, "items": []})
         found["items"].append(row)
     ordered = [{**g, "count": len(g["items"])} for g in groups.values()]
@@ -346,7 +364,7 @@ def listing(
 
 
 def counts(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> dict[str, int]:
-    """How many each of the three lists holds, for a line that only counts."""
+    """How many each of the two lists holds, for a line that only counts."""
     return {t: len(rows(ws, store, cfg, t, now)) for t in TABS}
 
 

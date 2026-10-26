@@ -62,28 +62,32 @@ const group = (key: string, items: S["HandledRow"][], label: string | null = nul
 
 const ASIDE: S["HandledView"] = {
   tab: "set_aside",
-  group: "reason",
+  group: "kind",
   query: "",
   item: null,
   kept_days: 30,
   page_rows: 25,
-  counts: { set_aside: 3, closed: 1, read: 2 },
-  kinds: [{ item: "mail", count: 3 }],
-  groups: [group(BULK, [row("a"), row("b")], BULK), group(NOTICE, [row("n", { kind: "notices", section: "notices", reason: NOTICE })], NOTICE)],
-};
-
-const CLOSED: S["HandledView"] = {
-  ...ASIDE,
-  tab: "closed",
+  counts: { set_aside: 6, read: 2 },
   kinds: [
+    { item: "mail", count: 3 },
     { item: "file", count: 2 },
     { item: "page", count: 1 },
   ],
   groups: [
-    group("only the spacing changed", [closedRow("a"), closedRow("b")], "only the spacing changed"),
-    group("a scratch file", [closedRow("c", { item: "page", reason: "a scratch file", rule: "Scratch" })], "a scratch file"),
+    group("kind:sales", [row("a"), row("b")]),
+    group("kind:notices", [row("n", { kind: "notices", section: "notices", reason: NOTICE })]),
+    group("item:file", [closedRow("a"), closedRow("b")]),
+    group("item:page", [closedRow("c", { item: "page", reason: "a scratch file", rule: "Scratch" })]),
   ],
 };
+
+const BY_REASON: S["HandledView"] = {
+  ...ASIDE,
+  group: "reason",
+  groups: [group(BULK, [row("a"), row("b")], BULK), group(NOTICE, [row("n", { kind: "notices", section: "notices", reason: NOTICE })], NOTICE)],
+};
+
+const SALES = /^Sales and promotions · 2$/;
 
 const NO_CLOSES: S["SilentClosesView"] = {
   count: 0,
@@ -93,12 +97,12 @@ const NO_CLOSES: S["SilentClosesView"] = {
 
 const READ: S["HandledView"] = {
   tab: "read",
-  group: "reason",
+  group: "kind",
   query: "",
   item: null,
   kept_days: 30,
   page_rows: 25,
-  counts: { set_aside: 3, closed: 1, read: 2 },
+  counts: { set_aside: 6, read: 2 },
   kinds: [{ item: "mail", count: 2 }],
   groups: [group("kind:bills", [read("p", { kind: "bills", title: "Statement p" })]), group("kind:other", [read("q", { title: "Lunch q" })])],
 };
@@ -123,7 +127,6 @@ function open(extra: Routes = {}) {
   const calls = fakeApi({
     "GET handled?tab=set_aside&q=": () => ASIDE,
     "GET handled?tab=read&q=": () => READ,
-    "GET handled?tab=closed&q=": () => CLOSED,
     "GET silent-closes": () => NO_CLOSES,
     "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
     ...extra,
@@ -139,29 +142,32 @@ const open_ = async (user: ReturnType<typeof userEvent.setup>, name: RegExp) => 
   return header.closest("section") as HTMLElement;
 };
 
-test("three lists with their counts, each saying in one line what it holds, and the cursor starts in the search box", async () => {
+test("two tabs with their counts, each saying in one line what it holds, and the cursor starts in the search box", async () => {
   const user = userEvent.setup();
   const calls = open();
   expect(await screen.findByRole("heading", { level: 1, name: "Handled for you" })).toBeInTheDocument();
-  expect(await screen.findByRole("button", { name: "Set aside before reading · 3" })).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByRole("button", { name: "Closed by a rule · 1" })).toHaveAttribute("aria-pressed", "false");
+  expect(await screen.findByRole("button", { name: "Set aside before reading · 6" })).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByRole("button", { name: "Read, nothing to do · 2" })).toHaveAttribute("aria-pressed", "false");
+  expect(screen.queryByRole("button", { name: /Closed by a rule/ })).not.toBeInTheDocument();
+  expect(within(screen.getByRole("group", { name: "Which list" })).getAllByRole("button")).toHaveLength(2);
   expect(screen.getByText("Kept for 30 days, then it leaves this list. The originals stay where they came from.")).toBeInTheDocument();
-  expect(screen.getByText("Mail sorted away before Helper read it: newsletters, sales, codes and alerts.")).toBeInTheDocument();
+  expect(screen.getByText("Sorted away before Helper read it: newsletters, sales, codes, alerts and older copies.")).toBeInTheDocument();
   expect(screen.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" })).toHaveFocus();
   await user.click(screen.getByRole("button", { name: "Read, nothing to do · 2" }));
   expect(await screen.findByText("Mail Helper read and found nothing for you in.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET handled?tab=read&q=")).toBe(true);
-  expect(screen.queryByText(/Mail sorted away before/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Sorted away before/)).not.toBeInTheDocument();
 });
 
-test("rows are grouped by reason with a count, collapsed, and a group opens to its mails with a chip for the kind, sender, date and why", async () => {
+test("rows are grouped by kind with a count, collapsed, and a group opens to its mails with a chip for the kind, sender, date and why", async () => {
   const user = userEvent.setup();
   open();
-  const sales = (await screen.findByRole("button", { name: `${BULK} · 2` })).closest("section") as HTMLElement;
-  expect(screen.getByRole("button", { name: `${NOTICE} · 1` })).toHaveAttribute("aria-expanded", "false");
+  const sales = (await screen.findByRole("button", { name: "Sales and promotions · 2" })).closest("section") as HTMLElement;
+  expect(screen.getByRole("button", { name: "Automated notices · 1" })).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("button", { name: "Files · 2" })).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("button", { name: "Pages · 1" })).toHaveAttribute("aria-expanded", "false");
   expect(screen.queryByText("Offer a")).not.toBeInTheDocument();
-  await user.click(within(sales).getByRole("button", { name: `${BULK} · 2` }));
+  await user.click(within(sales).getByRole("button", { name: "Sales and promotions · 2" }));
   const rows = within(sales).getAllByRole("listitem");
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("Mail");
@@ -169,7 +175,19 @@ test("rows are grouped by reason with a count, collapsed, and a group opens to i
   expect(rows[0]).toHaveTextContent(`Sender <${addr("a")}>`);
   expect(rows[0]).toHaveTextContent("Inbox");
   expect(rows[0]).toHaveTextContent("Set aside because: it was sent to many people, as a mailing list or bulk mail");
+  expect(rows[0]).toHaveTextContent("The message text was never sent to the AI.");
   expect(screen.queryByText("Offer n")).not.toBeInTheDocument();
+});
+
+test("the Kind, Reason and Sender buttons are shown, Kind first and pressed, and the group keys of one view are all different", async () => {
+  open();
+  await screen.findByRole("button", { name: "Sales and promotions · 2" });
+  const buttons = within(screen.getByRole("group", { name: "Group by" })).getAllByRole("button");
+  expect(buttons.map((b) => b.textContent)).toEqual(["Kind", "Reason", "Sender"]);
+  expect(buttons[0]).toHaveAttribute("aria-pressed", "true");
+  const keys = Array.from(document.querySelectorAll("[data-group]")).map((e) => e.getAttribute("data-group"));
+  expect(keys).toEqual(["kind:sales", "kind:notices", "item:file", "item:page"]);
+  expect(new Set(keys).size).toBe(keys.length);
 });
 
 test("a row on the read list says it was read with nothing to do", async () => {
@@ -181,31 +199,36 @@ test("a row on the read list says it was read with nothing to do", async () => {
   expect(screen.getByRole("button", { name: "Other mail · 1" })).toBeInTheDocument();
 });
 
-test("the other grouping, by sender, is one click away and groups by the sender the server names", async () => {
+test("the other groupings, by reason and by sender, are one click away and group by what the server names", async () => {
   const user = userEvent.setup();
   const bySender: S["HandledView"] = {
     ...ASIDE,
     group: "sender",
     groups: [group(addr("a"), [row("a"), row("b")], "Sender"), group("", [row("z", { sender: null, address: "" })], null)],
   };
-  const calls = open({ "GET handled?tab=set_aside&q=&group=sender": () => bySender });
-  await screen.findByRole("button", { name: `${BULK} · 2` });
+  const calls = open({ "GET handled?tab=set_aside&q=&group=sender": () => bySender, "GET handled?tab=set_aside&q=&group=reason": () => BY_REASON });
+  await screen.findByRole("button", { name: "Sales and promotions · 2" });
+  expect(screen.getByRole("button", { name: "Kind" })).toHaveAttribute("aria-pressed", "true");
+  await user.click(screen.getByRole("button", { name: "Reason" }));
+  expect(await screen.findByRole("button", { name: `${BULK} · 2` })).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("button", { name: `${NOTICE} · 1` })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Reason" })).toHaveAttribute("aria-pressed", "true");
   await user.click(screen.getByRole("button", { name: "Sender" }));
   expect(await screen.findByRole("button", { name: "Sender · 2" })).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByRole("button", { name: "No known sender · 1" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Sender" })).toHaveAttribute("aria-pressed", "true");
   expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&group=sender")).toBe(true);
+  expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&group=reason")).toBe(true);
 });
 
 test("a search asks for the words, opens the groups it found, and says when nothing matches", async () => {
   const user = userEvent.setup();
-  const found: S["HandledView"] = { ...ASIDE, query: "offer b", groups: [group(BULK, [row("b")], BULK)] };
+  const found: S["HandledView"] = { ...ASIDE, query: "offer b", groups: [group("kind:sales", [row("b")])] };
   const none: S["HandledView"] = { ...ASIDE, query: "zzz", groups: [] };
   const calls = open({ "GET handled?tab=set_aside&q=offer+b": () => found, "GET handled?tab=set_aside&q=zzz": () => none });
-  await screen.findByRole("button", { name: `${BULK} · 2` });
+  await screen.findByRole("button", { name: "Sales and promotions · 2" });
   await user.type(screen.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" }), "offer b");
-  expect(await screen.findByRole("button", { name: `${BULK} · 1` })).toHaveAttribute("aria-expanded", "true");
+  expect(await screen.findByRole("button", { name: "Sales and promotions · 1" })).toHaveAttribute("aria-expanded", "true");
   expect(screen.getByText("Offer b")).toBeInTheDocument();
   expect(screen.queryByText("Offer a")).not.toBeInTheDocument();
   expect(calls.filter((c) => c.route === "GET handled?tab=set_aside&q=offer+b").length).toBeGreaterThan(0);
@@ -217,8 +240,8 @@ test("a search asks for the words, opens the groups it found, and says when noth
 test("each list says so when it is empty", async () => {
   const user = userEvent.setup();
   open({
-    "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [], kinds: [], counts: { set_aside: 0, closed: 0, read: 0 } }),
-    "GET handled?tab=read&q=": () => ({ ...READ, groups: [], kinds: [], counts: { set_aside: 0, closed: 0, read: 0 } }),
+    "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [], kinds: [], counts: { set_aside: 0, read: 0 } }),
+    "GET handled?tab=read&q=": () => ({ ...READ, groups: [], kinds: [], counts: { set_aside: 0, read: 0 } }),
   });
   expect(await screen.findByText("Nothing has been set aside.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Read, nothing to do · 0" }));
@@ -228,9 +251,9 @@ test("each list says so when it is empty", async () => {
 test("a row offers Treat as work, and in its menu Treat as personal, Always set aside mail like this and Open the message, with no Keep set aside anywhere", async () => {
   const user = userEvent.setup();
   open({
-    "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [group(BULK, [row("a", { link: "message-a" })], BULK)] }),
+    "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [group("kind:sales", [row("a", { link: "message-a" })])] }),
   });
-  const sales = await open_(user, new RegExp(`^${BULK} · 1$`));
+  const sales = await open_(user, /^Sales and promotions · 1$/);
   expect(within(sales).getByRole("button", { name: "Treat as work: Offer a" })).toBeInTheDocument();
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
   expect(await screen.findByRole("menuitem", { name: "Treat as personal" })).toBeInTheDocument();
@@ -254,8 +277,8 @@ test("a row of the read list has Take a closer look, and in its menu the other c
 
 test("Open the message goes to the saved page when the message has no link in the mail service", async () => {
   const user = userEvent.setup();
-  open({ "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [group(BULK, [row("a", { saved: "SRC-a" })], BULK)] }) });
-  const sales = await open_(user, new RegExp(`^${BULK} · 1$`));
+  open({ "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [group("kind:sales", [row("a", { saved: "SRC-a" })])] }) });
+  const sales = await open_(user, /^Sales and promotions · 1$/);
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
   await user.click(await screen.findByRole("menuitem", { name: "Open the message" }));
   expect(window.location.hash).toBe("#records/source/SRC-a");
@@ -264,7 +287,7 @@ test("Open the message goes to the saved page when the message has no link in th
 test("Open the message is not offered for a message with neither a link nor a saved page", async () => {
   const user = userEvent.setup();
   open();
-  const sales = await open_(user, new RegExp(`^${BULK} · 2$`));
+  const sales = await open_(user, SALES);
   await user.click(within(sales).getAllByRole("button", { name: /^More actions for/ })[0]);
   expect(await screen.findByRole("menuitem", { name: "Treat as personal" })).toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Open the message" })).not.toBeInTheDocument();
@@ -277,7 +300,7 @@ test("Treat as work on a set-aside mail hands it in with the version read, offer
     "POST mail/a/set-aside": () => ({ id: "a", version: 6, section: "sales", address: addr("a"), domain: null }),
     "POST watch/sorting": () => SAVED,
   });
-  const sales = await open_(user, new RegExp(`^${BULK} · 2$`));
+  const sales = await open_(user, SALES);
   await user.click(within(sales).getByRole("button", { name: "Treat as work: Offer a" }));
   await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3 }));
   expect(await screen.findByText("Handed in Offer a. Helper is on it.")).toBeInTheDocument();
@@ -309,7 +332,7 @@ test("Treat as personal hands the message in for the Personal project, and Undo 
     "POST handled/a/personal": () => done("a", { domain: null }),
     "POST mail/a/set-aside": () => ({ id: "a", version: 6, section: "sales", address: addr("a"), domain: null }),
   });
-  const sales = await open_(user, new RegExp(`^${BULK} · 2$`));
+  const sales = await open_(user, SALES);
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
   await user.click(await screen.findByRole("menuitem", { name: "Treat as personal" }));
   await waitFor(() => expect(body(calls, "POST handled/a/personal")).toEqual({ read_version: 3 }));
@@ -343,32 +366,33 @@ test("a list that can't be loaded says so and tries again", async () => {
   });
   expect(await screen.findByText(/The list couldn't be loaded/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Try again" }));
-  expect(await screen.findByRole("button", { name: `${BULK} · 2` })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Sales and promotions · 2" })).toBeInTheDocument();
 });
 
 test("an assistant with no name of its own is called your assistant", async () => {
   fakeApi({ "GET handled?tab=set_aside&q=": () => ASIDE, "GET handled?tab=read&q=": () => READ });
   renderApp(<Handled />, {}, { unnamed: true });
-  expect(await screen.findByText("Mail sorted away before your assistant read it: newsletters, sales, codes and alerts.")).toBeInTheDocument();
+  expect(await screen.findByText("Sorted away before your assistant read it: newsletters, sales, codes, alerts and older copies.")).toBeInTheDocument();
 });
 
-test("the closed list: each row has a chip for its kind of item, the rule and the reason, and Take a closer look in one click", async () => {
+test("a change a rule closed is a row of the set-aside tab: a chip for its kind of item, the rule and the reason, and Take a closer look in one click", async () => {
   const user = userEvent.setup();
   const calls = open({
     "POST requests/REQ-a/closer-look": () => ({ id: "REQ-a" }),
     "POST requests/REQ-a/closer-look/undo": () => ({ id: "REQ-a" }),
   });
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
-  expect(await screen.findByText(/Changes a rule closed before Helper read them/)).toBeInTheDocument();
-  const spacing = await open_(user, /^only the spacing changed · 2$/);
-  const first = within(spacing).getAllByRole("listitem")[0];
+  const files = await open_(user, /^Files · 2$/);
+  const first = within(files).getAllByRole("listitem")[0];
   expect(first).toHaveTextContent("File");
   expect(first).toHaveTextContent("Plan a");
   expect(first).toHaveTextContent("Changed");
   expect(first).toHaveTextContent("Closed by the rule Spacing: only the spacing changed");
-  const scratch = await open_(user, /^a scratch file · 1$/);
-  expect(within(scratch).getByRole("listitem")).toHaveTextContent("Page");
-  await user.click(within(spacing).getByRole("button", { name: "Take a closer look at Plan a" }));
+  const pages = await open_(user, /^Pages · 1$/);
+  expect(within(pages).getByRole("listitem")).toHaveTextContent("Page");
+  const sales = await open_(user, SALES);
+  expect(within(sales).getAllByRole("listitem")[0]).toHaveTextContent("Set aside because:");
+  expect(within(sales).getByRole("button", { name: "Treat as work: Offer a" })).toBeInTheDocument();
+  await user.click(within(files).getByRole("button", { name: "Take a closer look at Plan a" }));
   await waitFor(() => expect(body(calls, "POST requests/REQ-a/closer-look")).toEqual({ read_version: 3 }));
   expect(await screen.findByText("Handed in Plan a. Helper is on it.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
@@ -378,15 +402,14 @@ test("the closed list: each row has a chip for its kind of item, the rule and th
 test("a closed row's menu has Looks right, which marks the close as seen, and Open it", async () => {
   const user = userEvent.setup();
   const calls = open({ "POST silent-closes/seen": () => ({ id: "request:REQ-a" }) });
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
-  const spacing = await open_(user, /^only the spacing changed · 2$/);
-  await user.click(within(spacing).getByRole("button", { name: "More actions for Plan a" }));
+  const files = await open_(user, /^Files · 2$/);
+  await user.click(within(files).getByRole("button", { name: "More actions for Plan a" }));
   expect(await screen.findByRole("menuitem", { name: "Open it" })).toBeInTheDocument();
   await user.click(screen.getByRole("menuitem", { name: "Looks right" }));
   await waitFor(() => expect(body(calls, "POST silent-closes/seen")).toEqual({ ref: "request:REQ-a" }));
 });
 
-test("the closed list also holds the assistant's own closes nobody has seen, with their kind of item, and Looks right", async () => {
+test("Closed without you seeing sits under the Read tab, not under Set aside, with the kind of item of each close and Looks right", async () => {
   const user = userEvent.setup();
   const calls = open({
     "GET silent-closes": () => ({
@@ -400,7 +423,9 @@ test("the closed list also holds the assistant's own closes nobody has seen, wit
     }),
     "POST silent-closes/seen": () => ({ id: "changeset:CS-1:0" }),
   });
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
+  await screen.findByRole("button", { name: "Sales and promotions · 2" });
+  expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Read, nothing to do · 2" }));
   const heading = await screen.findByRole("heading", { name: "Closed without you seeing" });
   const section = heading.closest("section") as HTMLElement;
   expect(within(section).getByText("2 of 4 closes in the last 14 days weren't seen by you.")).toBeInTheDocument();
@@ -410,28 +435,30 @@ test("the closed list also holds the assistant's own closes nobody has seen, wit
   expect(rows[0]).toHaveTextContent("Ask about the venue");
   await user.click(within(rows[0]).getByRole("button", { name: "Looks right: Ask about the venue" }));
   await waitFor(() => expect(body(calls, "POST silent-closes/seen")).toEqual({ ref: "changeset:CS-1:0" }));
+  await user.click(screen.getByRole("button", { name: "Set aside before reading · 6" }));
+  await screen.findByRole("button", { name: "Sales and promotions · 2" });
+  expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
 });
 
 test("a kind filter narrows the list to one kind of item and asks the server for it", async () => {
   const user = userEvent.setup();
-  const onlyFiles: S["HandledView"] = { ...CLOSED, item: "file", groups: [group("only the spacing changed", [closedRow("a"), closedRow("b")], "only the spacing changed")] };
-  const calls = open({ "GET handled?tab=closed&q=&item=file": () => onlyFiles });
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
+  const onlyFiles: S["HandledView"] = { ...ASIDE, item: "file", groups: [group("item:file", [closedRow("a"), closedRow("b")])] };
+  const calls = open({ "GET handled?tab=set_aside&q=&item=file": () => onlyFiles });
   const filter = await screen.findByRole("group", { name: "Kind of item" });
   expect(within(filter).getByRole("button", { name: "All kinds" })).toHaveAttribute("aria-pressed", "true");
   expect(within(filter).getByRole("button", { name: "Page · 1" })).toBeInTheDocument();
   await user.click(within(filter).getByRole("button", { name: "File · 2" }));
-  expect(await screen.findByRole("button", { name: "only the spacing changed · 2" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "a scratch file · 1" })).not.toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Files · 2" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Pages · 1" })).not.toBeInTheDocument();
   expect(within(filter).getByRole("button", { name: "File · 2" })).toHaveAttribute("aria-pressed", "true");
-  expect(calls.some((c) => c.route === "GET handled?tab=closed&q=&item=file")).toBe(true);
+  expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&item=file")).toBe(true);
 });
 
 test("a group shows a page of rows and Show more adds the next page, newest first", async () => {
   const user = userEvent.setup();
   const many = Array.from({ length: 7 }, (_, n) => row(`m${n}`, { title: `Offer m${n}` }));
-  open({ "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, page_rows: 3, groups: [group(BULK, many, BULK)] }) });
-  const section = await open_(user, new RegExp(`^${BULK} · 7$`));
+  open({ "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, page_rows: 3, groups: [group("kind:sales", many)] }) });
+  const section = await open_(user, /^Sales and promotions · 7$/);
   expect(within(section).getAllByRole("listitem", { name: /^Offer/ })).toHaveLength(3);
   await user.click(within(section).getByRole("button", { name: "Show more (4 more)" }));
   expect(within(section).getAllByRole("listitem", { name: /^Offer/ })).toHaveLength(6);

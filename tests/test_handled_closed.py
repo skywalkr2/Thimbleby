@@ -1,6 +1,7 @@
-"""Handled for you, retention and the third list (design 7.20; P58): mail stays listed for `watch.handled_keep_days`
-and then leaves the list with no record changed, and what a rule closed and the closes nobody has seen are a third tab
-of the same screen, each row saying what kind of item it is and keeping its choices. Names come from the fixtures."""
+"""Handled for you, retention and what a rule closed (design 7.20; P58): mail stays listed for
+`watch.handled_keep_days` and then leaves the list with no record changed, and what a rule closed joins the set-aside
+mail on the first tab (the closes nobody has seen are under the second), each row saying what kind of item it is and
+keeping its choices. Names come from the fixtures."""
 
 from __future__ import annotations
 
@@ -52,9 +53,9 @@ def test_mail_stays_listed_for_the_keep_days_then_leaves_both_lists_and_no_recor
             len(store.read().ledger()),
         )
         day_29 = handled.listing(ws, store, cfg, "set_aside", "reason", "", NOW + timedelta(days=29))
-        assert day_29["counts"] == {"set_aside": 1, "closed": 0, "read": 1} and day_29["kept_days"] == 30
+        assert day_29["counts"] == {"set_aside": 1, "read": 1} and day_29["kept_days"] == 30
         day_31 = handled.listing(ws, store, cfg, "set_aside", "reason", "", NOW + timedelta(days=31))
-        assert day_31["counts"] == {"set_aside": 0, "closed": 0, "read": 0} and day_31["groups"] == []
+        assert day_31["counts"] == {"set_aside": 0, "read": 0} and day_31["groups"] == []
         assert handled.listing(ws, store, cfg, "read", "reason", "", NOW + timedelta(days=31))["groups"] == []
         after = (
             {(r.id, r.version) for kind in ("snapshot", "request", "source") for r in store.read().list(kind)},
@@ -73,7 +74,7 @@ def test_the_keep_days_setting_decides_how_long(tmp_path):
         assert cfg.watch.handled_keep_days == 7
         assert handled.listing(ws, store, cfg, "read", "reason", "", NOW + timedelta(days=6))["counts"]["read"] == 1
         late = handled.listing(ws, store, cfg, "read", "reason", "", NOW + timedelta(days=8))
-        assert late["counts"] == {"set_aside": 0, "closed": 0, "read": 0} and late["kept_days"] == 7
+        assert late["counts"] == {"set_aside": 0, "read": 0} and late["kept_days"] == 7
     finally:
         store.close()
 
@@ -84,7 +85,7 @@ def test_mail_the_person_sets_aside_by_hand_is_kept_from_that_day_not_from_when_
         long_ago = NOW - timedelta(days=60)
         refresh(ws, store, cfg, "m", long_ago)
         (snap,) = store.read().list("snapshot")
-        set_aside_item(store, snap.id, "personal", now=NOW)
+        set_aside_item(store, snap.id, "sales", now=NOW)
         shown = handled.listing(ws, store, cfg, "set_aside", "reason", "", NOW + timedelta(days=1))
         assert [i["title"] for g in shown["groups"] for i in g["items"]] == ["Lunch is moved"]
         gone = handled.listing(ws, store, cfg, "set_aside", "reason", "", NOW + timedelta(days=31))
@@ -100,11 +101,11 @@ def test_the_api_lists_nothing_older_than_the_keep_days_and_says_how_long_mail_i
     for tab in ("set_aside", "read"):
         body = client.get(f"{api}/handled", params={"tab": tab}).json()
         assert body["groups"] == [] and body["kept_days"] == 30
-        assert body["counts"] == {"set_aside": 0, "closed": 0, "read": 0}
+        assert body["counts"] == {"set_aside": 0, "read": 0}
     fresh_ws, fresh_cfg, fresh_store, _ = aged(tmp_path / "fresh", 2)
     fresh_store.close()
     client, api = client_for(fresh_ws, fresh_cfg)
-    assert client.get(f"{api}/handled").json()["counts"] == {"set_aside": 1, "closed": 0, "read": 1}
+    assert client.get(f"{api}/handled").json()["counts"] == {"set_aside": 1, "read": 1}
 
 
 def test_the_keep_days_setting_refuses_zero(tmp_path):
@@ -120,13 +121,14 @@ def test_the_keep_days_setting_refuses_zero(tmp_path):
 
 
 def closed_view(client, api, **params):
-    shown = client.get(f"{api}/handled", params={"tab": "closed", **params})
+    shown = client.get(f"{api}/handled", params={"tab": "set_aside", "group": "reason", **params})
     assert shown.status_code == 200, shown.text
     return shown.json()
 
 
 def closed_rows(view):
-    return [i for g in view["groups"] for i in g["items"]]
+    """The rows of the set-aside tab that a rule closed (the tab also holds the mail set aside)."""
+    return [i for g in view["groups"] for i in g["items"] if i["tab"] == "closed"]
 
 
 def test_a_change_a_rule_closed_is_a_row_with_its_rule_its_reason_and_its_kind_of_item(tmp_path):
@@ -140,7 +142,7 @@ def test_a_change_a_rule_closed_is_a_row_with_its_rule_its_reason_and_its_kind_o
     assert row["item"] == "other", "the test source is neither mail, a file nor a page"
     (group,) = view["groups"]
     assert group["key"] == group["label"] == row["reason"] and group["count"] == 1
-    assert view["counts"] == {"set_aside": 0, "closed": 1, "read": 0}
+    assert view["counts"] == {"set_aside": 1, "read": 0}
     assert view["kinds"] == [{"item": "other", "count": 1}]
     assert client.get(f"{api}/handled/counts").json() == view["counts"]
 
@@ -186,7 +188,7 @@ def test_take_a_closer_look_hands_it_in_records_a_signal_and_leaves_the_list_and
     done = client.post(f"{api}/requests/{row['id']}/closer-look", json={"read_version": row["version"]})
     assert done.status_code == 200, done.text
     after = closed_view(client, api)
-    assert after["groups"] == [] and after["counts"]["closed"] == 0
+    assert after["groups"] == [] and after["counts"]["set_aside"] == 0
     again = Store(ws.db_path)
     try:
         assert again.read().get("request", request).data["state"] == "queued"
@@ -235,23 +237,50 @@ def test_the_assistants_own_unseen_closes_stay_on_their_own_route_with_the_kind_
     client, api = client_for(ws, cfg)
     by_kind = {c["kind"]: c for c in client.get(f"{api}/silent-closes").json()["closes"]}
     assert by_kind["assistant"]["item"] == "question" and by_kind["assistant"]["changeset"] == cs_id
-    assert closed_view(client, api)["counts"]["closed"] == 1, "only a rule's closes are rows on this list"
+    assert closed_view(client, api)["counts"]["set_aside"] == 1, "only a rule's closes are rows on this list"
 
 
-def test_set_aside_mail_is_on_its_own_tab_and_never_on_the_closed_one(tmp_path):
-    ws, cfg, store, then = aged(tmp_path, 0)
+def test_the_set_aside_tab_lists_both_a_set_aside_mail_and_a_file_a_rule_closed_and_the_old_tab_name_reads_as_it(
+    tmp_path,
+):
+    from tests.test_watch import reread
+
+    ws, cfg, store, request = closed_by_a_rule(tmp_path)
+    plan = {"key": "a", "title": "Plan", "text": "One  budget"}
+    cfg, store, _ = reread(
+        tmp_path,
+        ws,
+        store,
+        [plan, mail("sale", SHOP_LIST, bulk=True, subject="Sale of the week", body="Our budget range.")],
+    )
     store.close()
-    client, api = client_for(ws, cfg)
+    current = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
+    current["sources"] = [{**current["sources"][0], "connector": "folder", "settings": {}}]
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(current))
+    client, api = client_for(ws, load_config(ws.config_dir, env={}))
     body = closed_view(client, api)
-    assert body["groups"] == [] and body["counts"] == {"set_aside": 1, "closed": 0, "read": 1}
+    rows = [i for g in body["groups"] for i in g["items"]]
+    assert {(r["tab"], r["item"]) for r in rows} == {("set_aside", "mail"), ("closed", "file")}
+    assert body["counts"] == {"set_aside": 2, "read": 0} and body["tab"] == "set_aside"
+    assert {k["item"] for k in body["kinds"]} == {"mail", "file"}
+    mail_row = next(r for r in rows if r["item"] == "mail")
+    file_row = next(r for r in rows if r["item"] == "file")
+    assert mail_row["reason"] and mail_row["rule"] is None, "each row keeps its own reason"
+    assert file_row["rule"] == "Spacing" and file_row["request"] == request
+    old = client.get(f"{api}/handled", params={"tab": "closed"}).json()
+    assert old["tab"] == "set_aside" and old["counts"] == body["counts"]
+    assert {i["id"] for g in old["groups"] for i in g["items"]} == {r["id"] for r in rows}
+    by_kind = client.get(f"{api}/handled", params={"tab": "set_aside", "group": "kind"}).json()
+    keys = [g["key"] for g in by_kind["groups"]]
+    assert by_kind["group"] == "kind" and len(keys) == len(set(keys)) and set(keys) == {"kind:sales", "item:file"}
 
 
 def test_a_rule_close_leaves_the_list_after_the_keep_days_too(tmp_path):
     ws, cfg, store, request = closed_by_a_rule(tmp_path)
     try:
         created = datetime.fromisoformat(str(store.read().get("request", request).data["created_at"]))
-        assert handled.counts(ws, store, cfg, created + timedelta(days=29))["closed"] == 1
-        assert handled.counts(ws, store, cfg, created + timedelta(days=31))["closed"] == 0
+        assert handled.counts(ws, store, cfg, created + timedelta(days=29))["set_aside"] == 1
+        assert handled.counts(ws, store, cfg, created + timedelta(days=31))["set_aside"] == 0
     finally:
         store.close()
 

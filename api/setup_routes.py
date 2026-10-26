@@ -839,7 +839,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/watch/sorting")
     def sorting_rule(body: SortingRuleIn) -> SettingsSaved:
-        """Always set aside mail from these senders and domains as personal or sales, or never set it aside, as the
+        """Always set aside mail from these senders and domains as sales or notices, or never set it aside, as the
         person's own rule, with Undo. Keeping mail goes first in the list; the rule applies to the next mail."""
         if not body.senders and not body.domains:
             raise HTTPException(status_code=400, detail="Name a sender or a domain.")

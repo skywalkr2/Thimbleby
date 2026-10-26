@@ -53,7 +53,7 @@ test("Came in carries no count of what was set aside, whatever it is: Today list
   expect(within(col).queryByText(/set aside/)).toBeNull();
 });
 
-test("a Came in row's menu sets the message aside as personal or sales, with Undo and an offer of a rule", async () => {
+test("a Came in row's menu sets the message aside as sales, never as personal, with Undo and an offer of a rule", async () => {
   const user = userEvent.setup();
   const { calls } = today({
     "POST mail/SNAP-1/set-aside": () => DONE,
@@ -62,7 +62,7 @@ test("a Came in row's menu sets the message aside as personal or sales, with Und
   });
   const col = await column("Came in");
   await user.click(await within(col).findByRole("button", { name: "More actions for Spring sale" }));
-  expect(screen.getByRole("menuitem", { name: "Set aside: personal" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Set aside: personal" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("menuitem", { name: "Set aside: sales" }));
   await waitFor(() => expect(body(calls, "POST mail/SNAP-1/set-aside")).toEqual({ section: "sales" }));
   expect(await screen.findByText("Set aside Spring sale as sales mail.")).toBeInTheDocument();
@@ -82,7 +82,7 @@ test("Undo of a set-aside puts the message back with the version it was left at"
   });
   const col = await column("Came in");
   await user.click(await within(col).findByRole("button", { name: "More actions for Spring sale" }));
-  await user.click(screen.getByRole("menuitem", { name: "Set aside: personal" }));
+  await user.click(screen.getByRole("menuitem", { name: "Set aside: sales" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(body(calls, "POST set-aside/SNAP-1/put-back")).toEqual({ read_version: 7 }));
 });
@@ -106,7 +106,7 @@ function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem
   };
 }
 
-test("a What changed row for a mail message has the same two corrections; other rows do not", async () => {
+test("a What changed row for a mail message has the same correction; other rows do not", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
     "GET changes": () => [change("REQ-1", { mail_item: "SNAP-1" }), change("REQ-2", { source_title: "A note" })],

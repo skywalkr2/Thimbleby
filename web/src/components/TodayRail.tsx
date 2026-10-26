@@ -636,7 +636,6 @@ function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () =>
                 <RowMenu
                   label={message.title}
                   actions={[
-                    { id: "personal", label: t("setaside.menu_personal"), run: () => void moveToFolder({ id: message.snapshot, title: message.title }, "personal") },
                     { id: "sales", label: t("setaside.menu_sales"), run: () => void moveToFolder({ id: message.snapshot, title: message.title }, "sales") },
                   ]}
                 />

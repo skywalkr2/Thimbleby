@@ -6,10 +6,10 @@ A rule names a matcher: the core's are below; plugins add theirs (`registrar.tri
 change (source, key, title, change, author, before, now, and the added and removed lines) and the rule's parameters,
 and returns a reason in plain words, or None. Matchers are deterministic and never call AI.
 
-A rule with `set_aside` puts mail in the Set aside folder (personal, sales and promotions, or automated notices)
-instead of plainly closing it; `never` keeps mail with the assistant, over every set-aside rule after it and over
-the built-in sorting that follows the list (`watch.set_aside_defaults`). A match returns `{rule, reason}`, with
-`section` when the mail is set aside.
+A rule with `set_aside` puts mail in the Set aside folder (sales and promotions, or automated notices) instead of
+plainly closing it; `never` keeps mail with the assistant, over every set-aside rule after it and over the built-in
+sorting that follows the list (`watch.set_aside_defaults`). `personal` sets nothing aside: the mail is handed in and
+filed under the Personal project. A match returns `{rule, reason}`, with `section` when the mail is set aside.
 """
 
 from __future__ import annotations
@@ -169,7 +169,7 @@ def matchers(store: Any) -> dict[str, Matcher]:
 
 
 def first_match(store: Any, cfg: Any, change: dict[str, Any]) -> dict[str, str] | None:
-    """The first rule that closes this change: {rule, reason}, plus `section` (personal or sales) when the rule sets
+    """The first rule that closes this change: {rule, reason}, plus `section` (sales or notices) when the rule sets
     mail aside, or None. A matching `never` rule keeps the mail with the assistant against every later set-aside rule
     and the built-in sorting; other rules still apply."""
     return classify(store, cfg, change)[0]
@@ -178,6 +178,14 @@ def first_match(store: Any, cfg: Any, change: dict[str, Any]) -> dict[str, str] 
 def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, str] | None, bool]:
     """What the rules and the built-in sorting make of this change: the match `first_match` gives, and whether a
     `never` rule keeps the mail with the assistant (so no later sorting, the assistant's included, may set it aside)."""
+    closed, kept, _personal = classify_placed(store, cfg, change)
+    return closed, kept
+
+
+def classify_placed(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, str] | None, bool, bool]:
+    """`classify`, and whether a rule says the mail is personal. Personal mail is never set aside: such a rule closes
+    nothing and keeps the mail with the assistant (so no later sorting sets it aside), and the caller files the mail
+    under the Personal project."""
     found = matchers(store)
     kept = False
     for rule in cfg.watch.triage:
@@ -186,7 +194,7 @@ def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, st
         match = found.get(rule.kind)
         if match is None:
             continue
-        if kept and rule.set_aside:
+        if kept and rule.set_aside and rule.set_aside != "personal":
             continue
         params = dict(rule.params)
         if rule.projects or rule.people:
@@ -200,25 +208,29 @@ def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, st
         if rule.set_aside == "never":
             kept = True
             continue
+        if rule.set_aside == "personal":
+            if change.get("message"):
+                return None, True, True
+            continue
         why = rule.why.format(reason=reason) if rule.why else reason
         closed = {"rule": rule.name, "reason": why}
         if rule.set_aside:
             closed["section"] = rule.set_aside
-        return closed, kept
+        return closed, kept, False
     if kept or not change.get("message"):
-        return None, kept
+        return None, kept, False
     auto = cfg.watch.automated_mail
     if cfg.watch.set_aside_defaults and auto.set_aside:
         reason = automated_code_mail(change, {"senders": auto.senders, "words": auto.words})
         if reason:
-            return {"rule": "Automated notices", "reason": reason, "section": "notices"}, kept
+            return {"rule": "Automated notices", "reason": reason, "section": "notices"}, kept, False
     if kind_of_change(cfg.watch.mail_kinds, change):
-        return None, True  # a bill, an order or a delivery is never set aside, and no sorting may set it aside
+        return None, True, False  # a bill, an order or a delivery is never set aside, and no sorting may set it aside
     if not cfg.watch.set_aside_defaults:
-        return None, kept
+        return None, kept, False
     built_in = BUILT_IN_SET_ASIDE
     for kind, params, name, section in built_in:
         reason = CORE[kind](change, params)
         if reason:
-            return {"rule": name, "reason": reason, "section": section}, kept
-    return None, kept
+            return {"rule": name, "reason": reason, "section": section}, kept, False
+    return None, kept, False

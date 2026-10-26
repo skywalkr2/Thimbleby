@@ -2569,10 +2569,11 @@ class UiFile(FileModel):
         default_factory=lambda: dict(DEFAULT_SHORTCUTS),
         description="Single-key shortcuts by action; they never fire while typing.",
     )
-    handled_group: Literal["reason", "sender"] = Field(
-        "reason",
-        description="How the Handled for you screen groups what it lists to start with: by the reason it was handled "
-        "(a rule's own words) or by sender. The other grouping is one click away.",
+    handled_group: Literal["kind", "reason", "sender"] = Field(
+        "kind",
+        description="How the Handled for you screen groups what it lists to start with: by what the item is (a "
+        "mail's kind, such as bills or orders, or the kind of file, page or entry), by the reason it was handled "
+        "(a rule's own words) or by sender. The other groupings are one click away.",
     )
     handled_rows_shown: int = Field(
         25,
@@ -2580,12 +2581,6 @@ class UiFile(FileModel):
         le=500,
         description="How many rows a group on the Handled for you screen shows before Show more.",
     )
-
-    @field_validator("handled_group", mode="before")
-    @classmethod
-    def _handled_group_was_kind(cls, value: Any) -> Any:
-        """The first grouping was named kind; a file that still says so means the reason grouping."""
-        return "reason" if value == "kind" else value
 
     narrow_below_px: int = Field(
         640,
@@ -2901,9 +2896,10 @@ class TriageRule(ConfigModel):
     )
     set_aside: Literal["personal", "sales", "notices", "never"] | None = Field(
         None,
-        description="With a match, put mail in the Set aside folder (personal, sales and promotions, or automated "
-        "notices) instead of plainly closing it; never keeps the mail with the assistant, over any set-aside rule "
-        "after it and over the built-in sorting. Empty: the rule closes the change as usual.",
+        description="With a match, put mail in the Set aside folder (sales and promotions, or automated notices) "
+        "instead of plainly closing it; never keeps the mail with the assistant, over any set-aside rule after it "
+        "and over the built-in sorting. Personal (written by an earlier version) no longer sets mail aside: the "
+        "mail is handed in and filed under the Personal project. Empty: the rule closes the change as usual.",
     )
 
 
@@ -3121,8 +3117,9 @@ class WatchFile(FileModel):
         "ai",
         description="How mail that none of the rules above place is sorted. ai: one small, low-cost run reads only "
         "each message's sender, subject line and the mail service's category (never the text) and says work, "
-        "personal or sales; unsure counts as work, so nothing is hidden on a guess. rules: no run; only the rules "
-        "set mail aside.",
+        "personal, sales or notice; sales and notices are set aside, personal mail is handed in and filed under "
+        "the Personal project; unsure counts as work, so nothing is hidden on a guess. rules: no run; only the "
+        "rules set mail aside.",
     )
     acting: list[str] = Field(
         default_factory=list,
@@ -3176,12 +3173,19 @@ class WatchFile(FileModel):
         description="After you confirm set-aside mail is not work for you, how long the app keeps its copy so Undo can "
         "bring it back; then the copy is deleted from the app (it stays in your mailbox). 0 deletes at once.",
     )
-    handled_rule_section: Literal["personal", "sales", "notices"] = Field(
+    handled_rule_section: Literal["sales", "notices"] = Field(
         "notices",
         description="Where mail goes when you choose Always set aside mail like this on mail the assistant already "
-        "read and found nothing to do in (that mail has no section of its own): personal, sales or notices "
-        "(automated notices).",
+        "read and found nothing to do in (that mail has no section of its own): sales or notices (automated "
+        "notices). A file that still says personal reads as notices, because personal mail is never set aside.",
     )
+
+    @field_validator("handled_rule_section", mode="before")
+    @classmethod
+    def _handled_rule_section_was_personal(cls, value: Any) -> Any:
+        """Personal mail is never set aside, so a file that still says personal means automated notices."""
+        return "notices" if value == "personal" else value
+
     handled_keep_days: int = Field(
         30,
         ge=1,

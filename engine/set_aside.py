@@ -18,6 +18,9 @@ from engine.storage import StoreError, WriteContext
 from engine.triage import sender_address
 from engine.yaml_load import load_yaml
 
+#: The sections a set-aside mail can be in. No sorting or screen sets mail aside as personal any more (personal mail is
+#: handed in, filed under the Personal project); the section stays so a row an earlier version stored still lists, and
+#: Undo of Treat as work puts such a row back as it was.
 SECTIONS = ("personal", "sales", "notices")
 #: The domains the core ships as public mail domains (see `is_public_domain`).
 PUBLIC_DOMAINS_FILE = Path(__file__).parent / "defaults" / "public_mail_domains.yaml"

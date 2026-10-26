@@ -445,23 +445,23 @@ def test_a_rule_written_by_the_corrections_route_applies_to_the_next_matching_it
     ws, cfg, store, client, base = app
     read(ws, store)
     work = next(s for s in store.read().list("snapshot") if s.data["key"] == "work")
-    client.post(f"{base}/mail/{work.id}/set-aside", json={"section": "personal"})
+    client.post(f"{base}/mail/{work.id}/set-aside", json={"section": "sales"})
     saved = client.post(
         f"{base}/watch/sorting",
-        json={"fingerprint": fingerprint(client, base), "choice": "personal", "senders": [WORK], "domains": []},
+        json={"fingerprint": fingerprint(client, base), "choice": "sales", "senders": [WORK], "domains": []},
     )
     assert saved.status_code == 200 and saved.json()["needs_restart"] is False
     rules = load_config(ws.config_dir, env={}).watch.triage
     assert [(r.name, r.set_aside, r.params) for r in rules] == [
-        ("Personal mail you set aside", "personal", {"senders": [WORK]})
+        ("Sales mail you set aside", "sales", {"senders": [WORK]})
     ]
-    # The next mail from that sender, which says nothing about itself, is set aside as personal mail.
+    # The next mail from that sender, which says nothing about itself, is set aside as sales mail.
     settings = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
     settings["sources"][0]["settings"]["items"].append(mail("later", WORK, hours=0))
     (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(settings))
     read(ws, store)
     later = next(s for s in store.read().list("snapshot") if s.data["key"] == "later")
-    assert later.data["set_aside"]["section"] == "personal" and "colleague" in later.data["set_aside"]["reason"]
+    assert later.data["set_aside"]["section"] == "sales" and "colleague" in later.data["set_aside"]["reason"]
     assert len(requests_in(store, "queued")) == 0
     # Undo, as the screen does: the settings go back as they were.
     change = saved.json()["changes"][0]
@@ -474,11 +474,11 @@ def test_a_rule_written_by_the_corrections_route_applies_to_the_next_matching_it
 
 def test_a_keep_rule_from_this_is_work_always_goes_first_and_beats_the_built_in_sorting(app):
     ws, cfg, store, client, base = app
-    for choice, sender in (("sales", f"x@{SHOP}"), ("never", f"a@{LISTS}"), ("personal", f"y@{SHOP}")):
+    for choice, sender in (("sales", f"x@{SHOP}"), ("never", f"a@{LISTS}"), ("notices", f"y@{SHOP}")):
         body = {"fingerprint": fingerprint(client, base), "choice": choice, "senders": [sender], "domains": []}
         assert client.post(f"{base}/watch/sorting", json=body).status_code == 200
     rules = load_config(ws.config_dir, env={}).watch.triage
-    assert [r.set_aside for r in rules] == ["never", "personal", "sales"]
+    assert [r.set_aside for r in rules] == ["never", "notices", "sales"]
     read(ws, store)
     kept = next(s for s in store.read().list("snapshot") if s.data["key"] == "bulk")
     assert kept.data["set_aside"] is None, "the bulk mail from a kept sender stays with the assistant"

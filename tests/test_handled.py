@@ -1,7 +1,8 @@
-"""Handled for you (design 7.20; P45, P46, P47): mail set aside before it was read and mail read with nothing to do
-are two lists on one screen; a mail is in one of them at most; rows are grouped by kind or by sender, newest first,
-and searched; every row offers Treat as personal, Treat as work and Always set aside mail like this, each recording
-a signal, and Treat as work or personal can be undone. There is no Keep set aside. Senders are made up."""
+"""Handled for you (design 7.20; P45, P46, P47): what was set aside before it was read (mail, and changes a rule
+closed) and mail read with nothing to do are two lists on one screen; an item is in one of them at most; rows are
+grouped by kind, by reason or by sender, newest first, and searched; every row offers Treat as personal, Treat as work
+and Always set aside mail like this, each recording a signal, and Treat as work or personal can be undone. There is
+no Keep set aside. Senders are made up."""
 
 from datetime import UTC, datetime
 
@@ -105,7 +106,7 @@ def row(view, title):
 def test_the_two_lists_hold_different_mail_and_no_mail_is_in_both(app):
     ws, cfg, store, client, base = app
     aside, read = get(client, base, tab="set_aside"), get(client, base, tab="read")
-    assert aside["counts"] == read["counts"] == {"set_aside": 4, "closed": 0, "read": 2}
+    assert aside["counts"] == read["counts"] == {"set_aside": 4, "read": 2}
     assert {i["tab"] for g in aside["groups"] for i in g["items"]} == {"set_aside"}
     assert {i["tab"] for g in read["groups"] for i in g["items"]} == {"read"}
     assert not (ids(aside) & ids(read))
@@ -115,9 +116,26 @@ def test_the_two_lists_hold_different_mail_and_no_mail_is_in_both(app):
     assert folder == ids(aside)
 
 
-def test_rows_are_grouped_by_reason_by_default_with_a_count_and_newest_first(app):
+def test_rows_are_grouped_by_kind_by_default_with_unique_keys_a_count_and_newest_first(app):
     ws, cfg, store, client, base = app
     view = get(client, base, tab="set_aside")
+    assert view["group"] == "kind"
+    keys = [g["key"] for g in view["groups"]]
+    assert len(keys) == len(set(keys)) and set(keys) == {"kind:sales", "kind:notices"}
+    assert all(g["label"] is None for g in view["groups"]), "the screen words a kind"
+    by_key = {g["key"]: g for g in view["groups"]}
+    sales = by_key["kind:sales"]
+    assert sales["count"] == 3 and [i["title"] for i in sales["items"]] == ["Sale sale-a", "Sale sale-b", "Sale sale-c"]
+    assert [i["title"] for i in by_key["kind:notices"]["items"]] == ["Your verification code"]
+    # Groups are ordered by their newest row: the code mail is newer than all the bulk mail.
+    assert keys == ["kind:notices", "kind:sales"]
+    read = get(client, base, tab="read")
+    assert read["group"] == "kind" and {g["key"] for g in read["groups"]} == {"kind:bills", "kind:other"}
+
+
+def test_grouped_by_reason_each_group_is_named_by_its_words_and_a_read_mail_falls_back_to_its_kind(app):
+    ws, cfg, store, client, base = app
+    view = get(client, base, tab="set_aside", group="reason")
     assert view["group"] == "reason"
     assert all(g["key"] == g["label"] and g["key"] for g in view["groups"]), "a reason group is named by its words"
     by_reason = {g["key"]: g for g in view["groups"]}
@@ -125,9 +143,8 @@ def test_rows_are_grouped_by_reason_by_default_with_a_count_and_newest_first(app
     assert bulk["count"] == 3 and [i["title"] for i in bulk["items"]] == ["Sale sale-a", "Sale sale-b", "Sale sale-c"]
     other = next(g for g in view["groups"] if g is not bulk)
     assert [i["title"] for i in other["items"]] == ["Your verification code"] and len(by_reason) == 2
-    # Groups are ordered by their newest row: the code mail is newer than all the bulk mail.
     assert view["groups"] == [other, bulk]
-    read = get(client, base, tab="read")
+    read = get(client, base, tab="read", group="reason")
     assert {g["key"] for g in read["groups"]} == {"kind:bills", "kind:other"}, "a mail read has no reason, so its kind"
     assert all(g["label"] is None for g in read["groups"]), "the screen words a kind"
 
@@ -158,12 +175,12 @@ def test_the_other_grouping_is_by_sender(app):
 def test_the_settings_grouping_applies_when_none_is_asked_for(tmp_path):
     ws, cfg, store, client, base = start(tmp_path, [promo("one", SHOP_LIST, 1)])
     try:
-        assert get(client, base)["group"] == "reason"
+        assert get(client, base)["group"] == "kind"
         (ws.config_dir / "ui.yaml").write_text("version: 1\nhandled_group: sender\n")
         assert get(client, base)["group"] == "sender"
         assert get(client, base, group="reason")["group"] == "reason"
-        (ws.config_dir / "ui.yaml").write_text("version: 1\nhandled_group: kind\n")
-        assert get(client, base)["group"] == "reason", "the first name of the grouping still works"
+        (ws.config_dir / "ui.yaml").write_text("version: 1\nhandled_group: reason\n")
+        assert get(client, base)["group"] == "reason"
     finally:
         store.close()
 
@@ -175,7 +192,7 @@ def test_a_search_narrows_by_sender_subject_and_kind_and_leaves_the_counts_alone
     assert len(titles(get(client, base, tab="set_aside", q="sales"))) == 3, "a kind"
     assert len(titles(get(client, base, tab="set_aside", q="sale zebra"))) == 0, "every word must be found"
     none = get(client, base, tab="read", q="no such words")
-    assert none["groups"] == [] and none["counts"] == {"set_aside": 4, "closed": 0, "read": 2}
+    assert none["groups"] == [] and none["counts"] == {"set_aside": 4, "read": 2}
     assert titles(get(client, base, tab="read", q="bills")) == ["Your statement is ready"]
     assert len(titles(get(client, base, tab="set_aside", q="mailing list"))) == 3, "a reason"
 
@@ -188,6 +205,46 @@ def test_each_row_carries_what_its_choices_need(app):
     read = row(get(client, base, tab="read"), "Lunch is moved")
     assert read["reason"] is None and read["request"] and read["saved"]
     assert read["section"] == cfg.watch.handled_rule_section == "notices"
+
+
+def test_a_personal_message_from_a_friend_is_not_on_the_set_aside_tab_and_is_filed_under_personal(tmp_path):
+    from tests.test_mail_sorting import Account
+
+    friend = mail("hello", "friend@club.example.com", subject="Dinner on Friday", body="Are you free for dinner?")
+    set_responder(Account(answers={"Dinner on Friday": "personal", "Sale sale-a": "sales"}))
+    ws, cfg, store, client, base = start(tmp_path, [friend, promo("sale-a", SHOP_LIST, 2)], sorting="ai")
+    try:
+        aside = get(client, base, tab="set_aside")
+        assert titles(aside) == ["Sale sale-a"] and aside["counts"] == {"set_aside": 1, "read": 0}
+        assert "Dinner on Friday" not in titles(get(client, base, tab="read"))
+        (made,) = [
+            r
+            for r in requests_in(store, "queued")
+            if store.read().get("source", r.data["source"]).data["title"] == "Dinner on Friday"
+        ]
+        assert made.data["project"] == sides.personal_project(store.read(), cfg)
+    finally:
+        store.close()
+
+
+def test_a_message_an_earlier_version_set_aside_as_personal_still_lists_and_offers_both_treat_choices(app):
+    from engine.set_aside import set_aside_item
+
+    ws, cfg, store, client, base = app
+    item = row(get(client, base, tab="set_aside"), "Sale sale-a")
+    set_aside_item(store, item["id"], "personal")
+    old = row(get(client, base, tab="set_aside"), "Sale sale-a")
+    assert old["kind"] == "personal" and old["section"] == cfg.watch.handled_rule_section, "a rule can't be personal"
+    assert "kind:personal" in {g["key"] for g in get(client, base, tab="set_aside")["groups"]}
+    done = client.post(f"{base}/handled/{old['id']}/personal", json={"read_version": old["version"]})
+    assert done.status_code == 200, done.text
+    assert store.read().get("request", done.json()["request"]).data["project"] == sides.personal_project(
+        store.read(), cfg
+    )
+    other = row(get(client, base, tab="set_aside"), "Sale sale-b")
+    set_aside_item(store, other["id"], "personal")
+    again = row(get(client, base, tab="set_aside"), "Sale sale-b")
+    assert client.post(f"{base}/handled/{again['id']}/work", json={"read_version": again["version"]}).status_code == 200
 
 
 def test_treat_as_work_on_set_aside_mail_hands_it_in_records_a_signal_and_undo_sets_it_aside_again(app):

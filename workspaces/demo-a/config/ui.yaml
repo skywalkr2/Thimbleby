@@ -5,7 +5,7 @@ narrow_below_px: 700   # below this width: the phone layout, with a bottom bar
 toast_seconds: 0
 links: [{name: Planning board, address: "https://planning-board.example.com/spring"}, {name: Shared schedule, address: "https://shared-schedule.example.com/team"}]   # links to your own pages, shown in the header
 feedback_to: feedback@example.com   # where the feedback button writes
-handled_group: reason   # how Handled for you groups what it lists to start with: reason or sender
+handled_group: kind   # how Handled for you groups what it lists to start with: kind, reason or sender
 handled_rows_shown: 25   # how many rows a group shows before Show more
 feedback_problem_days: 3   # how far back Send feedback offers to add failed work
 feedback_problem_max: 20   # the most failures it offers to add

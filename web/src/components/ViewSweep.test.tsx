@@ -606,7 +606,7 @@ test("Handled for you, with every kind of group, chip and filter, says names, da
       item: null,
       kept_days: 30,
       page_rows: 25,
-      counts: { set_aside: rows.length, closed: 1, read: 1 },
+      counts: { set_aside: rows.length, read: 1 },
       kinds: items.map((item) => ({ item, count: 1 })),
       groups: rows.map((row) => ({ key: row.reason ?? "", label: row.reason ?? null, count: 1, items: [row] })),
     }),
@@ -618,7 +618,7 @@ test("Handled for you, with every kind of group, chip and filter, says names, da
   sweep(view.container);
 });
 
-test("Handled for you, the closed list with a rule's closes and the assistant's own, says names, dates and words", async () => {
+test("Handled for you, a rule's closes on the set-aside tab and the assistant's own under Read, say names, dates and words", async () => {
   const closed: S["HandledRow"] = {
     id: "REQ-9",
     version: 4,
@@ -641,18 +641,18 @@ test("Handled for you, the closed list with a rule's closes and the assistant's 
     older_version: false,
   };
   fakeApi({
-    "GET handled?tab=set_aside&q=": () => ({ tab: "set_aside", group: "reason", query: "", item: null, kept_days: 30, page_rows: 25, counts: { set_aside: 0, closed: 1, read: 0 }, kinds: [], groups: [] }),
-    "GET handled?tab=closed&q=": () => ({
-      tab: "closed",
+    "GET handled?tab=set_aside&q=": () => ({
+      tab: "set_aside",
       group: "reason",
       query: "",
       item: null,
       kept_days: 30,
       page_rows: 25,
-      counts: { set_aside: 0, closed: 1, read: 0 },
+      counts: { set_aside: 1, read: 0 },
       kinds: [{ item: "file", count: 1 }],
       groups: [{ key: "only spacing changed", label: "only spacing changed", count: 1, items: [closed] }],
     }),
+    "GET handled?tab=read&q=": () => ({ tab: "read", group: "reason", query: "", item: null, kept_days: 30, page_rows: 25, counts: { set_aside: 1, read: 0 }, kinds: [], groups: [] }),
     "GET silent-closes": () => ({
       count: 1,
       closes: [{ ref: "changeset:CS-1:0", kind: "assistant", how: "dropped", title: "Send the proof", when: at("2026-10-10", 9), why: "the printer said so", run: "RUN-1", item: "action" }],
@@ -661,8 +661,10 @@ test("Handled for you, the closed list with a rule's closes and the assistant's 
   });
   const view = renderApp(<Handled />);
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
   await user.click(await screen.findByRole("button", { name: "only spacing changed · 1", expanded: false }));
+  await screen.findByText("Spacing change in the style sheet");
+  sweep(view.container);
+  await user.click(screen.getByRole("button", { name: "Read, nothing to do · 0" }));
   await screen.findByText("Send the proof");
   sweep(view.container);
 });

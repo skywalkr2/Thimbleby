@@ -56,7 +56,7 @@ class Arrived:
 class Inbox:
     items: list[Arrived]
     left_out: int  # closed by a triage rule in the same window: newsletters, automatic replies
-    set_aside: int = 0  # put in the Set aside folder in the same window: personal mail, sales and promotions
+    set_aside: int = 0  # put in the Set aside folder in the same window: sales and promotions, automated notices
 
 
 def zone(cfg: Any) -> ZoneInfo:

@@ -15,7 +15,7 @@ from engine.mail_sorting import ANSWERS, RULE, read_answers
 from tests.conftest import DEMO_B
 from tests.test_set_aside import CLUB, NOW, UNIQUE, mail, requests_in
 
-REASON = {"personal": "the assistant sorted it as personal mail", "sales": "the assistant sorted it as sales mail"}
+REASON = {"sales": "the assistant sorted it as sales mail"}
 
 
 class Account:
@@ -152,8 +152,10 @@ def test_mail_the_rules_place_is_never_sent_to_the_run(tmp_path, account):
 # ---- the answers ---------------------------------------------------------------------------------------------------
 
 
-def test_personal_and_sales_are_set_aside_with_the_reason_and_the_rest_is_handed_in_as_work(tmp_path, account):
-    from engine import set_aside, today
+def test_sales_is_set_aside_with_the_reason_personal_is_filed_under_personal_and_the_rest_is_handed_in_as_work(
+    tmp_path, account
+):
+    from engine import set_aside, sides, today
 
     account.answers = {"Subject 0": "personal", "Subject 1": "sales", "Subject 2": "work", "Subject 3": "spam"}
     account.omit = {"Subject 4"}
@@ -161,22 +163,23 @@ def test_personal_and_sales_are_set_aside_with_the_reason_and_the_rest_is_handed
     try:
         read(ws, store)
         snaps = snapshots(store)
-        for n, section in ((0, "personal"), (1, "sales")):
-            mark = snaps[f"thread-{n}"]["set_aside"]
-            assert mark == {"section": section, "rule": RULE, "reason": REASON[section], "by": "assistant"}
-        assert [snaps[f"thread-{n}"]["set_aside"] for n in (2, 3, 4)] == [None] * 3
+        mark = snaps["thread-1"]["set_aside"]
+        assert mark == {"section": "sales", "rule": RULE, "reason": REASON["sales"], "by": "assistant"}
+        assert [snaps[f"thread-{n}"]["set_aside"] for n in (0, 2, 3, 4)] == [None] * 4, "personal is never set aside"
         aside = [r for r in requests_in(store, "done") if r.data.get("set_aside")]
-        assert {r.data["set_aside"]["section"] for r in aside} == {"personal", "sales"}
+        assert {r.data["set_aside"]["section"] for r in aside} == {"sales"}
         assert all(r.data["waiting"].startswith("Set aside: the assistant sorted it") for r in aside)
-        # A word that isn't one of the three, and a message left out, count as work.
-        assert len(requests_in(store, "queued")) == 3
+        # The personal answer, a word that isn't one of the four and a message left out are handed in.
+        queued = requests_in(store, "queued")
+        assert len(queued) == 4
+        home = sides.personal_project(store.read(), cfg)
+        assert home
+        filed = {store.read().get("source", r.data["source"]).data["title"]: r.data.get("project") for r in queued}
+        assert filed == {"Subject 0": home, "Subject 2": None, "Subject 3": None, "Subject 4": None}
         rows = set_aside.folder(ws, store, load_config(ws.config_dir, env={}))
-        assert {(r["title"], r["section"], r["reason"]) for r in rows} == {
-            ("Subject 0", "personal", REASON["personal"]),
-            ("Subject 1", "sales", REASON["sales"]),
-        }
+        assert {(r["title"], r["section"], r["reason"]) for r in rows} == {("Subject 1", "sales", REASON["sales"])}
         inbox = today.arrived(store, cfg, NOW)
-        assert inbox.set_aside == 2 and {a.title for a in inbox.items} == {"Subject 2", "Subject 3", "Subject 4"}
+        assert inbox.set_aside == 1 and {a.title for a in inbox.items} == {f"Subject {n}" for n in (0, 2, 3, 4)}
         assert not store.read().has("signal")
     finally:
         store.close()
@@ -294,7 +297,7 @@ def test_a_batch_that_cant_run_stops_the_rest_of_the_read_instead_of_trying_each
 
 
 def test_a_changed_message_the_assistant_set_aside_stays_set_aside_without_another_run(tmp_path, account):
-    account.answers = {"Subject 0": "personal"}
+    account.answers = {"Subject 0": "sales"}
     item = unplaced(0, body="first words")
     ws, cfg, store = make(tmp_path, [item])
     try:
@@ -307,7 +310,7 @@ def test_a_changed_message_the_assistant_set_aside_stays_set_aside_without_anoth
         again = read(ws, store)
         assert len(account.tasks) == 1, "no second run for a change"
         mark = snapshots(store)["thread-0"]["set_aside"]
-        assert mark["section"] == "personal" and mark["by"] == "assistant"
+        assert mark["section"] == "sales" and mark["by"] == "assistant"
         assert len(again.changed) == 1 and len(requests_in(store, "queued")) == 0
     finally:
         store.close()
@@ -330,6 +333,26 @@ def test_look_at_the_last_day_sorts_the_mail_a_first_read_only_noted(tmp_path, a
         store.close()
 
 
+def test_look_at_the_last_day_files_a_personal_answer_under_personal(tmp_path, account):
+    from engine import sides
+    from engine.watch import hand_in_recent
+
+    account.answers = {"Subject 0": "personal"}
+    ws, cfg, store = make(tmp_path, [unplaced(0), unplaced(1)], first_run="baseline")
+    try:
+        read(ws, store)
+        hand_in_recent(ws, store, load_config(ws.config_dir, env={}), "m", NOW)
+        assert not any(s["set_aside"] for s in snapshots(store).values())
+        home = sides.personal_project(store.read(), cfg)
+        filed = {
+            store.read().get("source", r.data["source"]).data["title"]: r.data.get("project")
+            for r in requests_in(store, "queued")
+        }
+        assert filed == {"Subject 0": home, "Subject 1": None}
+    finally:
+        store.close()
+
+
 def test_mail_a_first_read_only_notes_is_not_sorted_until_it_is_handed_in(tmp_path, account):
     ws, cfg, store = make(tmp_path, [unplaced(0, hours=500)], first_run="recent")
     try:
@@ -346,7 +369,7 @@ def test_mail_a_first_read_only_notes_is_not_sorted_until_it_is_handed_in(tmp_pa
 def app(tmp_path, account):
     from api.app import create_app
 
-    account.answers = {"Subject 0": "personal", "Subject 1": "work"}
+    account.answers = {"Subject 0": "sales", "Subject 1": "work"}
     items = [
         unplaced(0, body=f"Dinner on Friday {UNIQUE}"),
         unplaced(1),
@@ -369,7 +392,7 @@ def test_mail_the_assistant_set_aside_gives_no_request_signal_or_knowledge_and_t
     read(ws, store)
     view = store.read()
     item = next(i for i in client.get(f"{base}/set-aside").json()["items"] if i["title"] == "Subject 0")
-    assert item["section"] == "personal" and item["reason"] == REASON["personal"]
+    assert item["section"] == "sales" and item["reason"] == REASON["sales"]
     # Nothing was queued for it, nothing was learned from it, and its words went to no AI account but the header run.
     queued = [r for r in requests_in(store, "queued")]
     assert len(queued) == 1 and view.get("source", queued[0].data["source"]).data["title"] == "Subject 1"
@@ -392,7 +415,7 @@ def test_mail_the_assistant_set_aside_gives_no_request_signal_or_knowledge_and_t
 
 
 def test_learning_pair_a_sender_the_assistant_got_wrong_is_kept_next_time(app, account):
-    """The mistake (a colleague's message sorted as personal), the person's correction, and the corrected later case:
+    """The mistake (a colleague's message sorted as sales mail), the person's correction, and the corrected later case:
     the next message from that sender is not sent to the run at all and is handed in as work."""
     ws, cfg, store, client, base, items = app
     read(ws, store)
@@ -408,7 +431,7 @@ def test_learning_pair_a_sender_the_assistant_got_wrong_is_kept_next_time(app, a
     source = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
     source["sources"][0]["settings"]["items"] = items
     (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(source))
-    account.answers["Later"] = "personal"
+    account.answers["Later"] = "sales"
     read(ws, store)
     assert len(account.tasks) == runs_before, "mail from the kept sender isn't sorted, so it can't be set aside"
     later = next(s for s in store.read().list("snapshot") if s.data["title"] == "Later")
@@ -515,6 +538,70 @@ def test_the_first_go_leaves_alone_mail_the_person_pulled_back_as_work(tmp_path)
     finally:
         store.close()
         set_responder(None)
+
+
+def test_the_first_go_files_a_personal_answer_under_personal_and_sets_nothing_aside_for_it(tmp_path):
+    from engine import sides
+    from engine.watch import sort_before_first_go
+
+    set_responder(Account(answers={"Subject 0": "personal", "Subject 1": "sales"}))
+    ws, cfg, store = make(tmp_path, [unplaced(0), unplaced(1), unplaced(2)], ai=[("first_go: false", "first_go: true")])
+    try:
+        read(ws, store)
+        assert len(requests_in(store, "queued")) == 3 and not snapshots(store)["thread-0"]["set_aside"]
+        assert sort_before_first_go(ws, store, cfg) == 1, "only the sales answer is set aside"
+        snaps = snapshots(store)
+        assert snaps["thread-0"]["set_aside"] is None and snaps["thread-1"]["set_aside"]["section"] == "sales"
+        home = sides.personal_project(store.read(), cfg)
+        assert home
+        waiting = {
+            store.read().get("source", r.data["source"]).data["title"]: r.data.get("project")
+            for r in requests_in(store, "queued")
+        }
+        assert waiting == {"Subject 0": home, "Subject 2": None}
+    finally:
+        store.close()
+        set_responder(None)
+
+
+# ---- personal mail is never set aside: a rule that says so files the mail under Personal ----------------------------
+
+
+def test_a_rule_with_set_aside_personal_files_the_mail_under_personal_and_keeps_it_from_the_sorting(tmp_path, account):
+    from engine import sides
+
+    triage = [
+        {"name": "Friends", "kind": "sender-rule", "params": {"senders": [f"person0@{CLUB}"]}, "set_aside": "personal"}
+    ]
+    ws, cfg, store = make(tmp_path, [unplaced(0), unplaced(1)], triage=triage)
+    try:
+        assert cfg.watch.triage[0].set_aside == "personal", "an older workspace's rule still loads"
+        result = read(ws, store)
+        assert len(result.new) == 2 and not any(s["set_aside"] for s in snapshots(store).values())
+        assert [row["subject"] for row in account.headers] == ["Subject 1"], "the rule placed the first, not the run"
+        home = sides.personal_project(store.read(), cfg)
+        assert home
+        filed = {
+            store.read().get("source", r.data["source"]).data["title"]: r.data.get("project")
+            for r in requests_in(store, "queued")
+        }
+        assert filed == {"Subject 0": home, "Subject 1": None}
+        assert not [r for r in store.read().list("request") if r.data.get("set_aside") or r.data.get("auto_closed")]
+    finally:
+        store.close()
+
+
+def test_the_handled_rule_section_personal_reads_as_notices_and_offers_sales_and_notices_only(tmp_path):
+    from engine.config.schema import WatchFile
+
+    ws, cfg, store = make(tmp_path, [], handled_rule_section="personal")
+    try:
+        assert cfg.watch.handled_rule_section == "notices"
+        assert WatchFile().handled_rule_section == "notices"
+        choices = WatchFile.model_json_schema()["properties"]["handled_rule_section"]["enum"]
+        assert choices == ["sales", "notices"]
+    finally:
+        store.close()
 
 
 def test_the_first_go_estimate_includes_the_sorting_run_so_the_person_approves_the_whole_spend(tmp_path):
