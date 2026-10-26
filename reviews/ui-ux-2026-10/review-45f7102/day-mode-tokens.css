@@ -1,0 +1,21 @@
+/* Proposed day-mode changes as an overlay on the 45f71023 build, used for shots/31 and shots/34. Class-name selectors are
+   for the overlay only; the real change goes into tokens.css and the Button, Panel, Pill and Row modules (day-mode.md). */
+/* Proposed light-mode changes, as an overlay on the current build. Dark mode is untouched. */
+:root:not([data-theme="dark"]) {
+  --canvas: #f4f5f7;          /* was gray-50 #f3f4f6, now one plane with the panes, separated by a soft edge */
+  --border: #e8eaef;          /* was gray-150 #e1e4e9: dividers recede */
+  --surface-sunk: #f6f7f9;    /* was gray-100 #eef0f3: group bands no longer grey slabs */
+  --text: #1d2230;            /* was #14171f: 15.6:1 instead of 18:1, still AAA */
+  --text-muted: #4e5565;      /* was gray-650: 7.4:1 */
+  --btn-border: #cfd4dc;      /* new: button outline; the label identifies the button (inputs keep border-strong) */
+}
+@media (prefers-color-scheme: light) {
+  [class*="_panel_"], [class*="_card_1di33"] { border-color: transparent !important; box-shadow: 0 0 0 1px rgb(20 24 34 / 0.05), 0 1px 3px rgb(20 24 34 / 0.05); }
+  [class*="_groupHead_"] { background: transparent !important; color: var(--text-muted) !important; border-top: 1px solid var(--border); }
+  button[class*="_btn_"]:not([class*="_primary_"]):not([class*="_ghost_"]) { border-color: var(--btn-border) !important; }
+  [data-queue-line] [class*="_primary_"] { background: var(--accent-soft) !important; border-color: transparent !important; color: var(--accent-text) !important; }
+  [class*="_list_"] > li:first-child [data-queue-line="decision"] [class*="_primary_"] { background: var(--accent) !important; color: var(--text-on-accent) !important; }
+  main li button[class*="_primary_"], main [class*="_row_"] button[class*="_primary_"] { background: var(--accent-soft) !important; border-color: transparent !important; color: var(--accent-text) !important; }
+  [data-queue-line] [class*="_title_"] { font-weight: 500 !important; color: var(--text); }
+  [class*="_pill_"][class*="_neutral_"] { background: transparent !important; box-shadow: inset 0 0 0 1px var(--border); color: var(--text-muted) !important; }
+}
