@@ -201,24 +201,24 @@ def scan(env, text: str, **more) -> tuple[str, list[str]]:
     return handed.request, new_terms.scan(store, cfg, handed.request, text, NOW, **more)
 
 
-def test_the_scan_proposes_each_new_term_as_unknown_from_the_input_and_skips_known_names(env):
-    _, _, store = env
+def asked(store) -> list:
+    return [q for q in entries(store, "question") if new_terms.term_of(q)]
+
+
+def test_the_scan_asks_the_person_what_each_new_term_means_and_proposes_nothing(env):
+    _, cfg, store = env
     seed_known(store)
     text = (
         "ZED and QRS were discussed with McTavish and the VPX crew.\nThe XYZ gateway and the LoadHub service are new."
     )
     request, made = scan(env, text)
-    terms = [store.read().get("glossary_entry", i).data for i in made]
-    assert [t["term"] for t in terms] == ["XYZ", "LoadHub"]
-    for entry in terms:
-        assert (entry["status"], entry["origin"], entry["confidence"], entry["trust"]) == (
-            "proposed",
-            "input",
-            "unknown",
-            "untrusted",
-        )
-        assert entry["evidence"]["request"] == request and entry["evidence"]["quote"] in text
-    assert {p.kind for p in proposals.proposals(store.read())} == {"glossary_entry"}
+    questions = [store.read().get("question", i).data for i in made]
+    assert [new_terms.term_of(q) for q in asked(store)] == ["XYZ", "LoadHub"]
+    for q in questions:
+        assert (q["to"], q["status"], q["kind"]) == (cfg.workspace.user.person, "open", "question")
+        assert q["title"] in ("What does XYZ mean here?", "What does LoadHub mean here?")
+    assert entries(store, "glossary_entry")[0].data["term"] == "ZED"  # only the seeded one: nothing proposed
+    assert {p.kind for p in proposals.proposals(store.read())} == set()
     assert scan(env, text)[1] == []  # nothing is new the second time
 
 
@@ -234,14 +234,13 @@ def test_the_scan_stops_at_the_configured_number_for_one_input_and_never_when_it
     assert scan(env, "FFF and GGG are new.")[1] == []
 
 
-def test_the_scan_does_not_bring_back_a_term_the_person_just_discarded(env):
+def test_the_scan_does_not_ask_again_about_a_term_the_person_dismissed(env):
     _, _, store = env
     request, made = scan(env, "The HHH gateway is new.")
-    (entry,) = made
-    current = store.read().get("glossary_entry", entry)
+    (qid,) = made
+    current = store.read().get("question", qid)
     with store.transaction() as tx:
-        tx.update("glossary_entry", entry, {"status": "discarded"}, _TEST, read_version=current.version)
-        tx.create("signal", {"kind": "discarded", "refs": [entry], "at": NOW.isoformat()}, _TEST)
+        tx.update("question", qid, {"status": "dropped"}, _TEST, read_version=current.version)
     assert scan(env, "The HHH gateway is mentioned again.")[1] == []
 
 
@@ -249,9 +248,150 @@ def test_a_run_on_an_input_scans_it_after_the_answer_applies_and_work_that_learn
     _, _, store = env
     _, cs_id = read(env, "The QXZ gateway moves next week.", [])
     assert statuses(store, cs_id) == []
-    (entry,) = entries(store, "glossary_entry")
-    assert (entry.data["term"], entry.data["status"], entry.data["origin"]) == ("QXZ", "proposed", "input")
-    assert entry.data["evidence"]["source"] and entry.data["evidence"]["quote"] == "The QXZ gateway moves next week."
+    (question,) = asked(store)
+    assert question.data["title"] == "What does QXZ mean here?"
+    assert entries(store, "glossary_entry") == []
+
+
+# ---- the owner's path: terms are questions, never knowledge ---------------------------------------------------------
+
+
+def shipped_service() -> str:
+    return sorted(w for w in new_terms.shipped_known() if w.isalpha() and len(w) > 5)[0]
+
+
+def test_a_note_mentioning_the_owners_five_terms_raises_none(env):
+    """The learning pair for the owner's case: a country code, a state code, a mail folder label, a time zone and a
+    well-known service are never asked about."""
+    _, _, store = env
+    service = shipped_service()
+    request, made = scan(
+        env, f"Ship to the USA office, PA state, INBOX is full, meet at 14:00 UTC, see {service.upper()} and {service}."
+    )
+    assert made == [] and asked(store) == [] and entries(store, "glossary_entry") == []
+
+
+def test_the_shipped_list_can_be_turned_off_and_the_workspace_can_add_its_own_words(env):
+    _, cfg, store = env
+    cfg.language.known_terms = ["QWX"]
+    scan(env, "QWX and USA.")
+    assert asked(store) == []  # the shipped list and the person's own word are both left alone
+    cfg.language.known_terms_shipped = False
+    scan(env, "QWX and USA again.")
+    assert [new_terms.term_of(q) for q in asked(store)] == ["USA"]  # off: only the person's own words stay
+
+
+def test_the_names_of_the_configured_sources_are_never_asked_about(env):
+    _, cfg, store = env
+    source = cfg.watch.sources[0] if cfg.watch.sources else None
+    if source is None:
+        pytest.skip("the fixture has no configured source")
+    assert source.id.lower() in new_terms.never_asked(cfg)
+
+
+def test_a_term_in_automatic_mail_is_never_asked_about(env):
+    ws, cfg, store = env
+    src = make(
+        store,
+        "source",
+        {
+            "received_at": NOW.isoformat(),
+            "kind": "email",
+            "title": "A notice",
+            "projects": [],
+            "content_hash": "h",
+            "watched": {"source": "mail", "key": "m1", "change": "new"},
+            "trust": "untrusted",
+        },
+    )
+    make(
+        store,
+        "snapshot",
+        {
+            "source": "mail",
+            "key": "m1",
+            "title": "Your access token was added",
+            "message": {"bulk": True},
+            "set_aside": None,
+            "content_hash": "h",
+            "seen_at": NOW.isoformat(),
+        },
+    )
+    request = make(
+        store,
+        "request",
+        {"task": "notes", "origin": "input", "state": "done", "source": src, "created_at": NOW.isoformat()},
+    )
+    assert new_terms.scan(store, cfg, request, "The XYZ gateway is new.", NOW) == []
+    assert asked(store) == []
+
+
+def test_answering_the_question_keeps_the_term_in_the_persons_words_and_dismissing_it_records_a_signal(api):
+    client, store, cfg, ws = api
+    (qid,) = new_terms.scan(
+        store,
+        cfg,
+        make(store, "request", {"task": "notes", "origin": "pm", "state": "done", "created_at": NOW.isoformat()}),
+        "The XYZ gateway is new.",
+        NOW,
+    )
+    done = client.post(f"/api/questions/{qid}/answer", json={"text": "the exchange gateway"})
+    assert done.status_code == 200, done.text
+    (entry,) = [e for e in entries(store, "glossary_entry") if e.data["term"] == "XYZ"]
+    assert (entry.data["status"], entry.data["origin"], entry.data["meaning"]) == (
+        "active",
+        "person",
+        "the exchange gateway",
+    )
+    (other,) = new_terms.scan(
+        store,
+        cfg,
+        make(store, "request", {"task": "notes", "origin": "pm", "state": "done", "created_at": NOW.isoformat()}),
+        "The LMN gateway is new.",
+        NOW,
+    )
+    before = len(entries(store, "signal"))
+    from engine.applier import apply_as_person
+
+    apply_as_person(store, cfg, [{"op": "question.drop", "id": other, "reason": "Not needed"}], "Dropped")
+    assert store.read().get("question", other).data["status"] == "dropped"
+    assert len(entries(store, "signal")) > before
+    assert entries(store, "glossary_entry")[-1].data["term"] == "XYZ"
+
+
+def old_entry(store, term: str) -> str:
+    return make(
+        store,
+        "glossary_entry",
+        {
+            "text": f"{term}: not known yet",
+            "term": term,
+            "meaning": new_terms.UNKNOWN_MEANING,
+            "confidence": "unknown",
+            "origin": "input",
+            "status": "proposed",
+            "trust": "untrusted",
+            "applies_to": {},
+            "learned_at": NOW.isoformat(),
+            "evidence": {"quote": f"about {term}"},
+        },
+    )
+
+
+def test_the_migration_retires_the_old_entries_into_questions_with_one_undo(env):
+    _, cfg, store = env
+    service = shipped_service()
+    old = [old_entry(store, t) for t in ("USA", service, "XYZ")]
+    cs = new_terms.clear_old_entries(store, cfg)
+    assert cs is not None
+    assert [store.read().get("glossary_entry", i).data["status"] for i in old] == ["discarded"] * 3
+    assert [new_terms.term_of(q) for q in asked(store)] == ["XYZ"]  # the well-known ones are only retired
+    assert new_terms.clear_old_entries(store, cfg) is None  # nothing left to do
+    from engine.applier import undo
+
+    undo(store, cs)
+    assert [store.read().get("glossary_entry", i).data["status"] for i in old] == ["proposed"] * 3
+    assert [q for q in asked(store) if q.data["status"] in ("open", "sent")] == []  # Undo took the question back
 
 
 # ---- "not me, ask X" -------------------------------------------------------------------------------------------------

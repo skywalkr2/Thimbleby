@@ -1543,8 +1543,11 @@ def action_unhold_problem(view: Any, op: ActionUnholdOp) -> str | None:
 
 
 def _waits_on_nothing(view: Any, question: Any) -> bool:
-    """Whether a "Pick an owner" question's action is gone (undone), so nothing waits for its answer."""
+    """Whether nothing waits for a question's answer: a "Pick an owner" question whose action is gone (undone), or a
+    question asking what a term means, which only adds a glossary term when answered."""
     resolves = question.data.get("resolves") or {}
+    if resolves.get("kind") == "term":
+        return True
     return resolves.get("kind") == "owner" and view.get("action", resolves.get("action")) is None
 
 

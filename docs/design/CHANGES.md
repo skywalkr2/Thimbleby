@@ -1027,6 +1027,21 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 207. An unknown term is a question to the person, not a proposal (2026-10-26; P50, P43 c, f, g)
+
+- **Design 6.22 and 6.8:** the scan for new terms (`engine/new_terms.py`) asks one question to the person, "What does X
+  mean here?", instead of proposing a glossary entry marked not known yet; the answer becomes an active glossary term in
+  the person's words (`POST /api/questions/{id}/answer`), and dropping the question records a `dropped` signal. Never
+  asked about: the shipped well-known words (`engine/defaults/known_terms.yaml`, `language.known_terms_shipped`,
+  `language.known_terms`), configured source and connector names, a term already asked or dismissed; nothing is asked
+  from mail sorted as automatic, bulk or set aside. A project's Still unknown lists only what a question was asked about,
+  with who and the day; a one-time retirement (as one change, with Undo) turns the old "not known yet" proposals into
+  questions. **Built:** `tests/test_learn_input.py` (`test_a_note_mentioning_the_owners_five_terms_raises_none`,
+  `test_a_term_in_automatic_mail_is_never_asked_about`,
+  `test_answering_the_question_keeps_the_term_in_the_persons_words_and_dismissing_it_records_a_signal`,
+  `test_the_migration_retires_the_old_entries_into_questions_with_one_undo`), `tests/test_project_knows.py`,
+  `web/src/components/ProjectKnows.test.tsx`
+
 ## 206. The app's own screens are in the guide; an answer is read, not reviewed; run summaries never show (2026-10-26; P55 a, b, c)
 
 - **Design 6.25 (asking):** the user guide has a section naming every screen of the side menu and Settings with what it is

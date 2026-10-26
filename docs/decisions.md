@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: An unknown term is a question to the person, never a proposal; well-known words and automatic mail raise none (P50, P43 c, f, g)
+
+**Decided:** (1) A word the glossary lacks is no longer proposed as a glossary entry marked "not known yet" (a term
+with no meaning is not knowledge to keep). The rules-only scan asks the person one question, "What does X mean here?",
+with an answer box, listed with their open questions; only their answer becomes a glossary term, in their own words, and
+dismissing the question records the usual `dropped` signal. (2) The scan never asks about common abbreviations (country
+and state codes, units, time zones, month and day names), mail folder labels, widely known service names (a shipped data
+file, `engine/defaults/known_terms.yaml`; `language.known_terms_shipped` turns it off, `language.known_terms` adds the
+workspace's own words), nor the names of the configured sources and connectors. (3) It reads only the person's own
+notes and mail from people: mail the app sorted as automatic, bulk or set aside raises none. (4) "Still unknown" on a
+project lists only what a question was asked about, with "Asked {who} on {day}"; an unknown nobody was asked about is not
+listed, and "Nobody has been asked" is gone (the project's blank fields, which have no question, are no longer listed).
+(5) The entries already proposed are retired once, as one change with Undo, and each becomes a question unless it is a
+well-known word. Not decided here: a question for a blank project field (status, phase, owner), if the person wants one.
+**Why:** the owner's first real use found five entries (a country code, a state code, a mail folder, a time zone and a
+code-hosting service) in Knowledge's Proposed tab, each with Keep: "it shows the system knows nothing". Change log:
+section 207.
+
 ## 2026-10-26: The assistant knows the app's own screens; an answer is read, never reviewed; run summaries never show (P55 a, b, c)
 
 **Decided:** (1) The user guide the ask reads has a section naming every screen in the side menu and Settings (Today,

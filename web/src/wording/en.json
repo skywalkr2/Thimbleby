@@ -3488,8 +3488,7 @@
   "knows.unknown.owner": "Nobody is named as its owner",
   "knows.unknown.summary": "It has no description",
   "knows.unknown.term": "What “{term}” means isn't known",
-  "knows.unknown.asked": "Asked of {name}",
-  "knows.unknown.nobody": "Nobody has been asked.",
+  "knows.unknown.asked": "Asked {name} on {day}",
   "series.for": "for {day}'s {title}",
   "series.for_title": "for {title}",
 

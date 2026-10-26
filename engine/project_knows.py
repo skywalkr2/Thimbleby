@@ -17,10 +17,8 @@ from engine.knowledge_section import (
     _uses,
     with_ancestors,
 )
+from engine.new_terms import term_of
 from engine.record_page import fact_source
-
-#: The project's own fields that stay blank until someone says them, in the order they are listed as unknown.
-UNKNOWN_FIELDS: tuple[str, ...] = ("status", "phase", "target", "owner", "summary")
 
 
 def _sources(view: Any, cfg: Config, project_id: str) -> list[dict[str, Any]]:
@@ -157,7 +155,17 @@ def _question_for(view: Any, project_id: str, term: str) -> dict[str, Any] | Non
     ]
     if not asked:
         return None
-    q = min(asked, key=_key)
+    return _asked(view, min(asked, key=_key))
+
+
+def _asked_on(view: Any, q: Any) -> str:
+    """The day a question was asked: the day it was made."""
+    first = next(iter(view.ledger(kind="question", record_id=q.id)), None)
+    return str(first["at"])[:10] if first is not None else ""
+
+
+def _asked(view: Any, q: Any) -> dict[str, Any]:
+    """A question as the unknown list shows it: who it was asked of and the day it was asked."""
     person = view.get("person", q.data["to"], include_deleted=True)
     return {
         "id": q.id,
@@ -165,6 +173,7 @@ def _question_for(view: Any, project_id: str, term: str) -> dict[str, Any] | Non
         "to": q.data["to"],
         "to_name": person.data["full_name"] if person is not None else q.data["to"],
         "status": q.data["status"],
+        "asked_on": _asked_on(view, q),
     }
 
 
@@ -192,21 +201,24 @@ def knows(view: Any, project_id: str, cfg: Config) -> dict[str, Any] | None:
         for e in _terms(view, project_id, chain, text, kinds=("active", "proposed"))
         if e.data.get("confidence") == "unknown"
     ]
-    unknown: list[dict[str, Any]] = [
-        {"kind": "field", "field": f, "term": None, "entry": None, "question": None}
-        for f in UNKNOWN_FIELDS
-        if project.data.get(f) in (None, "") and not (f == "target" and project.data.get("area"))
-    ]
-    unknown += [
-        {
-            "kind": "term",
-            "field": None,
-            "term": e.data["term"],
-            "entry": e.id,
-            "question": _question_for(view, project_id, e.data["term"]),
-        }
-        for e in unknown_terms
-    ]
+    # Something unknown is listed only with the question that asks about it: an unknown nobody was asked about isn't
+    # shown (design 6.8).
+    unknown: list[dict[str, Any]] = []
+    for e in unknown_terms:
+        asked = _question_for(view, project_id, e.data["term"])
+        if asked is not None:
+            unknown.append({"kind": "term", "field": None, "term": e.data["term"], "entry": e.id, "question": asked})
+    listed = {u["term"].lower() for u in unknown}
+    for q in view.list("question"):
+        term = term_of(q)
+        if (
+            term
+            and q.data.get("status") in ("open", "sent")
+            and project_id in (q.data.get("projects") or [])
+            and term.lower() not in listed
+        ):
+            listed.add(term.lower())
+            unknown.append({"kind": "term", "field": None, "term": term, "entry": None, "question": _asked(view, q)})
     return {
         "id": project_id,
         "name": project.data["name"],

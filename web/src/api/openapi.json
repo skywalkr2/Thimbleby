@@ -11348,6 +11348,12 @@
       },
       "KnowsQuestion": {
         "properties": {
+          "asked_on": {
+            "default": "",
+            "description": "The day it was asked, as YYYY-MM-DD.",
+            "title": "Asked On",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"

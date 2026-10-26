@@ -882,6 +882,8 @@ the project management pack (6.24), which builds on these links. From the functi
 
 ## 6.8 Questions service
 
+
+*Term questions (2026-10-26).* "What does X mean here?" is an ordinary question to the person with an answer box; answering it keeps the term as a glossary entry in their words, and nothing waits on it, so it can be dropped. It is made by the scan for new terms (6.22) and listed with the person's other open questions.
 *As built today* there is no separate questions service: a question is written by the `question.add` op (a recipient, a
 title, text, links, one project and a kind), by the engine for its own problems (a sign-in that needs attention, a watched
 source that fails), and by the applier for its routing decisions. Below, what the design says and the code does not yet do
@@ -2964,9 +2966,14 @@ putting an action on or off hold is the person's own planning, not a correction 
 
 **Learning from inputs too.** A rules-only scan (no AI) finds the terms in an input that look like acronyms or project
 names (`language.new_term_patterns`, less `language.new_term_ignore`) and are not in the glossary or among the
-workspace's names. *As built,* it runs after the input's answer applies, and proposes each new term as an unknown
-glossary entry from the input, at most `knowledge.new_terms_per_input` (0 turns it off), never one the person discarded
-recently. Its entries have Discard, not Undo. The run that processes an input may also propose:
+workspace's names, the shipped list of well-known words (common abbreviations, time zones, mail folder labels, service
+names; `language.known_terms_shipped`, `language.known_terms`) or the names of the configured sources. *As built,* it runs
+after the person's own note, or mail from a person, is read (never mail sorted as automatic, bulk or set aside), and asks
+the person "What does X mean here?" as a question (6.8) with an answer box, at most `knowledge.new_terms_per_input`
+(0 turns it off), never about a term already asked or dismissed. A term with no meaning is not knowledge, so nothing
+goes to Knowledge's Proposed tab; only the person's answer becomes a glossary term, in their own words. Dropping the
+question records a `dropped` signal. A project's Still unknown lists only what a question was asked about ("Asked {who}
+on {day}"), never "nobody has been asked". The run that processes an input may also propose:
 - glossary entries for new acronyms or terms. An assumed or unknown one that blocks understanding can carry one short question
   to whoever routing says knows it.
 - routing entries when the input shows who answers what ("not me, ask X" in a reply: a routing proposal, and the question

@@ -45,10 +45,7 @@ const FULL = knows({
     { id: "ROUTE-2", topic: "Legal", who: "Dara Keene", negative: true, look_up: "the style sheet" },
   ],
   unknown: [
-    { kind: "field", field: "status", term: null, entry: null, question: null },
-    { kind: "field", field: "owner", term: null, entry: null, question: null },
-    { kind: "term", field: null, term: "Folio", entry: "GLOSS-3", question: { id: "Q-1", title: "What does folio mean here?", to: "PER-1", to_name: "Robin Sample", status: "open" } },
-    { kind: "term", field: null, term: "Recto", entry: "GLOSS-4", question: null },
+    { kind: "term", field: null, term: "Folio", entry: "GLOSS-3", question: { id: "Q-1", title: "What does folio mean here?", to: "PER-1", to_name: "Robin Sample", status: "open", asked_on: "2026-10-12" } },
   ],
 });
 
@@ -141,18 +138,15 @@ test("who answers what names the person or team, or says who doesn't and where t
   expect(rows[1]).toHaveTextContent("Dara Keene doesn't answer this · Look it up: the style sheet");
 });
 
-test("what is still unknown says each blank field and each term, with the question asked or that nobody has been", async () => {
+test("what is still unknown lists only what a question was asked about, with who was asked and the day", async () => {
   show(FULL);
   const unknown = await section("Still unknown");
   const rows = within(unknown).getAllByRole("listitem");
-  expect(rows).toHaveLength(4);
-  expect(rows[0]).toHaveTextContent("Its status isn't known");
-  expect(rows[1]).toHaveTextContent("Nobody is named as its owner");
-  expect(rows[2]).toHaveTextContent("What “Folio” means isn't known");
-  expect(within(rows[2]).getByRole("link", { name: "What does folio mean here?" })).toHaveAttribute("href", expect.stringContaining("question"));
-  expect(rows[2]).toHaveTextContent("Asked of Robin Sample");
-  expect(rows[3]).toHaveTextContent("What “Recto” means isn't known");
-  expect(rows[3]).toHaveTextContent("Nobody has been asked.");
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toHaveTextContent("What “Folio” means isn't known");
+  expect(within(rows[0]).getByRole("link", { name: "What does folio mean here?" })).toHaveAttribute("href", expect.stringContaining("question"));
+  expect(rows[0]).toHaveTextContent("Asked Robin Sample on Oct 12");
+  expect(unknown.textContent).not.toContain("Nobody has been asked");
 });
 
 test("a project nothing is known about says so in plain words in every section", async () => {

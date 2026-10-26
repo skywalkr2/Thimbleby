@@ -1099,7 +1099,7 @@ From the original designer's lessons of 2026-10-14:
   unless the edit contradicts the evidence the run had. Built: `tests/test_learn_correction.py::test_a_silent_corrections_packet_holds_the_inputs_that_arrived_after_the_original_run`.
 - [x] Learning from inputs (`learn-input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,
   ask X", rerouted questions, facts that supersede. As built, part of reading notes (no separate task kind); a question
-  rerouted by hand teaches through its `routed` signal. Built: `tests/test_learn_input.py::test_a_run_proposing_a_term_a_routing_entry_and_a_superseding_fact_makes_three_proposals`, `tests/test_learn_input.py::test_the_scan_proposes_each_new_term_as_unknown_from_the_input_and_skips_known_names`, `tests/test_learn_input.py::test_a_reply_that_says_not_me_ask_x_proposes_routing_and_leaves_the_question_open`, `tests/test_learn_input.py::test_work_that_learns_on_its_own_gets_no_learning_ops_no_prompt_rules_and_no_scan`.
+  rerouted by hand teaches through its `routed` signal. Built: `tests/test_learn_input.py::test_a_run_proposing_a_term_a_routing_entry_and_a_superseding_fact_makes_three_proposals`, `tests/test_learn_input.py::test_the_scan_asks_the_person_what_each_new_term_means_and_proposes_nothing`, `tests/test_learn_input.py::test_a_reply_that_says_not_me_ask_x_proposes_routing_and_leaves_the_question_open`, `tests/test_learn_input.py::test_work_that_learns_on_its_own_gets_no_learning_ops_no_prompt_rules_and_no_scan`.
 - [x] Proposal rules:
   - the person's own words apply at once with Undo, and the rest wait for Keep;
   - a pasted reply is content;

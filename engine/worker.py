@@ -667,6 +667,10 @@ class Worker:
         now = self.now()
         if self._swept_on == now.date():
             return []
+        from engine import new_terms
+
+        if new_terms.clear_old_entries(self.store, self.cfg) is not None:
+            self.events.changed()
         expired = expire_due(self.store, now, self.cfg.dispatch.knowledge.proposals_expire_days)
         self._swept_on = now.date()
         if expired:

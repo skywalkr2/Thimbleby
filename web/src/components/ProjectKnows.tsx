@@ -137,11 +137,10 @@ function Unknown(props: { rows: S["KnowsUnknown"][] }) {
             meta={
               q ? (
                 <>
-                  {t("knows.unknown.asked", { name: q.to_name })}: <a href={viewHref(recordView("question", q.id))}>{q.title}</a>
+                  {t("knows.unknown.asked", { name: q.to_name, day: monthDay(q.asked_on) })}:{" "}
+                  <a href={viewHref(recordView("question", q.id))}>{q.title}</a>
                 </>
-              ) : (
-                t("knows.unknown.nobody")
-              )
+              ) : undefined
             }
           />
         );

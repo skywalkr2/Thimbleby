@@ -169,7 +169,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import catch_up, endings, held_ask, learned, repeats, source_intake
+from engine import catch_up, endings, held_ask, learned, new_terms, repeats, source_intake
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -1634,6 +1634,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     )
 
             guard(do)
+        guard(lambda: new_terms.keep_answer(store, cfg, qid, body.text or ""))
         asked = q.data.get("to")
         for_someone_else = bool(asked) and asked != People(store, cfg).pm
         if not for_someone_else and resolves.get("kind") not in ("owner", "held-op"):

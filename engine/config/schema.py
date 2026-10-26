@@ -2020,6 +2020,17 @@ class LanguageFile(FileModel):
         description="Words that match a new-term pattern but are everyday abbreviations, never suggested as new "
         "terms. Case is ignored.",
     )
+    known_terms_shipped: bool = Field(
+        True,
+        description="Never ask what a widely known word means: the core's list of common abbreviations (country and "
+        "state codes, units, time zone names, month and day names), mail folder labels and well-known service names. "
+        "Off turns the list off; the words you add in `known_terms` still count.",
+    )
+    known_terms: list[str] = Field(
+        default_factory=list,
+        description="Words of your own that the assistant never asks the meaning of, added to the core's list of "
+        "well-known words. Case is ignored.",
+    )
     never_shown: list[str] = Field(
         default_factory=list, description="Words that must never appear in anything people see (model names are added)."
     )

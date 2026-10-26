@@ -73,19 +73,11 @@ def test_an_unknown_project_has_nothing_to_know(env):
     assert seen(store, cfg, "PRJ-999") is None
 
 
-def test_a_project_nothing_is_known_about_has_empty_sections_and_its_blank_fields_unknown(env):
+def test_a_project_nothing_is_known_about_has_empty_sections_and_lists_nothing_unknown_nobody_was_asked(env):
     store, cfg = env
     prj = project(store)
     view = seen(store, cfg, prj)
-    assert (view["sources"], view["facts"], view["terms"], view["routing"]) == ([], [], [], [])
-    assert [u["field"] for u in view["unknown"]] == ["status", "phase", "target", "owner", "summary"]
-    assert all(u["kind"] == "field" and u["question"] is None for u in view["unknown"])
-
-
-def test_a_field_with_a_value_is_not_unknown(env):
-    store, cfg = env
-    prj = project(store, status="On track", owner=ME["id"], summary="A book.")
-    assert [u["field"] for u in seen(store, cfg, prj)["unknown"]] == ["phase", "target"]
+    assert (view["sources"], view["facts"], view["terms"], view["routing"], view["unknown"]) == ([], [], [], [], [])
 
 
 def test_each_source_shows_how_many_inputs_it_gave_and_the_last_one(env):
@@ -198,7 +190,8 @@ def test_a_term_that_is_still_a_proposal_is_not_in_the_glossary_but_an_unknown_o
     kept = term(store, "bleed", "unknown", project=prj)
     view = seen(store, cfg, prj)
     assert [t["id"] for t in view["terms"]] == [kept]
-    assert {(u["kind"], u["entry"]) for u in view["unknown"]} == {("term", proposed), ("term", kept)}
+    assert view["unknown"] == []  # nobody was asked about either, so neither is listed
+    assert proposed and kept
 
 
 def ask(store, title, to=None, status="open", text="", **fields) -> str:
@@ -209,7 +202,7 @@ def ask(store, title, to=None, status="open", text="", **fields) -> str:
     )
 
 
-def test_an_unknown_term_names_the_open_question_asked_about_it_or_none(env):
+def test_an_unknown_term_is_listed_only_with_the_open_question_asked_about_it_and_the_day(env):
     store, cfg = env
     prj = project(store, status="On track", phase="Design", target="2027-01-10", owner=ME["id"], summary="A book.")
     make(store, "fact", {"text": "The gutter and the bleed matter.", "project": prj})
@@ -219,10 +212,11 @@ def test_an_unknown_term_names_the_open_question_asked_about_it_or_none(env):
     ask(store, "What does bleed mean here?", status="dropped", projects=[prj])
     ask(store, "What does bleed mean for another book?", projects=[project(store, name="Another")])
     rows = {u["term"]: u for u in seen(store, cfg, prj)["unknown"]}
+    assert set(rows) == {"gutter"}
     assert rows["gutter"]["question"]["id"] == asked
     assert rows["gutter"]["question"]["to_name"] == OTHER["full_name"]
     assert rows["gutter"]["question"]["status"] == "open"
-    assert rows["bleed"]["question"] is None
+    assert rows["gutter"]["question"]["asked_on"][:4].isdigit()
 
 
 def routing(store, topic, scope=None, **fields) -> str:

@@ -1,0 +1,39 @@
+# Known terms: words everyone already knows, so the assistant never asks what they mean (design 6.22). It lists common
+# abbreviations (country, region and state codes, units, time zone names, month and day names), the labels a mail
+# program puts on its folders, and the names of widely used services. Written for the core, by hand, not taken from
+# any outside list. Case is ignored and whole words are matched. The setting `language.known_terms_shipped` turns the
+# whole list off; `language.known_terms` adds a workspace's own words.
+abbreviations: [
+  usa, us, uk, eu, uae, un, nato, gb, gbr, can, aus, nz, de, fr, es, it, jp, cn, in, br, mx, ie, ch, se, no, dk, fi,
+  al, ak, az, ar, ca, co, ct, de, fl, ga, hi, id, il, ia, ks, ky, la, me, md, ma, mi, mn, ms, mo, mt, ne, nv, nh,
+  nj, nm, ny, nc, nd, oh, ok, or, pa, ri, sc, sd, tn, tx, ut, vt, va, wa, wv, wi, wy, dc, ab, bc, mb, nb, nl, ns,
+  on, pe, qc, sk, nsw, vic, qld, ceo, cfo, cto, coo, hr, it, pr, qa, faq, pdf, url, uri, html, css, api, sms, gps,
+  wifi, usb, pc, tv, id, ssn, vat, gst, tax, pto, kpi, roi, usd, eur, gbp, cad, aud, jpy, ok, vs, etc, aka,
+]
+units: [
+  b, kb, mb, gb, tb, pb, kib, mib, gib, hz, khz, mhz, ghz, mm, cm, km, kg, mg, ml, mph, kph, kw, kwh, rpm, dpi, px,
+  pt, em, fps, mbps, gbps,
+]
+time_zones: [
+  utc, gmt, est, edt, cst, cdt, mst, mdt, pst, pdt, akst, akdt, hst, ast, cet, cest, eet, eest, wet, west, bst, ist,
+  jst, kst, aest, aedt, acst, awst, nzst, nzdt, sast, msk,
+]
+calendar: [
+  jan, feb, mar, apr, jun, jul, aug, sep, sept, oct, nov, dec, mon, tue, tues, wed, thu, thur, thurs, fri, sat, sun,
+  january, february, march, april, june, july, august, september, october, november, december, monday, tuesday,
+  wednesday, thursday, friday, saturday, sunday, am, pm, ad, bc, bce, ce, q1, q2, q3, q4, h1, h2, ytd, mtd, qtd, eoy,
+  eom, eod, eow,
+]
+mail_labels: [
+  inbox, sent, drafts, draft, spam, junk, trash, bin, outbox, archive, starred, important, unread, flagged, snoozed,
+  deleted, all, mail, primary, social, promotions, updates, forums, notes, calendar, contacts, tasks, label, labels,
+  folder, folders, category, categories, unseen, seen, answered, recent, noselect, haschildren, hasnochildren,
+]
+services: [
+  github, gitlab, bitbucket, google, gmail, youtube, microsoft, outlook, office, excel, word, powerpoint, onenote,
+  teams, sharepoint, onedrive, azure, windows, apple, icloud, iphone, ipad, macos, ios, android, linux, amazon, aws,
+  facebook, instagram, whatsapp, messenger, twitter, linkedin, tiktok, reddit, pinterest, snapchat, slack, zoom,
+  skype, discord, dropbox, box, notion, trello, asana, jira, confluence, salesforce, hubspot, shopify, paypal, stripe,
+  venmo, netflix, spotify, uber, airbnb, ebay, etsy, wikipedia, chrome, firefox, safari, edge,
+  wordpress, mailchimp, canva, figma, evernote, zapier, docusign, quickbooks, xero,
+]

@@ -1513,6 +1513,7 @@ class KnowsQuestion(BaseModel):
     to: str
     to_name: str
     status: Literal["open", "sent"]
+    asked_on: str = Field("", description="The day it was asked, as YYYY-MM-DD.")
 
 
 class KnowsUnknown(BaseModel):
