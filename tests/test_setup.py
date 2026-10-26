@@ -1016,6 +1016,43 @@ def test_an_installed_add_on_is_turned_on_and_off_with_undo(tmp_path):
     assert off.status_code == 200 and "spare" not in load_config(ws.config_dir, env={}).workspace.plugins.enabled
 
 
+def test_turning_an_add_on_on_never_restarts_and_the_restart_is_the_persons_own_call(tmp_path):
+    from api.app import create_app
+
+    ws, cfg, store = make(tmp_path)
+    folder = ws.root / "plugins" / "spare"
+    folder.mkdir(parents=True)
+    (folder / "plugin.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "spare",
+                "version": "0.1.0",
+                "plugin_api": ">=0.3,<0.4",
+                "description": "An add-on left off",
+                "entry": "spare:register",
+                "config_schema": "spare:Config",
+            }
+        )
+    )
+    store.close()
+    asked = []
+    able = TestClient(create_app(ws, cfg, "t", start_worker=False, on_restart=lambda: asked.append(True)))
+    able.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    assert able.get(f"{api}/status").json()["can_restart"] is True
+    fingerprint = able.get(f"{api}/settings").json()["fingerprint"]
+    turned = able.post(f"{api}/packs/spare/on", json={"fingerprint": fingerprint})
+    assert turned.status_code == 200 and turned.json()["needs_restart"] is True
+    assert asked == [] and not able.app.state.worker.restart_due()  # turning on only says a restart is needed
+    assert able.post(f"{api}/restart").json() == {"restarting": True}  # the click that follows is what restarts
+    assert able.app.state.worker.restart_due() and asked == [True]
+    able.close()
+    stuck = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    stuck.headers["Authorization"] = "Bearer t"
+    assert stuck.post(f"{api}/restart").status_code == 409  # the page then keeps its visible restart line
+    stuck.close()
+
+
 def test_a_source_is_added_changed_and_removed_from_the_screens_without_a_restart(tmp_path):
     from engine.worker import Events, Worker
 

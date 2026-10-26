@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Setup's add-on button folds the restart into the person's click, and the sign-in opens in its own window (phase B)
+
+**Decided:** In setup's mail step a service that needs an add-on says so in one line. Where the app can restart itself
+(`can_restart`), one button ("Add it and sign in, the app restarts for a moment") installs the add-on if needed, turns it
+on, restarts and, once the app is back, opens the sign-in. The click is the say-so for that restart; the button's words
+say it, and nothing restarts without the click. Where the app cannot restart itself, the step keeps the visible restart
+line. The sign-in opens in its own window or tab, never the app's window; the step shows "Waiting for you to sign in",
+then signed in, the service's refusal in plain words, or closed, with Try again.
+
+**Decided by:** the owner (P40, points 3, 5, 6, 9).
+
+**Why:** The owner had to know the add-on was needed, then find a separate Restart button and a separate Sign in; the
+service's sign-in page replaced the app's window and a refused sign-in left them stuck on the service's page.
+
+**Impact:** Design 7.8 (setup, mail step) text changes; no new API route, setting or plugin API change (the web page calls
+the existing install, on and restart routes in order). The restart rule stands: the person's click is the request.
+Change log: section 202.
+
 ## 2026-10-26: Setup's first step asks the names and personal or business; Reginald is the default (phase B)
 
 **Decided:** The assistant's default name is Reginald (`workspace.assistant_name`), shown wherever the screen names it,

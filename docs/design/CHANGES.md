@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 202. Setup's add-on button restarts on the person's click; sign-in in its own window (2026-10-26; P40)
+
+- **Design 7.8 (setup, mail step):** a service that needs an add-on says so in one line. Where the app can restart itself,
+  one button adds the add-on, turns it on, restarts (the click is the say-so, and the button says so) and opens the
+  sign-in; otherwise the visible restart line stays. The sign-in opens in its own window or tab; the step shows waiting,
+  then signed in, refused (the service's reason) or closed, with Try again. Decision entry 2026-10-26. **Built:**
+  `web/src/components/Walkthrough.test.tsx` ("Mail and calendar"), `tests/test_setup.py`
+  (`test_turning_an_add_on_on_never_restarts_and_the_restart_is_the_persons_own_call`).
+
 ## 200. Setup's names, personal or business, people by relation, one time zone list (2026-10-26; P40)
 
 - **Design 7.8 (setup):** the You step asks the person's name, the workspace's name, the assistant's name (default Reginald) and whether this is for the person alone or also a business, whose name is saved through the business route; the People step asks by relation, and a business's people by their part; the time zone is one searchable list defaulting to this computer's zone; no backup account is said plainly

@@ -1,17 +1,19 @@
 // The mail and calendar screen of the walkthrough (design 7.8): the services the person can connect, each in the state it
 // is in. One not yet installed is installed and turned on with one button; one installed but off is turned on; then the
-// one restart ("Restart to finish connecting"), never made on its own; then Sign in. Once signed in the screen says what is read now
+// one restart. Where the app can restart itself, one button does all of it (the click is the say-so, and the button says
+// the app restarts), then opens the sign-in in its own window; otherwise the visible "Restart to finish connecting" stays,
+// never made on its own. Once signed in the screen says what is read now
 // and that the last day's mail waits for the first Go. The core's own mail folder and calendar address are offered as
 // "Another mail or calendar". With no service listed and nothing read yet, the step is one sentence, one button and the way
 // out the walkthrough already has (skip it).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { serviceReachLines, waitsForRestart } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
-import { useStartSignIn } from "../lib/sign-in-start";
+import { useSignInWindow } from "../lib/sign-in-window";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { addonOfSignIn } from "./SignIns";
@@ -155,6 +157,7 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
                 service={service}
                 signIns={(signIns.data ?? []).filter((s) => addonOfSignIn(s.name) === service.id)}
                 onOpenAddons={props.onOpenAddons}
+                canRestart={canRestart}
               />
             ))}
           </ul>
@@ -236,7 +239,7 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
 }
 
 /** One service: what it reads, where it stands and the one button for the next thing to do. */
-function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: () => void }) {
+function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: () => void; canRestart: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
   const restart = useRestart();
@@ -244,9 +247,17 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState(false);
+  // The person's click on the one button is the say-so for the restart; after it the sign-in opens by itself.
+  const [after, setAfter] = useState(false);
   const base = `service-${service.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   // Installing and turning on are one button; a row that has just done them says so until the restart.
   const state: ServiceState = done && (service.state === "not_installed" || service.state === "off") ? "restart" : service.state;
+
+  // With a restart the app can make itself, one button adds the add-on, restarts and signs in.
+  const oneClick = props.canRestart;
+  useEffect(() => {
+    if (after && (restart.phase === "refused" || restart.phase === "stuck")) setAfter(false);
+  }, [after, restart.phase]);
 
   const connect = async () => {
     setBusy(true);
@@ -256,10 +267,15 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
       // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
       const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
       const saved = await api.packOn(service.id, current.fingerprint);
-      if (saved.needs_restart) restart.offer();
+      if (saved.needs_restart && props.canRestart && oneClick) {
+        setAfter(true);
+        setDone(true);
+        void restart.now();
+      } else if (saved.needs_restart) restart.offer();
       setDone(true);
       await client.invalidateQueries();
     } catch (err) {
+      setAfter(false);
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
     } finally {
@@ -306,20 +322,32 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               {problem}
             </p>
           )}
+          {(state === "not_installed" || state === "off") && (
+            <p className="hint" data-needs-addon="">
+              {t(oneClick ? "walkthrough.mail.needs_addon_restart" : "walkthrough.mail.needs_addon", { name: service.name })}
+            </p>
+          )}
           {state === "ready" &&
-            props.signIns.map((item) => <ServiceSignIn key={item.name} item={item} />)}
+            props.signIns.map((item, i) => (
+              <ServiceSignIn
+                key={item.name}
+                item={item}
+                autostart={after && i === 0}
+                onStarted={() => setAfter(false)}
+              />
+            ))}
         </div>
         <div className="acts">
           {state === "not_installed" && service.installable && (
             <button
               type="button"
               className="btn primary"
-              disabled={busy}
-              aria-label={t("walkthrough.mail.connect_named", { name: service.name })}
+              disabled={busy || after}
+              aria-label={t(oneClick ? "walkthrough.mail.add_and_sign_in_named" : "walkthrough.mail.connect_named", { name: service.name })}
               aria-describedby={`${base}-state`}
               onClick={() => void connect()}
             >
-              {busy ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect")}
+              {busy || after ? t("walkthrough.mail.connecting") : t(oneClick ? "walkthrough.mail.add_and_sign_in" : "walkthrough.mail.connect")}
             </button>
           )}
           {state === "not_installed" && !service.installable && (
@@ -331,12 +359,12 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
             <button
               type="button"
               className="btn primary"
-              disabled={busy}
-              aria-label={t("walkthrough.mail.turn_on_named", { name: service.name })}
+              disabled={busy || after}
+              aria-label={t(oneClick ? "walkthrough.mail.add_and_sign_in_named" : "walkthrough.mail.turn_on_named", { name: service.name })}
               aria-describedby={`${base}-state`}
               onClick={() => void connect()}
             >
-              {busy ? t("walkthrough.mail.connecting") : t("walkthrough.mail.turn_on")}
+              {busy || after ? t("walkthrough.mail.connecting") : t(oneClick ? "walkthrough.mail.add_and_sign_in" : "walkthrough.mail.turn_on")}
             </button>
           )}
         </div>
@@ -345,13 +373,27 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   );
 }
 
-/** A sign-in of a running service: where it stands, and the button that sends the person to the service's own page. */
-function ServiceSignIn(props: { item: SignIn }) {
+/** A sign-in of a running service: where it stands, and the button that opens the service's own page in its own window.
+ *  The screen says it is waiting, then how it went; a refusal shows the service's reason and Try again. */
+function ServiceSignIn(props: { item: SignIn; autostart?: boolean; onStarted?: () => void }) {
   const { t } = useWords();
+  const client = useQueryClient();
   const { item } = props;
-  const { start, busy, problem } = useStartSignIn(item.name);
+  const { start, phase, text } = useSignInWindow(item.name);
+  const tried = useRef(false);
+  useEffect(() => {
+    if (!props.autostart || tried.current) return;
+    tried.current = true;
+    props.onStarted?.();
+    void start();
+  }, [props.autostart]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (phase === "done") void client.invalidateQueries();
+  }, [phase, client]);
   const signedIn = item.status === "signed_in";
   const again = item.status === "expired";
+  const busy = phase === "starting" || phase === "waiting";
+  const retry = phase === "refused" || phase === "closed" || phase === "failed" || phase === "blocked";
   return (
     <div className="service-sign-in" data-sign-in={item.name}>
       {signedIn ? (
@@ -364,9 +406,19 @@ function ServiceSignIn(props: { item: SignIn }) {
           {(item.allows ?? []).length > 0 && (
             <p className="sub">{t("walkthrough.mail.allows", { allows: (item.allows ?? []).join("; ") })}</p>
           )}
-          {problem && (
+          {phase === "waiting" && (
+            <p className="sub" role="status">
+              {t("sign_in.window.waiting")}
+            </p>
+          )}
+          {phase === "done" && (
+            <p className="sub" role="status">
+              {t("sign_in.window.done")}
+            </p>
+          )}
+          {text && (
             <p className="problem-note" role="alert">
-              {problem}
+              {text}
             </p>
           )}
           <div className="row-end">
@@ -377,7 +429,7 @@ function ServiceSignIn(props: { item: SignIn }) {
               aria-label={t(again ? "sign_in.sign_in_again_named" : "sign_in.sign_in_named", { label: item.label })}
               onClick={() => void start()}
             >
-              {busy ? t("sign_in.working") : t(again ? "sign_in.sign_in_again" : "sign_in.sign_in")}
+              {busy ? t("sign_in.working") : retry ? t("sign_in.window.try_again") : t(again ? "sign_in.sign_in_again" : "sign_in.sign_in")}
             </button>
           </div>
         </>

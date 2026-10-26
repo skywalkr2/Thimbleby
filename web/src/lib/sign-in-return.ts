@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "./api";
+import { announceSignIn } from "./sign-in-window";
 import { useToasts } from "./toasts";
 import { useWords } from "./wording";
 
@@ -62,6 +63,15 @@ export function useSignInReturn(): void {
     const from = startedFrom();
     if (from && !window.location.hash) window.location.hash = from;
     if (!OUTCOMES.has(outcome)) return;
+    // A window the app opened for the sign-in tells the screen that waits for it, then closes itself.
+    announceSignIn({ outcome, name, error, detail });
+    if (window.opener) {
+      try {
+        window.close();
+      } catch {
+        // The toast below still says how it went.
+      }
+    }
     void (async () => {
       let message = t(`sign_in.return.${outcome}`);
       if (outcome === "refused" && error) {

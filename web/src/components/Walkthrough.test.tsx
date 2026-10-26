@@ -1,9 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import type { S } from "../lib/api";
 import { RestartProvider } from "../lib/restart";
+import { announceSignIn } from "../lib/sign-in-window";
 import { useToasts } from "../lib/toasts";
 import { App } from "../App";
 import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture } from "../test-utils";
@@ -740,7 +741,7 @@ describe("each screen", () => {
 describe("Mail and calendar", () => {
   /** A fake service that moves through the states the screen shows: not here, installed and off, on and waiting for the
    * restart, then running. The restart changes the app's start so the screen sees it come back. */
-  function service(start: "none" | "off" | "on", over: { signed?: boolean } = {}) {
+  function service(start: "none" | "off" | "on", over: { signed?: boolean; canRestart?: boolean } = {}) {
     const state = { here: start !== "none", enabled: start === "on", running: start === "on", signed: !!over.signed, restarted: 0 };
     const id = "mail-addon";
     const login = "http://localhost:9090/login?x=1";
@@ -762,7 +763,7 @@ describe("Mail and calendar", () => {
         state.enabled = true;
         return { changes: [], fingerprint: "fp-2", needs_restart: true };
       },
-      "GET status": () => statusFixture({ can_restart: true }),
+      "GET status": () => statusFixture({ can_restart: over.canRestart ?? true }),
       "POST restart": () => {
         // The app is gone for a moment and comes back as a new start.
         setTimeout(() => {
@@ -780,56 +781,94 @@ describe("Mail and calendar", () => {
     return { calls, state, login };
   }
 
+  let opener: ReturnType<typeof vi.fn>;
+  let popup: { closed: boolean; close: ReturnType<typeof vi.fn>; location: { href: string } };
   let assign: ReturnType<typeof vi.fn>;
   beforeEach(() => {
     assign = vi.fn();
+    popup = { closed: false, close: vi.fn(), location: { href: "" } };
+    opener = vi.fn(() => popup);
     vi.stubGlobal("location", { ...window.location, assign });
+    vi.stubGlobal("open", opener);
   });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
   const row = async () => (await screen.findByText("Service mail-addon")).closest("li") as HTMLElement;
+  const oneButton = "Add Service mail-addon and sign in — the app restarts for a moment";
 
-  test("a service that is not installed: one button installs it and turns it on, then one restart, then Sign in", async () => {
+  test("a service that is not installed: the row says it needs the add-on; one click installs, turns on, restarts, then opens the sign-in in its own window", async () => {
     const user = userEvent.setup();
     const { calls, login } = service("none");
     open();
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
     const mine = await row();
     expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
-    expect(within(mine).getByText(/Not on this computer yet/)).toBeInTheDocument();
+    expect(within(mine).getByText(/needs the Service mail-addon add-on/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
-    await user.click(within(mine).getByRole("button", { name: "Install and connect Service mail-addon" }));
-    await waitFor(() => expect(within(mine).getByText("Ready after the restart below.")).toBeInTheDocument());
+    // Nothing restarts before the click.
+    expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+    await user.click(within(mine).getByRole("button", { name: oneButton }));
+    await waitFor(() => expect(popup.location.href).toBe(login), { timeout: 3000 });
     const routesCalled = calls.map((c) => c.route);
     expect(routesCalled.indexOf("POST packs/mail-addon/install")).toBeLessThan(routesCalled.indexOf("POST packs/mail-addon/on"));
-    expect(calls.find((c) => c.route === "POST packs/mail-addon/on")!.body).toEqual({ fingerprint: "fp-1" });
-    // Nothing restarts until the person presses the one button.
-    expect(calls.some((c) => c.route === "POST restart")).toBe(false);
-    expect(screen.getAllByRole("button", { name: "Restart to finish connecting" })).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "Restart to finish connecting" }));
-    await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
-    // After the restart the next action is Sign in.
-    const signInButton = await screen.findByRole("button", { name: "Sign in to The account" });
-    expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
+    expect(routesCalled.indexOf("POST packs/mail-addon/on")).toBeLessThan(routesCalled.indexOf("POST restart"));
     expect(calls.filter((c) => c.route === "POST restart")).toHaveLength(1);
-    await user.click(signInButton);
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(login));
+    expect(opener).toHaveBeenCalledWith("", "_blank");
+    // The app's own window never goes to the service.
+    expect(assign).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Waiting for you to sign in/)).toBeInTheDocument();
   });
 
-  test("a service installed but off: one button turns it on, with no install, then the restart, then Sign in", async () => {
+  test("a refused sign-in shows the service's reason in plain words and Try again", async () => {
     const user = userEvent.setup();
-    const { calls } = service("off");
+    service("on");
+    open();
+    const mine = await row();
+    await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
+    expect(await screen.findByText(/Waiting for you to sign in/)).toBeInTheDocument();
+    act(() => announceSignIn({ outcome: "refused", name: "mail-addon/account", error: "access_denied", detail: "Not on the testers list" }));
+    expect(await screen.findByText("The service didn't allow the sign-in (access_denied): Not on the testers list")).toBeInTheDocument();
+    expect(assign).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Sign in to The account" }));
+    expect(opener).toHaveBeenCalledTimes(2);
+  });
+
+  test("a sign-in window closed with no answer says so, with Try again", async () => {
+    const user = userEvent.setup();
+    service("on");
+    open();
+    const mine = await row();
+    await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
+    expect(await screen.findByText(/Waiting for you to sign in/)).toBeInTheDocument();
+    popup.closed = true;
+    expect(await screen.findByText("The sign-in window was closed before you finished.", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in to The account" })).toHaveTextContent("Try again");
+  });
+
+  test("when the app can't restart itself, nothing restarts and the visible restart line stays", async () => {
+    const user = userEvent.setup();
+    const { calls } = service("none", { canRestart: false });
+    open();
+    const mine = await row();
+    await user.click(within(mine).getByRole("button", { name: "Install and connect Service mail-addon" }));
+    await waitFor(() => expect(within(mine).getByText("Ready after the restart below.")).toBeInTheDocument());
+    expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+    expect(screen.getByText(/Close and reopen the app/)).toBeInTheDocument();
+    expect(opener).not.toHaveBeenCalled();
+  });
+
+  test("a service installed but off: one click turns it on, with no install, then restarts and opens the sign-in", async () => {
+    const user = userEvent.setup();
+    const { calls, login } = service("off");
     open();
     const mine = await row();
     expect(within(mine).getByText("Installed, but off.")).toBeInTheDocument();
-    await user.click(within(mine).getByRole("button", { name: "Turn on Service mail-addon" }));
-    await waitFor(() => expect(within(mine).getByText("Ready after the restart below.")).toBeInTheDocument());
+    await user.click(within(mine).getByRole("button", { name: oneButton }));
+    await waitFor(() => expect(popup.location.href).toBe(login), { timeout: 3000 });
     expect(calls.some((c) => c.route === "POST packs/mail-addon/install")).toBe(false);
     expect(calls.some((c) => c.route === "POST packs/mail-addon/on")).toBe(true);
-    await user.click(screen.getByRole("button", { name: "Restart to finish connecting" }));
-    expect(await screen.findByRole("button", { name: "Sign in to The account" })).toBeInTheDocument();
   });
 
   test("a service that is on goes straight to Sign in, with no restart in the way", async () => {
@@ -841,7 +880,8 @@ describe("Mail and calendar", () => {
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
     expect(within(mine).queryByRole("button", { name: /Install|Turn on/ })).toBeNull();
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(login));
+    await waitFor(() => expect(popup.location.href).toBe(login));
+    expect(assign).not.toHaveBeenCalled();
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
   });
 
@@ -980,31 +1020,6 @@ describe("Mail and calendar", () => {
     expect(within(list).getByText("Your inbox")).toBeInTheDocument();
     expect(within(list).getByText("Your calendar")).toBeInTheDocument();
     expect(within(list).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
-  });
-
-  test("two services turned on before the restart still need only the one restart button", async () => {
-    const user = userEvent.setup();
-    const ids = ["mail-addon", "second-addon"];
-    const turned = new Set<string>();
-    const calls = fakeApi({
-      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
-      "GET packs": () => ({
-        enabled: true,
-        feeds: [],
-        available: ids.map((id) => available(id, { installed_version: "1.0.0", enabled: turned.has(id) })),
-        installed: ids.map((id) => installedPack(id, { enabled: turned.has(id), state: "off" })),
-      }),
-      "POST packs/mail-addon/on": () => (turned.add("mail-addon"), { changes: [], fingerprint: "fp-2", needs_restart: true }),
-      "POST packs/second-addon/on": () => (turned.add("second-addon"), { changes: [], fingerprint: "fp-3", needs_restart: true }),
-      "GET status": () => statusFixture({ can_restart: true }),
-    });
-    open();
-    await user.click(await screen.findByRole("button", { name: "Turn on Service mail-addon" }));
-    await user.click(await screen.findByRole("button", { name: "Turn on Service second-addon" }));
-    await waitFor(() => expect(turned.size).toBe(2));
-    expect(await screen.findAllByText("Ready after the restart below.")).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "Restart to finish connecting" })).toHaveLength(1);
-    expect(calls.some((c) => c.route === "POST restart")).toBe(false);
   });
 
   test("where the app can't restart itself the step says to close and start it, and offers no restart button", async () => {
