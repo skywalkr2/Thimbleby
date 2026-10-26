@@ -1714,6 +1714,10 @@ mechanics.
 - Hosted mode and sign-in (Part 11), and its end state: an organization install where members from the People list have
   roles, their own views and approvals by role (design 11.8; owner, 2026-10-13).
 - Social, email and newsletter channels.
+- An editor in the app for long text, what-you-see-is-what-you-get (owner, 2026-10-26: "in the future we might do a
+  WYSIWYG editor in the app, but thats not 1.0"). In 1.0 long text is written in the person's own tools through
+  working-copy formats (design 3.3, 5.0; Word first) and reviewed in the core's compare view. When it comes it is a core
+  screen for any pack's `LongText` field, not one pack's.
 - The sales pack (13.3).
 - Which of a pack's AI work a project allows (the writing pack's question 198, after 1.0): a project, inherited from the
   workspace and its parent, names the task kinds or groups that may run, or none; the core refuses to queue the rest from
