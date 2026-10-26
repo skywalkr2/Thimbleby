@@ -3838,7 +3838,9 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   later), so "the second side" below becomes a list. Each side is a top-level project with a kind (`job` or `business`)
   and its own name, mailboxes (or a mailbox shared with Personal or another side), people and relations; a pack's
   screens, Today lines and setup attach to the side or projects they serve (a writing pack's books are projects under the
-  writing business), never to "the business". The filing ranks below read "a side" wherever they say "the business", a
+  writing business), never to "the business". Packs on different sides still work together through the core's interfaces
+  (3.9): a finished book on a writing side can be handed to a publishing pack serving another side, and each item stays on
+  its own side. The filing ranks below read "a side" wherever they say "the business", a
   rank pointing to two or more sides deciding nothing. `workspace.project.business` becomes a list of sides, the single
   value read as a one-item list. Until it is built, the text below describes the one-business version that runs today.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
