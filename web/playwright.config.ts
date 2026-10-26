@@ -48,11 +48,13 @@ const pair = (port: number, fakePort: number, httpsPort: number) => ({
 const journeys = pair(8783, 8790, 8791);
 const mail = pair(8784, 8792, 8793);
 const newStart = pair(8785, 8794, 8795);
+const evening = pair(8760, 8761, 8762);
 
 // The browser tests ask the fake services for what they were asked; they read where from here.
 process.env.JOURNEY_FAKE_PORT = String(journeys.fakePort);
 process.env.JOURNEY_MAIL_FAKE_PORT = String(mail.fakePort);
 process.env.JOURNEY_NEW_START_FAKE_PORT = String(newStart.fakePort);
+process.env.JOURNEY_EVENING_FAKE_PORT = String(evening.fakePort);
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
 
@@ -128,6 +130,11 @@ export default defineConfig({
       testMatch: /journeys-new-start\.spec\.ts/,
       use: { baseURL: `http://127.0.0.1:${newStart.port}/`, ignoreHTTPSErrors: true },
     },
+    {
+      name: "journeys-owner-evening",
+      testMatch: /journeys-owner-evening\.spec\.ts/,
+      use: { baseURL: `http://127.0.0.1:${evening.port}/`, ignoreHTTPSErrors: true },
+    },
   ],
   webServer: [
     ...servers.map((s) => ({
@@ -194,5 +201,8 @@ export default defineConfig({
     // prints is kept so the restarts can be counted.
     freshServer(newStart, "--add-ons --catalog-by-environment --log"),
     fakeServices(newStart, "--catalog journey_mail"),
+    // The owner's first evening: the same start as the new-start journey, with the fake services' evening mail and model list.
+    freshServer(evening, "--add-ons --catalog-by-environment --log"),
+    fakeServices(evening, "--catalog journey_mail --evening"),
   ],
 });

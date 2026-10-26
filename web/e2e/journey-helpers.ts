@@ -4,7 +4,8 @@ import { expect, type Page } from "@playwright/test";
 
 /** Where the fake services answer over plain HTTP (the config sets the ports; the mail and new-start journeys have their own). */
 export const fakeAddress = (
-  variable: "JOURNEY_FAKE_PORT" | "JOURNEY_MAIL_FAKE_PORT" | "JOURNEY_NEW_START_FAKE_PORT",
+  variable: "JOURNEY_FAKE_PORT" | "JOURNEY_MAIL_FAKE_PORT" | "JOURNEY_NEW_START_FAKE_PORT"
+    | "JOURNEY_EVENING_FAKE_PORT",
   fallback: number,
 ) =>
   `http://127.0.0.1:${process.env[variable] ?? fallback}`;

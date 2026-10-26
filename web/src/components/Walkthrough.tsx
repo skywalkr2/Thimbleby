@@ -107,8 +107,9 @@ export function Walkthrough(
   }, [props.at?.n]);
 
   // On opening and on every move, the cursor goes to the screen's first field, so the person can start typing; a screen
-  // with no field puts it on its heading instead. A screen's fields can arrive a moment later, so it waits briefly; a
-  // person who already put the cursor in a field meanwhile keeps it there.
+  // with no field puts it on its heading instead. A screen's fields can arrive a moment later (a slow answer), so the
+  // heading holds the cursor meanwhile and the first field takes it when it appears; a person who already put the
+  // cursor in a field or elsewhere keeps it there.
   useEffect(() => {
     if (!current) return;
     let tries = 0;
@@ -120,9 +121,14 @@ export function Walkthrough(
       const field = main?.querySelector<HTMLElement>(
         "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
       );
-      if (field) field.focus();
-      else if (tries++ < 10) timer = window.setTimeout(place, 50);
-      else heading.current?.focus();
+      if (field) {
+        field.focus();
+        return;
+      }
+      if (tries === 10) heading.current?.focus();
+      // Only while the cursor is still where this code put it (nowhere, or the heading) does it keep waiting for a field.
+      const parked = !active || active === document.body || active === heading.current;
+      if (tries++ < 200 && parked) timer = window.setTimeout(place, 50);
     };
     place();
     return () => window.clearTimeout(timer);

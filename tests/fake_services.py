@@ -58,6 +58,9 @@ HOST = "127.0.0.1"
 PLUGINS = Path(__file__).parent / "fixtures" / "plugins"
 
 #: Fictional model names with a price per token, as a service's own model list gives them.
+#: A model the service lists first and marks retired, as it does for one it no longer offers (the evening journey).
+RETIRED_MODEL = "fake-retired-text"
+
 MODELS = {
     "fake-small": {"prompt": "0.0000005", "completion": "0.0000015", "context_length": 128000},
     "fake-large": {"prompt": "0.000003", "completion": "0.000015", "context_length": 200000},
@@ -86,6 +89,7 @@ class State:
         self.refresh: set[str] = set()
         #: The moment the made-up mailbox and calendar are dated from, so reading them again gives the same text.
         self.moment = datetime.now(UTC)
+        self.evening = False  # the owner-evening journey's extra mail, event and retired model
         self.later_mail: list[dict] = []  # messages that arrive after the first read (added by a helper route)
         self.seen = {
             "authorizations": 0,
@@ -157,10 +161,24 @@ def ai_routes(state: State) -> list[Route]:
             }
             for name, info in MODELS.items()
         ]
+        if state.evening:
+            data.insert(
+                0,
+                {
+                    "id": RETIRED_MODEL,
+                    "context_length": 4096,
+                    "deprecated": True,
+                    "pricing": {"prompt": "0.0000001", "completion": "0.0000001"},
+                },
+            )
         return JSONResponse({"object": "list", "data": data})
 
     async def chat(request: Request) -> JSONResponse:
         body = await request.json()
+        if body.get("model") == RETIRED_MODEL:
+            return JSONResponse(
+                {"error": {"message": f"The model {RETIRED_MODEL} has been deprecated."}}, status_code=404
+            )
         messages = body.get("messages") or []
         system = next((m["content"] for m in messages if m.get("role") == "system"), "")
         user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
@@ -334,7 +352,64 @@ def message(
     }
 
 
-def messages(now: datetime, later: list[dict] | None = None) -> list[dict]:
+#: The evening journey's mail. A booking confirmation for an appointment the calendar also holds (its markup carries the
+#: place), a one-time code from a no-reply sender, and a bill with its amount and due day.
+HALL = "Maple Hall"
+BOOKING = ("Maple Hall Tickets", "tickets@maplehall.example.com")
+ACCOUNTS = ("Example Sign-in", "no-reply@accounts.example.com")
+WATER = ("Riverside Water", "billing@riversidewater.example.com")
+BILL_LINE = "Pay the water bill of $84.20 by 2026-11-05."
+
+
+def appointment(now: datetime) -> datetime:
+    """The appointment two days ahead, on the hour, which the calendar and the booking confirmation both hold."""
+    return (now + timedelta(days=2)).replace(minute=0, second=0, microsecond=0)
+
+
+def booking_markup(start: datetime) -> str:
+    data = {
+        "@type": "EventReservation",
+        "reservationId": "R-7731",
+        "provider": {"@type": "Organization", "name": "Maple Hall Tickets"},
+        "reservationFor": {
+            "@type": "Event",
+            "name": "Pottery evening",
+            "startDate": start.isoformat(),
+            "endDate": (start + timedelta(hours=2)).isoformat(),
+            "location": {"@type": "Place", "name": HALL},
+        },
+    }
+    return (
+        "<html><body><p>Your booking is confirmed.</p>"
+        f'<script type="application/ld+json">{json.dumps(data)}</script></body></html>'
+    )
+
+
+def evening_messages(now: datetime) -> list[dict]:
+    return [
+        message(
+            "m-7",
+            BOOKING,
+            "Your booking is confirmed",
+            timedelta(hours=3),
+            True,
+            booking_markup(appointment(now)),
+            now=now,
+        ),
+        message(
+            "m-8",
+            ACCOUNTS,
+            "Your verification code",
+            timedelta(hours=2),
+            True,
+            "Your verification code is 482913. Do not share it with anyone.",
+            now=now,
+        ),
+        message("m-9", WATER, "Your water bill is ready", timedelta(hours=1), True, BILL_LINE, now=now),
+    ]
+
+
+def messages(now: datetime, later: list[dict] | None = None, evening: bool = False) -> list[dict]:
     """Six messages: three work messages from the last day, with the shapes the stand-in reads, a social update with
     the service's category and a sales mail with a bulk flag, both from the last day too, and one from last week.
     `later` are messages that arrived after the first read."""
@@ -384,11 +459,12 @@ def messages(now: datetime, later: list[dict] | None = None) -> list[dict]:
             now=now,
             bulk=True,
         ),
+        *(evening_messages(now) if evening else []),
         *(later or []),
     ]
 
 
-def events(now: datetime) -> list[dict]:
+def events(now: datetime, evening: bool = False) -> list[dict]:
     """Three events: two within the hour, and one next week."""
     first, second = people()[1:3]
 
@@ -417,6 +493,7 @@ def events(now: datetime) -> list[dict]:
             "Agreed: the budget stays as planned.",
         ),  # fmt: skip
         event("e-3", "Offsite day", now + timedelta(days=9), "The lodge", first, "Everyone arrives by nine."),
+        *([event("e-4", HALL, appointment(now), "Maple Street", first, "Bring the tickets.")] if evening else []),
     ]
 
 
@@ -463,7 +540,7 @@ def mail_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["mail_reads"] += 1
-        return JSONResponse({"messages": messages(state.moment, state.later_mail)})
+        return JSONResponse({"messages": messages(state.moment, state.later_mail, state.evening)})
 
     return [Route("/messages", listed)]
 
@@ -474,7 +551,7 @@ def calendar_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["calendar_reads"] += 1
-        return JSONResponse({"events": events(state.moment)})
+        return JSONResponse({"events": events(state.moment, state.evening)})
 
     return [Route("/events", listed)]
 
@@ -599,6 +676,7 @@ def helper_routes(state: State, base: str) -> list[Route]:
                 "tokens": len(state.access),
                 "recent_items": recent_items(datetime.now(UTC)),
                 "intake_items": intake_items(datetime.now(UTC)),
+                "moment": stamp(state.moment),
             }
         )
 
@@ -704,8 +782,12 @@ def main() -> None:
     parser.add_argument(
         "--catalog", default="journey_panel", help="the fixture add-ons the catalog lists, comma-separated"
     )
+    parser.add_argument(
+        "--evening", action="store_true", help="add the evening journey's mail, event and retired model"
+    )
     args = parser.parse_args()
     state = State(args.state)
+    state.evening = args.evening
     if args.https_port:
         start_secure(state, args.https_port, tuple(name for name in args.catalog.split(",") if name))
     uvicorn.run(build_app(state, args.port), host=HOST, port=args.port, log_level="warning")
