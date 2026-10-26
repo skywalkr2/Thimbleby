@@ -305,10 +305,14 @@ test.describe("screen use and the shell", () => {
     await signIn(page, "setup");
     await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await pressStart(page);
+    // The shared workspace resumes at the first screen not done, so the You screen is opened from the step list.
+    const steps = page.getByRole("button", { name: "Steps", exact: true });
+    await showSteps(page);
+    await page.locator('#walkthrough-steps [data-screen="you"]').click();
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { level: 2, name: "You", exact: true })).toBeVisible();
+    if ((await steps.getAttribute("aria-expanded")) === "true") await steps.click();
     await expect(page.getByText("You · 1 of 7")).toBeVisible();
-    const steps = page.getByRole("button", { name: "Steps", exact: true });
     await expect(steps).toHaveAttribute("aria-expanded", "false");
     await expect(page.locator("#walkthrough-steps")).toBeHidden();
     const field = (await main.getByLabel("Your full name").boundingBox())!;

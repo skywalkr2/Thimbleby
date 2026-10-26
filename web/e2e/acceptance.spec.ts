@@ -275,10 +275,11 @@ test.describe.serial("acceptance scenario", () => {
     // Finish later leaves the walkthrough, and Today's setup line stays as it was.
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
-    await expect(line).toContainText("Next: Add an AI account and test it");
-    // Continue setup opens the walkthrough at the next step, with focus on its heading.
+    // The next step is still the first one not done or skipped: the work question comes before the AI account.
+    await expect(line).toContainText("Next: Say whether your work is part of this");
+    // Continue setup opens the walkthrough at that step, with the cursor in its first field.
     await line.getByRole("button", { name: "Continue setup" }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
       .toBe(true);
