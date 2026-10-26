@@ -1027,6 +1027,10 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 199. One appointment, one entry; a week of agenda; lead time (2026-10-26; P44, P54)
+
+- **One appointment, one entry; a week of agenda; lead time (6.32, 7.7):** the agenda reaches six days ahead and names the days when empty; a booking already on a calendar is linked, not copied, and a copy never clashes with its original; a sign-in warns a day before its end, never before three quarters of its life; a meeting to set up counts on Today `steward.meetings.setup_lead_working_days` working days ahead.
+
 ## 198. A failing step and a stopped loop (2026-10-26; P53)
 
 - **Design 6.13 and 6.14:** a step that fails in any way, an exit included, rolls its whole change back, which is recorded
@@ -2540,10 +2544,6 @@ All *not yet built*: L7, phase B and phase P.
 | Rules review (7.6) | "Not now" a button beside the answer | "Not now" in the line's menu with what it does; the 7.6 rule: a second answer is a visible button, a postponement is in the menu |
 | Follow-ups (7.5) | One message per person | A Message / Table switch; the table is shown before it is copied; Copy as table (HTML) and Copy for a spreadsheet (tab-separated) |
 | Today | None | A held line when work has no AI account; the backup line's button is at the row's end |
-
-## 72. One appointment, one entry; a week of agenda; lead time (2026-10-24)
-
-- **One appointment, one entry; a week of agenda; lead time (6.32, 7.7):** the agenda reaches six days ahead and names the days when empty; a booking already on a calendar is linked, not copied, and a copy never clashes with its original; a sign-in warns a day before its end, never before three quarters of its life; a meeting to set up counts on Today `steward.meetings.setup_lead_working_days` working days ahead.
 
 ## Plugin host, API 0.1 (2026-10-09)
 

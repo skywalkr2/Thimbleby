@@ -3854,6 +3854,17 @@ a gap (the computer asleep or the app closed; the record cannot tell which). A l
 `::test_the_worker_notes_when_the_app_is_running_and_not_more_often_than_it_should`,
 `web/src/components/TodayReminders.test.tsx`. Working hours never move a reminder the person set; only quiet hours hold it (6.35).
 
+**One appointment, one entry; a week ahead; lead time** (*built, P44 and P54*, 2026-10-26). Two entries are one
+appointment when they start at the same moment and one title, set aside case, spacing and punctuation, equals or contains
+the other (a booking's title often adds the place). A booking already held, on a connected calendar or as the app's own
+entry, makes no second entry, and the clash check never pairs an entry with its own copy. Today's agenda covers today and
+the six days after (`ui.today.agenda_days_ahead`), and when it is empty it names the days it looked at. A sign-in's
+renewal warning starts at the later of `ai.credential_warn_days` before its end and three quarters of its life, so a
+short test sign-in never warns on its first day. A meeting the person sets up (a to-do whose words include one of
+`steward.meetings.setup_words`) counts from `steward.meetings.setup_lead_working_days` working days before its day, names
+the day when that is past this week, and once its invitation is out (told to someone, or a linked calendar entry) shows
+only on its day, as hold.
+
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 
 A promise is something someone owes someone: "I'll send it Friday" is the person's own; "they'll get back to me Tuesday"
