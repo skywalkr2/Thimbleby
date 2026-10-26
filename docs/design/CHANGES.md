@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 203. Sign-ins in their own window, a way back to setup, Your promises kept, the sent folder by itself (2026-10-26; P40, P37)
+
+- **Design 7.8 (setup):** every sign-in opens in its own window or tab; a screen the walkthrough sends the person to
+  offers "Back to setup"; Your promises is shown before the screens after it on resume and is marked done once the
+  person moves on; the sent folder of a mail account is read by itself (the server's own marking), with "Choose the
+  Sent folder" only where that failed; with no catalog set the add-ons step says why nothing is listed. Settings: a
+  schema field marked `internal` never shows. **Built:** `web/src/components/SignIns.test.tsx`,
+  `web/src/components/Walkthrough.test.tsx` ("a way back to the step", "moving on from Your promises"),
+  `web/src/components/FirstPromises.test.tsx`, `web/src/components/Welcome.test.tsx`, `tests/test_walkthrough.py`,
+  `tests/test_sent_folder.py`, `tests/test_internal_settings.py`.
+
 ## 202. Setup's add-on button restarts on the person's click; sign-in in its own window (2026-10-26; P40)
 
 - **Design 7.8 (setup, mail step):** a service that needs an add-on says so in one line. Where the app can restart itself,

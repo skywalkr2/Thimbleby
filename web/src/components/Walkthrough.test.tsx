@@ -476,6 +476,70 @@ describe("closing", () => {
   });
 });
 
+describe("a way back to the step", () => {
+  /** The walkthrough open at a step, with the quiet routes the other screens ask for. */
+  function started(stepId: S["WalkthroughView"]["step"]) {
+    window.location.hash = "";
+    const steps = CORE.map((id) => step(id));
+    return fakeApi({
+      ...routes({ "GET setup": () => setupView(steps, { walkthrough: { open: true, step: stepId, closed: false } }) }),
+      "GET panels": () => [],
+      "GET asks": () => [],
+      "GET changes": () => [],
+      "GET followups": () => [],
+      "GET runtime-config": () => ({ instance: null }),
+      "GET today/agenda": () => [],
+      "GET today/todo": () => [],
+      "GET today/arrived": () => ({ items: [], left_out: 0 }),
+      "GET projects": () => [],
+      "GET people": () => [],
+      "GET watch": () => [],
+      "GET watch/kinds": () => [],
+      "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [] }),
+      "POST setup/walkthrough": (body) => ({ open: true, step: stepId, closed: false, finished: false, ...(body as object) }),
+    });
+  }
+
+  test("moving on from Your promises marks it done in the list of screens, like the others", async () => {
+    window.location.hash = "";
+    fakeApi({
+      ...routes({ "GET setup": () => setupView(CORE.map((id) => step(id)), { walkthrough: { open: true, step: "backup", closed: false, promises_done: true } }) }),
+      "GET watch": () => [],
+      "POST setup/walkthrough": (body) => ({ open: true, step: "backup", closed: false, finished: false, promises_done: true, ...(body as object) }),
+    });
+    open();
+    const item = (await screen.findByRole("button", { name: /Your promises/ })) as HTMLElement;
+    expect(item).toHaveAttribute("data-state", "done");
+    expect(within(item).getByText("Done")).toBeInTheDocument();
+  });
+
+  test("Connect one on the mail step leaves for Sources, and Back to setup returns to the mail step", async () => {
+    const user = userEvent.setup();
+    started("mail");
+    renderApp(<App rc={rcFixture()} />);
+    expect(await screenTitle()).toHaveTextContent("Mail and calendar");
+    await user.click(await screen.findByRole("button", { name: "Connect one" }));
+    const back = await screen.findByRole("button", { name: "Back to setup" });
+    await user.click(back);
+    expect(await screenTitle()).toHaveTextContent("Mail and calendar");
+    expect(screen.queryByRole("button", { name: "Back to setup" })).toBeNull();
+  });
+
+  test("How to get it leaves for the Add-ons screen, and Back to setup returns to the mail step", async () => {
+    const user = userEvent.setup();
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({ enabled: true, feeds: [], available: [available("mail-addon", { installable: false })], installed: [] }),
+      "GET watch": () => [],
+      "GET watch/kinds": () => [],
+    });
+    renderApp(<App rc={rcFixture()} />);
+    await user.click(await screen.findByRole("button", { name: "How to get it" }));
+    await user.click(await screen.findByRole("button", { name: "Back to setup" }));
+    expect(await screenTitle()).toHaveTextContent("Mail and calendar");
+  });
+});
+
 describe("toasts", () => {
   function Pusher() {
     const { push } = useToasts();

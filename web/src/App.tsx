@@ -100,6 +100,12 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   const [addAccount, setAddAccount] = useState<number | null>(null);
   // A screen that puts focus somewhere of its own on opening (a step's heading, a form) keeps it.
   const ownFocus = useRef(false);
+  // Set when the walkthrough sent the person to another screen: that screen then offers the way back to the step.
+  const [fromSetup, setFromSetup] = useState(false);
+  const leaveSetup = (go: () => void) => () => {
+    setFromSetup(true);
+    go();
+  };
   const openAddSource = (plugin: string | null = null) => {
     ownFocus.current = true;
     setAddSource({ plugin, n: Date.now() });
@@ -296,20 +302,24 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     </>
   );
   if (inWalkthrough) {
+    if (fromSetup) setFromSetup(false);
     return (
       <>
         <Walkthrough
           at={guideAt}
-          onOpenPeople={() => setView("records/people")}
-          onOpenAddons={() => setView("addons")}
-          onHandIn={() => {
+          onOpenPeople={leaveSetup(() => setView("records/people"))}
+          onOpenAddons={leaveSetup(() => setView("addons"))}
+          onHandIn={leaveSetup(() => {
             // The hand-in box takes focus itself.
             ownFocus.current = true;
             setView("today");
             setHandIn(true);
+          })}
+          onChooseSource={(plugin) => {
+            setFromSetup(true);
+            openAddSource(plugin);
           }}
-          onChooseSource={openAddSource}
-          onOpenSources={() => setView("sources")}
+          onOpenSources={leaveSetup(() => setView("sources"))}
           onFinishLater={() => setView("today")}
           onDone={() => {
             setView("today");
@@ -346,6 +356,20 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         />
         {!narrow && <Sidebar current={navView} expanded={sidebar.expanded} onToggle={sidebar.toggle} />}
         <main id="main" className={shell.main} tabIndex={-1}>
+          {fromSetup && (
+            <p className={shell.backToSetup} data-back-to-setup="">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setFromSetup(false);
+                  openGuide();
+                }}
+              >
+                {t("app.back_to_setup")}
+              </button>
+            </p>
+          )}
           {handIn && <HandIn onClose={() => setHandIn(false)} />}
           {body}
         </main>

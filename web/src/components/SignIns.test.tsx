@@ -36,10 +36,25 @@ const open = (onChooseSource: (plugin: string | null) => void = () => undefined)
   renderApp(<SignIns onOpenAddons={() => undefined} onChooseSource={onChooseSource} />);
 const row = (label: string) => screen.getByText(label).closest("li") as HTMLElement;
 
-let assign: ReturnType<typeof vi.fn>;
+let assign: ReturnType<typeof vi.fn<(url: string) => void>>;
 beforeEach(() => {
-  assign = vi.fn();
-  vi.stubGlobal("location", { ...window.location, assign });
+  assign = vi.fn<(url: string) => void>();
+  // The app's own window must never navigate to a service: only the opened window's address is set.
+  vi.stubGlobal("location", {
+    ...window.location,
+    assign: () => {
+      throw new Error("The app's window went to a service");
+    },
+  });
+  vi.stubGlobal("open", () => ({
+    closed: false,
+    close: () => undefined,
+    location: {
+      set href(value: string) {
+        assign(value);
+      },
+    },
+  }));
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -145,15 +160,12 @@ test("no note about permissions when none are missing", async () => {
   expect(screen.queryByRole("button", { name: /Sign in again/ })).toBeNull();
 });
 
-test("the address the registration must allow is always shown, read-only", async () => {
-  fakeApi({ ...settings, "GET sign-ins": () => [LIST[0], signIn("demo/three", { ready: false })] });
+test("the registration's return address is not a field on a sign-in row", async () => {
+  fakeApi({ ...settings, "GET sign-ins": () => [LIST[0], signIn("demo/three", { ready: true })] });
   open();
-  const callbacks = await screen.findAllByLabelText("Address to allow");
-  expect(callbacks).toHaveLength(2);
-  expect(callbacks[0]).toHaveAttribute("readonly");
-  expect(callbacks[0]).toHaveValue("http://localhost:8080/auth/demo/one/callback");
-  expect(callbacks[1]).toHaveValue("http://localhost:8080/auth/demo/three/callback");
-  expect(screen.getAllByText("The service's app registration must allow this address.")).toHaveLength(2);
+  await screen.findByText("Service demo/one");
+  expect(screen.queryByLabelText("Address to allow")).toBeNull();
+  expect(document.body.textContent).not.toContain("/callback");
 });
 
 test("Sign in starts the sign-in, then sends this tab to the service's page", async () => {

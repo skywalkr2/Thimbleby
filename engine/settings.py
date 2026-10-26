@@ -255,6 +255,8 @@ def _walk(
             continue
         kind, options = _kind(info.annotation)
         extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+        if extra.get("internal") is True:
+            continue  # an address, id or limit the program uses: never a field a person sees
         list_name = str(extra["choices"]) if extra.get("choices") else None
         named = CHOICE_LISTS.get(list_name) if list_name else None
         if list_name and (live or {}).get(list_name):

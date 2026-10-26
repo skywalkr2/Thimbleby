@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
-import { useStartSignIn } from "../lib/sign-in-start";
+import { useSignInWindow } from "../lib/sign-in-window";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -74,7 +74,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   const base = `sign-in-${item.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   const signedIn = item.status === "signed_in";
 
-  const { start, busy: starting, problem: startProblem } = useStartSignIn(item.name);
+  const { start, busy: starting, problem: startProblem } = useSignInWindow(item.name);
   const busy = starting || signingOut;
   const problem = startProblem || outProblem;
 
@@ -322,9 +322,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
               onSaved={closeForm}
               disabled={busy}
             />
-          ) : (
-            callbackField
-          )}
+          ) : null}
         </div>
         <div className="acts">
           <button

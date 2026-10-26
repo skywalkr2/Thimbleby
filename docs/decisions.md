@@ -4,6 +4,30 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Every sign-in opens in its own window; setup has a way back, shows Your promises and reads the sent folder by itself (phase B)
+
+**Decided:** (1) The app's own window never navigates to a service: every sign-in (Connections, Sign-ins, Today's
+renewal line, setup) opens the service's page in its own window or tab and shows waiting, then what happened, with Try
+again. (2) Internal fields (return addresses, ids, technical limits) never show to the person: a setting marked
+`internal` in its schema is left out of the Settings forms, and a sign-in row no longer lists its return address (it
+appears only inside "use your own app"). (3) A screen the walkthrough sends the person to offers "Back to setup", which
+returns to the step they left. (4) Your promises comes before the screens after it when the walkthrough resumes, and
+moving on from it marks it done like the others (`promises_done`). (5) A signed-in mail account's sent folder is read
+by itself, taken from the folder its server marks as sent mail; "Choose the Sent folder" shows only where that
+could not be done. (6) With no catalog set, the setup add-ons step and the Add-ons screen say why nothing is listed and
+how to add a catalog.
+
+**Decided by:** the owner (P40 points 8, 9, 10, 12, 13, 14; P37 second half).
+
+**Why:** A refused sign-in left the owner on the service's page; the return address was a field no one should see;
+wizard exits had no way back; the first-result screen was passed over on resume; a button asked for what the server
+already knew; an empty add-ons list said nothing.
+
+**Impact:** Design 7.8 and 7.15 text changes; one generic schema flag (`internal`); `WalkthroughView` gains
+`promises_done` and the sent-folder route takes no folder to mean the server's own sent folder (generated API types
+updated). No plugin API change.
+Change log: section 203.
+
 ## 2026-10-26: Setup's add-on button folds the restart into the person's click, and the sign-in opens in its own window (phase B)
 
 **Decided:** In setup's mail step a service that needs an add-on says so in one line. Where the app can restart itself

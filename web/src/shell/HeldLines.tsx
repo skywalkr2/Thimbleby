@@ -16,7 +16,7 @@ import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
-import { useStartSignIn } from "../lib/sign-in-start";
+import { useSignInWindow } from "../lib/sign-in-window";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
@@ -219,7 +219,7 @@ function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const signIn = line.credential_kind === "sign_in";
   const past = (line.waiting_days ?? 0) < 0;
   const date = line.due ? day(line.due) : "";
-  const { start, busy, problem } = useStartSignIn(line.credential_name ?? "");
+  const { start, busy, problem } = useSignInWindow(line.credential_name ?? "");
   const text = t(`queue.credential.${signIn ? "sign_in" : "account"}.${past ? "past" : "soon"}`, { thing: first, date });
   const label = t(signIn ? "queue.credential.sign_in_label" : "queue.credential.label");
   const also = signIn ? t(`queue.credential.sign_in.also.${past ? "past" : "soon"}`, { date }) : t("queue.credential.also");

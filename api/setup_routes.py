@@ -741,16 +741,19 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         quietly like any new source."""
         found, settings = mailbox_of(source_id)
         listed = read_folders(settings)
-        if body.folder not in listed.names or body.folder in taken_folders(settings):
+        folder = body.folder if body.folder is not None else listed.sent
+        if folder is None:
+            raise HTTPException(status_code=409, detail="The mail server doesn't say which folder holds sent mail.")
+        if folder not in listed.names or folder in taken_folders(settings):
             raise HTTPException(status_code=400, detail="Choose a folder from the list.")
         person = current().workspace.user.person
         return watch_add(
             WatchSourceIn(
                 connector="mailbox",
-                label=body.label,
+                label=body.label or f"{found['label']} ({folder})",
                 every_minutes=found["every_minutes"],
                 author=person or None,
-                settings={**found["settings"], "folder": body.folder},
+                settings={**found["settings"], "folder": folder},
                 fingerprint=body.fingerprint,
             )
         )

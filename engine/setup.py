@@ -201,6 +201,7 @@ class Walkthrough:
     step: str  # the screen to open at (one of WALKTHROUGH_STEPS)
     closed: bool  # the person chose Finish later
     finished: bool  # the person pressed the last button
+    promises_done: bool = False  # the person moved on from the first-result screen
 
 
 def missing_essentials(cfg: Any, found: list[Step]) -> bool:
@@ -219,15 +220,21 @@ def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
     mine = mine if isinstance(mine, dict) else {}
     closed, ended, started = bool(mine.get("closed")), bool(mine.get("finished")), bool(mine.get("started"))
     step = mine.get("step")
+    promises_done = bool(mine.get("promises_done"))
     if step not in WALKTHROUGH_STEPS:
         todo = next((s for s in found if s.counted and not (s.done or s.skipped)), None)
         step = todo.group if todo else "done"
+        # The first result has no setup step, so a resume past mail would pass it over: it comes first.
+        after_it = WALKTHROUGH_STEPS.index(step) > WALKTHROUGH_STEPS.index("promises")
+        if after_it and not promises_done:
+            step = "promises"
     return Walkthrough(
         open=not cfg.workspace.demo
         and (missing_essentials(cfg, found) or not (started or closed or ended or finished(found))),
         step=step,
         closed=closed,
         finished=ended,
+        promises_done=promises_done,
     )
 
 
@@ -240,6 +247,8 @@ def keep_walkthrough(ws: Any, step: str | None = None, closed: bool | None = Non
         mine = dict(state["walkthrough"]) if isinstance(state.get("walkthrough"), dict) else {}
         if step is not None:
             mine["step"], mine["started"] = step, True
+            if WALKTHROUGH_STEPS.index(step) > WALKTHROUGH_STEPS.index("promises"):
+                mine["promises_done"] = True
         if closed is not None:
             mine["closed"] = closed
         if ended is not None:

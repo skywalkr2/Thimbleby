@@ -332,10 +332,25 @@ describe("a sign-in's step", () => {
       plugin: "demo",
       ...extra,
     });
-  let assign: ReturnType<typeof vi.fn>;
+  let assign: ReturnType<typeof vi.fn<(url: string) => void>>;
   beforeEach(() => {
-    assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
+    assign = vi.fn<(url: string) => void>();
+    // The app's own window must never navigate to a service: only the opened window's address is set.
+  vi.stubGlobal("location", {
+    ...window.location,
+    assign: () => {
+      throw new Error("The app's window went to a service");
+    },
+  });
+  vi.stubGlobal("open", () => ({
+    closed: false,
+    close: () => undefined,
+    location: {
+      set href(value: string) {
+        assign(value);
+      },
+    },
+  }));
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -470,6 +485,14 @@ test("the add-ons step says what add-ons do, names the ones installed but off, a
   expect(within(off).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Mail sample", "Notes sample"]);
   await user.click(within(section("addons")).getByRole("button", { name: "Open Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalledTimes(1);
+});
+
+test("the add-ons step with no catalog set says why nothing is listed and where to add one", async () => {
+  api([step("addons")], { "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [] }) });
+  open();
+  await screen.findByRole("heading", { name: "Turn on your add-ons" });
+  const note = await within(section("addons")).findByText(/no catalog is set for this copy of the app/);
+  expect(note).toHaveTextContent("Add one with its web address");
 });
 
 test("Leave the rest off keeps the installed add-ons off, says so, and refreshes the guide", async () => {

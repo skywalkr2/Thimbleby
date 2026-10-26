@@ -467,7 +467,22 @@ test("a key used in one place only says so, and one that has already ended says 
 test("a sign-in about to end offers to sign in again, and names what reads through it", async () => {
   const user = userEvent.setup();
   const assign = vi.fn();
-  vi.stubGlobal("location", { ...window.location, assign });
+  // The app's own window must never navigate to a service: only the opened window's address is set.
+  vi.stubGlobal("location", {
+    ...window.location,
+    assign: () => {
+      throw new Error("The app's window went to a service");
+    },
+  });
+  vi.stubGlobal("open", () => ({
+    closed: false,
+    close: () => undefined,
+    location: {
+      set href(value: string) {
+        assign(value);
+      },
+    },
+  }));
   const calls = show([credential({ key: "credential:sign_in:p/s", credential_kind: "sign_in", credential_name: "p/s", places: ["the Mail sign-in", "Inbox"] })], {
     "POST sign-ins/p/s/start": () => ({ url: "about:blank#signin" }),
   }).calls;

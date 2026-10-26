@@ -226,20 +226,20 @@ function Loaded(props: {
   return <>{props.children(query.data)}</>;
 }
 
+/** Why the list of add-ons to get is empty, in words, or null when it holds some. */
+export function emptyReason(view: S["PacksView"], t: (key: string) => string): string | null {
+  if (!view.enabled) return t("addons.off");
+  if (view.feeds.length === 0) return t("addons.no_catalog");
+  if (view.available.length > 0) return null;
+  // A catalog that couldn't be read is not an empty one: say so, and the reason is listed below.
+  return view.feeds.every((feed) => feed.error) ? t("addons.no_packs_failed") : t("addons.no_packs");
+}
+
 function Available(props: { view: S["PacksView"] }) {
   const { t } = useWords();
   const { view } = props;
   const [getting, setGetting] = useState<number | null>(null);
-  const empty = !view.enabled
-    ? t("addons.off")
-    : view.feeds.length === 0
-      ? t("addons.no_catalog")
-      : view.available.length === 0
-        ? // A catalog that couldn't be read is not an empty one: say so, and the reason is listed below.
-          view.feeds.every((feed) => feed.error)
-          ? t("addons.no_packs_failed")
-          : t("addons.no_packs")
-        : null;
+  const empty = emptyReason(view, t);
   return (
     <div className="addons-body">
       {empty ? (

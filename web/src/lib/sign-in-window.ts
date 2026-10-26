@@ -51,7 +51,15 @@ export type SignInPhase = "idle" | "starting" | "waiting" | "done" | "refused" |
 
 const WATCH_MS = 1000;
 
-export function useSignInWindow(name: string): { start: () => Promise<void>; phase: SignInPhase; text: string } {
+export function useSignInWindow(name: string): {
+  start: () => Promise<void>;
+  phase: SignInPhase;
+  text: string;
+  /** The window is opening or open: the button waits. */
+  busy: boolean;
+  /** What to show as a problem: the refusal, the closed window, the failure. */
+  problem: string;
+} {
   const { t } = useWords();
   const [phase, setPhase] = useState<SignInPhase>("idle");
   const [text, setText] = useState("");
@@ -139,5 +147,6 @@ export function useSignInWindow(name: string): { start: () => Promise<void>; pha
     }, WATCH_MS);
   }, [name, stop, t]);
 
-  return { start, phase, text };
+  const busy = phase === "starting" || phase === "waiting";
+  return { start, phase, text, busy, problem: phase === "done" ? "" : text };
 }

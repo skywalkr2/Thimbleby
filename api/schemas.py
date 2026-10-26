@@ -3410,6 +3410,7 @@ class WalkthroughView(BaseModel):
     step: WalkthroughScreen = Field(description="The screen to open at.")
     closed: bool = Field(description="The person chose Finish later; it stays closed until they open it again.")
     finished: bool = Field(description="The person pressed the last button.")
+    promises_done: bool = Field(False, description="The person moved on from the first-result screen (Your promises).")
 
 
 class WalkthroughIn(BaseModel):
@@ -4214,8 +4215,10 @@ class SentFolderIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    folder: str
-    label: str
+    folder: str | None = Field(
+        None, description="The folder to read; left out, the one the mail server itself marks as sent mail."
+    )
+    label: str | None = Field(None, description="What the new source is shown as; left out, the account and folder.")
     fingerprint: str
 
 

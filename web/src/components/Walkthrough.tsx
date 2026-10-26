@@ -163,7 +163,7 @@ export function Walkthrough(
     setChosen(screen);
     void keep({ step: screen });
   };
-  const here = standing(steps, current);
+  const here = standing(steps, current, data.walkthrough.promises_done);
   // With nothing connected the mail step has one way on, "I'll do this later"; a Continue beside it would do the same thing.
   // Continue comes once something is connected (the step is done), or once the step was left for later.
   const next = after(current);
@@ -237,7 +237,7 @@ export function Walkthrough(
         <nav aria-label={t("walkthrough.screens")}>
           <ol className={styles.screens}>
             {SCREENS.map((screen) => {
-              const state = standing(steps, screen);
+              const state = standing(steps, screen, data.walkthrough.promises_done);
               return (
                 <li key={screen}>
                   <button

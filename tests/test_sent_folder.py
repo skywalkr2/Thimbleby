@@ -127,3 +127,16 @@ def test_a_folder_the_server_doesnt_list_is_refused(tmp_path, monkeypatch):
         f"{api}/watch/work-mail/sent-folder", json={"folder": "Nowhere", "label": "x", "fingerprint": fingerprint}
     )
     assert refused.status_code == 400 and not any(s.label == "x" for s in sources(ws))
+
+
+def test_the_sent_folder_is_taken_by_the_servers_own_marking_when_none_is_named(tmp_path, monkeypatch):
+    stand_in(monkeypatch)
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    fingerprint = add_mailbox(c, api)
+    added = c.post(f"{api}/watch/work-mail/sent-folder", json={"fingerprint": fingerprint})
+    assert added.status_code == 200, added.text
+    mine = next(s for s in sources(ws) if s.settings.get("folder") == "Sent Items")
+    assert mine.author == cfg.workspace.user.person and "Sent Items" in mine.label
+    again = c.post(f"{api}/watch/work-mail/sent-folder", json={"fingerprint": added.json()["fingerprint"]})
+    assert again.status_code == 400  # read already: nothing is added twice

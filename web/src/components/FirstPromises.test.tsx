@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
-import { fakeApi, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
+import { Refuse, fakeApi, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
 import { FirstPromises } from "./FirstPromises";
 import { MissedOneProvider } from "./MissedOne";
 import { Walkthrough } from "./Walkthrough";
@@ -209,7 +209,7 @@ describe("what it reads", () => {
     const list = await screen.findByRole("list", { name: "What it will read" });
     const rows = within(list).getAllByRole("listitem");
     expect(rows.map((r) => r.textContent)).toEqual([`Your mail at work@example.com: Inbox, from ${dated}`, `Your mail at work@example.com: Sent, from ${dated}`]);
-    expect(screen.queryByRole("button", { name: "Add your Sent folder" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Choose the Sent folder" })).toBeNull();
   });
 
   test("a mailbox folder that differs from its name is named beside it; a source with no known account says only mail", async () => {
@@ -217,22 +217,35 @@ describe("what it reads", () => {
     expect(await screen.findByText(`Your mail: Work mail (folder Sent Items), from ${dated}`)).toBeInTheDocument();
   });
 
-  test("a mail account with no sent folder says what can't be found, with the one action that adds it", async () => {
+  const SETTINGS = { "GET settings": () => ({ fingerprint: "fp-1", items: [] }) };
+  const missingSent = view({ ...planned, complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] });
+
+  test("a mail account with no sent folder gets it by itself, with no button to find", async () => {
+    const calls = show(missingSent, { ...SETTINGS, "POST watch/inbox/sent-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
+    await waitFor(() => expect(calls.some((c) => c.route === "POST watch/inbox/sent-folder")).toBe(true));
+    expect(calls.find((c) => c.route === "POST watch/inbox/sent-folder")!.body).toEqual({ fingerprint: "fp-1" });
+    expect(screen.queryByRole("button", { name: /Sent folder/ })).toBeNull();
+  });
+
+  test("where the sent folder can't be found by itself, the line says what can't be found and offers choosing it", async () => {
     const user = userEvent.setup();
     const open = vi.fn();
-    show(view({ ...planned, complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }), {}, noop, open);
+    show(missingSent, { ...SETTINGS, "POST watch/inbox/sent-folder": () => new Refuse(409, "The mail server doesn't say which folder holds sent mail.") }, noop, open);
     expect(await screen.findByText("The mail you sent from work@example.com isn't being read, so promises you made in it can't be found until you add its Sent folder.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Add your Sent folder" }));
+    await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
     expect(open).toHaveBeenCalledTimes(1);
   });
 
   test("with only the sent folder missing, nothing found isn't blamed on something unread: the missing sent folder is said instead", async () => {
-    show(view({ complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }));
+    show(view({ complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }), {
+      "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+      "POST watch/inbox/sent-folder": () => new Refuse(409, "x"),
+    });
     expect(await screen.findByText("No open promises found in the mail it looked over.")).toBeInTheDocument();
     expect(screen.getByText("Everything listed was read, but not the mail you sent, so this list may be missing promises you made.")).toBeInTheDocument();
     expect(screen.queryByText(/wasn't read, so there may be/)).toBeNull();
     expect(screen.queryByText("Everything listed was read.")).toBeNull();
-    expect(screen.getByRole("button", { name: "Add your Sent folder" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Choose the Sent folder" })).toBeInTheDocument();
   });
 
   test("after the read each source is said as read, and a list of everything read says so", async () => {

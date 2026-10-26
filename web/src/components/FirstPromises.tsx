@@ -2,13 +2,14 @@
 // back over the person's own mail with what that costs shown first; after their Go it lists a handful of the open promises
 // found and has one follow-up ready to copy, through the Follow-ups screen's own route. With nothing found it says so and
 // offers "Missed one". The server says where it stands; nothing here keeps anything.
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { copyMessage } from "../lib/copy";
 import { day } from "../lib/dates";
 import { useEstimate } from "../lib/money";
+import { useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import type { Screen } from "../lib/walkthrough";
 import { useWords } from "../lib/wording";
@@ -135,6 +136,34 @@ function Found(props: { data: Result; onOpenSources: () => void }) {
 type Place = Result["coverage"][number];
 type Folder = Place["folders"][number];
 
+/** A mail account whose sent folder isn't read gets it by itself: the folder its server marks as sent mail, tried once for
+ * each account, one after the other. Returns whether some account couldn't be done (the server doesn't mark one, or it
+ * isn't a mailbox), so the screen can offer the Sources screen for choosing it by hand. */
+function useSentFolders(missing: Place[]): boolean {
+  const client = useQueryClient();
+  const fresh = useFreshFingerprint();
+  const tried = useRef(new Set<string>());
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const keys = missing.map((p) => p.folders[0]?.source).filter((x): x is string => !!x);
+  useEffect(() => {
+    const todo = keys.filter((k) => !tried.current.has(k));
+    if (todo.length === 0) return;
+    todo.forEach((k) => tried.current.add(k));
+    void (async () => {
+      for (const source of todo) {
+        try {
+          await api.addSentFolder(source, { fingerprint: await fresh() });
+        } catch {
+          setFailed((old) => new Set(old).add(source));
+        }
+      }
+      await client.invalidateQueries();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keys.join("|")]);
+  return missing.some((p) => !p.folders[0]?.source || failed.has(p.folders[0].source));
+}
+
 /** Whether a folder the person connected wasn't read. A missing sent folder alone isn't that: it has its own line. */
 const unread = (data: Result) => data.coverage.some((p) => p.folders.some((f) => f.outcome !== "read"));
 
@@ -146,6 +175,7 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; onOpenSo
   const { data, plan } = props;
   if (data.coverage.length === 0) return null;
   const missing = data.coverage.filter((p) => p.missing_sent);
+  const unfixed = useSentFolders(missing);
   const place = (p: Place) => t(`walkthrough.coverage.${p.kind}${p.account ? "_at" : ""}`, { account: p.account ?? "" });
   const named = (f: Folder) => (f.folder && f.folder.toLowerCase() !== f.name.toLowerCase() ? t("walkthrough.coverage.folder_named", { name: f.name, folder: f.folder }) : f.name);
   const row = (p: Place, f: Folder) => {
@@ -171,7 +201,7 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; onOpenSo
         ))}
       </ul>
       {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : unread(data) ? "walkthrough.coverage.partial" : "walkthrough.coverage.read_no_sent")}</p>}
-      {missing.length > 0 && (
+      {unfixed && (
         <div className="row-end">
           <Button onClick={props.onOpenSources}>{t("walkthrough.coverage.add_sent")}</Button>
         </div>

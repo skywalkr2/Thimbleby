@@ -21567,17 +21567,31 @@
             "type": "string"
           },
           "folder": {
-            "title": "Folder",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The folder to read; left out, the one the mail server itself marks as sent mail.",
+            "title": "Folder"
           },
           "label": {
-            "title": "Label",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the new source is shown as; left out, the account and folder.",
+            "title": "Label"
           }
         },
         "required": [
-          "folder",
-          "label",
           "fingerprint"
         ],
         "title": "SentFolderIn",
@@ -25920,6 +25934,12 @@
           "open": {
             "description": "It should open by itself now: not closed, not finished, setup still to do.",
             "title": "Open",
+            "type": "boolean"
+          },
+          "promises_done": {
+            "default": false,
+            "description": "The person moved on from the first-result screen (Your promises).",
+            "title": "Promises Done",
             "type": "boolean"
           },
           "step": {

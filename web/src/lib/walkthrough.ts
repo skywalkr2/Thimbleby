@@ -27,7 +27,8 @@ export function screenOf(steps: Step[], id: string): Screen {
 export type Standing = "done" | "skipped" | "todo";
 
 /** Where a screen stands, from the core step it is about. The first result and the last screen have no standing of their own. */
-export function standing(steps: Step[], screen: Screen): Standing | null {
+export function standing(steps: Step[], screen: Screen, promisesDone = false): Standing | null {
+  if (screen === "promises") return promisesDone ? "done" : null;
   const id = STEP_OF[screen];
   const step = id ? steps.find((s) => s.id === id) : undefined;
   if (!step) return null;

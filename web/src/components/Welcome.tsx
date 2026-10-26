@@ -7,12 +7,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
-import { useStartSignIn } from "../lib/sign-in-start";
+import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { addonLabel, formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
+import { emptyReason } from "./Addons";
 import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
 import { TemplateList } from "./Templates";
@@ -128,7 +129,7 @@ export function StepList(props: {
  * the actions it has there (choose what to read, sign out, sign in again). */
 function SignInStep(props: { name: string; label: string; done: boolean; onChooseSource: (plugin: string | null) => void }) {
   const { t } = useWords();
-  const { start, busy, problem } = useStartSignIn(props.name);
+  const { start, busy, problem } = useSignInWindow(props.name);
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns, enabled: props.done });
   if (props.done) {
     const row = signIns.data?.find((item) => item.name === props.name);
@@ -175,8 +176,14 @@ function AddonsStep(props: { onOpen: () => void }) {
   };
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
   const off = (packs.data?.installed ?? []).filter((p) => !p.enabled);
+  const why = packs.data && packs.data.installed.length === 0 ? emptyReason(packs.data, t) : null;
   return (
     <>
+      {why && (
+        <p className="hint" data-no-addons="">
+          {why}
+        </p>
+      )}
       {off.length > 0 && (
         <div className="field">
           <span className="what" id="guide-addons-off">

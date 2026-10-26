@@ -46,7 +46,7 @@ def _steps(c):
 def test_the_walkthrough_opens_by_itself_on_a_new_workspace_at_its_first_screen(tmp_path):
     _, c = _fresh(tmp_path)
     walk = _view(c)["walkthrough"]
-    assert walk == {"open": True, "step": "you", "closed": False, "finished": False}
+    assert walk == {"open": True, "step": "you", "closed": False, "finished": False, "promises_done": False}
 
 
 def test_the_screen_the_person_is_on_is_kept_and_is_where_it_resumes_after_a_restart(tmp_path):
@@ -119,6 +119,25 @@ def test_the_screen_to_open_at_is_the_first_with_something_left_when_none_was_ke
     c.post("/api/setup/workspace/skip")
     c.post("/api/setup/ai/skip")
     assert _view(c)["walkthrough"]["step"] == "mail"
+
+
+def test_the_first_result_is_shown_before_the_screens_after_it_when_none_was_kept(tmp_path):
+    _, c = _fresh(tmp_path)
+    for step in ("workspace", "ai", "mail"):
+        c.post(f"/api/setup/{step}/skip")
+    walk = _view(c)["walkthrough"]
+    assert walk["step"] == "promises" and not walk["promises_done"]  # not passed over to Backups
+
+
+def test_moving_past_the_first_result_marks_it_done_and_resume_goes_on_from_there(tmp_path):
+    _, c = _fresh(tmp_path)
+    for step in ("workspace", "ai", "mail"):
+        c.post(f"/api/setup/{step}/skip")
+    assert c.post("/api/setup/walkthrough", json={"step": "promises"}).json()["promises_done"] is False
+    done = c.post("/api/setup/walkthrough", json={"step": "backup"}).json()
+    assert done["promises_done"] is True
+    c.post("/api/setup/walkthrough", json={"step": "mail"})  # going back keeps it done
+    assert _view(c)["walkthrough"]["promises_done"] is True
 
 
 def test_steps_belong_to_a_screen_and_only_the_five_that_matter_count(tmp_path):

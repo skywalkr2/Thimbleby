@@ -342,7 +342,7 @@ test("when the catalog is off, nothing is listed and the reason is given", async
 test("with no catalog it says so and points to Installed", async () => {
   open(view({ feeds: [] }));
   expect(
-    await screen.findByText("No add-on catalog is connected. Installed add-ons still appear under Installed."),
+    await screen.findByText("No add-ons are listed because no catalog is set for this copy of the app. Add one with its web address (ask the add-on's publisher for it). Installed add-ons still appear under Installed."),
   ).toBeInTheDocument();
 });
 
@@ -845,7 +845,7 @@ describe("adding a catalog from the screen", () => {
 
   test("with no catalog listed the screen offers an address field, with the cursor in it", async () => {
     open(view({ feeds: [] }));
-    expect(await screen.findByText(/No add-on catalog is connected/)).toBeInTheDocument();
+    expect(await screen.findByText(/no catalog is set for this copy of the app/)).toBeInTheDocument();
     const field = await screen.findByLabelText("Catalog address");
     await waitFor(() => expect(field).toHaveFocus());
     expect(screen.getByRole("button", { name: "Add catalog" })).toBeDisabled();

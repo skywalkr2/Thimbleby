@@ -1,4 +1,5 @@
 {
+  "app.back_to_setup": "Back to setup",
   "app.skip": "Skip to the list",
   "app.signed_out_title": "Open the sign-in link",
   "app.signed_out": "Open the sign-in link shown when you started the app on this computer.",
@@ -2046,7 +2047,7 @@
   "addons.tab.installed": "Installed",
   "addons.load_failed": "The add-ons couldn't be loaded.",
   "addons.off": "The add-on catalog is turned off in Settings.",
-  "addons.no_catalog": "No add-on catalog is connected. Installed add-ons still appear under Installed.",
+  "addons.no_catalog": "No add-ons are listed because no catalog is set for this copy of the app. Add one with its web address (ask the add-on's publisher for it). Installed add-ons still appear under Installed.",
   "addons.no_packs": "No add-ons are listed yet.",
   "addons.no_packs_failed": "The catalog couldn't be read: no add-ons are listed. Check the reason below, then refresh.",
   "addons.installed.empty": "No add-ons are installed.",
@@ -2776,7 +2777,7 @@
   "walkthrough.coverage.not_yet": "{place}: {name} hasn't been read yet.",
   "walkthrough.coverage.no_sent": "The mail you sent isn't being read, so promises you made in it can't be found until you add its Sent folder.",
   "walkthrough.coverage.no_sent_at": "The mail you sent from {account} isn't being read, so promises you made in it can't be found until you add its Sent folder.",
-  "walkthrough.coverage.add_sent": "Add your Sent folder",
+  "walkthrough.coverage.add_sent": "Choose the Sent folder",
   "walkthrough.coverage.complete": "Everything listed was read.",
   "walkthrough.coverage.partial": "Not everything was read, so this list may be missing promises.",
   "walkthrough.coverage.read_no_sent": "Everything listed was read, but not the mail you sent, so this list may be missing promises you made.",

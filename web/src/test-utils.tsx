@@ -125,7 +125,7 @@ export function setupView(
     steps,
     finished: over.finished ?? false,
     local: over.local ?? true,
-    walkthrough: { open: false, step: "you", closed: false, finished: false, ...over.walkthrough },
+    walkthrough: { open: false, step: "you", closed: false, finished: false, promises_done: false, ...over.walkthrough },
   };
 }
 
