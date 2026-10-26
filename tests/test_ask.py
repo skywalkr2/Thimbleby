@@ -300,3 +300,27 @@ def test_correcting_an_answer_records_a_signal_naming_the_answer(app):
     assert found.data["kind"] == "change_requested" and found.data["refs"] == [answer.id]
     assert found.data["note"].startswith("Backups are under")
     assert c.post(f"{api}/asks/NOPE-1/correction", json={"note": "x"}).status_code == 404
+
+
+def test_an_answer_waits_on_today_as_a_line_to_read_until_it_is_opened(app):
+    from datetime import UTC, datetime
+
+    from engine.storage import Store
+    from engine.today_queue import queue
+
+    ws, c, api, worker = app
+    answer_with({"op": "answer", "text": "Choose a backup folder in Settings.", "cites": [{"quote": BACKUP_WORDS}]})
+    asked = c.post(f"{api}/ask", json={"question": "How do I set up backups?"}).json()["id"]
+    worker.run_pending()
+
+    def lines():
+        store = Store(ws.db_path, cfg=ws.config(env={}))
+        try:
+            return [x for x in queue(ws, store, ws.config(env={}), datetime.now(UTC)) if x.request == asked]
+        finally:
+            store.close()
+
+    (line,) = lines()
+    assert line.kind == "answer" and line.text == "How do I set up backups?" and not line.actions
+    assert c.post(f"{api}/asks/{asked}/read").status_code == 200
+    assert lines() == []

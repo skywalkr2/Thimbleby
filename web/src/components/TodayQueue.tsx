@@ -61,6 +61,8 @@ export interface QueueHandlers {
   onOpenHandover: () => void;
   onOpenRules: () => void;
   onOpenKnowledge?: () => void;
+  /** Opens Ask at the answer to a question, which marks it read. */
+  onOpenAnswer?: (request: string) => void;
   onAddAccount?: () => void;
   onOpenSources?: () => void;
   onOpenRecord?: (kind: string, id: string) => void;
@@ -615,6 +617,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.backup");
       case "escalate":
         return t("queue.escalate", { text: (line.text ?? "").replace(/[?.!\s]+$/, "") });
+      case "answer":
+        return t("queue.answer", { text: line.text ?? "" });
       case "stale":
         return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: line.subject }) : tn("queue.stale", line.count);
       case "pattern": {
@@ -995,6 +999,14 @@ function QueueRow(props: {
           menu: [...rest.map((c) => ({ id: c.id, label: c.label, run: c.run })), ...open],
         };
       }
+      case "answer":
+        return {
+          pill: t("queue.pill.answer"),
+          tone: "neutral",
+          meta: null,
+          primary: { label: t("queue.answer.open"), run: () => void (line.request && props.handlers.onOpenAnswer?.(line.request)) },
+          menu: [],
+        };
       case "stale": {
         // One to-do: Keep, Drop and Snooze right on the line. Several: Look over opens them, and Keep and Snooze are in
         // the menu, for all of them.

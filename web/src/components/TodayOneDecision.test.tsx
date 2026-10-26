@@ -70,6 +70,8 @@ const change = (): S["ChangeItem"] => ({
   },
 });
 
+const openAnswer = vi.fn();
+
 function show(lines: Line[], extra: Routes = {}) {
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }));
   const calls = fakeApi({
@@ -91,7 +93,7 @@ function show(lines: Line[], extra: Routes = {}) {
   });
   renderApp(
     <RestartProvider hellos={1}>
-      <Today workspace="Workspace" onView={vi.fn()} onAddSource={vi.fn()} onOpenGuide={vi.fn()} onOpenRecord={vi.fn()} shortcuts={{ next: "j", previous: "k" }} />
+      <Today workspace="Workspace" onView={vi.fn()} onAddSource={vi.fn()} onOpenGuide={vi.fn()} onOpenRecord={vi.fn()} onOpenAnswer={openAnswer} shortcuts={{ next: "j", previous: "k" }} />
     </RestartProvider>,
   );
   return calls;
@@ -210,4 +212,13 @@ test("the lines that stop or ask for something use the queue's columns: one fixe
   }
   expect(read("..", "shell", "HeldLines.module.css")).not.toMatch(/\.line\s*\{[^}]*display:\s*flex/);
   expect(read("Learned.module.css")).not.toMatch(/\.todayLine\s*\{[^}]*display:\s*flex/);
+});
+
+test("an answer to the person's question is a line that starts with Read, opens the answer, and has no approve button", async () => {
+  const user = userEvent.setup();
+  show([line("answer", { key: "answer:REQ-5", request: "REQ-5", text: "what is the knowledge panel?" })]);
+  const row = await rowOf("Read the answer: what is the knowledge panel?");
+  expect(within(row).queryByRole("button", { name: /looks good/i })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "Read" }));
+  expect(openAnswer).toHaveBeenCalledWith("REQ-5");
 });

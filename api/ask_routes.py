@@ -63,6 +63,22 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         events.changed()
         return Created(id=request.id)
 
+    @r.post("/asks/{request_id}/read")
+    def read_answer(request_id: str) -> Created:
+        """The person opened the answer: its Today line is done."""
+        found = store.read().get("request", request_id)
+        if found is None or found.data["task"] != "ask":
+            raise HTTPException(status_code=404, detail="There is no answer to read.")
+        if not found.data.get("dismissed"):
+            try:
+                with store.transaction() as tx:
+                    cur = tx.get("request", request_id)
+                    tx.update("request", request_id, {"dismissed": True}, _PM, read_version=cur.version)
+            except StoreError as err:
+                raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return Created(id=request_id)
+
     @r.post("/asks/{request_id}/correction")
     def correct_answer(request_id: str, body: AnswerCorrectionIn) -> Created:
         """The person says what an answer got wrong: one correction signal naming the answer, the change and the run

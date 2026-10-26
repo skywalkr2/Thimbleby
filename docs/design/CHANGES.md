@@ -1036,6 +1036,7 @@ yet follow, that it is *designed*, with its phase.
   `test_the_guide_has_the_owners_question_about_the_knowledge_panel`, `test_an_answer_to_the_persons_question_leaves_nothing_to_look_over`,
   `test_correcting_an_answer_records_a_signal_naming_the_answer`), `web/src/components/Ask.test.tsx`. Not built: "Helpful"
   and "Not helpful" (two new signal kinds).
+- **Design 7 (Today):** an answered question is the line "Read the answer: <question>" until it is opened (`POST /api/asks/{id}/read`); `web/src/components/TodayOneDecision.test.tsx`.
 - **Design 7 (Today, Review):** a review line never counts an answer (`_outcome_of`); the assistant's own summary of a run
   and the summary of the change an item follows are not shown (`web/src/components/WhatChanged.test.tsx`: "the
   assistant's own summary of a run never shows").

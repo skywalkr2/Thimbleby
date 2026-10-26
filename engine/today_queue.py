@@ -1153,6 +1153,30 @@ def _everything(
             )
         )
 
+    # An answer to the person's own question waits to be read, one line each, until it is opened or dismissed. It
+    # changed nothing, so it has no approve button (design 6.25).
+    from engine import conversation
+
+    for req in requests.values():
+        d = req.data
+        if d.get("task") != "ask" or d.get("state") not in ("review", "done") or d.get("dismissed"):
+            continue
+        if d.get("origin") != "pm" or conversation.about(req) is not None or req.id in hidden:
+            continue
+        if not reader.find("answer", {"request": req.id}):
+            continue
+        lines.append(
+            Line(
+                key=f"answer:{req.id}",
+                group="review",
+                kind="answer",
+                count=1,
+                text=" ".join(str(d.get("note") or "").split()),
+                request=req.id,
+                since=str(d.get("created_at") or ""),
+            )
+        )
+
     # Review: what a newly added source's intake found, as one line for the source once all of its work is finished.
     for source_id, found in sorted(intake_unseen.items()):
         if any(source_intake.unfinished(r.data) for r in found):
@@ -1578,6 +1602,7 @@ _KIND_ORDER = {
     "catch_up": 3,
     "unfiled": 4,
     "area": 4.5,
+    "answer": 0,
     "stale": 5,
     "pattern": 5.5,
     "moved": 6,

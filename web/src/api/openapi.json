@@ -19244,6 +19244,7 @@
               "meeting_capture",
               "quiet_promise",
               "date_reminder",
+              "answer",
               "area",
               "pattern"
             ],
@@ -29084,6 +29085,46 @@
           }
         },
         "summary": "Correct Answer"
+      }
+    },
+    "/api/asks/{request_id}/read": {
+      "post": {
+        "description": "The person opened the answer: its Today line is done.",
+        "operationId": "read_answer_api_asks__request_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Answer"
       }
     },
     "/api/auto-closed": {

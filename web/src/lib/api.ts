@@ -150,6 +150,7 @@ export const api = {
     call<S["Created"]>("POST", `reports/${id(report)}/sent`, { read_version: readVersion }),
   dismissReport: (report: string, readVersion: number) =>
     call<S["Created"]>("POST", `reports/${id(report)}/dismiss`, { read_version: readVersion }),
+  readAnswer: (request: string) => call<S["Created"]>("POST", `asks/${id(request)}/read`, {}),
   correctAnswer: (request: string, note: string) =>
     call<S["Created"]>("POST", `asks/${id(request)}/correction`, { note }),
   people: () => call<S["PersonView"][]>("GET", "people"),

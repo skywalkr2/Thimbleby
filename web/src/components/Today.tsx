@@ -28,6 +28,7 @@ export function Today(props: {
   onOpenGuide: (step?: string) => void;
   /** Opens the form that hands something to the assistant. */
   onHandIn?: () => void;
+  onOpenAnswer?: (request: string) => void;
   /** Opens the form that adds an AI account, in Settings. */
   onAddAccount?: () => void;
   onOpenRecord: (kind: string, id: string) => void;
@@ -79,6 +80,7 @@ export function Today(props: {
     onOpenHandover: () => props.onView("handover"),
     onOpenRules: () => props.onView("records/rules-review"),
     onOpenKnowledge: () => props.onView("records/knowledge"),
+    onOpenAnswer: props.onOpenAnswer,
     onAddAccount: props.onAddAccount,
     onOpenSources: () => props.onView("sources"),
     onOpenRecord: props.onOpenRecord,

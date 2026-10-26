@@ -2528,6 +2528,7 @@ class QueueLineView(BaseModel):
         "meeting_capture",
         "quiet_promise",
         "date_reminder",
+        "answer",
         "area",
         "pattern",
     ]

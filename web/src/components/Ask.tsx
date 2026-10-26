@@ -3,7 +3,7 @@
 // the read-back toast); a drafted report is theirs to copy and send. On a wide screen it is a pane at the right edge
 // (`pane`), so answers with lists have room and the work stays in view; on a narrower one it is a dialog.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -23,7 +23,7 @@ import { SafeText } from "./SafeText";
 type AskItem = S["AskView"];
 const SHOWN = 10;
 
-export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?: string | null; pane?: boolean }) {
+export function Ask(props: { onClose: () => void; initial?: string; reveal?: string; feedbackTo?: string | null; pane?: boolean }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
@@ -31,6 +31,13 @@ export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?:
   const [question, setQuestion] = useState(props.initial ?? "");
   const [busy, setBusy] = useState(false);
   const asks = useQuery({ queryKey: ["asks"], queryFn: api.asks });
+  const client = useQueryClient();
+  // Opened at an answer from Today: reading it is what clears its line.
+  useEffect(() => {
+    if (!props.reveal) return;
+    void api.readAnswer(props.reveal).then(() => client.invalidateQueries({ queryKey: ["today"] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.reveal]);
 
   const submit = async () => {
     const text = question.trim();
@@ -118,7 +125,7 @@ export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?:
         ) : (
           <ul className="queue">
             {asks.data.slice(0, SHOWN).map((item) => (
-              <AskRow key={item.id} item={item} onApplied={props.onClose} mailTo={props.feedbackTo} />
+              <AskRow key={item.id} revealed={item.id === props.reveal} item={item} onApplied={props.onClose} mailTo={props.feedbackTo} />
             ))}
           </ul>
         )}
@@ -156,7 +163,7 @@ const PILL: Record<string, string> = {
   failed: "k-risk",
 };
 
-function AskRow(props: { item: AskItem; onApplied: () => void; mailTo?: string | null }) {
+function AskRow(props: { revealed?: boolean; item: AskItem; onApplied: () => void; mailTo?: string | null }) {
   const { t } = useWords();
   const { item } = props;
   const titleId = `ask-${item.id}`;
@@ -166,7 +173,7 @@ function AskRow(props: { item: AskItem; onApplied: () => void; mailTo?: string |
   const proposals = item.proposals ?? [];
   const reports = item.reports ?? [];
   return (
-    <li className="line" aria-labelledby={titleId}>
+    <li className="line" aria-labelledby={titleId} data-revealed={props.revealed || undefined} ref={(el) => { if (props.revealed) el?.scrollIntoView?.({ block: "nearest" }); }}>
       <div className="row single">
         <div className="text">
           <strong id={titleId}>{item.question}</strong>

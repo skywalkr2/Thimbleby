@@ -88,7 +88,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   const [help, setHelp] = useState(false);
   const [feedback, setFeedback] = useState(false);
   // The Ask box, with the question it opens on when a screen suggests one.
-  const [ask, setAsk] = useState<{ question?: string } | null>(null);
+  const [ask, setAsk] = useState<{ question?: string; reveal?: string } | null>(null);
   const [view, setView] = useView();
   // The setup walkthrough opens at a screen when a line elsewhere sends the person to a step.
   const [guideAt, setGuideAt] = useState<{ screen: Screen; n: number } | null>(null);
@@ -202,6 +202,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onOpenRecord={openRecord}
             onOpenGuide={openGuide}
             onHandIn={() => setHandIn(true)}
+            onOpenAnswer={(reveal) => setAsk({ reveal })}
             shortcuts={rc.shortcuts}
             onAddAccount={() => {
               setAddAccount(Date.now());
@@ -280,6 +281,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       {ask && !askPane && (
         <Ask
           initial={ask.question}
+          reveal={ask.reveal}
           feedbackTo={rc.feedback_to}
           onClose={() => {
             setAsk(null);
@@ -377,6 +379,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           <Ask
             pane
             initial={ask?.question}
+            reveal={ask?.reveal}
             feedbackTo={rc.feedback_to}
             onClose={() => {
               setAsk(null);
