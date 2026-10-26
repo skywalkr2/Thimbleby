@@ -1592,6 +1592,10 @@ schedule when both are on, and is a plain list of milestones when it is alone.
   outside the workspace; and short review quotes the writer approved, checked against each platform's quoting rule.
   Reading profile and review pages comes later, on the core's search and fact lookups, within each site's terms;
   nothing is scraped or sent.
+- [ ] [C3] **Marketing, scope to settle when the pack is scoped** (owner, 2026-10-26: "Publishing pack will include
+  marketing as a stage"): marketing as a stage of a title (the stages are config, design 6.26), its milestones in the
+  launch plan template, drafted by `publishing/promo-draft` (design 9.7) and posted through the social media pack when it
+  is on (copied to paste when it isn't, so the pack still works alone).
 - Staying with the writing pack: the cover wrap specification and advance reader editions.
 
 C3c. **A business analysis pack and a systems architect pack** (owner, 2026-10-14: "pretty much barely disguised
@@ -1713,9 +1717,16 @@ mechanics.
 
 - Hosted mode and sign-in (Part 11), and its end state: an organization install where members from the People list have
   roles, their own views and approvals by role (design 11.8; owner, 2026-10-13).
-- Social, email and newsletter channels. For social posting, the owner's research on opening each platform's own
-  composer with the approved text instead of using its API (free, no app review) is in
-  `docs/project/research/social-sharing-without-apis.md`.
+- Social, email and newsletter channels.
+- **A social media pack** (owner, 2026-10-26): a pack like any other that adds "post this to a network" for other packs to
+  use when it is on. It drafts posts per network (the core's draft review and approval of the exact text, as every
+  outward item), takes marketing milestones from the publishing pack's launch plan and the project management pack's
+  schedule through interfaces (design 3.9), and hands each approved post to the platform's own composer instead of its
+  API, so no developer account or app review is needed (the owner's research:
+  `docs/project/research/social-sharing-without-apis.md`). Each platform's link format is data in the pack. The post
+  stays open until the person marks it posted. **The one core piece it needs:** a channel that hands an approved item
+  over by opening an outside page with the text filled in (or copying it and opening the page), showing that page's real
+  domain; a generic channel capability any pack can use, designed with the pack.
 - An editor in the app for long text, what-you-see-is-what-you-get (owner, 2026-10-26: "in the future we might do a
   WYSIWYG editor in the app, but thats not 1.0"). In 1.0 long text is written in the person's own tools through
   working-copy formats (design 3.3, 5.0; Word first) and reviewed in the core's compare view. When it comes it is a core
