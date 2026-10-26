@@ -15,7 +15,7 @@ installer work, the owner asks for a review of the whole app. The owner named th
 ## What to look at
 
 Captures of every main screen and every setup step, in day and night mode, at a desktop (1440) and a phone (390) width,
-are in `reviews/ui-ux-2026-10/after-fix-batch/` (`<screen>-<mode>-<width>.png`, listed in that folder's `index.md`).
+are in `reviews/ui-ux-2026-10/after-fix-batch/` (`<screen>-<mode>-<width>.jpg`, listed in that folder's `index.md`).
 To try it live: `uv run cockpit init ~/thimbleby-try`, then `uv run cockpit serve -w ~/thimbleby-try` (a fresh
 workspace, no template).
 
