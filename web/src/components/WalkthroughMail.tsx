@@ -21,6 +21,7 @@ import { addonOfSignIn } from "./SignIns";
 type Pack = S["PackView"];
 type Installed = S["InstalledPackView"];
 type SignIn = S["SignInView"];
+type Source = S["WatchSourceView"];
 
 /** Where a service stands on the way to being read. */
 export type ServiceState = "not_installed" | "off" | "restart" | "problem" | "ready";
@@ -121,6 +122,75 @@ function SortingSwitch() {
   );
 }
 
+const SOURCES = "watch.sources";
+
+/** Which sides of the person's life a mailbox or calendar serves, as tick boxes: Personal and each side. Each tick is saved at
+ * once as the source's `sides`, through the settings save (the whole list of sources, read fresh), so the toast reads it
+ * back with Undo. Nothing ticked is allowed: it means not said. */
+function SourceSides(props: { source: Source; personal: string | null; sides: S["SideView"][] }) {
+  const { t } = useWords();
+  const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const [problem, setProblem] = useState("");
+  const [busy, setBusy] = useState(false);
+  const options = [
+    ...(props.personal ? [{ id: props.personal, name: t("sides.filter.personal") }] : []),
+    ...props.sides.map((s) => ({ id: s.project, name: s.name })),
+  ];
+  const stored = (settings.data?.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<{ id: string; sides?: string[] }>;
+  const held = new Set(stored.find((s) => s.id === props.source.id)?.sides ?? []);
+
+  const change = async (side: string, on: boolean) => {
+    setBusy(true);
+    setProblem("");
+    try {
+      // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
+      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const list = (current.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<Record<string, unknown> & { id: string; sides?: string[] }>;
+      const mine = new Set(list.find((s) => s.id === props.source.id)?.sides ?? []);
+      if (on) mine.add(side);
+      else mine.delete(side);
+      // In the order of the choices, then any side the source names that isn't offered, which a tick leaves as it was.
+      const next = [...options.map((o) => o.id).filter((id) => mine.has(id)), ...[...mine].filter((id) => !options.some((o) => o.id === id))];
+      const changes = { [SOURCES]: list.map((s) => (s.id === props.source.id ? { ...s, sides: next } : s)) };
+      const saved = await api.saveSettings({ changes, reset: [], fingerprint: current.fingerprint });
+      await afterSave(saved);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const id = `source-sides-${props.source.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+  return (
+    <fieldset className="field" data-source-sides={props.source.id} aria-describedby={`${id}-hint`}>
+      <legend>{t("walkthrough.mail.sides.legend", { label: props.source.label })}</legend>
+      {options.map((o) => (
+        <label key={o.id} className="check-line">
+          <input
+            type="checkbox"
+            checked={held.has(o.id)}
+            disabled={busy || settings.isPending}
+            onChange={(e) => void change(o.id, e.target.checked)}
+          />
+          <span>{o.name}</span>
+        </label>
+      ))}
+      <p className="hint" id={`${id}-hint`}>
+        {t("walkthrough.mail.sides.hint")}
+      </p>
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
 export function WalkthroughMail(props: { onChooseSource: (plugin: string | null) => void; onOpenAddons: () => void }) {
   const { t } = useWords();
   const client = useQueryClient();
@@ -129,6 +199,7 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const sources = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
+  const business = useQuery({ queryKey: ["business"], queryFn: api.business });
 
   // After the app comes back the add-ons that were waiting for it are running: read their state again.
   useEffect(() => {
@@ -234,6 +305,10 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
           <p className="hint">{t("walkthrough.mail.first_go")}</p>
         </div>
       )}
+      {read.length > 0 && (business.data?.sides ?? []).length > 0 &&
+        read.map((source) => (
+          <SourceSides key={source.id} source={source} personal={business.data?.personal ?? null} sides={business.data?.sides ?? []} />
+        ))}
     </div>
   );
 }

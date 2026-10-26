@@ -25,7 +25,7 @@ from typing import Any, Literal
 
 from engine.mail_kinds import kind_of_input
 from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
-from engine.records import FiledBy
+from engine.records import FiledBy, referrers
 from engine.storage import StoreError, WriteContext
 from engine.yaml_load import load_yaml
 
@@ -640,3 +640,95 @@ def set_business(
         allow=(SETTING_SIDES,),
     )
     return Business(made.id, True, changeset, kind)
+
+
+def _below(view: Any, project_id: str) -> list[str]:
+    """The ids of every project inside a project, however deep, each after the one it sits in."""
+    found: list[str] = []
+    waiting = [project_id]
+    while waiting:
+        here = waiting.pop(0)
+        for record in view.list("project"):
+            if record.data.get("parent") == here and record.id not in found and record.id != project_id:
+                found.append(record.id)
+                waiting.append(record.id)
+    return found
+
+
+def removable_side(view: Any, project_id: str) -> bool:
+    """Whether a side's project and the projects inside it have nothing filed under them: no item, person, source or
+    other record refers to any of them, only the projects inside it to each other."""
+    family = {project_id, *_below(view, project_id)}
+    return all(
+        kind == "project" and other in family for pid in family for kind, other in referrers(view, "project", pid)
+    )
+
+
+def remove_side(ws: Any, store: Any, cfg: Any, project_id: str, *, env: dict[str, str] | None = None) -> list[str]:
+    """Take a side back out before setup is finished: delete its project and the projects inside it, and drop it from
+    `project.sides`. Refused in plain words while anything is filed under it, or when it is not a side. Returns the ids
+    removed."""
+    from engine import settings as config_screens
+
+    if not any(s.project == project_id for s in side_list(store.read(), cfg)):
+        raise StoreError("That isn't one of your sides.")
+    context = WriteContext(actor="pm", trust="trusted", op="project.remove")
+    with store.transaction() as tx:
+        if not removable_side(tx, project_id):
+            raise StoreError("Something is already filed under it, so it can't be removed here.")
+        gone = [*reversed(_below(tx, project_id)), project_id]
+        for pid in gone:
+            tx.delete("project", pid, context, read_version=tx.get("project", pid).version)
+    kept = [{"project": e.project, "kind": e.kind} for e in cfg.workspace.project.sides if e.project != project_id]
+    config_screens.save(
+        ws,
+        cfg,
+        store,
+        changes={SETTING_SIDES: kept},
+        reset=[],
+        read_fingerprint=config_screens.fingerprint(ws.config_dir),
+        env=env,
+        allow=(SETTING_SIDES,),
+    )
+    return gone
+
+
+def restore_side(
+    ws: Any, store: Any, cfg: Any, project_id: str, *, kind: str, position: int, env: dict[str, str] | None = None
+) -> list[str]:
+    """Bring back a side `remove_side` took out: undelete its project and the projects that were inside it, and list it
+    in `project.sides` again with its kind, at `position` among the sides (the end when there are fewer). Refused in
+    plain words for a project that isn't a removed side. Returns the ids brought back."""
+    from engine import settings as config_screens
+
+    if kind not in SIDE_KINDS:
+        raise StoreError(f"A side is a {' or a '.join(SIDE_KINDS)}.")
+    context = WriteContext(actor="pm", trust="trusted", op="project.restore")
+    with store.transaction() as tx:
+        top = tx.get("project", project_id, include_deleted=True)
+        if top is None or tx.get("project", project_id) is not None or top.data.get("parent"):
+            raise StoreError("That isn't a side that was taken back out.")
+        every = tx.list("project", include_deleted=True)
+        live = {p.id for p in tx.list("project")}
+        back = [project_id]
+        for record in every:  # ids rise as projects are made, so a project comes after the one it sits in
+            if record.id not in live and record.data.get("parent") in back and record.id not in back:
+                back.append(record.id)
+        for pid in back:
+            tx.undelete("project", pid, context, read_version=tx.get("project", pid, include_deleted=True).version)
+    listed = side_list(store.read(), cfg)
+    entries = [{"project": e.project, "kind": e.kind} for e in cfg.workspace.project.sides if e.project != project_id]
+    anchor = listed[position].project if 0 <= position < len(listed) else None
+    at = next((i for i, e in enumerate(entries) if e["project"] == anchor), len(entries))
+    entries.insert(at, {"project": project_id, "kind": kind})
+    config_screens.save(
+        ws,
+        cfg,
+        store,
+        changes={SETTING_SIDES: entries},
+        reset=[],
+        read_fingerprint=config_screens.fingerprint(ws.config_dir),
+        env=env,
+        allow=(SETTING_SIDES,),
+    )
+    return back

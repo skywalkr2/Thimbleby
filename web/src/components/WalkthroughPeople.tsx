@@ -1,6 +1,7 @@
 // The people step of the walkthrough (design 7.8): the people in the person's life, each with how they relate ("my
-// sister", "our neighbor"), and, once a business is named, the business's people with their part (customer, supplier).
-// It adds people through the same records the People screen shows; no organizations, teams or ids are asked.
+// sister", "our neighbor"), and, once a side of work is named, each side's people under its own name with their part
+// (manager or colleague at a job; customer, supplier, staff or client in a business). It adds people through the same
+// records the People screen shows, on the side they are listed under; no organizations, teams or ids are asked.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -8,21 +9,29 @@ import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
 
 const RELATIONS = ["partner", "parent", "child", "sibling", "friend", "neighbor", "doctor", "other"] as const;
-const ROLES = ["customer", "supplier", "staff", "colleague", "manager", "other"] as const;
+/** The parts people have at each kind of side, a list to pick from. */
+const ROLES = {
+  job: ["manager", "colleague", "client", "other"],
+  business: ["customer", "supplier", "staff", "client", "other"],
+} as const;
 const OTHER = "other";
 
-function Section(props: { side: "personal" | "business"; title: string; people: S["PersonView"][] }) {
+/** Whose people a section lists: the person's own life, or one side of their work. */
+type Whose = { kind: "personal"; id: string | null } | { kind: "job" | "business"; id: string };
+
+function Section(props: { whose: Whose; title: string; people: S["PersonView"][]; sided: boolean }) {
   const { t } = useWords();
   const client = useQueryClient();
-  const options = props.side === "personal" ? RELATIONS : ROLES;
-  const group = props.side === "personal" ? "relation" : "role";
+  const personal = props.whose.kind === "personal";
+  const options: readonly string[] = props.whose.kind === "personal" ? RELATIONS : ROLES[props.whose.kind];
+  const group = personal ? "relation" : "role";
   const [name, setName] = useState("");
   const [pick, setPick] = useState<string>(options[0]);
   const [other, setOther] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const how = pick === OTHER ? other.trim() : t(`walkthrough.people.${group}.${pick}`);
-  const id = `walkthrough-people-${props.side}`;
+  const id = `walkthrough-people-${props.whose.id ?? "personal"}`;
 
   const add = async () => {
     setBusy(true);
@@ -31,8 +40,9 @@ function Section(props: { side: "personal" | "business"; title: string; people: 
       await api.addPerson({
         full_name: name.trim(),
         aliases: [],
-        side: props.side,
-        ...(props.side === "personal" ? { relation: how || null } : { role: how || null }),
+        // With sides of work, a person is placed on a side by its id; a side word alone can't say which of several.
+        ...(props.sided && props.whose.id ? { sides: [props.whose.id] } : { side: personal ? "personal" : "business" }),
+        ...(personal ? { relation: how || null } : { role: how || null }),
       });
       setName("");
       setOther("");
@@ -53,7 +63,7 @@ function Section(props: { side: "personal" | "business"; title: string; people: 
           {props.people.map((p) => (
             <li key={p.id}>
               {p.name}
-              {(props.side === "personal" ? p.relation : p.role) && <span className="hint"> · {props.side === "personal" ? p.relation : p.role}</span>}
+              {(personal ? p.relation : p.role) && <span className="hint"> · {personal ? p.relation : p.role}</span>}
             </li>
           ))}
         </ul>
@@ -105,14 +115,27 @@ export function WalkthroughPeople() {
   const business = useQuery({ queryKey: ["business"], queryFn: api.business });
   if (!people.data) return <p className="empty">{t(people.isError ? "welcome.failed" : "loading")}</p>;
   const others = people.data.filter((p) => !p.is_pm && p.status === "active");
-  const work = others.filter((p) => p.side === "business");
-  const mine = others.filter((p) => p.side !== "business");
+  const listed = business.data?.sides ?? [];
+  const personal = business.data?.personal ?? null;
+  const sided = listed.length > 0;
+  const onSide = (p: S["PersonView"], side: string) => (p.sides ?? []).includes(side);
+  const onAnySide = (p: S["PersonView"]) => listed.some((s) => onSide(p, s.project));
+  // A person on a side of work is listed there (and on Personal too when they are on both); the rest are Personal's.
+  const mine = sided
+    ? others.filter((p) => (personal ? onSide(p, personal) : false) || !onAnySide(p))
+    : others.filter((p) => p.side !== "business");
   return (
     <>
-      <Section side="personal" title={t("walkthrough.people.personal")} people={mine} />
-      {business.data?.business && (
-        <Section side="business" title={t("walkthrough.people.business", { business: business.data.name ?? "" })} people={work} />
-      )}
+      <Section whose={{ kind: "personal", id: personal }} title={t("walkthrough.people.personal")} people={mine} sided={sided} />
+      {listed.map((side) => (
+        <Section
+          key={side.project}
+          whose={{ kind: side.kind, id: side.project }}
+          title={t("walkthrough.people.side", { side: side.name })}
+          people={others.filter((p) => onSide(p, side.project))}
+          sided={sided}
+        />
+      ))}
     </>
   );
 }

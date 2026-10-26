@@ -76,6 +76,7 @@ from api.schemas import (
     SettingsView,
     SetupStepView,
     SetupView,
+    SideRestoreIn,
     SideView,
     SortingRuleIn,
     TemplateApplied,
@@ -362,11 +363,20 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
         now, view = current(), store.read()
         listed = sides.side_list(view, now)
+        open_to_change = not setup.walkthrough_ended(ws)
         return BusinessState(
             business=bool(listed),
             name=listed[0].name if listed else None,
             personal=sides.personal_project(view, now),
-            sides=[SideView(project=s.project, kind=s.kind, name=s.name) for s in listed],
+            sides=[
+                SideView(
+                    project=s.project,
+                    kind=s.kind,
+                    name=s.name,
+                    removable=open_to_change and sides.removable_side(view, s.project),
+                )
+                for s in listed
+            ],
             chosen=setup.work_choice(ws, now, view),
         )
 
@@ -414,6 +424,45 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         else:
             setup.keep_work_choice(ws, "me")
             events.changed()
+        return business_state()
+
+    @r.post("/setup/sides/{project}/remove")
+    def side_remove(project: str) -> BusinessState:
+        """Take a side back out while setup is still open: its project and the projects inside it go, and so does its
+        place in the sides' list. Refused once setup is finished or when anything is filed under it."""
+        from engine import sides
+
+        if setup.walkthrough_ended(ws):
+            raise HTTPException(status_code=409, detail="Setup is finished, so a side is changed under Projects now.")
+        try:
+            sides.remove_side(ws, store, current(), project, env=dict(os.environ))
+        except config_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        worker.apply_live()
+        if sides.business_project(store.read(), current()) is None:
+            setup.clear_work_choice(ws)
+        events.changed()
+        return business_state()
+
+    @r.post("/setup/sides/{project}/restore")
+    def side_restore(project: str, body: SideRestoreIn) -> BusinessState:
+        """Undo of taking a side back out: its project and the projects that were inside it come back, and it is
+        listed again with its kind at its old place."""
+        from engine import sides
+
+        try:
+            sides.restore_side(
+                ws, store, current(), project, kind=body.kind, position=body.position, env=dict(os.environ)
+            )
+        except config_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        setup.keep_work_choice(ws, "work")
+        worker.apply_live()
+        events.changed()
         return business_state()
 
     # ---- setup steps ---------------------------------------------------------------------------------------------

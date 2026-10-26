@@ -10,15 +10,20 @@ import yaml
 from fastapi.testclient import TestClient
 
 from api.app import create_app
-from engine import setup
+from engine import setup, sides
 from engine.connectors import reads
+from engine.names import People
 from engine.packs import summary
+from engine.storage import WriteContext
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B
+from tests.conftest import DEMO_B, fixture_records
+from tests.test_many_sides import THIRD_NAME, a_watched_source
+from tests.test_sides import BUSINESS_NAME, OTHER_BUSINESS_NAME, new_op
 from tests.test_sign_in import signing as signing  # noqa: F401 - the fixture
 from tests.test_sign_in_sources import _app, _with_sources, sign_in
 
 TOKEN = "t"
+_PM = WriteContext(actor="pm", trust="trusted", op="test.walkthrough")
 #: The steps that count, in the order a person meets them.
 COUNTED = ("workspace", "work", "ai", "mail", "promises", "backup", "people")
 
@@ -383,3 +388,213 @@ def test_a_name_saved_without_a_workspace_name_leaves_the_default_alone(tmp_path
     ws, c = _fresh(tmp_path)
     c.post("/api/me", json={"full_name": "Avery Stone"})
     assert ws.config(env={}).workspace.name == "Workspace"
+
+
+# ---- the Work step with several sides: a job and any number of businesses ----------------------------
+
+JOB_NAME = BUSINESS_NAME
+FIRST_BUSINESS = OTHER_BUSINESS_NAME
+SECOND_BUSINESS = THIRD_NAME
+WORKS_ON = [p["name"] for p in fixture_records(DEMO_B, "project")[:3]]
+
+
+def _add_side(c, name, kind):
+    made = c.post("/api/setup/business", json={"name": name, "kind": kind})
+    assert made.status_code == 200, made.text
+    return made.json()["project"]
+
+
+def test_a_job_and_two_businesses_make_three_sides_in_order_with_their_kinds(tmp_path):
+    ws, c = _fresh(tmp_path)
+    job = _add_side(c, JOB_NAME, "job")
+    first = _add_side(c, FIRST_BUSINESS, "business")
+    second = _add_side(c, SECOND_BUSINESS, "business")
+    state = c.get("/api/setup/business").json()
+    assert [(s["project"], s["kind"], s["name"]) for s in state["sides"]] == [
+        (job, "job", JOB_NAME),
+        (first, "business", FIRST_BUSINESS),
+        (second, "business", SECOND_BUSINESS),
+    ]
+    assert state["chosen"] == "work" and _steps(c)["work"]["done"] is True
+    cfg = ws.config(env={})
+    assert [(e.project, e.kind) for e in cfg.workspace.project.sides] == [
+        (job, "job"),
+        (first, "business"),
+        (second, "business"),
+    ]
+    # The workspace keeps the person's name: no business renames it.
+    assert cfg.workspace.name == "Workspace"
+
+
+def test_what_a_business_works_on_becomes_projects_under_it_through_the_project_route(tmp_path):
+    ws, c = _fresh(tmp_path)
+    business = _add_side(c, FIRST_BUSINESS, "business")
+    ids = []
+    for line in WORKS_ON:
+        made = c.post("/api/projects", json={"name": line, "parent": business})
+        assert made.status_code == 200, made.text
+        ids.append(made.json()["id"])
+    app_store = c.app.state.store
+    view, cfg = app_store.read(), ws.config(env={})
+    assert [view.get("project", i).data["parent"] for i in ids] == [business] * len(ids)
+    assert all(sides.side_of_project(view, cfg, i) == business for i in ids)
+    # A name another project has is refused in words, and nothing is made.
+    again = c.post("/api/projects", json={"name": WORKS_ON[0], "parent": business})
+    assert again.status_code == 409
+    assert len(app_store.read().list("project")) == 2 + len(WORKS_ON)  # Personal, the business and its projects
+
+
+def test_renaming_a_side_edits_its_project_and_keeps_its_id_and_its_place_in_the_sides(tmp_path):
+    ws, c = _fresh(tmp_path)
+    job = _add_side(c, JOB_NAME, "job")
+    first = _add_side(c, FIRST_BUSINESS, "business")
+    second = _add_side(c, SECOND_BUSINESS, "business")
+    renamed = c.post(f"/api/projects/{first}", json={"name": f"{FIRST_BUSINESS} Renamed"})
+    assert renamed.status_code == 200, renamed.text
+    state = c.get("/api/setup/business").json()
+    assert [(s["project"], s["name"]) for s in state["sides"]] == [
+        (job, JOB_NAME),
+        (first, f"{FIRST_BUSINESS} Renamed"),
+        (second, SECOND_BUSINESS),
+    ]
+    assert [e.project for e in ws.config(env={}).workspace.project.sides] == [job, first, second]
+    assert len(c.app.state.store.read().list("project")) == 4  # nothing was added by the rename
+
+
+def test_a_side_made_in_setup_is_removable_until_something_is_filed_under_it_or_setup_ends(tmp_path):
+    ws, c = _fresh(tmp_path)
+    keep = _add_side(c, FIRST_BUSINESS, "business")
+    drop = _add_side(c, SECOND_BUSINESS, "business")
+    child = c.post("/api/projects", json={"name": WORKS_ON[0], "parent": drop}).json()["id"]
+    state = c.get("/api/setup/business").json()
+    assert [s["removable"] for s in state["sides"]] == [True, True]
+    store = c.app.state.store
+    with store.transaction() as tx:
+        owner = tx.create("person", {"full_name": "Casey Example"}, _PM).id
+        tx.create("action", {"text": "Order the thread", "project": keep, "owners": [{"person": owner}]}, _PM)
+    state = c.get("/api/setup/business").json()
+    assert [(s["project"], s["removable"]) for s in state["sides"]] == [(keep, False), (drop, True)]
+    refused = c.post(f"/api/setup/sides/{keep}/remove")
+    assert refused.status_code == 409 and "filed" in refused.json()["detail"]
+    gone = c.post(f"/api/setup/sides/{drop}/remove")
+    assert gone.status_code == 200, gone.text
+    assert [s["project"] for s in gone.json()["sides"]] == [keep]
+    view = store.read()
+    assert view.get("project", drop) is None and view.get("project", child) is None
+    assert [e.project for e in ws.config(env={}).workspace.project.sides] == [keep]
+    assert c.post(f"/api/setup/sides/{drop}/remove").status_code == 409  # no longer a side
+    # Once setup is finished nothing is offered or accepted.
+    c.post("/api/setup/walkthrough", json={"finished": True})
+    assert [s["removable"] for s in c.get("/api/setup/business").json()["sides"]] == [False]
+    assert c.post(f"/api/setup/sides/{keep}/remove").status_code == 409
+
+
+def test_taking_back_the_last_side_leaves_the_work_question_unanswered(tmp_path):
+    _, c = _fresh(tmp_path)
+    only = _add_side(c, JOB_NAME, "job")
+    assert c.get("/api/setup/business").json()["chosen"] == "work"
+    state = c.post(f"/api/setup/sides/{only}/remove").json()
+    assert state["sides"] == [] and state["business"] is False and state["chosen"] is None
+    assert _steps(c)["work"]["done"] is False
+
+
+def test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_nothing_else_places(tmp_path):
+    ws = init_workspace(tmp_path / "ws", git=False, you="Pat Example")
+    cfg = ws.config(env={}, flags={"server.base_path": "/", "storage.backups.automatic": False})
+    app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui")
+    with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as c:
+        first = _add_side(c, FIRST_BUSINESS, "business")
+        second = _add_side(c, SECOND_BUSINESS, "business")
+        folder = tmp_path / "inbox"
+        folder.mkdir()
+        fingerprint = c.get("/api/settings").json()["fingerprint"]
+        added = c.post(
+            "/api/watch/sources",
+            json={
+                "connector": "folder",
+                "label": "Shared inbox",
+                "settings": {"path": str(folder)},
+                "fingerprint": fingerprint,
+            },
+        )
+        assert added.status_code == 200, added.text
+        shown = c.get("/api/settings").json()
+        stored = next(i["value"] for i in shown["items"] if i["key"] == "watch.sources")
+        assert [s["id"] for s in stored] == ["shared-inbox"] and not stored[0].get("sides")
+        # The mail step ticks the second side for this source, as the settings save does for any list of sources.
+        changed = [{**stored[0], "sides": [second]}]
+        saved = c.post(
+            "/api/settings",
+            json={"changes": {"watch.sources": changed}, "reset": [], "fingerprint": shown["fingerprint"]},
+        )
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["changes"][0]["key"] == "watch.sources"
+        assert [s.sides for s in ws.config(env={}).watch.sources] == [[second]]
+        store, now = app.state.store, ws.config(env={})
+        env = (ws, now, store)
+        source = a_watched_source(env, "shared-inbox")
+        placed = sides.file_by_people(
+            [new_op(text="Call about it")], store.read(), now, People(store, now), None, None, source=source
+        )
+        assert placed[0].project == second and placed[0].filed_by.by == "source"
+        # Two sides ticked narrow the choice to them and decide nothing alone; nothing ticked is "not said".
+        both = [{**stored[0], "sides": [first, second]}]
+        fingerprint = c.get("/api/settings").json()["fingerprint"]
+        assert (
+            c.post(
+                "/api/settings", json={"changes": {"watch.sources": both}, "reset": [], "fingerprint": fingerprint}
+            ).status_code
+            == 200
+        )
+        now = ws.config(env={})
+        placed = sides.file_by_people(
+            [new_op(text="Call about it")], store.read(), now, People(store, now), None, None, source=source
+        )
+        assert placed[0].project is None
+        none = [{**stored[0], "sides": []}]
+        fingerprint = c.get("/api/settings").json()["fingerprint"]
+        assert (
+            c.post(
+                "/api/settings", json={"changes": {"watch.sources": none}, "reset": [], "fingerprint": fingerprint}
+            ).status_code
+            == 200
+        )
+        assert [s.sides for s in ws.config(env={}).watch.sources] == [[]]
+
+
+def test_removing_a_side_and_undoing_it_gives_back_the_same_projects_order_kind_and_answer(tmp_path):
+    ws, c = _fresh(tmp_path)
+    job = _add_side(c, JOB_NAME, "job")
+    middle = _add_side(c, FIRST_BUSINESS, "business")
+    last = _add_side(c, SECOND_BUSINESS, "business")
+    children = [c.post("/api/projects", json={"name": n, "parent": middle}).json()["id"] for n in WORKS_ON[:2]]
+    before = [(e.project, e.kind) for e in ws.config(env={}).workspace.project.sides]
+    removed = c.post(f"/api/setup/sides/{middle}/remove")
+    assert removed.status_code == 200, removed.text
+    assert [s["project"] for s in removed.json()["sides"]] == [job, last]
+    # What Undo needs is what the screen read before: the side's kind and its place in the list.
+    restored = c.post(f"/api/setup/sides/{middle}/restore", json={"kind": "business", "position": 1})
+    assert restored.status_code == 200, restored.text
+    assert [(s["project"], s["kind"], s["name"]) for s in restored.json()["sides"]] == [
+        (job, "job", JOB_NAME),
+        (middle, "business", FIRST_BUSINESS),
+        (last, "business", SECOND_BUSINESS),
+    ]
+    assert [(e.project, e.kind) for e in ws.config(env={}).workspace.project.sides] == before
+    view = c.app.state.store.read()
+    assert [view.get("project", i).data["parent"] for i in children] == [middle, middle]
+    # A project that isn't a removed side is refused in words, and so is a kind that isn't one.
+    assert c.post(f"/api/setup/sides/{middle}/restore", json={"kind": "business", "position": 0}).status_code == 409
+    assert (
+        c.post(f"/api/setup/sides/{children[0]}/restore", json={"kind": "business", "position": 0}).status_code == 409
+    )
+    assert c.post(f"/api/setup/sides/{middle}/restore", json={"kind": "hobby", "position": 0}).status_code == 422
+
+
+def test_undoing_the_removal_of_the_last_side_brings_back_the_work_answer(tmp_path):
+    _, c = _fresh(tmp_path)
+    only = _add_side(c, JOB_NAME, "job")
+    assert c.post(f"/api/setup/sides/{only}/remove").json()["chosen"] is None
+    state = c.post(f"/api/setup/sides/{only}/restore", json={"kind": "job", "position": 0}).json()
+    assert state["chosen"] == "work" and [s["kind"] for s in state["sides"]] == ["job"]
+    assert _steps(c)["work"]["done"] is True

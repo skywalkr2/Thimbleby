@@ -531,18 +531,19 @@ test("the add-ons step still has its button when nothing is installed or the lis
 
 test("the setup list asks the work question as its own step, with a Save of its own", async () => {
   const user = userEvent.setup();
+  const employer = "Employer Example";
   const calls = api([step("work")], {
-    "GET setup/business": () => ({ business: false, name: null, chosen: null }),
-    "POST setup/work": (body) => ({ business: true, name: (body as { name: string }).name, chosen: "work" }),
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: null }),
+    "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "job", created: true, changeset: "CS-1" }),
   });
   open();
   expect(await screen.findByRole("heading", { name: "Say whether your work is part of this" })).toBeInTheDocument();
-  await user.click(await screen.findByRole("radio", { name: "Me and my work" }));
+  await user.click(await screen.findByRole("checkbox", { name: "My job" }));
   expect(screen.getByRole("note")).toHaveTextContent("employer's permission");
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-  await user.type(screen.getByLabelText("What is your work called?"), "Harbor Goods");
+  await user.type(screen.getByLabelText("What is your employer called?"), employer);
   await user.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST setup/work")?.body).toEqual({ choice: "work", name: "Harbor Goods" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST setup/business")?.body).toEqual({ name: employer, kind: "job" }));
 });
 
 test("a step that adds to a list shows what it adds in words, and Apply sends the current fingerprint", async () => {

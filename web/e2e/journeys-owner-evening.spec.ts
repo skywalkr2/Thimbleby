@@ -70,14 +70,16 @@ test.describe.serial("journey: the owner's first evening", () => {
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
 
-    // 1b. Work, on its own screen: two choices, Just me first. Me and my work shows the notice about work mail; the
-    // evening is Just me.
+    // 1b. Work, on its own screen: Just me first, then two tick boxes under Also track. A job shows the notice about work
+    // mail; the evening is Just me.
     await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
-    await expect(main.getByRole("radio")).toHaveCount(2);
+    await expect(main.getByRole("radio")).toHaveCount(1);
+    await expect(main.getByRole("checkbox")).toHaveCount(2);
     await expect(main.getByRole("radio", { name: "Just me" })).toBeChecked();
-    await main.getByRole("radio", { name: "Me and my work" }).check();
+    await main.getByRole("checkbox", { name: "My job" }).check();
     await expect(main.getByRole("note")).toContainText("may need your employer's permission");
     await main.getByRole("radio", { name: "Just me" }).check();
+    await expect(main.getByRole("checkbox", { name: "My job" })).not.toBeChecked();
     await expect(main.getByRole("note")).toHaveCount(0);
     await main.getByRole("button", { name: "Continue" }).click();
 

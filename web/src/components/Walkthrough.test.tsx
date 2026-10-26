@@ -84,6 +84,19 @@ const SETTINGS = [
   },
 ] as S["SettingItem"][];
 
+/** The ids and names the work tests use; the names are made up and kept apart from the code that handles them. */
+const PERSONAL = "PRJ-1";
+const [EMPLOYER, SHOP, STUDIO] = ["Employer Example", "Shop Example", "Studio Example"];
+const WORKS_ON = ["First thing", "Second thing", "Third thing"];
+const side = (project: string, kind: "job" | "business", name: string, removable = false): S["SideView"] => ({ project, kind, name, removable });
+const stateWith = (sides: S["SideView"][], chosen: "me" | "work" | null = "work"): S["BusinessState"] => ({
+  business: sides.length > 0,
+  name: sides[0]?.name ?? null,
+  personal: PERSONAL,
+  sides,
+  chosen,
+});
+
 const NOTHING = { adds: { item_types: [], screens: 0, today: 0, ai_work: 0, actions: 0, setup_steps: 0, sources: 2 } };
 const what = (over: Partial<S["PackSummary"]> = {}): S["PackSummary"] => ({
   ...NOTHING,
@@ -172,7 +185,8 @@ function routes(over: Record<string, (body: unknown) => unknown> = {}, steps = C
     "GET setup": () => setupView(steps, { walkthrough: { open: true, ...walk } }),
     "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS }),
     "GET me": () => ({ person: null, full_name: "" }),
-    "GET setup/business": () => ({ business: false, name: null, chosen: null }),
+    "GET setup/business": () => ({ business: false, name: null, personal: PERSONAL, sides: [], chosen: null }),
+    "GET projects": () => [],
     "GET people": () => [],
     "GET ai/endpoints": () => [],
     "GET ai/accounts": () => [],
@@ -685,63 +699,223 @@ describe("each screen", () => {
     expect(calls.some((c) => c.route === "POST setup/business" || c.route === "POST setup/work")).toBe(false);
   });
 
-  test("Work: two choices, Just me first; Continue keeps the answer and goes on to the AI account", async () => {
+  test("Work: Just me first, then two tick boxes under Also track; Continue keeps Just me and goes on to the AI account", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
-        { "POST setup/work": () => ({ business: false, name: null, chosen: "me" }) },
+        { "POST setup/work": () => stateWith([], "me") },
         CORE.map((id) => step(id)),
         { step: "work" },
       ),
     );
     open();
     expect(await screenTitle()).toHaveTextContent("Work");
-    const radios = await screen.findAllByRole("radio");
-    expect(radios.map((r) => (r.closest("label") as HTMLElement).textContent)).toEqual(["Just me", "Me and my work"]);
-    expect(radios[0]).toBeChecked();
-    expect(radios[0]).toHaveFocus();
+    const just = await screen.findByRole("radio", { name: "Just me" });
+    expect(just).toBeChecked();
+    expect(just).toHaveFocus();
+    const also = screen.getByRole("group", { name: "Also track" });
+    const boxes = within(also).getAllByRole("checkbox");
+    expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["My job", "My own business"]);
+    expect(boxes.every((b) => !(b as HTMLInputElement).checked)).toBe(true);
     expect(screen.queryByText(/employer's permission/)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.find((c) => c.route === "POST setup/work")!.body).toEqual({ choice: "me" });
   });
 
-  test("Work: Me and my work asks what it is called, shows the notice about work mail, and Continue waits for the name", async () => {
+  test("Work: My job asks the employer's name and shows the notice about work mail; My own business never shows it", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
-        { "POST setup/work": (body) => ({ business: true, name: (body as { name: string }).name, chosen: "work" }) },
+        { "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "job", created: true, changeset: "CS-1" }) },
         CORE.map((id) => step(id)),
         { step: "work" },
       ),
     );
     open();
-    await user.click(await screen.findByRole("radio", { name: "Me and my work" }));
-    const notice = screen.getByRole("note");
-    expect(notice).toHaveTextContent("Reading work mail may need your employer's permission. Check your workplace's rules before you connect a work mailbox.");
+    await user.click(await screen.findByRole("checkbox", { name: "My job" }));
+    expect(screen.getByRole("radio", { name: "Just me" })).not.toBeChecked();
+    expect(screen.getByRole("note")).toHaveTextContent("Reading work mail may need your employer's permission. Check your workplace's rules before you connect a work mailbox.");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     expect(screen.getByText("Say what your work is called to go on.")).toBeInTheDocument();
-    await user.type(screen.getByLabelText("What is your work called?"), "Harbor Goods");
+    await user.type(screen.getByLabelText("What is your employer called?"), EMPLOYER);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
-    expect(calls.find((c) => c.route === "POST setup/work")!.body).toEqual({ choice: "work", name: "Harbor Goods" });
-    // Whether it is a job or a business is never asked as a choice here.
-    expect(calls.filter((c) => c.route === "POST setup/work")).toHaveLength(1);
+    expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: EMPLOYER, kind: "job" }]);
+    // The notice belongs to the job path alone: ticking only the business shows none.
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    expect(screen.queryByRole("note")).toBeNull();
   });
 
-  test("Work: with a work side already there it stays chosen under its name, and Just me can't be picked", async () => {
+  test("Work: My own business asks its name and what it works on, and each line becomes a project inside it", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    // The question names the business as it is typed.
+    const works = await screen.findByLabelText(`What does ${SHOP} work on?`);
+    await user.click(works);
+    await user.paste(`- ${WORKS_ON[0]}\n${WORKS_ON[1]}\n\n2. ${WORKS_ON[2]}\n${WORKS_ON[1]}`);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: SHOP, kind: "business" }]);
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: Add another business repeats the name and what it works on, and a job and two businesses are saved in order", async () => {
+    const user = userEvent.setup();
+    const made: Record<string, string> = { [EMPLOYER]: "PRJ-2", [SHOP]: "PRJ-3", [STUDIO]: "PRJ-4" };
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => {
+            const { name, kind } = body as { name: string; kind: "job" | "business" };
+            return { project: made[name], name, kind, created: true, changeset: "CS" };
+          },
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My job" }));
+    await user.click(screen.getByRole("checkbox", { name: "My own business" }));
+    await user.type(screen.getByLabelText("What is your employer called?"), EMPLOYER);
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    await user.click(screen.getByRole("button", { name: "Add another business" }));
+    const names = screen.getAllByLabelText("What is your business called?");
+    expect(names).toHaveLength(2);
+    await user.type(names[1], STUDIO);
+    await user.click(await screen.findByLabelText(`What does ${STUDIO} work on?`));
+    await user.paste(WORKS_ON[0]);
+    // Each extra business can be taken out again before it is saved.
+    expect(screen.getByRole("button", { name: `Remove this business: ${STUDIO}` })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([
+      { name: EMPLOYER, kind: "job" },
+      { name: SHOP, kind: "business" },
+      { name: STUDIO, kind: "business" },
+    ]);
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual([{ name: WORKS_ON[0], parent: "PRJ-4" }]);
+  });
+
+  test("Work: sides already saved are listed with their projects and stay ticked; Just me can't be picked", async () => {
     fakeApi(
       routes(
-        { "GET setup/business": () => ({ business: true, name: "Harbor Goods", chosen: "work" }) },
+        {
+          "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP, true)]),
+          "GET projects": () => WORKS_ON.slice(0, 2).map((name, i) => ({ id: `PRJ-${i + 5}`, name, parent: "PRJ-3" })),
+        },
         CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
         { step: "work" },
       ),
     );
     open();
-    expect(await screen.findByRole("radio", { name: "Me and my work" })).toBeChecked();
+    const added = await screen.findByRole("region", { name: "Added so far" });
+    const rows = within(added).getAllByRole("listitem");
+    expect(rows.map((r) => r.getAttribute("data-kind"))).toEqual(["job", "business"]);
+    expect(rows[1]).toHaveTextContent(`Projects: ${WORKS_ON[0]}, ${WORKS_ON[1]}`);
+    expect(rows[0]).toHaveTextContent("Nothing under it yet.");
     expect(screen.getByRole("radio", { name: "Just me" })).toBeDisabled();
-    expect(screen.getByLabelText("What is your work called?")).toHaveValue("Harbor Goods");
-    expect(screen.getByText(/already part of this/)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "My job" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "My own business" })).toBeChecked();
+    // Remove is offered only for a side the server says can still be taken back out.
+    expect(within(rows[0]).queryByRole("button", { name: /^Remove/ })).toBeNull();
+    expect(within(rows[1]).getByRole("button", { name: `Remove ${SHOP}` })).toBeInTheDocument();
+    expect(screen.getByText(/stays part of this/)).toBeInTheDocument();
+  });
+
+  test("Work: going Back and changing a name renames the side's project and never posts the name again", async () => {
+    const user = userEvent.setup();
+    let name = SHOP;
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith([side("PRJ-3", "business", name)]),
+          "POST projects/PRJ-3": (body) => {
+            name = (body as { name: string }).name;
+            return { ok: "PRJ-3" };
+          },
+        },
+        CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("button", { name: `Rename ${SHOP}` }));
+    const field = screen.getByLabelText(`New name for ${SHOP}`);
+    expect(field).toHaveValue(SHOP);
+    await user.clear(field);
+    await user.type(field, STUDIO);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST projects/PRJ-3")).toBeDefined());
+    expect(calls.find((c) => c.route === "POST projects/PRJ-3")!.body).toEqual({ name: STUDIO });
+    expect(await screen.findByText(STUDIO)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.some((c) => c.route === "POST setup/business" || c.route === "POST setup/work")).toBe(false);
+  });
+
+  test("Work: Remove takes a side made here back out at once, and the toast's Undo calls the restore route", async () => {
+    const user = userEvent.setup();
+    const sideA = side("PRJ-2", "job", EMPLOYER);
+    const sideB = side("PRJ-3", "business", SHOP, true);
+    let sides = [sideA, sideB];
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith(sides, sides.length ? "work" : null),
+          "POST setup/sides/PRJ-3/remove": () => ((sides = [sideA]), stateWith(sides)),
+          "POST setup/sides/PRJ-3/restore": () => ((sides = [sideA, sideB]), stateWith(sides)),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("button", { name: `Remove ${SHOP}` }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/sides/PRJ-3/remove")).toBe(true));
+    await waitFor(() => expect(screen.queryByRole("button", { name: `Rename ${SHOP}` })).toBeNull());
+    expect(await screen.findByText(`Removed ${SHOP}.`)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST setup/sides/PRJ-3/restore")).toBeDefined());
+    expect(calls.find((c) => c.route === "POST setup/sides/PRJ-3/restore")!.body).toEqual({ kind: "business", position: 1 });
+    expect(await screen.findByRole("button", { name: `Rename ${SHOP}` })).toBeInTheDocument();
+  });
+
+  test("Work: Remove of the only side leaves Just me chosen", async () => {
+    const user = userEvent.setup();
+    let sides = [side("PRJ-3", "business", SHOP, true)];
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith(sides, sides.length ? "work" : null),
+          "POST setup/sides/PRJ-3/remove": () => ((sides = []), stateWith([], null)),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("button", { name: `Remove ${SHOP}` }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/sides/PRJ-3/remove")).toBe(true));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Added so far" })).toBeNull());
+    expect(screen.getByRole("radio", { name: "Just me" })).toBeChecked();
   });
 
   test("Your AI account: spending is one sentence with its starting amounts, and Continue saves a change to them", async () => {
@@ -834,14 +1008,14 @@ describe("each screen", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  test("People: asked by how they relate, saved with that relation and the personal side, with the business's people after it", async () => {
+  test("People: asked by how they relate, saved with that relation and side, each side of work under its own name", async () => {
     const user = userEvent.setup();
     let added = false;
     const calls = fakeApi(
       routes(
         {
-          "GET people": () => (added ? [{ id: "PER-9", name: "Pat Kin", role: null, aliases: [], status: "active", is_pm: false, relation: "my sister or brother", side: "personal" }] : []),
-          "GET setup/business": () => ({ business: true, name: "Harbor Goods" }),
+          "GET people": () => (added ? [{ id: "PER-9", name: "Pat Kin", role: null, aliases: [], status: "active", is_pm: false, relation: "my sister or brother", side: "personal", sides: [PERSONAL] }] : []),
+          "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
           "POST people": () => {
             added = true;
             return { id: "PER-9" };
@@ -854,16 +1028,44 @@ describe("each screen", () => {
     open();
     expect(await screenTitle()).toHaveTextContent("People");
     expect(screen.getByText(/You can skip this: it will ask about names it doesn't recognize/)).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "The people at Harbor Goods" })).toBeInTheDocument();
+    // Each side's people are headed by that side's name, in the order of the sides.
+    const headings = await screen.findAllByRole("heading", { level: 3 });
+    expect(headings.map((h) => h.textContent)).toEqual(["The people in your life", `The people at ${EMPLOYER}`, `The people at ${SHOP}`]);
     const personal = screen.getByRole("region", { name: "The people in your life" });
     await user.type(within(personal).getByLabelText("Their name"), "Pat Kin");
     await user.selectOptions(within(personal).getByLabelText("How they relate to you"), "sibling");
     await user.click(within(personal).getByRole("button", { name: "Add" }));
     expect(await within(personal).findByRole("listitem")).toHaveTextContent("Pat Kin · my sister or brother");
-    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], side: "personal", relation: "my sister or brother" });
+    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], sides: [PERSONAL], relation: "my sister or brother" });
   });
 
-  test("People: with no business named, only the people in the person's life are asked", async () => {
+  test("People: a job's parts and a business's parts are lists to pick from, saved on that side by its id", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
+          "POST people": () => ({ id: "PER-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "people" },
+      ),
+    );
+    open();
+    const job = await screen.findByRole("region", { name: `The people at ${EMPLOYER}` });
+    const business = screen.getByRole("region", { name: `The people at ${SHOP}` });
+    const options = (el: HTMLElement) => within(within(el).getByLabelText("Their part")).getAllByRole("option").map((o) => o.textContent);
+    expect(options(job)).toEqual(expect.arrayContaining(["manager", "colleague"]));
+    expect(options(business)).toEqual(expect.arrayContaining(["customer", "supplier", "staff", "client"]));
+    expect(options(business)).not.toContain("manager");
+    await user.type(within(business).getByLabelText("Their name"), "Sam Kin");
+    await user.selectOptions(within(business).getByLabelText("Their part"), "client");
+    await user.click(within(business).getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
+    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Sam Kin", aliases: [], sides: ["PRJ-3"], role: "client" });
+  });
+
+  test("People: with no side of work, only the people in the person's life are asked, saved on the personal side", async () => {
     fakeApi(routes({ "GET people": () => [] }, CORE.map((id) => step(id)), { step: "people" }));
     open();
     await screen.findByRole("region", { name: "The people in your life" });
@@ -1176,6 +1378,68 @@ describe("Mail and calendar", () => {
     expect(within(list).getByText("Your inbox")).toBeInTheDocument();
     expect(within(list).getByText("Your calendar")).toBeInTheDocument();
     expect(within(list).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
+  });
+
+  test("with a side of work, each mailbox and calendar asks which it serves and saves the ticks as its sides", async () => {
+    const user = userEvent.setup();
+    service("on", { signed: true });
+    let sources: Array<Record<string, unknown>> = [
+      { id: "s1", connector: "x/y", label: "Your inbox", settings: {} },
+      { id: "s2", connector: "x/y", label: "Your calendar", settings: {}, sides: ["PRJ-3"] },
+    ];
+    const first = sources;
+    const saves: unknown[] = [];
+    const mail = fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { installed_version: "1.0.0", enabled: true })],
+        installed: [installedPack("mail-addon", { enabled: true, state: "enabled" })],
+      }),
+      "GET sign-ins": () => [signIn("mail-addon/account", { status: "signed_in", account: "me@example.com" })],
+      "GET watch": () => [source("s1", "Your inbox"), source("s2", "Your calendar", { reads: ["calendar"] })],
+      "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
+      "GET settings": () => ({
+        fingerprint: "fp-1",
+        items: [
+          ...SETTINGS,
+          { key: "watch.sources", file: "watch", group: "watch", description: "", type: "other", options: [], value: sources, default: [], source: "file", locked: false, basic: false, editable: false },
+        ],
+      }),
+      "POST settings": (body) => {
+        saves.push(body);
+        const before = sources;
+        sources = (body as { changes: { "watch.sources": Array<Record<string, unknown>> } }).changes["watch.sources"];
+        return { changes: [{ key: "watch.sources", before, after: sources, was_default: false, is_default: false }], fingerprint: "fp-2", needs_restart: false };
+      },
+    });
+    open();
+    const inbox = await screen.findByRole("group", { name: "Which does Your inbox serve?" });
+    const calendar = screen.getByRole("group", { name: "Which does Your calendar serve?" });
+    expect(within(inbox).getAllByRole("checkbox").map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
+    // Nothing ticked is allowed; what a source already serves is shown ticked.
+    expect(within(inbox).getAllByRole("checkbox").every((b) => !(b as HTMLInputElement).checked)).toBe(true);
+    expect(within(calendar).getByRole("checkbox", { name: SHOP })).toBeChecked();
+    // The same mailbox may serve several: Personal and the job.
+    await user.click(within(inbox).getByRole("checkbox", { name: "Personal" }));
+    await waitFor(() => expect(saves).toHaveLength(1));
+    expect(saves[0]).toEqual({
+      changes: { "watch.sources": [{ ...first[0], sides: [PERSONAL] }, first[1]] },
+      reset: [],
+      fingerprint: "fp-1",
+    });
+    await user.click(within(inbox).getByRole("checkbox", { name: EMPLOYER }));
+    await waitFor(() => expect(saves).toHaveLength(2));
+    expect((saves[1] as { changes: { "watch.sources": Array<{ sides: string[] }> } }).changes["watch.sources"][0].sides).toEqual([PERSONAL, "PRJ-2"]);
+    expect(mail.filter((c) => c.route === "POST settings")).toHaveLength(2);
+  });
+
+  test("with no side of work, the mailboxes are not asked which they serve", async () => {
+    service("on", { signed: true });
+    open();
+    await screen.findByText("Now reading");
+    expect(screen.queryByRole("group", { name: /serve\?$/ })).toBeNull();
   });
 
   test("where the app can't restart itself the step says to close and start it, and offers no restart button", async () => {

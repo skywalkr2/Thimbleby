@@ -58,9 +58,10 @@ test.describe.serial("journeys", () => {
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
     await visit(page);
 
-    // Work: Just me or Me and my work, nothing else; work brings the notice about work mail, and Just me carries on.
+    // Work: Just me, or under Also track a job and an own business; the job brings the notice about work mail, and Just
+    // me carries on.
     await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
-    await main.getByRole("radio", { name: "Me and my work" }).check();
+    await main.getByRole("checkbox", { name: "My job" }).check();
     await expect(main.getByRole("note")).toContainText("may need your employer's permission");
     await main.getByRole("radio", { name: "Just me" }).check();
     await main.getByRole("button", { name: "Continue" }).click();

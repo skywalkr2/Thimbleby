@@ -326,6 +326,17 @@ def keep_work_choice(ws: Any, choice: str) -> None:
         state["work"] = choice
 
 
+def clear_work_choice(ws: Any) -> None:
+    """Forget the answer to the work question, so it reads as unanswered again (the last side was taken back out)."""
+    with _changing(ws) as state:
+        state.pop("work", None)
+
+
+def walkthrough_ended(ws: Any) -> bool:
+    """Whether the person pressed the walkthrough's last button."""
+    return bool(_walkthrough_state(_state(ws)).get("finished"))
+
+
 def finished(found: list[Step]) -> bool:
     """Every step that counts toward finishing is done or skipped. The optional extras never count."""
     return all(s.done or s.skipped for s in found if s.counted)

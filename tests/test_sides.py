@@ -625,7 +625,7 @@ def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_
         "business": True,
         "name": BUSINESS_NAME,
         "personal": personal_id,
-        "sides": [{"project": business, "kind": "business", "name": BUSINESS_NAME}],
+        "sides": [{"project": business, "kind": "business", "name": BUSINESS_NAME, "removable": False}],
         "chosen": "work",
     }
     lines = {line["key"]: line for line in client.get("/api/today/queue").json()}

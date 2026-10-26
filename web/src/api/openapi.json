@@ -24237,6 +24237,33 @@
         "title": "SetupView",
         "type": "object"
       },
+      "SideRestoreIn": {
+        "additionalProperties": false,
+        "description": "What Undo of a removed side needs: what it was and where it stood among the sides.",
+        "properties": {
+          "kind": {
+            "description": "What the side was: a job or a business.",
+            "enum": [
+              "job",
+              "business"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "position": {
+            "description": "Its place in the sides' list, from 0; the end when there are fewer.",
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "position"
+        ],
+        "title": "SideRestoreIn",
+        "type": "object"
+      },
       "SideView": {
         "description": "One side of the person's work beside their own life: the id of its top project, what it is and its name.",
         "properties": {
@@ -24255,6 +24282,12 @@
           "project": {
             "title": "Project",
             "type": "string"
+          },
+          "removable": {
+            "default": false,
+            "description": "Setup is not finished and nothing is filed under the side or its projects, so setup can take it back out.",
+            "title": "Removable",
+            "type": "boolean"
           }
         },
         "required": [
@@ -39427,6 +39460,96 @@
           }
         },
         "summary": "Folders"
+      }
+    },
+    "/api/setup/sides/{project}/remove": {
+      "post": {
+        "description": "Take a side back out while setup is still open: its project and the projects inside it go, and so does its\nplace in the sides' list. Refused once setup is finished or when anything is filed under it.",
+        "operationId": "side_remove_api_setup_sides__project__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Side Remove"
+      }
+    },
+    "/api/setup/sides/{project}/restore": {
+      "post": {
+        "description": "Undo of taking a side back out: its project and the projects that were inside it come back, and it is\nlisted again with its kind at its old place.",
+        "operationId": "side_restore_api_setup_sides__project__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SideRestoreIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Side Restore"
       }
     },
     "/api/setup/walkthrough": {

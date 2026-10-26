@@ -5257,6 +5257,19 @@ class SideView(BaseModel):
     project: str
     kind: Literal["job", "business"]
     name: str
+    removable: bool = Field(
+        False,
+        description="Setup is not finished and nothing is filed under the side or its projects, so setup can take it "
+        "back out.",
+    )
+
+
+class SideRestoreIn(BaseModel):
+    """What Undo of a removed side needs: what it was and where it stood among the sides."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["job", "business"] = Field(description="What the side was: a job or a business.")
+    position: int = Field(ge=0, description="Its place in the sides' list, from 0; the end when there are fewer.")
 
 
 class BusinessState(BaseModel):

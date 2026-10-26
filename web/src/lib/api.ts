@@ -81,8 +81,15 @@ export const api = {
   settleAct: (a: string, answer: S["ActSettleIn"]["answer"]) => call<S["ActResultView"]>("POST", `acts/${id(a)}/settle`, { answer }),
   /** Whether the person has a business and what it is called, for the Personal / business filter. */
   business: () => call<S["BusinessState"]>("GET", "setup/business"),
-  /** Answer the work question: Just me, or Me and my work (which names the work side, or renames it). */
+  /** Answer the work question: Just me, or Me and my work (which adds a side). */
   chooseWork: (body: S["WorkIn"]) => call<S["BusinessState"]>("POST", "setup/work", body),
+  /** Adds a side beside Personal (a job or a business); a name a side already has is that side. */
+  addSide: (body: S["BusinessIn"]) => call<S["BusinessView"]>("POST", "setup/business", body),
+  /** Takes a side back out while setup is open and nothing is filed under it. */
+  removeSide: (project: string) => call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/remove`),
+  /** Undo of removeSide: the side comes back with its projects, as `kind` at `position` among the sides. */
+  restoreSide: (project: string, body: S["SideRestoreIn"]) =>
+    call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/restore`, body),
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
   /** The go for a newly added source's intake: every item held for it starts. */
