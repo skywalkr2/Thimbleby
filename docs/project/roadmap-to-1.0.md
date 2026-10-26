@@ -1713,7 +1713,9 @@ mechanics.
 
 - Hosted mode and sign-in (Part 11), and its end state: an organization install where members from the People list have
   roles, their own views and approvals by role (design 11.8; owner, 2026-10-13).
-- Social, email and newsletter channels.
+- Social, email and newsletter channels. For social posting, the owner's research on opening each platform's own
+  composer with the approved text instead of using its API (free, no app review) is in
+  `docs/project/research/social-sharing-without-apis.md`.
 - An editor in the app for long text, what-you-see-is-what-you-get (owner, 2026-10-26: "in the future we might do a
   WYSIWYG editor in the app, but thats not 1.0"). In 1.0 long text is written in the person's own tools through
   working-copy formats (design 3.3, 5.0; Word first) and reviewed in the core's compare view. When it comes it is a core
