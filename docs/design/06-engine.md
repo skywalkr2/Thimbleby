@@ -1691,7 +1691,7 @@ to the assistant like a failed run (retried up to `dispatch.retries`, then the p
 earlier step of the same change removed is skipped, not an error. Each background loop (requests, jobs and sources,
 backups, the synced folder) guards every pass, so a failure is noted as an automation problem and the next pass runs, and
 writes a heartbeat. The watchdog starts a loop again, inside the running app, when its thread has stopped, and the
-assistant's card says it did. A loop whose heartbeat is older than the limit is stuck: it is not started twice, since two
+assistant's card says it did. A loop whose heartbeat is older than the limit (`steward.background_stuck_after_minutes`, 10 by default) is stuck: it is not started twice, since two
 copies would race; the card and a Today line say since when and offer Restart now, which the person chooses (6.14: the
 app never restarts on its own). A large change is rehearsed first by the applier's dry run, in a transaction that is
 rolled back.

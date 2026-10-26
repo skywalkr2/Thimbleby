@@ -1033,7 +1033,7 @@ yet follow, that it is *designed*, with its phase.
   as rejected with why and sent back to the assistant; a repeated removal in one change is skipped; every background loop
   pass is guarded and writes a heartbeat; a watchdog starts a stopped loop again inside the app and shows it on the
   assistant's card; a stuck loop is shown on the card and Today with Restart now. Built:
-  `tests/test_change_failures.py` and the worker's loop tests.
+  `tests/test_change_failures.py`, `tests/test_background_loops.py`, `web/src/shell/AssistantLine.test.tsx`.
 
 ## 197. A channel gets a context (2026-10-22; plugin API 0.3.89, built)
 
