@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Ending a project drops what is open on it, in the same undoable change (P52, lesson 2)
+
+**Decided:** When a project's status changes to a status whose meaning is done (completed, archived, closed for good:
+the status list's meaning decides, never the wording), the applier adds, in the same changeset and one op group, a
+`action.drop` (reason "The project ended") for each of its open actions and a `question.drop` for each open or sent
+question filed about it. Dropped, not done: nobody is credited and no history row says completed; the existing
+called-off note is drafted, for the person to send, to whoever was already told. One Undo takes back the ending and
+every drop. A status that only pauses (meaning blocked, such as On hold) changes the status and leaves every item open.
+The person's own action or note applies at once, listing what was dropped, with Undo. An ending read from an input or
+the assistant is held as one proposal (the ending and every drop); the person keeps an item by declining that item's
+drop. When the assistant can't tell whether something should outlive the project, it doesn't guess: every item is in the
+proposal. Not done: risks (the core has no risk record; they belong to a pack and need an op of the plugin API, on
+hold), and an action waiting for an owner (`action.drop` refuses it). **Decided by:** the owner's lesson 2
+(`docs/project/lessons-2026-10-23.md`); the keep-by-declining-a-drop mechanism is the main session's, under the plugin API
+hold, in place of a `keep` list. **Why:** a manager said a project was complete; it moved to Completed and left 26
+actions, 3 risks and a dozen questions open, still chasing people. **Impact:** Change log: section 211.
+
 ## 2026-10-26: The Personal project has no target day; automated notices never become facts; facts show short labels (P43 a, b, d, e)
 
 **Decided:** (1) The Personal project and an area are ongoing: a target day is refused for them by the applier and the

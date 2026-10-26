@@ -439,6 +439,17 @@ person makes on screen, or approves in a plugin's action, is not a claim and car
 quote; the quote is still checked word for word. Evidence is kept in the ledger and shown on the row ("closed because the
 email said: ...").
 
+**Ending a project (P52).** Setting a project's status to a value whose list meaning is *done* (completed, archived,
+closed for good; the meaning decides, never the wording) ends it. The applier adds to the same changeset, in the ending's
+op group, an `action.drop` (reason "The project ended") for each of its open actions and a `question.drop` for each open or
+sent question filed about it, so one Undo takes back the ending and every drop. They are dropped, not done: nobody is
+credited and no history row says completed; the called-off note an `action.drop` already drafts goes to whoever was
+told, for the person to send. A status that only pauses (meaning blocked) leaves every item open. From the person's own
+action or note the change applies at once with Undo and lists what was dropped; read from an input or the assistant's own
+initiative, the ending and every drop are held as one proposal (check `project-ending`), the person keeps an item by
+declining its drop, and the assistant never guesses what should outlive the project: every item is listed. Not built:
+risks (a pack's records, needing a plugin API op) and an action waiting for an owner, which `action.drop` refuses.
+
 **Text stays text.** Every field of an op that holds text is a string, and a mapping or a list that arrives where text
 belongs is refused in plain words, never turned into a string: "action.text has to be text, but it arrived as a mapping of
 names to values. A ': ' inside text makes it read as a mapping, so put text with ': ' in quotes." The usual cause is a

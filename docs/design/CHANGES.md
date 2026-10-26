@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 211. Ending a project drops what is open on it, in the same undoable change (2026-10-26; P52)
+
+(The top section was 209; 211 is the number the brief gave.)
+
+- **Design 6.7 (project endings):** `engine/endings.py` `wind_down` adds, for a `record.set` of a project's status to a
+  value whose list meaning is done, one `action.drop` per open action and one `question.drop` per open or sent question
+  filed about the project, reason "The project ended", all in the ending's op group (one Undo). A paused status (meaning
+  blocked) adds nothing. From the person it applies at once; from an input every one of those ops is held (check
+  `project-ending`) and the person keeps an item by declining its drop. Dropping an action drafts the existing called-off
+  note to whoever was told. Not covered: risks (no core record), actions waiting for an owner. **Built:**
+  `tests/test_project_ending.py`
+
 ## 209. The Personal project reads as the person's own: no target day, no work-style questions, notices never become facts, short fact labels (2026-10-26; P43 a, b, d, e)
 
 - **Design 6.32:** the Personal project and an area are ongoing, so neither takes a target day: `record.set` and

@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
-from engine.ops import ActionCloseOp, ActionDropOp
+from engine.ops import ActionCloseOp, ActionDropOp, QuestionDropOp, RecordSetOp
 from engine.storage import StoreError
 
 Reading = Literal["done", "called_off", "choice"]
@@ -225,3 +225,59 @@ def answer(store: Any, cfg: Any, changeset_id: str, index: int, ending: Answer, 
         now=now,
         changeset=changeset_id,
     )
+
+
+#: Why the items of an ended project are dropped.
+PROJECT_ENDED = "The project ended"
+#: The check that holds a project's ending when it was read from what came in.
+PROJECT_ENDING_CHECK = "project-ending"
+PROJECT_ENDING_WAITS = "Something that came in says this project ended."
+
+
+def ends_project(view: Any, op: Any) -> bool:
+    """Whether an op moves a project to a status whose meaning is done (completed, archived, closed for good), and
+    the project isn't already at one. A status that only pauses the project has another meaning and ends nothing."""
+    from engine.lists import describe
+
+    if not (isinstance(op, RecordSetOp) and op.kind == "project" and op.field == "status"):
+        return False
+    current = view.get("project", op.id)
+    if current is None or describe(view, "project-status", op.value).meaning != "done":
+        return False
+    return describe(view, "project-status", current.data.get("status")).meaning != "done"
+
+
+def wind_down(cs: Any, ctx: Any) -> Any:
+    """Add to a changeset, for each project it ends, a drop of every open action and every open or sent question
+    filed about the project, all in one op group with the ending so one Undo takes them all back. An action waiting
+    for an owner can't be dropped, so it stays. The drops go at the end, so the positions of the ops already there
+    don't move. Dropped, not done: nobody is credited. A drop the changeset names already isn't added twice. Whatever
+    the person keeps, they keep by refusing that item's drop in the held proposal."""
+    view = ctx.store.read()
+    ops = list(cs.ops)
+    named = {(o.op, o.id) for o in ops if isinstance(o, (ActionDropOp, QuestionDropOp))}
+    extra: list[Any] = []
+    for i, op in enumerate(ops):
+        if not ends_project(view, op):
+            continue
+        group = op.group or f"ending-{op.id}"
+        ops[i] = op.model_copy(update={"group": group})
+        quote = _quote(op)
+        evidence = op.evidence if quote else None
+        for action in view.list("action"):
+            if (
+                action.data.get("project") == op.id
+                and action.data.get("status") == "open"
+                and ("action.drop", action.id) not in named
+            ):
+                extra.append(ActionDropOp(id=action.id, reason=PROJECT_ENDED, evidence=evidence, group=group))
+        for question in view.list("question"):
+            if (
+                op.id in (question.data.get("projects") or [])
+                and question.data.get("status") in ("open", "sent")
+                and ("question.drop", question.id) not in named
+            ):
+                extra.append(QuestionDropOp(id=question.id, reason=PROJECT_ENDED, evidence=evidence, group=group))
+    if not extra and ops == list(cs.ops):
+        return cs
+    return cs.model_copy(update={"ops": [*ops, *extra]})

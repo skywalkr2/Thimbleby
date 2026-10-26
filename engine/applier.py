@@ -232,7 +232,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
 
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    cs = endings.read_endings(restatements(cs, ctx), ctx)
+    cs = endings.wind_down(endings.read_endings(restatements(cs, ctx), ctx), ctx)
     problems: list[Problem] = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
@@ -522,6 +522,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if endings.asks(op, ctx):
             # Closed with no delivery words or call-off words (or both) is one choice, even in the person's own note.
             problems.append(Problem(endings.CHOICE_CHECK, "hold", i, endings.CHOICE_WAITS))
+        if (
+            endings.ends_project(view, op)
+            or (isinstance(op, (ActionDropOp, QuestionDropOp)) and op.reason == endings.PROJECT_ENDED)
+        ) and not _persons_own(view, ctx):
+            # A project ending read from what came in waits, with every drop it brings, as one proposal.
+            problems.append(Problem(endings.PROJECT_ENDING_CHECK, "hold", i, endings.PROJECT_ENDING_WAITS))
         if isinstance(op, ENDING_OPS) and not _persons_own(view, ctx):
             # How a promise ends is the person's to keep when it was read from what came in (design 6.33).
             problems.append(Problem("ending-confirm", "hold", i, ENDING_WAITS))
@@ -1841,7 +1847,7 @@ def apply_changeset(
     one refused op rolls everything back, and the changeset is recorded as rejected with every op refused."""
     now = now or datetime.now(UTC)
     ctx.run = run
-    cs = endings.read_endings(restatements(cs, ctx), ctx)
+    cs = endings.wind_down(endings.read_endings(restatements(cs, ctx), ctx), ctx)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
     today = now.date()
