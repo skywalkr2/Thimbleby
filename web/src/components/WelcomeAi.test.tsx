@@ -1078,3 +1078,27 @@ test("an account whose sign-in the app can read is asked about by that sign-in",
   await pickElse(user, "App A");
   expect(await screen.findByRole("group", { name: "Allow App A account, signed in as pat@example.com, to read your work mail and notes?" })).toBeInTheDocument();
 });
+
+test("a model the service retired is named, offered its replacement with one button, and leaves the list", async () => {
+  const user = userEvent.setup();
+  let asked = 0;
+  const calls = api({
+    "POST ai/account-check": (b) => {
+      asked += 1;
+      const first = (b as S["AiAccountCheck"]).models.everyday;
+      return first === "model-a"
+        ? { ok: false, reason: "model_retired", message: "model-a is no longer offered by this service", model: "model-a", next_model: "model-b" }
+        : WORKS;
+    },
+  });
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.paste("a-key");
+  expect(await screen.findByRole("alert")).toHaveTextContent("model-a is no longer offered by this service");
+  await user.click(screen.getByRole("button", { name: "Use model-b instead" }));
+  expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
+  expect(asked).toBe(2);
+  expect((checks(calls)[1].body as S["AiAccountCheck"]).models.everyday).toBe("model-b");
+  expect(screen.queryByRole("option", { name: /model-a/ })).toBeNull();
+});
