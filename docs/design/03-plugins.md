@@ -53,8 +53,8 @@ entry: personal_projects:register # called with a registrar from engine.plugin_a
 ```
 
 `provides` also takes `stages`, `stage_checks`, `op_validators`, `file_kinds`, `actions`, `lints`, `text_formats`,
-`working_copies`, `derived_files`, `setup_steps`, `data_forms`, `connectors`, `triage_matchers`, `value_lists`, `sign_ins`,
-`help` and `wording` (3.3). A plugin whose own settings define identifiers (the kit's item types) lists `<plugin>/*` for them.
+`working_copies`, `derived_files`, `setup_steps`, `tiers`, `data_forms`, `connectors`, `triage_matchers`, `value_lists`,
+`sign_ins`, `help` and `wording` (3.3). A plugin whose own settings define identifiers (the kit's item types) lists `<plugin>/*` for them.
 `provides.playbook` is not yet available (3.8).
 
 Identifiers that aren't core are namespaced `<plugin>/<name>`, so two plugins never collide and every op, record or panel shows
@@ -84,7 +84,8 @@ Each row gives the call a plugin makes (or the manifest key), what it adds, and 
 | Sign-in | a sign-in to a service, as the person | `registrar.sign_in(name, authorize_url=, token_url=, scopes=, sources=, ...)`: the core runs the flow and keeps the tokens; a connector asks for a current token. See 3.12 | 0.3.33; `sources` 0.3.54 |
 | Triage matcher | a rule kind for the `triage:` list in `config/watch.yaml` | `registrar.triage_matcher(name, match=)`: `match(change, params)` returns a reason in plain words or None | 0.3.26 |
 | Value list | the values a field may take, shown as a dropdown | `registrar.value_list(name, label=, values=)`; the person owns the list after the first values | 0.3.42 |
-| Setup step | a step added to the first-run setup | `registrar.setup_step(name, label=, done=, action=, settings=)`; may suggest core settings the person applies | 0.3.24 |
+| Setup step | a step added to the first-run setup | `registrar.setup_step(name, label=, done=, action=, settings=, adds=)`; may suggest core settings the person applies, and values to add to a list setting (`adds={"storage.files.accepted_types": [...]}`): the step says "adds: ..." with only the values the person's list lacks, and the person's yes applies them as a union with their own list, as their own settings change with Undo. Enabling a pack that declares file kinds also offers, as a step the core adds, to add the media types those kinds take (7.8) | 0.3.24; `adds` 0.3.90 |
+| Tier | a tier of the plugin's own for work that needs a kind of model the core's tiers don't name | `registrar.tier(name, label=, falls_back_to=, description=)` (`provides.tiers`, id `<plugin>/<name>`); its task kinds name it with `tier=`. The person maps it to an account and model under the plugin in Settings and in the setup guide (4.8); until then its work runs on the named core tier with one line on Today. The core's own work never uses it | 0.3.90 |
 | Panel | a list screen, under Work or Records in the sidebar (never a top-level entry: the navigation budget, 7.1) | `registrar.panel(name, title=, kind=, columns=, view=, ...)`: a declarative spec (7.2), with computed columns and a per-project `show_for` | 0.3.18; computed columns and `show_for` 0.3.48 |
 | Document panel | a read-only page composed from many records | `registrar.document(name, title=, render=)`: `render` returns Markdown, drawn as the screens' own elements, never HTML | 0.3.51 |
 | Today contributor | lines on the Today list | `registrar.today(name, lines=)`: each line has one action, the plugin's own or one of the core's | 0.3.18 |
@@ -381,10 +382,18 @@ freeze"). A pack's catalog entry says where its release is and how to check it. 
 - downloads the release, checks it against the entry's checksum, installs it beside the app and offers Turn on, with the
   usual restart the person chooses (2.6). An installed pack stays off until the person turns it on, and installing one leaves
   every other add-on as it was;
-- needs a release that names every package the pack needs, each with a checksum, so a pack's own libraries come with it;
-- shows what will be added before it installs, and refuses what conflicts with the app's own libraries;
-- is matched by Update and Remove. Remove works on a pack that is turned off, takes out only what that pack needed, and leaves
-  the pack's records and settings in place;
+- needs a release that names every package the pack needs, each with a checksum, so a pack's own libraries come with it. The
+  entry's `release` keeps the pack's own wheel (pure Python) in `url` and `sha256`, and lists every other wheel in `libraries`
+  (its dependencies' and theirs): one entry for each build, with the package's `name` and `version`, the wheel's `platform` tag
+  (`any`, or a tag such as `win_amd64`), its `url` and its `sha256`. Install takes the build that fits the computer, checks every
+  wheel against its checksum, installs exactly those and never reads a package index. Readers ignore fields they don't know, so
+  an older app still lists the entry (and installs only what it knows how to);
+- shows what will be added before it installs (the libraries, by name and version, on the pack's row), and refuses what conflicts
+  with the app's own libraries, a package installed another way, a library that isn't a built wheel (source is refused), one with
+  no build for the computer, and a need that neither the app nor the list meets. `cockpit pack check` verifies the list the
+  same way;
+- is matched by Update and Remove. Remove works on a pack that is turned off, takes out only what that pack needed (a library only
+  once no other installed pack uses it), and leaves the pack's records and settings in place;
 - takes a read token for a private pack's release host, given once and kept as a secret reference: when the install is refused
   for want of one, the row offers "Add a read token" in place, a password box that says the token needs only read access to
   where the add-on's files are kept and goes only to that host. A local app keeps it in the private keys folder and writes

@@ -601,7 +601,7 @@ class Router:
         USD on the account it would use first, priced as the request's go will be; None when the price isn't known
         or no account takes the work."""
         try:
-            options = list(choices(self.cfg, kind, data_level, unchecked=self._unchecked()))
+            options = list(choices(self.cfg, kind, data_level, tier=self._pack_tier(kind), unchecked=self._unchecked()))
         except NoProvider:
             return None
         if not options:
@@ -612,6 +612,16 @@ class Router:
         output = self.typical_output(kind) if output_tokens is None else output_tokens
         read = scaled(input_tokens, self.calibration(options[0]))
         return (read * info.input_per_million + max(0, output) * info.output_per_million) / 1e6
+
+    def _pack_tier(self, kind: str) -> str | None:
+        """For a kind of work that names a plugin's own tier: the tier its work runs on now (the tier itself once the
+        person mapped it, else the core tier it falls back to); None for any other work."""
+        from engine import pack_tiers
+        from engine.tasks import settings
+
+        registered = self.store.plugins.tasks.get(kind)
+        named = settings(self.cfg, registered, kind).tier if registered is not None else ""
+        return pack_tiers.effective(self.cfg, self.store.plugins, named) if "/" in named else None
 
     def calibration(self, choice: Choice) -> Calibration:
         """How this account's model counts compared with the app's own count, and the fixed tokens its adapter adds to

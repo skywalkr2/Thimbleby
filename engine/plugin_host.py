@@ -1076,6 +1076,32 @@ class PluginHost:
         self.succeeded(plugin, where)
         return poll
 
+    def declared_media_types(self) -> dict[str, list[str]]:
+        """For each running plugin whose file kinds name media types, those types, once each, in the order declared."""
+        found = {}
+        for plugin, registrar in sorted(self.registrars.items()):
+            if self.active(plugin):
+                types = list(dict.fromkeys(t for kind in registrar.file_kinds.values() for t in kind.accept))
+                if types:
+                    found[plugin] = types
+        return found
+
+    def pack_tiers(self) -> dict[str, Any]:
+        """The tiers (`TierRegistration`) of every running plugin, by id."""
+        found = {}
+        for plugin, registrar in sorted(self.registrars.items()):
+            if self.active(plugin):
+                found.update(registrar.pack_tiers)
+        return found
+
+    def tier_task_kinds(self, tier: str) -> list[str]:
+        """The names of the running plugin's task kinds that name this tier of its own."""
+        plugin = tier.split("/", 1)[0]
+        registrar = self.registrars.get(plugin)
+        if registrar is None or not self.active(plugin):
+            return []
+        return sorted(name for name, kind in registrar.tasks.items() if kind.defaults.get("tier") == tier)
+
     def setup_steps(self) -> list[tuple[str, Any]]:
         """(plugin, step) for every running plugin's setup steps."""
         found = []
@@ -1120,7 +1146,7 @@ class PluginHost:
             current = load_config(root / "config", env=dict(os.environ))
         except ConfigError:
             current = self.cfg
-        settings = {key: current.value(key) for key in step.settings}
+        settings = {key: current.value(key) for key in (*step.settings, *step.adds)}
         tools = {tool.name for tool in self.manifests[plugin].requires.tools}
         box = self.tool_box(plugin) if tools else None
         return SetupState(
@@ -1590,6 +1616,7 @@ class PluginHost:
             ("today", registrar.today_lines),
             ("jobs", registrar.jobs),
             ("setup_steps", registrar.setup_steps),
+            ("tiers", registrar.pack_tiers),
             ("connectors", registrar.connectors),
             ("channels", registrar.channels),
             ("triage_matchers", registrar.triage_matchers),
@@ -1710,7 +1737,17 @@ class PluginHost:
                 raise ValueError(f"lint {lint.name} may check only core or own ops")
             if set(lint.ops) & ACT_PUBLISHER_OPS:
                 raise ValueError(f"lint {lint.name} may not check what the publisher records")
+        for step in registrar.setup_steps.values():
+            for key in step.adds:
+                if not isinstance(self.cfg.value(key), list):
+                    raise ValueError(f"setup step {step.name} adds to {key}, which isn't a list setting")
+        for tier in registrar.pack_tiers.values():
+            if "/" in tier.falls_back_to:
+                raise ValueError(f"tier {tier.name} falls back to a core tier, never to a plugin's")
         for task in registrar.tasks.values():
+            named = task.defaults.get("tier")
+            if named is not None and "/" in named and named not in registrar.pack_tiers:
+                raise ValueError(f"task {task.name} names the tier {named}, which the plugin doesn't declare")
             if not set(task.ops) <= allowed_ops:
                 raise ValueError("task may use only core or own ops")
             if set(task.ops) & (ACT_OPS - {"act.draft"}):

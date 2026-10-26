@@ -173,6 +173,8 @@ class Line:
     has had no news for `steward.people.quiet_promise_days`: its id in `actions`, its words in `text`, `person` to
     follow up with, `state` to when the person promised it to them or from when they promised it to the person, `due`
     its day when it has one and `waiting_days` the days with no news).
+    pack_tier (a tier an add-on declared for its own work, `tier` its id and `subject` its label, that the person hasn't
+    mapped to an account: its work runs on the core tier named in `text` until they do, `count` kinds of work),
     backup (no backup that works: `state` is unset for none set up, never for none yet, failed for a try that failed and
     none before it, overdue for a last one older than `storage.backups.every_hours` twice over, whose age in hours is
     `age_hours`).
@@ -823,7 +825,7 @@ def _everything(
     unserved = [
         name
         for name, tier in cfg.ai.tiers.items()
-        if not tier.use or tier.use.partition("/")[0] not in cfg.ai.providers
+        if "/" not in name and (not tier.use or tier.use.partition("/")[0] not in cfg.ai.providers)
     ]
     if unserved and cfg.ai.providers:
         lines.append(
@@ -834,6 +836,23 @@ def _everything(
                 count=len(unserved),
                 tier=unserved[0],
                 names=unserved,
+            )
+        )
+
+    # Decide: a tier an add-on declared for its own work that the person hasn't mapped to an account. Its work runs on
+    # the core tier it falls back to meanwhile; the line says so and offers the mapping. Nothing is mapped for them.
+    from engine import pack_tiers
+
+    for tier in pack_tiers.unmapped_in_use(cfg, store.plugins):
+        lines.append(
+            Line(
+                key=f"pack_tier:{tier.id}",
+                group="decide",
+                kind="pack_tier",
+                count=len(tier.used_by),
+                tier=tier.id,
+                subject=tier.label,
+                text=tier.falls_back_to,
             )
         )
 
@@ -1634,6 +1653,7 @@ _KIND_ORDER = {
     "work_access": 1,
     "credential": 1,
     "no_account": 0,
+    "pack_tier": 1,
     "backup": 1,
     "extractor": 1,
     "review": 0,

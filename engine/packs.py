@@ -16,7 +16,7 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from engine.config import Config
 from engine.connectors import READS_WORDS, reads
@@ -51,14 +51,56 @@ class AiJob(BaseModel):
     data_level: Literal["open", "internal", "restricted"] = "internal"
 
 
+class Library(BaseModel):
+    """One wheel of a library a pack needs besides its own: the package's name and version, the platform tag of this
+    build (`any` for pure Python, else a wheel platform tag such as `win_amd64` or `macosx_11_0_arm64`), the https
+    address of the wheel and its SHA-256, which the download must match. A library with builds for several platforms
+    has one entry for each; install takes the one that fits the computer."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$", max_length=100)
+    version: str = Field(min_length=1, max_length=50)
+    platform: str = Field("any", pattern=r"^[A-Za-z0-9_.]+$", max_length=80)
+    url: str = Field(max_length=1000)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("url")
+    @classmethod
+    def _wheel(cls, value: str) -> str:
+        from packaging.utils import InvalidWheelFilename, parse_wheel_filename
+
+        if not (value.startswith("https://") and urlsplit(value).hostname):
+            raise ValueError("a library is an https address")
+        try:
+            parse_wheel_filename(urlsplit(value).path.rsplit("/", 1)[-1])
+        except InvalidWheelFilename:
+            raise ValueError("a library is a built wheel (.whl), never source") from None
+        return value
+
+    @model_validator(mode="after")
+    def _agrees_with_its_file(self) -> Library:
+        from packaging.utils import canonicalize_name, parse_wheel_filename
+
+        name, version, _, tags = parse_wheel_filename(urlsplit(self.url).path.rsplit("/", 1)[-1])
+        if canonicalize_name(name) != canonicalize_name(self.name) or str(version) != self.version:
+            raise ValueError(f"library {self.name} {self.version} doesn't match the wheel it names")
+        if self.platform not in {t.platform for t in tags}:
+            raise ValueError(f"library {self.name} says platform {self.platform}, which its wheel isn't built for")
+        return self
+
+
 class Release(BaseModel):
-    """Where a pack's release file is, so the app can install it: an https address of a wheel of pure Python, and its
-    SHA-256 checksum, which the download must match."""
+    """Where a pack's release file is, so the app can install it: an https address of its own wheel of pure Python,
+    and its SHA-256 checksum, which the download must match. `libraries` lists every other wheel the pack needs (its
+    dependencies and theirs), each with its SHA-256, a platform tag and its address; install installs exactly those and
+    never fetches from a package index."""
 
     model_config = ConfigDict(extra="ignore")
 
     url: str = Field(max_length=1000)
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    libraries: list[Library] = Field(default_factory=list, max_length=100)
 
     @field_validator("url")
     @classmethod
@@ -66,6 +108,22 @@ class Release(BaseModel):
         if not (value.startswith("https://") and urlsplit(value).hostname):
             raise ValueError("a release is an https address")
         return value
+
+    @model_validator(mode="after")
+    def _one_build_each(self) -> Release:
+        from packaging.utils import canonicalize_name
+
+        seen: set[tuple[str, str]] = set()
+        for library in self.libraries:
+            key = (str(canonicalize_name(library.name)), library.platform)
+            if key in seen:
+                raise ValueError(f"library {library.name} is listed twice for platform {library.platform}")
+            seen.add(key)
+        for name in {k[0] for k in seen}:
+            versions = {lib.version for lib in self.libraries if canonicalize_name(lib.name) == name}
+            if len(versions) > 1:
+                raise ValueError(f"library {name} is listed at more than one version")
+        return self
 
 
 class Entry(BaseModel):

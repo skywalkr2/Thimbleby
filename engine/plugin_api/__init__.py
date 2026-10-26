@@ -52,7 +52,9 @@ class Settings(BaseModel):
     """Base for a plugin's settings, read from `config/plugins/<plugin>.yaml`. Every field needs a default and a
     description; unknown keys are refused. Handlers and actions get a copy as `context.config`. A field may be a nested
     model (shown as its own section on the Settings screen; keep it to one level) and may use an alias when its name
-    in the file can't be a Python name."""
+    in the file can't be a Python name. The screens build the model with no values to learn its defaults, so a rule
+    over the whole model ("required unless another is set") doesn't belong in a model validator, which would refuse
+    that empty model: check it where the plugin reads the setting, or in a lint."""
 
     model_config = ConfigDict(extra="forbid", validate_default=True)
     version: Literal[1] = Field(1, description="Settings format version.")
@@ -321,7 +323,12 @@ class ReadView:
     def stage_status(self, record: Stored) -> StageStatus | None:
         """Where a record of a core kind or this plugin's own stands in the workspace's effective stages, with the
         next stage's entry checks run now; None for a kind with no stages. Not available inside a stage check, which
-        is itself part of this answer (it raises PluginMisuse there)."""
+        is itself part of this answer (it raises PluginMisuse there). The answer's fields: `current` (the stage id, or
+        None before the first), `stages` (the ids that apply, in order), `next` (the next one that applies, None at the
+        end), `checks` (that stage's entry checks by id, each with `passed` and `reason`), `ready` (all of them pass),
+        and `current_label` and `next_label`: the stages' labels from `stages.yaml`, where every stage must have one,
+        so a label is None only when there is no such stage (no current stage yet, at the last one, or a stage since
+        taken out of `stages.yaml`)."""
         self._allow(record.kind)
         if self.stage_status_of is None:
             return None
@@ -717,7 +724,8 @@ class Item:
     """A change the person keeps or drops without the action running again: one judgment call, made of one or more
     ops (dicts) that apply together. `id` is stable across runs, so the person's tick carries over to an unchanged
     item when a choice reruns the action. An item's ops undo together; an op that sets its own `group` keeps it, so
-    several items can share one Undo."""
+    several items can share one Undo. `group` is the id of one of the proposal's `Group`s that the item sits under (an
+    id the proposal doesn't list refuses it); `kept` is the tick the review starts with."""
 
     id: str
     label: str
@@ -917,6 +925,17 @@ class SetupStepRegistration:
     done: Callable
     action: str | None
     settings: dict[str, Any] = field(default_factory=dict)
+    adds: dict[str, tuple[Any, ...]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class TierRegistration:
+    """A registered tier of the plugin's own (host side)."""
+
+    name: str
+    label: str
+    description: str
+    falls_back_to: str
 
 
 @dataclass(frozen=True)
@@ -1105,10 +1124,11 @@ class StageCheckResult:
 class SetupState(frozenset):
     """What a setup step's `done` can see beyond records, as its third argument. It is the set of the plugin's
     declared secrets that are set (names only, never values), so `"client-id" in state` works; it also carries
-    `settings`, the effective values of the core settings the step suggests, read from the files as they are now
-    (a hand edit counts); `accounts`, how many AI accounts can do each role's work ({"write": 1, "check": 0,
-    "research": 1}: the accounts of the tier the role names, else of every tier); and `tool_available(name)`,
-    whether a program the plugin declares is installed here."""
+    `settings`, the effective values of the core settings the step suggests or adds to (`settings=` and `adds=`), read
+    from the files as they are now (a hand edit counts; an `adds=` key gives the person's whole list); `accounts`, how
+    many AI accounts can do each role's work ({"write": 1, "check": 0, "research": 1}: the accounts of the tier the
+    role names, else of every tier); and `tool_available(name)`, whether a program the plugin declares is installed
+    here."""
 
     settings: dict[str, Any]
     accounts: dict[str, int]
@@ -1135,14 +1155,16 @@ class StageStatus:
     """Where a record stands in the workspace's own stages (`stages.yaml`, else the plugin's defaults): `current` is
     its stage id (None before the first), `stages` the ids of the stages that apply to it in order, `next` the next
     one that applies (None at the end), `checks` that stage's entry checks by id, and `ready` whether all of them
-    pass, so moving on is one step for the person."""
+    pass, so moving on is one step for the person. `current_label` and `next_label` are those stages' labels from
+    `stages.yaml`, where every stage must have one, so a label is None only when there is no such stage: the record
+    has no current stage yet, is at the last one, or its stage was taken out of `stages.yaml` since."""
 
     current: str | None
     stages: tuple[str, ...]
     next: str | None
     checks: dict[str, StageCheckResult]
     ready: bool
-    current_label: str | None = None  # the stages' names as the workspace calls them
+    current_label: str | None = None
     next_label: str | None = None
 
 
@@ -1176,6 +1198,7 @@ class Registrar:
         self.panels: dict[str, PanelRegistration] = {}
         self.jobs: dict[str, JobRegistration] = {}
         self.setup_steps: dict[str, SetupStepRegistration] = {}
+        self.pack_tiers: dict[str, TierRegistration] = {}
         self.connectors: dict[str, Any] = {}
         self.channels: dict[str, Any] = {}
         self.triage_matchers: dict[str, Callable] = {}
@@ -1365,6 +1388,8 @@ class Registrar:
 
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
         before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them.
+        `tier` is a core tier or one of the plugin's own (`registrar.tier`, "<plugin>/<name>"); naming one the plugin
+        didn't declare refuses the plugin at start.
 
         `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is
         recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings
@@ -1417,6 +1442,8 @@ class Registrar:
             if value is not None
         }
         TaskSettings.model_validate(defaults)
+        if tier is not None and "/" in tier and not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", tier):
+            raise ValueError("a task kind may name a core tier or one of the plugin's own, never another plugin's")
         prompt_file = self._own_file(prompt, "prompts")
         guidance_file = self._own_file(playbook, "guidance")
         self.tasks[name] = TaskKind(
@@ -1790,7 +1817,12 @@ class Registrar:
         model's validator refused it) and offers Undo. The list shows each file's first problem; opening the file
         shows the form with it. The plugin reads the files as before, with `view.data(path, project=...)`, and must
         read them with this same schema: a key left out of a file takes the schema's default, so a loader with other
-        defaults (or a field it requires that the form defaults) sees a different file than the form checked."""
+        defaults (or a field it requires that the form defaults) sees a different file than the form checked.
+
+        Every field needs a default because the form builds the model with no values to learn them, so a rule over the
+        whole model ("this is required unless that is set") can't be a model validator: it would refuse that empty
+        model and the form would show no defaults. Put such a rule in the plugin's loader, where the file is read, or
+        in a lint on the ops that use the file."""
         self._name(name)
         folder = str(folder).strip("/")
         if name in self.data_forms or not str(label).strip():
@@ -2195,6 +2227,7 @@ class Registrar:
         explanation: str = "",
         action: str | None = None,
         settings: dict[str, Any] | None = None,
+        adds: dict[str, Any] | None = None,
     ) -> None:
         """A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says
         what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called
@@ -2207,7 +2240,15 @@ class Registrar:
         `settings` suggests core settings the plugin needs ({"ai.budgets.confirm_unpriced": True}): the step shows them
         with an Apply button that saves them like any settings change (checked, with Undo); the plugin never changes
         them itself. A suggested mapping is merged: its keys are added and every key the person already has keeps its
-        own value, nested keys included. The person can skip it and come back to it later."""
+        own value, nested keys included. The person can skip it and come back to it later.
+
+        `adds` suggests values to add to a list setting ({"storage.files.accepted_types": ["application/x-example"]}):
+        the step shows "adds: ..." with the values the person's list lacks, and the person's yes applies them as a union
+        with their own list (their entries stay, in their order, and the new values follow), as their own settings
+        change, checked and with Undo; the plugin never changes the list itself. The key must be a list setting, and
+        the same keys are barred as for `settings`. A step whose `adds` values are all on the list already has nothing
+        to apply. `state.settings[key]` is the person's whole effective list. Suggest only what the plugin needs and
+        say why in `explanation`."""
         self._name(name)
         label = " ".join(str(label).split())
         if name in self.setup_steps or not callable(done) or not label or len(label) > 80:
@@ -2215,9 +2256,38 @@ class Registrar:
         suggested = dict(settings or {})
         if any(not isinstance(k, str) or "." not in k or "/" in k for k in suggested):
             raise ValueError("a setup step suggests core settings by their dotted keys")
+        added: dict[str, tuple[Any, ...]] = {}
+        for key, values in dict(adds or {}).items():
+            if not isinstance(key, str) or "." not in key or "/" in key or key in suggested:
+                raise ValueError("a setup step adds to core list settings by their dotted keys, apart from settings=")
+            if (
+                not isinstance(values, (list, tuple))
+                or not values
+                or any(isinstance(v, bool) or not isinstance(v, (str, int, float)) for v in values)
+            ):
+                raise ValueError("a setup step adds a non-empty list of text or numbers to a list setting")
+            added[key] = tuple(dict.fromkeys(values))
         self.setup_steps[name] = SetupStepRegistration(
-            name, label, " ".join(str(explanation).split()), done, action, suggested
+            name, label, " ".join(str(explanation).split()), done, action, suggested, added
         )
+
+    def tier(self, name: str, *, label: str, falls_back_to: str, description: str = "") -> None:
+        """Declare a tier of the plugin's own (listed in `provides.tiers`, id `<plugin>/<name>`), for work that needs a
+        kind of model the core's tiers don't name (long context, careful reading). `label` and `description` are what
+        the person sees when they map it to an account and model, under the plugin in Settings and in the setup guide;
+        `falls_back_to` is the core tier (`routine` or `deep`, or one the workspace added) the work runs on until the
+        person maps this one. Name it as `tier=` on the plugin's task kinds. Only the plugin's own task kinds use
+        it: the core's own work never does, and a role (`ai.roles`) can't name it. The core never picks an account for
+        it: until it is mapped the work runs on the fallback tier's account (one the person already set up) and one
+        line on Today says so and offers to map it. The person's mapping is the setting `ai.tiers.<id>` (an account
+        and model, with fallbacks, effort and thinking like any tier)."""
+        self._name(name)
+        label = " ".join(str(label).split())
+        if "." in name or name in self.pack_tiers or not label or len(label) > 80:
+            raise ValueError("duplicate tier, a name with a dot in it, or a label that isn't one short line")
+        if not isinstance(falls_back_to, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", falls_back_to):
+            raise ValueError("a tier falls back to a core tier by its name")
+        self.pack_tiers[name] = TierRegistration(name, label, " ".join(str(description).split()), falls_back_to)
 
     def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
         """A read-only file generated from records into each project's folder in the synced folder (an overview, a

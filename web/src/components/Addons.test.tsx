@@ -1094,3 +1094,22 @@ test("on Installed, entries of one file are one row too, each with its own switc
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/b/uninstall")).toBe(true));
   expect(await screen.findByText("b is removed. The file stays because it is still in use by a.")).toBeInTheDocument();
 });
+
+test("what an install adds besides the add-on is listed before it is installed, and a library with no build for this computer is said", async () => {
+  open(
+    view({
+      available: [
+        pack("tool", { installable: true, libraries: [{ name: "layout-lib", version: "3.1.0" }, { name: "render-lib", version: "2.0.1" }] }),
+        pack("stuck", { installable: false, library_problem: "Render-lib has no build for this computer, so this add-on can't be installed from here." }),
+      ],
+    }),
+  );
+  const tool = await row("Name of tool");
+  const added = within(tool).getByRole("list", { name: "Also adds" });
+  expect(within(added).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["layout-lib 3.1.0", "render-lib 2.0.1"]);
+  expect(within(tool).getByText(/Removing the add-on takes out those nothing else uses\./)).toBeInTheDocument();
+  const stuck = await row("Name of stuck");
+  expect(within(stuck).getByText(/no build for this computer/)).toBeInTheDocument();
+  expect(within(stuck).queryByRole("list", { name: "Also adds" })).toBeNull();
+  expect(within(stuck).queryByRole("button", { name: /Install/ })).toBeNull();
+});

@@ -385,6 +385,20 @@ function PackRow(props: {
           {!props.group && <span className="sub pack-price">{priceText(pack.price, amount, t)}</span>}
           {pack.summary && <p className="pack-summary">{pack.summary}</p>}
           <WhatLines what={pack.what} base={base} />
+          {(pack.libraries ?? []).length > 0 && (
+            <div className="pack-part">
+              <p className="what" id={`${base}-libraries`}>
+                {t("addons.libraries")}
+              </p>
+              <ul className="plain-list" aria-labelledby={`${base}-libraries`}>
+                {(pack.libraries ?? []).map((lib) => (
+                  <li key={lib.name}>{t("addons.library_line", { name: lib.name, version: lib.version })}</li>
+                ))}
+              </ul>
+              <p className="hint">{t("addons.libraries_hint")}</p>
+            </div>
+          )}
+          {!installed && pack.library_problem && <p className="problem-note">{pack.library_problem}</p>}
           {pack.costs.length > 0 && (
             <div className="pack-part">
               <p className="what" id={`${base}-costs`}>

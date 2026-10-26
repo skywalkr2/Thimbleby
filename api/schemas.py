@@ -2492,7 +2492,10 @@ class QueueLineView(BaseModel):
     of the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered "Not now"
     about reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the
     line goes once the account may see the internal level); `no_account` is work with no AI account
-    at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that
+    at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `pack_tier` is a tier an add-on
+    declared for its own work (`tier` its id, `subject` its label, `count` its kinds of work) that the person hasn't
+    mapped to an account, so that work runs on the core tier named in `text` until they do (GET /api/ai/pack-tiers
+    lists it for mapping); `extractor` is a kind of file that
     isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;
     `source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its
     label, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last
@@ -2593,6 +2596,7 @@ class QueueLineView(BaseModel):
         "work_access",
         "credential",
         "no_account",
+        "pack_tier",
         "backup",
         "extractor",
         "source_unread",
@@ -3479,6 +3483,16 @@ class SetupStepView(BaseModel):
     settings: dict[str, Any] = Field(
         default_factory=dict, description="Core settings a plugin step suggests, applied with the step's Apply."
     )
+    adds: dict[str, list[Any]] = Field(
+        default_factory=dict,
+        description="Values a step suggests adding to list settings, by setting: only those the person's list lacks "
+        "now. Apply (the same route as `settings`) adds them to the person's own list, with Undo.",
+    )
+    kind: Literal["file_types", "tiers"] | None = Field(
+        None,
+        description="For a step the core adds for an add-on (`plugin`): file_types adds the media types its file kinds "
+        "take to the accepted ones (`adds`); tiers maps its own tiers to accounts (GET /api/ai/pack-tiers).",
+    )
     sign_in: str | None = Field(None, description="For a step the core adds per sign-in: the sign-in's name.")
     group: Literal["you", "work", "ai", "mail", "promises", "backup", "people", "done"] = Field(
         "done",
@@ -3751,6 +3765,42 @@ class AiTierView(BaseModel):
         None, description="The stronger tier tried once more when the answer keeps failing the app's checks."
     )
     escalate_source: SettingLayer = Field(description="The layer that set `ai.tiers.<name>.escalate_to`.")
+
+
+class PackTierPick(BaseModel):
+    """An account and one of its models, by short name."""
+
+    account: str
+    model: str
+
+
+class PackTierView(BaseModel):
+    """A tier an add-on declares for its own work (design 3.3, 4.8), and where it stands: mapped to an account and model
+    by the person, or running on the core tier it falls back to."""
+
+    id: str = Field(description="The tier's id, `<add-on>/<name>`: the key of `ai.tiers.<id>`.")
+    plugin: str = Field(description="The add-on that declares it.")
+    label: str = Field(description="What the add-on calls the tier, in its own words.")
+    description: str = Field(description="What the work needs from a model, in the add-on's words.")
+    falls_back_to: str = Field(description="The core tier its work runs on until it is mapped.")
+    mapped: bool = Field(description="The person gave it an account; otherwise its work runs on `falls_back_to`.")
+    account: str | None = Field(None, description="The short name of the account it is mapped to.")
+    model: str | None = Field(None, description="The model of that account, by short name.")
+    used_by: list[str] = Field(description="The add-on's kinds of work that name this tier, by their labels.")
+    recommended: PackTierPick | None = Field(
+        None,
+        description="The account and model the capability measurements back for this work: the cheapest that passed "
+        "every skill its kinds of work need. Offered only, never applied.",
+    )
+    recommended_why_not: Literal["no_accounts", "no_cases", "not_measured", "stale", "none_passes"] | None = Field(
+        None, description="Why nothing is recommended."
+    )
+
+
+class PackTiersView(BaseModel):
+    """The tiers the running add-ons declare, to map to an account and model under each add-on."""
+
+    tiers: list[PackTierView]
 
 
 class AiRouteRuleView(BaseModel):
@@ -4803,6 +4853,13 @@ class PackPrice(BaseModel):
     note: str
 
 
+class PackLibrary(BaseModel):
+    """A library a pack's release lists, as a name and a version."""
+
+    name: str
+    version: str
+
+
 class PackView(BaseModel):
     id: str
     name: str
@@ -4824,6 +4881,15 @@ class PackView(BaseModel):
     feed: str = Field(description="The domain of the feed that lists it.")
     installable: bool | None = Field(
         None, description="True when the app can install it from here (POST /api/packs/{id}/install)."
+    )
+    libraries: list[PackLibrary] = Field(
+        default_factory=list,
+        description="The libraries an install would add besides the add-on itself (the ones its release lists that fit "
+        "this computer and aren't in place already), which the screen says before it installs.",
+    )
+    library_problem: ScreenText | None = Field(
+        None,
+        description="Why the app can't install it on this computer when a library it needs has no build for it.",
     )
     removable: bool = Field(False, description="The app installed it from this screen, so it can take it away again.")
     release_host: str | None = Field(
@@ -5223,6 +5289,9 @@ class PackInstalled(BaseModel):
     still_used_by: list[str] = Field(
         default_factory=list,
         description="The add-ons that still use the file when it was kept, by the name they run under.",
+    )
+    libraries: list[PackLibrary] = Field(
+        default_factory=list, description="The libraries the install added or shared (none after a removal)."
     )
 
 

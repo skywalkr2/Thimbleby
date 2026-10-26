@@ -924,6 +924,12 @@ class SkillSettings(ConfigModel):
     )
 
 
+def _may_use_tier(user: str, tier: str) -> bool:
+    """Whether work named `user` (a kind of work, or a tier) may use `tier`: any may use a core tier, and a tier of an
+    add-on (`<add-on>/<name>`) is used only by that add-on's own work."""
+    return "/" not in tier or user.partition("/")[0] == tier.partition("/")[0] and "/" in user
+
+
 def _default_tiers() -> dict[str, TierSettings]:
     return {"routine": TierSettings(), "deep": TierSettings()}
 
@@ -1070,16 +1076,24 @@ class AiFile(FileModel):
                     problems.append(f"the {name!r} tier names {ref!r}, but there is no account {provider!r}")
             if tier.escalate_to and tier.escalate_to not in self.tiers:
                 problems.append(f"the {name!r} tier escalates to {tier.escalate_to!r}, which isn't a tier")
+            elif tier.escalate_to and not _may_use_tier(name, tier.escalate_to):
+                problems.append(f"the {name!r} tier escalates to {tier.escalate_to!r}, a tier of an add-on")
         for index, rule in enumerate(self.routing):
             if rule.tier not in self.tiers:
                 problems.append(f"routing rule {index + 1} names the tier {rule.tier!r}, which isn't a tier")
+            elif not _may_use_tier(rule.when.task or "", rule.tier):
+                problems.append(f"routing rule {index + 1} names {rule.tier!r}, a tier of an add-on's own work")
         for kind, task in self.tasks.items():
             if task.tier not in self.tiers:
                 problems.append(f"the kind of work {kind!r} names the tier {task.tier!r}, which isn't a tier")
+            elif not _may_use_tier(kind, task.tier):
+                problems.append(f"the kind of work {kind!r} names {task.tier!r}, a tier of another add-on's work")
         for role in Roles.model_fields:
             tier = getattr(self.roles, role).tier
             if tier is not None and tier not in self.tiers:
                 problems.append(f"the {role!r} role names the tier {tier!r}, which isn't a tier")
+            elif tier is not None and "/" in tier:
+                problems.append(f"the {role!r} role names {tier!r}, a tier of an add-on's own work")
         if problems:
             raise ValueError("; ".join(problems))
         return self

@@ -27,7 +27,7 @@ watcher does.
 from __future__ import annotations
 
 import json as jsonlib
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -216,8 +216,13 @@ class AskResult:
 
 @dataclass
 class ActionResult:
-    """A person action's proposal as the review shows it: `summary`, `ops`, `notes`, `items`, `requests` and
-    `problems` (why ops would be refused if applied now). `apply(kept=...)` applies it as the person would."""
+    """A person action's proposal as the review shows it: `summary`, and `topic`, the few words that name it for the
+    item's title (empty when the action gave none); `ops`, the ops it would apply, as dicts; `notes`, what the person
+    should know; `items`, the changes the person keeps or drops, each a dict with `id`, `label`, `group` (the id of the
+    group it sits under, or None), `kept` (the tick the review starts with) and `ops`; `groups`, the headings that
+    gather choices and items, each a dict with `id`, `heading` and `explanation`; `requests`, the work it would queue,
+    each a dict with `task`, `about` ({"kind", "id"} or None) and `note`; and `problems`, why ops outside the items
+    would be refused if applied now. `apply(kept=...)` applies it as the person would."""
 
     summary: str
     ops: list[dict[str, Any]]
@@ -226,9 +231,16 @@ class ActionResult:
     requests: list[dict[str, Any]]
     problems: list[str]
     _apply: Callable[..., Outcome]
+    topic: str = ""
+    groups: list[dict[str, Any]] = field(default_factory=list)
 
-    def apply(self, kept: dict[str, bool] | None = None) -> Outcome:
-        return self._apply(kept)
+    def apply(self, kept: Mapping[str, bool] | None = None) -> Outcome:
+        """Apply the proposal as the person would (their own change, actor `pm`) and say what became of each op.
+
+        `kept` maps an item's id to True (keep) or False (drop): the ticks the person sets on the review. An item left
+        out keeps the tick it came with (`kept` on the item); an id that names no item raises StoreError, as it does on
+        screen. With no `kept`, the proposal applies as it was proposed."""
+        return self._apply(dict(kept) if kept is not None else None)
 
 
 class PluginDidNotStart(RuntimeError):
@@ -266,7 +278,11 @@ class PluginWorkspace:
 
     Its attributes: `root` (the workspace folder), `plugins` (the names of the plugins given, in order) and `cfg`
     (the workspace's settings as loaded). `store` and `ws` are the host's own objects: reach them only where no
-    method here covers a test, since they change with the host."""
+    method here covers a test, since they change with the host.
+
+    Opening a workspace runs the core's list setup, as the app does when it starts: the value lists the core and the
+    started plugins declare exist in it (with their values and any a record already holds), so a test needn't create
+    them before a record that takes its values from one."""
 
     def __init__(
         self,
@@ -295,6 +311,7 @@ class PluginWorkspace:
             self.cfg = load_config(self.ws.config_dir, env={})
             self.store = Store(self.ws.db_path, cfg=self.cfg)
             self._check_started(require_started)
+            self._set_up_lists()
             return
         self.ws = init_workspace(root, template=demo("demo-b"), git=False)
         storage_path = self.ws.config_dir / "storage.yaml"
@@ -309,6 +326,15 @@ class PluginWorkspace:
         self.cfg = load_config(self.ws.config_dir, env={})
         self.store = Store(self.ws.db_path, cfg=self.cfg)
         self._check_started(require_started)
+        self._set_up_lists()
+
+    def _set_up_lists(self) -> None:
+        """The app creates the value lists a workspace lacks (the core's and every started plugin's) when it starts;
+        the kit does the same, so a record that takes its values from a list is checked as it is in the app."""
+        from engine.lists import ensure
+
+        if all(self.store.plugins.active(name) for name in self.plugins):
+            ensure(self.store)
 
     def _check_started(self, required: bool) -> None:
         if not required:
@@ -329,7 +355,7 @@ class PluginWorkspace:
 
     def registered(self, plugin: str | None = None) -> dict[str, Any]:
         """What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ...,
-        "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs",
+        "triage_matchers", "setup_steps", "tiers", "actions", "tasks", "ops", "records", "panels", "today", "jobs",
         "stage_checks", "file_kinds", "lints", "extractors", "scorers", "drop_hooks"}, and "project_ending" (its
         hook, when it registered one). Empty kinds are left out. A started plugin only."""
         from types import MappingProxyType
@@ -342,6 +368,7 @@ class PluginWorkspace:
             ("connectors", "connectors"),
             ("triage_matchers", "triage_matchers"),
             ("setup_steps", "setup_steps"),
+            ("tiers", "pack_tiers"),
             ("actions", "actions"),
             ("tasks", "tasks"),
             ("ops", "ops"),
@@ -367,7 +394,9 @@ class PluginWorkspace:
 
     def save(self, path: str | Path) -> SavedWorkspace:
         """Save this workspace as it is now (records, settings, the plugins linked in), so other tests start from
-        fresh copies of it with `plugin_workspace(..., from_saved=saved)` instead of building it again."""
+        fresh copies of it with `plugin_workspace(..., from_saved=saved)` instead of building it again. Saving closes
+        the workspace's store and opens a new one, so a `ws.store` (or anything read through it) held from before the
+        call is closed afterwards: read `ws.store` again, or use the methods here, which always take the current one."""
         import shutil
 
         target = Path(path)
@@ -493,6 +522,8 @@ class PluginWorkspace:
             list(pending.requests),
             list(pending.problems),
             apply,
+            topic=pending.topic,
+            groups=list(pending.groups),
         )
 
     def end_project(

@@ -11,6 +11,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useAccountNames } from "../lib/account-names";
+import { useTierName } from "../lib/ai-routing";
 import { whenWords } from "../lib/coverage";
 import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
@@ -28,7 +29,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "stuck", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "account_move", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "stuck", "paused", "borrow", "credential", "no_account", "pack_tier", "offline", "handover", "account_check", "switch_failed", "account_move", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -80,6 +81,8 @@ export function HeldLine(props: {
       return <RuleReviewLine line={line} onOpen={props.onOpenRules} onOpenKnowledge={props.onOpenKnowledge} />;
     case "no_account":
       return <NoAccountLine line={line} onAdd={props.onAddAccount ?? props.onOpenAiAccounts} />;
+    case "pack_tier":
+      return <PackTierLine line={line} onOpen={props.onOpenAiAccounts} />;
     case "catch_up_go":
       return <CatchUpGoLine line={line} />;
     case "intake_go":
@@ -652,6 +655,28 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void; onOpenKnowledg
           ]}
           trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.rule_review.label") })} tooltip={false} />}
         />
+      </div>
+    </section>
+  );
+}
+
+/** A tier an add-on declared for its own work that the person hasn't mapped: its work uses the core's kind of work it
+ * named meanwhile, which the line says. Nothing is chosen for the person; the one button opens where they choose. */
+function PackTierLine(props: { line: Line; onOpen: () => void }) {
+  const { t } = useWords();
+  const tierName = useTierName();
+  const { line } = props;
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.pack_tier.label")} data-queue-line="pack_tier">
+      <Pill tone="neutral">{t("queue.pack_tier.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.pack_tier", { subject: line.subject ?? "", fallback: tierName(line.text ?? "routine") })}</p>
+        <p className={styles.sub}>{t("queue.pack_tier.sub")}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpen}>
+          {t("queue.pack_tier.open")}
+        </Button>
       </div>
     </section>
   );

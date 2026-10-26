@@ -14,6 +14,15 @@ Publishing a pack (the process every plugin repository follows; the catalog's PU
    computer, and it is sent only to that address's host. Leave `release` out and the screen shows the entry's own
    install text instead of an Install button.
 
+   A pack that needs libraries besides the app's own lists them in `release.libraries`: every wheel it needs, its
+   dependencies' and theirs, one entry for each build (`name`, `version`, `platform`: `any` or a wheel platform tag
+   such as `win_amd64` or `macosx_11_0_arm64`, the wheel's `url` and its `sha256`). Install shows what it will add,
+   takes the build that fits the computer, installs exactly those wheels and never reads a package index. It refuses
+   a library that isn't a built wheel, one with no build for the computer, a need the app and the list don't meet,
+   and one that clashes with a package the app has or one installed another way. Remove takes out only the
+   libraries no other installed pack uses. The pack's own wheel stays pure Python. Quote each checksum in the entry
+   file: one made only of digits reads as a number.
+
 3. **Check it:** `cockpit pack check <its plugin folder> --entry catalog/pack.yaml`, with the host at the version the
    pack declares. Every line must pass. A pack whose plugins share a helper package from the same distribution is
    checked installed: install the built package beside the host and name the plugin instead of its folder
@@ -206,3 +215,74 @@ def _check_entry(entry_path: Path, manifest: Any, report: Report, manifest_folde
         else:
             differ = sorted({k for k in {*ours, *theirs} if ours.get(k) != theirs.get(k)})
             report.failed.append(f"its {part} differs from plugin.yaml in: {', '.join(differ)}")
+    if entry.release is not None:
+        _check_libraries(entry.release, manifest.name, report)
+
+
+def _check_libraries(release: Any, name: str, report: Report) -> None:
+    """The release's list of libraries: each a built wheel that doesn't clash with a package the app has, each with
+    builds for the platforms the others have, and, when the pack is installed here, every package it needs that the app
+    doesn't have listed at a version that meets the need."""
+    from importlib import metadata
+
+    from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.utils import canonicalize_name
+
+    libraries = release.libraries
+    if not libraries:
+        report.passed.append("its release lists no libraries (it needs nothing beyond the app's own packages)")
+        return
+    names = sorted({lib.name for lib in libraries}, key=str.lower)
+    report.passed.append(f"its release lists {len(names)} libraries as built wheels with checksums: {', '.join(names)}")
+    clash = []
+    for lib in libraries:
+        try:
+            metadata.version(lib.name)
+            clash.append(lib.name)
+        except metadata.PackageNotFoundError:
+            pass
+    if clash:
+        report.failed.append(
+            f"its release lists {', '.join(sorted(set(clash)))}, which the app has: install refuses a library that "
+            "clashes with the app's own packages"
+        )
+    else:
+        report.passed.append("none of its libraries clashes with the app's own packages")
+    platforms = {lib.platform for lib in libraries}
+    for lib_name in names:
+        have = {lib.platform for lib in libraries if lib.name == lib_name}
+        if "any" in have:
+            continue
+        lacking = sorted(platforms - {"any"} - have)
+        if lacking:
+            report.warned.append(f"{lib_name} has no build for {', '.join(lacking)}, which the other libraries have")
+    found = next((ep for ep in metadata.entry_points(group="pm_cockpit.plugins") if ep.name == name), None)
+    if found is None or found.dist is None:
+        report.warned.append("the pack isn't installed here, so its own needs weren't compared with the libraries")
+        return
+    listed = {str(canonicalize_name(lib.name)): lib.version for lib in libraries}
+    unmet = []
+    for line in found.dist.requires or []:
+        try:
+            requirement = Requirement(line)
+        except InvalidRequirement:
+            unmet.append(line)
+            continue
+        if requirement.marker is not None and not requirement.marker.evaluate({"extra": ""}):
+            continue
+        key = str(canonicalize_name(requirement.name))
+        if key in listed:
+            if requirement.specifier and not requirement.specifier.contains(listed[key], prereleases=True):
+                unmet.append(f"{requirement} (the release lists {listed[key]})")
+            continue
+        try:
+            have = metadata.version(requirement.name)
+        except metadata.PackageNotFoundError:
+            unmet.append(str(requirement))
+            continue
+        if requirement.specifier and not requirement.specifier.contains(have, prereleases=True):
+            unmet.append(f"{requirement} (the app has {have})")
+    if unmet:
+        report.failed.append(f"the pack needs {', '.join(unmet)}, which neither the app nor its release's list has")
+    else:
+        report.passed.append("everything the pack needs is the app's own or in its release's list")

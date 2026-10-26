@@ -1027,6 +1027,45 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 221. The install and setup answers of the batched plugin API release: a pack's own libraries, values added to a list setting, a pack's own tiers, and the guide's corrections (2026-10-26; P2, answers 173, 183, 185, 219, 172, 184, 186, 206)
+
+Part B3 of the one batched plugin API release (`docs/project/plugin-api-release-plan.md`; the version and the guide's
+regeneration are finished once at the end). Answers are in `docs/project/plugin-answers-34-48.md`.
+
+- **Design 3.11 (173), a pack's own libraries.** A catalog entry's `release` keeps the pack's own pure-Python wheel in `url` and
+  `sha256` and gains `libraries`: every other wheel the pack needs, one entry for each build (`name`, `version`, `platform`, `url`,
+  `sha256`). Install takes the build that fits the computer (the wheel's own tags against the ones the computer takes),
+  downloads and checks each wheel against its checksum (the read token goes only to the release's own host), and installs
+  exactly those, never from a package index. The Add-ons row lists what an install will add before it installs. It refuses a
+  library that isn't a built wheel, one with no build for this computer, a need that neither the app nor the list meets, and one
+  that clashes with an app package or one installed another way or by another pack at another version; nothing is written until
+  every wheel has passed. Each installed library records the packs that need it (`REQUIRED_BY` in its metadata folder), and Remove
+  takes out a library only when no installed pack uses it. `cockpit pack check` verifies the list (built wheels, no clash with
+  the app's packages, builds for the same platforms, and, for a pack installed there, every need met by the app or the list).
+  Readers ignore fields they don't know. **Built:** `tests/test_pack_libraries.py`, `web/src/components/Addons.test.tsx`.
+- **Design 3.3 and 7.8 (183, 185), values added to a list setting.** `registrar.setup_step(..., adds={key: [values]})`: the step
+  shows "Adds to <setting>: <values>" with only what the person's list lacks, and one Apply adds them as a union with the
+  person's own list (their entries and order stay), as their own settings change with Undo; the keys barred for `settings` are
+  barred here, the key must be a list setting, and the step's `done` can read the effective list (`state.settings`).
+  Enabling a pack with file kinds also offers, as a step the core adds (`kind: file_types`), to add the media types those kinds
+  take to `storage.files.accepted_types`. **Built:** `tests/test_plugin_api_0390_install_setup.py`,
+  `web/src/components/Welcome.test.tsx`.
+- **Design 3.3, 4.8 and 7.8 (219), a pack's own tiers.** `provides.tiers` and `registrar.tier(name, label=, falls_back_to=,
+  description=)`; a task kind may name one with `tier=`. The person maps it (`tiers.<id>` in `ai.yaml`, through the account's
+  own change) in Settings and in the setup guide, listed under the pack, with a suggestion from the capability matrix that is
+  only offered. An unmapped tier runs on its named fallback, a tier the person already set up, and one Today line (`pack_tier`)
+  says so and offers the mapping; the core never picks an account. A tier of a pack is used only by that pack's own task kinds:
+  a role, a core kind of work, a routing rule for another kind and a tier's `escalate_to` that name it are refused when the
+  settings load. The routing screen lists the core's tiers only; an account's row counts only the core's tiers.
+  **Built:** `tests/test_plugin_api_0390_install_setup.py`, `web/src/components/PackTiers.test.tsx`,
+  `web/src/shell/HeldLines.test.tsx`, `web/src/components/AiRouting.test.tsx`.
+- **The guide and the test kit (172, 184, 186, 206).** `ActionResult.apply(kept=...)` is typed (a mapping of item id to yes or no)
+  and documented, with `items` and `groups` described as the review holds them and the new `ActionResult.topic` and `.groups`;
+  the kit runs the core's list setup when a workspace opens; the guide says `ws.save(path)` closes the old store and what a stage
+  status's `current_label` and `next_label` are (the label from `stages.yaml`, `None` only where there is no such stage);
+  a whole-model rule ("required unless") belongs in the loader or a lint, not a model validator, since the forms build the
+  model with no values; and a request waiting for the go is `needs_you` with approval `required`.
+  **Built:** `tests/test_plugin_api_0390_install_setup.py`.
 ## 220. A pack follows a project's ending and a dropped action; Helpful / Not helpful on an answer (2026-10-26; plugin API release part A1; P61, P55)
 
 - **Design 3.3, 3.5 and 6.7 (F35, lesson 8):** two registrar calls, `registrar.project_ending(fn)` (`fn(project_id, view)`) and

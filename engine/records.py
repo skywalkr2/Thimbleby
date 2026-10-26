@@ -1322,7 +1322,9 @@ class Request(Record):
     )
     approval: Literal["required", "granted"] | None = Field(
         None,
-        description="Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm.",
+        description="Needs the person's go before dispatch: stage tasks, runs above the amount to confirm, and the "
+        "first run waiting for a go. A request waiting for the go is `needs_you` with approval `required`; the go sets "
+        "it to `granted` and queues the request.",
     )
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
     range_usd: list[float] | None = Field(
@@ -1344,7 +1346,8 @@ class Request(Record):
     state: Literal["queued", "running", "review", "done", "needs_you", "failed"] = Field(
         "queued",
         description="queued: waiting its turn. running: with the assistant. review: its changeset awaits the "
-        "person. done: finished. needs_you: stopped until the person acts. failed: ended with an error.",
+        "person. done: finished. needs_you: stopped until the person acts (a request waiting for their go is needs_you "
+        "with approval `required`). failed: ended with an error.",
     )
     waiting: str | None = Field(None, description="Why it is waiting and until when, in plain words.")
     cause: StopCause | None = Field(

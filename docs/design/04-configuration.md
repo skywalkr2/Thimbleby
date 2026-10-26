@@ -516,6 +516,18 @@ content_levels:                  # kinds of material some accounts won't take, b
   declares a role; `ai.roles.<role>.tier` maps the role to a tier and `ai.tasks.<kind>` overrides any of it. `same_account`
   (on a role or a kind) lets a check run as a fresh run on the account that wrote the work, when no other account can take
   it (6.16; decisions, 2026-10-12, "Roles, and second opinions on one account").
+- **An add-on's own tiers** (plugin API 0.3.90; decisions, 2026-10-26): an add-on may declare tiers of its own
+  (`provides.tiers`, id `<add-on>/<name>`, with a label, a description and the core tier it falls back to), which its task
+  kinds name with `tier=`. The person maps one by giving `tiers.<add-on>/<name>` an account and model like any tier (`use`,
+  `fallback`, `effort`, `thinking`, `escalate_to`), in Settings' AI section and in the setup guide, listed under the add-on,
+  where the capability matrix's measurements may suggest an account and model (only suggested, never applied). A declared tier
+  with no account runs on its fallback tier, which is one the person already set up (so no account is ever chosen for them),
+  with one line on Today that says so and offers the mapping; removing an account unmaps the tiers it served, and the line
+  returns. A tier of an add-on is used only by that add-on's own task kinds: a role (`roles.<role>.tier`), a core kind of
+  work, a routing rule that doesn't name the add-on's own kind, and another tier's `escalate_to` are refused if they name it,
+  so the core's own work never uses one. The order for a kind of work stays: its `tasks.<kind>.tier`, then its role's tier,
+  then the tier the kind declares, then the default (the order change in the release plan, C0, puts a declared tier before its
+  role's).
 - **Content levels** (decisions, 2026-10-12): the workspace defines its levels in `content_levels`; a project, or a plugin's
   record, is marked with the levels its material carries; routing skips accounts that don't take them all, and when none does
   the request waits and says why. An account with no list takes every level.

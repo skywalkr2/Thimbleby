@@ -48,6 +48,7 @@ import {
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
+import { PackTiers } from "./PackTiers";
 import { AiRouting } from "./AiRouting";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
@@ -618,6 +619,7 @@ export function Settings(props: {
             onCompare={props.onOpenCompare}
           />
           <AiRouting />
+          <PackTiers level={3} />
           {form("ai")}
         </>
       );

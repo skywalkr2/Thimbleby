@@ -4,6 +4,26 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The install and setup answers of the batched plugin API release (P2, answers 173, 183, 185, 219, 172, 184, 186, 206)
+
+**Decided:** The answers promised to a pack's builder in `docs/project/plugin-answers-34-48.md` for install, setup and the guide
+are built as answered, in part B3 of the one batched release: a pack's release lists every other wheel it needs, per platform
+and with a checksum, and installing from the Add-ons screen installs exactly those (shown first, refused on a clash, removed
+only when no other pack uses them); a setup step may suggest values to add to a list setting, applied as the person's own
+settings change with their yes and Undo, and enabling a pack offers the media types its file kinds take; a pack may declare
+tiers of its own that its task kinds name, which the person maps under the pack, with an unmapped one running on its named
+fallback and one line on Today. Choices made while building: the pack's own wheel stays pure Python and the libraries are the
+compiled or pure wheels beside it; a tier of a pack is used only by that pack's own task kinds (a role or a core kind of work
+that names one is refused when the settings load), so the core's own work never uses it; the account's row and the routing
+screen count the core's tiers only, and an add-on's tiers are mapped under the add-on. The corrections to the guide and the
+test kit (`apply(kept=...)`, `ActionResult.topic` and `.groups`, the list setup the kit runs, what `ws.save` does to the store,
+the stage labels, the whole-model rule note, the go on a request) are made. *Not here:* the declared tier's place in the order
+for a kind of work (the release plan's C0, 196). **Decided by:** the owner, 2026-10-26, the one batched plugin API release;
+answers 172 to 219 in plugin-answers-34-48.md. **Why:** the answers were promised and the hold was lifted once for them.
+**Impact:** design 3.2, 3.3, 3.11, 4.8 and 7.8; the manifest (`provides.tiers`), the registrar (`setup_step(adds=)`, `tier`), the
+test kit, the catalog's release format (`libraries`, readers ignore what they don't know), four routes' views (`/api/setup`
+steps, `/api/packs`, `/api/packs/{id}/install`, the new `GET /api/ai/pack-tiers`) and the Today line `pack_tier`; no new setting
+and no change to scope. The plugin API version is raised once, at the end of the release. Change log: section 221.
 ## 2026-10-26: Handled for you has two tabs; setup asks about a job and a business separately
 
 **Decided:**

@@ -12,7 +12,10 @@ version range alone. The complete runnable example is
 
 ## What 0.3.90 adds
 
-Manifests stay `'>=0.3,<0.4'`. Nothing a 0.3.89 plugin relies on changes.
+Manifests stay `'>=0.3,<0.4'`. Nothing a 0.3.89 plugin relies on changes. Items B1 to B3 answer a pack builder's questions
+(`docs/project/plugin-answers-34-48.md`); the generated guide has the exact signatures.
+
+Part A1 (endings, drops and answer signals):
 
 - **A pack follows a project's ending:** `registrar.project_ending(fn)`, with `fn(project_id, view)` returning the
   plugin's own ops for that ending (a list of op dicts or op models; `settings` is passed by keyword to a hook that names
@@ -36,6 +39,39 @@ Manifests stay `'>=0.3,<0.4'`. Nothing a 0.3.89 plugin relies on changes.
   `ws.ending_items(outcome)`, `ws.finish_ending(outcome, keep=())`, `ws.decline_ending(outcome)`,
   `ws.left_open(project)` and `ws.undo(outcome)` test a hook through the applier as the person and as outside content;
   `ws.registered()` lists `project_ending` and `drop_hooks`.
+
+Part B3 (install, setup, tiers and the guide's corrections):
+
+- **A pack's own libraries (173).** A catalog entry's `release` keeps its own wheel (pure Python) in `url` and `sha256` and
+  gains `libraries`: a list of every other wheel the pack needs, each `{name, version, platform, url, sha256}` (one entry for
+  each build of a library; `platform` is `any` or a wheel platform tag such as `win_amd64`; `url` is an https address of a
+  built `.whl`, never source; quote the checksum in YAML). Install takes the build that fits the computer, checks each
+  wheel against its checksum, shows the libraries it will add on the pack's row, and installs exactly those, never from a
+  package index. It refuses a library with no build for the computer, a need that neither the app nor the list meets, and a
+  clash with a package the app has, one installed another way, or a library another installed pack uses at another version.
+  Remove takes out a library only once no installed pack uses it. `cockpit pack check` verifies the list. Readers ignore
+  fields they don't know. Routes: `GET /api/packs` gains `libraries` and `library_problem` on a pack; `POST
+  /api/packs/{id}/install` answers with `libraries`.
+- **Values added to a list setting (185, 183).** `registrar.setup_step(..., adds={"storage.files.accepted_types": [...]})`: the
+  step shows "adds: ..." with only the values the person's list lacks, and the person's yes adds them to their own list (a
+  union: their entries and order stay), as their own settings change with Undo. The key must be a list setting (a plugin that
+  names another is refused at start) and the keys barred for `settings=` are barred here. `state.settings[key]` in `done`
+  is the person's whole effective list. Enabling a pack whose file kinds take media types the workspace doesn't accept yet also
+  offers, as a step the core adds, to add those types to `storage.files.accepted_types`; nothing to write.
+- **A pack's own tiers (219).** `provides.tiers` lists tiers `<plugin>/<name>`; `registrar.tier(name, label=, falls_back_to=,
+  description=)` declares one; a task kind may name it with `task_kind(..., tier="<plugin>/<name>")` (only the plugin's own
+  tiers). The person maps it in Settings and the setup guide, listed under the pack, to an account and model (the setting
+  `ai.tiers.<id>`); until they do, the work runs on `falls_back_to`, a tier they already set up, with one line on Today
+  that says so and offers the mapping. The core never picks an account, and its own work never uses a pack's tier (a role
+  or a core kind of work naming one is refused when the settings load). `ws.registered()` in the test kit lists them under
+  `"tiers"`. Route: `GET /api/ai/pack-tiers`.
+- **The guide and the test kit (172, 184, 186, 206).** `ActionResult.apply(kept=...)` takes a mapping of item id to
+  yes or no (typed and documented); `ActionResult.items` and `.groups` are documented as the dicts the review holds; the new
+  `ActionResult.topic` and `ActionResult.groups`; `plugin_workspace` runs the core's list setup when it opens, so the
+  value lists exist; the guide says `ws.save(path)` closes the old store and what `StageStatus.current_label` and
+  `next_label` are; `Settings` and `data_form` say a whole-model rule ("required unless") belongs in the loader or a lint, not
+  a model validator, because the forms build the model with no values; and the request record says a request waiting for the
+  go is `needs_you` with approval `required`.
 
 ## What 0.3.89 adds
 

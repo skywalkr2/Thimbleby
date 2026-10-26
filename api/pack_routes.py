@@ -9,7 +9,15 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import InstalledPackView, PackFeedView, PackInstalled, PackSummary, PacksView, PackView
+from api.schemas import (
+    InstalledPackView,
+    PackFeedView,
+    PackInstalled,
+    PackLibrary,
+    PackSummary,
+    PacksView,
+    PackView,
+)
 from engine import pack_install, packs
 from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
@@ -68,6 +76,16 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 )
         return found
 
+    def libraries_of(entry: packs.Entry) -> tuple[list[tuple[str, str]], str | None]:
+        """What an install of this entry would add besides the pack: its libraries that fit this computer and aren't in
+        place already; or why none can be chosen (a library with no build for this computer)."""
+        if entry.release is None or not entry.release.libraries:
+            return [], None
+        try:
+            return pack_install.to_add(pack_install.select(entry.release.libraries)), None
+        except pack_install.InstallError as err:
+            return [], _sentence(str(err))
+
     def signed_in() -> dict[str, bool]:
         """For each running add-on that signs in, whether any of its sign-ins is signed in."""
         from engine.sign_in import status
@@ -106,6 +124,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         available = []
         for feed in feeds:
             for entry in feed.entries:
+                adds, problem = libraries_of(entry)
                 manifest = None if entry.id in gone else host.manifests.get(entry.id) or on_disk.get(entry.id)
                 available.append(
                     PackView(
@@ -125,7 +144,9 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                         installed_version=manifest.version if manifest else None,
                         enabled=entry.id in enabled,
                         what=PackSummary(**packs.summary(entry.provides, entry.requires)),
-                        installable=entry.release is not None and cfg.server.mode == "local",
+                        installable=entry.release is not None and cfg.server.mode == "local" and problem is None,
+                        libraries=[PackLibrary(name=n, version=v) for n, v in adds],
+                        library_problem=problem,
                         removable=entry.id in mine and entry.id not in gone,
                         costs=costs(entry),
                         feed=urlsplit(feed.url).hostname or "",
@@ -185,8 +206,16 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         ref = _saved(ws, cfg).workspace.plugins.catalog.release_tokens.get(host_name)
         try:
             token = resolve_secret(ref) if ref else None
+            chosen = pack_install.select(entry.release.libraries)
             data = pack_install.download(entry.release.url, entry.release.sha256, token)
-            done = pack_install.install(data)
+            # A read token goes only to the release's own host, never to another host a library is kept on.
+            blobs = [
+                pack_install.download(
+                    lib.url, lib.sha256, token if (urlsplit(lib.url).hostname or "") == host_name else None
+                )
+                for lib in chosen
+            ]
+            done = pack_install.install(data, None, blobs)
         except SecretError:
             raise HTTPException(
                 status_code=409,
@@ -203,7 +232,12 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         if any(host.active(name) for name in {pack_id, *together}):
             # A running add-on was updated: work waits for the restart rather than mix old and new files.
             worker.add_ons_changed()
-        return PackInstalled(name=done.name, version=done.version, needs_restart=True)
+        return PackInstalled(
+            name=done.name,
+            version=done.version,
+            needs_restart=True,
+            libraries=[PackLibrary(name=n, version=v) for n, _, v in (item.partition(" ") for item in done.libraries)],
+        )
 
     @r.post("/packs/{pack_id}/uninstall")
     def uninstall(pack_id: str) -> PackInstalled:

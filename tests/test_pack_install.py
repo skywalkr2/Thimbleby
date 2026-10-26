@@ -139,6 +139,7 @@ def test_the_install_route_uses_the_catalog_entry(tmp_path, monkeypatch):
         "needs_restart": True,
         "file_kept": False,
         "still_used_by": [],
+        "libraries": [],
     }
     assert (place / "pack_demo" / "__init__.py").is_file()
     assert c.post(f"{api}/packs/bare/install").status_code == 409
@@ -335,6 +336,7 @@ def test_removing_one_entry_of_a_shared_file_keeps_the_file_while_another_entry_
         "needs_restart": False,
         "file_kept": True,
         "still_used_by": ["beta"],
+        "libraries": [],
     }
     assert (place / "pack_alpha" / "__init__.py").is_file() and (place / "pack_beta" / "__init__.py").is_file()
     assert worker.restart_needed is None and worker.restart_for == []

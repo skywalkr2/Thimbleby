@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from engine import booking_entries, follow_on, learn, new_terms, quality, transcribe
+from engine import booking_entries, follow_on, learn, new_terms, pack_tiers, quality, transcribe
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -219,6 +219,7 @@ def process(
         data_level=level,
         default=task_settings(cfg, store.plugins.task_kind(req.data["task"])).tier,
     )
+    tier = pack_tiers.effective(cfg, store.plugins, tier)
     use = req.data.get("use")
     content = content_levels(store, req.data)
     independent = independence(store, cfg, req.data)
@@ -531,6 +532,7 @@ def estimate_request(
         data_level=level,
         default=task_settings(cfg, store.plugins.task_kind(req.data["task"])).tier,
     )
+    tier = pack_tiers.effective(cfg, store.plugins, tier)
     return router.estimate(
         packet.task,
         tier=tier,

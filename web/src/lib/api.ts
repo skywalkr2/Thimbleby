@@ -584,6 +584,8 @@ export const api = {
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
   aiSkills: () => call<S["AiSkillsView"]>("GET", "ai/skills"),
   aiRouting: () => call<S["AiRoutingView"]>("GET", "ai/routing"),
+  /** The tiers the running add-ons declare for their own work, each mapped to an account and model or running on its fallback. */
+  packTiers: () => call<S["PackTiersView"]>("GET", "ai/pack-tiers"),
   /** What one account's connection check involves, to price it with a model's price. */
   aiCheckSize: () => call<S["AiCheckSize"]>("GET", "ai/check-size"),
   changeAccount: (name: string, body: S["AiAccountChange"]) =>

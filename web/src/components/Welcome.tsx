@@ -14,6 +14,7 @@ import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
 import { emptyReason } from "./Addons";
+import { PackTiers } from "./PackTiers";
 import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
 import { TemplateList } from "./Templates";
@@ -67,14 +68,20 @@ export function StepList(props: {
       <ol className="guide">
         {shown.map((step) => {
           // A sign-in's step is worded by the list from the service's label; its explanation lists what is asked.
+          // A step the core adds for an add-on (its kinds of files, its own models) is worded by the list, with the add-on's name.
+          const addon = step.plugin ? addonLabel(step.plugin, t, has) : "";
           const label = step.sign_in
             ? t("welcome.sign_in.title", { label: step.label || step.sign_in })
-            : step.label || (has(`setup_step.${step.id}`) ? t(`setup_step.${step.id}`) : step.id);
+            : step.kind
+              ? t(`setup_step.kind.${step.kind}`, { addon })
+              : step.label || (has(`setup_step.${step.id}`) ? t(`setup_step.${step.id}`) : step.id);
           const why = step.sign_in
             ? step.explanation
               ? t("welcome.sign_in.explanation", { allows: step.explanation })
               : ""
-            : step.explanation || (has(`setup_step.${step.id}.explanation`) ? t(`setup_step.${step.id}.explanation`) : "");
+            : step.kind
+              ? t(`setup_step.kind.${step.kind}.explanation`, { addon })
+              : step.explanation || (has(`setup_step.${step.id}.explanation`) ? t(`setup_step.${step.id}.explanation`) : "");
           return (
             <StepSection key={step.id} step={step} label={label} explanation={why}>
               {step.sign_in ? (
@@ -97,6 +104,8 @@ export function StepList(props: {
                 </div>
               ) : step.id === "addons" ? (
                 <AddonsStep onOpen={props.onOpenAddons} />
+              ) : step.kind === "tiers" && step.plugin ? (
+                <PackTiers level={4} plugin={step.plugin} />
               ) : step.id === "first_note" ? (
                 <div className="row-end">
                   <button type="button" className="btn" onClick={props.onHandIn}>
@@ -213,7 +222,7 @@ function AddonsStep(props: { onOpen: () => void }) {
   );
 }
 
-const hasSettings = (step: Step) => Object.keys(step.settings ?? {}).length > 0;
+const hasSettings = (step: Step) => Object.keys(step.settings ?? {}).length > 0 || Object.keys(step.adds ?? {}).length > 0;
 
 /** The settings a step suggests, in words, with one button that applies them all and reads the result back. */
 function SuggestedSettings(props: { step: Step }) {
@@ -247,11 +256,14 @@ function SuggestedSettings(props: { step: Step }) {
   return (
     <div className="field">
       <span className="what" id={`${stepSlug(step.id)}-settings`}>
-        {t("welcome.settings.title")}
+        {t(Object.keys(step.settings ?? {}).length > 0 ? "welcome.settings.title" : "welcome.settings.adds_title")}
       </span>
       <ul className="plain-list" aria-labelledby={`${stepSlug(step.id)}-settings`}>
         {Object.entries(step.settings ?? {}).map(([key, value]) => (
           <li key={key}>{t("welcome.settings.line", { label: label(key), value: formatValue(value, t) })}</li>
+        ))}
+        {Object.entries(step.adds ?? {}).map(([key, values]) => (
+          <li key={`adds-${key}`}>{t("welcome.settings.adds_line", { label: label(key), values: values.map((v) => String(v)).join(", ") })}</li>
         ))}
       </ul>
       {problem && (

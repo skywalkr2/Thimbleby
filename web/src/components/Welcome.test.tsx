@@ -544,3 +544,54 @@ test("the setup list asks the work question as its own step, with a Save of its 
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST setup/work")?.body).toEqual({ choice: "work", name: "Harbor Goods" }));
 });
+
+test("a step that adds to a list shows what it adds in words, and Apply sends the current fingerprint", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [
+      step("plugin/types", {
+        label: "Take more files",
+        plugin: "plugin",
+        adds: { "storage.files.accepted_types": ["application/x-sheet", "text/x-notes"] },
+      }),
+    ],
+    {
+      "POST setup/plugin/types/apply-settings": () => ({
+        changes: [{ key: "storage.files.accepted_types", before: ["text/plain"], after: ["text/plain", "application/x-sheet", "text/x-notes"], was_default: true, is_default: false }],
+        fingerprint: "fp-2",
+        needs_restart: false,
+      }),
+    },
+  );
+  open();
+  const suggested = await screen.findByRole("list", { name: "Suggested additions" });
+  expect(within(suggested).getByText("Adds to storage.files.accepted_types: application/x-sheet, text/x-notes")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Apply these settings" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST setup/plugin/types/apply-settings")?.body).toEqual({ fingerprint: "fp-1" }),
+  );
+  expect(await screen.findByRole("button", { name: "Undo" })).toBeInTheDocument();
+});
+
+test("the step the core adds for an add-on's kinds of files is worded with the add-on's name and offers the same yes", async () => {
+  api([step("gadget/file-types", { kind: "file_types", plugin: "gadget", adds: { "storage.files.accepted_types": ["application/x-sheet"] } })]);
+  open();
+  expect(await screen.findByRole("heading", { name: "Let Gadget take its kinds of files" })).toBeInTheDocument();
+  expect(screen.getByText(/Adding them keeps everything already on your list, and you can undo it\./)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Apply these settings" })).toBeInTheDocument();
+});
+
+test("the step the core adds for an add-on's own models lists them to choose from, under the add-on", async () => {
+  api([step("gadget/tiers", { kind: "tiers", plugin: "gadget" })], {
+    "GET ai/accounts": () => [],
+    "GET ai/pack-tiers": () => ({
+      tiers: [
+        { id: "gadget/long", plugin: "gadget", label: "Long reading", description: "", falls_back_to: "deep", mapped: false, account: null, model: null, used_by: [], recommended: null, recommended_why_not: "no_cases" },
+      ],
+    }),
+  });
+  open();
+  expect(await screen.findByRole("heading", { name: "Choose the models for Gadget" })).toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "Models for Gadget" })).toBeInTheDocument();
+  expect(screen.getByText("Long reading")).toBeInTheDocument();
+});

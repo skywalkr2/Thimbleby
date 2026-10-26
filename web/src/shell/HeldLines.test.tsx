@@ -918,3 +918,15 @@ test("Keep it on a moved tier clears the line and nothing else changes", async (
   await waitFor(() => expect(screen.queryByRole("region", { name: "Moved to a newer model" })).toBeNull());
   expect(calls.filter((c) => c.route.startsWith("POST")).map((c) => c.route)).toEqual(["POST ai/switch/routine/keep"]);
 });
+
+test("an add-on's tier the person hasn't mapped is a line that says what it uses meanwhile and offers the choice", async () => {
+  const user = userEvent.setup();
+  const { onOpenAiAccounts } = show([line("pack_tier", { key: "pack_tier:gadget/long", group: "decide", tier: "gadget/long", subject: "Long reading", text: "deep" })]);
+  const row = await screen.findByRole("region", { name: "Add-on model" });
+  expect(row).toHaveTextContent("Long reading uses your Harder work model until you choose one");
+  expect(row).toHaveTextContent("Nothing is chosen for you.");
+  expect(row).not.toHaveTextContent(/gadget\/long|tier/i);
+  expect(within(row).getAllByRole("button")).toHaveLength(1);
+  await user.click(within(row).getByRole("button", { name: "Choose a model" }));
+  expect(onOpenAiAccounts).toHaveBeenCalledTimes(1);
+});

@@ -385,6 +385,7 @@ def build() -> str:
                     testing.PluginDidNotStart,
                 )
             ),
+            _methods(testing.ActionResult, "proposal"),
         ),
         _section(
             "Channels",

@@ -370,3 +370,15 @@ test("a rule set outside the app can be read but not changed", async () => {
   expect(screen.getByRole("button", { name: "Add a rule" })).toBeDisabled();
   expect(screen.getAllByText("Set outside the app by an environment variable").length).toBeGreaterThan(0);
 });
+
+test("a kind of work that uses an add-on's own tier shows it as the model it uses, named by the add-on", async () => {
+  server(start({ kinds: [kind("ex/read", "Read a chapter", { tier: "ex/long", default_tier: "ex/long" })] }), {
+    "GET ai/pack-tiers": () => ({
+      tiers: [{ id: "ex/long", plugin: "ex", label: "Long reading", description: "", falls_back_to: "deep", mapped: true, account: "big", model: "everyday", used_by: ["Read a chapter"], recommended: null, recommended_why_not: null }],
+    }),
+  });
+  renderApp(<AiRouting />);
+  const select = (await within(await screen.findByRole("heading", { name: "Which model does what" }).then(() => rowOf("ex/read"))).findByLabelText("Read a chapter")) as HTMLSelectElement;
+  await waitFor(() => expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account", "Long reading"]));
+  expect(select).toHaveValue("ex/long");
+});

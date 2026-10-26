@@ -63,6 +63,9 @@ from api.schemas import (
     MeIn,
     MeView,
     Ok,
+    PackTierPick,
+    PackTiersView,
+    PackTierView,
     PackTokenIn,
     RestartAsked,
     SentFolderIn,
@@ -413,9 +416,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.post("/setup/{step:path}/apply-settings")
     def setup_apply_settings(step: str, body: FingerprintIn) -> SettingsSaved:
         found = next((s for s in setup.steps(ws, current(), store) if s.id == step), None)
-        if found is None or not found.settings:
+        if found is None or not (found.settings or found.adds):
             raise HTTPException(status_code=404, detail="That step suggests no settings.")
-        barred = [k for k in found.settings if k.startswith(NEVER_SUGGESTED)]
+        barred = [k for k in (*found.settings, *found.adds) if k.startswith(NEVER_SUGGESTED)]
         if barred:
             log.warning("A setup step suggested settings it may not: %s", ", ".join(barred))
             raise HTTPException(
@@ -425,6 +428,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             )
         now = current()
         changes = {key: _merged(now.value(key), value) for key, value in found.settings.items()}
+        for key, values in found.adds.items():
+            mine = now.value(key)
+            mine = list(mine) if isinstance(mine, list) else []
+            changes[key] = [*mine, *(v for v in values if v not in mine)]
         return saved(save(changes, [], body.fingerprint, allow=("",)))
 
     @r.post("/setup/{step:path}/skip")
@@ -973,9 +980,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     adapter=p.adapter,
                     base_url=p.base_url,
                     models=dict(p.models),
-                    used_for=[t for t, tier in ai.tiers.items() if (tier.use or "").split("/", 1)[0] == name],
+                    # The core's tiers only: an add-on's own tiers are mapped and listed under the add-on.
+                    used_for=[
+                        t for t, tier in ai.tiers.items() if "/" not in t and (tier.use or "").split("/", 1)[0] == name
+                    ],
                     backup_for=[
-                        t for t, tier in ai.tiers.items() if any(f.split("/", 1)[0] == name for f in tier.fallback)
+                        t
+                        for t, tier in ai.tiers.items()
+                        if "/" not in t and any(f.split("/", 1)[0] == name for f in tier.fallback)
                     ],
                     has_key=bool(p.auth),
                     key_state=state,
@@ -1009,7 +1021,6 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
         from engine.ai import matrix, suggest
         from engine.ai.adapters import make_adapter
-        from engine.shipped import DEMOS, demo
         from engine.skills import skills as skill_list
         from engine.tasks import default_tier
         from engine.tasks import settings as task_settings
@@ -1017,18 +1028,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         cfg_now = current()
         ai = cfg_now.ai
         today = worker.now().astimezone(UTC).date()
-        sets: dict[str, dict[str, str]] = {}
-        needed: dict[str, list[str]] = {}
-        for demo_name in DEMOS:
-            sets |= matrix.case_sets(demo(demo_name), ws.root)
-            for kind_name, ids in matrix.skills_by_kind(demo(demo_name), ws.root).items():
-                needed[kind_name] = [
-                    *needed.get(kind_name, []),
-                    *(i for i in ids if i not in needed.get(kind_name, [])),
-                ]
-        # The measurements of the model each tier uses, by tier; a tier with no account has none.
+        sets, needed = skill_needs()
+        # The measurements of the model each tier uses, by tier; a tier with no account has none. An add-on's own tiers
+        # are mapped under the add-on (GET /api/ai/pack-tiers), not here.
         standings: dict[str, list[Any]] = {}
         for tier_name, tier in ai.tiers.items():
+            if "/" in tier_name:
+                continue
             account, _, short = tier.use.partition("/")
             provider = ai.providers.get(account) if tier.use else None
             if provider is None:
@@ -1097,6 +1103,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 escalate_source=config_screens.source_of(cfg_now, f"ai.tiers.{name}.escalate_to"),
             )
             for name, tier in ai.tiers.items()
+            if "/" not in name
         ]
         return AiRoutingView(
             kinds=kinds,
@@ -1108,6 +1115,77 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             confirm_above_usd=ai.budgets.confirm_above_usd,
             per_run_usd=ai.budgets.per_run_usd,
         )
+
+    def skill_needs() -> tuple[dict[str, dict[str, str]], dict[str, list[str]]]:
+        """The sets of cases the measurements were made on, and the skills each kind of work needs."""
+        from engine.ai import matrix
+        from engine.shipped import DEMOS, demo
+
+        sets: dict[str, dict[str, str]] = {}
+        needed: dict[str, list[str]] = {}
+        for demo_name in DEMOS:
+            sets |= matrix.case_sets(demo(demo_name), ws.root)
+            for kind_name, ids in matrix.skills_by_kind(demo(demo_name), ws.root).items():
+                needed[kind_name] = [
+                    *needed.get(kind_name, []),
+                    *(i for i in ids if i not in needed.get(kind_name, [])),
+                ]
+        return sets, needed
+
+    @r.get("/ai/pack-tiers")
+    def ai_pack_tiers() -> PackTiersView:
+        """The tiers the running add-ons declare for their own work, each with where it stands (mapped to an account
+        and model, or running on the core tier it falls back to) and, when the capability measurements back one, the
+        account and model to map it to. Mapping is the account's own change (POST /api/ai/accounts/{name} with `use`
+        naming the tier's id). Nothing here picks an account."""
+        from datetime import UTC
+
+        from engine import pack_tiers
+        from engine.ai import matrix, suggest
+        from engine.ai.adapters import make_adapter
+
+        cfg_now = current()
+        ai = cfg_now.ai
+        today = worker.now().astimezone(UTC).date()
+        sets, needed = skill_needs()
+        standings: dict[str, list[Any]] = {}
+        for account, provider in ai.providers.items():
+            version = matrix.current_program_version(cfg_now, account, make_adapter)
+            for short, model_id in provider.models.items():
+                standings[f"{account}/{short}"] = matrix.standing(
+                    ws,
+                    cfg_now,
+                    f"{account}/{model_id}",
+                    program_version=version,
+                    current_sets=sets,
+                    today=today,
+                )
+        found = []
+        for tier in pack_tiers.declared(cfg_now, store.plugins):
+            ids = list(dict.fromkeys(i for kind in tier.used_by for i in needed.get(kind, [])))
+            pick = suggest.suggest_tier([suggest.fit(ref, ids, held) for ref, held in standings.items()], "")
+            use = ai.tiers[tier.id].use if tier.mapped else ""
+            account, _, short = use.partition("/")
+            account_pick, _, model_pick = (pick.tier or "").partition("/")
+            found.append(
+                PackTierView(
+                    id=tier.id,
+                    plugin=tier.plugin,
+                    label=tier.label,
+                    description=tier.description,
+                    falls_back_to=tier.falls_back_to,
+                    mapped=tier.mapped,
+                    account=account or None,
+                    model=short or None,
+                    used_by=[
+                        store.plugins.tasks[k].label or k.rsplit("/", 1)[-1].replace("-", " ").capitalize()
+                        for k in tier.used_by
+                    ],
+                    recommended=PackTierPick(account=account_pick, model=model_pick) if pick.tier else None,
+                    recommended_why_not=pick.why_not,
+                )
+            )
+        return PackTiersView(tiers=found)
 
     @r.get("/ai/check-size")
     def ai_check_size() -> AiCheckSize:

@@ -66,6 +66,10 @@ class Step:
     action: str | None = None  # a plugin step's person action, if it has one
     plugin: str | None = None
     settings: dict[str, Any] = field(default_factory=dict)  # core settings a plugin step suggests
+    adds: dict[str, list[Any]] = field(
+        default_factory=dict
+    )  # values a step suggests adding to list settings, not yet on
+    kind: str | None = None  # a step the core adds for a plugin: file_types or tiers (the plugin is in `plugin`)
     sign_in: str | None = None  # a step the core adds per sign-in: the sign-in's name
     group: str = "done"  # the walkthrough screen it belongs to (one of WALKTHROUGH_STEPS)
     counted: bool = False  # whether it counts toward finishing the walkthrough
@@ -181,9 +185,11 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
                 action=step.action,
                 plugin=plugin,
                 settings=dict(step.settings),
+                adds=_not_yet_on(cfg, step.adds),
                 group="mail" if plugin in mail_addons else "done",
             )
         )
+    found.extend(_plugin_steps(cfg, store, skipped, mail_addons))
     for name, sign_in in sign_ins.items():
         found.append(
             Step(
@@ -195,6 +201,66 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
                 plugin=sign_in.plugin,
                 sign_in=name,
                 group="mail" if sign_in.plugin in mail_addons else "done",
+            )
+        )
+    return found
+
+
+def _not_yet_on(cfg: Any, adds: dict[str, tuple[Any, ...]]) -> dict[str, list[Any]]:
+    """For each list setting a step adds to, the values the person's list lacks now; a list that has them all is left
+    out."""
+    found = {}
+    for key, values in adds.items():
+        have = cfg.value(key)
+        have = have if isinstance(have, list) else []
+        missing = [v for v in values if v not in have]
+        if missing:
+            found[key] = missing
+    return found
+
+
+#: The list setting of the media types files may have.
+ACCEPTED_TYPES = "storage.files.accepted_types"
+
+
+def _plugin_steps(cfg: Any, store: Any, skipped: set[str], mail_addons: set[str]) -> list[Step]:
+    """The steps the core adds for running add-ons from what they declare: one to add the media types their file kinds
+    take to the accepted ones (done when all are on the list), and one to map each add-on's own tiers to accounts (done
+    once every tier of it that a kind of its work names is mapped). A step with nothing left to do isn't offered."""
+    from engine import pack_tiers
+
+    found = []
+    for plugin, types in sorted(store.plugins.declared_media_types().items()):
+        missing = _not_yet_on(cfg, {ACCEPTED_TYPES: tuple(types)})
+        step_id = f"{plugin}/file-types"
+        found.append(
+            Step(
+                step_id,
+                not missing,
+                step_id in skipped and bool(missing),
+                plugin=plugin,
+                adds=missing,
+                kind="file_types",
+                group="mail" if plugin in mail_addons else "done",
+                applies=bool(missing),
+            )
+        )
+    tiers = pack_tiers.declared(cfg, store.plugins)
+    for plugin in sorted({t.plugin for t in tiers}):
+        mine = [t for t in tiers if t.plugin == plugin and t.used_by]
+        if not mine:
+            continue
+        finished = all(t.mapped for t in mine)
+        step_id = f"{plugin}/tiers"
+        found.append(
+            Step(
+                step_id,
+                finished,
+                step_id in skipped and not finished,
+                plugin=plugin,
+                kind="tiers",
+                group="mail" if plugin in mail_addons else "done",
+                applies=not finished,
             )
         )
     return found

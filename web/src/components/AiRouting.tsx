@@ -79,8 +79,11 @@ const SKIP_WHY = ["no_accounts", "no_cases"];
 function Kinds(props: { view: Routing; model: (tier: string) => string }) {
   const { t, has } = useWords();
   const save = useRoutingSave();
+  const tierName = useTierName();
+  const packTiers = useQuery({ queryKey: ["pack-tiers"], queryFn: api.packTiers });
   const [problems, setProblems] = useState<Record<string, string>>({});
   const [chosen, setChosen] = useState<Record<string, string>>({});
+  const own = (tier: string) => packTiers.data?.tiers.find((x) => x.id === tier)?.label ?? tierName(tier);
   const label = (k: WorkKind) => (has(`ai_routing.kind.${k.name}`) ? t(`ai_routing.kind.${k.name}`) : k.label);
 
   const choose = async (k: WorkKind, tier: string) => {
@@ -113,6 +116,7 @@ function Kinds(props: { view: Routing; model: (tier: string) => string }) {
           tiers={props.view.tiers}
           model={props.model}
           value={chosen[k.name] ?? k.tier}
+          own={own}
           problem={problems[k.name]}
           onChoose={(tier) => void choose(k, tier)}
           onReset={() => void reset(k)}
@@ -129,6 +133,8 @@ function KindRow(props: {
   tiers: Routing["tiers"];
   model: (tier: string) => string;
   value: string;
+  /** What to call a tier that belongs to an add-on. */
+  own: (tier: string) => string;
   problem?: string;
   onChoose: (tier: string) => void;
   onReset: () => void;
@@ -162,6 +168,8 @@ function KindRow(props: {
               {props.model(x.name)}
             </option>
           ))}
+          {/* An add-on's own tier isn't one of these: the kind of work that names it shows it, and it is mapped under the add-on. */}
+          {!props.tiers.some((x) => x.name === props.value) && <option value={props.value}>{props.own(props.value)}</option>}
         </select>
         {locked && <p className="hint">{t(kind.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
         {props.problem && (

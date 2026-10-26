@@ -132,6 +132,11 @@ class Provides(Strict):
     today: list[str] = Field(default_factory=list, description="Contributors of lines on Today.")
     jobs: list[str] = Field(default_factory=list, description="Work run on a schedule while the app runs.")
     setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
+    tiers: list[str] = Field(
+        default_factory=list,
+        description="Tiers of the plugin's own (`<plugin>/<name>`), which its task kinds may name and the person maps "
+        "to an account and model; each falls back to a core tier until mapped.",
+    )
     data_forms: list[str] = Field(
         default_factory=list, description="Kinds of data file the screens offer a form for, checked by a schema."
     )
@@ -278,6 +283,7 @@ class Manifest(Strict):
             "today",
             "jobs",
             "scorers",
+            "tiers",
         )
         for category in categories:
             names = getattr(self.provides, category)

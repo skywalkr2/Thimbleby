@@ -60,6 +60,7 @@ A plugin's manifest, `plugin.yaml`, beside its package. It is read and checked b
 | `provides.today` | list[str] | `[]` | Contributors of lines on Today. |
 | `provides.jobs` | list[str] | `[]` | Work run on a schedule while the app runs. |
 | `provides.setup_steps` | list[str] | `[]` | Steps added to the first-run setup. |
+| `provides.tiers` | list[str] | `[]` | Tiers of the plugin's own (`<plugin>/<name>`), which its task kinds may name and the person maps to an account and model; each falls back to a core tier until mapped. |
 | `provides.data_forms` | list[str] | `[]` | Kinds of data file the screens offer a form for, checked by a schema. |
 | `provides.connectors` | list[str] | `[]` | Places the assistant can keep reading. |
 | `provides.connector_reads` | dict[str, Literal['mail', 'calendar']] | `{}` | What each of the plugin's connectors reads, by connector: mail or calendar. The setup walkthrough offers an add-on that signs in and reads mail or a calendar as a service to connect, also before it is installed. A connector left out is told apart by its name. |
@@ -96,7 +97,7 @@ A non-empty value for any of these keys turns the plugin off with the reason.
 
 ## Settings
 
-Base for a plugin's settings, read from `config/plugins/<plugin>.yaml`. Every field needs a default and a description; unknown keys are refused. Handlers and actions get a copy as `context.config`. A field may be a nested model (shown as its own section on the Settings screen; keep it to one level) and may use an alias when its name in the file can't be a Python name.
+Base for a plugin's settings, read from `config/plugins/<plugin>.yaml`. Every field needs a default and a description; unknown keys are refused. Handlers and actions get a copy as `context.config`. A field may be a nested model (shown as its own section on the Settings screen; keep it to one level) and may use an alias when its name in the file can't be a Python name. The screens build the model with no values to learn its defaults, so a rule over the whole model ("required unless another is set") doesn't belong in a model validator, which would refuse that empty model: check it where the plugin reads the setting, or in a lint.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -138,7 +139,7 @@ Register AI work: the core or own ops its answer may use, and `label`, what to c
 
 `role` is "write" (the default: work that writes or changes things), "check" (an independent second opinion on work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`). A check never runs on an account that wrote the record it is about (its accepted and pending text versions and the changes AI runs made to it), unless the person accepts the same account for checks; the run then records which kind of independence it had (`Run.independence`). With no account to take it, the check waits for the person and says why. The packet decides what a check sees: give it the work, never the writing run's own material.
 
-`tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them.
+`tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them. `tier` is a core tier or one of the plugin's own (`registrar.tier`, "<plugin>/<name>"); naming one the plugin didn't declare refuses the plugin at start.
 
 `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings made in the same answer). Ops held for the person still wait as usual.
 
@@ -206,6 +207,8 @@ A kind of data file the person edits through a form (listed in `provides.data_fo
 
 The screens list the files with the layer each comes from (shipped, the workspace's, a project's) and any problem each has, checked as the plugin's loader would and with defaults checked too (a required value left empty shows). They offer a form built from the schema, as for settings: editing a shipped file saves a copy in the workspace's layer (or a project's), never the shipped one; a new file starts from the schema's defaults or from another file of the kind ("start from"); a copy can be removed to fall back to the less specific one. A save writes only the keys the file already had plus those the person set, never the whole model with its defaults, so keys left out stay left out (a template's `extends` keeps following its base). Every save is checked against the schema (a refusal names the field, or says the file's own rule when the model's validator refused it) and offers Undo. The list shows each file's first problem; opening the file shows the form with it. The plugin reads the files as before, with `view.data(path, project=...)`, and must read them with this same schema: a key left out of a file takes the schema's default, so a loader with other defaults (or a field it requires that the form defaults) sees a different file than the form checked.
 
+Every field needs a default because the form builds the model with no values to learn them, so a rule over the whole model ("this is required unless that is set") can't be a model validator: it would refuse that empty model and the form would show no defaults. Put such a rule in the plugin's loader, where the file is read, or in a lint on the ops that use the file.
+
 #### `registrar.job(name: str, *, every_minutes: int, run: Callable) -> None`
 
 Work on a schedule (listed in `provides.jobs`): `run(context)` with an `EventContext`, every `every_minutes` by default; the workspace changes it or turns the job off in `workspace.plugins.jobs.<name>`. Like an event handler it reads, queues requests, files questions, raises interface events and stages its own ops; it never writes records directly and never calls AI itself. It runs only while the app runs, and each run is recorded.
@@ -256,9 +259,15 @@ A deterministic scorer for what only this plugin can judge (listed in `provides.
 
 A value list (listed in `provides.value_lists`): the values a field of the plugin's own record types may take, shown as a dropdown. Bind a field to it with `Annotated[str | None, InList("<plugin>/<name>")]` (or a list of those); a field may also take a core list, such as "project-status". `values` are the first values a workspace gets, once, the first time the list is needed, together with any values its records already hold; after that the list is the person's (they add, rename and retire values, with Undo), so never rely on a value staying on it. A value not on the list is refused wherever the record is written, a refusal the op's author sees; a value a record already holds stays valid after it is retired.
 
-#### `registrar.setup_step(name: str, *, label: str, done: Callable, explanation: str = '', action: str | None = None, settings: dict[str, Any] | None = None) -> None`
+#### `registrar.setup_step(name: str, *, label: str, done: Callable, explanation: str = '', action: str | None = None, settings: dict[str, Any] | None = None, adds: dict[str, Any] | None = None) -> None`
 
 A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called whenever setup is shown, so it must be quick and deterministic. A `done` taking a third argument gets a `SetupState`: the names of its declared secrets that are set (a frozenset; never their values), the effective values of the settings it suggests (`state.settings`), the AI accounts per role (`state.accounts`) and `state.tool_available(name)` for its declared programs. The host counts `done`'s positional parameters (through `functools.wraps`), so a wrapper around it declares all three. `action` is one of this plugin's person actions on the workspace, offered as the step's button; without one, the step points to the plugin's settings. `settings` suggests core settings the plugin needs ({"ai.budgets.confirm_unpriced": True}): the step shows them with an Apply button that saves them like any settings change (checked, with Undo); the plugin never changes them itself. A suggested mapping is merged: its keys are added and every key the person already has keeps its own value, nested keys included. The person can skip it and come back to it later.
+
+`adds` suggests values to add to a list setting ({"storage.files.accepted_types": ["application/x-example"]}): the step shows "adds: ..." with the values the person's list lacks, and the person's yes applies them as a union with their own list (their entries stay, in their order, and the new values follow), as their own settings change, checked and with Undo; the plugin never changes the list itself. The key must be a list setting, and the same keys are barred as for `settings`. A step whose `adds` values are all on the list already has nothing to apply. `state.settings[key]` is the person's whole effective list. Suggest only what the plugin needs and say why in `explanation`.
+
+#### `registrar.tier(name: str, *, label: str, falls_back_to: str, description: str = '') -> None`
+
+Declare a tier of the plugin's own (listed in `provides.tiers`, id `<plugin>/<name>`), for work that needs a kind of model the core's tiers don't name (long context, careful reading). `label` and `description` are what the person sees when they map it to an account and model, under the plugin in Settings and in the setup guide; `falls_back_to` is the core tier (`routine` or `deep`, or one the workspace added) the work runs on until the person maps this one. Name it as `tier=` on the plugin's task kinds. Only the plugin's own task kinds use it: the core's own work never does, and a role (`ai.roles`) can't name it. The core never picks an account for it: until it is mapped the work runs on the fallback tier's account (one the person already set up) and one line on Today says so and offers to map it. The person's mapping is the setting `ai.tiers.<id>` (an account and model, with fallbacks, effort and thinking like any tier).
 
 #### `registrar.derived_file(name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None`
 
@@ -394,7 +403,7 @@ Relative paths of the data files under a folder, across all layers, each once, s
 
 #### `view.stage_status(record: Stored) -> StageStatus | None`
 
-Where a record of a core kind or this plugin's own stands in the workspace's effective stages, with the next stage's entry checks run now; None for a kind with no stages. Not available inside a stage check, which is itself part of this answer (it raises PluginMisuse there).
+Where a record of a core kind or this plugin's own stands in the workspace's effective stages, with the next stage's entry checks run now; None for a kind with no stages. Not available inside a stage check, which is itself part of this answer (it raises PluginMisuse there). The answer's fields: `current` (the stage id, or None before the first), `stages` (the ids that apply, in order), `next` (the next one that applies, None at the end), `checks` (that stage's entry checks by id, each with `passed` and `reason`), `ready` (all of them pass), and `current_label` and `next_label`: the stages' labels from `stages.yaml`, where every stage must have one, so a label is None only when there is no such stage (no current stage yet, at the last one, or a stage since taken out of `stages.yaml`).
 
 #### `view.source_text(source_id: str) -> str`
 
@@ -633,7 +642,7 @@ One action's result for one review: what it would change (ops, as dicts), files 
 
 ### Item
 
-A change the person keeps or drops without the action running again: one judgment call, made of one or more ops (dicts) that apply together. `id` is stable across runs, so the person's tick carries over to an unchanged item when a choice reruns the action. An item's ops undo together; an op that sets its own `group` keeps it, so several items can share one Undo.
+A change the person keeps or drops without the action running again: one judgment call, made of one or more ops (dicts) that apply together. `id` is stable across runs, so the person's tick carries over to an unchanged item when a choice reruns the action. An item's ops undo together; an op that sets its own `group` keeps it, so several items can share one Undo. `group` is the id of one of the proposal's `Group`s that the item sits under (an id the proposal doesn't list refuses it); `kept` is the tick the review starts with.
 
 | Field | Type | Default |
 |---|---|---|
@@ -861,6 +870,8 @@ Publishing a pack (the process every plugin repository follows; the catalog's PU
 
 2. **Write its catalog entry** as `catalog/pack.yaml` in that repository, in the catalog's format (the catalog repository's README): `provides` and `requires` copied exactly from `plugin.yaml`, its price, how to get it, and its typical AI jobs. Its `release` gives the address of the attached wheel and the wheel's SHA-256, which the download must match. For a private repository the address is the release asset's API address (not the page address), which is read with a read token: the person adds the token on the Add-ons screen, where it is kept on their computer, and it is sent only to that address's host. Leave `release` out and the screen shows the entry's own install text instead of an Install button.
 
+A pack that needs libraries besides the app's own lists them in `release.libraries`: every wheel it needs, its dependencies' and theirs, one entry for each build (`name`, `version`, `platform`: `any` or a wheel platform tag such as `win_amd64` or `macosx_11_0_arm64`, the wheel's `url` and its `sha256`). Install shows what it will add, takes the build that fits the computer, installs exactly those wheels and never reads a package index. It refuses a library that isn't a built wheel, one with no build for the computer, a need the app and the list don't meet, and one that clashes with a package the app has or one installed another way. Remove takes out only the libraries no other installed pack uses. The pack's own wheel stays pure Python. Quote each checksum in the entry file: one made only of digits reads as a number.
+
 3. **Check it:** `cockpit pack check <its plugin folder> --entry catalog/pack.yaml`, with the host at the version the pack declares. Every line must pass. A pack whose plugins share a helper package from the same distribution is checked installed: install the built package beside the host and name the plugin instead of its folder (`cockpit pack check <plugin name> --entry catalog/pack.yaml`). An entry file listing several packs is matched to the plugin by its id.
 
 4. **Ask for it to be published:** add a "Publish request" to its `docs/host-questions.md` (the pack, the version and tag, what changed, the check's output, and whether the owner has said it may be listed publicly) and tell the host's session. A plugin repository never writes to the catalog itself.
@@ -1040,17 +1051,19 @@ A throwaway workspace (the fictional demo's data) with the plugins loaded, for a
 
 Its attributes: `root` (the workspace folder), `plugins` (the names of the plugins given, in order) and `cfg` (the workspace's settings as loaded). `store` and `ws` are the host's own objects: reach them only where no method here covers a test, since they change with the host.
 
+Opening a workspace runs the core's list setup, as the app does when it starts: the value lists the core and the started plugins declare exist in it (with their values and any a record already holds), so a test needn't create them before a record that takes its values from one.
+
 #### `ws.status(plugin: str | None = None) -> PluginState`
 
 A plugin's status (the first plugin given, unless named), whether it started or not.
 
 #### `ws.registered(plugin: str | None = None) -> dict[str, Any]`
 
-What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ..., "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs", "stage_checks", "file_kinds", "lints", "extractors", "scorers", "drop_hooks"}, and "project_ending" (its hook, when it registered one). Empty kinds are left out. A started plugin only.
+What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ..., "triage_matchers", "setup_steps", "tiers", "actions", "tasks", "ops", "records", "panels", "today", "jobs", "stage_checks", "file_kinds", "lints", "extractors", "scorers", "drop_hooks"}, and "project_ending" (its hook, when it registered one). Empty kinds are left out. A started plugin only.
 
 #### `ws.save(path: str | Path) -> SavedWorkspace`
 
-Save this workspace as it is now (records, settings, the plugins linked in), so other tests start from fresh copies of it with `plugin_workspace(..., from_saved=saved)` instead of building it again.
+Save this workspace as it is now (records, settings, the plugins linked in), so other tests start from fresh copies of it with `plugin_workspace(..., from_saved=saved)` instead of building it again. Saving closes the workspace's store and opens a new one, so a `ws.store` (or anything read through it) held from before the call is closed afterwards: read `ws.store` again, or use the methods here, which always take the current one.
 
 #### `ws.view(plugin: str | None = None) -> Any`
 
@@ -1122,7 +1135,7 @@ A run of a task kind: the request's `state` (review: the answer waits for the pe
 
 #### ActionResult
 
-A person action's proposal as the review shows it: `summary`, `ops`, `notes`, `items`, `requests` and `problems` (why ops would be refused if applied now). `apply(kept=...)` applies it as the person would.
+A person action's proposal as the review shows it: `summary`, and `topic`, the few words that name it for the item's title (empty when the action gave none); `ops`, the ops it would apply, as dicts; `notes`, what the person should know; `items`, the changes the person keeps or drops, each a dict with `id`, `label`, `group` (the id of the group it sits under, or None), `kept` (the tick the review starts with) and `ops`; `groups`, the headings that gather choices and items, each a dict with `id`, `heading` and `explanation`; `requests`, the work it would queue, each a dict with `task`, `about` ({"kind", "id"} or None) and `note`; and `problems`, why ops outside the items would be refused if applied now. `apply(kept=...)` applies it as the person would.
 
 #### PluginState
 
@@ -1135,6 +1148,12 @@ A workspace saved with `ws.save()`, to start tests from fresh copies of: `plugin
 #### PluginDidNotStart
 
 A plugin given to `plugin_workspace` didn't start: `plugin` names it and `reason` says why, as its status on the Add-ons screen would.
+
+#### `proposal.apply(kept: Mapping[str, bool] | None = None) -> Outcome`
+
+Apply the proposal as the person would (their own change, actor `pm`) and say what became of each op.
+
+`kept` maps an item's id to True (keep) or False (drop): the ticks the person sets on the review. An item left out keeps the tick it came with (`kept` on the item); an id that names no item raises StoreError, as it does on screen. With no `kept`, the proposal applies as it was proposed.
 
 ## Channels
 
@@ -1501,14 +1520,14 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `about.kind` | str | required | The record's kind. |
 | `about.id` | str | required | The record's id. |
 | `use` | str \| None | `None` | The account the person picked for this request ("provider/model"), in place of its tier. |
-| `approval` | Literal['required', 'granted'] \| None | `None` | Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm. |
+| `approval` | Literal['required', 'granted'] \| None | `None` | Needs the person's go before dispatch: stage tasks, runs above the amount to confirm, and the first run waiting for a go. A request waiting for the go is `needs_you` with approval `required`; the go sets it to `granted` and queues the request. |
 | `estimate_usd` | float \| None | `None` | What the run was estimated to cost when it asked for a go. |
 | `range_usd` | list[float] \| None | `None` | What the whole request was estimated to cost, low and high, with its fix rounds, searches and the stronger model, when it was last dispatched; none when it can't be priced. |
 | `spend_cap_usd` | float \| None | `None` | The most the request may spend in all under the person's go: what it had spent before the go plus the high figure; none until the first dispatch after a go. |
 | `note` | str \| None | `None` | The person's own words that came with the request. |
 | `source` | str \| None | `None` | The id of the source the request is about, if any. |
 | `origin` | Literal['pm', 'input', 'schedule'] | required | Who started it: pm, the person (handing something in or sending work back); input, an outside input; schedule, a schedule or a stage entry. |
-| `state` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] | `'queued'` | queued: waiting its turn. running: with the assistant. review: its changeset awaits the person. done: finished. needs_you: stopped until the person acts. failed: ended with an error. |
+| `state` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] | `'queued'` | queued: waiting its turn. running: with the assistant. review: its changeset awaits the person. done: finished. needs_you: stopped until the person acts (a request waiting for their go is needs_you with approval `required`). failed: ended with an error. |
 | `waiting` | str \| None | `None` | Why it is waiting and until when, in plain words. |
 | `cause` | StopCause \| None | see below | Why a request waits, when there is more to it than its words: for one waiting on the person, the cause the screen can offer an action for; for one queued, the time it is waiting for. |
 | `cause.kind` | Literal['data_level', 'no_person', 'paused', 'retry', 'offline', 'identity'] | required | data_level: no AI account may see the request's material, and `accounts` would take it if allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by itself at `until` (`idle` counts the runs in a row that did no work). offline: no AI account could be reached for want of a network connection; the request stays queued since `since` and is looked at again at `until`, and no try is counted. identity: a command-line agent's sign-in changed (`why` changed) or isn't set for the material's level (`why` level); the request stays queued, untouched, until the person answers for `account`. |
