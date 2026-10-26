@@ -202,3 +202,50 @@ def remove(name: str, place: Path | None = None) -> None:
             directory.rmdir()
     if folder.exists():
         shutil.rmtree(folder)
+
+
+# ---- one file, several add-ons ----------------------------------------------------------------------------------
+
+
+#: The add-ons a person removed while another add-on of the same package still used the package's files, kept in the
+#: workspace's private folder: the files stay, and these read as not installed.
+REMOVED_FILE = "pack-removed.json"
+
+
+def _canonical(name: str) -> str:
+    return name.replace("-", "_").replace(".", "_").lower()
+
+
+def entries_in(package: str) -> list[str]:
+    """The add-ons (by the name they run under) that an installed package provides: a package can hold several."""
+    return sorted(
+        {
+            ep.name
+            for ep in metadata.entry_points(group="pm_cockpit.plugins")
+            if ep.dist is not None and _canonical(ep.dist.name) == _canonical(package)
+        }
+    )
+
+
+def removed_entries(private_dir: Path) -> set[str]:
+    """The add-ons removed while their package stayed for another add-on."""
+    import json
+
+    try:
+        data = json.loads((private_dir / REMOVED_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {str(n) for n in data} if isinstance(data, list) else set()
+
+
+def set_removed(private_dir: Path, names: list[str], removed: bool) -> None:
+    """Mark add-ons as removed (their package stays), or bring them back (a new install of the package, or the files
+    having gone with the last of them)."""
+    import json
+
+    from engine.state_file import write_whole
+
+    current = removed_entries(private_dir)
+    changed = current | set(names) if removed else current - set(names)
+    if changed != current:
+        write_whole(private_dir / REMOVED_FILE, json.dumps(sorted(changed)))

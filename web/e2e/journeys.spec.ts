@@ -38,20 +38,25 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("navigation", { name: "Views" })).toHaveCount(0);
     await visit(page);
 
-    // You: my name and the workspace's name. Saving makes my own person record.
+    // You: my name and the time zone, one list that starts with this computer's. Saving makes my own person record. The
+    // workspace's name and the assistant's are not asked here; the work question is the next screen.
     const main = page.locator("main#main");
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
-    await main.getByLabel("Workspace name").fill("Offsite team");
     await main.getByLabel("Your full name").fill(info.people[0]);
-    // The assistant has a name of its own to change, "for you, or for you and a business?" is asked, and the time zone
-    // is one list that starts with this computer's.
-    await expect(main.getByLabel("Your assistant's name")).toHaveValue("Reginald");
-    await expect(main.getByText("Is this for you, or for you and a business?")).toBeVisible();
     await expect(main.getByLabel("Your time zone")).toBeVisible();
+    await expect(main.getByLabel("Workspace name")).toHaveCount(0);
+    await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
     await visit(page);
+
+    // Work: Just me or Me and my work, nothing else; work brings the notice about work mail, and Just me carries on.
+    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await main.getByRole("radio", { name: "Me and my work" }).check();
+    await expect(main.getByRole("note")).toContainText("may need your employer's permission");
+    await main.getByRole("radio", { name: "Just me" }).check();
+    await main.getByRole("button", { name: "Continue" }).click();
 
     // Your AI account: a service of my own that speaks the common chat format, at the address the fake service
     // answers on. The screen also says what it may spend.

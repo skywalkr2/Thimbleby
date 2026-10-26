@@ -6,11 +6,12 @@ export type Screen = S["WalkthroughView"]["step"];
 type Step = S["SetupStepView"];
 
 /** The screens, in the order a person needs them. The last one lists what was set up and what is optional. */
-export const SCREENS: readonly Screen[] = ["you", "ai", "mail", "promises", "backup", "people", "done"];
+export const SCREENS: readonly Screen[] = ["you", "work", "ai", "mail", "promises", "backup", "people", "done"];
 
 /** The core setup step each screen is about; the first result and the last have none. */
 export const STEP_OF: Record<Screen, string | null> = {
   you: "workspace",
+  work: "work",
   ai: "ai",
   mail: "mail",
   promises: null,

@@ -12,6 +12,7 @@ import engine.net
 from engine import packs
 from engine.config import load_config
 from tests.conftest import DEMO_B
+from tests.test_sign_in import signing as signing  # noqa: F401 - the fixture
 
 FIXTURES = Path(__file__).parent / "fixtures" / "network"
 N = yaml.safe_load((FIXTURES / "network.yaml").read_text())
@@ -119,3 +120,16 @@ def test_the_shipped_feed_template_reads_cleanly():
     template = Path(__file__).parents[1] / "deploy" / "pack-catalog.example.yaml"
     feed = packs.parse(FEED, template.read_text())
     assert len(feed.entries) == 1 and not feed.notes and feed.error is None
+
+
+def test_an_add_on_that_signs_in_says_whether_it_is_signed_in(signing):
+    from tests.test_sign_in_sources import _app, _with_sources, sign_in
+
+    ws, cfg, store, _ = signing
+    store.close()
+    _with_sources(ws)
+    c, api = _app(ws, cfg)
+    mine = lambda: next(p for p in c.get(f"{api}/packs").json()["installed"] if p["name"] == "p18")  # noqa: E731
+    assert mine()["enabled"] and mine()["signed_in"] is False
+    sign_in(c, api)
+    assert mine()["signed_in"] is True

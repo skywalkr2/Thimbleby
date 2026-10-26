@@ -133,7 +133,13 @@ def test_the_install_route_uses_the_catalog_entry(tmp_path, monkeypatch):
     assert listed["packdemo"]["installable"] and not listed["bare"]["installable"]
     done = c.post(f"{api}/packs/packdemo/install")
     assert done.status_code == 200, done.text
-    assert done.json() == {"name": "pack-demo", "version": "0.1.0", "needs_restart": True}
+    assert done.json() == {
+        "name": "pack-demo",
+        "version": "0.1.0",
+        "needs_restart": True,
+        "file_kept": False,
+        "still_used_by": [],
+    }
     assert (place / "pack_demo" / "__init__.py").is_file()
     assert c.post(f"{api}/packs/bare/install").status_code == 409
     assert c.post(f"{api}/packs/nothing/install").status_code == 404
@@ -244,6 +250,134 @@ def test_an_add_on_still_on_in_the_saved_settings_is_not_removed(screen):
     refused = c.post(f"{api}/packs/packdemo/uninstall")
     assert refused.status_code == 409 and "Turn it off first" in refused.json()["detail"]
     assert (place / "pack_demo" / "__init__.py").is_file()
+
+
+# ---- one release file that holds several add-ons -------------------------------------------------------------------
+
+
+def duo_wheel():
+    """One package holding two add-ons, each with its own folder, manifest and entry point."""
+    buffer = io.BytesIO()
+    info = "pack_duo-0.1.0.dist-info"
+    with zipfile.ZipFile(buffer, "w") as z:
+        for name in ("alpha", "beta"):
+            z.writestr(f"pack_{name}/__init__.py", "def register(registrar):\n    pass\n")
+            z.writestr(
+                f"pack_{name}/plugin.yaml",
+                f"name: {name}\nversion: 0.1.0\nplugin_api: '>=0.3,<0.4'\ndescription: The {name} add-on.\n"
+                f"config_schema: pack_{name}:Config\nentry: pack_{name}:register\n",
+            )
+        z.writestr(f"{info}/METADATA", "Metadata-Version: 2.1\nName: pack-duo\nVersion: 0.1.0\n")
+        z.writestr(f"{info}/WHEEL", "Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n")
+        z.writestr(
+            f"{info}/entry_points.txt", "[pm_cockpit.plugins]\nalpha = pack_alpha:register\nbeta = pack_beta:register\n"
+        )
+        z.writestr(f"{info}/RECORD", "")
+    return buffer.getvalue()
+
+
+@pytest.fixture
+def duo(tmp_path, monkeypatch):
+    """The app with a catalog whose two entries name the same release file, the download faked, and a folder to install
+    into."""
+    import importlib
+
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine import packs
+    from tests.test_setup import make
+
+    data = duo_wheel()
+    release = {"url": RELEASE, "sha256": hashlib.sha256(data).hexdigest()}
+    entries = [packs.Entry(id=name, name=f"Name of {name}", release=release) for name in ("alpha", "beta")]
+    monkeypatch.setattr(packs, "read_feeds", lambda *a, **k: [packs.Feed(RELEASE, entries)])
+    monkeypatch.setattr(pack_install, "download", lambda url, sha, token=None, client=None: data)
+    place = tmp_path / "site"
+    place.mkdir()
+    monkeypatch.setattr(pack_install, "target", lambda: place)
+    monkeypatch.syspath_prepend(str(place))
+    importlib.invalidate_caches()
+    ws, cfg, store = make(tmp_path)
+    store.close()
+    app = create_app(ws, cfg, "t", start_worker=False)
+    c = TestClient(app)
+    c.headers["Authorization"] = "Bearer t"
+    return c, cfg.server.base_path.rstrip("/") + "/api", app.state.worker, place, release["sha256"]
+
+
+def listing(c, api):
+    view = c.get(f"{api}/packs").json()
+    mine = {"alpha", "beta"}  # the workspace's own add-ons are listed too
+    return {p["id"]: p for p in view["available"]}, {p["name"]: p for p in view["installed"] if p["name"] in mine}
+
+
+def test_entries_that_share_one_release_file_say_so_and_both_are_installed_by_one_install(duo):
+    c, api, _, place, sha = duo
+    available, installed = listing(c, api)
+    assert available["alpha"]["file"] == available["beta"]["file"] == sha and not installed
+    assert c.post(f"{api}/packs/alpha/install").status_code == 200
+    available, installed = listing(c, api)
+    assert {a["installed_version"] for a in available.values()} == {"0.1.0"}  # one file, so both are here
+    assert set(installed) == {"alpha", "beta"} and {i["file"] for i in installed.values()} == {sha}
+    assert all(p["removable"] for p in available.values())
+    assert available["alpha"]["signed_in"] is None  # not running, so nothing to say about signing in
+
+
+def test_removing_one_entry_of_a_shared_file_keeps_the_file_while_another_entry_uses_it(duo):
+    c, api, worker, place, _ = duo
+    c.post(f"{api}/packs/alpha/install")
+    kept = c.post(f"{api}/packs/alpha/uninstall")
+    assert kept.status_code == 200, kept.text
+    assert kept.json() == {
+        "name": "pack-duo",
+        "version": "0.1.0",
+        "needs_restart": False,
+        "file_kept": True,
+        "still_used_by": ["beta"],
+    }
+    assert (place / "pack_alpha" / "__init__.py").is_file() and (place / "pack_beta" / "__init__.py").is_file()
+    assert worker.restart_needed is None and worker.restart_for == []
+    available, installed = listing(c, api)
+    assert set(installed) == {"beta"}, "the removed entry reads as not installed"
+    assert available["alpha"]["installed_version"] is None and not available["alpha"]["removable"]
+    assert available["beta"]["installed_version"] == "0.1.0" and available["beta"]["removable"]
+
+
+def test_the_file_goes_with_the_last_entry_that_uses_it(duo):
+    c, api, worker, place, _ = duo
+    c.post(f"{api}/packs/alpha/install")
+    c.post(f"{api}/packs/alpha/uninstall")
+    last = c.post(f"{api}/packs/beta/uninstall")
+    assert last.status_code == 200 and last.json()["file_kept"] is False and last.json()["needs_restart"] is True
+    assert not (place / "pack_alpha").exists() and not (place / "pack_beta").exists()
+    assert not list(place.glob("*.dist-info"))
+    assert not pack_install.removed_entries(worker.ws.private_dir), "nothing is left marked once the file is gone"
+
+
+def test_an_entry_removed_while_the_file_stayed_comes_back_with_an_install(duo):
+    c, api, _, _, _ = duo
+    c.post(f"{api}/packs/alpha/install")
+    c.post(f"{api}/packs/alpha/uninstall")
+    assert c.post(f"{api}/packs/alpha/install").status_code == 200
+    available, installed = listing(c, api)
+    assert set(installed) == {"alpha", "beta"} and available["alpha"]["installed_version"] == "0.1.0"
+
+
+def test_an_entry_that_is_on_is_not_removed_and_the_file_stays_for_it(duo):
+    import yaml
+
+    c, api, worker, place, _ = duo
+    c.post(f"{api}/packs/alpha/install")
+    path = worker.ws.config_dir / "workspace.yaml"
+    data = yaml.safe_load(path.read_text())
+    data.setdefault("plugins", {})["enabled"] = [*data.get("plugins", {}).get("enabled", []), "beta"]
+    path.write_text(yaml.safe_dump(data))
+    refused = c.post(f"{api}/packs/beta/uninstall")
+    assert refused.status_code == 409 and "Turn it off first" in refused.json()["detail"]
+    kept = c.post(f"{api}/packs/alpha/uninstall").json()  # beta is on and uses the file
+    assert kept["file_kept"] and kept["still_used_by"] == ["beta"]
+    assert (place / "pack_beta" / "__init__.py").is_file()
 
 
 def test_the_install_command_puts_an_add_on_file_in_place(tmp_path, monkeypatch, capsys):

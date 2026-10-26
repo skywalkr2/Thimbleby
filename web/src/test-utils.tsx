@@ -94,6 +94,7 @@ export function rcFixture(extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeCo
 /** The walkthrough screen each core setup step is on, as the server sorts them; any other step is an optional extra. */
 const SCREEN_OF: Record<string, S["SetupStepView"]["group"]> = {
   workspace: "you",
+  work: "work",
   ai: "ai",
   mail: "mail",
   backup: "backup",
@@ -111,7 +112,7 @@ export function setupStep(id: string, extra: Partial<S["SetupStepView"]> = {}): 
     action: null,
     plugin: null,
     group: SCREEN_OF[id] ?? "done",
-    counted: id in SCREEN_OF,
+    counted: id in SCREEN_OF && id !== "work",
     ...extra,
   };
 }

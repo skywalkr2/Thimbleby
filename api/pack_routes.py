@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import InstalledPackView, PackFeedView, PackInstalled, PackSummary, PacksView, PackView
-from engine import packs
+from engine import pack_install, packs
 from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
 from engine.plugin_manifest import declared_plugins, shipped_plugins
@@ -68,10 +68,18 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 )
         return found
 
+    def signed_in() -> dict[str, bool]:
+        """For each running add-on that signs in, whether any of its sign-ins is signed in."""
+        from engine.sign_in import status
+
+        found: dict[str, bool] = {}
+        for sign_in in host.sign_ins().values():
+            ok = status(ws.root / ".cockpit" / "keys" / sign_in.plugin, sign_in) == "signed_in"
+            found[sign_in.plugin] = found.get(sign_in.plugin, False) or ok
+        return found
+
     def view(refresh: bool) -> PacksView:
         from importlib.metadata import entry_points
-
-        from engine import pack_install
 
         # Which add-ons the app installed from this screen (and so can take away again), by the name they run under.
         mine = {
@@ -91,10 +99,14 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             enabled = set(cfg.workspace.plugins.enabled)
         on_disk = {m.name: m for m in declared_plugins(ws.config_dir, None)}
         shipped = shipped_plugins()
+        # Removed while another add-on of the same file stayed: not installed, unless turned on again by hand.
+        gone = pack_install.removed_entries(ws.private_dir) - enabled
+        signed = signed_in()
+        files = {e.id: e.release.sha256 for feed in feeds for e in feed.entries if e.release is not None}
         available = []
         for feed in feeds:
             for entry in feed.entries:
-                manifest = host.manifests.get(entry.id) or on_disk.get(entry.id)
+                manifest = None if entry.id in gone else host.manifests.get(entry.id) or on_disk.get(entry.id)
                 available.append(
                     PackView(
                         id=entry.id,
@@ -114,10 +126,12 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                         enabled=entry.id in enabled,
                         what=PackSummary(**packs.summary(entry.provides, entry.requires)),
                         installable=entry.release is not None and cfg.server.mode == "local",
-                        removable=entry.id in mine,
+                        removable=entry.id in mine and entry.id not in gone,
                         costs=costs(entry),
                         feed=urlsplit(feed.url).hostname or "",
                         release_host=(urlsplit(entry.release.url).hostname or None) if entry.release else None,
+                        file=entry.release.sha256 if entry.release else None,
+                        signed_in=signed.get(entry.id) if entry.id in enabled else None,
                     )
                 )
         installed = [
@@ -130,10 +144,12 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 reason=host.status[name].reason if name in host.status else None,
                 what=PackSummary(**packs.manifest_summary(manifest)),
                 removable=name in mine,
+                file=files.get(name),
+                signed_in=signed.get(name) if name in enabled else None,
             )
             for name, manifest in sorted({**on_disk, **host.manifests}.items())
             # The app's own samples and kits show only when turned on, or in a sandbox workspace for trying them.
-            if name in enabled or name not in shipped or cfg.workspace.demo
+            if (name in enabled or name not in shipped or cfg.workspace.demo) and name not in gone
         ]
         return PacksView(
             enabled=settings.enabled,
@@ -156,7 +172,6 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
     def install(pack_id: str) -> PackInstalled:
         """Install (or update) an add-on from the release file its catalog entry names, checked against the entry's
         checksum. It isn't turned on; it is used after the restart the person chooses."""
-        from engine import pack_install
         from engine.secrets import SecretError, resolve_secret
 
         if cfg.server.mode != "local":
@@ -182,31 +197,46 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             raise HTTPException(status_code=409, detail=_sentence(str(err)), headers={NEEDS: "read-token"}) from None
         except pack_install.InstallError as err:
             raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
-        if host.active(pack_id):
+        # The file is in place again for every add-on it holds, so none of them reads as removed any more.
+        together = pack_install.entries_in(done.name)
+        pack_install.set_removed(ws.private_dir, [pack_id, *together], False)
+        if any(host.active(name) for name in {pack_id, *together}):
             # A running add-on was updated: work waits for the restart rather than mix old and new files.
             worker.add_ons_changed()
         return PackInstalled(name=done.name, version=done.version, needs_restart=True)
 
     @r.post("/packs/{pack_id}/uninstall")
     def uninstall(pack_id: str) -> PackInstalled:
-        """Remove an add-on installed from this screen. Its records and settings stay; turn it off first."""
+        """Remove an add-on installed from this screen. Its records and settings stay; turn it off first. When other
+        installed add-ons come in the same file, only this one is taken away (it is left off and reads as not
+        installed) and the file stays for the others; the file goes with the last of them."""
         from importlib.metadata import entry_points
-
-        from engine import pack_install
 
         if pack_id in set(_saved(ws, cfg).workspace.plugins.enabled):
             raise HTTPException(status_code=409, detail="Turn it off first, then remove it.")
-        # Turned off but still running until the restart: its files go now, so work waits for that restart.
-        running = host.active(pack_id)
         found = next((ep for ep in entry_points(group="pm_cockpit.plugins") if ep.name == pack_id), None)
         if found is None or found.dist is None:
             raise HTTPException(status_code=404, detail=f"{pack_id} isn't installed as a package.")
         # Read before the files go: the package's metadata is among them.
         name, version = found.dist.name, found.dist.version
+        if not pack_install.installed_here(name):
+            raise HTTPException(
+                status_code=409, detail=_sentence(f"{name} was installed another way, so it is removed the same way")
+            )
+        together = pack_install.entries_in(name)
+        gone = pack_install.removed_entries(ws.private_dir)
+        # Counted before anything is deleted: the other installed add-ons that use this file.
+        using = [n for n in together if n != pack_id and n not in gone]
+        if using:
+            pack_install.set_removed(ws.private_dir, [pack_id], True)
+            return PackInstalled(name=name, version=version, needs_restart=False, file_kept=True, still_used_by=using)
+        # Turned off but still running until the restart: its files go now, so work waits for that restart.
+        running = any(host.active(n) for n in {pack_id, *together})
         try:
             pack_install.remove(name)
         except pack_install.InstallError as err:
             raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
+        pack_install.set_removed(ws.private_dir, together, False)
         if running:
             worker.add_ons_changed()
         return PackInstalled(name=name, version=version, needs_restart=True)

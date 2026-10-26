@@ -390,6 +390,21 @@ freeze"). A pack's catalog entry says where its release is and how to check it. 
   its reference to `workspace.plugins.catalog.release_tokens`; a hosted app takes only a reference (6.29);
 - is for a local install only. A hosted app's add-ons are installed with its deployment.
 
+**Entries that come in one release file** (functional designer, 2026-10-26, F38). Several entries can name the same release
+file (the same `release.sha256`): one file that holds, say, two services' add-ons. The screen shows them as **one row**
+(on Available and on Installed): a heading with the entries' own names ("<name> and <name>"), who made it and what it costs
+once, "Includes <names>", and under it each entry's own state (installed, on or off, signed in or not), its own
+Turn on or off and its own Remove. One Install covers the file. The core names no service: every name on the row is an
+entry's own, and the grouping is by the checksum alone, so the catalog format does not change now (an optional `includes:`
+field waits for the plugin API release; readers ignore fields they don't know, so an older app doesn't hide the entry).
+**Remove counts first**: it counts the installed entries that use the same file before deleting anything
+(`pack_install.entries_in`, `POST /api/packs/{id}/uninstall`). While another installed entry uses the file, removing one
+leaves that entry off and reading as not installed (kept in the private folder, `pack-removed.json`) and keeps the file; the
+screen says so ("The file stays because it is still in use by <names>") and asks for no restart. The file goes with the last
+entry that uses it, and installing an entry again brings back the ones removed beside it. `GET /api/packs` gives each entry
+its `file` and, for a running add-on that signs in, `signed_in`. Built: `tests/test_pack_install.py` (the shared-file
+tests), `web/src/components/Addons.test.tsx`, `web/src/lib/packs.test.ts`.
+
 **Catalogs from the screen** (decisions, 2026-10-16, "A catalog's address and a read token are added on the Add-ons screen").
 With no catalog listed, Available shows "Add a catalog": one https address, saved into `workspace.plugins.catalog.feeds` and
 read at once; the catalog list offers adding another and taking away one the person added (never the one the build came with).

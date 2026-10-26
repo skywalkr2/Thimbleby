@@ -16,7 +16,9 @@ import {
   SAFE_ID,
   addsLines,
   costText,
+  groupByFile,
   keepsText,
+  listOf,
   priceText,
   reachesLines,
   updateOffered,
@@ -104,9 +106,10 @@ function useSwitch(name: string, label: string) {
 /** Installing, updating or removing an add-on from the screen: acts at once, then the row says a restart is needed until
  * the app has restarted. A refusal is kept for the row to show in the server's own words; `note` is what the row says
  * after a success. */
-function usePackChange(packId: string, name: string, focusRow: () => void) {
+function usePackChange(packId: string, name: string, focusRow: () => void, nameOf: (id: string) => string = (id) => id) {
   const { t } = useWords();
   const client = useQueryClient();
+  const { push } = useToasts();
   const [busy, setBusy] = useState<"install" | "remove" | null>(null);
   const [problem, setProblem] = useState("");
   // The refusal says a read token for the release's host would fix it: the row asks for one in place.
@@ -129,8 +132,13 @@ function usePackChange(packId: string, name: string, focusRow: () => void) {
     setNeedsToken(false);
     setTokenSaved(false);
     try {
-      await (what === "install" ? api.installPack : api.removePack)(packId);
-      setLast({ what: what === "install" ? "installed" : "removed", at: restarts });
+      const result = await (what === "install" ? api.installPack : api.removePack)(packId);
+      if (result.file_kept) {
+        // Only this add-on went: the file stays while others of the same file use it, and nothing needs a restart.
+        push({ message: t("addons.removed_kept_note", { name, others: (result.still_used_by ?? []).map(nameOf).join(", ") }) });
+      } else {
+        setLast({ what: what === "install" ? "installed" : "removed", at: restarts });
+      }
       await Promise.all([
         client.invalidateQueries({ queryKey: ["packs"] }),
         client.invalidateQueries({ queryKey: ["status"] }),
@@ -246,15 +254,25 @@ function Available(props: { view: S["PacksView"] }) {
         <p className="empty">{empty}</p>
       ) : (
         <ul className="queue">
-          {view.available.map((pack, i) => (
-            <PackRow
-              key={`${pack.id}-${i}`}
-              pack={pack}
-              index={i}
-              restartNeeded={restartNeeded(pack, view.installed)}
-              onGet={() => setGetting(i)}
-            />
-          ))}
+          {groupByFile(view.available).map((slots) =>
+            slots.length === 1 ? (
+              <PackRow
+                key={`${slots[0].item.id}-${slots[0].index}`}
+                pack={slots[0].item}
+                index={slots[0].index}
+                restartNeeded={restartNeeded(slots[0].item, view.installed)}
+                onGet={() => setGetting(slots[0].index)}
+              />
+            ) : (
+              <PackGroup
+                key={`group-${slots[0].index}`}
+                slots={slots.map((slot) => ({ pack: slot.item, index: slot.index }))}
+                installed={view.installed}
+                nameOf={(id) => view.available.find((p) => p.id === id)?.name ?? id}
+                onGet={(i) => setGetting(i)}
+              />
+            ),
+          )}
         </ul>
       )}
       {view.enabled && view.feeds.length === 0 && <AddCatalog first />}
@@ -302,7 +320,16 @@ function WhatLines(props: { what: Summary; base: string }) {
   );
 }
 
-function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onGet: () => void }) {
+/** `group` is set when the row is one of several add-ons that come in one file: the group's row says who made it and
+ * what it costs, and installs the file, so this row keeps its own state, what it adds, reaches and keeps, and its own
+ * switch, and installs only to bring back an add-on removed while the file stayed. */
+function PackRow(props: {
+  pack: Pack;
+  index: number;
+  restartNeeded: boolean;
+  onGet: () => void;
+  group?: { anyInstalled: boolean; nameOf: (id: string) => string };
+}) {
   const { t } = useWords();
   const total = useTotal();
   const small = useSmallMoney();
@@ -323,10 +350,15 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
   const safeHomepage = pack.homepage && pack.homepage_domain && domainOf(pack.homepage) ? pack.homepage : null;
   const size = (n: number) => n.toLocaleString();
   const power = useSwitch(pack.id, pack.name);
-  const change = usePackChange(pack.id, pack.name, () =>
-    restoreFocus(() => document.getElementById(`pack-row-${index}`)),
+  const change = usePackChange(
+    pack.id,
+    pack.name,
+    () => restoreFocus(() => document.getElementById(`pack-row-${index}`)),
+    props.group?.nameOf,
   );
   const problem = change.problem || power.problem;
+  // In a group, the file is installed from the group's row; this row offers it only once the others are installed.
+  const offerInstall = !props.group || props.group.anyInstalled;
 
   const actions: MenuAction[] = [];
   if (installed && update && pack.installable) {
@@ -349,8 +381,8 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
       <div className="row pair">
         <div className="text pack">
           <strong id={`${base}-name`}>{pack.name}</strong>
-          <span className="sub">{facts.join(" · ")}</span>
-          <span className="sub pack-price">{priceText(pack.price, amount, t)}</span>
+          {!props.group && <span className="sub">{facts.join(" · ")}</span>}
+          {!props.group && <span className="sub pack-price">{priceText(pack.price, amount, t)}</span>}
           {pack.summary && <p className="pack-summary">{pack.summary}</p>}
           <WhatLines what={pack.what} base={base} />
           {pack.costs.length > 0 && (
@@ -373,6 +405,9 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
               })}
               {props.restartNeeded && !change.note && <RestartNowButton />}
             </p>
+          )}
+          {installed && pack.enabled && pack.signed_in != null && (
+            <p className="sub">{t(pack.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>
           )}
           {installed && update && (
             <p className="pack-update">
@@ -398,7 +433,7 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
           )}
         </div>
         <div className="acts">
-          {!installed && pack.installable && !change.installed && (
+          {!installed && pack.installable && !change.installed && offerInstall && (
             <button
               type="button"
               id={`pack-install-${index}`}
@@ -411,7 +446,7 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
               {t(change.busy === "install" ? "addons.installing" : "addons.install")}
             </button>
           )}
-          {!installed && !pack.installable && (
+          {!installed && !pack.installable && offerInstall && (
             <button
               type="button"
               id={`pack-get-${index}`}
@@ -427,6 +462,103 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
             <SwitchButton on={false} label={pack.name} busy={power.busy} id={`pack-switch-${index}`} onRun={() => void power.run(true)} />
           )}
           <RowMenu label={pack.name} actions={actions} />
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/** Add-ons that come in one file, as one row: who made it and what it costs once, the file installed with one button,
+ * and under it each add-on with its own state (installed, on or off, signed in or not), its own switch and its own
+ * Remove, which takes only that one away while the others still use the file. */
+function PackGroup(props: {
+  slots: { pack: Pack; index: number }[];
+  installed: Installed[];
+  nameOf: (id: string) => string;
+  onGet: (index: number) => void;
+}) {
+  const { t } = useWords();
+  const total = useTotal();
+  const { slots } = props;
+  const first = slots[0];
+  const names = slots.map((s) => s.pack.name);
+  const base = `pack-group-${first.index}`;
+  const anyInstalled = slots.some((s) => s.pack.installed_version != null);
+  const change = usePackChange(first.pack.id, names.join(", "), () =>
+    restoreFocus(() => document.getElementById(`${base}-row`)),
+  );
+  const amount = (value: number, currency: string) =>
+    !currency || currency.toUpperCase() === "USD" ? total(value) : t("money.other", { amount: value.toFixed(2), currency });
+  const pack = first.pack;
+  const facts = [
+    t(pack.maintainers ? "addons.by_maintainers" : "addons.third_party"),
+    pack.publisher,
+    pack.updated ? t("addons.updated", { updated: /^\d{4}-\d{2}-\d{2}$/.test(pack.updated) ? day(pack.updated) : pack.updated }) : "",
+  ].filter(Boolean);
+  return (
+    <li className="line" id={`${base}-row`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
+      <div className="row pair">
+        <div className="text pack">
+          <strong id={`${base}-name`}>{t("addons.group.title", { names: listOf(names, t("addons.group.and")) })}</strong>
+          <span className="sub">{facts.join(" · ")}</span>
+          <span className="sub pack-price">{priceText(pack.price, amount, t)}</span>
+          <p className="hint">{t("addons.group.one_file", { n: slots.length })}</p>
+          <p className="what" id={`${base}-includes`}>
+            {t("addons.group.includes", { names: names.join(", ") })}
+          </p>
+          {change.problem && (
+            <p className="problem-note" role="alert">
+              {change.problem}
+            </p>
+          )}
+          {change.needsToken && pack.release_host && (
+            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
+          )}
+          {change.tokenSaved && (
+            <p className="sub" role="status">
+              {t("addons.token.saved_note")}
+            </p>
+          )}
+          {change.note && <RestartLine text={change.note} />}
+          <ul className="queue" aria-labelledby={`${base}-includes`}>
+            {slots.map((slot) => (
+              <PackRow
+                key={`${slot.pack.id}-${slot.index}`}
+                pack={slot.pack}
+                index={slot.index}
+                restartNeeded={restartNeeded(slot.pack, props.installed)}
+                onGet={() => props.onGet(slot.index)}
+                group={{ anyInstalled, nameOf: props.nameOf }}
+              />
+            ))}
+          </ul>
+        </div>
+        <div className="acts">
+          {!anyInstalled && pack.installable && !change.installed && (
+            <button
+              type="button"
+              id={`${base}-install`}
+              className="btn primary"
+              data-key="primary"
+              disabled={change.busy !== null}
+              aria-label={t("addons.install_named", { name: names.join(", ") })}
+              onClick={() => void change.install()}
+            >
+              {t(change.busy === "install" ? "addons.installing" : "addons.install")}
+            </button>
+          )}
+          {!anyInstalled && !pack.installable && (
+            <button
+              type="button"
+              id={`${base}-get`}
+              className="btn primary"
+              data-key="primary"
+              aria-label={t("addons.get_named", { name: names.join(", ") })}
+              onClick={() => props.onGet(first.index)}
+            >
+              {t("addons.get")}
+            </button>
+          )}
         </div>
       </div>
     </li>
@@ -774,10 +906,37 @@ function InstalledList(props: { items: Installed[] }) {
   if (props.items.length === 0) return <p className="empty">{t("addons.installed.empty")}</p>;
   return (
     <ul className="queue">
-      {props.items.map((item, i) => (
-        <InstalledRow key={`${item.name}-${i}`} item={item} index={i} />
-      ))}
+      {groupByFile(props.items).map((slots) =>
+        slots.length === 1 ? (
+          <InstalledRow key={`${slots[0].item.name}-${slots[0].index}`} item={slots[0].item} index={slots[0].index} />
+        ) : (
+          <InstalledGroup key={`group-${slots[0].index}`} slots={slots} />
+        ),
+      )}
     </ul>
+  );
+}
+
+/** Installed add-ons that come in one file, as one row with each one's own state, switch and Remove under it. */
+function InstalledGroup(props: { slots: { item: Installed; index: number }[] }) {
+  const { t } = useWords();
+  const names = props.slots.map((s) => s.item.name);
+  const base = `installed-group-${props.slots[0].index}`;
+  return (
+    <li className="line" id={`${base}-row`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
+      <div className="text pack">
+        <strong id={`${base}-name`}>{t("addons.group.title", { names: listOf(names, t("addons.group.and")) })}</strong>
+        <p className="hint">{t("addons.group.one_file", { n: names.length })}</p>
+        <p className="what" id={`${base}-includes`}>
+          {t("addons.group.includes", { names: names.join(", ") })}
+        </p>
+        <ul className="queue" aria-labelledby={`${base}-includes`}>
+          {props.slots.map((slot) => (
+            <InstalledRow key={`${slot.item.name}-${slot.index}`} item={slot.item} index={slot.index} />
+          ))}
+        </ul>
+      </div>
+    </li>
   );
 }
 
@@ -814,6 +973,7 @@ function InstalledRow(props: { item: Installed; index: number }) {
             {statusText}
             {pending && <RestartNowButton />}
           </p>
+          {isOn && item.signed_in != null && <p className="sub">{t(item.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>}
           {change.note && <RestartLine text={change.note} />}
           {problem && (
             <p className="problem-note" role="alert">

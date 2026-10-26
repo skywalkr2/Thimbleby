@@ -13,9 +13,9 @@ from engine.names import People
 from engine.triage import classify
 from engine.watch import refresh
 from tests.test_set_aside import mail, make, requests_in
+from tests.test_sides import BOTH_PERSON, BUSINESS_ID, BUSINESS_PEOPLE, PERSONAL_PEOPLE, new_op
 from tests.test_sides import base as base  # noqa: F401  (the fixtures)
 from tests.test_sides import env as env  # noqa: F401
-from tests.test_sides import new_op
 
 NOW = datetime.now(UTC).replace(microsecond=0)
 POWER = "billing@power.example.com"
@@ -97,9 +97,9 @@ def raw(sender, subject):
     return f"New in Inbox: {subject}\n\nFrom: Someone <{sender}>\nSubject: {subject}\n\nBody."
 
 
-def filed(env, text):
+def filed(env, text, sender=None):
     _, cfg, store = env
-    return sides.file_by_people([new_op(text="Pay it")], store.read(), cfg, People(store, cfg), None, text)[0]
+    return sides.file_by_people([new_op(text="Pay it")], store.read(), cfg, People(store, cfg), sender, text)[0]
 
 
 def test_mail_the_rules_know_as_a_bill_or_an_order_is_filed_under_the_personal_project(env):
@@ -111,6 +111,31 @@ def test_mail_the_rules_know_as_a_bill_or_an_order_is_filed_under_the_personal_p
     ):
         got = filed(env, raw(sender, subject))
         assert got.project == cfg.workspace.project.personal and got.filed_by.by == "word"
+
+
+def test_a_bill_from_someone_on_the_work_side_is_filed_under_work_and_every_other_bill_stays_personal(env):
+    """With a work side, the sender's relation is read before the Personal default: a known person on the work side
+    (a supplier) files their invoice there; a person on the personal side, on both sides or nobody known does not."""
+    _, cfg, _ = env
+    bill = raw(POWER, "Your statement is ready")
+    got = filed(env, bill, sender=BUSINESS_PEOPLE[0]["id"])
+    assert (got.project, got.filed_by.by) == (BUSINESS_ID, "people")
+    for sender in (PERSONAL_PEOPLE[0]["id"], BOTH_PERSON["id"], None):
+        got = filed(env, bill, sender=sender)
+        assert (got.project, got.filed_by.by) == (cfg.workspace.project.personal, "word")
+
+
+def test_a_bill_from_an_organization_on_the_work_side_is_filed_under_work(env):
+    """Nobody known sent it, but its mail domain belongs to an organization whose people are all on the work side."""
+    from tests.test_filing_signals import BUSINESS_DOMAIN, ORG_ONE, at_domain
+
+    _, cfg, _ = env
+    for person in BUSINESS_PEOPLE:
+        at_domain(env, person, BUSINESS_DOMAIN, ORG_ONE)
+    got = filed(env, raw(f"billing@{BUSINESS_DOMAIN}", "Invoice 1234 is due"))
+    assert (got.project, got.filed_by.by, got.filed_by.word) == (BUSINESS_ID, "domain", BUSINESS_DOMAIN)
+    # A domain nobody on either side has is still the person's own life.
+    assert filed(env, raw(POWER, "Your statement is ready")).project == cfg.workspace.project.personal
 
 
 def test_the_same_words_in_a_note_or_in_other_mail_file_nothing_by_kind(env):

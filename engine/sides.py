@@ -322,7 +322,8 @@ def file_by_people(
     sides decides nothing and the next is read:
     00. the project the person settled for the hand-in (the request's own project), when it has one;
     0. mail the rules know as a bill, an order or a delivery (`engine/mail_kinds.py`): the personal project, whoever
-       sent it;
+       sent it, unless the person has a work side and the sender's relation is work (`_sender_relation`: a known person
+       on that side, or an organization whose people are all on it), which files it under the work side;
     1. the people the op names and the input's sender, when known: the side every deciding person is on (those on
        both sides and those not known don't decide), filed under that side's top project;
     2. the sender's mail domain, when the sender is nobody known (`domain_side`);
@@ -354,8 +355,12 @@ def file_by_people(
             out.append(op.model_copy(update={"project": settled}))
             continue
         if kind and personal:
-            # A bill, an order or a delivery is the person's own life, whoever sent it: the Personal project.
-            out.append(op.model_copy(update={"project": personal, "filed_by": Filing(personal, "word", kind).stamp()}))
+            # A bill, an order or a delivery is the person's own life, whoever sent it: the Personal project. Once the
+            # person has a work side, a sender whose relation is work (a known person on that side, or an
+            # organization whose people are all on it) is read first, so a supplier's invoice goes to work.
+            relation = _sender_relation(sender, by_domain, domain, business, people)
+            filing = relation or Filing(personal, "word", kind)
+            out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}))
             continue
         if business is None:
             out.append(op.model_copy(update={"project": personal}) if only_personal else op)
@@ -374,6 +379,21 @@ def file_by_people(
                 filing = file_by_words(op, view, cfg, words)
         out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}) if filing else op)
     return out
+
+
+def _sender_relation(
+    sender: str | None, by_domain: Side | None, domain: str | None, business: str | None, people: Any
+) -> Filing | None:
+    """How the sender's own relation files a bill, an order or a delivery under the work side, or none: the sender is a
+    known person on the work side, or nobody known at a mail domain whose organization is wholly on it. Both sides, no
+    side and an unknown sender leave the Personal default."""
+    if business is None:
+        return None
+    if sender and side_of_person(people, sender) == "business":
+        return Filing(business, "people")
+    if by_domain == "business" and domain:
+        return Filing(business, "domain", domain)
+    return None
 
 
 def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | None:

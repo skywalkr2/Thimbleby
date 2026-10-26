@@ -10,7 +10,7 @@ import { App } from "../App";
 import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture } from "../test-utils";
 import { Walkthrough } from "./Walkthrough";
 
-const CORE = ["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"];
+const CORE = ["workspace", "work", "ai", "mail", "backup", "people", "template", "first_note", "addons"];
 const SETTINGS = [
   {
     key: "ai.budgets.confirm_above_usd",
@@ -172,7 +172,7 @@ function routes(over: Record<string, (body: unknown) => unknown> = {}, steps = C
     "GET setup": () => setupView(steps, { walkthrough: { open: true, ...walk } }),
     "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS }),
     "GET me": () => ({ person: null, full_name: "" }),
-    "GET setup/business": () => ({ business: false, name: null }),
+    "GET setup/business": () => ({ business: false, name: null, chosen: null }),
     "GET people": () => [],
     "GET ai/endpoints": () => [],
     "GET ai/accounts": () => [],
@@ -568,7 +568,7 @@ describe("toasts", () => {
     await user.click(screen.getByRole("button", { name: "say something" }));
     expect(within(region()).getByText("Saved. Workspace name: Offsite team")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(region()).queryByText(/Saved\./)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "say something" }));
@@ -612,44 +612,97 @@ describe("toasts", () => {
 });
 
 describe("each screen", () => {
-  test("You: the person's name, the workspace's name and the time zone in one form", async () => {
+  test("You: asks only the person's name and the time zone; the workspace and assistant names are Settings', not asked here", async () => {
     fakeApi(routes());
     open();
     expect(await screenTitle()).toHaveTextContent("You");
     expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Workspace name")).toBeInTheDocument();
     expect(screen.getByLabelText("Your time zone")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Workspace name")).toBeNull();
+    expect(screen.queryByLabelText("Your assistant's name")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
     expect(screen.getByText(/Saving adds you to People/)).toBeInTheDocument();
   });
 
-  test("You: the names are prefilled, and a business is asked for by name and saved through its own route", async () => {
+  test("You: the name is saved on the person's record and a changed time zone as a setting, then it goes on to Work", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes({
         "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
-        "POST setup/business": (body) => ({ project: "PRJ-1", name: (body as { name: string }).name, created: true, changeset: "CS-1" }),
         "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
       }),
     );
     open();
     const full = await screen.findByLabelText("Your full name");
-    expect(screen.getByLabelText("Workspace name")).toHaveValue("Workspace");
-    expect(screen.getByLabelText("Your assistant's name")).toHaveValue("Reginald");
+    expect(full).toHaveFocus();
     await user.type(full, "Sam Tester");
-    expect(screen.getByLabelText("Workspace name")).toHaveValue("Sam's workspace");
-    expect(screen.getByRole("radio", { name: "Just for me" })).toBeChecked();
-    expect(screen.queryByLabelText("What is the business called?")).toBeNull();
-    await user.click(screen.getByRole("radio", { name: "For me and a business" }));
-    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
-    await user.type(screen.getByLabelText("What is the business called?"), "Harbor Goods");
-    await user.clear(screen.getByLabelText("Your assistant's name"));
-    await user.type(screen.getByLabelText("Your assistant's name"), "Ada");
+    const zone = screen.getByLabelText("Your time zone");
+    await user.clear(zone);
+    await user.type(zone, "Zone-Two");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
-    expect(calls.find((c) => c.route === "POST setup/business")!.body).toEqual({ name: "Harbor Goods" });
-    expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({
-      changes: { "workspace.name": "Sam's workspace", "workspace.assistant_name": "Ada" },
-    });
+    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester" });
+    expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.user.timezone": "Zone-Two" } });
+    expect(calls.some((c) => c.route === "POST setup/business" || c.route === "POST setup/work")).toBe(false);
+  });
+
+  test("Work: two choices, Just me first; Continue keeps the answer and goes on to the AI account", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        { "POST setup/work": () => ({ business: false, name: null, chosen: "me" }) },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    expect(await screenTitle()).toHaveTextContent("Work");
+    const radios = await screen.findAllByRole("radio");
+    expect(radios.map((r) => (r.closest("label") as HTMLElement).textContent)).toEqual(["Just me", "Me and my work"]);
+    expect(radios[0]).toBeChecked();
+    expect(radios[0]).toHaveFocus();
+    expect(screen.queryByText(/employer's permission/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.find((c) => c.route === "POST setup/work")!.body).toEqual({ choice: "me" });
+  });
+
+  test("Work: Me and my work asks what it is called, shows the notice about work mail, and Continue waits for the name", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        { "POST setup/work": (body) => ({ business: true, name: (body as { name: string }).name, chosen: "work" }) },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("radio", { name: "Me and my work" }));
+    const notice = screen.getByRole("note");
+    expect(notice).toHaveTextContent("Reading work mail may need your employer's permission. Check your workplace's rules before you connect a work mailbox.");
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByText("Say what your work is called to go on.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("What is your work called?"), "Harbor Goods");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.find((c) => c.route === "POST setup/work")!.body).toEqual({ choice: "work", name: "Harbor Goods" });
+    // Whether it is a job or a business is never asked as a choice here.
+    expect(calls.filter((c) => c.route === "POST setup/work")).toHaveLength(1);
+  });
+
+  test("Work: with a work side already there it stays chosen under its name, and Just me can't be picked", async () => {
+    fakeApi(
+      routes(
+        { "GET setup/business": () => ({ business: true, name: "Harbor Goods", chosen: "work" }) },
+        CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
+        { step: "work" },
+      ),
+    );
+    open();
+    expect(await screen.findByRole("radio", { name: "Me and my work" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Just me" })).toBeDisabled();
+    expect(screen.getByLabelText("What is your work called?")).toHaveValue("Harbor Goods");
+    expect(screen.getByText(/already part of this/)).toBeInTheDocument();
   });
 
   test("Your AI account: spending is one sentence with its starting amounts, and Continue saves a change to them", async () => {
@@ -1313,32 +1366,32 @@ describe("the look", { timeout: 20_000 }, () => {
 
   test("You: Continue says what is missing, then saves the form and opens the next screen", async () => {
     const user = userEvent.setup();
-    const calls = fakeApi(routes({ "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) }));
+    const calls = fakeApi(routes({ "POST me": () => ({ person: "PER-1", full_name: "Harbor Work" }) }));
     open();
-    const name = await screen.findByLabelText("Workspace name");
+    const name = await screen.findByLabelText("Your full name");
     const main = screen.getByRole("main");
     // Until something is entered Continue is off, and says why under itself.
     expect(within(main).getByRole("button", { name: "Continue" })).toBeDisabled();
     expect(within(main).getByText("Enter your full name to go on.")).toBeInTheDocument();
-    await user.clear(name);
     await user.click(name);
-    await user.paste("Harbor work");
+    await user.paste("Harbor Work");
     await waitFor(() => expect(within(main).getByRole("button", { name: "Continue" })).toBeEnabled(), { timeout: 5000 });
     expect(within(main).queryByRole("button", { name: "Save and continue" })).toBeNull();
     await user.click(within(main).getByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
-    expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.name": "Harbor work" } });
+    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Harbor Work" });
   });
 
   test("a screen that was already done also saves with Continue, and moves on", async () => {
     const user = userEvent.setup();
-    let name = "Workspace";
+    let zone = "UTC";
     const calls = fakeApi(
       routes(
         {
-          "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS.map((i) => (i.key === "workspace.name" ? { ...i, value: name } : i)) }),
+          "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS.map((i) => (i.key === "workspace.user.timezone" ? { ...i, value: zone, default: "Zone-Default" } : i)) }),
+          "GET me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
           "POST settings": (body) => {
-            name = String((body as { changes: Record<string, string> }).changes["workspace.name"]);
+            zone = String((body as { changes: Record<string, string> }).changes["workspace.user.timezone"]);
             return { changes: [], fingerprint: "fp-2", needs_restart: false };
           },
         },
@@ -1346,14 +1399,14 @@ describe("the look", { timeout: 20_000 }, () => {
       ),
     );
     open();
-    const box = await screen.findByLabelText("Workspace name");
+    const box = await screen.findByLabelText("Your time zone");
     await user.clear(box);
     await user.click(box);
-    await user.paste("Harbor work");
+    await user.paste("Zone-Two");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     // A busy computer takes longer than the default second to save and move on.
     await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true), { timeout: 5000 });
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   test("a screen's Continue that couldn't save keeps the person on it", async () => {

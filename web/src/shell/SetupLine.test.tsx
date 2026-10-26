@@ -35,7 +35,7 @@ test("a brand new workspace starts at zero and names the first step", async () =
   open();
   const line = await screen.findByRole("region", { name: "Setup" });
   expect(line).toHaveTextContent("Setup 0 of 5");
-  expect(line).toHaveTextContent("Next: Name the workspace and say who you are");
+  expect(line).toHaveTextContent("Next: Say who you are");
 });
 
 test("Continue setup opens the guide at the next step", async () => {

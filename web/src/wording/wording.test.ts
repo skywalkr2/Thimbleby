@@ -60,7 +60,7 @@ test("key families built at run time are complete", () => {
     "changes.second.same_account",
     ...["ok", "failed"].map((x) => `setup.job_${x}`),
     "setup.job_other",
-    ...["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
+    ...["workspace", "work", "ai", "mail", "backup", "people", "template", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
     ...(s.WalkthroughView.properties.step.enum ?? []).flatMap((x) => [`walkthrough.screen.${x}`, `walkthrough.why.${x}`]),
     ...["done", "skipped"].map((x) => `walkthrough.state.${x}`),
     ...["done", "skipped", "todo"].map((x) => `walkthrough.done.${x}`),

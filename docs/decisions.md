@@ -4,6 +4,32 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Setup's two choices and work's first screen, a work side's supplier bills, and one Add-ons row for one file (F37, F38)
+
+**Decided:**
+- **Setup has two choices, "Just me" and "Me and my work"** (not three), on a screen of their own after You. Whether the work
+  is a job or a business shows in the people step's relations and the wording, not as a path, so `work_kind` is not built
+  and the design drops it. Choosing work asks what it is called and shows the employer-mail notice (reading work mail may
+  need the employer's permission; check the workplace's rules), also in the tester guide. Step 1 asks only the person's name
+  and time zone; the workspace's and the assistant's names keep their defaults and are changed in Settings (basic).
+- **Design 7.8 says one order**, the one the code follows: You, Work, Your AI account, Mail and calendar, Your promises,
+  Backups, People, Done.
+- **Bills, orders and deliveries** still file under Personal whoever sent them, except that with a work side the sender's
+  relation is read first (a known person on the work side, or an organization wholly on it files under work). Nothing
+  distinguishes a job from a business, so the relation is used for both. Personal gets no fifth special case.
+- **The Add-ons screen shows entries that share one release file as one row** with each entry's own state under it, and
+  Remove counts the installed entries that use a file before deleting it. The catalog format is unchanged until the plugin
+  API release (`includes:` then).
+
+**Decided by:** the functional designer, 2026-10-26, F37 and F38.
+
+**Why:** Setup asked too much at once and read as a tool for managers; a supplier's invoice to someone with a business is
+work, not personal; two entries sharing one file would have broken each other on removal.
+
+**Impact:** Design 7.8, 6.32, 6.5, 3.11 (the setup order, the work screen, the bill rule, the shared-file row). API: `POST
+/api/setup/work`, `chosen` on `/api/setup/business`, `file` and `signed_in` on the pack views, `file_kept` and
+`still_used_by` on a removal. No new setting. No change to scope. Change log: section 218.
+
 ## 2026-10-26: Questions about words are capped, batched and trimmed; a pack's records after a project ends are left out and listed (P60, P61)
 
 **Decided:** (F33) A term question is asked only when the local meaning may differ from the common one, so the shipped

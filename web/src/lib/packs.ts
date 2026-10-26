@@ -91,3 +91,27 @@ export function updateOffered(pack: S["PackView"]): boolean {
  * one just turned off still is, and either changes at the next restart. */
 export const waitsForRestart = (item: S["InstalledPackView"]) =>
   item.enabled ? item.state !== "enabled" && !item.reason : item.state === "enabled";
+
+/** Items that come in one file (the same `file`), as groups in the order each file first appears, each item with its place
+ * in the original list. An item with no file is a group of one. */
+export function groupByFile<T extends { file?: string | null }>(items: T[]): { item: T; index: number }[][] {
+  const groups: { item: T; index: number }[][] = [];
+  const byFile = new Map<string, { item: T; index: number }[]>();
+  items.forEach((item, index) => {
+    const found = item.file ? byFile.get(item.file) : undefined;
+    if (found) {
+      found.push({ item, index });
+      return;
+    }
+    const group = [{ item, index }];
+    groups.push(group);
+    if (item.file) byFile.set(item.file, group);
+  });
+  return groups;
+}
+
+/** Names in a list for a heading: "A", "A and B", "A, B and C". */
+export function listOf(names: string[], and = "and"): string {
+  if (names.length < 2) return names.join("");
+  return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
+}

@@ -82,6 +82,7 @@ from api.schemas import (
     WatchKindView,
     WatchSourceChange,
     WatchSourceIn,
+    WorkIn,
 )
 from engine import act_accounts, audit, kept_secrets, references, setup, templates
 from engine import set_aside as set_aside_mail
@@ -333,36 +334,60 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/setup/business")
     def business_state() -> BusinessState:
-        """Whether the person has a business and what it is called, for the Personal / business filter. A business whose
-        project was undone or removed counts as none."""
+        """Whether the person has a business and what it is called, for the Personal / business filter, and what they
+        said about their work at setup. A business whose project was undone or removed counts as none."""
         from engine import sides
 
-        view = store.read()
-        project = sides.business_project(view, cfg)
+        now, view = current(), store.read()
+        project = sides.business_project(view, now)
         return BusinessState(
-            business=project is not None, name=view.get("project", project).data["name"] if project else None
+            business=project is not None,
+            name=view.get("project", project).data["name"] if project else None,
+            chosen=setup.work_choice(ws, now, view),
+        )
+
+    def save_work(name: str) -> BusinessView:
+        from engine import sides
+
+        try:
+            made = sides.set_business(ws, store, current(), name, env=dict(os.environ))
+        except config_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        setup.keep_work_choice(ws, "work")
+        worker.apply_live()  # the business is a live setting: Today and Follow-ups read it at once
+        events.changed()
+        return BusinessView(
+            project=made.project,
+            name=" ".join(name.split()),
+            created=made.created,
+            changeset=made.changeset,
         )
 
     @r.post("/setup/business")
     def business_save(body: BusinessIn) -> BusinessView:
         """Say what the person's business is called: makes its top-level project and sets `project.business`; saying it
         again renames that project. With Undo."""
+        return save_work(body.name)
+
+    @r.post("/setup/work")
+    def work_save(body: WorkIn) -> BusinessState:
+        """Answer the work question: Just me keeps nothing but the answer; Me and my work names the work side (as
+        `POST /setup/business` does). Once a work side exists it stays; the answer can't go back to Just me."""
         from engine import sides
 
-        try:
-            made = sides.set_business(ws, store, current(), body.name, env=dict(os.environ))
-        except config_screens.SettingsConflict as err:
-            raise HTTPException(status_code=409, detail=str(err)) from None
-        except StoreError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from None
-        worker.apply_live()  # the business is a live setting: Today and Follow-ups read it at once
-        events.changed()
-        return BusinessView(
-            project=made.project,
-            name=" ".join(body.name.split()),
-            created=made.created,
-            changeset=made.changeset,
-        )
+        view, now = store.read(), current()
+        if body.choice == "work":
+            if not (body.name or "").strip():
+                raise HTTPException(status_code=422, detail="Say what your work is called.")
+            save_work(body.name or "")
+        elif sides.business_project(view, now) is not None:
+            raise HTTPException(status_code=409, detail="Your work is already part of this; it stays.")
+        else:
+            setup.keep_work_choice(ws, "me")
+            events.changed()
+        return business_state()
 
     # ---- setup steps ---------------------------------------------------------------------------------------------
 

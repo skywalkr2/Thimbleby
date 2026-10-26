@@ -591,9 +591,9 @@ def seed_both_sides(client, store, cfg):
 
 def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported(anytime):
     client, ws, store = anytime
-    assert client.get("/api/setup/business").json() == {"business": False, "name": None}
+    assert client.get("/api/setup/business").json() == {"business": False, "name": None, "chosen": None}
     ids, other = seed_both_sides(client, store, ws.config(env={}))
-    assert client.get("/api/setup/business").json() == {"business": True, "name": BUSINESS_NAME}
+    assert client.get("/api/setup/business").json() == {"business": True, "name": BUSINESS_NAME, "chosen": "work"}
     lines = {line["key"]: line for line in client.get("/api/today/queue").json()}
     for name, side in (("business", "business"), ("personal", "personal"), ("none", None)):
         assert lines[ids[name]["line"]]["side"] == side
@@ -612,7 +612,7 @@ def test_with_no_business_nothing_is_on_the_business_side_and_the_route_says_so(
     with store.transaction() as tx:
         home = tx.create("question", {"to": me, "title": "Which one?", "projects": [personal_id]}, _PM).id
         loose = tx.create("question", {"to": me, "title": "Which other?"}, _PM).id
-    assert client.get("/api/setup/business").json() == {"business": False, "name": None}
+    assert client.get("/api/setup/business").json() == {"business": False, "name": None, "chosen": None}
     lines = {line["key"]: line["side"] for line in client.get("/api/today/queue").json()}
     assert lines[f"question:{home}"] == "personal" and lines[f"question:{loose}"] is None
     assert "business" not in lines.values()

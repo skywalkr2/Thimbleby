@@ -34,13 +34,25 @@ from engine.storage import StoreError
 from engine.yaml_load import load_yaml
 
 STATE_FILE = "setup.json"
-CORE_STEPS = ("workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons")
+CORE_STEPS = ("workspace", "work", "ai", "mail", "backup", "people", "template", "first_note", "addons")
 #: The walkthrough's screens, in order. "promises" is the first result (the look back over the mail and the promises
 #: found, `engine/first_promises.py`), right after mail, so nothing that asks about more comes before it; it has no
-#: setup step of its own. The last screen lists what was set up and what is optional.
-WALKTHROUGH_STEPS = ("you", "ai", "mail", "promises", "backup", "people", "done")
+#: setup step of its own. "work" asks whether the person's work is part of this (Just me, or Me and my work) and is
+#: optional: it never blocks finishing. The last screen lists what was set up and what is optional.
+WALKTHROUGH_STEPS = ("you", "work", "ai", "mail", "promises", "backup", "people", "done")
 #: The walkthrough screen a core step belongs to; a core step not listed is an optional extra, on the last screen.
-CORE_GROUPS = {"workspace": "you", "ai": "ai", "mail": "mail", "backup": "backup", "people": "people"}
+CORE_GROUPS = {
+    "workspace": "you",
+    "work": "work",
+    "ai": "ai",
+    "mail": "mail",
+    "backup": "backup",
+    "people": "people",
+}
+#: The core steps that count toward finishing the walkthrough (the work question is answered or left, never required).
+COUNTED_STEPS = frozenset({"workspace", "ai", "mail", "backup", "people"})
+#: What the person answered to the work question.
+WORK_CHOICES = ("me", "work")
 CATALOG = shipped("catalog") / "ai-endpoints.yaml"
 
 
@@ -136,6 +148,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     mail_read = any(source.enabled and reads(source.connector, said) for source in cfg.watch.sources)
     done = {
         "workspace": _pm_named(cfg, view),  # the workspace's own name is optional; naming yourself is what counts
+        "work": work_choice(ws, cfg, view) is not None,
         "template": bool(state.get("template")) or _template_in_use(ws, cfg),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
         "mail": mail_signed or mail_read,
@@ -151,7 +164,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             done[step],
             step in skipped and not done[step],
             group=CORE_GROUPS.get(step, "done"),
-            counted=step in CORE_GROUPS,
+            counted=step in COUNTED_STEPS,
             applies=step != "addons" or done[step] or bool(addons_off(ws, cfg)),
         )
         for step in CORE_STEPS
@@ -185,6 +198,25 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             )
         )
     return found
+
+
+def work_choice(ws: Any, cfg: Any, view: Any) -> str | None:
+    """What the person said about their work: "work" when a work side exists (or they chose it), "me" when they chose
+    Just me, none while the question is unanswered."""
+    from engine import sides
+
+    if sides.business_project(view, cfg) is not None:
+        return "work"
+    chosen = _state(ws).get("work")
+    return chosen if chosen in WORK_CHOICES else None
+
+
+def keep_work_choice(ws: Any, choice: str) -> None:
+    """Keep the answer to the work question on this computer, beside the skips."""
+    if choice not in WORK_CHOICES:
+        raise StoreError(f"there is no work choice {choice}")
+    with _changing(ws) as state:
+        state["work"] = choice
 
 
 def finished(found: list[Step]) -> bool:

@@ -5852,6 +5852,22 @@
             "title": "Business",
             "type": "boolean"
           },
+          "chosen": {
+            "anyOf": [
+              {
+                "enum": [
+                  "me",
+                  "work"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person said about their work at setup: Just me (`me`) or Me and my work (`work`); `work` whenever a work side exists; none while the question is unanswered.",
+            "title": "Chosen"
+          },
           "name": {
             "anyOf": [
               {
@@ -10908,6 +10924,18 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The checksum of the release file its catalog entry names, when a catalog lists it: add-ons with the same one come in one file, so the screen shows them as one row.",
+            "title": "File"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -10928,6 +10956,18 @@
             "description": "The app installed it from the Add-ons screen, so it can take it away again.",
             "title": "Removable",
             "type": "boolean"
+          },
+          "signed_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it is signed in, for an add-on that is running and signs in; empty when it doesn't or isn't running.",
+            "title": "Signed In"
           },
           "state": {
             "title": "State",
@@ -15327,6 +15367,12 @@
       },
       "PackInstalled": {
         "properties": {
+          "file_kept": {
+            "default": false,
+            "description": "Only this add-on was removed: other installed add-ons come in the same file, so the file stays.",
+            "title": "File Kept",
+            "type": "boolean"
+          },
           "name": {
             "description": "The installed package's name.",
             "title": "Name",
@@ -15336,6 +15382,14 @@
             "description": "It is used after a restart the person chooses; turning it on is separate.",
             "title": "Needs Restart",
             "type": "boolean"
+          },
+          "still_used_by": {
+            "description": "The add-ons that still use the file when it was kept, by the name they run under.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Still Used By",
+            "type": "array"
           },
           "version": {
             "title": "Version",
@@ -15560,6 +15614,18 @@
             "title": "Feed",
             "type": "string"
           },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The checksum of its release file: entries with the same one come in one file, so the screen shows them as one row. Empty when it has no release.",
+            "title": "File"
+          },
           "homepage": {
             "anyOf": [
               {
@@ -15648,6 +15714,18 @@
             "description": "The app installed it from this screen, so it can take it away again.",
             "title": "Removable",
             "type": "boolean"
+          },
+          "signed_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it is signed in, for an add-on that is running and signs in; empty when it doesn't or isn't running.",
+            "title": "Signed In"
           },
           "summary": {
             "title": "Summary",
@@ -23372,6 +23450,7 @@
             "description": "The walkthrough screen the step is on. A step on the last screen is an optional extra.",
             "enum": [
               "you",
+              "work",
               "ai",
               "mail",
               "promises",
@@ -26662,6 +26741,7 @@
               {
                 "enum": [
                   "you",
+                  "work",
                   "ai",
                   "mail",
                   "promises",
@@ -26709,6 +26789,7 @@
             "description": "The screen to open at.",
             "enum": [
               "you",
+              "work",
               "ai",
               "mail",
               "promises",
@@ -27372,6 +27453,38 @@
           "count"
         ],
         "title": "WeekWaitingView",
+        "type": "object"
+      },
+      "WorkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "description": "Just me, or Me and my work.",
+            "enum": [
+              "me",
+              "work"
+            ],
+            "title": "Choice",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the work is called (an employer or a business); needed for `work`, ignored for `me`.",
+            "title": "Name"
+          }
+        },
+        "required": [
+          "choice"
+        ],
+        "title": "WorkIn",
         "type": "object"
       },
       "WorkingCopyFormatView": {
@@ -34405,7 +34518,7 @@
     },
     "/api/packs/{pack_id}/uninstall": {
       "post": {
-        "description": "Remove an add-on installed from this screen. Its records and settings stay; turn it off first.",
+        "description": "Remove an add-on installed from this screen. Its records and settings stay; turn it off first. When other\ninstalled add-ons come in the same file, only this one is taken away (it is left off and reads as not\ninstalled) and the file stays for the others; the file goes with the last of them.",
         "operationId": "uninstall_api_packs__pack_id__uninstall_post",
         "parameters": [
           {
@@ -37871,7 +37984,7 @@
     },
     "/api/setup/business": {
       "get": {
-        "description": "Whether the person has a business and what it is called, for the Personal / business filter. A business whose\nproject was undone or removed counts as none.",
+        "description": "Whether the person has a business and what it is called, for the Personal / business filter, and what they\nsaid about their work at setup. A business whose project was undone or removed counts as none.",
         "operationId": "business_state_api_setup_business_get",
         "responses": {
           "200": {
@@ -38101,6 +38214,45 @@
           }
         },
         "summary": "Walkthrough Keep"
+      }
+    },
+    "/api/setup/work": {
+      "post": {
+        "description": "Answer the work question: Just me keeps nothing but the answer; Me and my work names the work side (as\n`POST /setup/business` does). Once a work side exists it stays; the answer can't go back to Just me.",
+        "operationId": "work_save_api_setup_work_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Work Save"
       }
     },
     "/api/setup/{step}/apply-settings": {

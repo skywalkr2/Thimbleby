@@ -47,10 +47,12 @@ test.describe.serial("journey: mail", () => {
     // You, then an AI account, as in the first journey.
     const main = page.locator("main#main");
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
-    await main.getByLabel("Workspace name").fill("Offsite team");
     await main.getByLabel("Your full name").fill(info.people[0]);
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
+    // Work: Just me, which is already chosen.
+    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).check();
     await main.getByText("More options").click();

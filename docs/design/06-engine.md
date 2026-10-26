@@ -212,7 +212,8 @@ it off. A no-reply bill or order has no such phrase and goes on to the assistant
 run (`engine/mail_kinds.py`, words in `watch.mail_kinds`, on from the first sign-in with no setup) recognize a bill or
 statement, an order confirmation and a shipping or delivery notice, from the sender's address and the subject or text. Such
 mail is kept with the assistant against the built-in sorting and the assistant's sorting (as a `never` rule would), is filed
-under the Personal project whoever sent it (`engine/sides.py`, rank 0, `filed_by` word = the kind), and the assistant's
+under the Personal project whoever sent it, unless the person has a work side and the sender's relation is work, which
+files it there (`engine/sides.py`, rank 0, `filed_by` word = the kind; section 218), and the assistant's
 sorting prompt answers *work* for what the rules miss. Rules and the person's own sender rules still come first: a rule that
 sets mail aside from a sender wins. What each becomes is in 6.32. `tests/test_mail_kinds.py`.
 
@@ -3655,10 +3656,13 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
 - **One Personal project, made at setup, for everyone** (owner, 2026-10-21: the default project for every person, used
   or not): an ordinary project the person can rename or remove, made with no question; a setting names which project is
   the personal one (`workspace.project.personal`). What the assistant files there is never "unfiled". A person who only
-  tracks a business answers yes to setup's business question and can leave Personal empty; nothing asks them to use it.
+  tracks work answers "Me and my work" to setup's work question and can leave Personal empty; nothing asks them to use it.
+  Personal is its own kind of thing, not a project with rules switched off. It keeps the exceptions it has (no target
+  day, no phase, no work-style questions, bills and orders filed there by default) and no new special case is added to it:
+  the work-side rule for bills changes where a bill files, not what Personal is (functional designer, 2026-10-26, F37).
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
-  second side, a business or a job as the person chose at setup (a top-level project, its projects under it; a
-  setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
+  second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
+  a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
   another person stays whole while any of its items is on the chosen side, since it is one message). Filing reads the
   signals in this order (designer, 2026-10-22; change log 174; **built, B-12 batch 1:** `tests/test_filing_signals.py`,
   `tests/test_sides.py`; the first rank that decides, decides, and a rank whose signals point to both sides decides
@@ -3712,7 +3716,9 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     that Undo takes back together. Nothing is moved before the yes. `tests/test_areas.py`.
 - **Bills, orders and deliveries (decided 2026-10-26; change log 205; P46):** they are the person's own life, tracked from the
   first sign-in with no setup, never set aside as sales (6.5). Rules recognize them (`watch.mail_kinds`) and file them under
-  the Personal project; the extraction prompt covers what the rules miss. A *bill* becomes one to-do owned by the person,
+  the Personal project, or, when the person has a work side and the sender is a known person on it (a supplier) or at an
+  organization wholly on it, under the work side (functional designer, 2026-10-26, F37; change log 218; nothing tells a
+  job from a business, so the sender's relation decides either way); the extraction prompt covers what the rules miss. A *bill* becomes one to-do owned by the person,
   "Pay the <sender> bill, <amount to pay>", due on the bill's due day, so the reminder the rules propose for a due day
   follows (held for the person's yes, as every reminder is): the amount to pay as the bill states it, never a balance, an
   account number or a bank link, and a statement with nothing to pay and no due day records nothing. An *order

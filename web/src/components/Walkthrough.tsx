@@ -1,5 +1,5 @@
 // The new-start walkthrough (design 7.8): the setup as one guided path, full window, one screen at a time in the order a
-// person needs them: You, Your AI account, Mail and calendar, Your promises (the first result: the look back and what it
+// person needs them: You, Work, Your AI account, Mail and calendar, Your promises (the first result: the look back and what it
 // found), Backups, People, Done. Every screen says why it matters and
 // can be skipped now and done later. The server keeps the screen the person is on, so it resumes where they left it,
 // also after a restart; "Finish later" closes it for good, and it opens again only when the person asks. The core's own
@@ -17,6 +17,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { FirstPromises } from "./FirstPromises";
 import { StepList, WorkspaceStep } from "./Welcome";
 import { WalkthroughPeople } from "./WalkthroughPeople";
+import { WorkStep } from "./WalkthroughWork";
 import { WalkthroughMail } from "./WalkthroughMail";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
@@ -282,6 +283,7 @@ export function Walkthrough(
           <p className={styles.why}>{t(`walkthrough.why.${current}`)}</p>
           <div className={styles.body}>
           {current === "you" && <WorkspaceStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
+          {current === "work" && <WorkStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "ai" && <WelcomeAi local={data.local} done={aiDone} />}
           {current === "mail" && (
             <>

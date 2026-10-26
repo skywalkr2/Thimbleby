@@ -146,6 +146,7 @@ def test_steps_belong_to_a_screen_and_only_the_five_that_matter_count(tmp_path):
     on = {s: (steps[s]["group"], steps[s]["counted"]) for s in setup.CORE_STEPS}
     assert on == {
         "workspace": ("you", True),
+        "work": ("work", False),
         "ai": ("ai", True),
         "mail": ("mail", True),
         "backup": ("backup", True),
@@ -225,3 +226,61 @@ def test_the_add_ons_that_come_with_the_app_are_not_listed_to_turn_on_and_not_on
     assert not shipped & listed
     sandbox = init_workspace(tmp_path / "sandbox", template=DEMO_B, git=False)
     assert shipped <= {p["name"] for p in _open(sandbox).get("/api/packs").json()["installed"]}
+
+
+# ---- the work question: Just me, or Me and my work ---------------------------------------------------------------
+
+
+def test_the_screens_run_in_the_one_order_the_design_gives():
+    assert setup.WALKTHROUGH_STEPS == ("you", "work", "ai", "mail", "promises", "backup", "people", "done")
+
+
+def test_the_work_question_is_optional_and_never_blocks_finishing(tmp_path):
+    _, c = _fresh(tmp_path)
+    assert _steps(c)["work"]["done"] is False and _steps(c)["work"]["counted"] is False
+    assert c.get("/api/setup/business").json()["chosen"] is None
+    for step in ("workspace", "ai", "mail", "backup", "people"):
+        c.post(f"/api/setup/{step}/skip")
+    assert _view(c)["finished"], "the work question was never answered, and setup still finishes"
+
+
+def test_just_me_is_an_answer_that_keeps_no_work_side(tmp_path):
+    ws, c = _fresh(tmp_path)
+    answered = c.post("/api/setup/work", json={"choice": "me"})
+    assert answered.status_code == 200 and answered.json() == {"business": False, "name": None, "chosen": "me"}
+    assert _steps(c)["work"]["done"] is True
+    assert ws.config(env={}).workspace.project.business is None
+    assert _steps(_open(ws))["work"]["done"] is True  # kept on this computer, so it survives a restart
+
+
+def test_me_and_my_work_names_the_work_side_and_it_stays(tmp_path):
+    ws, c = _fresh(tmp_path)
+    assert c.post("/api/setup/work", json={"choice": "work"}).status_code == 422  # a name is needed
+    assert c.post("/api/setup/work", json={"choice": "work", "name": "  "}).status_code == 422
+    named = c.post("/api/setup/work", json={"choice": "work", "name": "Harbor  Goods"})
+    assert named.status_code == 200 and named.json()["chosen"] == "work" and named.json()["name"] == "Harbor Goods"
+    cfg = ws.config(env={})
+    assert cfg.workspace.project.business is not None
+    assert _steps(c)["work"]["done"] is True
+    # Saying it again renames the same side rather than making another.
+    again = c.post("/api/setup/work", json={"choice": "work", "name": "Harbor Supply"}).json()
+    assert again["name"] == "Harbor Supply"
+    assert ws.config(env={}).workspace.project.business == cfg.workspace.project.business
+    # Once a work side exists, Just me can't quietly pretend there is none.
+    refused = c.post("/api/setup/work", json={"choice": "me"})
+    assert refused.status_code == 409 and "stays" in refused.json()["detail"]
+    assert c.get("/api/setup/business").json()["chosen"] == "work"
+
+
+def test_the_business_route_is_also_an_answer_to_the_work_question(tmp_path):
+    _, c = _fresh(tmp_path)
+    c.post("/api/setup/business", json={"name": "Harbor Goods"})
+    assert c.get("/api/setup/business").json()["chosen"] == "work" and _steps(c)["work"]["done"]
+
+
+def test_the_workspace_and_the_assistant_names_are_basic_settings_where_they_are_changed(tmp_path):
+    _, c = _fresh(tmp_path)
+    items = {i["key"]: i for i in c.get("/api/settings").json()["items"]}
+    assert items["workspace.name"]["basic"] and items["workspace.assistant_name"]["basic"]
+    assert items["workspace.assistant_name"]["value"] == "Reginald"
+    assert items["workspace.name"]["editable"] and items["workspace.assistant_name"]["editable"]

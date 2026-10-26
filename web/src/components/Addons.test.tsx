@@ -991,3 +991,106 @@ describe("a read token for a private release", () => {
     expect(await screen.findByText("install bare")).toBeInTheDocument();
   });
 });
+
+// ---- add-ons that come in one release file ----------------------------------------------------------------------
+
+const FILE = "f".repeat(64);
+const duo = (over: Partial<Pack> = {}, overB: Partial<Pack> = {}) => [
+  pack("a", { file: FILE, installable: true, ...over }),
+  pack("b", { file: FILE, installable: true, ...overB }),
+];
+
+test("entries that share one release file are one row, with each entry's own state under it", async () => {
+  open(
+    view({
+      available: [
+        pack("solo", { file: "e".repeat(64) }),
+        ...duo(
+          { installed_version: "1.0.0", enabled: true, signed_in: true },
+          { installed_version: "1.0.0", enabled: false },
+        ),
+      ],
+    }),
+  );
+  const group = await row("Name of a and Name of b");
+  expect(within(group).getByText("Includes Name of a, Name of b")).toBeInTheDocument();
+  expect(within(group).getByText("These 2 come in one file: installing or updating it covers all of them.")).toBeInTheDocument();
+  // One heading for the file, the others beside it as their own rows; a lone entry stays a row of its own.
+  expect(screen.getAllByRole("listitem", { name: "Name of a and Name of b" })).toHaveLength(1);
+  expect(await row("Name of solo")).toBeInTheDocument();
+  const a = await row("Name of a");
+  expect(within(a).getByText(/Installed \(version 1\.0\.0\) and on/)).toBeInTheDocument();
+  expect(within(a).getByText("Signed in")).toBeInTheDocument();
+  const b = await row("Name of b");
+  expect(within(b).getByText(/Installed \(version 1\.0\.0\) and off/)).toBeInTheDocument();
+  expect(within(b).queryByText("Signed in")).toBeNull();
+  expect(within(b).getByRole("button", { name: "Turn on Name of b" })).toBeInTheDocument();
+  // Who made it and what it costs are said once, on the file's row.
+  expect(within(group).getAllByText("Free")).toHaveLength(1);
+});
+
+test("a signed-in add-on that is on but not signed in says so", async () => {
+  open(view({ available: duo({ installed_version: "1.0.0", enabled: true, signed_in: false }, { installed_version: "1.0.0" }) }));
+  expect(within(await row("Name of a")).getByText("Not signed in yet")).toBeInTheDocument();
+});
+
+test("the file has one Install button for both entries, and installing it calls the install route once", async () => {
+  const user = userEvent.setup();
+  const calls = open(view({ available: duo() }), { "POST packs/a/install": () => INSTALLED("pack-duo") });
+  const group = await row("Name of a and Name of b");
+  const buttons = within(group).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
+  expect(buttons.filter((label) => label?.startsWith("Install"))).toEqual(["Install Name of a, Name of b"]);
+  await user.click(within(group).getByRole("button", { name: "Install Name of a, Name of b" }));
+  await waitFor(() => expect(calls.calls.filter((c) => c.route.startsWith("POST packs/")).map((c) => c.route)).toEqual(["POST packs/a/install"]));
+});
+
+test("removing one entry of a shared file says the file stays while another uses it, and asks for no restart", async () => {
+  const user = userEvent.setup();
+  const calls = open(
+    view({
+      available: duo(
+        { installed_version: "1.0.0", enabled: false, removable: true },
+        { installed_version: "1.0.0", enabled: false, removable: true },
+      ),
+    }),
+    {
+      "POST packs/a/uninstall": () => ({
+        name: "pack-duo",
+        version: "1.0.0",
+        needs_restart: false,
+        file_kept: true,
+        still_used_by: ["b"],
+      }),
+    },
+  );
+  const a = await row("Name of a");
+  await user.click(within(a).getByRole("button", { name: "More actions for Name of a" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/a/uninstall")).toBe(true));
+  expect(await screen.findByText("Name of a is removed. The file stays because it is still in use by Name of b.")).toBeInTheDocument();
+  expect(screen.queryByText(/Restart to finish/)).toBeNull();
+});
+
+test("on Installed, entries of one file are one row too, each with its own switch and Remove", async () => {
+  const user = userEvent.setup();
+  const calls = open(
+    view({
+      installed: [
+        { ...installedRows(true)[0], name: "a", file: FILE, removable: true, signed_in: false },
+        { ...installedRows(false)[0], name: "b", file: FILE, removable: true },
+      ],
+    }),
+    { "POST packs/b/uninstall": () => ({ name: "pack-duo", version: "1.0.0", needs_restart: false, file_kept: true, still_used_by: ["a"] }) },
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const group = await row("a and b");
+  expect(within(group).getByText("Includes a, b")).toBeInTheDocument();
+  expect(within(await row("a")).getByText("Not signed in yet")).toBeInTheDocument();
+  expect(within(await row("a")).getByRole("button", { name: "Turn off a" })).toBeInTheDocument();
+  expect(within(await row("b")).getByRole("button", { name: "Turn on b" })).toBeInTheDocument();
+  expect(within(await row("a")).queryByRole("button", { name: /More actions/ })).toBeNull(); // on, so not removable
+  await user.click(within(await row("b")).getByRole("button", { name: "More actions for b" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/b/uninstall")).toBe(true));
+  expect(await screen.findByText("b is removed. The file stays because it is still in use by a.")).toBeInTheDocument();
+});

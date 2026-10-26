@@ -19,6 +19,7 @@ import { WelcomeAi } from "./WelcomeAi";
 import { TemplateList } from "./Templates";
 import { TimeZoneSelect } from "./TimeZoneSelect";
 import { WelcomeBackup } from "./WelcomeBackup";
+import { WorkStep } from "./WalkthroughWork";
 import { Skeleton } from "../ui/Skeleton";
 
 type Step = S["SetupStepView"];
@@ -80,6 +81,8 @@ export function StepList(props: {
                 <SignInStep name={step.sign_in} label={step.label || step.sign_in} done={step.done} onChooseSource={props.onChooseSource} />
               ) : step.id === "workspace" ? (
                 <WorkspaceStep />
+              ) : step.id === "work" ? (
+                <WorkStep />
               ) : step.id === "template" ? (
                 <TemplateList />
               ) : step.id === "ai" ? (
@@ -313,8 +316,6 @@ function StepSection(props: { step: Step; label: string; explanation: string; ch
 
 // ---- workspace -----------------------------------------------------------------------------------------------------
 
-const NAME = "workspace.name";
-const ASSISTANT = "workspace.assistant_name";
 const TIMEZONE = "workspace.user.timezone";
 
 function browserZone(): string {
@@ -325,12 +326,13 @@ function browserZone(): string {
   }
 }
 
-/** The name of the person and of the workspace, and the time zone, in one form. In the walkthrough, saving a step that was
- * not done yet is also the way on (`onContinue`), so the screen has one primary button; the setup list has none. */
+/** The person's name and time zone, in one form. The workspace's name and the assistant's name keep their defaults and
+ * are changed in Settings. In the walkthrough, saving a step that was not done yet is also the way on (`onContinue`), so
+ * the screen has one primary button; the setup list has none. */
 export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean } = {}) {
   const { t } = useWords();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
-  // The person's name lives on their person record only; the settings hold the workspace's own values.
+  // The person's name lives on their person record only; the settings hold the time zone.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   if (!settings.data || !me.data) {
     return <p className="empty">{t(settings.isError || me.isError ? "welcome.failed" : "loading")}</p>;
@@ -345,48 +347,25 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   const hasSlot = useHasContinueSlot();
   const settings = { data: props.settings };
   const me = { data: props.me };
-  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [zoneEdit, setZoneEdit] = useState<string | null>(null);
   const [nameEdit, setNameEdit] = useState<string | null>(null);
-  const business = useQuery({ queryKey: ["business"], queryFn: api.business });
-  const [kindEdit, setKindEdit] = useState<"alone" | "business" | null>(null);
-  const [bizEdit, setBizEdit] = useState<string | null>(null);
-  const kind = kindEdit ?? (business.data?.business ? "business" : "alone");
-  const bizName = bizEdit ?? business.data?.name ?? "";
-  const bizChanged = kind === "business" && bizName.trim() !== "" && bizName.trim() !== (business.data?.name ?? "");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const fullName = nameEdit ?? me.data.full_name;
   const nameChanged = fullName.trim() !== me.data.full_name;
 
-  const item = (key: string) => settings.data.items.find((i) => i.key === key);
-  const current = (key: string): string => {
-    const found = item(key);
-    const value = found?.value == null ? "" : String(found.value);
-    // A value still equal to its built-in default counts as not chosen, whether or not the workspace's files hold it (a
-    // new workspace's files hold every default): the time zone is offered from this browser, the name starts empty.
-    const unchosen = found != null && found.source !== "env" && found.source !== "flag" && found.value === found.default;
-    if (key === TIMEZONE && unchosen) return browserZone() || value;
-    // A workspace still called by its default is offered the person's first name; the assistant keeps its default name.
-    if (key === NAME && unchosen) {
-      const first = fullName.trim().split(/\s+/)[0] ?? "";
-      return first ? t("welcome.workspace.default_name", { name: first }) : value;
-    }
-    return value;
-  };
-  const shown = (key: string) => edits[key] ?? current(key);
-  const stored = (key: string) => (item(key)?.value == null ? "" : String(item(key)?.value));
-  const changes: Record<string, string> = {};
-  for (const key of [NAME, ASSISTANT, TIMEZONE]) {
-    const found = item(key);
-    // An empty name leaves the stored default alone rather than saving an empty one.
-    if ((key === NAME || key === ASSISTANT) && shown(key).trim() === "") continue;
-    if (found && found.editable && !found.locked && shown(key).trim() !== stored(key)) changes[key] = shown(key).trim();
-  }
-  const noBusinessName = kind === "business" && bizName.trim() === "";
-  const empty = Object.values(changes).some((v) => v === "") || (nameChanged && !fullName.trim()) || noBusinessName;
-  const pending = Object.keys(changes).length > 0 || nameChanged || bizChanged;
+  const item = settings.data.items.find((i) => i.key === TIMEZONE);
+  const stored = item?.value == null ? "" : String(item.value);
+  // A value still equal to its built-in default counts as not chosen, whether or not the workspace's files hold it (a new
+  // workspace's files hold every default): the time zone is offered from this computer.
+  const unchosen = item != null && item.source !== "env" && item.source !== "flag" && item.value === item.default;
+  const zone = zoneEdit ?? (unchosen ? browserZone() || stored : stored);
+  const off = !item || item.locked || !item.editable;
+  const zoneChanged = !off && zone.trim() !== "" && zone.trim() !== stored;
+  const empty = nameChanged && !fullName.trim();
+  const pending = nameChanged || zoneChanged;
 
-  /** Saves the name and the settings that changed. True when it all went through. */
+  /** Saves the name and the time zone when they changed. True when it all went through. */
   const save = async (): Promise<boolean> => {
     setBusy(true);
     setProblem("");
@@ -397,16 +376,10 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
         await client.invalidateQueries({ queryKey: ["me"] });
         await client.invalidateQueries({ queryKey: ["people"] });
       }
-      if (bizChanged) {
-        await api.saveBusiness(bizName.trim());
-        setBizEdit(null);
-        await client.invalidateQueries({ queryKey: ["business"] });
-        await client.invalidateQueries({ queryKey: ["projects"] });
-      }
-      if (Object.keys(changes).length) {
-        const fresh = nameChanged || bizChanged ? await api.settings() : settings.data!;
-        const saved = await api.saveSettings({ changes, reset: [], fingerprint: fresh.fingerprint });
-        setEdits({});
+      if (zoneChanged) {
+        const fresh = nameChanged ? await api.settings() : settings.data!;
+        const saved = await api.saveSettings({ changes: { [TIMEZONE]: zone.trim() }, reset: [], fingerprint: fresh.fingerprint });
+        setZoneEdit(null);
         await afterSave(saved);
       } else {
         await client.invalidateQueries({ queryKey: ["setup"] });
@@ -423,63 +396,10 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   };
 
   // Inside the walkthrough the screen's one Continue saves this form (when it has something to save) and moves on.
-  const missing = !props.done && (empty || !pending) ? t(noBusinessName ? "welcome.workspace.why_business" : empty ? "welcome.workspace.why_blank" : "welcome.workspace.why") : "";
+  const missing = !props.done && (empty || !pending) ? t(empty ? "welcome.workspace.why_blank" : "welcome.workspace.why") : "";
   useContinue(hasSlot ? { run: async () => (pending ? save() : true), disabled: !!missing, why: missing } : null);
 
-  const field = (key: string, labelKey: string, hintKey: string | null, placeholderKey?: string) => {
-    const found = item(key);
-    const off = !found || found.locked || !found.editable;
-    const id = `workspace-${key.replace(/\./g, "-")}`;
-    return (
-      <div className="field">
-        <label htmlFor={id}>{t(labelKey)}</label>
-        {key === TIMEZONE && found?.type === "choice" && found.options?.length ? (
-          // A time zone is picked by its city, with a search.
-          <TimeZoneSelect
-            id={id}
-            value={shown(key)}
-            options={found.options ?? []}
-            disabled={off}
-            describedBy={hintKey ? `${id}-hint` : undefined}
-            onChange={(zone) => setEdits({ ...edits, [key]: zone })}
-          />
-        ) : found?.type === "choice" && found.options?.length ? (
-          // A setting with a known set of values is a list to pick from, never a box to type in.
-          <select
-            id={id}
-            value={shown(key)}
-            disabled={off}
-            aria-describedby={hintKey ? `${id}-hint` : undefined}
-            onChange={(e) => setEdits({ ...edits, [key]: e.target.value })}
-          >
-            {((found.options ?? []).includes(shown(key)) ? (found.options ?? []) : [shown(key), ...(found.options ?? [])]).map((o) => (
-              <option key={o} value={o}>
-                {o.replace(/_/g, " ")}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            id={id}
-            type="text"
-            value={shown(key)}
-            disabled={off}
-            autoComplete="off"
-            placeholder={placeholderKey ? t(placeholderKey) : undefined}
-            aria-describedby={hintKey ? `${id}-hint` : undefined}
-            onChange={(e) => setEdits({ ...edits, [key]: e.target.value })}
-          />
-        )}
-        {hintKey && (
-          <p className="hint" id={`${id}-hint`}>
-            {t(hintKey)}
-          </p>
-        )}
-        {found?.locked && <p className="hint">{t(found.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
-      </div>
-    );
-  };
-
+  const zoneId = "workspace-workspace-user-timezone";
   return (
     <form
       onSubmit={(e) => {
@@ -501,30 +421,34 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
           {t("welcome.workspace.full_name_hint")}
         </p>
       </div>
-      {field(NAME, "welcome.workspace.name", null, "welcome.workspace.name_placeholder")}
-      {field(ASSISTANT, "welcome.workspace.assistant", "welcome.workspace.assistant_hint")}
-      <fieldset className="field">
-        <legend>{t("welcome.workspace.kind")}</legend>
-        {(["alone", "business"] as const).map((k) => (
-          <label key={k} className="choice">
-            <input type="radio" name="workspace-kind" checked={kind === k} onChange={() => setKindEdit(k)} />
-            {t(`welcome.workspace.kind.${k}`)}
-          </label>
-        ))}
-        {kind === "business" && (
-          <div className="field">
-            <label htmlFor="workspace-business-name">{t("welcome.workspace.business_name")}</label>
-            <input
-              id="workspace-business-name"
-              type="text"
-              value={bizName}
-              autoComplete="organization"
-              onChange={(e) => setBizEdit(e.target.value)}
-            />
-          </div>
+      <div className="field">
+        <label htmlFor={zoneId}>{t("welcome.workspace.timezone")}</label>
+        {item?.type === "choice" && item.options?.length ? (
+          // A time zone is picked by its city, with a search.
+          <TimeZoneSelect
+            id={zoneId}
+            value={zone}
+            options={item.options ?? []}
+            disabled={off}
+            describedBy={`${zoneId}-hint`}
+            onChange={(next) => setZoneEdit(next)}
+          />
+        ) : (
+          <input
+            id={zoneId}
+            type="text"
+            value={zone}
+            disabled={off}
+            autoComplete="off"
+            aria-describedby={`${zoneId}-hint`}
+            onChange={(e) => setZoneEdit(e.target.value)}
+          />
         )}
-      </fieldset>
-      {field(TIMEZONE, "welcome.workspace.timezone", "welcome.workspace.timezone_hint")}
+        <p className="hint" id={`${zoneId}-hint`}>
+          {t("welcome.workspace.timezone_hint")}
+        </p>
+        {item?.locked && <p className="hint">{t(item.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
+      </div>
       {problem && (
         <p className="problem-note" role="alert">
           {problem}
@@ -540,4 +464,3 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
     </form>
   );
 }
-

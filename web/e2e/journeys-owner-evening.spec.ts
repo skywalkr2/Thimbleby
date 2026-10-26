@@ -43,23 +43,21 @@ test.describe.serial("journey: the owner's first evening", () => {
     const installed = join(String(info.install_target), "journey_mail");
     expect(existsSync(installed)).toBe(false);
     const [me, friend] = info.people;
-    const first = me.split(" ")[0];
 
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
     const main = page.locator("main#main");
 
-    // 1. You: the cursor is in the first field; the workspace name follows the first name; the assistant is Reginald;
-    // the time zone is one searchable list.
+    // 1. You: the cursor is in the first field; only the name and the time zone are asked (the workspace's name and the
+    // assistant's, Reginald, are Settings'); the time zone is one searchable list.
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
     expect(await widerThanWindow(page, "You")).toEqual([]);
     const fullName = main.getByLabel("Your full name");
     await expect(fullName).toBeFocused();
     await page.keyboard.type(me);
-    await expect(main.getByLabel("Workspace name")).toHaveValue(`${first}'s workspace`);
-    await expect(main.getByLabel("Your assistant's name")).toHaveValue("Reginald");
-    await main.getByRole("radio", { name: "Just for me" }).check();
-    await expect(main.getByText("What is the business called?")).toHaveCount(0);
+    await expect(main.getByLabel("Workspace name")).toHaveCount(0);
+    await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
+    await expect(main.getByRole("radio")).toHaveCount(0);
     const zone = main.getByRole("combobox", { name: "Your time zone" });
     await expect(main.getByRole("searchbox")).toHaveCount(0);
     await zone.click();
@@ -69,6 +67,17 @@ test.describe.serial("journey: the owner's first evening", () => {
     await choice.click();
     await expect(zone).toHaveValue(/Los Angeles/);
     await visit(page);
+    await main.getByRole("button", { name: "Continue" }).click();
+
+    // 1b. Work, on its own screen: two choices, Just me first. Me and my work shows the notice about work mail; the
+    // evening is Just me.
+    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await expect(main.getByRole("radio")).toHaveCount(2);
+    await expect(main.getByRole("radio", { name: "Just me" })).toBeChecked();
+    await main.getByRole("radio", { name: "Me and my work" }).check();
+    await expect(main.getByRole("note")).toContainText("may need your employer's permission");
+    await main.getByRole("radio", { name: "Just me" }).check();
+    await expect(main.getByRole("note")).toHaveCount(0);
     await main.getByRole("button", { name: "Continue" }).click();
 
     // 2. The AI account, by key, against a service whose list opens with a retired model: the pick is a usable one.

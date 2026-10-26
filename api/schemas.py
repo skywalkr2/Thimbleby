@@ -3478,7 +3478,7 @@ class SetupStepView(BaseModel):
         default_factory=dict, description="Core settings a plugin step suggests, applied with the step's Apply."
     )
     sign_in: str | None = Field(None, description="For a step the core adds per sign-in: the sign-in's name.")
-    group: Literal["you", "ai", "mail", "promises", "backup", "people", "done"] = Field(
+    group: Literal["you", "work", "ai", "mail", "promises", "backup", "people", "done"] = Field(
         "done",
         description="The walkthrough screen the step is on. A step on the last screen is an optional extra.",
     )
@@ -3488,7 +3488,7 @@ class SetupStepView(BaseModel):
     )
 
 
-WalkthroughScreen = Literal["you", "ai", "mail", "promises", "backup", "people", "done"]
+WalkthroughScreen = Literal["you", "work", "ai", "mail", "promises", "backup", "people", "done"]
 
 
 class WalkthroughView(BaseModel):
@@ -4766,6 +4766,16 @@ class PackView(BaseModel):
         description="The host its release file is read from, which a read token for it is sent to; empty when it has "
         "no release.",
     )
+    file: str | None = Field(
+        None,
+        description="The checksum of its release file: entries with the same one come in one file, so the screen shows "
+        "them as one row. Empty when it has no release.",
+    )
+    signed_in: bool | None = Field(
+        None,
+        description="Whether it is signed in, for an add-on that is running and signs in; empty when it doesn't or "
+        "isn't running.",
+    )
 
 
 class InstalledPackView(BaseModel):
@@ -4778,6 +4788,16 @@ class InstalledPackView(BaseModel):
     what: PackSummary
     removable: bool = Field(
         False, description="The app installed it from the Add-ons screen, so it can take it away again."
+    )
+    file: str | None = Field(
+        None,
+        description="The checksum of the release file its catalog entry names, when a catalog lists it: add-ons with "
+        "the same one come in one file, so the screen shows them as one row.",
+    )
+    signed_in: bool | None = Field(
+        None,
+        description="Whether it is signed in, for an add-on that is running and signs in; empty when it doesn't or "
+        "isn't running.",
     )
 
 
@@ -4980,6 +5000,22 @@ class BusinessState(BaseModel):
 
     business: bool
     name: str | None = None
+    chosen: Literal["me", "work"] | None = Field(
+        None,
+        description="What the person said about their work at setup: Just me (`me`) or Me and my work (`work`); "
+        "`work` whenever a work side exists; none while the question is unanswered.",
+    )
+
+
+class WorkIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    choice: Literal["me", "work"] = Field(description="Just me, or Me and my work.")
+    name: str | None = Field(
+        None,
+        max_length=200,
+        description="What the work is called (an employer or a business); needed for `work`, ignored for `me`.",
+    )
 
 
 # ---- data-file forms -------------------------------------------------------------------------------------------------
@@ -5115,6 +5151,14 @@ class PackInstalled(BaseModel):
     name: str = Field(description="The installed package's name.")
     version: str
     needs_restart: bool = Field(description="It is used after a restart the person chooses; turning it on is separate.")
+    file_kept: bool = Field(
+        False,
+        description="Only this add-on was removed: other installed add-ons come in the same file, so the file stays.",
+    )
+    still_used_by: list[str] = Field(
+        default_factory=list,
+        description="The add-ons that still use the file when it was kept, by the name they run under.",
+    )
 
 
 class KnowledgeUse(BaseModel):

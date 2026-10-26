@@ -77,7 +77,7 @@ test("one section per step, in the server's order, each saying in words where it
   await screen.findByRole("heading", { name: "Add an AI account and test it" });
   const sections = Array.from(document.querySelectorAll("[data-step]"));
   expect(sections.map((s) => s.getAttribute("data-step"))).toEqual(["workspace", "template", "ai", "plugin/tidy"]);
-  expect(within(section("workspace")).getByRole("heading", { name: "Name the workspace and say who you are" })).toBeInTheDocument();
+  expect(within(section("workspace")).getByRole("heading", { name: "Say who you are" })).toBeInTheDocument();
   expect(section("workspace")).toHaveTextContent("Done");
   expect(section("template")).toHaveTextContent("Skipped");
   expect(section("ai")).toHaveTextContent("Not done yet");
@@ -149,7 +149,7 @@ test("the workspace step starts the time zone from this browser while it is stil
   // The name goes to the person record (the one place it is kept); the time zone is a setting.
   expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester" });
   const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
-  expect(body.changes).toEqual({ "workspace.name": "Sam's workspace", "workspace.user.timezone": "Europe/Paris" });
+  expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
   vi.restoreAllMocks();
 });
 
@@ -167,7 +167,7 @@ test("on a workspace made by the init command, the defaults written in its files
   });
   open();
   expect(await screen.findByLabelText("Your time zone")).toHaveValue("America/Chicago");
-  expect(screen.getByLabelText("Workspace name")).toHaveValue("Workspace");
+  expect(screen.queryByLabelText("Workspace name")).toBeNull();
   vi.restoreAllMocks();
 });
 
@@ -204,7 +204,7 @@ test("the time zone is picked from a list when the setting offers one", async ()
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
   const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
-  expect(body.changes).toEqual({ "workspace.name": "Sam's workspace", "workspace.user.timezone": "Europe/Paris" });
+  expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
   vi.restoreAllMocks();
 });
 
@@ -212,12 +212,12 @@ test("the workspace step shows the server's words when a value is refused, and k
   const user = userEvent.setup();
   api([step("workspace")], { "POST settings": () => new Refuse(400, "That time zone isn't one we know.") });
   open();
-  const name = await screen.findByLabelText("Workspace name");
-  await user.clear(name);
-  await user.type(name, "Harbor");
+  const zone = await screen.findByLabelText("Your time zone");
+  await user.clear(zone);
+  await user.type(zone, "Nowhere");
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("That time zone isn't one we know.");
-  expect(screen.getByLabelText("Workspace name")).toHaveValue("Harbor");
+  expect(screen.getByLabelText("Your time zone")).toHaveValue("Nowhere");
 });
 
 test("the template step applies one template and asks before the app restarts", async () => {
@@ -458,7 +458,7 @@ test("the template step asks what kind of work this is, in plain words", async (
 test("an add-ons step with no add-on installed to turn on is not offered, so it never reads as done", async () => {
   api([step("addons", { applies: false }), step("workspace", { done: true })]);
   open();
-  await screen.findByRole("heading", { name: "Name the workspace and say who you are" });
+  await screen.findByRole("heading", { name: "Say who you are" });
   expect(screen.queryByRole("heading", { name: "Turn on your add-ons" })).toBeNull();
 });
 
@@ -527,4 +527,20 @@ test("the add-ons step still has its button when nothing is installed or the lis
   open();
   expect(await screen.findByRole("button", { name: "Open Add-ons" })).toBeInTheDocument();
   expect(screen.queryByText("Installed but turned off")).toBeNull();
+});
+
+test("the setup list asks the work question as its own step, with a Save of its own", async () => {
+  const user = userEvent.setup();
+  const calls = api([step("work")], {
+    "GET setup/business": () => ({ business: false, name: null, chosen: null }),
+    "POST setup/work": (body) => ({ business: true, name: (body as { name: string }).name, chosen: "work" }),
+  });
+  open();
+  expect(await screen.findByRole("heading", { name: "Say whether your work is part of this" })).toBeInTheDocument();
+  await user.click(await screen.findByRole("radio", { name: "Me and my work" }));
+  expect(screen.getByRole("note")).toHaveTextContent("employer's permission");
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  await user.type(screen.getByLabelText("What is your work called?"), "Harbor Goods");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST setup/work")?.body).toEqual({ choice: "work", name: "Harbor Goods" }));
 });

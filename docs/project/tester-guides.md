@@ -36,6 +36,9 @@ turn off your security protections. A later test build may ask again.
 ## 2. Follow the setup guide
 
 The first time Thimbleby opens, its setup guide walks you through:
+- **you and your work:** your name and time zone, then one question, "Just me" or "Me and my work". If you choose work,
+  Thimbleby shows a notice: **reading work mail may need your employer's permission, so check your workplace's rules before
+  you connect a work mailbox.** Use personal mail for the test, or work mail only with your employer's OK;
 - **your AI account:** choose your AI service and sign in or paste its key there (never in a feedback form or email). That
   service processes the text Reginald works on, using your account, and its charges and terms apply; a model running on
   your computer keeps it there;

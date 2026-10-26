@@ -220,7 +220,7 @@ test.describe("the walkthrough's look", () => {
     await steps.getByRole("button", { name: /^You/ }).first().click();
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
-    const name = main.getByLabel("Workspace name");
+    const name = main.getByLabel("Your full name");
     await expect(name).toBeVisible();
     const field = (await name.boundingBox())!;
     expect(field.width).toBeLessThanOrEqual(361);

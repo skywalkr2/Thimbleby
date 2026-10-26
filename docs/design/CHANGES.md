@@ -1027,6 +1027,30 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 218. Setup asks "Just me" or "Me and my work" on its own screen; a work side's supplier bills file there; one Add-ons row for one release file (2026-10-26; F37, F38, P62)
+
+- **Design 7.8 (setup), 6.32, 6.5:** two choices, never three. Step 1 (You) asks the person's name and time zone and nothing
+  else; the workspace's name and the assistant's name (Reginald) keep their defaults and are Settings', both on the basic
+  list. The work question is the next screen (Work): "Just me" or "Me and my work"; work asks what it is called and shows the
+  employer-mail notice, in the wording sheet and the tester guide. Whether the work is a job or a business shows in the people
+  step's relations and the wording, so `workspace.project.work_kind` (designed in section 146, never built) is dropped. 7.8
+  now gives one order for the screens and the code: You, Work, Your AI account, Mail and calendar, Your promises, Backups,
+  People, Done (it had Backups as 5 or 7 and People as 5 or 6); five screens count toward finishing, and Work is optional.
+  Built: `tests/test_walkthrough.py` (the work tests, the order, the basic names), `web/src/components/Walkthrough.test.tsx`
+  (You and Work), `web/src/components/Welcome.test.tsx` (the setup list's work step). New: `POST /api/setup/work`,
+  `BusinessState.chosen`, the core step `work` (optional), the walkthrough screen `work`.
+- **Filing of bills and orders (6.5, 6.32 rank 0):** with a work side, the sender's relation is read before the Personal
+  default: a known person on the work side, or nobody known at a domain whose organization is wholly on it, files the bill,
+  order or delivery under the work side. Nothing tells a job from a business, so the relation decides either way. Personal
+  gets no new special case. Built: `tests/test_mail_kinds.py` (the two work-side tests).
+- **Design 3.11 (Add-ons):** entries that name the same release file (the same checksum) are one row, "<names>" with
+  "Includes <names>" and each entry's own state, switch and Remove under it. Remove counts the installed entries that use a
+  file before deleting it: while another uses it, removing one keeps the file, leaves that entry off and reading as not
+  installed, and the screen says so; the file goes with the last one. No catalog format change now (`includes:` waits for
+  the plugin API release). New: `file` and `signed_in` on the pack and installed views, `file_kept` and `still_used_by` on the
+  removal's answer. Built: `tests/test_pack_install.py` (the shared-file tests), `tests/test_packs.py` (signed in),
+  `web/src/components/Addons.test.tsx`, `web/src/lib/packs.test.ts`.
+
 ## 217. Fewer questions about words, one line for them, and a pack's records after a project ends (2026-10-26; P60, P61)
 
 - **Design 6.8, 6.22 and 7.7 (F33):** the scan for new terms asks at most `dispatch.knowledge.new_terms_per_day` (default 3,
