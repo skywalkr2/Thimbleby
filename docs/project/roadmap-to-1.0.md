@@ -1190,18 +1190,27 @@ in `reviews/ui-ux-2026-10/review-45f7102/` (README: verdict, findings F1 to F27,
 `settings.md`: every on-screen field with a verdict; `day-mode.md` and its tokens). Its setup checks and C57, copied here
 as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't clash with the open promises):
 
-- [ ] [U1] The first screen says what the app does for the person, what they'll need and the time, with no PM words.
-- [ ] [U2] Progress reads "n of 7" in the wizard, on Done and on Today. All three agree.
-- [ ] [U3] A step is ticked only when its thing happened. Otherwise it reads "Skipped".
+- [x] [U1] The first screen says what the app does for the person, what they'll need and the time, with no PM words.
+  **Built:** `tests/test_walkthrough.py::test_the_walkthrough_opens_by_itself_on_a_new_workspace_on_welcome`, `web/src/components/Walkthrough.test.tsx` ("a fresh walkthrough opens on Welcome").
+- [x] [U2] Progress reads "n of 7" in the wizard, on Done and on Today. All three agree.
+  **Built:** `tests/test_walkthrough.py::test_todays_setup_count_equals_the_walkthroughs`, `web/src/components/Walkthrough.test.tsx` ("progress reads 1 of 7 through 7 of 7, in the one order").
+- [x] [U3] A step is ticked only when its thing happened. Otherwise it reads "Skipped".
+  **Built:** `tests/test_walkthrough.py::test_skipping_mail_makes_your_promises_skipped_with_the_needs_mail_reason`.
 - [ ] [U4] "Just me": no screen shows Work, Project, Stage, Organization, Owner or Template.
-- [ ] [U5] No sorting rule sets aside mail for being personal.
-- [ ] [U6] "My own business" asks the business's name, what it works on (paste allowed) and, per mailbox, which side it
+  **Built so far:** `web/e2e/just-me.spec.ts` (16 main screens, the capitalized words). **Left:** lowercase "project" in setting
+  descriptions, which the Settings cut (F8) rewrites; Done's "Work" step label, for the reviewer's second pass.
+- [x] [U5] No sorting rule sets aside mail for being personal.
+  **Built:** `tests/test_handled.py::test_a_personal_message_from_a_friend_is_not_on_the_set_aside_tab_and_is_filed_under_personal`.
+- [x] [U6] "My own business" asks the business's name, what it works on (paste allowed) and, per mailbox, which side it
   belongs to.
+  **Built:** `tests/test_walkthrough.py::test_a_job_and_two_businesses_make_three_sides_in_order_with_their_kinds`, `::test_what_a_business_works_on_becomes_projects_under_it_through_the_project_route`, `::test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_nothing_else_places`.
 - [ ] [U7] People on the personal side: a relation box that starts empty, suggestions from mail, and paste a list.
 - [ ] [U8] The first result reads sent mail by default. An empty result says what was read and offers "Hand something in".
-- [ ] [U9] The assistant is introduced by name before anything refers to it. The workspace never shows as "Workspace".
+- [x] [U9] The assistant is introduced by name before anything refers to it. The workspace never shows as "Workspace".
+  **Built:** `tests/test_walkthrough.py::test_saving_the_persons_name_names_a_default_named_workspace_after_them_and_leaves_a_renamed_one_alone`, `web/src/components/Walkthrough.test.tsx` ("You says what the assistant is called, and Rename...").
 - [ ] [U10] Today shows each item once (C57), with at most three rail cards.
-- [ ] [U11] At 390px, setup's first field is above the fold, and the step list is one line.
+- [x] [U11] At 390px, setup's first field is above the fold, and the step list is one line.
+  **Built:** `web/e2e/shell.spec.ts` ("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold").
 - [ ] [U12] Settings: at most 26 basic fields, at most 30 advanced, and no ids or key names (see `settings.md`).
 - [ ] [C57] An item appears once on Today.
 
