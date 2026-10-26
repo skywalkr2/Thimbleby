@@ -11,6 +11,29 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
+## Open: F33 to F38 (asked 2026-10-26, after the fix batch)
+
+Each says what the app does today and the default the build follows if the answer is "yes, that's fine".
+
+- **F33. Unknown words: a rule or the assistant?** The questions "What does USA mean here?" came from a plain rule with no
+  AI (`engine/new_terms.py`) that picks out acronyms and capitalised words; it now skips a shipped list of well-known
+  words, which will always miss some. Proposed: drop the rule and let the reading run raise a term only when it doesn't
+  know it and it matters, as one question to the person. Default meanwhile: the rule and the list.
+- **F34. Handled for you holds more than mail.** The owner approved moving "Closed by rules" (rule closes of any item:
+  files, pages, mail) into Handled for you as a third tab, and keeping handled mail listed for 30 days. Is the name still
+  right with non-mail items in it? Default: one name, each row saying what kind of item it is.
+- **F35. Risks when a project ends.** Ending a project drops its open to-dos and questions in one undoable change; risks
+  are a pack's records, and the plugin API is on hold, so they stay open. Should a risk be a core record? Default: risks
+  stay with the packs and are listed as left over when a project ends.
+- **F36. Two versions of a document with unrelated names.** Versions are linked by name only ("Deck v3", "Deck v3_1").
+  Is a link made by hand ("these are the same document") enough, and where does it live? Default: on the file's page.
+- **F37. Personal versus business, as built.** Setup's first step (names, Reginald by default, for you or for work too),
+  the Personal project's page and people by relation are built from design 6.32. A look at the captures in
+  `reviews/ui-ux-2026-10/after-fix-batch/` before the UI/UX review? Default: go ahead as built.
+- **F38. One add-on file, two services.** The mail add-on is one file that shows as two catalog entries. Showing it as
+  one needs the catalog format to name several add-ons in one entry (a core change). Now, or after the plugin API hold
+  lifts? Default: after.
+
 ## Answered: F30 to F32, from the owner's re-run of the failed AI cases (asked and answered 2026-10-21; B-10)
 
 Answered by the functional designer on 2026-10-21: yes to each default, with the additions in `docs/decisions.md`
