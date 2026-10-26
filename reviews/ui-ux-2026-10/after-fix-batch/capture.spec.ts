@@ -29,14 +29,14 @@ async function open(page: Page, base: string, hash: string, token: string, mode:
 
 const SCREENS: [string, string][] = [
   ["today", "today"], ["work-changed", "work/changed"], ["work-followups", "work/followups"], ["work-open", "work/open"],
-  ["work-outgoing", "work/outgoing"], ["work-stages", "work/stages"], ["records-projects", "records/projects"],
+  ["work-handled", "work/handled"], ["schedule", "schedule"], ["work-outgoing", "work/outgoing"], ["work-stages", "work/stages"], ["records-projects", "records/projects"],
   ["records-people", "records/people"], ["records-files", "records/files"], ["records-knowledge", "records/knowledge"],
   ["sources", "sources"], ["addons", "addons"], ["quality", "quality"], ["handover", "handover"],
   ["settings-you", "settings/you"], ["settings-ai", "settings/ai"], ["settings-backups", "settings/backups"],
   ["settings-today", "settings/today"], ["settings-appearance", "settings/appearance"], ["settings-lists", "settings/lists"],
   ["settings-files", "settings/files"], ["settings-advanced", "settings/advanced"], ["settings-ai-compare", "settings/ai-compare"],
 ];
-const STEPS = ["you", "ai", "mail", "promises", "backup", "people", "done"];
+const STEPS = ["you", "work", "ai", "mail", "promises", "backup", "people", "done"];
 
 for (const mode of MODES) {
   for (const size of SIZES) {

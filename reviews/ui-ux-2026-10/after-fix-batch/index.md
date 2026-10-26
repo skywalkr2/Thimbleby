@@ -4,7 +4,7 @@ File names: `<screen>-<mode>-<width>.jpg`, mode `day` or `night`, width `1440` o
 
 Main screens are on the demo workspace (demo-b); setup steps and the Personal project are on a fresh workspace made with no template, served with the fake outside services. Nothing was filled in or saved.
 
-Not captured: the Set aside list (the demo has no mail set aside, so there was no folder to open).
+Retaken 2026-10-26 after the designer's batch, with the Work step of setup, Handled for you (`work-handled`) and the schedule (`schedule`) added.
 
 Full-page shots: the side bar is drawn only to window height, so below that it looks cut off; that is the capture, not the app.
 
@@ -50,5 +50,8 @@ It starts its own servers (about 8 minutes).
 - `work-changed`: What changed
 - `work-followups`: Follow-ups
 - `work-open`: To-dos and questions
+- `work-handled`: Handled for you (empty in the demo, which has no handled mail; its full look is in the browser test `web/e2e/handled.spec.ts` or live after a mail sign-in)
+- `schedule`: The schedule
+- `setup-work`: Setup, the Work step
 - `work-outgoing`: Waiting to go out
 - `work-stages`: Stages
