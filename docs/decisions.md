@@ -4,6 +4,30 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Handled for you has two tabs; setup asks about a job and a business separately
+
+**Decided:**
+- **Handled for you has two tabs**, by the one difference the person cares about: did the assistant read it, or did a rule
+  decide without reading? Rule closes (files and pages too, such as an older version) join the set-aside tab; the tab may be
+  named "Sorted by rules" if "Set aside" reads oddly with them (the UI/UX reviewer's call). Grouped by kind by default.
+  Kept from the three-tab answer: every row says why it was closed and offers that row's own next step, one click away
+  ("Treat as personal", "Not an older version", "Take a closer look"); a set-aside mail's reason says it was never sent to
+  the AI; no "handled for you" count on Today.
+- **Setup asks about a job and a business separately:** "Just me", plus two tick boxes under "Also track": "my job" and
+  "my own business"; ticking both runs both short steps. A job gets the employer-mail notice and relations such as manager
+  and colleagues; a business is asked what it works on and which mailbox is the business's, and "the same mailbox for
+  both" must be allowed. A business's bills and orders file under the business. The rest of F37 stands (step 1 short,
+  one step order, the employer note only on the job path).
+
+**Decided by:** the owner, relaying the functional designer, who changed their answers to F34 and F37 after the UI/UX
+review of 45f7102 ("Go with the reviewer's two tabs ... I was over-splitting"; "Go with the reviewer on this one too:
+split job and business").
+
+**Why:** The person cares whether the assistant read an item, not which internal mechanism closed it; and a business
+needs things from setup a job doesn't (what it works on, its mailbox, its bills).
+
+**Impact:** Design 7.20 and 7.8 (with the phase U work); open promise P69; roadmap U4, U6. Change log: none.
+
 ## 2026-10-26: A pack follows a project's ending and a dropped action, and an answer can be marked Helpful or Not helpful (plugin API release, part A1)
 
 **Decided:** The project-ending hook and the drop hook are built as the first part of the one batched plugin API release.
