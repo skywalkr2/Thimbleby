@@ -18,7 +18,12 @@ have personal, my thimbleby business, my writing business, and probably other th
 **Why:** One work side can't hold a person who runs more than one thing, and a pack built for one kind of work would
 otherwise take over the only business slot.
 
-**Impact:** Design 6.32 and 7.8; built in phase U with F3 and F4 (roadmap U4, U6); open promise P69. Change log: section 227.
+**Plugin API (owner, 2026-10-26: "Lift the hold for this"):** a person's `side` (personal, business or both) can't say
+which business, so this is plugin API 0.3.91, which only adds: a person's `sides` (the sides they belong to), the list of
+sides and the side of a record on the read view. `side` keeps working, derived from `sides`. The hold on other plugin API
+changes stays.
+
+**Impact:** Design 6.32, 6.7 and 7.8; built in phase U with F3 and F4 (roadmap U4, U6); open promise P69. Change log: sections 227 and 228.
 
 ## 2026-10-26: Setup opens on Welcome, counts seven steps everywhere, ticks only what happened, and names the assistant first
 

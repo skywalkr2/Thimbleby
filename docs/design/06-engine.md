@@ -816,7 +816,10 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
   ambiguous name holds the op and files one routing decision.
 - **Every action names a person.** An action may have several owners (each a person, optionally with a team); a team alone or
   a blank is refused. An action whose person isn't known yet is held, with one question to the PM ("Pick an owner"), and is
-  added only once it has one.
+  added only once it has one. **On the Personal side, the person is the default owner** (the UI/UX reviewer's F3, 2026-10-26; change log 228;
+  *designed, phase U*): an action filed under Personal that names nobody is the person's own, added with them as its
+  owner and no question; "Pick an owner" stays for an action that names someone who isn't known, and for any action
+  on another side.
 - **Scope** (6.18; *designed, not yet built*, it waits for the scope resolver, roadmap phase E): an action's owner must be in the tracked area or be the PM. An action for anyone else, or with an owner
   label that matches another domain's `owners` patterns, is refused with the reason, and the AI records the work as a fact on
   the observed item instead. A question to anyone outside the tracked area is refused unless `cross_domain.allow` is
@@ -3841,8 +3844,18 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   writing business), never to "the business". Packs on different sides still work together through the core's interfaces
   (3.9): a finished book on a writing side can be handed to a publishing pack serving another side, and each item stays on
   its own side. The filing ranks below read "a side" wherever they say "the business", a
-  rank pointing to two or more sides deciding nothing. `workspace.project.business` becomes a list of sides, the single
-  value read as a one-item list. Until it is built, the text below describes the one-business version that runs today.
+  rank pointing to two or more sides deciding nothing. Until it is built, the text below describes the one-business
+  version that runs today. The parts (change log 228):
+  - **The sides' list:** `workspace.project.sides`, each entry a top-level project id and its kind (`job` or `business`).
+    `workspace.project.business`, the old single value, is read as one entry of kind `business` by a config migration and
+    is never written again. Personal stays `workspace.project.personal`.
+  - **People:** `person.sides`, the side ids a person belongs to (the Personal project's id among them). `person.side`
+    (personal, business or both) stays readable, worked out from `sides`; writing it still works while there is at most
+    one business side, and with several it is refused in plain words ("say which side").
+  - **Mailboxes and calendars:** a watched source's `sides` says which sides it serves (empty: not said). It is a filing
+    rank right after people: one side files there; several narrow the choice to them.
+  - **Plugin API 0.3.91** (the owner lifted the hold for this alone): `person.sides`; on the read view, the sides
+    (project id, kind, name) and the side of a record or project. Nothing is removed.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
   second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
   a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for

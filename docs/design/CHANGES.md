@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 228. Sides in detail, plugin API 0.3.91, and "Just me" with no work words (2026-10-26; phase U, F3, F4; designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Sides (6.32) | One business id; `person.side` personal, business or both | `workspace.project.sides` (project and kind, job or business), the old value migrated; `person.sides`, with `side` worked out from it; a source's `sides` as a filing rank after people; plugin API 0.3.91 adds `person.sides` and the sides on the read view |
+| Unowned actions (6.7) | Every unowned action held for "Pick an owner" | On the Personal side the person is the owner; "Pick an owner" stays for an unknown name and other sides |
+| Setup's Work step (7.8) | "Just me" or "Me and my work", one name | "Just me", or My job and My own business tick boxes, "What does it work on?", "Add another business"; the mail step asks which sides each mailbox serves |
+| "Just me" screens (7.8) | Work, Stages, Projects, Organizations, roles and the work template shown | None of them on a workspace with no side besides Personal |
+
 ## 227. Personal plus any number of sides (2026-10-26; owner; phase U with F3 and F4; designed, not built)
 
 | Where | Before | Now |
