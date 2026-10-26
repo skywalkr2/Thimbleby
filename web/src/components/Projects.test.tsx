@@ -393,3 +393,14 @@ test("a new project can be given other names, and none is sent as an empty list"
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects")).toBe(true));
   expect(calls.find((c) => c.route === "POST projects")?.body).toMatchObject({ name: "Fresh", aliases: [] });
 });
+
+test("the personal project and an area offer no target date in their form, and a project with an end does", async () => {
+  api([project("PRJ-1", "Personal", { no_end: true }), project("PRJ-2", "Harbor")]);
+  const user = userEvent.setup();
+  renderApp(<Projects />);
+  const personal = await edit(user, "Personal");
+  expect(within(personal).queryByLabelText("Target date")).toBeNull();
+  await user.click(within(personal).getByRole("button", { name: "Cancel" }));
+  const harbor = await edit(user, "Harbor");
+  expect(within(harbor).getByLabelText("Target date")).toBeInTheDocument();
+});

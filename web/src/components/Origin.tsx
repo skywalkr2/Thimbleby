@@ -18,10 +18,23 @@ export function hasOrigin(origin?: S["Origin"] | null): boolean {
   return (origin.kind === "link" && !!origin.url) || (origin.kind === "source" && !!origin.source) || (origin.kind === "change" && !!origin.changeset);
 }
 
+function isOwnAddress(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === window.location.hostname || ["localhost", "127.0.0.1", "[::1]", "::1"].includes(host);
+  } catch {
+    return false;
+  }
+}
+
 export function OriginLink(props: { origin?: S["Origin"] | null; /** The link's words, when they are more than "Where it came from". */ label?: string }) {
   const { t } = useWords();
   const origin = props.origin;
   if (!origin) return null;
+  // An address of this app itself is not an outside page: it opens the saved text like any input.
+  if (origin.kind === "link" && origin.url && origin.source && isOwnAddress(origin.url)) {
+    return <SourceLink source={origin.source} label={props.label} />;
+  }
   if (origin.kind === "link" && origin.url) {
     return (
       <div className="origin">

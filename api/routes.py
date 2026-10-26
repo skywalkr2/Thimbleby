@@ -2052,6 +2052,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/projects")
     def projects() -> list[ProjectView]:
+        from engine import sides
         from engine.lists import describe, status_rank
         from engine.projects import language_for, spent_on
         from engine.record_page import counts
@@ -2087,6 +2088,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 status_tone=meant[p.id].tone,
                 status_meaning=meant[p.id].meaning,
                 status_rank=status_rank(view, "project-status", p.data.get("status")),
+                no_end=sides.has_no_end(view, cfg, p.id),
                 **seen.get(p.id, {}),
             )
             for p in store.read().list("project")
@@ -2100,6 +2102,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             why = parent_problem(store.read(), prj, changes["parent"])
             if why:
                 raise HTTPException(status_code=409, detail=why)
+        from engine import sides
+
+        why = sides.no_target_problem(store.read(), cfg, prj, changes)
+        if why:
+            raise HTTPException(status_code=409, detail=why)
         unknown = sorted(set(changes.get("content_levels") or []) - set(cfg.ai.content_levels))
         if unknown:
             detail = f"{', '.join(unknown)} isn't a content level in the AI settings"

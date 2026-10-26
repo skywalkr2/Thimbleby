@@ -3613,6 +3613,10 @@ people and details, and never acts in their name without their yes on the exact 
 
 Personal mail and calendar entries the person wants kept track of (an appointment, a bill, a renewal) belong to no work
 project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) means not tracked at all. So:
+- **The Personal project and an area have no end** (2026-10-26): neither takes a target day (the applier and the screen
+  refuse one; a project with an end inside them keeps its own), nothing asks them for a status, phase, owner or
+  description, and a fact is never made from an input that is an automated notice. The facts list shows a short label
+  (the kind of input and its subject or day), never a full local address.
 - **One Personal project, made at setup, for everyone** (owner, 2026-10-21: the default project for every person, used
   or not): an ordinary project the person can rename or remove, made with no question; a setting names which project is
   the personal one (`workspace.project.personal`). What the assistant files there is never "unfiled". A person who only

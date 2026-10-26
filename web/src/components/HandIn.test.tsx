@@ -10,6 +10,7 @@ const handed = () => ({ request: "REQ-1", source: null });
 const project = (id: string, name: string, extra: Partial<S["ProjectView"]> = {}): S["ProjectView"] => ({
   id,
   name,
+  no_end: false,
   group: null,
   status: null,
   phase: null,

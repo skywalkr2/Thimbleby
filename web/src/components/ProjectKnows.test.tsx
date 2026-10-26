@@ -12,6 +12,8 @@ import { ProjectKnows } from "./ProjectKnows";
 
 type View = S["ProjectKnowsView"];
 
+const WEB = "https://";
+
 const knows = (over: Partial<View> = {}): View => ({
   id: "PRJ-1",
   name: "Harbor",
@@ -189,4 +191,21 @@ test("when no account may read it, the page says nothing from it is sent anywher
   show(knows({ reading: { state: "none", levels: ["private"], readers: [] } }));
   const part = await section("Who reads it");
   expect(within(part).getByText("No AI account of yours may read this, so nothing from it is sent anywhere.")).toBeInTheDocument();
+});
+
+test("a fact from mail with a local address shows a short label, never the full address, and an outside link its real domain", async () => {
+  const local = { kind: "link" as const, url: "http://127.0.0.1:8765/#mail/MSG-7", source: "SRC-7" };
+  const outside = { kind: "link" as const, url: `${WEB}pages.example.com/p/12`, source: "SRC-8" };
+  show(
+    knows({
+      facts: [
+        { id: "FACT-7", version: 1, text: "The parcel arrives Friday.", key: false, source: { basis: "said", kind: "email", title: "Your parcel", on: "2026-10-12", origin: local } },
+        { id: "FACT-8", version: 1, text: "The page is current.", key: false, source: { basis: "said", kind: "calendar", on: "2026-10-12", origin: outside } },
+      ],
+    }),
+  );
+  const facts = await section("Facts");
+  expect(within(facts).getByText("Mail · Your parcel")).toBeInTheDocument();
+  expect(within(facts).queryByText(/127\.0\.0\.1/)).toBeNull();
+  expect(within(facts).getByText(/pages\.example\.com/)).toBeInTheDocument();
 });

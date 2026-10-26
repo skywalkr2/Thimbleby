@@ -4,6 +4,16 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The Personal project has no target day; automated notices never become facts; facts show short labels (P43 a, b, d, e)
+
+**Decided:** (1) The Personal project and an area are ongoing: a target day is refused for them by the applier and the
+screen, and the form does not offer one. (2) Nothing is asked of them that a work project is asked (status, phase,
+target day, owner, description): Still unknown lists only questions. (3) A fact is never made from an input that is an
+automated notice (a no-reply sender and a code, sign-in, token or security phrase); the shipped phrases are extended.
+(4) The facts list shows a short label (the kind of input and its subject or day), an address of the app itself opens the
+saved text, and an outside link shows its real domain. **Why:** the owner's first real use: two facts came from
+access-token notices, and the facts list showed full local addresses. Change log: section 209.
+
 ## 2026-10-26: Looking further back asks the source, only when it can, and lives on the source's page; a title that does nothing doesn't look clickable (P41, P48)
 
 **Decided:** (1) The day a mail source's first read says it looked back to is the window start, except when the read stopped at its

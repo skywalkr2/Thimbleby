@@ -30,6 +30,7 @@ export function learnedLine(over: Partial<S["LearnedLine"]> = {}): S["LearnedLin
 export function project(id: string, name: string): S["ProjectView"] {
   return {
     id,
+    no_end: false,
     name,
     group: null,
     language: "en-US",

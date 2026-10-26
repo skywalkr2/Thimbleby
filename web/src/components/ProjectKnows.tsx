@@ -83,7 +83,7 @@ function Facts(props: { rows: S["KnowsFact"][] }) {
           key={f.id}
           pill={f.key ? <Pill tone="neutral">{t("knows.key")}</Pill> : undefined}
           title={<a href={viewHref(recordView("fact", f.id))}>{f.text}</a>}
-          meta={<FactSource inline source={f.source} fact={f.id} version={f.version} />}
+          meta={<FactSource inline short source={f.source} fact={f.id} version={f.version} />}
         />
       ))}
     </Part>

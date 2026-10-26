@@ -1105,6 +1105,7 @@ class ProjectView(BaseModel):
         description="How urgent its status is by its meaning (0 first): at risk, blocked, open, not started, none, "
         "done.",
     )
+    no_end: bool = Field(False, description="The personal project or an area: ongoing, so it has no target day.")
 
 
 class NoteView(BaseModel):
@@ -1366,6 +1367,9 @@ class FactSource(BaseModel):
     )
     sender: str | None = Field(None, description="Name of the person whose input it was, when that is known.")
     on: str | None = Field(None, description="The day it was confirmed, true as of, or filed, YYYY-MM-DD.")
+    title: str | None = Field(
+        None, description="The input's own short name (a message's subject), for a short label in the facts list."
+    )
     origin: Origin | None = Field(None, description="Where it came from, for the link that is the label.")
 
 

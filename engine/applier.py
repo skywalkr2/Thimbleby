@@ -579,6 +579,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", why)
         if isinstance(op, RecordEditOp):
             why = edit_problem(ctx.store, view, op)
+            if not why and op.record.kind == "project":
+                from engine import sides
+
+                why = sides.no_target_problem(view, ctx.cfg, op.record.id, dict(op.fields))
             if why:
                 refuse(i, "targets", why)
         if isinstance(op, RecordSetOp):
@@ -587,6 +591,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no {op.kind} {op.id}")
             elif op.field not in SETTABLE[op.kind]:
                 refuse(i, "targets", f"{op.kind}.{op.field} can't be changed this way")
+            elif op.kind == "project" and _no_target(view, ctx.cfg, op):
+                refuse(i, "targets", _no_target(view, ctx.cfg, op))
             elif op.kind == "action" and op.field == "due" and target.data.get("status") not in ("open", "held"):
                 refuse(
                     i,
@@ -941,6 +947,13 @@ DATE_OR_OWNER_FIELDS = frozenset({"due", "target", "owner", "owners"})
 
 def _fact_problem(op: FactOp, ctx: Context) -> str | None:
     """Why a fact's `basis`, `said_by` and `reaches_children` don't fit with the rest, or None."""
+    if ctx.actor != "pm" and not ctx.confirmed_by_pm:
+        from engine.mail_kinds import automated_notice_input
+
+        if automated_notice_input(ctx.cfg, ctx.inputs.raw_input):
+            return (
+                "the input is an automated notice (a code, a sign-in or a security alert), which never becomes a fact"
+            )
     if op.reaches_children and not op.project:
         return "a fact that reaches the projects inside one needs the project it is about"
     if (op.on is None) != (op.on_kind is None):
@@ -1692,6 +1705,12 @@ def is_confirm(kind: str, current: dict[str, Any], fields: dict[str, Any]) -> bo
     """Whether a change is the person confirming an inferred fact: its basis becomes theirs and nothing else changes.
     It is the only change to a fact's basis, and it comes only from the person's own edit."""
     return kind == "fact" and current.get("basis") == "inferred" and fields == {"basis": "person"}
+
+
+def _no_target(view: Any, cfg: Any, op: Any) -> str | None:
+    from engine import sides
+
+    return sides.no_target_problem(view, cfg, op.id, {op.field: op.value})
 
 
 def edit_problem(store: Store, view: Any, op: Any) -> str | None:

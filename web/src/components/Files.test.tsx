@@ -24,6 +24,7 @@ function file(id: string, name: string, extra: Partial<S["FileView"]> = {}): S["
 }
 
 const project: S["ProjectView"] = {
+  no_end: false,
   id: "P-1",
   name: "Harbor project",
   group: null,

@@ -64,7 +64,7 @@ sorting: ai   # a low-cost run sorts the mail the rules cannot place, from sende
 automated_mail:   # one-time-code mail from a no-reply address is set aside with no AI run
   set_aside: true
   senders: [no-reply, noreply, no_reply, do-not-reply, donotreply]   # what an automated address starts with
-  words: [verification code, one-time code, one-time password, security code, sign-in code, login code, passcode, new sign-in, security alert]
+  words: [verification code, one-time code, one-time password, security code, sign-in code, login code, passcode, new sign-in, new login, sign-in attempt, security alert, suspicious activity, reset your password, access token, personal access token, app password, api key was, was added to your account, was added to your, new device, signed in from, security notice, security notification, verify your email, confirm your email]
 mail_kinds:   # bills, orders and deliveries are tracked for the Personal project, never set aside
   enabled: true
   bill: {senders: [billing, statements, invoices], subject_words: [your statement, statement is ready, amount due, invoice], words: [amount due, due date]}

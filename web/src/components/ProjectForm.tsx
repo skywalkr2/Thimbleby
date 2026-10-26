@@ -67,7 +67,7 @@ export function ProjectDrawer(props: {
       phase: phase.trim() || null,
       group: group.trim() || null,
       priority: priority.trim() || null,
-      target: target || null,
+      ...(p?.no_end ? {} : { target: target || null }),
       owner: owner || null,
       summary: summary.trim() || null,
     };
@@ -81,7 +81,7 @@ export function ProjectDrawer(props: {
       phase: p.phase,
       group: p.group,
       priority: p.priority ?? null,
-      target: p.target,
+      ...(p.no_end ? {} : { target: p.target }),
       owner: p.owner,
       summary: p.summary,
     };
@@ -168,7 +168,7 @@ export function ProjectDrawer(props: {
     >
       <Field id={`jn-${key}`} label={t("setup.project_name")} value={name} onChange={setName} required />
       <Field id={`ja-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.project_aliases_hint")} />
-      <Field id={`jt-${key}`} label={t("setup.target")} value={target} onChange={setTarget} type="date" />
+      {!p?.no_end && <Field id={`jt-${key}`} label={t("setup.target")} value={target} onChange={setTarget} type="date" />}
       <ValueSelect id={`js-${key}`} list={PROJECT_LISTS.status} label={t("setup.status")} value={status} onChange={setStatus} />
       <ValueSelect id={`jp-${key}`} list={PROJECT_LISTS.phase} label={t("setup.phase")} value={phase} onChange={setPhase} />
       <ValueSelect

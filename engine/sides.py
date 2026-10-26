@@ -56,6 +56,20 @@ def personal_project(view: Any, cfg: Any) -> str | None:
     return _live(view, cfg.workspace.project.personal)
 
 
+def has_no_end(view: Any, cfg: Any, project_id: str | None) -> bool:
+    """Whether a project has no end: the personal project itself, or an area. Either is ongoing, so it has no target
+    day (design 6.32); a project with an end inside one is not covered."""
+    record = view.get("project", project_id) if project_id else None
+    return record is not None and (bool(record.data.get("area")) or project_id == personal_project(view, cfg))
+
+
+def no_target_problem(view: Any, cfg: Any, project_id: str | None, fields: dict[str, Any]) -> str | None:
+    """Why a change can't give a project with no end a target day, or None."""
+    if fields.get("target") and has_no_end(view, cfg, project_id):
+        return "the personal project and its areas have no target day: they are ongoing"
+    return None
+
+
 def business_project(view: Any, cfg: Any) -> str | None:
     """The top project of the business side, when one is set and still there."""
     return _live(view, cfg.workspace.project.business)

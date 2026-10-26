@@ -1027,6 +1027,25 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 209. The Personal project reads as the person's own: no target day, no work-style questions, notices never become facts, short fact labels (2026-10-26; P43 a, b, d, e)
+
+- **Design 6.32:** the Personal project and an area are ongoing, so neither takes a target day: `record.set` and
+  `record.edit` on a project refuse one (`engine/sides.py` `no_target_problem`), the on-screen edit answers 409, the
+  project list says `no_end`, and the form shows no Target date for it (a project with an end inside Personal keeps
+  it). Nothing asks Personal or an area for a status, phase, target day, owner or description: Still unknown lists only
+  what a question was asked about (change 207), and a test holds it for Personal. Automated notices: the shipped words
+  (`watch.automated_mail.words`, and both fictional workspaces) now include access-token, app-password, new-device and
+  security-notice phrases; a fact from an input that is an automated notice (a no-reply sender and one of those words,
+  never a bill, order or delivery) is refused by the applier unless the person made it. The facts list shows a mail
+  link as "{kind} · {subject or day}" and an address of the app itself opens the saved text, never a full local address;
+  an outside link keeps its real domain. **Built:** `tests/test_personal_page.py`,
+  `web/src/components/Projects.test.tsx`, `web/src/components/ProjectKnows.test.tsx`
+
+| Where | Before | Now |
+|---|---|---|
+| Personal project (6.32) | A target day could be set | Refused for it and its areas, on screen and in an op |
+| Automated notices (6.5, 6.32) | A token notice could become facts | Such input never becomes a fact |
+
 ## 208. Looking further back asks the source, only when it can, and is offered on the source's page; the dates agree (2026-10-26; P41, P48)
 
 - **Design 6.32 and 7.7:** the date a first read looked back to is the oldest day of the mail it returned when that is later than

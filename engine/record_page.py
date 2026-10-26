@@ -268,6 +268,7 @@ def fact_source(view: Any, record: Any) -> dict[str, Any]:
         "kind": kind,
         "sender": author.data["full_name"] if author is not None else None,
         "on": on,
+        "title": str(source.data.get("title") or "") or None if source is not None else None,
         "origin": origins(view, "fact", [record.id])[record.id],
     }
 

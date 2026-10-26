@@ -3439,6 +3439,7 @@
   "fact.src.said_unknown": "from {input}, {date}",
   "fact.src.reported": "said by {name}, in {input}, {date}",
   "fact.src.inferred": "{assistant} inferred this from {input}, {date}",
+  "fact.src.short": "{what} · {detail}",
   "fact.src.old": "recorded {date}",
   "fact.src.of": "{name}'s {kind}",
   "fact.src.kind.email": "email",

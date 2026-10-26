@@ -2852,6 +2852,18 @@ class AutomatedMail(FileModel):
             "security alert",
             "suspicious activity",
             "reset your password",
+            "access token",
+            "personal access token",
+            "app password",
+            "api key was",
+            "was added to your account",
+            "was added to your",
+            "new device",
+            "signed in from",
+            "security notice",
+            "security notification",
+            "verify your email",
+            "confirm your email",
         ],
         description="Words in the subject or text that say a mail is an automated notice (a one-time code, a sign-in "
         "alert or a security notice). A no-reply mail without "

@@ -8018,6 +8018,18 @@
             ],
             "description": "Name of the person whose input it was, when that is known.",
             "title": "Sender"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The input's own short name (a message's subject), for a short label in the facts list.",
+            "title": "Title"
           }
         },
         "title": "FactSource",
@@ -16888,6 +16900,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "no_end": {
+            "default": false,
+            "description": "The personal project or an area: ongoing, so it has no target day.",
+            "title": "No End",
+            "type": "boolean"
           },
           "open_actions": {
             "default": 0,

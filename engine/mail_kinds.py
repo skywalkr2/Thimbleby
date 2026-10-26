@@ -63,3 +63,18 @@ def kind_of_input(settings: Any, raw_input: str | None) -> str | None:
         return None
     subject = _SUBJECT.search(text) or _TITLE.search(text)
     return kind_of(settings, sender.group(1), subject.group(1) if subject else "", text)
+
+
+def automated_notice_input(cfg: Any, raw_input: str | None) -> bool:
+    """Whether an input's text is a mail the Automated notices rule sets aside (a one-time code, a sign-in or security
+    notice from a no-reply sender). A bill, an order or a delivery is never one. An input with no From line is not."""
+    from engine.triage import automated_code_mail
+
+    auto = cfg.watch.automated_mail
+    text = raw_input or ""
+    sender = _FROM.search(text)
+    if sender is None or not auto.set_aside or kind_of_input(cfg.watch.mail_kinds, text):
+        return False
+    subject = _SUBJECT.search(text) or _TITLE.search(text)
+    change = {"message": {"sender": sender.group(1).strip()}, "title": subject.group(1) if subject else "", "now": text}
+    return automated_code_mail(change, {"senders": auto.senders, "words": auto.words}) is not None

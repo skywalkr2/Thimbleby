@@ -36,10 +36,16 @@ export function useFactLabel(): (source: S["FactSource"]) => string {
   };
 }
 
-export function FactSource(props: { source: S["FactSource"]; fact: string; version: number; /** Drawn in a line of text (a row's meta) instead of as a paragraph. */ inline?: boolean }) {
-  const { t } = useWords();
+export function FactSource(props: { source: S["FactSource"]; fact: string; version: number; /** A short label (the kind of input and its name or day) instead of the sentence, for the facts list. */ short?: boolean; /** Drawn in a line of text (a row's meta) instead of as a paragraph. */ inline?: boolean }) {
+  const { t, has } = useWords();
   const act = useAct();
-  const label = useFactLabel()(props.source);
+  const sentence = useFactLabel()(props.source);
+  const kind = props.source.kind;
+  const short =
+    props.short && props.source.origin?.kind === "link" && kind && has(`knows.kind.${kind}`)
+      ? t("fact.src.short", { what: t(`knows.kind.${kind}`), detail: props.source.title || (props.source.on ? monthDay(props.source.on) : "") }).replace(/ · $/, "")
+      : null;
+  const label = short ?? sentence;
   const inferred = props.source.basis === "inferred";
   const confirm = () =>
     act(
