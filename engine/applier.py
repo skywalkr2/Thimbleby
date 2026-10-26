@@ -1830,6 +1830,7 @@ def apply_changeset(
         with ctx.store.transaction() as tx:
             cs_id = tx.new_id("changeset")
             outcomes: list[OpOutcome] = []
+            removed: set[tuple[str, str]] = set()  # what earlier steps of this change already removed
             for i, op in enumerate(cs.ops):
                 mine = list(by_op.get(i, [])) + [replace(p, op=i) for p in whole]
                 known = {p.message for p in mine if p.check == "plugin-validator"}
@@ -1857,7 +1858,11 @@ def apply_changeset(
                     if hold is not None:
                         outcome.status = "held"
                         outcome.reason = hold
-                if outcome.status == "applied":
+                gone = _removal_key(op)
+                if outcome.status == "applied" and gone is not None and gone in removed:
+                    # Removing again what an earlier step of this change removed changes nothing: it is skipped.
+                    outcome.reason = REPEATED_REMOVAL
+                elif outcome.status == "applied":
                     wctx = _wctx(ctx, cs_id, i, op)
                     # Each op in its own savepoint: one that fails is refused alone and leaves nothing behind.
                     tx.sql("SAVEPOINT plugin_op")
@@ -1890,6 +1895,8 @@ def apply_changeset(
                         outcome.status, outcome.reason = "refused", str(err)
                     finally:
                         tx.sql("RELEASE plugin_op")
+                    if outcome.status == "applied" and gone is not None:
+                        removed.add(gone)
                 elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
                     outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
                     outcome.reason = "Waiting for you to say who this is"
@@ -1917,8 +1924,54 @@ def apply_changeset(
             cs_id = tx.new_id("changeset")
             _record_changeset(tx, cs_id, cs, stopped.outcomes, "rejected", problems, ctx, run, now, extra)
         return cs_id
+    except StoreError:
+        raise  # a write refused with a plain reason: the caller says why
+    except (Exception, SystemExit) as err:
+        # Any other failure in a step, an exit included, has rolled the whole change back with its transaction.
+        # It is recorded as rejected, with why, and the caller sends the work back to be done again.
+        why = f"{STEP_FAILED} ({type(err).__name__})"
+        failed = [
+            OpOutcome(i, op.model_dump(mode="json", exclude_none=True), "refused", op.group or f"op{i}", reason=why)
+            for i, op in enumerate(cs.ops)
+        ]
+        with ctx.store.transaction() as tx:
+            cs_id = tx.new_id("changeset")
+            _record_changeset(tx, cs_id, cs, failed, "rejected", problems, ctx, run, now, extra)
+        raise ChangeFailed(cs_id, why) from err
     ctx.store.plugins.publish("changeset.applied", {"id": cs_id}, follows=cs_id)
     return cs_id
+
+
+#: Why a step that removes what an earlier step of the same change removed was skipped.
+REPEATED_REMOVAL = "Already removed by an earlier step of this change"
+#: Why a change was rolled back when one of its steps failed unexpectedly.
+STEP_FAILED = "Not applied: one step failed, so nothing in this change was kept"
+
+
+class ChangeFailed(StoreError):
+    """A change rolled back because a step failed unexpectedly; `changeset` is the id it was recorded as rejected
+    under."""
+
+    def __init__(self, changeset: str, why: str):
+        super().__init__(why)
+        self.changeset = changeset
+
+
+def _removal_key(op: OpModel) -> tuple[str, str] | None:
+    """What a removing op removes, as (kind, id), so a repeat in one change can be skipped; None for other ops."""
+    if isinstance(op, RecordDeleteOp):
+        return op.record.kind, op.record.id
+    if isinstance(op, ActionDropOp):
+        return "action", op.id
+    if isinstance(op, QuestionDropOp):
+        return "question", op.id
+    if isinstance(op, RuleRetireOp):
+        return "rule", op.id
+    if op.op == "knowledge.retire":
+        return "knowledge", op.id  # type: ignore[attr-defined]
+    if op.op == "list.retire":
+        return "list", f"{op.list}/{op.value}"  # type: ignore[attr-defined]
+    return None
 
 
 class _AllOrNothing(Exception):
@@ -2925,7 +2978,7 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                             continue
                     written, _ = _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), datetime.now(UTC).date())
                     found += _rule_problems(tx, ctx, i, op, written)
-                except Exception:
+                except (Exception, SystemExit):  # the real apply meets the same failure and reports it
                     tx.sql("ROLLBACK TO dry_op")
                     written = []
                 finally:

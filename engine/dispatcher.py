@@ -31,7 +31,7 @@ from engine.ai.router import (
     route,
 )
 from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN, AiError, AiTask, provider_reason
-from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
+from engine.applier import ChangeFailed, Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
 from engine.config import Config
 from engine.learning import offered_ops, request_learns
@@ -398,15 +398,20 @@ def process(
     extra = quality.claims(store, run_id, changeset.applied, changeset.missing)
     if outcome.fallback is not None and quality.first_run_on(store, run_id) == outcome.fallback:
         extra["first_on_account"] = outcome.fallback
-    cs_id = apply_changeset(
-        changeset,
-        problems,
-        ctx,
-        run=run_id,
-        now=now,
-        extra=extra,
-        all_or_nothing=getattr(kind, "all_or_nothing", False),
-    )
+    try:
+        cs_id = apply_changeset(
+            changeset,
+            problems,
+            ctx,
+            run=run_id,
+            now=now,
+            extra=extra,
+            all_or_nothing=getattr(kind, "all_or_nothing", False),
+        )
+    except ChangeFailed as failed:
+        # Nothing of the change was kept: the work goes back to the assistant to be done again, as a failed run does.
+        log.warning("Request %s: %s", request_id, failed)
+        return stop_or_retry(store, cfg, request_id, _Outcome(retry=str(failed), stop=str(failed)), now)
     if run_id is not None:
         record_applied(store, run_id, cs_id)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)

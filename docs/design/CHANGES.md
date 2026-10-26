@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 198. A failing step and a stopped loop (2026-10-26; P53)
+
+- **Design 6.13 and 6.14:** a step that fails in any way, an exit included, rolls its whole change back, which is recorded
+  as rejected with why and sent back to the assistant; a repeated removal in one change is skipped; every background loop
+  pass is guarded and writes a heartbeat; a watchdog starts a stopped loop again inside the app and shows it on the
+  assistant's card; a stuck loop is shown on the card and Today with Restart now. Built:
+  `tests/test_change_failures.py` and the worker's loop tests.
+
 ## 197. A channel gets a context (2026-10-22; plugin API 0.3.89, built)
 
 - **Design 6.12, channels:** an add-on's channel is handed a context on send, status and undo, like a connector's: web

@@ -4,6 +4,25 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: A failing step never leaves a change half applied, and the background work can't stop silently
+
+**Decided:** Any failure in a step of a change, an exit included, rolls the whole change back, records it as rejected
+with why, and sends the work back to the assistant (the usual retry, up to `dispatch.retries`, then the person). Removing
+again what an earlier step of the same change removed is skipped. Every pass of every background loop is guarded, and
+each loop writes a heartbeat. A watchdog starts a loop again, inside the running app, when its thread has stopped, and says
+so on the assistant's card. A loop whose heartbeat is older than the limit is stuck: it is never started a second time
+(two copies would race); the card and a Today line say so and offer Restart now, which the person chooses. The app is
+never restarted by the watchdog. The rehearsal "try a large change on a copy first" is the applier's existing dry run in
+a rolled-back transaction, which now also absorbs an exit.
+
+**Decided by:** the owner's lesson 3 of `docs/project/lessons-2026-10-23.md`; the in-app restart of a stopped loop in
+place of restarting the app is the main session's reading of it against the rule that the app never restarts on its own.
+
+**Why:** An exit in one step killed the thread that applies changes, starts jobs and hands work to the assistant, and
+nothing said so while the pages still loaded.
+
+**Impact:** Design 6.13 and 6.14; open promise P53. Change log: section 198.
+
 ## 2026-10-22: The free mail add-on is open; paid add-ons are closed from the start
 
 **Decided:** The mail and calendar add-on is the free one and is released as open source, so its release files can be

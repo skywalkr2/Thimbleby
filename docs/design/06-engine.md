@@ -1684,6 +1684,18 @@ Quality.
 - The self-check (Part 10) validates config schemas, plugin manifests, imports, the web build and the specificity guard; run it
   after any change.
 
+**A failing step and a stopped loop** (*built, P53*; the owner's lessons from running, 2026-10-23). Library code never
+exits the process; it raises an error its caller handles. The applier treats any failure in a step, an exit included, as
+a failed change: the transaction rolls everything back, the change is recorded as rejected with why, and the work goes back
+to the assistant like a failed run (retried up to `dispatch.retries`, then the person is needed). Removing again what an
+earlier step of the same change removed is skipped, not an error. Each background loop (requests, jobs and sources,
+backups, the synced folder) guards every pass, so a failure is noted as an automation problem and the next pass runs, and
+writes a heartbeat. The watchdog starts a loop again, inside the running app, when its thread has stopped, and the
+assistant's card says it did. A loop whose heartbeat is older than the limit is stuck: it is not started twice, since two
+copies would race; the card and a Today line say since when and offer Restart now, which the person chooses (6.14: the
+app never restarts on its own). A large change is rehearsed first by the applier's dry run, in a transaction that is
+rolled back.
+
 ## 6.14 Scheduler, offline behavior and restart
 
 Jobs that need the network wait while it's down and run when it returns ("Offline, waiting for the network" shown, not
