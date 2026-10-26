@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The add-ons catalog's address is the product's, not a setting
+
+**Decided:** The product's own packs catalog address is committed in `catalog/product.yaml` and always read; the person
+can't switch it off or change it on screen (the switch is kept in files only, for tests and closed networks). A team's own
+extra catalogs stay possible behind Advanced.
+
+**Decided by:** the owner ("The location of the add-ons should be hardcoded and in our own configuration, not the users
+control").
+
+**Why:** A run from source showed no add-ons, and a person should never have to find or type the catalog's address.
+
+**Impact:** Design 3.11; open promise P37. Change log: section 213.
+
 ## 2026-10-26: Versions of one document in a watched folder: only the newest counts (P51, lesson 1)
 
 **Decided:** Files in a watched folder whose names differ only by version marks (v3, v3_1), dates and the configured words

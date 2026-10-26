@@ -38,7 +38,6 @@ ADVANCED = (
     "workspace.project.side_words",
     "workspace.plugins.enabled",
     "workspace.plugins.catalog.enabled",
-    "workspace.plugins.catalog.shipped_feed",
     "workspace.plugins.catalog.feeds",
     "workspace.our_accounts",
     "storage.files.accepted_types",

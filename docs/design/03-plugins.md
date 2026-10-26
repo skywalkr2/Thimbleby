@@ -393,7 +393,7 @@ freeze"). A pack's catalog entry says where its release is and how to check it. 
 **Catalogs from the screen** (decisions, 2026-10-16, "A catalog's address and a read token are added on the Add-ons screen").
 With no catalog listed, Available shows "Add a catalog": one https address, saved into `workspace.plugins.catalog.feeds` and
 read at once; the catalog list offers adding another and taking away one the person added (never the one the build came with).
-No catalog address is committed to the repository; the build's own feed stays unset in a checkout.
+The product's own catalog address is the maintainers' configuration, committed in `catalog/product.yaml` and read by every build and checkout alike; it is not a setting a person changes (`workspace.plugins.catalog.shipped_feed` is kept in files only, for tests and closed networks), and a release build may replace it from a repository variable (decisions, 2026-10-26).
 
 **Built (phase A2):** installing a single release file of pure Python whose needs the app already has, the read token,
 the Install button, Update now for a newer release, and Remove for a pack this app installed and that is off. Installing

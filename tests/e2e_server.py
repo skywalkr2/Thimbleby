@@ -281,6 +281,8 @@ def main() -> None:
         "storage.backups.targets": [{"path": str(tmp / "offsite"), "label": "test folder"}],
         # Backups only on request, so the browser tests see the state before the first one.
         "storage.backups.automatic": False,
+        # The browser tests never read the product's own catalog feed over the network.
+        "workspace.plugins.catalog.shipped_feed": False,
         # A stage that starts work when entered, so the browser tests can exercise waiting for the go.
         "stages.types.project.stages": [
             {"id": "planned", "label": "Planned"},

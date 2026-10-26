@@ -61,7 +61,9 @@ def test_the_build_hook_skips_runtime_files(tmp_path, monkeypatch):
 
 
 def test_product_facts_come_from_the_shipped_catalog(tmp_path):
-    assert product().get("feedback_to") is None  # the repository commits no address
+    assert product().get("feedback_to") is None  # the repository commits no feedback address
+    # The product's own catalog feed is the maintainers' setting, committed with the product, never a person's.
+    assert str(product().get("pack_catalog", "")).startswith("https://")
     (tmp_path / "catalog").mkdir()
     (tmp_path / "catalog" / "product.yaml").write_text("feedback_to: someone@example.com\n")
     assert product(packaged=tmp_path)["feedback_to"] == "someone@example.com"

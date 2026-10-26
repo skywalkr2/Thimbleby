@@ -101,6 +101,16 @@ def _no_temp_folder_notice(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_product_feed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never read the product's own catalog feed over the network: the routes see a build without one, and a test
+    of the feed itself reads `engine.shipped.product` directly."""
+    import api.pack_routes as pack_routes
+
+    real = pack_routes.product
+    monkeypatch.setattr(pack_routes, "product", lambda *a, **k: {**real(*a, **k), "pack_catalog": None})
+
+
+@pytest.fixture(autouse=True)
 def _client_at_the_apps_address(monkeypatch: pytest.MonkeyPatch) -> None:
     """The app answers only to its own address (design 12.1), so a test client built on an app starts at that address,
     read from the app's own settings, unless the test names another one. This is the one place the tests follow the

@@ -150,7 +150,8 @@ class CatalogSettings(ConfigModel):
     enabled: bool = Field(True, description="Show the packs catalog feeds list on the Add-ons screen.")
     shipped_feed: bool = Field(
         True,
-        description="Include the catalog feed this build of the app came with, if any.",
+        description="Read the product's own catalog feed, which the maintainers set; kept in files only, for tests and "
+        "closed networks.",
         json_schema_extra={"enabled_by": "enabled"},
     )
     feeds: list[str] = Field(

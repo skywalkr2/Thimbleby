@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 213. The product's own add-ons catalog is built in (2026-10-26; P37)
+
+The address of the product's own packs catalog is committed in `catalog/product.yaml`, so a run from a checkout and every
+release build list the add-ons with no setup, and it is no longer a person's setting: `workspace.plugins.catalog.shipped_feed`
+moves from Advanced to files only. A release build replaces the address only when a repository variable sets it. Tests and
+the browser tests never read it over the network (`tests/conftest.py`, `tests/e2e_server.py`). Design 3.11 "Catalogs from the
+screen". Test: `tests/test_shipped.py::test_product_facts_come_from_the_shipped_catalog`.
+
 ## 212. Versions of one document in a watched folder: only the current copy counts (2026-10-26; P51)
 
 Files in a watched folder that differ only by version marks, dates or configured words are one family; the newest copy
