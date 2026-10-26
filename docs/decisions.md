@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: A person can track several businesses beside Personal and a job
+
+**Decided:** Sides are Personal plus any number of others, each a job or a business with its own name, mailboxes, people
+and relations. A person may have Personal, a job, their own company, their writing and more at once. A pack attaches to the
+side or projects it serves (a writing pack's books are projects under the writing business), never to a single "business".
+This is a core concept: `workspace.project.business` becomes a list of sides, with the old single value read as a list of
+one. Setup's job and business tick boxes lead to "Add another business".
+
+**Decided by:** the owner ("i view an authors writing as their 'business' or one of their businesses. In my case i will
+have personal, my thimbleby business, my writing business, and probably other things").
+
+**Why:** One work side can't hold a person who runs more than one thing, and a pack built for one kind of work would
+otherwise take over the only business slot.
+
+**Impact:** Design 6.32 and 7.8; built in phase U with F3 and F4 (roadmap U4, U6); open promise P69. Change log: section 227.
+
 ## 2026-10-26: Setup opens on Welcome, counts seven steps everywhere, ticks only what happened, and names the assistant first
 
 **Decided:** A fresh workspace opens on a Welcome screen that isn't counted (what the app does, what the person will need,

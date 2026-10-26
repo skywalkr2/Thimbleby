@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 227. Personal plus any number of sides (2026-10-26; owner; phase U with F3 and F4; designed, not built)
+
+| Where | Before | Now |
+|---|---|---|
+| Sides (6.32, 7.8) | Personal and at most one work side (`workspace.project.business`), job or business | Personal plus any number of sides, each a job or a business with its own name, mailboxes, people and relations. A pack attaches to the side or projects it serves. The setting becomes a list (one value reads as a list of one). Setup offers "Add another business" |
+
 ## 226. Setup: Welcome, seven counted steps, true ticks, and names introduced (2026-10-26; phase U, F1, F5 and F11; P69)
 
 | Where | Before | Now |

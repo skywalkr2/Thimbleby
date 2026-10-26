@@ -3833,6 +3833,14 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   Personal is its own kind of thing, not a project with rules switched off. It keeps the exceptions it has (no target
   day, no phase, no work-style questions, bills and orders filed there by default) and no new special case is added to it:
   the work-side rule for bills changes where a bill files, not what Personal is (functional designer, 2026-10-26, F37).
+- **Personal plus any number of sides** (owner, 2026-10-26; change log 227; *designed, phase U with F3 and F4, not built*):
+  a person may track Personal, a job, and several businesses at once (a company of their own, their writing, and more
+  later), so "the second side" below becomes a list. Each side is a top-level project with a kind (`job` or `business`)
+  and its own name, mailboxes (or a mailbox shared with Personal or another side), people and relations; a pack's
+  screens, Today lines and setup attach to the side or projects they serve (a writing pack's books are projects under the
+  writing business), never to "the business". The filing ranks below read "a side" wherever they say "the business", a
+  rank pointing to two or more sides deciding nothing. `workspace.project.business` becomes a list of sides, the single
+  value read as a one-item list. Until it is built, the text below describes the one-business version that runs today.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
   second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
   a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
