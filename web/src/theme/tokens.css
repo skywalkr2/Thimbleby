@@ -78,17 +78,18 @@
   --target-icon: 32px;         /* an icon-only button is at least this square */
 
   /* ---------- 2. Semantic roles (light) ---------- */
-  --canvas: var(--gray-50);          /* page background */
+  --canvas: #f4f5f7;                 /* page background: close to the panes, which part from it by a soft edge */
   --surface: var(--gray-0);          /* panes, header, sidebar, inputs */
-  --surface-sunk: var(--gray-100);   /* wells, code, expanded detail, group headers */
+  --surface-sunk: #f6f7f9;           /* wells, code, expanded detail: a hint of tint, not a slab */
   --surface-hover: var(--gray-25);
-  --border: var(--gray-150);         /* decorative dividers and pane edges */
-  --border-strong: var(--gray-450);  /* input and control boundaries: 3.26:1 on surface */
-  --text: #14171f;
-  --text-muted: var(--gray-650);     /* 6.9:1 on surface */
+  --border: #e8eaef;                 /* decorative dividers: they recede */
+  --border-strong: #848c9a;          /* input and control boundaries: 3.4:1 on surface, 3.1:1 on canvas */
+  --text: #1d2230;                   /* 15.9:1 on surface: softer than near-black */
+  --text-muted: #4e5565;             /* 7.5:1 on surface, 7.0:1 on sunk */
   --text-subtle: var(--gray-550);    /* 4.7:1 on sunk; meta only */
   --text-on-accent: #ffffff;
   --text-on-danger: #ffffff;
+  --btn-border: #cfd4dc;             /* a secondary button's outline: its label names it, so it needs no 3:1 edge */
 
   --accent: var(--brand-600);        /* primary buttons, selected nav, links */
   --accent-hover: var(--brand-700);
@@ -116,6 +117,16 @@
   --row-py: var(--space-3); --row-px: var(--space-4); --row-gap: var(--space-3);
   --pill-h: 22px; --pill-px: 8px;
   --card-p: var(--space-4);
+  /* Where day and night differ in shape, not only in color: a row's action is tonal by day and filled by night, a pane's
+     edge is a soft shadow by day and a hairline by night, group headers lose their band by day, titles are lighter by day. */
+  --row-action-bg: var(--accent-soft); --row-action-hover: var(--accent-soft); --row-action-text: var(--accent-text);
+  --row-action-border: transparent;
+  --row-action-strong-bg: var(--accent); --row-action-strong-hover: var(--accent-hover); --row-action-strong-text: var(--text-on-accent);
+  --pane-border: transparent;
+  --pane-edge: 0 0 0 1px rgb(20 24 34 / 0.05), 0 1px 3px rgb(20 24 34 / 0.05);
+  --band-bg: transparent; --band-text: var(--text-muted); --band-bottom: 0 solid transparent;
+  --row-title-weight: var(--weight-medium);
+  --pill-neutral-bg: transparent; --pill-neutral-edge: inset 0 0 0 1px var(--border);
   color-scheme: light;
 }
 
@@ -147,6 +158,13 @@
     --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
     --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
+    --btn-border: var(--border-strong);
+    --row-action-bg: var(--accent); --row-action-hover: var(--accent-hover); --row-action-text: var(--text-on-accent);
+    --row-action-border: var(--accent);
+    --pane-border: var(--border); --pane-edge: none;
+    --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
+    --row-title-weight: var(--weight-semibold);
+    --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
     color-scheme: dark;
   }
 }
@@ -177,6 +195,13 @@
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
   --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
   --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
+  --btn-border: var(--border-strong);
+  --row-action-bg: var(--accent); --row-action-hover: var(--accent-hover); --row-action-text: var(--text-on-accent);
+  --row-action-border: var(--accent);
+  --pane-border: var(--border); --pane-edge: none;
+  --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
+  --row-title-weight: var(--weight-semibold);
+  --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
   color-scheme: dark;
 }
 

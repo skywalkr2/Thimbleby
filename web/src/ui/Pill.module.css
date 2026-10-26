@@ -3,7 +3,7 @@
   border-radius: var(--radius-sm); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold);
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.neutral { background: var(--surface-sunk); color: var(--text-muted); }
+.neutral { background: var(--pill-neutral-bg); box-shadow: var(--pill-neutral-edge); color: var(--text-muted); }
 .need { background: var(--accent-soft); color: var(--accent-text); }
 .warn { background: var(--warn-soft); color: var(--warn); }
 .danger { background: var(--danger-soft); color: var(--danger); }

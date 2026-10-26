@@ -321,7 +321,7 @@ export function TodayQueue(props: {
           </div>
           {waiting > 0 && (
             <div className={styles.newbar}>
-              <Button size="sm" variant="primary" aria-keyshortcuts="Shift+N" onClick={show}>
+              <Button size="sm" variant="primary" data-tonal="" aria-keyshortcuts="Shift+N" onClick={show}>
                 {tn("queue.new_show", waiting)}
               </Button>
             </div>

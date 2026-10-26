@@ -32,7 +32,7 @@ h1:focus-visible, h2:focus-visible, h3:focus-visible, h4:focus-visible, h5:focus
 main p { max-width: var(--measure); }
 
 /* Buttons that screens not yet rebuilt on the shared Button still use */
-.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-md); padding: 0 var(--btn-px); font-weight: var(--weight-semibold); font-size: var(--text-sm); line-height: var(--lh-sm); cursor: pointer; white-space: nowrap; min-height: var(--btn-h); display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.btn { border: 1px solid var(--btn-border); background: var(--surface); border-radius: var(--radius-md); padding: 0 var(--btn-px); font-weight: var(--weight-semibold); font-size: var(--text-sm); line-height: var(--lh-sm); cursor: pointer; white-space: nowrap; min-height: var(--btn-h); display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
 .btn:hover { background: var(--surface-sunk); }
 .btn.primary { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
 .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
@@ -57,7 +57,7 @@ main p { max-width: var(--measure); }
 .hint { font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-muted); }
 
 /* Lists: one surface with hairline dividers, never a card per row */
-.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; }
 .line { background: var(--surface); border-bottom: 1px solid var(--border); min-width: 0; }
 .line:last-child { border-bottom: 0; }
 .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); padding: var(--row-py) var(--row-px); }
@@ -166,7 +166,7 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { background: tran
 input[type="checkbox"]:disabled::before, input[type="radio"]:disabled::before { background: var(--surface-sunk); border-color: var(--border); }
 input[type="checkbox"]:disabled:checked::after { border-color: var(--text-subtle); }
 .row-end { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); }
+.panel { background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); }
 .panel h2 { font-size: var(--text-lg); }
 .tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); background: var(--surface-sunk); padding: var(--space-1); border-radius: var(--radius-md); }
 .tabs button { border: 0; background: transparent; min-height: 24px; padding: 0 var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; }
@@ -233,7 +233,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 
 /* Plugin panels, record pages, text review and working copies */
 .link-button { display: inline-flex; align-items: center; min-height: var(--target-min); border: 0; background: none; padding: 0; color: var(--accent-text); font: inherit; font-weight: var(--weight-semibold); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); background: var(--surface); }
 .document { display: grid; gap: var(--space-3); min-width: 0; }
 .document > * { margin: 0; }
 .document h3 { font-size: var(--text-lg); line-height: var(--lh-lg); }
@@ -511,7 +511,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .record-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); align-items: start; min-width: 0; }
 @media (min-width: 1024px) { .record-grid { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); } }
 .record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
-.record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); }
+.record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
 /* A side panel is narrow: each label sits above its value, so no pair wraps beside the other. */
 .record-side .detail { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }

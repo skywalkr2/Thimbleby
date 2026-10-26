@@ -113,6 +113,43 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
+// Day mode (UI/UX review F7): a row's action is tonal, so a screen's own content draws at most one filled button (the selected
+// line's); "Hand something in" is in the header, outside it. A filled button is one drawn in the accent color itself.
+/** How many buttons in the main content are filled with the accent color. */
+async function filledButtons(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.backgroundColor = "var(--accent)";
+    document.body.append(probe);
+    const accent = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return Array.from(document.querySelectorAll<HTMLElement>("main button")).filter((b) => getComputedStyle(b).backgroundColor === accent && b.getBoundingClientRect().width > 0).length;
+  });
+}
+
+test.describe("day mode", () => {
+  for (const screen of [{ name: "Today", hash: "today" }, { name: "To-dos and questions", hash: "work/open" }, { name: "Follow-ups", hash: "work/followups" }]) {
+    test(`${screen.name} draws at most one filled button in light at 1440px, and the header's Hand something in is filled`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: "light" });
+      await signIn(page);
+      await page.setViewportSize({ width: 1440, height: HEIGHT });
+      await open(page, screen.hash);
+      expect(await filledButtons(page)).toBeLessThanOrEqual(1);
+      if (screen.hash === "today") {
+        const handIn = page.getByRole("banner").getByRole("button", { name: "Hand something in" });
+        await expect(handIn).toHaveCSS("background-color", await page.evaluate(() => {
+          const probe = document.createElement("span");
+          probe.style.backgroundColor = "var(--accent)";
+          document.body.append(probe);
+          const accent = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return accent;
+        }));
+      }
+    });
+  }
+});
+
 // Target sizes (WCAG 2.5.8; check C52): no visible interactive element is smaller than 24 by 24 CSS pixels. A checkbox or
 // radio is measured as the element itself (its 18px box is drawn inside a 24px control), never by its label; a link inside a
 // sentence is exempt, as the standard says.

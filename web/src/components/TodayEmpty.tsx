@@ -18,7 +18,7 @@ export function TodayEmpty(props: { className?: string; onContinueSetup?: () => 
       <p className={props.className} data-queue-empty="connect">
         {t("queue.empty.connect")}{" "}
         {props.onContinueSetup && (
-          <Button size="sm" variant="primary" onClick={props.onContinueSetup}>
+          <Button size="sm" variant="primary" data-tonal="" onClick={props.onContinueSetup}>
             {t("queue.empty.continue_setup")}
           </Button>
         )}

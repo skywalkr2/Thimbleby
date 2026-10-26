@@ -4,7 +4,8 @@
 //   inherit, initial, unset or a percentage. Inside calc(), min(), max() and clamp() the same holds, and a bare multiplier is fine.
 // cockpit/no-opacity-when-disabled: a rule that styles a disabled state never uses opacity; a disabled control gets the
 //   sunken fill, the subtle text color and a border instead.
-// cockpit/weight-tokens: a font weight is one of the weight tokens (var(--weight-regular), -medium or -semibold, with no
+// cockpit/weight-tokens: a font weight is one of the weight tokens (var(--weight-regular), -medium or -semibold, or the
+//   row title's role token, with no
 //   fallback number), or inherit, initial, unset or revert. No number, no bold or normal, in font-weight or in the font shorthand.
 import stylelint from "stylelint";
 import valueParser from "postcss-value-parser";
@@ -54,7 +55,8 @@ const weightTokens = "cockpit/weight-tokens";
 const weightMessages = utils.ruleMessages(weightTokens, {
   rejected: (value) => `Use a weight token (var(--weight-regular), var(--weight-medium) or var(--weight-semibold)), not "${value}"`,
 });
-const WEIGHT_TOKEN = /^--weight-(regular|medium|semibold)$/;
+// --row-title-weight is a role token (tokens.css) that is one of those three weights, by day and by night.
+const WEIGHT_TOKEN = /^--(weight-(regular|medium|semibold)|row-title-weight)$/;
 const WEIGHT_KEYWORDS = new Set(["inherit", "initial", "unset", "revert"]);
 
 /** The first weight in a value that is not a token, or null. In the font shorthand only a number or a bold word counts. */

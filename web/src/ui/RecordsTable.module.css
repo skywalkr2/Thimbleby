@@ -2,7 +2,7 @@
    as the window narrows (rank 2 under 1280px, rank 3 under 1024px), and on a phone each row stacks as a list row with its
    cells under the name. No word is broken: headers stay on one line, a cell wraps only at its spaces, and what is still too
    long ends in an ellipsis. */
-.wrap { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.wrap { min-width: 0; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; }
 .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .tools { display: flex; justify-content: flex-end; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border); background: var(--surface-sunk); }
 .table th, .table td { text-align: left; vertical-align: middle; padding: var(--space-2) var(--space-3); overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; word-break: normal; hyphens: none; font-size: var(--text-sm); line-height: var(--lh-sm); }

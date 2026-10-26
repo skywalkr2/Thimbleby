@@ -59,6 +59,7 @@ test("a font weight is one of the weight tokens, never a number or a word, and n
   expect(await problems(".a { font-weight: var(--weight-medium); }")).toEqual([]);
   expect(await problems(".a { font-weight: var(--weight-semibold); }")).toEqual([]);
   expect(await problems(".a { font-weight: inherit; }")).toEqual([]);
+  expect(await problems(".a { font-weight: var(--row-title-weight); }")).toEqual([]);
   expect(await problems(".a { font-weight: 700; }")).toEqual(["cockpit/weight-tokens"]);
   expect(await problems(".a { font-weight: 600; }")).toEqual(["cockpit/weight-tokens"]);
   expect(await problems(".a { font-weight: bold; }")).toEqual(["cockpit/weight-tokens"]);
