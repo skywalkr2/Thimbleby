@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: One place to act; Today shows each thing once with three cards; Connections and Add-ons move into Settings
+
+**Decided:** Every thing has one home where it is acted on, and everywhere else links to it: a decision or question on
+Today's queue line, a to-do in To-dos and questions, a message to send in Follow-ups' To send tab (Waiting to go out merges
+into it), handled mail in Handled for you, the assistant's work on Today's review line (What changed becomes the history).
+Today shows each item once, and its rail keeps three cards (Briefing, Schedule, Came in); Top priorities and Your to-dos
+leave Today. Connections and Add-ons become sections of Settings. A plugin's Today panels stay below the three cards,
+folded, and don't count among them (the main session's call, to keep the plugin API unchanged under the hold).
+
+**Decided by:** the UI/UX reviewer (section 4, F6, F16, F17), sent by the owner to be built (P69).
+
+**Why:** A to-do could be ticked in four places, the same lines showed two or three times, and five of seven empty cards
+said nothing; a beginner couldn't tell where to act.
+
+**Impact:** Design 7.3, 7.4, 7.5 and 7.7 (the paragraph at the top of 7.7 governs); roadmap C57, U10; open promise P69.
+Change log: section 229.
+
 ## 2026-10-26: A person can track several businesses beside Personal and a job
 
 **Decided:** Sides are Personal plus any number of others, each a job or a business with its own name, mailboxes, people

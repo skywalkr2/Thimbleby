@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 229. One place to act, each thing once on Today, three rail cards, Connections and Add-ons in Settings (2026-10-26; phase U, the reviewer's section 4, F6, F16, F17; designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Where things are acted on (7.7) | A to-do could be ticked on Today, Top priorities, Follow-ups and To-dos | One home per thing; everywhere else links to it (the table at the top of 7.7) |
+| Today (7.7) | The same lines in Decide and Top priorities; meetings in This week and Agenda; seven rail cards, most empty | Each item once (C57); three cards: Briefing, Schedule, Came in; no empty card; one empty line |
+| Waiting to go out (7.4) | Its own screen in the side menu | The To send tab of Follow-ups, with the same guards |
+| What changed (7.3) | Rows with Looks good beside Today's review line | The history: past tense, no buttons, Undo in the row's menu |
+| Connections and Add-ons (7.2) | In the side menu, opening pages inside Settings | Sections of Settings; Today's lines link to them |
+
 ## 228. Sides in detail, plugin API 0.3.91, and "Just me" with no work words (2026-10-26; phase U, F3, F4; designed)
 
 | Where | Before | Now |
