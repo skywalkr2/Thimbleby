@@ -4,14 +4,47 @@
 // settings as the screen last knew them, so a change made elsewhere meanwhile is refused in plain words and what was
 // typed stays.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useValueLists } from "../lib/lists";
 import { problemText } from "../lib/problem";
-import { changedTime, changedUnderneath, refreshedSettings, type Refreshed } from "../lib/refreshed";
-import { addonLabel, fromDraft, groupLabel, isOff, depthOf, matches, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
-import { isListed, navSections, sectionItems, sectionOfItem, topics } from "../lib/settings-sections";
-import { knownFingerprint, rememberFingerprint, useAfterSave } from "../lib/settings-save";
+import {
+  changedTime,
+  changedUnderneath,
+  refreshedSettings,
+  type Refreshed,
+} from "../lib/refreshed";
+import {
+  addonLabel,
+  fromDraft,
+  groupLabel,
+  isOff,
+  depthOf,
+  matches,
+  switchOf,
+  toDraft,
+  type Draft,
+  type Item,
+} from "../lib/settings";
+import {
+  isListed,
+  navSections,
+  sectionItems,
+  sectionOfItem,
+  topics,
+} from "../lib/settings-sections";
+import {
+  knownFingerprint,
+  rememberFingerprint,
+  useAfterSave,
+} from "../lib/settings-save";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
@@ -36,7 +69,128 @@ import { restoreFocus } from "./ModalPanel";
 
 type Edits = Record<string, Draft>;
 
-const FIRST_FIELD = "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled])";
+const FIRST_FIELD =
+  "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled])";
+
+/** The sections listed down the side of Settings, with the screens that open inside Settings: Connections and Quality.
+ * The pages reached from Settings (Connections, Quality, Add-ons, what each account can do) show it too, so the person
+ * can go to any other section from where they are. */
+export function SettingsNav(props: {
+  listed: SettingsSection[];
+  /** The section whose page is open; none when the page is one of the screens reached from Settings. */
+  current: SettingsSection | null;
+  /** The screen reached from Settings that is open, to mark it in the list. */
+  page?: "sources" | "quality" | null;
+  choose: (section: SettingsSection) => void;
+  onOpenSources?: () => void;
+  onOpenQuality?: () => void;
+}) {
+  const { t, has } = useWords();
+  const label = (s: SettingsSection) =>
+    s.startsWith("addon/")
+      ? addonLabel(s.slice("addon/".length), t, has)
+      : t(`settings.section.${s}`);
+  const lastOwn = [...props.listed]
+    .reverse()
+    .find((id) => !id.startsWith("addon/"));
+  const follow = (e: MouseEvent, run: () => void) => {
+    // A plain click moves within the app; a modified one (a new tab) keeps its link.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      return;
+    e.preventDefault();
+    run();
+  };
+  return (
+    <nav aria-label={t("settings.sections")}>
+      <ul className="settings-nav">
+        {props.listed.flatMap((id) => [
+          <li key={id}>
+            <a
+              href={viewHref(settingsView(id))}
+              aria-current={id === props.current ? "page" : undefined}
+              onClick={(e) => follow(e, () => props.choose(id))}
+            >
+              {label(id)}
+            </a>
+          </li>,
+          ...(id === "ai"
+            ? [
+                <li key="sources">
+                  <a
+                    href={viewHref("sources")}
+                    aria-current={props.page === "sources" ? "page" : undefined}
+                    onClick={(e) =>
+                      props.onOpenSources && follow(e, props.onOpenSources)
+                    }
+                  >
+                    {t("settings.section.sources")}
+                  </a>
+                </li>,
+              ]
+            : []),
+          ...(id === lastOwn
+            ? [
+                <li key="quality">
+                  <a
+                    href={viewHref("quality")}
+                    aria-current={props.page === "quality" ? "page" : undefined}
+                    onClick={(e) =>
+                      props.onOpenQuality && follow(e, props.onOpenQuality)
+                    }
+                  >
+                    {t("quality.open")}
+                  </a>
+                </li>,
+              ]
+            : []),
+        ])}
+      </ul>
+    </nav>
+  );
+}
+
+/** A screen reached from Settings, shown beside the Settings side bar. */
+export function SettingsFrame(props: {
+  /** The section this page belongs under, marked in the list; none for Connections and Quality, which are listed. */
+  under?: SettingsSection;
+  page?: "sources" | "quality";
+  choose: (section: SettingsSection) => void;
+  onOpenSources: () => void;
+  onOpenQuality: () => void;
+  children: ReactNode;
+}) {
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const lists = useValueLists();
+  const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
+  const keyed = useQuery({
+    queryKey: ["addon-secrets"],
+    queryFn: api.addonSecrets,
+  });
+  const listed = navSections(settings.data?.items ?? [], {
+    lists: (lists.data?.length ?? 0) > 0,
+    files: (forms.data?.length ?? 0) > 0,
+    keyed: (keyed.data ?? [])
+      .filter((a) => a.secrets.length > 0)
+      .map((a) => a.plugin),
+  });
+  return (
+    <div className="settings-screen">
+      <div className="settings-layout settings-frame">
+        <div className="settings-side">
+          <SettingsNav
+            listed={listed}
+            current={props.under ?? null}
+            page={props.page ?? null}
+            choose={props.choose}
+            onOpenSources={props.onOpenSources}
+            onOpenQuality={props.onOpenQuality}
+          />
+        </div>
+        <div className="settings-content">{props.children}</div>
+      </div>
+    </div>
+  );
+}
 
 export function Settings(props: {
   /** Opens the setup guide, at the step named when one is. */
@@ -66,9 +220,15 @@ export function Settings(props: {
   // What decides which sections are listed, and when a section that loads its own content is ready to take the cursor.
   const lists = useValueLists();
   const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
-  const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
+  const accounts = useQuery({
+    queryKey: ["ai-accounts"],
+    queryFn: api.aiAccounts,
+  });
   // The add-ons that need keys: each gets password boxes in its own section.
-  const keyed = useQuery({ queryKey: ["addon-secrets"], queryFn: api.addonSecrets });
+  const keyed = useQuery({
+    queryKey: ["addon-secrets"],
+    queryFn: api.addonSecrets,
+  });
   // The form that adds an AI account opens here, as a drawer, so the person never leaves Settings for it.
   const [adding, setAdding] = useState(false);
   const [addDirty, setAddDirty] = useState(false);
@@ -87,7 +247,10 @@ export function Settings(props: {
   const [edits, setEdits] = useState<Edits>({});
   const [problems, setProblems] = useState<Record<string, string>>({});
   // What a refused save refreshed from what is saved now, and when it changed, until the next save goes through.
-  const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
+  const [refreshed, setRefreshed] = useState<{
+    lines: Refreshed[];
+    time: string;
+  }>({ lines: [], time: "" });
   const editsNow = useRef(edits);
   editsNow.current = edits;
   const searchId = useId();
@@ -96,41 +259,57 @@ export function Settings(props: {
   const everything = settings.data?.items ?? [];
   // The accent color as it stands on screen: what is typed, else what is saved.
   const brand = everything.find((i) => i.key === "ui.brand.color");
-  const brandColor = brand ? String(brand.key in edits ? edits[brand.key] : (brand.value ?? "")) : "";
+  const brandColor = brand
+    ? String(brand.key in edits ? edits[brand.key] : (brand.value ?? ""))
+    : "";
   const canList = useFolderListing(everything.some((i) => i.picker));
   const listed = navSections(everything, {
     lists: (lists.data?.length ?? 0) > 0,
     files: (forms.data?.length ?? 0) > 0,
-    keyed: (keyed.data ?? []).filter((a) => a.secrets.length > 0).map((a) => a.plugin),
+    keyed: (keyed.data ?? [])
+      .filter((a) => a.secrets.length > 0)
+      .map((a) => a.plugin),
   });
   const wanted = props.section ?? chosen;
-  const loaded = settings.isSuccess && !lists.isPending && !forms.isPending && !keyed.isPending;
+  const loaded =
+    settings.isSuccess &&
+    !lists.isPending &&
+    !forms.isPending &&
+    !keyed.isPending;
   // An address naming a section that has nothing to show (an add-on turned off) opens the first one.
-  const section: SettingsSection = !loaded || listed.includes(wanted) ? wanted : "you";
-  const label = (s: SettingsSection) => (s.startsWith("addon/") ? addonLabel(s.slice("addon/".length), t, has) : t(`settings.section.${s}`));
+  const section: SettingsSection =
+    !loaded || listed.includes(wanted) ? wanted : "you";
+  const label = (s: SettingsSection) =>
+    s.startsWith("addon/")
+      ? addonLabel(s.slice("addon/".length), t, has)
+      : t(`settings.section.${s}`);
 
   const choose = (next: SettingsSection) => {
     setQuery("");
     if (props.onSection) props.onSection(next);
     else setChosen(next);
   };
-  const lastOwn = [...listed].reverse().find((id) => !id.startsWith("addon/"));
-  const follow = (e: MouseEvent, run: () => void) => {
-    // A plain click moves within the app; a modified one (a new tab) keeps its link.
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    run();
-  };
 
   // The cursor goes to the section's first field when it opens, or to its heading where its content is a list.
-  const settled = settings.isSuccess && (section === "ai" ? !accounts.isPending : section === "lists" ? !lists.isPending : section === "files" ? !forms.isPending : true);
+  const settled =
+    settings.isSuccess &&
+    (section === "ai"
+      ? !accounts.isPending
+      : section === "lists"
+        ? !lists.isPending
+        : section === "files"
+          ? !forms.isPending
+          : true);
   useEffect(() => {
     if (!settled) return;
     const root = content.current;
     if (!root) return;
     const field = root.querySelector<HTMLElement>(FIRST_FIELD);
     const heading = root.querySelector<HTMLElement>("[data-section-heading]");
-    const target = section === "ai" || section === "lists" || section === "files" ? heading : (field ?? heading);
+    const target =
+      section === "ai" || section === "lists" || section === "files"
+        ? heading
+        : (field ?? heading);
     target?.focus({ preventScroll: true });
     // Only when a section opens: a save must not move the cursor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,7 +325,8 @@ export function Settings(props: {
     rememberFingerprint(client, settings.data.fingerprint);
   }, [client, settings.data, settings.isFetching]);
 
-  const draftOf = (item: Item): Draft => (item.key in edits ? edits[item.key] : toDraft(item));
+  const draftOf = (item: Item): Draft =>
+    item.key in edits ? edits[item.key] : toDraft(item);
   const edit = (key: string, draft: Draft) => {
     setEdits((all) => ({ ...all, [key]: draft }));
     setProblems((all) => (all[key] ? { ...all, [key]: "" } : all));
@@ -159,28 +339,45 @@ export function Settings(props: {
   };
   const drop = (key: string, sent?: Draft) =>
     setEdits((all) => {
-      if (!(key in all) || (sent !== undefined && all[key] !== sent)) return all;
+      if (!(key in all) || (sent !== undefined && all[key] !== sent))
+        return all;
       const next = { ...all };
       delete next[key];
       return next;
     });
-  const save = async (key: string, body: { changes?: Record<string, unknown>; reset?: string[] }, sent?: Draft) => {
+  const save = async (
+    key: string,
+    body: { changes?: Record<string, unknown>; reset?: string[] },
+    sent?: Draft,
+  ) => {
     const view = client.getQueryData<S["SettingsView"]>(["settings"]);
     const fingerprint = knownFingerprint(client, view?.fingerprint);
     if (!view || !fingerprint) return;
     setProblems((all) => ({ ...all, [key]: "" }));
     try {
-      const saved = await api.saveSettings({ changes: body.changes ?? {}, reset: body.reset ?? [], fingerprint });
+      const saved = await api.saveSettings({
+        changes: body.changes ?? {},
+        reset: body.reset ?? [],
+        fingerprint,
+      });
       rememberFingerprint(client, saved.fingerprint);
       // What the screen shows is what was saved, at once, before the reload comes back.
-      client.setQueryData<S["SettingsView"]>(["settings"], (now) =>
-        now && {
-          fingerprint: saved.fingerprint,
-          items: now.items.map((item) => {
-            const change = saved.changes.find((c) => c.key === item.key);
-            return change ? { ...item, value: change.after, source: change.is_default ? "default" : "file" } : item;
-          }),
-        },
+      client.setQueryData<S["SettingsView"]>(
+        ["settings"],
+        (now) =>
+          now && {
+            fingerprint: saved.fingerprint,
+            items: now.items.map((item) => {
+              const change = saved.changes.find((c) => c.key === item.key);
+              return change
+                ? {
+                    ...item,
+                    value: change.after,
+                    source: change.is_default ? "default" : "file",
+                  }
+                : item;
+            }),
+          },
       );
       drop(key, sent);
       setRefreshed({ lines: [], time: "" });
@@ -192,22 +389,40 @@ export function Settings(props: {
         adopt.current = true;
         const typed = editsNow.current;
         try {
-          const now = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+          const now = await client.fetchQuery({
+            queryKey: ["settings"],
+            queryFn: api.settings,
+            staleTime: 0,
+          });
           rememberFingerprint(client, now.fingerprint);
           const was = view.items;
-          setRefreshed({ lines: refreshedSettings(was, now.items, (k) => k in typed, t, has), time: changedTime(now) });
+          setRefreshed({
+            lines: refreshedSettings(was, now.items, (k) => k in typed, t, has),
+            time: changedTime(now),
+          });
           setProblems((all) => {
             const next = { ...all, [key]: t("settings.changed_since_opened") };
-            for (const k of Object.keys(typed)) if (changedUnderneath(was, now.items, k)) next[k] = t("settings.changed_since_opened");
+            for (const k of Object.keys(typed))
+              if (changedUnderneath(was, now.items, k))
+                next[k] = t("settings.changed_since_opened");
             return next;
           });
         } catch {
           void client.invalidateQueries({ queryKey: ["settings"] });
-          setProblems((all) => ({ ...all, [key]: t("settings.changed_since_opened") }));
+          setProblems((all) => ({
+            ...all,
+            [key]: t("settings.changed_since_opened"),
+          }));
         }
         return;
       }
-      setProblems((all) => ({ ...all, [key]: err instanceof ApiError && err.detail ? err.detail : problemText(err, t) }));
+      setProblems((all) => ({
+        ...all,
+        [key]:
+          err instanceof ApiError && err.detail
+            ? err.detail
+            : problemText(err, t),
+      }));
     }
   };
 
@@ -217,9 +432,15 @@ export function Settings(props: {
     if (!parsed.ok) return;
     enqueue(async () => {
       // What is saved now, so a repeat (Enter, then the cursor leaving) or an edit put back as it was sends nothing.
-      const now = client.getQueryData<S["SettingsView"]>(["settings"])?.items.find((i) => i.key === item.key) ?? item;
+      const now =
+        client
+          .getQueryData<S["SettingsView"]>(["settings"])
+          ?.items.find((i) => i.key === item.key) ?? item;
       const saved = fromDraft(now, toDraft(now));
-      if (saved.ok && JSON.stringify(saved.value) === JSON.stringify(parsed.value)) {
+      if (
+        saved.ok &&
+        JSON.stringify(saved.value) === JSON.stringify(parsed.value)
+      ) {
         drop(item.key, draft);
         return;
       }
@@ -259,12 +480,21 @@ export function Settings(props: {
   const group = (name: string, items: Item[], heading: boolean) => {
     const titleId = `settings-group-${name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
     return (
-      <div key={name} className="settings-group" role="group" aria-labelledby={heading ? titleId : undefined}>
+      <div
+        key={name}
+        className="settings-group"
+        role="group"
+        aria-labelledby={heading ? titleId : undefined}
+      >
         {heading && <h3 id={titleId}>{groupLabel(name, t, has)}</h3>}
         {name === "rules" && props.onOpenKnowledge && (
           <p className="hint">
             {t("settings.rules_link")}{" "}
-            <button type="button" className="link-button" onClick={props.onOpenKnowledge}>
+            <button
+              type="button"
+              className="link-button"
+              onClick={props.onOpenKnowledge}
+            >
               {t("settings.rules_open")}
             </button>
           </p>
@@ -290,7 +520,13 @@ export function Settings(props: {
         </div>
         {extra && (
           <div className="row-end">
-            <button type="button" className="btn" aria-expanded={!!more[id]} aria-controls={listId} onClick={() => setMore({ ...more, [id]: !more[id] })}>
+            <button
+              type="button"
+              className="btn"
+              aria-expanded={!!more[id]}
+              aria-controls={listId}
+              onClick={() => setMore({ ...more, [id]: !more[id] })}
+            >
               {t(more[id] ? "settings.fewer" : "settings.more")}
             </button>
           </div>
@@ -307,11 +543,22 @@ export function Settings(props: {
       return (
         <div key={topic.group} className="settings-topic">
           <h3 id={`${id}-title`}>
-            <button type="button" className="topic-toggle" aria-expanded={!!open[key]} aria-controls={id} onClick={() => setOpen({ ...open, [key]: !open[key] })}>
+            <button
+              type="button"
+              className="topic-toggle"
+              aria-expanded={!!open[key]}
+              aria-controls={id}
+              onClick={() => setOpen({ ...open, [key]: !open[key] })}
+            >
               {groupLabel(topic.group, t, has)}
             </button>
           </h3>
-          <div id={id} hidden={!open[key]} role="group" aria-labelledby={`${id}-title`}>
+          <div
+            id={id}
+            hidden={!open[key]}
+            role="group"
+            aria-labelledby={`${id}-title`}
+          >
             {open[key] && group(topic.group, topic.items, false)}
           </div>
         </div>
@@ -319,19 +566,35 @@ export function Settings(props: {
     });
 
   const heading = (id: SettingsSection) => (
-    <h2 id={`settings-section-${id.replace(/[^A-Za-z0-9_-]/g, "-")}`} tabIndex={-1} data-section-heading="">
+    <h2
+      id={`settings-section-${id.replace(/[^A-Za-z0-9_-]/g, "-")}`}
+      tabIndex={-1}
+      data-section-heading=""
+    >
       {label(id)}
     </h2>
   );
 
-  const found = query.trim() ? everything.filter((item) => isListed(item) && matches(item, query, t, has)) : [];
+  const found = query.trim()
+    ? everything.filter(
+        (item) => isListed(item) && matches(item, query, t, has),
+      )
+    : [];
   const results = () => {
-    if (!found.length) return <p className="empty">{t("settings.none_match")}</p>;
+    if (!found.length)
+      return <p className="empty">{t("settings.none_match")}</p>;
     return listed
-      .map((id) => ({ id, items: found.filter((i) => sectionOfItem(i) === id) }))
+      .map((id) => ({
+        id,
+        items: found.filter((i) => sectionOfItem(i) === id),
+      }))
       .filter((s) => s.items.length > 0)
       .map((s) => (
-        <section key={s.id} className="settings-results" aria-label={label(s.id)}>
+        <section
+          key={s.id}
+          className="settings-results"
+          aria-label={label(s.id)}
+        >
           <h3>{label(s.id)}</h3>
           {s.items.map(row)}
         </section>
@@ -346,7 +609,10 @@ export function Settings(props: {
             level={2}
             local={setup.data?.local}
             onAdd={() => {
-              addButton.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+              addButton.current =
+                document.activeElement instanceof HTMLElement
+                  ? document.activeElement
+                  : null;
               setAdding(true);
             }}
             onCompare={props.onOpenCompare}
@@ -373,7 +639,12 @@ export function Settings(props: {
         {form(section)}
         {section === "appearance" && <BrandContrast color={brandColor} />}
         {section === "appearance" && <PageLinks />}
-        {section.startsWith("addon/") && <AddonSecrets plugin={section.slice("addon/".length)} name={label(section)} />}
+        {section.startsWith("addon/") && (
+          <AddonSecrets
+            plugin={section.slice("addon/".length)}
+            name={label(section)}
+          />
+        )}
         {section === "you" && <ActingAccounts />}
         {section === "today" && <ReminderWhere />}
         {section === "today" && <Notifications />}
@@ -389,14 +660,21 @@ export function Settings(props: {
   };
 
   return (
-    <section className="panel-section settings-screen" aria-labelledby="settings-title">
+    <section
+      className="panel-section settings-screen"
+      aria-labelledby="settings-title"
+    >
       <div className="heading">
         <h1 id="settings-title">{t("settings.title")}</h1>
         <div className="acts">
           <button type="button" className="btn" onClick={props.onOpenAddons}>
             {t("settings.open_addons")}
           </button>
-          <button type="button" className="btn" onClick={() => props.onOpenGuide()}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => props.onOpenGuide()}
+          >
             {t("settings.open_guide")}
           </button>
         </div>
@@ -406,45 +684,21 @@ export function Settings(props: {
         <div className="settings-side">
           <div className="field">
             <label htmlFor={searchId}>{t("settings.search")}</label>
-            <input id={searchId} type="search" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" />
+            <input
+              id={searchId}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoComplete="off"
+            />
           </div>
-          <nav aria-label={t("settings.sections")}>
-            <ul className="settings-nav">
-              {listed.flatMap((id) => [
-                <li key={id}>
-                  <a
-                    href={viewHref(settingsView(id))}
-                    aria-current={!query.trim() && id === section ? "page" : undefined}
-                    onClick={(e) => follow(e, () => choose(id))}
-                  >
-                    {label(id)}
-                  </a>
-                </li>,
-                // Sources is a screen of its own; the list only leads to it.
-                ...(id === "ai"
-                  ? [
-                      <li key="sources">
-                        <a href={viewHref("sources")} onClick={(e) => props.onOpenSources && follow(e, props.onOpenSources)}>
-                          {t("settings.section.sources")}
-                        </a>
-                      </li>,
-                    ]
-                  : []),
-                // Quality is a screen of its own; the list only leads to it, after the app's own sections and before
-                // each add-on's.
-                ...(id === lastOwn
-                  ? [
-                      <li key="quality">
-                        <a href={viewHref("quality")} onClick={(e) => props.onOpenQuality && follow(e, props.onOpenQuality)}>
-                          {t("quality.open")}
-                        </a>
-                      </li>,
-                    ]
-                  : []),
-              ])}
-
-            </ul>
-          </nav>
+          <SettingsNav
+            listed={listed}
+            current={!query.trim() ? section : null}
+            choose={choose}
+            onOpenSources={props.onOpenSources}
+            onOpenQuality={props.onOpenQuality}
+          />
         </div>
         <div className="settings-content" ref={content}>
           {query.trim() && (

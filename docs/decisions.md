@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Every setting is on screen, behind Advanced, or only in files; every page reached from Settings keeps the Settings side bar (P40 points 19, 20)
+
+**Decided:** (1) Each setting of the app's own files is one of three kinds: basic (on screen first), advanced (behind
+Advanced), or internal (kept only in files, never listed). Internal means an address, port, id, callback address, limit,
+timeout, retry count, cache size, similarity cut-off, word or pattern list the program reads, or a format version.
+"More settings" is left empty by this: nothing sits in between. The sort of all 383 fields (32 basic, 109 advanced, 242
+files only) is in `docs/project/settings-sort-2026-10-26.md`, applied by `engine/config/levels.py` (a front of the key
+decides, the field's own marker wins); a new field with no kind fails `tests/test_internal_settings.py`. (2) Connections,
+Quality, Add-ons and what each account can do open inside Settings, beside the same side bar, so the person goes to any
+section without choosing Settings again; Connections keeps its entry in the side menu and opens the same page. **Why:**
+the owner's first real use: "too much junk there that no one should ever see", and Connections left the Settings side bar.
+Impact: no setting is removed; internal ones stay settable in files and by environment variable. The saved text of a
+setting that was on screen now refused by the screens is unchanged. Change log: section 210.
+
 ## 2026-10-26: Ending a project drops what is open on it, in the same undoable change (P52, lesson 2)
 
 **Decided:** When a project's status changes to a status whose meaning is done (completed, archived, closed for good:

@@ -295,8 +295,8 @@ class ServerFile(FileModel):
         description="local: only this computer can reach the app. hosted: runs behind sign-in and deploy checks.",
         json_schema_extra={"advanced": True},
     )
-    host: str = Field("127.0.0.1", description="Address to listen on.", json_schema_extra={"advanced": True})
-    port: int = Field(8765, ge=1, le=65535, description="Port to listen on.", json_schema_extra={"advanced": True})
+    host: str = Field("127.0.0.1", description="Address to listen on.", json_schema_extra={"internal": True})
+    port: int = Field(8765, ge=1, le=65535, description="Port to listen on.", json_schema_extra={"internal": True})
     base_path: str = Field(
         "/",
         description="Path the app is served under, e.g. /admin. Every route and link uses it.",
@@ -305,7 +305,7 @@ class ServerFile(FileModel):
     public_url: str | None = Field(
         None,
         description="The address people use to reach the app. Required when hosted.",
-        json_schema_extra={"advanced": True},
+        json_schema_extra={"internal": True},
     )
     open_browser: bool = Field(
         False,
@@ -3687,6 +3687,10 @@ FILES: dict[str, type[FileModel]] = {
     "watch": WatchFile,
     "steward": StewardFile,
 }
+
+from engine.config import levels as _levels  # noqa: E402
+
+_levels.apply(FILES)
 
 #: The newest version each file format has reached.
 CURRENT_VERSIONS: dict[str, int] = {name: 1 for name in FILES}

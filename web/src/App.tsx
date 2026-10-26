@@ -1,7 +1,7 @@
 // The app shell (design 7.1): one grid with the header across the top, the sidebar on the left (a bottom bar on a phone) and
 // the content area, which is the only thing that changes when the view does. Every view is a link in the address's fragment.
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
@@ -11,7 +11,7 @@ import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
-import { fromHash, parseView, recordView, settingsView, toHash, type View } from "./lib/views";
+import { fromHash, parseView, recordView, settingsView, toHash, type SettingsSection, type View } from "./lib/views";
 import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
@@ -33,7 +33,7 @@ import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
 import { RuleReview } from "./components/RuleReview";
 import { SeriesPage } from "./components/SeriesPage";
-import { Settings } from "./components/Settings";
+import { Settings, SettingsFrame } from "./components/Settings";
 import { Sources, type AddRequest } from "./components/Sources";
 import { StyleGuide } from "./components/StyleGuide";
 import { Stages } from "./components/Stages";
@@ -192,6 +192,18 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     if (shown.type === "record") {
       return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;
     }
+    // A screen reached from Settings keeps the Settings side bar, so every other section is one choice away.
+    const framed = (page: "sources" | "quality" | undefined, under: SettingsSection | undefined, body: ReactNode) => (
+      <SettingsFrame
+        page={page}
+        under={under}
+        choose={(section) => setView(settingsView(section))}
+        onOpenSources={() => setView("sources")}
+        onOpenQuality={() => setView("quality")}
+      >
+        {body}
+      </SettingsFrame>
+    );
     switch (shown.view) {
       case "today":
         return (
@@ -233,13 +245,15 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "records/rules-review":
         return <RuleReview onBack={() => setView("records/knowledge")} />;
       case "sources":
-        return (
+        return framed(
+          "sources",
+          undefined,
           <Sources
             onAsk={(question) => setAsk({ question })}
             add={addSource}
             onAddOpened={() => setAddSource(null)}
             onOpenAddons={() => setView("addons")}
-          />
+          />,
         );
       case "setup":
         return null;
@@ -260,13 +274,13 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           />
         );
       case "settings/ai-compare":
-        return <AiCompare onBack={() => setView(settingsView("ai"))} />;
+        return framed(undefined, "ai", <AiCompare onBack={() => setView(settingsView("ai"))} />);
       case "addons":
-        return <Addons onBack={() => setView("settings")} />;
+        return framed(undefined, undefined, <Addons onBack={() => setView("settings")} />);
       case "handover":
         return <Handover />;
       case "quality":
-        return <Quality onBack={() => setView("settings")} />;
+        return framed("quality", undefined, <Quality onBack={() => setView("settings")} />);
       case "styleguide":
         return styleGuideShown(rc) ? <StyleGuide /> : null;
       default:

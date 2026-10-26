@@ -68,8 +68,8 @@ def test_settings_are_described_for_the_forms(tmp_path, monkeypatch):
     view = c.get(f"{api}/settings").json()
     items = {i["key"]: i for i in view["items"]}
     assert items["workspace.name"]["type"] == "text" and items["workspace.name"]["basic"]
-    assert items["server.port"]["editable"] is False
-    assert items["storage.export.remote"]["editable"] is False  # not offered until it is built
+    assert "server.port" not in items  # an address or port is kept only in files
+    assert "storage.export.remote" not in items  # not offered until it is built
     assert items["storage.export.every_minutes"]["editable"] is True
     assert items["stages.moves"]["type"] == "choice" and items["stages.moves"]["options"] == ["person", "rule"]
     assert items["ai.providers"]["type"] == "other" and not items["ai.providers"]["editable"]

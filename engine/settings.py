@@ -25,7 +25,7 @@ import yaml
 from pydantic import BaseModel
 
 from engine import audit
-from engine.config import ConfigError, load_config
+from engine.config import ConfigError, levels, load_config
 from engine.config.loader import RENAMED_KEYS, plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
@@ -60,6 +60,7 @@ BASIC = frozenset(
         "ui.notifications.enabled",
         "ui.notifications.browser",
     }
+    | levels.BASIC_EXTRA
 )
 #: Keys the screens never change: a wrong value would stop the app from being reached or starting, or the setting is
 #: not offered yet (the export's remote).
