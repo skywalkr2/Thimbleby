@@ -45,6 +45,7 @@ import {
   rememberFingerprint,
   useAfterSave,
 } from "../lib/settings-save";
+import { useSides } from "../lib/sides";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
@@ -257,7 +258,10 @@ export function Settings(props: {
   const searchId = useId();
   const content = useRef<HTMLDivElement>(null);
 
-  const everything = settings.data?.items ?? [];
+  // With no side beside Personal, the settings that name which project is whose side are left out: nothing in them can be
+  // changed to any use until there is one.
+  const { justMe } = useSides();
+  const everything = (settings.data?.items ?? []).filter((i) => !(justMe && i.key.startsWith("workspace.project.")));
   // The accent color as it stands on screen: what is typed, else what is saved.
   const brand = everything.find((i) => i.key === "ui.brand.color");
   const brandColor = brand

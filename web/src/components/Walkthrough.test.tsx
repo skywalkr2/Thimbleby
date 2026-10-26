@@ -1579,9 +1579,15 @@ describe("Done", () => {
 
   test("it shows the optional extras and they do not count: the last button is there with them undone", async () => {
     fakeApi(
-      routes({ "GET templates": () => [{ id: "tpl-a", name: "Book project", description: "Chapters and drafts.", set_up: false, adds: [] }] }, steps({}), {
-        step: "done",
-      }),
+      routes(
+        {
+          "GET templates": () => [{ id: "tpl-a", name: "Book project", description: "Chapters and drafts.", set_up: false, adds: [] }],
+          // A person with work: a side beside Personal.
+          "GET setup/business": () => ({ business: true, name: "Harbor Goods", personal: "PRJ-p", sides: [{ project: "PRJ-b", kind: "business", name: "Harbor Goods" }], chosen: "work" }),
+        },
+        steps({}),
+        { step: "done" },
+      ),
     );
     open();
     const extras = await screen.findByRole("region", { name: "Optional extras" });
@@ -1591,6 +1597,26 @@ describe("Done", () => {
     // The counted steps are not among the extras.
     expect(within(extras).queryByRole("heading", { name: "Choose a backup folder" })).toBeNull();
     expect(screen.getByRole("button", { name: "Go to Today" })).toBeEnabled();
+  });
+
+  test("a person with no side besides Personal is never offered the starting template for work", async () => {
+    fakeApi(
+      routes(
+        {
+          "GET templates": () => [{ id: "tpl-a", name: "Book project", description: "Chapters and drafts.", set_up: false, adds: [] }],
+          "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-p", sides: [], chosen: "me" }),
+          "GET projects": () => [{ id: "PRJ-p", name: "Personal", group: null, status: null, phase: null, target: null, owner: null, owner_name: null, summary: null, language: "en-US", language_own: false, role: "run", completed: false, spent_usd: 0, open_actions: 0, open_questions: 0, no_end: true }],
+        },
+        steps({}),
+        { step: "done" },
+      ),
+    );
+    open();
+    const extras = await screen.findByRole("region", { name: "Optional extras" });
+    expect(await within(extras).findByRole("heading", { name: "Hand in a first note" })).toBeInTheDocument();
+    expect(within(extras).queryByRole("heading", { name: "What kind of work is this?" })).toBeNull();
+    expect(within(extras).queryByText("Book project")).toBeNull();
+    expect(within(extras).queryByRole("button", { name: /^Use / })).toBeNull();
   });
 
   test("the extras include an add-on's step that is not about mail", async () => {

@@ -332,6 +332,7 @@ def test_the_page_says_why_and_names_the_other_side_to_move_to(env):
         "project_name": BUSINESS_PROJECT_NAME,
         "move_to": PERSONAL_ID,
         "move_to_name": PERSONAL_PROJECT_NAME,
+        "move_options": [{"project": PERSONAL_ID, "name": PERSONAL_PROJECT_NAME}],
         "field": "project",
         "version": action.version,
     }
@@ -461,6 +462,7 @@ def test_a_projects_aliases_are_set_and_listed_and_an_items_page_carries_its_fil
         "project_name": "Business",
         "move_to": personal,
         "move_to_name": store.read().get("project", personal).data["name"],
+        "move_options": [{"project": personal, "name": store.read().get("project", personal).data["name"]}],
         "field": "project",
         "version": action.version,
     }

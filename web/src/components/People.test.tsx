@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { org, person } from "../lib/records-fixtures";
+import { org, person, project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { People } from "./People";
 
@@ -276,4 +276,48 @@ test("removing an organization acts at once, undo restores it, and a refusal's o
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   expect(await screen.findByText(/Two people still work for it\./)).toBeInTheDocument();
+});
+
+// ---- a person with no side besides Personal (design 6.32, 7.8) --------------------------------------------------------
+
+const justMe = {
+  "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+  "GET projects": () => [project("PRJ-personal", "Personal")],
+};
+
+test("with no side besides Personal people have Name, Who they are to you and How to reach, with no Role, Organization or Organizations", async () => {
+  api(
+    [person("P-1", "Ana Person", { relation: "my sister", role: "Editor", org: firstOrg.id, org_name: firstOrg.name, how_to_reach: { email: "ana@example.com" } }), person("P-2", "Ben Person")],
+    justMe,
+  );
+  renderApp(<People />);
+  const tr = await row("Ana Person");
+  await waitFor(() => expect(screen.queryByRole("columnheader", { name: "Role" })).toBeNull());
+  expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(expect.arrayContaining(["Name", "Who they are to you", "How to reach"]));
+  expect(screen.queryByRole("columnheader", { name: "Organization" })).toBeNull();
+  expect(tr).toHaveTextContent("my sister");
+  expect(tr).toHaveTextContent("email: ana@example.com");
+  expect(tr).not.toHaveTextContent("Editor");
+  expect(tr).not.toHaveTextContent(firstOrg.name);
+  // No organization filter, no Organizations section.
+  expect(screen.queryByRole("combobox", { name: "Organization" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: /Organizations/ })).toBeNull();
+  expect(screen.queryByText(/Organization/)).toBeNull();
+});
+
+test("with no side besides Personal an empty list asks for the people in your life, and the form asks who they are to you", async () => {
+  const user = userEvent.setup();
+  const calls = api([], { ...justMe, "POST people": () => ({ id: "P-9" }) });
+  renderApp(<People />);
+  expect(await screen.findByText("No people yet. Add the people in your life.")).toBeInTheDocument();
+  await user.click(screen.getAllByRole("button", { name: "Add a person" })[0]);
+  const dialog = await screen.findByRole("dialog", { name: "Add a person" });
+  expect(within(dialog).queryByLabelText(/^Role/)).toBeNull();
+  expect(within(dialog).queryByLabelText(/^Organization/)).toBeNull();
+  await user.type(within(dialog).getByLabelText(/^Full name/), "Cal Person");
+  await user.type(within(dialog).getByLabelText(/^Who they are to you/), "my dentist");
+  await user.click(within(dialog).getByRole("button", { name: "Add a person" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
+  expect(calls.find((c) => c.route === "POST people")?.body).toMatchObject({ full_name: "Cal Person", relation: "my dentist" });
+  expect(calls.find((c) => c.route === "POST people")?.body).not.toHaveProperty("role");
 });

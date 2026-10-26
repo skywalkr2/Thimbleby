@@ -251,3 +251,29 @@ test("Move edits the item's project as the person, says so with Undo, and the ro
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-20/undo")).toBe(true));
 });
+
+test("with several other sides the row's menu has Move to… over a list of them, and one moves the item there", async () => {
+  const user = userEvent.setup();
+  const many = {
+    ...FILED,
+    move_to: null,
+    move_to_name: null,
+    move_options: [
+      { project: "PRJ-2", name: "Personal" },
+      { project: "PRJ-3", name: "Lantern Works" },
+    ],
+  };
+  const { calls } = open([entry({ ...ADDED_BY_WORDS, filed: many })], {
+    "POST records/edit": () => ({ changeset: "CS-21" }),
+    "POST changesets/CS-21/undo": () => ({ restored: ["ACT-9"], skipped: [] }),
+  });
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await user.click(within(rows()[0]).getByRole("button", { name: /More actions for/ }));
+  // No "Move to Personal" or "Move to Lantern Works": one titled list holds them.
+  expect(screen.queryByRole("menuitem", { name: /^Move to / })).toBeNull();
+  expect(await screen.findByText("Move to…")).toBeInTheDocument();
+  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(expect.arrayContaining(["Personal", "Lantern Works"]));
+  await user.click(screen.getByRole("menuitem", { name: "Lantern Works" }));
+  await waitFor(() => expect(body(calls, "POST records/edit")).toEqual({ kind: "action", id: "ACT-9", fields: { project: "PRJ-3" }, read_version: 3 }));
+  expect(await screen.findByText("Moved to Lantern Works.")).toBeInTheDocument();
+});

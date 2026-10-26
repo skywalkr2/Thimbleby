@@ -24,7 +24,7 @@ import { revealOrKeep, showRow } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { useActToday } from "../lib/acts";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
-import { useSideFilter } from "../lib/sides";
+import { useSideFilter, useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { HeldLine, isHeld } from "../shell/HeldLines";
 import { useQuietChoices } from "./QuietLine";
@@ -570,6 +570,7 @@ export function useLineTitle(): (line: QueueLine) => string {
   const titleWords = useTitleWords();
   const firstGoText = useFirstGoText();
   const reviewCount = useReviewCount();
+  const { justMe } = useSides();
   return (line) => {
     const what = titleWords(line.title);
     const name = line.person_name ?? "";
@@ -585,7 +586,14 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "held":
         return line.held ? heldTitle(line.held, t) : t("queue.held");
       case "unfiled":
-        return line.state === "which_side" ? tn("queue.sides", line.count, { business: line.subject ?? "" }) : tn("queue.unfiled", line.count);
+        // Asking which side: the one other side by name, or, with several, which of them.
+        return line.state === "which_side"
+          ? line.subject
+            ? tn("queue.sides", line.count, { business: line.subject })
+            : tn("queue.sides.many", line.count)
+          : justMe
+            ? tn("queue.unfiled.just_me", line.count)
+            : tn("queue.unfiled", line.count);
       case "moved":
         return moveTitle(line, t, tn);
       case "terms":
@@ -709,6 +717,7 @@ function QueueRow(props: {
   const lineTitle = useLineTitle();
   const reviewCount = useReviewCount();
   const intakeWords = useIntakeWords();
+  const { justMe } = useSides();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes, enabled: props.line.kind === "go" });
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const { line } = props;
@@ -793,8 +802,13 @@ function QueueRow(props: {
         return {
           pill: t("queue.pill.unfiled"),
           tone: "neutral",
-          meta: line.state === "which_side" ? t("queue.sides.meta") : t("queue.unfiled.meta"),
-          primary: { label: t("queue.act.file_them"), run: () => props.handlers.onOpenView?.("records/projects") },
+          meta: line.state === "which_side" ? t(line.subject ? "queue.sides.meta" : "queue.sides.meta.many") : t(justMe ? "queue.unfiled.meta.just_me" : "queue.unfiled.meta"),
+          // Asking which side: the primary opens the list of sides to pick from (and "File them" stays the way to the
+          // unfiled items one by one); otherwise it goes to the unfiled items.
+          primary:
+            line.state === "which_side"
+              ? { label: t("queue.act.pick_side") }
+              : { label: t("queue.act.file_them"), run: () => props.handlers.onOpenView?.("records/projects") },
           menu: [],
         };
       case "terms":

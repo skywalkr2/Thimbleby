@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { offers, useListChange, useValueLists, type ValueList } from "../lib/lists";
 import { readable, readableTail } from "../lib/records";
+import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -21,9 +22,13 @@ const MEANINGS: Meaning[] = ["not_started", "open", "at_risk", "blocked", "done"
 export function ValueLists(props: { level?: 2 | 3 }) {
   const { t } = useWords();
   const lists = useValueLists();
+  const { justMe } = useSides();
   // Nothing is shown until the lists have loaded; a failure says so quietly.
   if (lists.isPending) return null;
   if (lists.isError) return <p className="hint">{t("lists.load_failed")}</p>;
+  // With no side beside Personal, the lists only the project fields take their values from (group, phase, priority and
+  // status) are left out, and the page says so in words rather than showing nothing.
+  const shown = justMe ? lists.data.filter((list) => !(list.used_by.length > 0 && list.used_by.every((use) => use.startsWith("project.")))) : lists.data;
   if (lists.data.length === 0) return null;
   const Heading = props.level === 2 ? "h2" : "h3";
   return (
@@ -33,12 +38,16 @@ export function ValueLists(props: { level?: 2 | 3 }) {
           {t("lists.title")}
         </Heading>
       </div>
-      <p className="hint">{t("lists.intro")}</p>
-      <ul className="queue">
-        {lists.data.map((list) => (
-          <ListBlock key={list.name} list={list} />
-        ))}
-      </ul>
+      <p className="hint">{t(justMe ? "lists.intro.just_me" : "lists.intro")}</p>
+      {shown.length === 0 ? (
+        <p className="empty">{t("lists.none_yet")}</p>
+      ) : (
+        <ul className="queue">
+          {shown.map((list) => (
+            <ListBlock key={list.name} list={list} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

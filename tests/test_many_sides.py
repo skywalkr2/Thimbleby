@@ -333,7 +333,7 @@ def test_a_source_serving_two_sides_narrows_the_ranks_after_it_to_them(env):
     assert stamp(file_ops(env, [new_op(text="Only qzx-per here")])[0])[:2] == (in_personal, "alias")
 
 
-def test_a_filing_by_source_moves_to_personal_in_one_step_and_from_personal_only_when_one_other_side(env):
+def test_a_filing_names_every_other_side_to_move_to_and_one_step_only_when_there_is_one(env):
     _, cfg, store = env
     second = add_side(env, OTHER_BUSINESS_NAME)
     source = a_watched_source(env, serve(env, second))
@@ -350,7 +350,11 @@ def test_a_filing_by_source_moves_to_personal_in_one_step_and_from_personal_only
             _PM,
         )
     shown = sides.filed_view(store.read(), cfg, "action", store.read().get("action", action.id))
-    assert shown["by"] == "source" and shown["move_to"] == PERSONAL_ID and shown["project"] == second
+    # Personal and the first business are both other sides for an item on the second one: the person picks.
+    assert shown["by"] == "source" and shown["project"] == second and shown["move_to"] is None
+    assert [o["project"] for o in shown["move_options"]] == [PERSONAL_ID, BUSINESS_ID]
+    held = [store.read().get("project", i).data["name"] for i in (PERSONAL_ID, BUSINESS_ID)]
+    assert [o["name"] for o in shown["move_options"]] == held
     with store.transaction() as tx:
         tx.update(
             "action",
@@ -360,7 +364,9 @@ def test_a_filing_by_source_moves_to_personal_in_one_step_and_from_personal_only
             read_version=tx.get("action", action.id).version,
         )
     shown = sides.filed_view(store.read(), cfg, "action", store.read().get("action", action.id))
-    assert shown["move_to"] is None  # two other sides: which one is the person's to say
+    # From Personal, both businesses are other sides: which one is the person's to say.
+    assert shown["move_to"] is None and shown["move_to_name"] is None
+    assert [o["project"] for o in shown["move_options"]] == [BUSINESS_ID, second]
 
 
 # ---- the person as the default owner on Personal --------------------------------------------------------------------
@@ -424,6 +430,45 @@ def test_with_no_other_side_an_unfiled_action_on_the_only_top_project_is_the_per
         assert [o["person"] for o in action.data["owners"]] == [cfg.workspace.user.person] and asked == []
     finally:
         store.close()
+
+
+# ---- moving an item to one of several sides -------------------------------------------------------------------------
+
+
+def test_the_page_lists_every_other_side_to_move_to_and_an_edit_to_one_of_them_moves_the_item(anytime):
+    client, ws, store = anytime
+    cfg = ws.config(env={})
+    me, personal = cfg.workspace.user.person, cfg.workspace.project.personal
+    first = client.post("/api/setup/business", json={"name": BUSINESS_NAME}).json()["project"]
+    second = client.post("/api/setup/business", json={"name": OTHER_BUSINESS_NAME, "kind": "job"}).json()["project"]
+    with store.transaction() as tx:
+        action = tx.create(
+            "action",
+            {
+                "text": "Call about it",
+                "owners": [{"person": me}],
+                "project": second,
+                "filed_by": {"by": "word", "word": "x", "project": second},
+            },
+            _PM,
+        )
+    names = {p["id"]: p["name"] for p in client.get("/api/projects").json()}
+    shown = client.get(f"/api/record-pages/{action.id}", params={"kind": "action"}).json()["filed"]
+    # Personal and the first side are both other sides: no one-click move, a list of them with Personal first.
+    assert shown["move_to"] is None and shown["move_to_name"] is None
+    assert shown["move_options"] == [{"project": i, "name": names[i]} for i in (personal, first)]
+    moved = client.post(
+        "/api/records/edit",
+        json={
+            "kind": "action",
+            "id": action.id,
+            "fields": {"project": shown["move_options"][1]["project"]},
+            "read_version": shown["version"],
+        },
+    )
+    assert moved.status_code == 200
+    assert store.read().get("action", action.id).data["project"] == first
+    assert client.get(f"/api/record-pages/{action.id}", params={"kind": "action"}).json()["filed"] is None
 
 
 # ---- what Today and Follow-ups carry -----------------------------------------------------------------------------

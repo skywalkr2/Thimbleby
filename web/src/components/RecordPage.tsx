@@ -27,6 +27,8 @@ import { useInvitationActs } from "./InvitationActs";
 import { useMessageActs } from "./MessageActs";
 import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
+import { SideInside } from "./SideInside";
+import { useSides } from "../lib/sides";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
@@ -52,6 +54,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // What is open with the record, what was finished and what happened to it; a record the page can't be read for shows none.
   const page = useQuery({ queryKey: ["record-page", kind, id], queryFn: () => api.recordPage(kind, id) });
   const lines = useValueLines();
+  const { justMe, personal, sides } = useSides();
+  // Personal's page and each side's page are the top of a side: they say what is inside and never call themselves a project.
+  const isSide = kind === "project" && (personal === id || sides.some((s) => s.project === id));
   const { open, dialog } = useTextReview();
   // "Change this" sits in a menu beside the record's own actions, for the kinds of record it can be asked for.
   const change = useChangeThis({ kind: kind as ChangeKind, id });
@@ -118,7 +123,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       </div>
       <div className="heading">
         <div>
-          <span className="kind k-review">{readableTail(kind)}</span>
+          {!isSide && <span className="kind k-review">{readableTail(kind)}</span>}
           <h1 id="record-title">{heading}</h1>
         </div>
         {data && (
@@ -163,7 +168,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "person" && <PersonMemory person={id} />}
           {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
           {page.data && <RecordActivity page={page.data} />}
-          {kind === "project" && <ProjectKnows id={id} />}
+          {kind === "project" && <SideInside id={id} />}
+          {kind === "project" && <ProjectKnows id={id} plain={justMe && isSide} />}
           {data.long_text.map((field) => (
             <TextSection
               key={field}

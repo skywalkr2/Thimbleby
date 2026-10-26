@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { ValueLists } from "./ValueLists";
 
@@ -244,4 +245,26 @@ test("choosing a look for a value on a list with no meanings sends the tone", as
   await user.selectOptions(within(group).getByRole("combobox", { name: "How it looks" }), "danger");
   await user.click(within(group).getByRole("button", { name: /^Add/ }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST lists/project-group/add")?.body).toEqual({ value: "Urgent", tone: "danger" }));
+});
+
+test("with no side besides Personal the lists only a project's own fields take their values from are left out", async () => {
+  api({ "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }), "GET projects": () => [project("PRJ-personal", "Personal")] });
+  renderApp(<ValueLists />);
+  expect(await screen.findByText("Loose list")).toBeInTheDocument();
+  expect(screen.getByText("Stages")).toBeInTheDocument();
+  expect(screen.queryByText("Project status")).toBeNull();
+  expect(screen.queryByText("Project group")).toBeNull();
+  expect(screen.getByText("Lists provide the choices your dropdowns offer. Changes apply immediately and can be undone.")).toBeInTheDocument();
+});
+
+test("with no side besides Personal and no other list, the page says there is nothing to change yet", async () => {
+  fakeApi({
+    "GET lists": () => lists().filter((list) => list.used_by.length > 0 && list.used_by.every((use) => use.startsWith("project."))),
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+  });
+  renderApp(<ValueLists level={2} />);
+  expect(await screen.findByRole("heading", { name: "Lists" })).toBeInTheDocument();
+  expect(await screen.findByText(/There are no lists to change yet/)).toBeInTheDocument();
+  expect(screen.queryByText(/Project/)).toBeNull();
 });

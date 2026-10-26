@@ -1394,14 +1394,21 @@ class RecordRefName(BaseModel):
     )
 
 
+class FiledMove(BaseModel):
+    """A side an item can move to: the id of its top project and its name."""
+
+    project: str
+    name: str
+
+
 class FiledView(BaseModel):
     """Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the
     signal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;
     `alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under
-    `project_name`. `move_to` is the top project of the other side it can move to in one step (Personal from another
-    side; from Personal, the one other side, and none when there are several), `move_to_name` its name, and the item
-    moves there in one step: POST /api/records/edit with `{field: id}` (a list for `projects`) and `read_version` set
-    to `version`. Absent once the item is anywhere else."""
+    `project_name`. `move_options` lists every other side it can move to (Personal first), each by its top project and
+    name; `move_to` and `move_to_name` name the one when there is exactly one (a one-click move) and are empty when
+    there are several, which the person picks from. The item moves to a side in one step: POST /api/records/edit with
+    `{field: id}` (a list for `projects`) and `read_version` set to `version`. Absent once the item is anywhere else."""
 
     by: Literal["source", "domain", "alias", "name", "word"]
     word: str | None = None
@@ -1409,6 +1416,7 @@ class FiledView(BaseModel):
     project_name: str
     move_to: str | None = None
     move_to_name: str | None = None
+    move_options: list[FiledMove] = Field(default_factory=list)
     field: Literal["project", "projects"]
     version: int
 

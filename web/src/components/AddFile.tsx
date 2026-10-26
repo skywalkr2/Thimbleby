@@ -8,6 +8,7 @@ import { api, type S } from "../lib/api";
 import { buildDetails, detailFields, initialValue, type DetailField, type FormValues } from "../lib/details-form";
 import { useTypeWords } from "../lib/files";
 import { problemText } from "../lib/problem";
+import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
@@ -25,6 +26,7 @@ export function AddFile(props: { onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [kindName, setKindName] = useState("");
   const [project, setProject] = useState("");
+  const { justMe } = useSides();
   const [values, setValues] = useState<FormValues>({});
   const [problem, setProblem] = useState("");
 
@@ -121,6 +123,7 @@ export function AddFile(props: { onClose: () => void }) {
               }}
             />
           </div>
+          {!justMe && (
           <div className="field">
             <label htmlFor={`${base}-project`}>
               {t("addfile.project")} <span className="hint">{t("addfile.optional")}</span>
@@ -134,6 +137,7 @@ export function AddFile(props: { onClose: () => void }) {
               ))}
             </select>
           </div>
+          )}
           {fields === null ? (
             <p className="hint">{t("addfile.unsupported")}</p>
           ) : (

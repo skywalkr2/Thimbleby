@@ -21,6 +21,7 @@ import {
 } from "../lib/open-items";
 import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
+import { useSides } from "../lib/sides";
 import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
@@ -67,7 +68,10 @@ export function OpenItems() {
   ]
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const states: readonly string[] = tab === "actions" ? ACTION_STATES : QUESTION_STATES;
+  // With no side beside Personal the projects are the areas of the person's life, and a to-do with no owner is their own,
+  // so neither "Project" nor "No owner" is offered to narrow by.
+  const { justMe } = useSides();
+  const states: readonly string[] = tab === "actions" ? ACTION_STATES.filter((s) => !(justMe && s === "no_owner")) : QUESTION_STATES;
 
   const shownActions = actionsShown(actions, filters);
   const shownQuestions = questionsShown(questions, filters);
@@ -116,7 +120,7 @@ export function OpenItems() {
       ) : (
         <>
           <div className={styles.bar} role="group" aria-label={t("open.filters")}>
-            <Choice id={`${ids}-project`} label={t("open.filter.project")} value={filters.project} onChange={(v) => set({ project: v })} none={t("open.filter.all_projects")} options={projectChoices.map((p) => [p.id, p.name])} />
+            <Choice id={`${ids}-project`} label={t(justMe ? "open.filter.area" : "open.filter.project")} value={filters.project} onChange={(v) => set({ project: v })} none={t(justMe ? "open.filter.all_areas" : "open.filter.all_projects")} options={projectChoices.map((p) => [p.id, p.name])} />
             <Choice id={`${ids}-person`} label={t("open.filter.person")} value={filters.person} onChange={(v) => set({ person: v })} none={t("person.everyone")} options={personChoices.map((p) => [p.id, p.name])} />
             <Choice id={`${ids}-state`} label={t("open.filter.state")} value={filters.state} onChange={(v) => set({ state: v })} none={t("open.filter.any_state")} options={states.map((s) => [s, t(`open.${tab === "actions" ? "state" : "qstate"}.${s}`)])} />
           </div>

@@ -338,6 +338,37 @@ test("a question is moved by its list of projects, and an item nobody filed by w
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { projects: ["PRJ-2"] } }));
 });
 
+test("with several other sides the page offers Move to… as a list of them, and choosing one moves the item there with Undo", async () => {
+  const user = userEvent.setup();
+  const many = {
+    ...FILED,
+    move_to: null,
+    move_to_name: null,
+    move_options: [
+      { project: "PRJ-2", name: "Personal" },
+      { project: "PRJ-3", name: "Lantern Works" },
+    ],
+  };
+  const calls = api(
+    "action",
+    "ACT-7",
+    { text: "Send the proof", project: "PRJ-1", filed_by: { by: "alias", word: "RTE", project: "PRJ-1" } },
+    page({ kind: "action", id: "ACT-7", name: "Send the proof", filed: many }),
+    { "POST records/edit": () => ({ changeset: "CS-32" }), "POST changesets/CS-32/undo": () => ({ restored: ["ACT-7"], skipped: [] }) },
+  );
+  renderApp(<RecordPage kind="action" id="ACT-7" onBack={() => {}} />);
+  await screen.findByText("Filed under Business: it names RTE");
+  // No one-click button for either side: the choice is a list.
+  expect(screen.queryByRole("button", { name: /^Move to / })).toBeNull();
+  const list = screen.getByRole("combobox", { name: "Move to…" });
+  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Move to…", "Personal", "Lantern Works"]);
+  await user.selectOptions(list, "Lantern Works");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "ACT-7", fields: { project: "PRJ-3" }, read_version: 3 }));
+  expect(await screen.findByText("Moved to Lantern Works.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-32/undo")).toBe(true));
+});
+
 test("an item with no filing reason shows no filed line", async () => {
   api("action", "ACT-6", { text: "Call", project: "PRJ-1" }, page({ kind: "action", id: "ACT-6", name: "Call" }));
   renderApp(<RecordPage kind="action" id="ACT-6" onBack={() => {}} />);

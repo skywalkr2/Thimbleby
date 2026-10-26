@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
+import { useSides } from "../lib/sides";
 import { viewHref, recordView } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -32,6 +33,8 @@ export function People() {
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
+  // With no side beside Personal a person is said by who they are to you: no role, organization or list of organizations.
+  const { justMe } = useSides();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<S["PersonView"] | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -77,14 +80,27 @@ export function People() {
     </>
   );
   const reach = (p: S["PersonView"]) => Object.entries(p.how_to_reach ?? {}).map(([kind, value]) => `${kind}: ${value}`);
-  const columns: TableColumn<S["PersonView"]>[] = [
-    { id: "role", header: t("people.col.role"), rank: 1, core: true, cell: (p) => p.role ?? "" },
-    { id: "org", header: t("people.col.org"), rank: 2, core: true, cell: (p) => p.org_name ?? "" },
-    { id: "reach", header: t("people.col.reach"), rank: 3, cell: (p) => reach(p).map((line) => (
+  const reachColumn: TableColumn<S["PersonView"]> = {
+    id: "reach",
+    header: t("people.col.reach"),
+    rank: justMe ? 2 : 3,
+    core: justMe,
+    cell: (p) =>
+      reach(p).map((line) => (
         <div key={line} title={line} className={styles.clip}>
           {line}
         </div>
-      )) },
+      )),
+  };
+  const leading: TableColumn<S["PersonView"]>[] = justMe
+    ? [{ id: "relation", header: t("people.col.relation"), rank: 1, core: true, cell: (p) => p.relation ?? "" }]
+    : [
+        { id: "role", header: t("people.col.role"), rank: 1, core: true, cell: (p) => p.role ?? "" },
+        { id: "org", header: t("people.col.org"), rank: 2, core: true, cell: (p) => p.org_name ?? "" },
+      ];
+  const columns: TableColumn<S["PersonView"]>[] = [
+    ...leading,
+    reachColumn,
     { id: "open", header: t("people.col.open"), rank: 1, core: true, numeric: true, cell: (p) => (p.open_items > 0 ? p.open_items : "") },
     { id: "last", header: t("people.col.last"), rank: 2, cell: (p) => (p.last_contact ? day(p.last_contact) : "") },
   ];
@@ -115,15 +131,15 @@ export function People() {
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
         fit={PEOPLE_FIT}
-        detail={selected ? <PersonDetail person={selected} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} menu={menu(selected)} /> : null}
+        detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} menu={menu(selected)} /> : null}
       >
         {people.isPending ? (
           <Skeleton />
         ) : all.length === 0 ? (
-          <EmptyState text={t("setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
+          <EmptyState text={t(justMe ? "setup.no_people.just_me" : "setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
         ) : (
           <>
-            {(orgs.data ?? []).length > 0 && filter}
+            {!justMe && (orgs.data ?? []).length > 0 && filter}
             {rows.length === 0 ? (
               <p className="empty">{t("people.none_here")}</p>
             ) : (
@@ -155,14 +171,14 @@ export function People() {
           </>
         )}
       </ListDetail>
-      <Organizations />
+      {!justMe && <Organizations />}
       {adding && <PersonDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}
       {editing && <PersonDrawer person={editing} onClose={() => setEditing(null)} />}
     </section>
   );
 }
 
-function PersonDetail(props: { person: S["PersonView"]; tags: React.ReactNode; reach: string[]; onEdit: () => void; menu: MenuAction[] }) {
+function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: React.ReactNode; reach: string[]; onEdit: () => void; menu: MenuAction[] }) {
   const { t, tn } = useWords();
   const p = props.person;
   const fact = (label: string, value: React.ReactNode) =>
@@ -176,8 +192,8 @@ function PersonDetail(props: { person: S["PersonView"]; tags: React.ReactNode; r
     <>
       <div className="row-end">{props.tags}</div>
       <dl className="details-list">
-        {fact(t("people.col.role"), p.role)}
-        {fact(t("people.col.org"), p.org_name)}
+        {props.justMe ? fact(t("people.col.relation"), p.relation) : fact(t("people.col.role"), p.role)}
+        {!props.justMe && fact(t("people.col.org"), p.org_name)}
         {fact(t("setup.first_name"), p.first_name)}
         {fact(t("setup.aliases"), p.aliases.join(", "))}
         {fact(t("people.col.reach"), props.reach.length ? props.reach.map((line) => <div key={line}>{line}</div>) : null)}

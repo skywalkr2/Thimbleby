@@ -78,7 +78,7 @@ export function BottomBar(props: {
         </a>
         <button type="button" className={styles.item} aria-current={workCurrent ? "page" : undefined} aria-haspopup="dialog" onClick={() => setSheet("work")}>
           <Icon name="inbox" />
-          {t("nav.work")}
+          {nav.workTitle}
         </button>
         <span className={styles.plusCell}>
           <button type="button" className={styles.plus} aria-label={t("handin.open")} onClick={props.onHandIn}>
@@ -95,7 +95,7 @@ export function BottomBar(props: {
         </button>
       </nav>
       {sheet === "work" && (
-        <Sheet title={t("nav.work")} onClose={close}>
+        <Sheet title={nav.workTitle} onClose={close}>
           <Links entries={nav.work} current={props.current} onPick={close} />
         </Sheet>
       )}

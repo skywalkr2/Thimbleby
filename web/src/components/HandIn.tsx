@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { projectChoices } from "../lib/project-choices";
+import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -51,6 +52,7 @@ export function HandIn(props: { onClose: () => void }) {
   const [todo, setTodo] = useState("");
   const [sensitivity, setSensitivity] = useState<Sensitivity>("");
   const [project, setProject] = useState("");
+  const { justMe } = useSides();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
   const [dropProblem, setDropProblem] = useState("");
@@ -194,6 +196,7 @@ export function HandIn(props: { onClose: () => void }) {
             {t("handin.sensitivity_hint")}
           </span>
         </div>
+        {!justMe && (
         <div className="field">
           <label htmlFor="handin-project">{t("handin.project")}</label>
           <select
@@ -213,6 +216,7 @@ export function HandIn(props: { onClose: () => void }) {
             {t("handin.project_hint")}
           </span>
         </div>
+        )}
       </form>
     </Drawer>
   );

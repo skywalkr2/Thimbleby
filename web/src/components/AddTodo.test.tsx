@@ -207,3 +207,21 @@ test("with no estimate chosen nothing about effort is sent", async () => {
   await waitFor(() => expect(sent(calls)).toBeDefined());
   expect(sent(calls)).not.toHaveProperty("effort_minutes");
 });
+
+test("with no side besides Personal the form has no project to choose, and with a side it has", async () => {
+  const user = userEvent.setup();
+  api([], {
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+  });
+  const first = renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  await screen.findByRole("textbox", { name: "What to do" });
+  await waitFor(() => expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull());
+  expect(screen.getByRole("combobox", { name: "Who does it" })).toBeInTheDocument();
+  first.unmount();
+  api([], { "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-side", kind: "business", name: "Orchard Press" }], chosen: "work" }) });
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  expect(await screen.findByRole("combobox", { name: /Project/ })).toBeInTheDocument();
+});

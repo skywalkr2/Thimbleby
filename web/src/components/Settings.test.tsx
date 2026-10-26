@@ -4,6 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import type { SettingsSection } from "../lib/views";
+import { project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Settings } from "./Settings";
@@ -1041,4 +1042,29 @@ test("who people are to you is a list in words, and what you keep track of is ti
   await user.click(within(group).getByRole("checkbox", { name: "Design quality" }));
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toMatchObject({ changes: { "steward.tracks": ["dates", "decisions", "design"] } });
+});
+
+// ---- with no side besides Personal (design 6.32, 7.8) ------------------------------------------------------------------
+
+test("with no side besides Personal the settings that name whose side a project is on are not listed, and with a side they are", async () => {
+  const items = [
+    ...ITEMS,
+    item("workspace.project.personal", { group: "workspace.project", description: "The project that holds the person's own life.", value: "PRJ-1" }),
+    item("workspace.project.sides", { group: "workspace.project", description: "The sides of the person's work.", value: [], editable: false }),
+  ];
+  api(items, {
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-1", "Personal")],
+  });
+  const first = open();
+  expect(await screen.findByText("The display name.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText("The project that holds the person's own life.")).toBeNull());
+  expect(screen.queryByText("The sides of the person's work.")).toBeNull();
+  first.unmount();
+  api(items, {
+    "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-1", sides: [{ project: "PRJ-2", kind: "business", name: "Orchard Press" }], chosen: "work" }),
+  });
+  open();
+  expect(await screen.findByText("The project that holds the person's own life.")).toBeInTheDocument();
+  expect(screen.getByText("The sides of the person's work.")).toBeInTheDocument();
 });

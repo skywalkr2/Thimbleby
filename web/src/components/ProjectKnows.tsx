@@ -57,10 +57,10 @@ function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
   );
 }
 
-function Sources(props: { rows: S["KnowsSource"][] }) {
+function Sources(props: { rows: S["KnowsSource"][]; plain: boolean }) {
   const { t, tn } = useWords();
   return (
-    <Part id="knows-sources" title={t("knows.sources")} empty={t("knows.sources.empty")} count={props.rows.length}>
+    <Part id="knows-sources" title={t("knows.sources")} empty={t(props.plain ? "knows.sources.empty.plain" : "knows.sources.empty")} count={props.rows.length}>
       {props.rows.map((s) => (
         <Row
           key={s.key}
@@ -74,10 +74,10 @@ function Sources(props: { rows: S["KnowsSource"][] }) {
   );
 }
 
-function Facts(props: { rows: S["KnowsFact"][] }) {
+function Facts(props: { rows: S["KnowsFact"][]; plain: boolean }) {
   const { t } = useWords();
   return (
-    <Part id="knows-facts" title={t("knows.facts")} empty={t("knows.facts.empty")} count={props.rows.length}>
+    <Part id="knows-facts" title={t("knows.facts")} empty={t(props.plain ? "knows.facts.empty.plain" : "knows.facts.empty")} count={props.rows.length}>
       {props.rows.map((f) => (
         <Row
           key={f.id}
@@ -149,7 +149,9 @@ function Unknown(props: { rows: S["KnowsUnknown"][] }) {
   );
 }
 
-export function ProjectKnows(props: { id: string }) {
+/** `plain` is for Personal when the person has no side beside it: the parts about who answers what, the terms used and what
+ * is still unknown about its status, phase, target day and owner are left out, and the empty parts speak plainly. */
+export function ProjectKnows(props: { id: string; plain?: boolean }) {
   const { t } = useWords();
   const knows = useQuery({ queryKey: ["project-knows", props.id], queryFn: () => api.projectKnows(props.id) });
   const data = knows.data;
@@ -159,15 +161,19 @@ export function ProjectKnows(props: { id: string }) {
         <h2 id="knows-title">{t("knows.title")}</h2>
       </div>
       {knows.isPending && <Skeleton />}
-      {knows.isError && <LoadFailed message={t("knows.load_failed")} onRetry={() => void knows.refetch()} />}
+      {knows.isError && <LoadFailed message={t(props.plain ? "knows.load_failed.plain" : "knows.load_failed")} onRetry={() => void knows.refetch()} />}
       {data && (
         <>
           <Reading reading={data.reading} area={data.area} />
-          <Sources rows={data.sources} />
-          <Facts rows={data.facts} />
-          <Terms rows={data.terms} />
-          <Routing rows={data.routing} />
-          <Unknown rows={data.unknown} />
+          <Sources rows={data.sources} plain={!!props.plain} />
+          <Facts rows={data.facts} plain={!!props.plain} />
+          {!props.plain && (
+            <>
+              <Terms rows={data.terms} />
+              <Routing rows={data.routing} />
+              <Unknown rows={data.unknown} />
+            </>
+          )}
         </>
       )}
     </section>

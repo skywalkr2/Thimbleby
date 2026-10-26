@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
 import { Sidebar } from "./Sidebar";
 
@@ -109,4 +110,114 @@ test("with the sidebar collapsed to a rail, each icon still has its name, and th
 test("the toggle collapses a sidebar that shows labels", async () => {
   show({ expanded: true });
   expect(await screen.findByRole("button", { name: "Hide the side menu" })).toBeInTheDocument();
+});
+
+// ---- sides (design 6.32, 7.8) ---------------------------------------------------------------------------------------
+
+const PERSONAL = "PRJ-personal";
+const FIRST = { project: "PRJ-first", kind: "business", name: "Orchard Press" };
+const SECOND = { project: "PRJ-second", kind: "job", name: "Lantern Works" };
+
+/** The sidebar once the person's sides have been read, with the other views as in any workspace. */
+function showWithSides(sides: Array<typeof FIRST>) {
+  fakeApi({
+    "GET panels": () => [],
+    "GET changes": () => [],
+    "GET followups": () => [],
+    "GET today/queue": () => [],
+    "GET plugin-today": () => [],
+    "GET stages/requests": () => [],
+    "GET stages/records": () => [],
+    "GET stages/ready": () => [],
+    "GET setup/business": () => ({ business: sides.length > 0, name: sides[0]?.name ?? null, personal: PERSONAL, sides, chosen: null }),
+    // The person's projects: Personal's own, and each side's top project.
+    "GET projects": () => [project(PERSONAL, "Personal"), ...sides.map((s) => project(s.project, s.name))],
+  });
+  renderApp(<Sidebar current="today" expanded onToggle={() => undefined} />);
+}
+
+const labels = () =>
+  within(nav())
+    .getAllByRole("link")
+    .map((a) => a.querySelector('[class*="label"]')?.textContent);
+
+test("with no side besides Personal the first group has no Work heading, and Stages, Waiting to go out and Projects are not listed", async () => {
+  showWithSides([]);
+  await screen.findByRole("link", { name: "Personal" });
+  expect(labels()).toEqual([
+    "Today",
+    "What changed",
+    "Handled for you",
+    "Follow-ups",
+    "To-dos and questions",
+    "Personal",
+    "People",
+    "Files",
+    "Knowledge",
+    "Connections",
+    "Add-ons",
+    "Settings",
+  ]);
+  expect(within(nav()).queryByText("Work")).toBeNull();
+  // The group is still one group for a screen reader, named without the word.
+  expect(within(nav()).getByRole("group", { name: "Your day" })).toBeInTheDocument();
+  // Personal is a page of its own: the Personal project's page.
+  expect(screen.getByRole("link", { name: "Personal" })).toHaveAttribute("href", expect.stringMatching(new RegExp(`#records/project/${PERSONAL}$`)));
+});
+
+test("with sides the menu has Personal and each side by its own name, each a link to that top project's page, and the work views return", async () => {
+  showWithSides([FIRST, SECOND]);
+  await screen.findByRole("link", { name: FIRST.name });
+  expect(labels()).toEqual([
+    "Today",
+    "What changed",
+    "Handled for you",
+    "Follow-ups",
+    "To-dos and questions",
+    "Waiting to go out",
+    "Stages",
+    "Personal",
+    FIRST.name,
+    SECOND.name,
+    "People",
+    "Files",
+    "Knowledge",
+    "Connections",
+    "Add-ons",
+    "Settings",
+  ]);
+  expect(within(nav()).getByText("Work")).toBeInTheDocument();
+  expect(within(nav()).queryByRole("link", { name: "Projects" })).toBeNull();
+  expect(screen.getByRole("link", { name: FIRST.name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`#records/project/${FIRST.project}$`)));
+  expect(screen.getByRole("link", { name: SECOND.name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`#records/project/${SECOND.project}$`)));
+});
+
+test("the current top project's page is the marked one", async () => {
+  fakeApi({
+    "GET panels": () => [],
+    "GET changes": () => [],
+    "GET followups": () => [],
+    "GET today/queue": () => [],
+    "GET plugin-today": () => [],
+    "GET setup/business": () => ({ business: true, name: FIRST.name, personal: PERSONAL, sides: [FIRST], chosen: "work" }),
+    "GET projects": () => [project(PERSONAL, "Personal"), project(FIRST.project, FIRST.name)],
+  });
+  renderApp(<Sidebar current={`records/project/${FIRST.project}`} expanded onToggle={() => undefined} />);
+  expect(await screen.findByRole("link", { name: FIRST.name, current: "page" })).toBeInTheDocument();
+});
+
+test("a workspace with projects of its own and no side keeps the Projects, Stages and Waiting to go out entries", async () => {
+  fakeApi({
+    "GET panels": () => [],
+    "GET changes": () => [],
+    "GET followups": () => [],
+    "GET today/queue": () => [],
+    "GET plugin-today": () => [],
+    "GET setup/business": () => ({ business: false, name: null, personal: PERSONAL, sides: [], chosen: null }),
+    "GET projects": () => [project(PERSONAL, "Personal"), project("PRJ-own", "A project of its own")],
+  });
+  renderApp(<Sidebar current="today" expanded onToggle={() => undefined} />);
+  await screen.findByText("Work");
+  expect(labels()).toEqual(expect.arrayContaining(["Waiting to go out", "Stages", "Projects"]));
+  expect(labels()).not.toContain("Personal");
 });

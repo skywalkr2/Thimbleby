@@ -550,9 +550,9 @@ def _sender_relation(
 
 def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | None:
     """What an item says about why it was filed, for its line and its page: the signal and the word, domain or source,
-    the project it was filed under and its name, and the top project of the other side it can move to in one step (with
-    the field that holds its project and the version to read): from another side to Personal, from Personal to the one
-    other side, and none from Personal when there are several. None when people placed it or nobody did, when the
+    the project it was filed under and its name, every other side it can move to (`move_options`: the top project and
+    name of each, Personal first) and the one it moves to in a single step when there is exactly one (`move_to`), with
+    the field that holds its project and the version to read. None when people placed it or nobody did, when the
     project it was filed under is gone, and once the item is anywhere else: the line goes when the person moves it, and
     comes back with Undo."""
     found = record.data.get("filed_by")
@@ -562,21 +562,20 @@ def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | 
     if project is None or found["project"] not in projects_of(record.data):
         return None
     side = side_of_project(view, cfg, project.id)
-    personal = personal_project(view, cfg)
-    elsewhere = [i for i in side_ids(view, cfg) if i != side]
-    other = None
-    if side is not None:
-        other = (
-            personal if side != personal and personal is not None else (elsewhere[0] if len(elsewhere) == 1 else None)
-        )
-    target = view.get("project", other) if other and other != project.id else None
+    elsewhere = [i for i in side_ids(view, cfg) if i != side and i != project.id] if side is not None else []
+    options = [
+        {"project": top.id, "name": str(top.data.get("name") or "")}
+        for top in (view.get("project", i) for i in elsewhere)
+        if top is not None
+    ]
     return {
         "by": found["by"],
         "word": found.get("word"),
         "project": project.id,
         "project_name": str(project.data.get("name") or ""),
-        "move_to": target.id if target is not None else None,
-        "move_to_name": str(target.data.get("name") or "") if target is not None else None,
+        "move_to": options[0]["project"] if len(options) == 1 else None,
+        "move_to_name": options[0]["name"] if len(options) == 1 else None,
+        "move_options": options,
         "field": "projects" if kind == "question" else "project",
         "version": record.version,
     }

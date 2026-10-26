@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useFirstField } from "../lib/focus";
+import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -57,6 +58,9 @@ export function PersonDrawer(props: {
   const [firstName, setFirstName] = useState(p?.first_name ?? "");
   const [role, setRole] = useState(p?.role ?? "");
   const [org, setOrg] = useState(p?.org ?? "");
+  const [relation, setRelation] = useState(p?.relation ?? "");
+  // With no side beside Personal the form asks who they are to you, not their role or organization.
+  const { justMe } = useSides();
   const [aliases, setAliases] = useState(p?.aliases.join(", ") ?? "");
   const [busy, setBusy] = useState(false);
   const first = useFirstField<HTMLFormElement>();
@@ -65,6 +69,7 @@ export function PersonDrawer(props: {
     firstName !== (p?.first_name ?? "") ||
     role !== (p?.role ?? "") ||
     org !== (p?.org ?? "") ||
+    relation !== (p?.relation ?? "") ||
     aliases !== (p?.aliases.join(", ") ?? "");
   const formId = `person-form-${key}`;
 
@@ -74,8 +79,7 @@ export function PersonDrawer(props: {
     const body = {
       full_name: name.trim(),
       first_name: firstName.trim() || null,
-      role: role.trim() || null,
-      org: org || null,
+      ...(justMe ? { relation: relation.trim() || null } : { role: role.trim() || null, org: org || null }),
       aliases: list(aliases),
     };
     const done = p
@@ -84,7 +88,12 @@ export function PersonDrawer(props: {
           () => ({
             message: t("toast.saved", { name: body.full_name }),
             undo: () =>
-              api.editPerson(p.id, { full_name: p.name, first_name: p.first_name, role: p.role, org: p.org, aliases: p.aliases }),
+              api.editPerson(p.id, {
+                full_name: p.name,
+                first_name: p.first_name,
+                ...(justMe ? { relation: p.relation } : { role: p.role, org: p.org }),
+                aliases: p.aliases,
+              }),
           }),
         )
       : await act(
@@ -123,8 +132,14 @@ export function PersonDrawer(props: {
       >
         <Field id={`pn-${key}`} label={t("setup.full_name")} value={name} onChange={setName} required />
         <Field id={`pf-${key}`} label={t("setup.first_name")} value={firstName} onChange={setFirstName} hint={t("setup.first_name_hint")} />
-        <Field id={`pr-${key}`} label={t("setup.role")} value={role} onChange={setRole} hint={t("setup.role_hint")} />
-        <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
+        {justMe ? (
+          <Field id={`pl-${key}`} label={t("setup.relation")} value={relation} onChange={setRelation} hint={t("setup.relation_hint")} />
+        ) : (
+          <>
+            <Field id={`pr-${key}`} label={t("setup.role")} value={role} onChange={setRole} hint={t("setup.role_hint")} />
+            <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
+          </>
+        )}
         <Field id={`pa-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.aliases_hint")} />
       </form>
     </Drawer>

@@ -1,6 +1,7 @@
 // Why the assistant filed an item under a project when words or the sender's mail domain did it (design 6.32), said in
 // words, and the one step that moves it to the other side as the person: an edit of the item's own project with Undo,
 // which the server records as a correction like any other change of a field the assistant set.
+import { useId } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
@@ -15,17 +16,24 @@ export function filedWords(filed: Filed, t: T): string {
   return filed.by === "domain" || filed.by === "source" ? t("filed.from", vars) : t("filed.names", vars);
 }
 
-/** Moves an item to the top project of the other side; the toast says so and has Undo. */
+/** The sides an item can move to: a side to pick when there are several, none to pick from when there is one (it moves in a
+ * single step, to `move_to`) or none. */
+export function movesToPick(filed: Filed): S["FiledMove"][] {
+  return (filed.move_options ?? []).length > 1 ? (filed.move_options ?? []) : [];
+}
+
+/** Moves an item to the top project of another side (the one it can move to, or the one named); the toast says so and has Undo. */
 export function useMoveFiled() {
   const act = useAct();
   const { t } = useWords();
-  return (kind: string, id: string, filed: Filed) => {
-    const to = filed.move_to;
+  return (kind: string, id: string, filed: Filed, side?: S["FiledMove"]) => {
+    const to = side?.project ?? filed.move_to;
     if (!to) return Promise.resolve(undefined);
+    const name = side?.name ?? filed.move_to_name ?? "";
     return act(
       () => api.editRecord({ kind, id, fields: { [filed.field]: filed.field === "projects" ? [to] : to }, read_version: filed.version }),
       (done) => ({
-        message: t("filed.moved", { project: filed.move_to_name ?? "" }),
+        message: t("filed.moved", { project: name }),
         undo: async () => {
           const report = await api.undo(done.changeset);
           if (!report.restored.length) throw new Error("not undone");
@@ -40,6 +48,8 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
   const { t } = useWords();
   const move = useMoveFiled();
   const { filed } = props;
+  const options = movesToPick(filed);
+  const pick = useId();
   return (
     <p className="filed-line" data-filed-by={filed.by}>
       <span>{filedWords(filed, t)}</span>
@@ -49,6 +59,31 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
           <button type="button" className="btn small" onClick={() => void move(props.kind, props.id, filed)}>
             {t("filed.move", { project: filed.move_to_name ?? "" })}
           </button>
+        </>
+      )}
+      {options.length > 0 && (
+        <>
+          {" "}
+          {/* Several other sides: a list to pick one from, which moves the item as soon as one is chosen. */}
+          <label className="sr" htmlFor={pick}>
+            {t("filed.move_choose")}
+          </label>
+          <select
+            id={pick}
+            className="small"
+            value=""
+            onChange={(e) => {
+              const side = options.find((o) => o.project === e.target.value);
+              if (side) void move(props.kind, props.id, filed, side);
+            }}
+          >
+            <option value="">{t("filed.move_choose")}</option>
+            {options.map((o) => (
+              <option key={o.project} value={o.project}>
+                {o.name}
+              </option>
+            ))}
+          </select>
         </>
       )}
     </p>

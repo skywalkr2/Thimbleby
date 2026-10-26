@@ -13,6 +13,7 @@ import { RerouteForm } from "./ChangeThis";
 import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
 import { ReassignForm } from "./ReassignAction";
+import { SideChoose } from "./SideChoose";
 import { TodoRow } from "./TodayRail";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
@@ -23,7 +24,8 @@ import { ChangeRow } from "./WhatChanged";
 const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "send", "nudge", "escalate", "overdue", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
-  return OPENS.has(line.kind);
+  // The line that asks which side items belong to opens the list of sides to pick from.
+  return OPENS.has(line.kind) || (line.kind === "unfiled" && line.state === "which_side");
 }
 
 /** What a line opens, headed by its action's notes when it is about one: where there is no hover (the phone, and below the
@@ -68,6 +70,8 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
       return <OverdueDetail line={line} />;
     case "capacity":
       return <CapacityDetail />;
+    case "unfiled":
+      return <SideChoose />;
     case "promise":
       return <PromiseWhy action={(line.actions ?? [])[0] ?? ""} />;
     default:

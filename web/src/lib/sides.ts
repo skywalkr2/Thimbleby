@@ -4,7 +4,7 @@
 // under every choice.
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
-import { api } from "./api";
+import { api, type S } from "./api";
 import { useWords } from "./wording";
 
 /** The id of a side's top project. */
@@ -88,4 +88,36 @@ export function useSideFilter(): SideFilter {
   const found = options.find((o) => o.id === resolved);
   const choice = found ? found.id : "all";
   return { offered, options, choice, named: found?.name ?? "", set: setSideChoice };
+}
+
+export interface SidesState {
+  /** Whether the person has nothing beside Personal: no side, and no project outside Personal's own. It is what the
+   * screens leave out of their words and lists (design 6.32, 7.8). Only once both answers have come: until then, and when
+   * either could not be read, nothing the person set up is hidden. */
+  justMe: boolean;
+  /** The id of the Personal project, when there is one. */
+  personal: string | null;
+  /** The sides beside Personal, in the person's order. */
+  sides: S["SideView"][];
+}
+
+/** The sides as the screens read them: whether there is nothing beside Personal, Personal's own project, and the sides. */
+export function useSides(): SidesState {
+  const state = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const sides = state.data?.sides ?? [];
+  const personal = state.data?.personal ?? null;
+  // Every project is Personal itself or inside it (a chain that loops or leads nowhere stops where it is).
+  const parents = new Map((projects.data ?? []).map((p) => [p.id, p.parent ?? null]));
+  const top = (id: string): string => {
+    const seen = new Set<string>();
+    let at = id;
+    while (!seen.has(at) && parents.get(at)) {
+      seen.add(at);
+      at = parents.get(at) as string;
+    }
+    return at;
+  };
+  const alone = projects.isSuccess && personal !== null && (projects.data ?? []).every((p) => top(p.id) === personal);
+  return { justMe: state.isSuccess && sides.length === 0 && alone, personal, sides };
 }

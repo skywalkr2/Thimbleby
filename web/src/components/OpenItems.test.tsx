@@ -326,3 +326,26 @@ test("reassigning keeps the team the owner acted for", async () => {
   await user.selectOptions(await screen.findByRole("combobox", { name: "Reassign to" }), "P-3");
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3", team: "T-1" }] } }));
 });
+
+test("with no side besides Personal the filters say Area, never Project, and the state list has no No owner", async () => {
+  api({
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+  });
+  renderApp(<OpenItems />);
+  await rows();
+  expect(await screen.findByRole("combobox", { name: "Area" })).toBeInTheDocument();
+  expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
+  expect(within(screen.getByRole("combobox", { name: "Area" })).getByRole("option", { name: "All areas" })).toBeInTheDocument();
+  const states = within(screen.getByRole("combobox", { name: "State" })).getAllByRole("option").map((o) => o.textContent);
+  expect(states).toEqual(expect.arrayContaining(["Overdue", "Stale", "On hold"]));
+  expect(states).not.toContain("No owner");
+});
+
+test("with a side the filters keep Project and No owner", async () => {
+  api({ "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-side", kind: "business", name: "Orchard Press" }], chosen: "work" }) });
+  renderApp(<OpenItems />);
+  await rows();
+  expect(screen.getByRole("combobox", { name: "Project" })).toBeInTheDocument();
+  expect(within(screen.getByRole("combobox", { name: "State" })).getByRole("option", { name: "No owner" })).toBeInTheDocument();
+});

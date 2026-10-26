@@ -14,7 +14,7 @@ import { choiceRow, useListChoice, type ListChoice } from "../lib/list-choice";
 import { useIsNarrow, useMediaQuery } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { hasSeenMessage, markMessageSeen } from "../lib/seen-messages";
-import { onSide, useSideFilter, type SideChoice } from "../lib/sides";
+import { onSide, useSideFilter, useSides, type SideChoice } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AfterMoveAnswers } from "./AfterMoveAnswers";
@@ -113,7 +113,10 @@ export function FollowUps(props: { compact?: boolean }) {
     (s) => s.questions.length || (s.later ?? []).length || (s.actions.length && !(compact && s.is_pm)),
   );
   const side = useSideFilter();
-  const sections = sectionsOnSide(present, side.choice, group === "project");
+  // With no side beside Personal the follow-ups are by person only: there is no grouping by project to choose.
+  const { justMe } = useSides();
+  const byProject = group === "project" && !justMe;
+  const sections = sectionsOnSide(present, side.choice, byProject);
   const shown = sections.filter((s) =>
     filter === "send"
       ? s.is_pm || s.to_send > 0
@@ -159,7 +162,7 @@ export function FollowUps(props: { compact?: boolean }) {
       <div className="heading">
         <Heading id="followups-title">{t("followups.title")}</Heading>
         <SideFilter />
-        {!compact && (
+        {!compact && !justMe && (
           <SegmentedControl
             label={t("followups.group")}
             value={group}
@@ -170,7 +173,7 @@ export function FollowUps(props: { compact?: boolean }) {
             ]}
           />
         )}
-        {group === "person" && (
+        {!byProject && (
           <div className="filters" role="group" aria-label={t("followups.filter")}>
             {FILTERS.map((f) => (
               <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -191,7 +194,7 @@ export function FollowUps(props: { compact?: boolean }) {
         </p>
       ) : sections.length === 0 ? (
         <p className="empty">{present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")}</p>
-      ) : group === "project" ? (
+      ) : byProject ? (
         <FollowUpsByProject sections={sections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
       ) : shown.length === 0 ? (
         <p className="empty">{t(`followups.empty_${filter}`)}</p>

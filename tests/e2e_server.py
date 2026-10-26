@@ -31,9 +31,11 @@ from engine.cleaning import normalize
 from engine.cli import KEEP_ALIVE
 from engine.config.yaml_edit import set_key
 from engine.evaluate import load_cases
+from engine.setup import keep_walkthrough
 from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
+from tests.e2e_just_me import seed_just_me, the_person
 from tests.e2e_meetings import seed_meetings
 from tests.roundtrip import round_trip
 
@@ -257,6 +259,13 @@ def main() -> None:
         "was seeded and whether the ended entry has its notes",
     )
     parser.add_argument(
+        "--just-me",
+        action="store_true",
+        help="make the workspace as a person with no work does (no template, nothing besides Personal) and seed an "
+        "area, a person with their relation, a to-do and a question on Personal, for the check that no screen shows "
+        "work words; /__e2e/just-me says what was seeded",
+    )
+    parser.add_argument(
         "--clock-at",
         metavar="MOMENT",
         help="start the clock at this ISO 8601 moment in UTC (for example 2026-10-21T00:30:00Z); it keeps ticking",
@@ -272,7 +281,20 @@ def main() -> None:
     stress = layout_strings() if args.layout_stress else {}
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
-    ws = init_workspace(tmp / "ws", template=DEMO_B, git=False, history=True)
+    if args.just_me:
+        ws = init_workspace(tmp / "ws", git=False, you=the_person())
+        # The same stand-in account and tiers the fixture workspaces have, so the person has chosen an account and the
+        # walkthrough does not open by itself (a new workspace has none).
+        fixture = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text(encoding="utf-8"))
+        path = ws.config_dir / "ai.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        data.setdefault("providers", {})["stub"] = fixture["providers"]["stub"]
+        data["tiers"] = fixture["tiers"]
+        path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        # The person pressed Finish later on the walkthrough, so the first visit opens on Today.
+        keep_walkthrough(ws, closed=True)
+    else:
+        ws = init_workspace(tmp / "ws", template=DEMO_B, git=False, history=True)
     (tmp / "offsite").mkdir(exist_ok=True)
     flags = {
         "server.base_path": args.base_path,
@@ -351,6 +373,7 @@ def main() -> None:
     fake_channel = seed_outgoing(store, cfg) if args.fake_channel else None
     acts = seed_acts(ws, store, cfg) if args.acts else None
     meetings = seed_meetings(store, cfg) if args.meetings else None
+    just_me = seed_just_me(store, cfg) if args.just_me else None
 
     async def case_list(_request):
         return JSONResponse(cases)
@@ -439,8 +462,13 @@ def main() -> None:
         entry = store.read().get("event", meetings["ended"]["id"])
         return JSONResponse({"enabled": True, **meetings, "captured": bool(entry and entry.data.get("captured_at"))})
 
+    async def alone(_request):
+        """What the "Just me" journey's records are."""
+        return JSONResponse({"enabled": just_me is not None, **(just_me or {})})
+
     outer = Starlette(
         routes=[
+            Route("/__e2e/just-me", alone),
             Route("/__e2e/delivered", delivered),
             Route("/__e2e/meetings", met),
             Route("/__e2e/acts", acted),

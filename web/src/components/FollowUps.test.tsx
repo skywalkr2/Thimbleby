@@ -1069,6 +1069,22 @@ test("a row's Open goes to that person's group, on the list that holds what is w
   expect(screen.queryByRole("list", { name: "Open follow-ups by project" })).toBeNull();
 });
 
+test("with no side besides Personal the follow-ups are by person only: there is no switch to group by project", async () => {
+  fakeApi({
+    "GET followups": () => byProject,
+    "GET people": () => [],
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [{ id: "PRJ-personal", name: "Personal", group: null, status: null, phase: null, target: null, owner: null, owner_name: null, summary: null, language: "en-US", language_own: false, role: "run", completed: false, spent_usd: 0, open_actions: 0, open_questions: 0, no_end: true }],
+  });
+  renderApp(<FollowUps />);
+  await screen.findByRole("heading", { name: "You" });
+  await waitFor(() => expect(screen.queryByRole("radiogroup", { name: "Show as" })).toBeNull());
+  expect(screen.queryByRole("radio", { name: "By project" })).toBeNull();
+  expect(screen.queryByRole("radio", { name: "By person" })).toBeNull();
+  // The person filters stay.
+  expect(screen.getByRole("group", { name: "Show" })).toBeInTheDocument();
+});
+
 test("on Today the switch is not shown", async () => {
   fakeApi({ "GET followups": () => byProject, "GET people": () => [] });
   renderApp(<FollowUps compact />);

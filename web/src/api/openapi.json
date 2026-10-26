@@ -8701,8 +8701,27 @@
         "title": "FileView",
         "type": "object"
       },
+      "FiledMove": {
+        "description": "A side an item can move to: the id of its top project and its name.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "name"
+        ],
+        "title": "FiledMove",
+        "type": "object"
+      },
       "FiledView": {
-        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;\n`alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under\n`project_name`. `move_to` is the top project of the other side it can move to in one step (Personal from another\nside; from Personal, the one other side, and none when there are several), `move_to_name` its name, and the item\nmoves there in one step: POST /api/records/edit with `{field: id}` (a list for `projects`) and `read_version` set\nto `version`. Absent once the item is anywhere else.",
+        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;\n`alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under\n`project_name`. `move_options` lists every other side it can move to (Personal first), each by its top project and\nname; `move_to` and `move_to_name` name the one when there is exactly one (a one-click move) and are empty when\nthere are several, which the person picks from. The item moves to a side in one step: POST /api/records/edit with\n`{field: id}` (a list for `projects`) and `read_version` set to `version`. Absent once the item is anywhere else.",
         "properties": {
           "by": {
             "enum": [
@@ -8722,6 +8741,13 @@
             ],
             "title": "Field",
             "type": "string"
+          },
+          "move_options": {
+            "items": {
+              "$ref": "#/components/schemas/FiledMove"
+            },
+            "title": "Move Options",
+            "type": "array"
           },
           "move_to": {
             "anyOf": [

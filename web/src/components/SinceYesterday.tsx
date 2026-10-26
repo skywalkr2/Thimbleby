@@ -14,8 +14,9 @@ import { Button } from "../ui/Button";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
-import { filedWords, useMoveFiled } from "./Filed";
+import { filedWords, movesToPick, useMoveFiled } from "./Filed";
 import { MissedOneLine } from "./MissedOne";
+import type { MenuGroup } from "../ui/MenuButton";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 type Entry = S["SinceEntryView"];
@@ -153,6 +154,21 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
     const { kind, id } = e.record;
     menu.push({ id: "move-filed", label: t("filed.move", { project: filed.move_to_name ?? "" }), run: () => void move(kind, id, filed).then((done) => done && setMoved(true)) });
   }
+  // With several other sides the menu has "Move to…" over the list of them, one entry for each.
+  const sidesToPick = filed && e.record ? movesToPick(filed) : [];
+  const groups: MenuGroup[] = filed && e.record && sidesToPick.length > 0
+    ? [
+        {
+          id: "move-filed",
+          title: t("filed.move_choose"),
+          entries: sidesToPick.map((side) => ({
+            id: `move-filed-${side.project}`,
+            label: side.name,
+            run: () => void move(e.record!.kind, e.record!.id, filed, side).then((done) => done && setMoved(true)),
+          })),
+        },
+      ]
+    : [];
   const record = e.record;
   return (
     <Row
@@ -180,7 +196,7 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
           </Button>
         ) : undefined
       }
-      menu={menu.length > 0 ? <RowMenu label={e.title} actions={menu} /> : undefined}
+      menu={menu.length > 0 || groups.length > 0 ? <RowMenu label={e.title} actions={menu} groups={groups} /> : undefined}
     />
   );
 }

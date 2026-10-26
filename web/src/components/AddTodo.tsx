@@ -8,6 +8,7 @@ import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { saidRepeat, useRepeatCheck } from "../lib/repeat";
+import { useSides } from "../lib/sides";
 import { useDayCheck } from "../lib/todo-day";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -25,6 +26,7 @@ function AddTodoForm(props: { onClose: () => void }) {
   const [when, setWhen] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
   const [project, setProject] = useState("");
+  const { justMe } = useSides();
   const [repeat, setRepeat] = useState("");
   const [effort, setEffort] = useState<number | null>(null);
   const active = (people.data ?? []).filter((p) => p.status !== "left");
@@ -98,7 +100,7 @@ function AddTodoForm(props: { onClose: () => void }) {
         </div>
         <EffortField id={id} value={effort} onChange={setEffort} />
         <PersonPicker label={t("addtodo.owner")} value={who} suggested={[]} people={active} onChange={setOwner} />
-        <ProjectPicker label={t("addtodo.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />
+        {!justMe && <ProjectPicker label={t("addtodo.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />}
         <div className="field">
           <label htmlFor={`${id}-repeat`}>{t("repeat.label")}</label>
           <input

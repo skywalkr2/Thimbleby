@@ -62,22 +62,24 @@ export function Sidebar(props: { current: View; expanded: boolean; onToggle: () 
   const { t } = useWords();
   const nav = useNav();
   const rail = !props.expanded;
-  const entry = (e: NavEntry, sub = false) => <Entry key={e.view} entry={e} current={props.current} rail={rail} sub={sub && !rail} />;
-  const builtIn = 4;
+  const entry = (e: NavEntry) => <Entry key={e.view} entry={e} current={props.current} rail={rail} sub={!!e.sub && !rail} />;
   return (
     <nav className={[styles.side, rail ? styles.rail : ""].filter(Boolean).join(" ")} aria-label={t("nav.label")}>
       <div className={styles.group}>{entry(nav.today)}</div>
-      <div className={styles.group} role="group" aria-labelledby="nav-work">
-        <span id="nav-work" className={styles.title}>
-          {t("nav.work")}
-        </span>
-        {nav.work.map((e, i) => entry(e, i >= builtIn))}
+      {/* With no side beside Personal the group has no heading, only a name for screen readers. */}
+      <div className={styles.group} role="group" aria-label={nav.justMe ? nav.workTitle : undefined} aria-labelledby={nav.justMe ? undefined : "nav-work"}>
+        {!nav.justMe && (
+          <span id="nav-work" className={styles.title}>
+            {nav.workTitle}
+          </span>
+        )}
+        {nav.work.map(entry)}
       </div>
       <div className={styles.group} role="group" aria-labelledby="nav-records">
         <span id="nav-records" className={styles.title}>
           {t("nav.records")}
         </span>
-        {nav.records.map((e, i) => entry(e, i >= 3))}
+        {nav.records.map(entry)}
       </div>
       <div className={styles.bottom}>
         {nav.bottom.map((e) => entry(e))}

@@ -18,7 +18,7 @@ type Item = S["UnfiledItem"];
 const key = (item: Item) => `${item.kind}:${item.id}`;
 
 /** Files items under a project at once, with one Undo; the toast says how many and where. */
-function useFile() {
+export function useFile() {
   const { tn } = useWords();
   const act = useAct();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });

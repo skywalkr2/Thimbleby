@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
+import { useSides } from "../lib/sides";
 import { useToastCount, useToasts } from "../lib/toasts";
 import { after, before, counted, SCREENS, standing, STEP_OF, stepOf, type Screen } from "../lib/walkthrough";
 import { ContinueSlotProvider, type ContinueSlot, type ContinueSpec } from "../lib/walkthrough-continue";
@@ -360,6 +361,8 @@ export function Walkthrough(
 /** The last screen: what was set up and what was skipped (each with a way back to it), then the optional extras. */
 function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
   const { t } = useWords();
+  // A person with no side beside Personal is never offered the starting template for work.
+  const { justMe } = useSides();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   if (!setup.data) return <Skeleton />;
   const steps = counted(setup.data.steps);
@@ -407,7 +410,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
         <h3 id="walkthrough-extras">{t("walkthrough.extras.title")}</h3>
         <p className={styles.aside}>{t("walkthrough.extras.why")}</p>
         <StepList
-          include={(s) => s.group === "done"}
+          include={(s) => s.group === "done" && !(justMe && s.id === "template")}
           onOpenPeople={props.onOpenPeople}
           onOpenAddons={props.onOpenAddons}
           onHandIn={props.onHandIn}

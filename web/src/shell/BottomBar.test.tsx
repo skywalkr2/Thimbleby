@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
 import { BottomBar } from "./BottomBar";
 
@@ -67,4 +68,22 @@ test("More lists Records, Connections, Add-ons and Settings, the help items, and
   expect(within(sheet).getByRole("radiogroup", { name: "Spacing" })).toBeInTheDocument();
   await user.click(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" }));
   await waitFor(() => expect(onHelp).toHaveBeenCalledTimes(1));
+});
+
+test("with no side besides Personal the phone's bar says Your day, not Work, and its sheet lists no Stages or Waiting to go out", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET panels": () => [],
+    "GET changes": () => [],
+    "GET followups": () => [],
+    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: null }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+  });
+  const noop = () => undefined;
+  renderApp(<BottomBar current="today" version="9.8.7" onHandIn={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />);
+  const bar = screen.getByRole("navigation", { name: "Views" });
+  await user.click(await within(bar).findByRole("button", { name: "Your day" }));
+  const sheet = await screen.findByRole("dialog", { name: "Your day" });
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "To-dos and questions"]);
+  expect(within(bar).queryByRole("button", { name: "Work" })).toBeNull();
 });
