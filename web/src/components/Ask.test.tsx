@@ -141,7 +141,7 @@ test("an answer lists the words it is based on, in quote marks, as text", async 
   expect(within(row).getByText("“<b>bold</b> words”")).toBeInTheDocument();
   expect(row.querySelector("b")).toBeNull();
   // The place a quote came from is an internal name and is not shown.
-  expect(row).not.toHaveTextContent("help");
+  expect(row).not.toHaveTextContent(/\bhelp\b/);
 });
 
 test("a suggested setting shows its label, value and why, and Apply sends the current fingerprint and the version read", async () => {
@@ -360,4 +360,33 @@ test("an answer offers Correct it, and the correction is sent with the person's 
   await user.type(within(row).getByLabelText("What was wrong in this answer?"), "It is under Connections");
   await user.click(within(row).getByRole("button", { name: "Send correction" }));
   await waitFor(() => expect(sent(calls, "POST asks/Q-9/correction")).toEqual({ note: "It is under Connections" }));
+});
+
+test("an answer offers Helpful and Not helpful: one click records it, the standing one is pressed, and Undo takes it back", async () => {
+  const user = userEvent.setup();
+  const answered = ask("Q-8", { state: "done", answer: { text: "It is in Settings.", cites: [] } });
+  const { calls } = open([answered], {
+    "POST asks/Q-8/verdict": () => ({ id: "SIG-4" }),
+    "POST asks/verdict/SIG-4/undo": () => ({ ok: "SIG-4" }),
+  });
+  const row = await item("Question Q-8");
+  const helpful = within(row).getByRole("button", { name: "Helpful" });
+  expect(helpful).toHaveAttribute("aria-pressed", "false");
+  await user.click(helpful);
+  await waitFor(() => expect(sent(calls, "POST asks/Q-8/verdict")).toEqual({ helpful: true }));
+  expect(await screen.findByText("Thanks. Marked helpful.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST asks/verdict/SIG-4/undo")).toBe(true));
+});
+
+test("a standing verdict shows pressed, and the other button replaces it", async () => {
+  const user = userEvent.setup();
+  const answered = ask("Q-7", { state: "done", answer: { text: "It is in Settings.", cites: [] }, verdict: "helpful", verdict_signal: "SIG-1" });
+  const { calls } = open([answered], { "POST asks/Q-7/verdict": () => ({ id: "SIG-2" }) });
+  const row = await item("Question Q-7");
+  expect(within(row).getByRole("button", { name: "Helpful" })).toHaveAttribute("aria-pressed", "true");
+  await user.click(within(row).getByRole("button", { name: "Helpful" }));
+  expect(calls.some((c) => c.route === "POST asks/Q-7/verdict")).toBe(false);
+  await user.click(within(row).getByRole("button", { name: "Not helpful" }));
+  await waitFor(() => expect(sent(calls, "POST asks/Q-7/verdict")).toEqual({ helpful: false }));
 });

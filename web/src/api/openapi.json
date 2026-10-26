@@ -4347,6 +4347,21 @@
         "title": "AnswerCorrectionIn",
         "type": "object"
       },
+      "AnswerVerdictIn": {
+        "additionalProperties": false,
+        "properties": {
+          "helpful": {
+            "description": "True for Helpful, false for Not helpful.",
+            "title": "Helpful",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "helpful"
+        ],
+        "title": "AnswerVerdictIn",
+        "type": "object"
+      },
       "AnswerView": {
         "properties": {
           "cites": {
@@ -4733,6 +4748,34 @@
             ],
             "title": "State",
             "type": "string"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "helpful",
+                  "not_helpful"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person said about the answer, when they did (and haven't taken back).",
+            "title": "Verdict"
+          },
+          "verdict_signal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The signal behind the verdict, which Undo takes back.",
+            "title": "Verdict Signal"
           },
           "version": {
             "default": 1,
@@ -16936,7 +16979,7 @@
         "type": "object"
       },
       "ProjectEndingItem": {
-        "description": "One open item a waiting project ending would drop: the held op's `index` and the item's own words.",
+        "description": "One item a waiting project ending would drop: the held op's `index` and the item's own words. `other` is a\nchange an add-on made for the ending (its own record dropped, say), listed beside the core's items and kept the\nsame way.",
         "properties": {
           "id": {
             "title": "Id",
@@ -16949,7 +16992,8 @@
           "kind": {
             "enum": [
               "action",
-              "question"
+              "question",
+              "other"
             ],
             "title": "Kind",
             "type": "string"
@@ -18514,6 +18558,71 @@
         "title": "ProposedOp",
         "type": "object"
       },
+      "QualityAnswerWeek": {
+        "description": "Helpful and not helpful answers for one week, each counted on its own (design 6.20).",
+        "properties": {
+          "helpful": {
+            "description": "Answers from Ask the person marked helpful.",
+            "title": "Helpful",
+            "type": "integer"
+          },
+          "not_helpful": {
+            "description": "Answers from Ask the person marked not helpful.",
+            "title": "Not Helpful",
+            "type": "integer"
+          },
+          "week": {
+            "description": "The Monday of the week, in the person's time zone.",
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          },
+          "week_end": {
+            "description": "The Sunday of the week.",
+            "format": "date",
+            "title": "Week End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "week_end",
+          "helpful",
+          "not_helpful"
+        ],
+        "title": "QualityAnswerWeek",
+        "type": "object"
+      },
+      "QualityAnswers": {
+        "description": "What the person said about the answers from Ask, a measure counted beside the corrections and never added to\nthem: a verdict they took back isn't counted.",
+        "properties": {
+          "helpful": {
+            "description": "Answers marked helpful in the window.",
+            "title": "Helpful",
+            "type": "integer"
+          },
+          "not_helpful": {
+            "description": "Answers marked not helpful in the window.",
+            "title": "Not Helpful",
+            "type": "integer"
+          },
+          "weeks": {
+            "description": "The same for each week of the window, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityAnswerWeek"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "helpful",
+          "not_helpful",
+          "weeks"
+        ],
+        "title": "QualityAnswers",
+        "type": "object"
+      },
       "QualityApart": {
         "description": "The three signals the person gives, never added together: missed, declined and dropped. A drop is not a\ncorrection of the assistant, so it is in no correction count and not in the repeat-correction rate.",
         "properties": {
@@ -19260,6 +19369,10 @@
       "QualityView": {
         "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly\nmissing-op list and \"Missed one\" for each person and week, over the configured window.",
         "properties": {
+          "answers": {
+            "$ref": "#/components/schemas/QualityAnswers",
+            "description": "Answers from Ask marked helpful and not helpful, over the window and for each week."
+          },
           "apart": {
             "$ref": "#/components/schemas/QualityApart",
             "description": "Missed, declined and dropped, each counted on its own, over the window and for each week."
@@ -19338,6 +19451,7 @@
           "repeat_corrections",
           "missing",
           "apart",
+          "answers",
           "since",
           "until",
           "closes",
@@ -30103,6 +30217,46 @@
         "summary": "Asks"
       }
     },
+    "/api/asks/verdict/{signal_id}/undo": {
+      "post": {
+        "description": "Undo Helpful or Not helpful: the verdict stops counting.",
+        "operationId": "undo_verdict_api_asks_verdict__signal_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Verdict"
+      }
+    },
     "/api/asks/{request_id}/correction": {
       "post": {
         "description": "The person says what an answer got wrong: one correction signal naming the answer, the change and the run\nthat made it, so the assistant learns from it.",
@@ -30191,6 +30345,56 @@
           }
         },
         "summary": "Read Answer"
+      }
+    },
+    "/api/asks/{request_id}/verdict": {
+      "post": {
+        "description": "The person says the answer helped or didn't, in one click: one signal naming the answer, standing in place of\nan earlier opposite verdict. The id returned is the signal's, which `/asks/verdict/{id}/undo` takes back.",
+        "operationId": "give_verdict_api_asks__request_id__verdict_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerVerdictIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Give Verdict"
       }
     },
     "/api/auto-closed": {

@@ -18,7 +18,7 @@ For a plugin's own tests, install the host from its repository without the web s
 
 One distribution may ship several plugins. They may share a helper package of their own (a module neither plugin registers from); what a plugin may not do is import another plugin's registered package or read its records.
 
-Import everything from `engine.plugin_api`: `Change`, `ChannelContext`, `ChannelFailed`, `ChannelNotSent`, `ChannelSent`, `ChannelUndone`, `ChannelUnknown`, `OutgoingAbout`, `OutgoingAct`, `OutgoingRecipient`, `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `ItemFile`, `ExtractError`, `EventDetails`, `EventOccurrence`, `EventPerson`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `TODAY_GROUPS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
+Import everything from `engine.plugin_api`: `Change`, `ChannelContext`, `ChannelFailed`, `ChannelNotSent`, `ChannelSent`, `ChannelUndone`, `ChannelUnknown`, `OutgoingAbout`, `OutgoingAct`, `OutgoingRecipient`, `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `ItemFile`, `ExtractError`, `EventDetails`, `EventOccurrence`, `EventPerson`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `TODAY_GROUPS`, `DROP_HOOK_KINDS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
 
 ## The manifest: plugin.yaml
 
@@ -117,6 +117,14 @@ Register an op: an `OpModel` subclass with a single literal `op` id and a `write
 #### `registrar.op_validator(op_name: str, fn: Callable) -> None`
 
 Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far. `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via": "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind, "about": the record it works on as {"kind", "id"} or None, "request": the run's request id or None, "part": the part of the record the request names (as given to `queue_request(part=)`) or None}; ops a plugin's event handler or job staged with `apply_op` have actor "plugin" and via "handler" or "job". A validator with a parameter named `settings` (or `**kwargs`) also gets the plugin's settings by keyword, so a check that depends on a setting is a validator, and its refusal is fed back in a fix round like any other; a refusal raised from an op's `apply` refuses the op without a fix round. Before anything applies, the core dry-runs the whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check at the write boundary, a validator usually runs about three times per op, so it must be pure and quick. There is no cache the core keeps for a pass: the view is made anew for each call. Cache costly derived data by its content (a hash of the text it comes from, say, in a module-level dictionary of bounded size), never by record id or version alone, since the changeset so far may change what a version holds.
+
+#### `registrar.project_ending(fn: Callable) -> None`
+
+Wind down the plugin's own records when a project ends: `fn(project_id, view)` returns the plugin's own ops for that ending (a list of op dicts or op models; for example dropping its open records about the project), or an empty list. `view` is a read view of core and the plugin's own records, as before the ending applies, and a hook with a parameter named `settings` also gets the plugin's settings by keyword. The core's wind-down calls every running plugin's hook once for each project the change ends (a status whose meaning is done) and joins the ops into the ending's own op group, so they are one change with the core's own drops: one Undo, and when the ending was read from an input, one held proposal in which each item is listed with the core's and can be kept like them, with one keep list. The ops are checked by the applier like any of the plugin's ops (validators, write scopes and tiers), and only the plugin's own ops are accepted: a core op or another plugin's op breaks the contract and turns the plugin off. The call is held to `steward.pack_call_limit_seconds` and contained like an event handler: a hook that raises, returns something else or doesn't return in time adds nothing, is noted on the plugin, and the plugin's records that refer to the project are listed as left open for the add-on to close, never as resolved. A hook must be pure and quick: it reads and returns ops, it never writes. One hook per plugin; the plugin needs no manifest entry.
+
+#### `registrar.on_drop(kind: str, fn: Callable) -> None`
+
+Follow a core record that is dropped: `fn(record_id, view)` returns the plugin's own ops (as for `project_ending`) to apply with the drop, for example dropping the record of the plugin's that is paired with a dropped action. `kind` is "action" for now (`DROP_HOOK_KINDS`). Whenever the applier drops a record of that kind, the ops join the drop's own op group (same Undo, same hold: when the drop waits for the person, so do they). A drop that is part of a project's ending is covered by the `project_ending` hook, not by this one. Time limit, containment, what ops are accepted and purity are as for `project_ending`. One hook per kind per plugin.
 
 #### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | None = None, packet: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = (), learning: str = 'core') -> None`
 
@@ -1036,9 +1044,9 @@ Its attributes: `root` (the workspace folder), `plugins` (the names of the plugi
 
 A plugin's status (the first plugin given, unless named), whether it started or not.
 
-#### `ws.registered(plugin: str | None = None) -> dict[str, dict[str, Any]]`
+#### `ws.registered(plugin: str | None = None) -> dict[str, Any]`
 
-What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ..., "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs", "stage_checks", "file_kinds", "lints", "extractors", "scorers"}. Empty kinds are left out. A started plugin only.
+What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ..., "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs", "stage_checks", "file_kinds", "lints", "extractors", "scorers", "drop_hooks"}, and "project_ending" (its hook, when it registered one). Empty kinds are left out. A started plugin only.
 
 #### `ws.save(path: str | Path) -> SavedWorkspace`
 
@@ -1059,6 +1067,34 @@ Run a task kind with a scripted answer, through the dispatcher: the packet, the 
 #### `ws.action(name: str, target: Any = None, choices: dict[str, Any] | None = None) -> ActionResult`
 
 Run a person action on a record (a Stored, or (kind, id)) or the workspace, and get its proposal.
+
+#### `ws.end_project(project: str, *, as_person: bool = True, quote: str = 'the whole project is complete') -> Outcome`
+
+End a project (set it to a status whose meaning is done) and say what became of each op, the core's drops and the ops the plugin's `project_ending` hook returned among them. As the person it applies at once, with one Undo (`undo(outcome)`); `as_person=False` reads it from outside content that says `quote`, so the ending and every drop wait together: see `ending_items`, `finish_ending` and `decline_ending`.
+
+#### `ws.drop_action(action: str, *, as_person: bool = True, quote: str = 'this is no longer needed') -> Outcome`
+
+Drop an action and say what became of each op, the ops the plugin's `on_drop` hook returned among them. As the person it applies at once, with one Undo; `as_person=False` reads it from outside content that says `quote`, so the drop and the plugin's ops wait together.
+
+#### `ws.ending_items(outcome: Outcome) -> list[dict[str, Any]]`
+
+The project endings waiting in a changeset, as the screen lists them: for each, `index` (the held op that ends the project), `project`, and its `items`, each with `index`, `kind` ("action", "question", or "other" for an op a plugin's hook added, whose `text` is its `describe()` label), `id` and `text`.
+
+#### `ws.finish_ending(outcome: Outcome, keep: list[int] | tuple[int, ...] = ()) -> Outcome`
+
+Confirm the one waiting project ending in a changeset as the person would: the items whose `index` is in `keep` stay open (declined, one signal each), the ending and every other item apply.
+
+#### `ws.decline_ending(outcome: Outcome) -> Outcome`
+
+Keep the project as it is: the waiting ending and every item that waits with it are declined together.
+
+#### `ws.left_open(project: str, closing: list[str] | tuple[str, ...] = ()) -> list[dict[str, Any]]`
+
+The records of running plugins that refer to a project, which the ending lists as left open for the plugin to close (`kind`, `id`, `title`); `closing` names records a waiting item already closes.
+
+#### `ws.undo(outcome: Outcome) -> Outcome`
+
+Undo a whole changeset with one Undo, as the person would, and return it as it stands after.
 
 #### `ws.emit(event: str, payload: dict[str, Any]) -> list[dict[str, Any]]`
 
@@ -1877,7 +1913,7 @@ A correction by the person, the measure of how well the assistant does. The engi
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now', 'no_reply_needed', 'missed', 'suggestion_dismissed', 'suggestion_chosen', 'review_time'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their words); suggestion_dismissed, said "Not now" to a suggestion line on Today (the note says which line and what it was when put off, so it stays off until something about it changes; it is not a correction); suggestion_chosen, picked one of the choices a suggestion line offered (the note says which line, the choice and what the line was; it is not a correction); review_time, the seconds spent looking over the assistant's work on one screen (the note says which screen and how long; it is a measure, not a correction). |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now', 'no_reply_needed', 'missed', 'suggestion_dismissed', 'suggestion_chosen', 'review_time', 'answer_helpful', 'answer_not_helpful'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their words); suggestion_dismissed, said "Not now" to a suggestion line on Today (the note says which line and what it was when put off, so it stays off until something about it changes; it is not a correction); suggestion_chosen, picked one of the choices a suggestion line offered (the note says which line, the choice and what the line was; it is not a correction); review_time, the seconds spent looking over the assistant's work on one screen (the note says which screen and how long; it is a measure, not a correction); answer_helpful or answer_not_helpful, said one answer from Ask helped or didn't (the ref is the answer; the note is "taken back" once the person undid it; a measure that teaches nothing by itself). |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |

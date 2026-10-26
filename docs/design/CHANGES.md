@@ -1027,6 +1027,27 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 220. A pack follows a project's ending and a dropped action; Helpful / Not helpful on an answer (2026-10-26; plugin API release part A1; P61, P55)
+
+- **Design 3.3, 3.5 and 6.7 (F35, lesson 8):** two registrar calls, `registrar.project_ending(fn)` (`fn(project_id, view)`) and
+  `registrar.on_drop("action", fn)` (`fn(record_id, view)`), each returning the pack's own ops. `endings.wind_down` calls every
+  running pack's hook (through `PackCalls` and the containment of `PluginHost.failed`, once for a change, in
+  `PluginHost.ending_ops` and `drop_ops`) and joins the ops to the ending's or the drop's op group: one Undo; held with the
+  ending when it was read from an input, and listed with the core's items (`HeldItem.kind` "other", the op's `describe`),
+  kept by the same keep list; a record a held item closes isn't also listed as left open (`left_behind(closing=)`). A hook
+  that fails or hangs adds nothing and leaves its records listed as left open; a core op or another pack's op turns the pack
+  off. The ops are exempt only from the task's allowed-ops list (`Context.hook_ops`), never from validators, write scopes or
+  tiers. A drop that is part of an ending is the ending hook's. No manifest entry. `ProjectEndingItem.kind` gains "other".
+  The testing kit gains `ws.end_project`, `ws.drop_action`, `ws.ending_items`, `ws.finish_ending`, `ws.decline_ending`,
+  `ws.left_open` and `ws.undo`, and `ws.registered` lists the hooks. **Built:** `tests/test_pack_hooks.py`,
+  `web/src/components/TodayTerms.test.tsx` (an add-on's item in the ending's detail).
+- **Design 6.20 and 6.25 (P55):** two signal kinds, `answer_helpful` and `answer_not_helpful`: Helpful and Not helpful under
+  an answer on Ask, one click, an Undo toast, one standing verdict for an answer (the other replaces it; Undo marks the
+  signal "taken back"). Counted on Quality (`answers`, the window and each week) beside missed, declined and dropped and never
+  added to the corrections; neither teaches by itself. New routes `POST /api/asks/{id}/verdict` and `POST
+  /api/asks/verdict/{signal}/undo`; `AskView.verdict`, `QualityView.answers`. **Built:** `tests/test_answer_feedback.py`,
+  `web/src/components/Ask.test.tsx`, `web/src/components/Quality.test.tsx`.
+
 ## 219. Files said by hand to be one document, and the designer's lessons from running as rules with tests (2026-10-26; P62, P63)
 
 - **Design 6.2, 7.20, 7.14 and 4.5 (F36):** **Same document as…** and **Not the same document** on a saved file's own page and
@@ -1281,8 +1302,8 @@ Built: `tests/test_versions.py`. (The log's top entry was 211, so this takes 212
   looked over (`engine/dispatcher.py`, `_answer_only`); `POST /api/asks/{id}/correction` records a `change_requested`
   signal naming the answer. **Built:** `tests/test_ask.py` (`test_the_guide_names_every_screen_and_is_found_by_its_near_names`,
   `test_the_guide_has_the_owners_question_about_the_knowledge_panel`, `test_an_answer_to_the_persons_question_leaves_nothing_to_look_over`,
-  `test_correcting_an_answer_records_a_signal_naming_the_answer`), `web/src/components/Ask.test.tsx`. Not built: "Helpful"
-  and "Not helpful" (two new signal kinds).
+  `test_correcting_an_answer_records_a_signal_naming_the_answer`), `web/src/components/Ask.test.tsx`. "Helpful" and "Not helpful"
+  (two new signal kinds) are built in section 220.
 - **Design 7 (Today):** an answered question is the line "Read the answer: <question>" until it is opened (`POST /api/asks/{id}/read`); `web/src/components/TodayOneDecision.test.tsx`.
 - **Design 7 (Today, Review):** a review line never counts an answer (`_outcome_of`); the assistant's own summary of a run
   and the summary of the change an item follows are not shown (`web/src/components/WhatChanged.test.tsx`: "the

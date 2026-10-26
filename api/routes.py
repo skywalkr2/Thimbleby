@@ -1609,7 +1609,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     id=each.id,
                     title=each.title,
                 )
-                for each in endings.left_behind(store, found.project)
+                for each in endings.left_behind(
+                    store, found.project, [i.id for i in found.items if i.kind == "other" and i.id]
+                )
             ],
         )
 

@@ -48,10 +48,12 @@ class EndingAnswer(BaseModel):
 
 
 class ProjectEndingItem(BaseModel):
-    """One open item a waiting project ending would drop: the held op's `index` and the item's own words."""
+    """One item a waiting project ending would drop: the held op's `index` and the item's own words. `other` is a
+    change an add-on made for the ending (its own record dropped, say), listed beside the core's items and kept the
+    same way."""
 
     index: int
-    kind: Literal["action", "question"]
+    kind: Literal["action", "question", "other"]
     id: str
     text: str
 
@@ -4138,6 +4140,12 @@ class AnswerCorrectionIn(BaseModel):
     note: str = Field(min_length=1, max_length=2000, description="What the answer got wrong, in the person's words.")
 
 
+class AnswerVerdictIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    helpful: bool = Field(description="True for Helpful, false for Not helpful.")
+
+
 class CiteView(BaseModel):
     quote: str = Field(description="The exact words from the cited material; the input's own text, never checked.")
     source: str | None = None
@@ -4176,6 +4184,10 @@ class AskView(BaseModel):
     created_at: str
     changeset: str | None = None
     answer: AnswerView | None = None
+    verdict: Literal["helpful", "not_helpful"] | None = Field(
+        None, description="What the person said about the answer, when they did (and haven't taken back)."
+    )
+    verdict_signal: str | None = Field(None, description="The signal behind the verdict, which Undo takes back.")
     proposals: list[SettingProposalView] = Field(default_factory=list)
     reports: list[ReportView] = Field(default_factory=list)
     about: RecordRef | None = Field(
@@ -5496,6 +5508,24 @@ class QualityApart(BaseModel):
     weeks: list[QualityApartWeek] = Field(description="The same for each week of the window, oldest first.")
 
 
+class QualityAnswerWeek(BaseModel):
+    """Helpful and not helpful answers for one week, each counted on its own (design 6.20)."""
+
+    week: date = Field(description="The Monday of the week, in the person's time zone.")
+    week_end: date = Field(description="The Sunday of the week.")
+    helpful: int = Field(description="Answers from Ask the person marked helpful.")
+    not_helpful: int = Field(description="Answers from Ask the person marked not helpful.")
+
+
+class QualityAnswers(BaseModel):
+    """What the person said about the answers from Ask, a measure counted beside the corrections and never added to
+    them: a verdict they took back isn't counted."""
+
+    helpful: int = Field(description="Answers marked helpful in the window.")
+    not_helpful: int = Field(description="Answers marked not helpful in the window.")
+    weeks: list[QualityAnswerWeek] = Field(description="The same for each week of the window, oldest first.")
+
+
 class QualityCloseDay(BaseModel):
     day: date = Field(description="The day, on the person's own clock.")
     total: int = Field(description="Closes made that day.")
@@ -5647,6 +5677,9 @@ class QualityView(BaseModel):
     )
     apart: QualityApart = Field(
         description="Missed, declined and dropped, each counted on its own, over the window and for each week."
+    )
+    answers: QualityAnswers = Field(
+        description="Answers from Ask marked helpful and not helpful, over the window and for each week."
     )
     since: date = Field(description="The first day of the window the gate-week measures cover.")
     until: date = Field(description="The last day of the window: today, on the person's own clock.")

@@ -272,6 +272,25 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
+            <Section id="quality-answers" title={t("quality.answers.title")} hint={t("quality.answers.hint")}>
+              {view.answers.helpful + view.answers.not_helpful === 0 ? (
+                <Empty text={t("quality.answers.empty")} />
+              ) : (
+                <>
+                  <Days
+                    label={t("quality.answers.title")}
+                    rows={[tn("quality.answers.helpful", view.answers.helpful, {}), tn("quality.answers.not_helpful", view.answers.not_helpful, {})]}
+                  />
+                  <Days
+                    label={t("quality.day_list")}
+                    rows={view.answers.weeks
+                      .filter((w) => w.helpful + w.not_helpful > 0)
+                      .map((w) => t("quality.answers.week", { from: monthDay(w.week), to: monthDay(w.week_end), helpful: w.helpful, not_helpful: w.not_helpful }))}
+                  />
+                </>
+              )}
+            </Section>
+
             <Section id="quality-replays" title={t("quality.replays.title")} hint={t("quality.replays.hint")}>
               {view.replays.count === 0 ? (
                 <Empty text={t("quality.replays.empty")} />

@@ -830,6 +830,8 @@ CORE_LINE_ACTIONS: dict[str, str | None] = {
 #: The groups of Today's queue, in the order the core ranks them: what to decide, what is at risk, what to review and
 #: what to send or follow up on. A plugin's Today line names one of them as its `group`.
 TODAY_GROUPS: tuple[str, ...] = ("decide", "risk", "review", "send")
+#: The kinds of core record a plugin may follow with `Registrar.on_drop`.
+DROP_HOOK_KINDS: tuple[str, ...] = ("action",)
 
 
 @dataclass
@@ -1181,6 +1183,8 @@ class Registrar:
         self.value_lists: dict[str, dict[str, Any]] = {}
         self.sign_ins: dict[str, Any] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
+        self.project_ending_hook: Callable | None = None
+        self.drop_hooks: dict[str, Callable] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -1258,6 +1262,39 @@ class Registrar:
         if not callable(fn):
             raise ValueError("validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
+
+    def project_ending(self, fn: Callable) -> None:
+        """Wind down the plugin's own records when a project ends: `fn(project_id, view)` returns the plugin's own ops
+        for that ending (a list of op dicts or op models; for example dropping its open records about the project),
+        or an empty list. `view` is a read view of core and the plugin's own records, as before the ending applies,
+        and a hook with a parameter named `settings` also gets the plugin's settings by keyword. The core's wind-down
+        calls every running plugin's hook once for each project the change ends (a status whose meaning is done) and
+        joins the ops into the ending's own op group, so they are one change with the core's own drops: one Undo,
+        and when the ending was read from an input, one held proposal in which each item is listed with the core's
+        and can be kept like them, with one keep list. The ops are checked by the applier like any of the plugin's
+        ops (validators, write scopes and tiers), and only the plugin's own ops are
+        accepted: a core op or another plugin's op breaks the contract and turns the plugin off. The call is held to
+        `steward.pack_call_limit_seconds` and contained like an event handler: a hook that raises, returns something
+        else or doesn't return in time adds nothing, is noted on the plugin, and the plugin's records that refer to
+        the project are listed as left open for the add-on to close, never as resolved. A hook must be pure and
+        quick: it reads and returns ops, it never writes. One hook per plugin; the plugin needs no manifest entry."""
+        if self.project_ending_hook is not None or not callable(fn):
+            raise ValueError("one project-ending hook per plugin, and it must be callable")
+        self.project_ending_hook = fn
+
+    def on_drop(self, kind: str, fn: Callable) -> None:
+        """Follow a core record that is dropped: `fn(record_id, view)` returns the plugin's own ops (as for
+        `project_ending`) to apply with the drop, for example dropping the record of the plugin's that is paired with a
+        dropped action. `kind` is "action" for now (`DROP_HOOK_KINDS`). Whenever the applier drops a record of that
+        kind, the ops join the drop's own op group (same Undo, same hold: when the drop waits for the person, so do
+        they). A drop that is part of a project's ending is covered by the `project_ending` hook, not by this one.
+        Time limit, containment, what ops are accepted and purity are as for `project_ending`. One hook per kind per
+        plugin."""
+        if kind not in DROP_HOOK_KINDS:
+            raise ValueError(f"a drop hook follows one of: {', '.join(DROP_HOOK_KINDS)}")
+        if kind in self.drop_hooks or not callable(fn):
+            raise ValueError("one drop hook per kind per plugin, and it must be callable")
+        self.drop_hooks[kind] = fn
 
     def task_kind(
         self,
@@ -2289,6 +2326,7 @@ __all__ = [
     "TodayLine",
     "CORE_LINE_ACTIONS",
     "TODAY_GROUPS",
+    "DROP_HOOK_KINDS",
     "PacketContext",
     "LongText",
     "Unit",

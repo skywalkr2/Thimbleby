@@ -1,8 +1,9 @@
-"""A time limit on what a pack runs for the core (design 3.5, 6.13): its event handlers, its validators and its Today
-lines. A pack that never returns is as fatal as one that crashes, so each call runs on the pack's own thread and the
-caller waits at most the configured limit (`steward.pack_call_limit_seconds`). A call that is still running then is
-abandoned and counts as a failure of that place, like an exception does: the existing containment takes it from there
-(noted on the pack, turned off after the configured number in a row; a validator turns the pack off at once).
+"""A time limit on what a pack runs for the core (design 3.5, 6.13): its event handlers, its validators, its Today
+lines and its project-ending and drop hooks. A pack that never returns is as fatal as one that crashes, so each call
+runs on the pack's own thread and the caller waits at most the configured limit (`steward.pack_call_limit_seconds`). A
+call that is still running then is abandoned and counts as a failure of that place, like an exception does: the
+existing containment takes it from there (noted on the pack, turned off after the configured number in a row; a
+validator turns the pack off at once).
 
 Python cannot stop a thread, so an abandoned call may run on. The pack's thread is then busy, and a later call to the
 same pack fails at once ("an earlier call has not finished") rather than waiting behind it; other packs and the core

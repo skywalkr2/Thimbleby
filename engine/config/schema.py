@@ -3720,9 +3720,10 @@ class StewardFile(FileModel):
         20,
         ge=1,
         le=600,
-        description="The most seconds an add-on's event handler, validator or Today lines may take for one call. A "
-        "call still running then is given up on and counts as a failure of that add-on, as if it had crashed: it is "
-        "noted on the add-on, and a validator or the third failure in a row turns the add-on off.",
+        description="The most seconds an add-on's event handler, validator, Today lines, or project-ending or drop "
+        "hook may take for one call. A call still running then is given up on and counts as a failure of that add-on, "
+        "as if it had crashed: it is noted on the add-on, and a validator or the third failure in a row turns the "
+        "add-on off.",
         json_schema_extra={"internal": True},
     )
     reminders: RemindersSettings = Field(

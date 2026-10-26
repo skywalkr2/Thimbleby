@@ -4,6 +4,25 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: A pack follows a project's ending and a dropped action, and an answer can be marked Helpful or Not helpful (plugin API release, part A1)
+
+**Decided:** The project-ending hook and the drop hook are built as the first part of the one batched plugin API release.
+`registrar.project_ending(fn)` returns a pack's own ops for a project that ends; `registrar.on_drop("action", fn)` returns
+a pack's own ops for an action that is dropped (the risk paired with it). The ops join the core's op group, so the person
+gets one Undo, one held proposal when the ending came from an input, and one keep list; each hook runs under
+`steward.pack_call_limit_seconds` and is contained like a handler, and a hook that fails leaves its records listed as left
+open, never resolved. A hook may return only its own pack's ops (a core op or another pack's op turns the pack off); the
+ops go through the applier's validators, write scopes and tiers and are exempt only from the task's allowed-ops list. The
+two hooks need no manifest entry. A drop inside an ending is the ending hook's, so nothing is closed twice. Helpful and
+Not helpful are two new signal kinds, `answer_helpful` and `answer_not_helpful`: a measure counted on Quality beside the
+other signals, with one standing verdict per answer and an Undo, teaching nothing by themselves. Not decided here: a
+manifest entry for the hooks (it can be added with `provides` later), and drop hooks for kinds other than `action`.
+**Decided by:** the owner, 2026-10-26, the one batched plugin API release; the functional designer, F35 and lesson 8.
+**Why:** the leftover risks kept being chased after a project ended, and an action and its paired risk should end together;
+the owner's first real use asked for a way to say an answer helped. **Impact:** design 3.3, 3.5, 5.1, 6.7, 6.20 and 6.25;
+plugin API 0.3.90 (version and guide finished once for the release); two signal kinds, two routes, a Quality block, no new
+setting. Change log: section 220.
+
 ## 2026-10-26: Files said by hand to be one document, the current copy by version then date, and the designer's lessons from running as product rules with tests (P62, P63)
 
 **Decided:** (F36) A person can say by hand that two files in a watched folder are one document ("Same document as…", from a

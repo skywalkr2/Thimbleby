@@ -327,11 +327,11 @@ class PluginWorkspace:
             return PluginState("off", "it isn't installed or turned on", [], {})
         return PluginState(found.state, found.reason, list(found.notes), dict(found.tools))
 
-    def registered(self, plugin: str | None = None) -> dict[str, dict[str, Any]]:
+    def registered(self, plugin: str | None = None) -> dict[str, Any]:
         """What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ...,
         "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs",
-        "stage_checks", "file_kinds", "lints", "extractors", "scorers"}. Empty kinds are left out. A started plugin
-        only."""
+        "stage_checks", "file_kinds", "lints", "extractors", "scorers", "drop_hooks"}, and "project_ending" (its
+        hook, when it registered one). Empty kinds are left out. A started plugin only."""
         from types import MappingProxyType
 
         registrar = self.store.plugins.registrars.get(plugin or self.plugins[0])
@@ -354,12 +354,15 @@ class PluginWorkspace:
             ("lints", "lints"),
             ("extractors", "extractors"),
             ("scorers", "scorers"),
+            ("drop_hooks", "drop_hooks"),
         )
-        found = {}
+        found: dict[str, Any] = {}
         for label, attribute in kinds:
             value = getattr(registrar, attribute, None)
             if value:
                 found[label] = MappingProxyType(dict(value))
+        if registrar.project_ending_hook is not None:
+            found["project_ending"] = registrar.project_ending_hook
         return found
 
     def save(self, path: str | Path) -> SavedWorkspace:
@@ -491,6 +494,85 @@ class PluginWorkspace:
             list(pending.problems),
             apply,
         )
+
+    def end_project(
+        self, project: str, *, as_person: bool = True, quote: str = "the whole project is complete"
+    ) -> Outcome:
+        """End a project (set it to a status whose meaning is done) and say what became of each op, the core's drops
+        and the ops the plugin's `project_ending` hook returned among them. As the person it applies at once, with one
+        Undo (`undo(outcome)`); `as_person=False` reads it from outside content that says `quote`, so the ending and
+        every drop wait together: see `ending_items`, `finish_ending` and `decline_ending`."""
+        from engine.lists import core_lists, describe
+
+        view = self.store.read()
+        done = next(
+            value
+            for value in core_lists()["project-status"]["values"]
+            if describe(view, "project-status", value).meaning == "done"
+        )
+        op: dict[str, Any] = {"op": "record.set", "kind": "project", "id": project, "field": "status", "value": done}
+        if as_person:
+            return self.apply([op])
+        return self.apply([{**op, "evidence": {"quote": quote}}], summary=quote, as_person=False, trusted=False)
+
+    def drop_action(self, action: str, *, as_person: bool = True, quote: str = "this is no longer needed") -> Outcome:
+        """Drop an action and say what became of each op, the ops the plugin's `on_drop` hook returned among them. As
+        the person it applies at once, with one Undo; `as_person=False` reads it from outside content that says
+        `quote`, so the drop and the plugin's ops wait together."""
+        op: dict[str, Any] = {"op": "action.drop", "id": action, "reason": quote}
+        if as_person:
+            return self.apply([op])
+        return self.apply([{**op, "evidence": {"quote": quote}}], summary=quote, as_person=False, trusted=False)
+
+    def ending_items(self, outcome: Outcome) -> list[dict[str, Any]]:
+        """The project endings waiting in a changeset, as the screen lists them: for each, `index` (the held op that
+        ends the project), `project`, and its `items`, each with `index`, `kind` ("action", "question", or "other" for
+        an op a plugin's hook added, whose `text` is its `describe()` label), `id` and `text`."""
+        from engine.endings import held_endings
+
+        view = self.store.read()
+        return [
+            {
+                "index": e.index,
+                "project": e.project,
+                "items": [{"index": i.index, "kind": i.kind, "id": i.id, "text": i.text} for i in e.items],
+            }
+            for e in held_endings(view, outcome.changeset, view.get("changeset", outcome.changeset).data["ops"])
+        ]
+
+    def finish_ending(self, outcome: Outcome, keep: list[int] | tuple[int, ...] = ()) -> Outcome:
+        """Confirm the one waiting project ending in a changeset as the person would: the items whose `index` is in
+        `keep` stay open (declined, one signal each), the ending and every other item apply."""
+        from engine.endings import finish_ending
+
+        (waiting,) = self.ending_items(outcome)
+        finish_ending(self.store, self.cfg, outcome.changeset, waiting["index"], list(keep))
+        return self._outcome(outcome.changeset)
+
+    def decline_ending(self, outcome: Outcome) -> Outcome:
+        """Keep the project as it is: the waiting ending and every item that waits with it are declined together."""
+        from engine.endings import decline_ending
+
+        (waiting,) = self.ending_items(outcome)
+        decline_ending(self.store, outcome.changeset, waiting["index"])
+        return self._outcome(outcome.changeset)
+
+    def left_open(self, project: str, closing: list[str] | tuple[str, ...] = ()) -> list[dict[str, Any]]:
+        """The records of running plugins that refer to a project, which the ending lists as left open for the plugin
+        to close (`kind`, `id`, `title`); `closing` names records a waiting item already closes."""
+        from engine.endings import left_behind
+
+        return [
+            {"kind": each.kind, "id": each.id, "title": each.title}
+            for each in left_behind(self.store, project, closing)
+        ]
+
+    def undo(self, outcome: Outcome) -> Outcome:
+        """Undo a whole changeset with one Undo, as the person would, and return it as it stands after."""
+        from engine.dispatcher import undo_changeset
+
+        undo_changeset(self.store, outcome.changeset)
+        return self._outcome(outcome.changeset)
 
     def emit(self, event: str, payload: dict[str, Any]) -> list[dict[str, Any]]:
         """Raise an event as the core would and return the work the handlers queued: one dict per new request

@@ -203,6 +203,7 @@ function AskRow(props: { revealed?: boolean; item: AskItem; onApplied: () => voi
               )}
             </div>
           )}
+          {item.answer && <Verdict request={item.id} verdict={item.verdict ?? null} />}
           {item.answer && <CorrectIt request={item.id} />}
           {proposals.map((p) => (
             <Proposal key={p.id} proposal={p} onApplied={props.onApplied} />
@@ -213,6 +214,32 @@ function AskRow(props: { revealed?: boolean; item: AskItem; onApplied: () => voi
         </div>
       )}
     </li>
+  );
+}
+
+// Helpful and Not helpful: one click each, the standing one pressed, with an Undo toast. The other replaces it.
+function Verdict(props: { request: string; verdict: "helpful" | "not_helpful" | null }) {
+  const { t } = useWords();
+  const act = useAct();
+  const say = (helpful: boolean) => {
+    if (props.verdict === (helpful ? "helpful" : "not_helpful")) return;
+    void act(
+      () => api.answerVerdict(props.request, helpful),
+      (made) => ({
+        message: t(helpful ? "ask.toast.helpful" : "ask.toast.not_helpful"),
+        undo: () => api.undoAnswerVerdict(made.id),
+      }),
+    );
+  };
+  return (
+    <div className="acts" role="group" aria-label={t("ask.verdict_group")}>
+      <button type="button" className="btn quiet" aria-pressed={props.verdict === "helpful"} onClick={() => say(true)}>
+        {t("ask.helpful")}
+      </button>
+      <button type="button" className="btn quiet" aria-pressed={props.verdict === "not_helpful"} onClick={() => say(false)}>
+        {t("ask.not_helpful")}
+      </button>
+    </div>
   );
 }
 

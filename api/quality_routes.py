@@ -10,6 +10,8 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     Ok,
+    QualityAnswers,
+    QualityAnswerWeek,
     QualityApart,
     QualityApartWeek,
     QualityCloseDay,
@@ -92,8 +94,22 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
         ended = gate_measures.endings_measure(view, view.ledger(kind="action"), span, here)
         person = people.pm
         apart = quality.apart_per_week(view, now, days, here)
+        answered = quality.answers_per_week(view, now, days, here)
         counted = gate_measures.counts_measure(view, person, span)
         return QualityView(
+            answers=QualityAnswers(
+                helpful=sum(w.helpful for w in answered),
+                not_helpful=sum(w.not_helpful for w in answered),
+                weeks=[
+                    QualityAnswerWeek(
+                        week=w.week,
+                        week_end=w.week + timedelta(days=6),
+                        helpful=w.helpful,
+                        not_helpful=w.not_helpful,
+                    )
+                    for w in answered
+                ],
+            ),
             since=span.since,
             until=span.until,
             closes=QualityCloses(

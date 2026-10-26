@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     AnswerCorrectionIn,
+    AnswerVerdictIn,
     AnswerView,
     AskIn,
     AskView,
@@ -18,6 +19,7 @@ from api.schemas import (
     ConversationIn,
     ConversationView,
     Created,
+    Ok,
     ProposalApply,
     ReadVersion,
     RecordRef,
@@ -26,7 +28,7 @@ from api.schemas import (
     SettingProposalView,
     SettingsSaved,
 )
-from engine import conversation
+from engine import answer_feedback, conversation
 from engine import settings as config_screens
 from engine.config import Config
 from engine.names import People
@@ -100,6 +102,25 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         events.changed()
         return Created(id=made)
 
+    @r.post("/asks/{request_id}/verdict")
+    def give_verdict(request_id: str, body: AnswerVerdictIn) -> Created:
+        """The person says the answer helped or didn't, in one click: one signal naming the answer, standing in place of
+        an earlier opposite verdict. The id returned is the signal's, which `/asks/verdict/{id}/undo` takes back."""
+        try:
+            made = answer_feedback.give(store, request_id, body.helpful, worker.now())
+        except StoreError as err:
+            raise HTTPException(status_code=404, detail="There is no answer to say that about.") from err
+        events.changed()
+        return Created(id=made)
+
+    @r.post("/asks/verdict/{signal_id}/undo")
+    def undo_verdict(signal_id: str) -> Ok:
+        """Undo Helpful or Not helpful: the verdict stops counting."""
+        if not answer_feedback.take_back(store, signal_id):
+            raise HTTPException(status_code=404, detail="There is no verdict to take back.")
+        events.changed()
+        return Ok(ok=signal_id)
+
     #: The ops an ask shows apart from its changes: the answer, a suggested setting and a drafted report.
     own_ops = ("answer", "setting.propose", "report.draft")
 
@@ -116,6 +137,12 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         if answers:
             found = answers[-1].data
             answer = AnswerView(text=found["text"], cites=[CiteView(**c) for c in found.get("cites", [])])
+        standing = answer_feedback.standing(view, answers[-1].id) if answers else None
+        verdict = (
+            None
+            if standing is None
+            else ("helpful" if standing.data["kind"] == answer_feedback.HELPFUL else "not_helpful")
+        )
         place = conversation.about(q)
         ops: list[Any] = []
         changeset = view.get("changeset", q.data["changeset"]) if q.data.get("changeset") else None
@@ -136,6 +163,8 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             created_at=str(q.data["created_at"]),
             changeset=q.data.get("changeset"),
             answer=answer,
+            verdict=verdict,
+            verdict_signal=standing.id if standing is not None else None,
             proposals=[
                 SettingProposalView(id=p.id, version=p.version, **_pick(p.data, "key", "value", "why", "status"))
                 for p in of("setting_proposal", q.id)

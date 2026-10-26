@@ -10,6 +10,33 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.90 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a 0.3.89 plugin relies on changes.
+
+- **A pack follows a project's ending:** `registrar.project_ending(fn)`, with `fn(project_id, view)` returning the
+  plugin's own ops for that ending (a list of op dicts or op models; `settings` is passed by keyword to a hook that names
+  it). The core's wind-down calls every running plugin's hook once for each project a change ends and joins the ops into
+  the ending's op group: one Undo; when the ending was read from an input, one held proposal in which each item is listed
+  with the core's (worded by the op's `describe`) and kept by the same keep list. A record a held item closes is not also
+  listed as left open. One hook per plugin, no manifest entry.
+- **A pack follows a dropped record:** `registrar.on_drop(kind, fn)` with `fn(record_id, view)`, for `kind` in
+  `DROP_HOOK_KINDS` (`"action"`), returns the plugin's own ops (the risk paired with a dropped action, say), joined into
+  the drop's own op group with the same Undo and hold. A drop that is part of a project's ending belongs to the
+  `project_ending` hook, not this one. One hook per kind per plugin.
+- **What the hooks may return:** only the plugin's own ops (a core op or another plugin's op breaks the contract and
+  turns the plugin off). They are checked by the applier like any of its ops (validators, write scopes, tiers). Calls are
+  held to `steward.pack_call_limit_seconds` and contained like an event handler: a hook that raises, returns something
+  else or doesn't return in time adds nothing, is noted on the plugin, and its records that refer to the project are
+  listed as left open for the add-on to close, never as resolved. A hook is pure and quick (it reads and returns ops) and
+  may run more than once for one change, so it returns the same ops each time.
+- **Two signal kinds** on the core's `signal` record: `answer_helpful` and `answer_not_helpful` (Helpful and Not helpful on
+  an answer from Ask). They are measures, not corrections.
+- **The testing kit:** `ws.end_project(project, as_person=True)`, `ws.drop_action(action, as_person=True)`,
+  `ws.ending_items(outcome)`, `ws.finish_ending(outcome, keep=())`, `ws.decline_ending(outcome)`,
+  `ws.left_open(project)` and `ws.undo(outcome)` test a hook through the applier as the person and as outside content;
+  `ws.registered()` lists `project_ending` and `drop_hooks`.
+
 ## What 0.3.89 adds
 
 - `context.web` (connectors and channels) also has `.put`, `.patch` and `.delete`, with the same host limits, errors

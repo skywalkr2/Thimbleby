@@ -64,7 +64,7 @@ export function ProjectEndingDetail(props: { line: QueueLine }) {
                     <input id={id} type="checkbox" checked={kept.has(item.index)} onChange={(e) => toggle(item.index, e.target.checked)} />
                     <span className={styles.text}>{item.text}</span>
                   </label>
-                  <Pill tone="neutral">{t(item.kind === "action" ? "project_ending.kind.action" : "project_ending.kind.question")}</Pill>
+                  <Pill tone="neutral">{t(`project_ending.kind.${item.kind}`)}</Pill>
                 </li>
               );
             })}

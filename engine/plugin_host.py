@@ -585,6 +585,56 @@ class PluginHost:
                 found += [(plugin, line) for line in lines]
         return found
 
+    def ending_ops(self, project: str, view: Any) -> list[Any]:
+        """The ops every running plugin's project-ending hook returns for a project that is ending, as op models, in
+        the order of the plugins' names. A hook that fails or times out adds nothing and is noted on its plugin."""
+        return self._hook_ops("project-ending hook", project, view, lambda r: r.project_ending_hook)
+
+    def drop_ops(self, kind: str, record_id: str, view: Any) -> list[Any]:
+        """The ops every running plugin's drop hook for `kind` returns for a record that is being dropped."""
+        return self._hook_ops(f"{kind} drop hook", record_id, view, lambda r: r.drop_hooks.get(kind))
+
+    def _hook_ops(self, where: str, target: str, view: Any, find: Callable[[Registrar], Callable | None]) -> list[Any]:
+        from engine.plugin_api import PluginMisuse, ReadView
+
+        found: list[Any] = []
+        for plugin, registrar in sorted(self.registrars.items()):
+            fn = find(registrar)
+            if fn is None or not self.active(plugin):
+                continue
+            try:
+                read = self._with_files(ReadView(view, plugin))
+                extra = {"settings": registrar.config.model_copy(deep=True)} if _takes_settings(fn) else {}
+                result = self.pack_calls.run(plugin, fn, target, read, **extra)
+                ops = self._hook_result(registrar, result)
+            except PluginMisuse as err:
+                self.disable(plugin, f"{where} broke the plugin contract: {err}")
+                continue
+            except Exception as err:
+                self.failed(plugin, where, err)
+                continue
+            self.succeeded(plugin, where)
+            found += ops
+        return found
+
+    def _hook_result(self, registrar: Registrar, result: Any) -> list[Any]:
+        """What a hook returned, as the plugin's own op models: a list of op dicts or op models, nothing else."""
+        from engine.plugin_api import OpModel, PluginMisuse
+
+        if result is None:
+            return []
+        if not isinstance(result, (list, tuple)):
+            raise ValueError("a hook returns a list of ops")
+        ops = []
+        for item in result:
+            data = item.model_dump(mode="json") if isinstance(item, OpModel) else item
+            if not isinstance(data, dict) or not isinstance(data.get("op"), str):
+                raise ValueError("a hook returns ops: dicts with an op name, or op models")
+            if data["op"] not in registrar.ops:
+                raise PluginMisuse(f"{data['op']} isn't one of {registrar.name}'s own ops")
+            ops.append(self.ops[data["op"]].model_validate(data))
+        return ops
+
     def _left_out_for_ended_projects(self, lines: list[Any]) -> list[Any]:
         """The Today lines of a plugin without those about a record of a project that has ended: nothing there is to be
         chased, reminded of or notified. A line about no record, or about a record with no project, stays."""

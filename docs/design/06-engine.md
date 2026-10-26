@@ -504,9 +504,24 @@ one Undo of the change takes the ending and the drops back), or keeps the projec
 assistant never guesses what should outlive the project: every item is listed. A pack's records that refer to the
 project are listed beneath as "left open: the add-on that made these closes them", never as resolved: the core can't
 tell whether an add-on counts one as open, and a core delete is not a close, so there is no "Close these too" until
-the plugin API has a project-ending hook (F35). Until then a pack's Today lines about a record of an ended project are
-left out (`PluginHost.today`), so nothing of it is chased or counted in a notice; a line that names no record can't be
-matched and stays. Not built: the hook itself, and the pack's own ops on its risks.
+the plugin API has a project-ending hook (F35). A pack's Today lines about a record of an ended project are left out
+(`PluginHost.today`), so nothing of it is chased or counted in a notice; a line that names no record can't be matched and
+stays.
+
+**A pack follows an ending and a drop (F35, lesson 8; plugin API 0.3.90).** A pack that registers `registrar.project_ending`
+is asked, once for each project a change ends, for its own ops (for example closing its open risks about the project);
+`wind_down` joins them to the ending's op group, after the core's own drops. So there is one Undo; when the ending was
+read from an input, the pack's ops are held with the ending and listed with the core's items in the detail (as "Add-on"
+items, worded by the op's own `describe`), each can be kept like the others, and one keep list covers them all; and a record
+a held item closes is no longer listed as left open. `registrar.on_drop("action", fn)` does the same for a dropped action:
+the ops it returns (the paired risk, say) join the drop's own group and are held when the drop is. A drop that is part of
+an ending is the ending hook's, not the drop hook's, so nothing is closed twice. A hook is held to
+`steward.pack_call_limit_seconds` and contained like an event handler (3.5); one that fails, hangs or returns something
+other than the pack's own ops adds nothing, and the pack's records about the project stay listed as left open, never as
+resolved (a core op or another pack's op in the answer breaks the contract and turns the pack off). The hook's ops are the
+pack's own ops, checked by the applier with their validators, write scopes and tiers, and are exempt only from the task's
+list of allowed ops (the task didn't choose them). **Built:** `tests/test_pack_hooks.py`. A pack's line naming no record
+and its chasing outside Today lines still can't be matched.
 
 **Text stays text.** Every field of an op that holds text is a string, and a mapping or a list that arrives where text
 belongs is refused in plain words, never turned into a string: "action.text has to be text, but it arrived as a mapping of
@@ -2626,6 +2641,7 @@ hand, an automatic close pulled back, and an edited follow-up message (a draft t
 | undone | the PM undoes a changeset or part of one |
 | dropped / reworded | the PM drops (the note is the reason) or rewords (the note is the old and new wording) a question the assistant filed. Refs: the question; the changeset and run that made it. Undoing the correction leaves the signal and records none. **Built**: `tests/test_corrections.py::test_reword_changes_the_question_records_a_reworded_signal_naming_its_run_and_undo_restores_it`, `tests/test_corrections.py::test_drop_keeps_the_question_with_its_reason_records_dropped_and_undo_opens_it_again` |
 | change requested | the person asks for a change to something the assistant made, with a note on its row ("Change this": an action, question, decision, calendar entry or fact). Refs: the item; the changeset and run that made it, when there was one; the note is the person's words. The note also goes to the assistant as the person's own input about the item. **Built**: `tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now` |
+| answer helpful / not helpful | the person says one answer from Ask helped or didn't (the buttons Helpful and Not helpful under the answer; one click each, an Undo toast). Refs: the answer; the changeset and run that made it. One verdict stands for an answer: the other button replaces it, the same one again changes nothing, and Undo marks the signal "taken back" so it is no longer counted. They are a measure counted on Quality (`answers`, the window and each week, never added to the corrections) and teach nothing by themselves; "Correct it" is where the person says what was wrong. **Built:** `tests/test_answer_feedback.py` |
 | pulled back | the PM pulls an auto-closed change back ("This is ours") |
 | set aside | the person sets a mail item aside by hand ("Set aside: personal" or "Set aside: sales", 6.5). Refs: the requests closed by it, or the snapshot when none was waiting; the note is the section, and says when a sorting rule was offered for the sender. Undoing it records no signal, and learning never reads anything marked set aside (6.5). **Built**: `tests/test_set_aside.py::test_set_aside_by_hand_records_a_set_aside_signal_and_putting_it_back_records_none` |
 | draft edited | the approved content differs from the assistant's draft (the difference is kept). Refs: the person the message was for, then the ids of the questions it covered; when those all came from one run, that run and its changeset (otherwise both are empty). **Built**: `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`, `tests/test_corrections.py::test_an_edited_message_over_questions_from_different_runs_or_none_leaves_the_run_empty` |
@@ -2647,7 +2663,7 @@ given, so it is a checked citation, not the model's say-so. If the first rate do
 second stays near zero, the knowledge isn't reaching the runs that need it. *As built,* `GET /api/quality` reports both
 per task kind over `knowledge.quality_window_days` (28), the repeat-correction rate per week only for weeks with at least
 `knowledge.min_corrections_per_week` (10) corrections, and the weekly missing-op list from each changeset's `missing`
-(6.13); only the run that produced a changeset counts. The screen is phase B's. **Built:** `tests/test_quality.py`. Missed, declined and dropped are also reported each on its own (`apart`, window and weeks), so a week of drops never reads as a week of misses: **built:** `tests/test_quality.py::test_the_quality_route_gives_missed_declined_and_dropped_apart`. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
+(6.13); only the run that produced a changeset counts. The screen is phase B's. **Built:** `tests/test_quality.py`. Missed, declined and dropped are also reported each on its own (`apart`, window and weeks), so a week of drops never reads as a week of misses: **built:** `tests/test_quality.py::test_the_quality_route_gives_missed_declined_and_dropped_apart`. Helpful and not helpful answers are counted on their own too (`answers`, window and weeks; a verdict taken back isn't counted): **built:** `tests/test_answer_feedback.py::test_both_verdicts_are_counted_on_quality_each_on_its_own`. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
 
 - **Quality panel** (Admin tab): rates over time by task kind, provider and model (share of changesets sent back or undone,
   share of questions dropped, auto-close pull-back rate, draft edit size), with each figure linking to its examples.
@@ -3303,7 +3319,8 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 the side menu and Settings, what each is for and the near names people use ("panel", "page", "screen", "tab"); a test
 asks for each screen by those names, with the screen list read from the navigation code. An answer to the person's own
 question changed nothing: it has no review, no approve button and nothing waiting, and the request closes as looked over.
-It shows once, on Ask, with "Correct it", which records one `change_requested` correction naming the answer. The
+It shows once, on Ask, with "Helpful" and "Not helpful" (one `answer_helpful` or `answer_not_helpful` signal naming the answer,
+with Undo; 6.20) and "Correct it", which records one `change_requested` correction naming the answer. The
 assistant's one-line summary of a run is internal and never shown, and the ask prompt calls the reader "the person".
 
 ## 6.26 Stages

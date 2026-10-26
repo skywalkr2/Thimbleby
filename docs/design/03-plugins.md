@@ -90,6 +90,7 @@ Each row gives the call a plugin makes (or the manifest key), what it adds, and 
 | Today contributor | lines on the Today list | `registrar.today(name, lines=)`: each line has one action, the plugin's own or one of the core's | 0.3.18 |
 | Job | scheduled work | `registrar.job(name, every_minutes=, run=)`: reads, queues requests, files questions, stages the plugin's own ops; never writes records or calls AI itself. The workspace changes or turns off its schedule | 0.3.18 |
 | Interface | a versioned contract other plugins can use: record fields to read, events, task kinds to request (3.9) | `registrar.define_interface`, `registrar.provide_interface`, and the manifest's `interfaces`; the item shape is a schema the host checks | 0.3.16 |
+| Ending and drop hooks | the pack's own ops when a project ends or a core record is dropped, joined to the core's own change (6.7) | `registrar.project_ending(fn)`: `fn(project_id, view)` returns the pack's ops; `registrar.on_drop("action", fn)`: `fn(record_id, view)`. Same Undo, same hold, one keep list; own ops only; contained and time-limited like a handler | 0.3.90 |
 | Event handler | a reaction to a core or interface event | `registrar.subscribe(event, fn)` and the manifest's `subscribes` (3.4) | 0.1 |
 | Wording | what screens call the plugin's own kinds | `provides.wording`: YAML files of wording keys in the plugin's namespace; the workspace's `ui.wording` overrides | 0.3.31 |
 | Help | text that asking the assistant reads and cites | `provides.help`: Markdown files, one section per `##` heading | 0.3.29 |
@@ -173,7 +174,7 @@ Enforced by the plugin host, the applier and the self-check, and by the publishe
 - **Code against the API, not the internals.** Plugins import only `engine.plugin_api`. Until 1.0, a minor version may break a
   plugin; the manifest's `plugin_api` range says which it works with.
 - **Failures stay contained.** A plugin that raises is turned off for the run with the reason in its status; the core and other
-  plugins keep running. Calls that only read or react (Today lines, interface items, event handlers, jobs) are contained one
+  plugins keep running. Calls that only read or react (Today lines, interface items, event handlers, jobs, ending and drop hooks) are contained one
   call at a time: the call is skipped and noted on the plugin, and the plugin is turned off only after
   `workspace.plugins.failures_before_off` failures in a row there. Breaking the contract, or failing inside a write (an op, a
   validator, a lint, a stage check), turns it off at once. Disabling a plugin stops its jobs and hides its panels, and keeps

@@ -162,3 +162,22 @@ test("keeping the project as it is declines the ending and its items, and Undo a
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undecline")).map((c) => c.route)).toEqual(["POST changesets/CS-1/ops/4/undecline", "POST changesets/CS-1/ops/5/undecline", "POST changesets/CS-1/ops/6/undecline"]));
 });
+
+test("an add-on's own item is listed with the others and kept like them", async () => {
+  const user = userEvent.setup();
+  const withPack: S["ProjectEndingView"] = {
+    ...endingView,
+    items: [...endingView.items, { index: 7, kind: "other", id: "RSK-2", text: "Close the risk 'Late paper'" }],
+    left_open: [],
+  };
+  const calls = show([ending], {
+    "GET changesets/CS-1/ops/4/project-ending": () => withPack,
+    "POST changesets/CS-1/ops/4/project-ending": () => ({ ok: "CS-1" }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  const item = await screen.findByRole("checkbox", { name: "Close the risk 'Late paper'" });
+  expect(screen.getByText("Add-on")).toBeInTheDocument();
+  await user.click(item);
+  await user.click(screen.getByRole("button", { name: "End Spring book, keeping 1 item" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/4/project-ending")?.body).toEqual({ end: true, keep: [7] }));
+});

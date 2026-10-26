@@ -10,6 +10,7 @@ screen is never read for words: they said what they meant by pressing the button
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -258,16 +259,50 @@ def project_ended(view: Any, project_id: str | None) -> bool:
     return found is not None and describe(view, "project-status", found.data.get("status")).meaning == "done"
 
 
+def hook_key(op: Any) -> str:
+    """An op in one canonical form, to tell whether the change already holds it."""
+    return json.dumps(op.model_dump(mode="json"), sort_keys=True)
+
+
+def _hook_ops(ctx: Any, purpose: str, target: str, view: Any) -> list[Any]:
+    """The ops the add-ons' hooks return for one project ending (`purpose` "ending") or one dropped record of a kind
+    (`purpose` the kind), asked once for each in a change's context: a hook that fails is contained and noted once, not
+    once for every check of the same change."""
+    key = (purpose, target)
+    if key not in ctx.hook_calls:
+        plugins = ctx.store.plugins
+        ctx.hook_calls[key] = (
+            plugins.ending_ops(target, view) if purpose == "ending" else plugins.drop_ops(purpose, target, view)
+        )
+    return ctx.hook_calls[key]
+
+
 def wind_down(cs: Any, ctx: Any) -> Any:
     """Add to a changeset, for each project it ends, a drop of every open action (one waiting for an owner too, with
     its "Pick an owner" question) and every open or sent question filed about the project, all in one op group with
     the ending so one Undo takes them all back. The drops go at the end, so the positions of the ops already there
     don't move. Dropped, not done: nobody is credited. A drop the changeset names already isn't added twice. The
-    person keeps an item by refusing its drop in the held proposal."""
+    person keeps an item by refusing its drop in the held proposal.
+
+    The add-ons' own records join the same group: the ops each running add-on's project-ending hook returns for the
+    project, and, for an action the changeset drops for another reason, the ops its drop hooks return (they join that
+    drop's own group). Hook ops are marked on the context (`hook_ops`) so the checks know them as the add-on's own
+    ops, whatever task the change came from, and hold them when the drop or ending is held."""
     view = ctx.store.read()
     ops = list(cs.ops)
     named = {(o.op, o.id) for o in ops if isinstance(o, (ActionDropOp, QuestionDropOp))}
+    present = {hook_key(o) for o in ops}
     extra: list[Any] = []
+
+    def join(pack_ops: Sequence[Any], group: str, purpose: str) -> None:
+        for pack_op in pack_ops:
+            joined = pack_op.model_copy(update={"group": group})
+            key = hook_key(joined)
+            ctx.hook_ops[key] = purpose
+            if key not in present:
+                present.add(key)
+                extra.append(joined)
+
     for i, op in enumerate(ops):
         if not ends_project(view, op):
             continue
@@ -289,14 +324,30 @@ def wind_down(cs: Any, ctx: Any) -> Any:
                 and ("question.drop", question.id) not in named
             ):
                 extra.append(QuestionDropOp(id=question.id, reason=PROJECT_ENDED, evidence=evidence, group=group))
+        join(_hook_ops(ctx, "ending", op.id, view), group, ENDING_HOOK)
+    for i, op in enumerate(ops):
+        if not isinstance(op, ActionDropOp) or op.reason == PROJECT_ENDED:
+            continue
+        group = op.group or f"drop-{op.id}"
+        pack_ops = _hook_ops(ctx, "action", op.id, view)
+        if pack_ops:
+            ops[i] = op.model_copy(update={"group": group})
+            join(pack_ops, group, DROP_HOOK)
     if not extra and ops == list(cs.ops):
         return cs
     return cs.model_copy(update={"ops": [*ops, *extra]})
 
 
+#: What an op an add-on's hook added is for: the ending of a project, or the drop of a record.
+ENDING_HOOK = "ending"
+DROP_HOOK = "drop"
+
+
 @dataclass(frozen=True)
 class HeldItem:
-    """One open action or question an ending read from an input would drop: the held op's `index` in its change."""
+    """One item an ending read from an input would bring: the held op's `index` in its change. `kind` is "action" or
+    "question" for the core's own drops, and "other" for an op an add-on's hook added, whose `text` is the op's own
+    label and whose `id` is the record it names, when it names one."""
 
     index: int
     kind: str
@@ -353,13 +404,30 @@ def held_endings(view: Any, changeset_id: str, outcomes: list[dict[str, Any]]) -
                     " ".join(str(record.data.get("text") or record.data.get("title") or "").split()) if record else ""
                 )
                 items.append(HeldItem(other["index"], kind, drop.get("id", ""), text))
+            elif (
+                other.get("status") == "held"
+                and "/" in str(drop.get("op"))
+                and drop.get("group") == raw.get("group")
+                and other["index"] != outcome["index"]
+            ):
+                items.append(_hook_item(other))
         found.append(HeldEnding(changeset_id, outcome["index"], op.id, tuple(items)))
     return found
 
 
-def left_behind(store: Any, project: str) -> list[LeftOpen]:
+def _hook_item(outcome: dict[str, Any]) -> HeldItem:
+    """An op an add-on's hook added to a held ending, as one item: its own label (`describe`), else its name."""
+    raw = outcome.get("op") or {}
+    named = raw.get("id")
+    label = " ".join(str(outcome.get("label") or "").split())
+    return HeldItem(outcome["index"], "other", named if isinstance(named, str) else "", label or str(raw.get("op")))
+
+
+def left_behind(store: Any, project: str, closing: Sequence[str] = ()) -> list[LeftOpen]:
     """The records of running add-ons' own kinds that refer to the project, in the order the kinds are declared. Only
-    the add-on knows whether one of its records is still open, so none is called open or closed here."""
+    the add-on knows whether one of its records is still open, so none is called open or closed here. A record in
+    `closing` (named by an op the add-on's own hook added to the waiting ending, which lists it as an item) isn't left
+    behind."""
     from engine.stages import record_title
 
     view = store.read()
@@ -371,7 +439,7 @@ def left_behind(store: Any, project: str) -> list[LeftOpen]:
         if not project_paths:
             continue
         for stored in view.list(kind):
-            if any(project in values_at(stored.data, path) for path in project_paths):
+            if stored.id not in closing and any(project in values_at(stored.data, path) for path in project_paths):
                 found.append(LeftOpen(kind, stored.id, record_title(stored)))
     return found
 

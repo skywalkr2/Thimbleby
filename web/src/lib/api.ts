@@ -185,6 +185,9 @@ export const api = {
   readAnswer: (request: string) => call<S["Created"]>("POST", `asks/${id(request)}/read`, {}),
   correctAnswer: (request: string, note: string) =>
     call<S["Created"]>("POST", `asks/${id(request)}/correction`, { note }),
+  answerVerdict: (request: string, helpful: boolean) =>
+    call<S["Created"]>("POST", `asks/${id(request)}/verdict`, { helpful }),
+  undoAnswerVerdict: (signal: string) => call<S["Ok"]>("POST", `asks/verdict/${id(signal)}/undo`, {}),
   people: () => call<S["PersonView"][]>("GET", "people"),
 
   stageRecords: () => call<S["StageView"][]>("GET", "stages/records"),

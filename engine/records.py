@@ -2136,6 +2136,8 @@ class Signal(Record):
         "suggestion_dismissed",
         "suggestion_chosen",
         "review_time",
+        "answer_helpful",
+        "answer_not_helpful",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -2152,7 +2154,9 @@ class Signal(Record):
         "what it was when put off, so it stays off until something about it changes; it is not a correction); "
         "suggestion_chosen, picked one of the choices a suggestion line offered (the note says which line, the choice "
         "and what the line was; it is not a correction); review_time, the seconds spent looking over the assistant's "
-        "work on one screen (the note says which screen and how long; it is a measure, not a correction)."
+        "work on one screen (the note says which screen and how long; it is a measure, not a correction); "
+        "answer_helpful or answer_not_helpful, said one answer from Ask helped or didn't (the ref is the answer; "
+        'the note is "taken back" once the person undid it; a measure that teaches nothing by itself).'
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

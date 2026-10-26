@@ -186,6 +186,16 @@ class Context:
     # Whether the person's own drop writes the correction a drop is. Off for a choice made on a suggestion line, which
     # records its own signal and says nothing about the assistant's work.
     corrections: bool = True
+    # The ops an add-on's project-ending or drop hook added to this change, by `endings.hook_key`, with what each is for
+    # (`endings.ENDING_HOOK` or `endings.DROP_HOOK`); and what each hook returned, so it is asked once for a change.
+    hook_ops: dict[str, str] = field(default_factory=dict)
+    hook_calls: dict[tuple[str, str], list[Any]] = field(default_factory=dict)
+
+
+def _allowed(op: OpModel, ctx: Context) -> bool:
+    """Whether the task may use the op: one of its ops, or an op an add-on's hook added to a project ending or a drop,
+    which the add-on's own manifest and write scopes already bound."""
+    return op.op in ctx.allowed_ops or endings.hook_key(op) in ctx.hook_ops
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -280,7 +290,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 
     for i, op in enumerate(cs.ops):
         name = op.op
-        if name not in ctx.allowed_ops:
+        if not _allowed(op, ctx):
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
         # The outward act (design 6.12): only the person says yes, only the publisher records what happened outside,
@@ -530,6 +540,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         ) and not _persons_own(view, ctx):
             # A project ending read from what came in waits, with every drop it brings, as one proposal.
             problems.append(Problem(endings.PROJECT_ENDING_CHECK, "hold", i, endings.PROJECT_ENDING_WAITS))
+        waits_for = ctx.hook_ops.get(endings.hook_key(op))
+        if waits_for is not None and not _persons_own(view, ctx):
+            # What an add-on closes with a project's ending or a dropped action waits like the ending or drop itself.
+            if waits_for == endings.ENDING_HOOK:
+                problems.append(Problem(endings.PROJECT_ENDING_CHECK, "hold", i, endings.PROJECT_ENDING_WAITS))
+            else:
+                problems.append(Problem("ending-confirm", "hold", i, ENDING_WAITS))
         if isinstance(op, ENDING_OPS) and not _persons_own(view, ctx):
             # How a promise ends is the person's to keep when it was read from what came in (design 6.33).
             problems.append(Problem("ending-confirm", "hold", i, ENDING_WAITS))
@@ -3042,7 +3059,7 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             for i, op in enumerate(cs.ops):
                 messages = ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
                 found += [Problem("plugin-validator", "refuse", i, m) for m in messages]
-                if messages or op.op not in ctx.allowed_ops:
+                if messages or not _allowed(op, ctx):
                     earlier.append((op.op, []))
                     continue
                 tx.sql("SAVEPOINT dry_op")

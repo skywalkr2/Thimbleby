@@ -316,6 +316,33 @@ def apart_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[Ap
     return [ApartWeek(week, **found) for week, found in counts.items()]
 
 
+# ---- helpful and not helpful answers --------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AnswerWeek:
+    week: date  # the Monday
+    helpful: int
+    not_helpful: int
+
+
+def answers_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[AnswerWeek]:
+    """How many answers from Ask the person marked helpful and not helpful over the last `days` days, for each week of
+    the window, oldest week first. A verdict the person took back isn't counted, and the two are never added."""
+    from engine.answer_feedback import HELPFUL, NOT_HELPFUL, TAKEN_BACK
+
+    start = now - timedelta(days=days)
+    counts: dict[date, dict[str, int]] = {w: {HELPFUL: 0, NOT_HELPFUL: 0} for w in weeks_in(now, days, here)}
+    for signal in view.list("signal"):
+        when = at_of(signal.data["at"])
+        if signal.data["kind"] not in (HELPFUL, NOT_HELPFUL) or signal.data.get("note") == TAKEN_BACK:
+            continue
+        if when < start or when > now:
+            continue
+        counts[week_of(when, here)][signal.data["kind"]] += 1
+    return [AnswerWeek(week, c[HELPFUL], c[NOT_HELPFUL]) for week, c in counts.items()]
+
+
 # ---- the missing-op list ---------------------------------------------------------------------------------------------
 
 

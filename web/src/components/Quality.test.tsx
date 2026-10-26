@@ -19,6 +19,7 @@ const quality = (over: Partial<View> = {}): View => ({
   missing: [],
   missed: [],
   apart: { missed: 0, declined: 0, dropped: 0, weeks: [] },
+  answers: { helpful: 0, not_helpful: 0, weeks: [] },
   since: "2026-09-21",
   until: "2026-10-19",
   closes: { total: 0, silent: 0, days: [] },
@@ -44,6 +45,14 @@ const FULL = quality({
     weeks: [
       { week: "2026-10-12", week_end: "2026-10-18", missed: 0, declined: 0, dropped: 0 },
       { week: "2026-10-19", week_end: "2026-10-25", missed: 1, declined: 2, dropped: 9 },
+    ],
+  },
+  answers: {
+    helpful: 3,
+    not_helpful: 1,
+    weeks: [
+      { week: "2026-10-12", week_end: "2026-10-18", helpful: 0, not_helpful: 0 },
+      { week: "2026-10-19", week_end: "2026-10-25", helpful: 3, not_helpful: 1 },
     ],
   },
   replays: { count: 2, last_run: null },
@@ -85,6 +94,7 @@ test("the screen has a section for each measure and shows the window's dates", a
     "Promises the app missed",
     "Missed one",
     "Missed, declined and dropped",
+    "Helpful and not helpful answers",
     "Replays",
     "Using what it learned",
     "Corrections that repeated",
@@ -136,6 +146,16 @@ test("missed, declined and dropped are three lines of their own, so a week of dr
   expect(apart.queryByText(/Oct 12 to Oct 18/)).not.toBeInTheDocument();
 });
 
+test("helpful and not helpful answers are counted on their own, a week at a time", async () => {
+  show(FULL);
+  await loaded();
+  const found = within(section("quality-answers"));
+  expect(found.getByText("Helpful: you marked 3 answers helpful.")).toBeInTheDocument();
+  expect(found.getByText("Not helpful: you marked 1 answer not helpful.")).toBeInTheDocument();
+  expect(found.getByText("Oct 19 to Oct 25: helpful 3, not helpful 1.")).toBeInTheDocument();
+  expect(found.queryByText(/Oct 12 to Oct 18/)).not.toBeInTheDocument();
+});
+
 test("the outcome is each measure on its own line, then each week's numbers in words", async () => {
   show(FULL);
   await loaded();
@@ -156,6 +176,7 @@ test("a screen with nothing to show says so in plain words in every section", as
   expect(within(section("quality-counts")).getByText("You haven't entered a count in this window.")).toBeInTheDocument();
   expect(within(section("quality-missed")).getByText("No one has said the assistant missed something in this window.")).toBeInTheDocument();
   expect(within(section("quality-apart")).getByText("Nothing was missed, declined or dropped in this window.")).toBeInTheDocument();
+  expect(within(section("quality-answers")).getByText("You haven't marked an answer helpful or not helpful in this window.")).toBeInTheDocument();
   expect(within(section("quality-replays")).getByText("No misses have been kept as replays yet.")).toBeInTheDocument();
   expect(within(section("quality-knowledge")).getByText(/No work was given what you'd taught the assistant/)).toBeInTheDocument();
   expect(within(section("quality-repeats")).getByText("You haven't corrected the assistant in this window.")).toBeInTheDocument();
