@@ -245,6 +245,14 @@ async function openStatus(page: Page) {
   return page.getByRole("dialog", { name: "Status" });
 }
 
+/** The rail's place on the page, read from the page itself so an empty rail (no card has anything) still has one. */
+async function railBox(page: Page): Promise<{ x: number; width: number }> {
+  return page.evaluate(() => {
+    const r = document.querySelector('[aria-label="Briefing, schedule and mail"]')!.getBoundingClientRect();
+    return { x: r.x, width: r.width };
+  });
+}
+
 test.describe.serial("acceptance scenario", () => {
   test.beforeAll(async ({ request, baseURL }) => {
     origin = new URL(baseURL!).origin;
@@ -875,7 +883,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(change).toHaveCount(0);
   });
 
-  test("Today's empty cards say they were checked once a source is set up, and offer no Connect button", async ({ page }) => {
+  test("Today offers no Connect button once a source is set up", async ({ page }) => {
     await signIn(page);
     await expect(page.getByRole("button", { name: "Connect a calendar" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Connect a mailbox" })).toHaveCount(0);
@@ -923,11 +931,14 @@ test.describe.serial("acceptance scenario", () => {
     await page.setViewportSize({ width: 1512, height: 860 });
     await signIn(page);
     await expect(page.getByRole("region", { name: "Setup", exact: true })).toBeVisible();
-    for (const name of ["Needs you", "Agenda", "Your to-dos", "Came in"]) {
-      await expect(page.getByRole("heading", { level: 2, name, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
+    // The rail holds at most three cards, and never Top priorities, Your to-dos, This week or Agenda.
+    for (const gone of ["Top priorities", "Your to-dos", "This week", "Agenda"]) {
+      await expect(page.getByRole("heading", { name: gone, exact: true })).toHaveCount(0);
     }
+    expect(await page.locator('[aria-label="Briefing, schedule and mail"] > section, [aria-label="Briefing, schedule and mail"] > [data-col]:not([data-col="plugin-panels"])').count()).toBeLessThanOrEqual(3);
     const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
-    const rail = (await page.locator('[data-col="agenda"]').boundingBox())!;
+    const rail = await railBox(page);
     // The queue is the wide pane on the left; the rail is beside it, and nothing sits between them.
     expect(rail.x).toBeGreaterThanOrEqual(queue.x + queue.width);
     expect(queue.width).toBeGreaterThan(rail.width * 1.5);
@@ -946,7 +957,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(inspector).not.toContainText("Choose an item to see its details.");
     const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
     const box = (await inspector.boundingBox())!;
-    const rail = (await page.locator('[data-col="agenda"]').boundingBox())!;
+    const rail = await railBox(page);
     expect(box.x).toBeGreaterThanOrEqual(queue.x + queue.width);
     expect(rail.x).toBeGreaterThanOrEqual(box.x + box.width);
     expect(queue.width).toBeGreaterThanOrEqual(560);
@@ -954,45 +965,31 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("a tablet puts the rail under the queue in two columns, and a phone stacks everything with no sideways scrolling", async ({ page }) => {
+  test("a tablet puts the rail under the queue, and a phone stacks everything with no sideways scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 });
     await signIn(page);
-    // The queue and each panel load on their own, and each load moves what is below it, so the boxes are read in one step (all
+    // The queue and each card load on their own, and each load moves what is below it, so the boxes are read in one step (all
     // from the same layout) and judged by what they say: the check waits for the layout to have settled into the one asked for.
     const queue = page.getByRole("region", { name: "Needs you" });
-    const columns = () =>
-      queue.evaluate((q, ids) => {
-        const box = (el: Element | null) => {
-          const b = el?.getBoundingClientRect();
-          return b ? { x: b.x, y: b.y, width: b.width, height: b.height } : null;
-        };
-        return { queue: box(q), ...Object.fromEntries(ids.map((id) => [id, box(document.querySelector(`[data-col="${id}"]`))])) };
-      }, ["priorities", "week", "agenda", "todo", "arrived"]);
-    type Box = { x: number; y: number; width: number; height: number };
-    type Rule = [string, (b: Record<string, Box>) => boolean];
-    /** What is wrong with the layout, in words, or "" when it is as it should be. */
-    const wrongWith = (found: Record<string, Box | null>, rules: Rule[]) => {
-      if (Object.values(found).some((box) => !box)) return `a box is missing: ${JSON.stringify(found)}`;
-      const boxes = found as Record<string, Box>;
-      const broken = rules.filter(([, holds]) => !holds(boxes)).map(([what]) => what);
-      return broken.length > 0 ? `${broken.join("; ")} ${JSON.stringify(boxes)}` : "";
+    const layout = () =>
+      queue.evaluate((q) => {
+        const rail = document.querySelector('[aria-label="Briefing, schedule and mail"]')!.getBoundingClientRect();
+        const asked = q.getBoundingClientRect();
+        return { queueBottom: asked.y + asked.height, railTop: rail.y, railLeft: rail.x, queueLeft: asked.x, overflow: document.documentElement.scrollWidth - window.innerWidth };
+      });
+    const wrongWith = (found: Awaited<ReturnType<typeof layout>>) => {
+      const broken = [
+        found.railTop < found.queueBottom - 1 ? "the rail is under the queue" : "",
+        found.overflow > 0 ? "nothing scrolls sideways" : "",
+      ].filter(Boolean);
+      return broken.length > 0 ? `${broken.join("; ")} ${JSON.stringify(found)}` : "";
     };
-    const tablet: Rule[] = [
-      ["every panel is under the queue", (b) => ["priorities", "week", "agenda", "todo"].every((id) => b[id].y >= b.queue.y + b.queue.height - 1)],
-      // Two columns, in reading order: Top priorities and This week side by side, then the agenda and the to-dos under them.
-      ["This week is beside Top priorities", (b) => b.week.x > b.priorities.x && b.week.y === b.priorities.y],
-      ["the agenda is under Top priorities", (b) => b.agenda.x === b.priorities.x],
-      ["the to-dos are beside the agenda", (b) => b.todo.x > b.agenda.x && b.todo.y === b.agenda.y],
-    ];
-    await expect.poll(async () => wrongWith(await columns(), tablet), { timeout: 20_000 }).toBe("");
+    await expect.poll(async () => wrongWith(await layout()), { timeout: 20_000 }).toBe("");
     await checkAccessibility(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("html")).toHaveAttribute("data-narrow", "");
-    const phone: Rule[] = [
-      ["the to-dos are under the agenda", (b) => b.todo.y > b.agenda.y + b.agenda.height - 1 && b.todo.x === b.agenda.x],
-      ["Came in is under the to-dos", (b) => b.arrived.y > b.todo.y + b.todo.height - 1],
-    ];
-    await expect.poll(async () => wrongWith(await columns(), phone), { timeout: 20_000 }).toBe("");
+    // On the phone the cards are one line each, below the queue.
+    await expect.poll(async () => wrongWith(await layout()), { timeout: 20_000 }).toBe("");
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });

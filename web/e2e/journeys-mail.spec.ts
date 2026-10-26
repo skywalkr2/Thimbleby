@@ -175,7 +175,7 @@ test.describe.serial("journey: mail", () => {
 
     // The sign-in's sources were read at once and taken in when I pressed Start, so Today has nothing to start: no first-go
     // line, no line waiting for a go.
-    const agenda = page.getByRole("region", { name: "Agenda" });
+    const agenda = page.getByRole("region", { name: "Schedule" });
     const came = page.getByRole("region", { name: "Came in" });
     await expect(came.getByText(recentMail[0])).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
@@ -229,8 +229,10 @@ test.describe.serial("journey: mail", () => {
     if (await showNew.count()) await showNew.click();
     await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
     for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);
-    // My own words filed my action.
-    await expect(page.getByRole("region", { name: "Your to-dos" })).toContainText("Send the venue list by 2026-11-02.");
+    // My own words filed my action; a to-do is listed in To-dos and questions, not on Today.
+    await openView(page, "To-dos and questions");
+    await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible();
+    await openView(page, "Today");
     const catering = reviews.filter({ hasText: mail.find((title) => /quote/i.test(title)) ?? "" });
     await catering.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Look closer" }).click();

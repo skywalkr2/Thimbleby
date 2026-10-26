@@ -36,3 +36,4 @@
 .mark[data-color="pink"] { background: var(--cal-pink); }
 .mark[data-color="purple"] { background: var(--cal-purple); }
 .mark[data-color="gray"] { background: var(--cal-gray); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }

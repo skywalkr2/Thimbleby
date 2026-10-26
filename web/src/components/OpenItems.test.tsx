@@ -1,9 +1,11 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { chooseFilters } from "../lib/open-items";
+import { dateAndTime } from "./ReminderLine";
 import { OpenItems } from "./OpenItems";
 
 const WEB = "https" + "://";
@@ -363,4 +365,112 @@ test("with a side the filters keep Project and No owner", async () => {
   await rows();
   expect(screen.getByRole("combobox", { name: "Project" })).toBeInTheDocument();
   expect(within(screen.getByRole("combobox", { name: "State" })).getByRole("option", { name: "No owner" })).toBeInTheDocument();
+});
+
+// ---- the to-do row's own acts: Drop, Change this, a reminder, a hold, what is learned (moved here with the row) ---------------
+
+test("Drop on a to-do asks why with the cursor in the field, acts at once and Undo takes it back", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST actions/A-1/drop": () => ({ changeset: "CS-9" }), "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }) });
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
+  const field = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
+  expect(field).toHaveFocus();
+  const form = field.closest("form") as HTMLElement;
+  expect(within(form).getByRole("button", { name: "Drop it" })).toBeDisabled();
+  await user.type(field, "The index moved to the printer");
+  await user.click(within(form).getByRole("button", { name: "Drop it" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/A-1/drop")?.body).toEqual({ reason: "The index moved to the printer" }));
+  expect(await screen.findByText("Dropped.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
+});
+
+test("a to-do's menu has Change this, which posts the person's note about that action", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST items/action/A-1/change": () => ({ ok: "A-1", request: "REQ-7", signal: "SIG-1" }) });
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  await user.click(screen.getByRole("menuitem", { name: "Change this" }));
+  await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Due on Friday instead");
+  await user.click(screen.getByRole("button", { name: "Ask for the change" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST items/action/A-1/change")?.body).toEqual({ note: "Due on Friday instead" }));
+  expect(await screen.findByText("Helper will look at it.")).toBeInTheDocument();
+});
+
+test("what is being learned from a change asked for on a to-do shows on that row", async () => {
+  api({
+    "GET knowledge/learned": () => ({
+      lines: [{ signal: "SIG-1", kind: "change_requested", changeset: null, refs: ["A-2"], state: "learning", waiting: "With the assistant, starting now" }],
+    }),
+  });
+  renderApp(<OpenItems />);
+  const row = (await screen.findByText("Order the sample copies")).closest("li")!;
+  expect(await within(row).findByRole("status")).toHaveTextContent("Learning from this…");
+});
+
+test("a to-do whose blocker is over says who answered and when, and Take off hold clears it", async () => {
+  const user = userEvent.setup();
+  const answered = action("A-6", "Ship the proofs", {
+    blocker: { kind: "question", id: "Q-4", name: "Can proof copies ship by Nov 3?", who: "Morgan Sample", state: "answered", answered: "2026-10-09" },
+  });
+  const calls = api({ "POST actions/A-6/unhold": () => ({ ok: "A-6", previous: { waiting_for: "Morgan Sample", since: "2026-10-01", on: "Q-4" } }) }, { actions: [answered] });
+  renderApp(<OpenItems />);
+  expect(await screen.findByText(/^Unblocked: Morgan Sample answered .*9$/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "More actions for Ship the proofs" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Take off hold" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/A-6/unhold")).toBe(true));
+});
+
+test("a blocked to-do says Blocked, waiting on who or what it waits on", async () => {
+  api({}, { actions: [action("A-7", "Sign the contract", { state: "on_hold", on_hold: "Morgan Sample", blocker: { kind: "person", id: "PER-9", name: "Morgan Sample", state: "waiting" } })] });
+  renderApp(<OpenItems />);
+  expect(await screen.findByText(/Blocked, waiting on/)).toHaveTextContent("Blocked, waiting on Morgan Sample");
+});
+
+test("a to-do's menu sets a reminder from a day and time, and a set one is said on its row and can be changed or removed", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST reminders/A-1": () => ({ changeset: "CS-6" }) });
+  const first = renderApp(<OpenItems />);
+  const [row] = await rows();
+  await user.click(within(row).getByRole("button", { name: /More actions for Send the proof/ }));
+  expect(screen.queryByRole("menuitem", { name: "Remove reminder" })).toBeNull();
+  await user.click(screen.getByRole("menuitem", { name: "Remind me…" }));
+  const box = await screen.findByLabelText("Remind me at");
+  fireEvent.change(box, { target: { value: "2026-10-21T10:30" } });
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/A-1")?.body).toEqual({ at: "2026-10-21T10:30" }));
+  first.unmount();
+
+  const at = "2026-10-21T10:30:00-04:00";
+  const again = api({ "POST reminders/A-1": () => ({ changeset: "CS-6" }) }, { actions: [action("A-1", "Send the proof to the printer", { remind_at: at })] });
+  renderApp(<OpenItems />);
+  expect(await screen.findByText(new RegExp(`Reminder ${dateAndTime(at)}`))).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /More actions for Send the proof/ }));
+  expect(screen.getByRole("menuitem", { name: "Change reminder…" })).toBeInTheDocument();
+  await user.click(screen.getByRole("menuitem", { name: "Remove reminder" }));
+  await waitFor(() => expect(again.filter((c) => c.route === "POST reminders/A-1").map((c) => c.body)).toEqual([{}]));
+});
+
+test("a reminder is a menu entry, never a second primary button on the row", async () => {
+  api();
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  expect(within(first).queryByRole("button", { name: /Remind me/ })).toBeNull();
+  expect(within(first).getAllByRole("button").filter((b) => b.getAttribute("data-variant") === "primary" || b.classList.contains("primary"))).toHaveLength(1);
+});
+
+test("the overdue line's link shows the person's own overdue to-dos and no one else's, as many as the line counts", async () => {
+  const mine = [action("A-1", "Send the proof to the printer", { state: "overdue", due: "2026-10-12" }), action("A-8", "Pay the invoice", { state: "overdue", due: "2026-10-10" })];
+  const theirs = action("A-2", "Order the sample copies", { state: "overdue", due: "2026-10-09", owners: [{ person: "P-2", name: "Robin Sample" }] });
+  api({}, { actions: [theirs, ...mine, action("A-3", "Tidy the style sheet")] });
+  chooseFilters({ state: "overdue", person: "P-1" });
+  renderApp(<OpenItems />);
+  const listed = await rows();
+  expect(listed).toHaveLength(2);
+  expect(listed.map((r) => r.textContent).join(" ")).toMatch(/Send the proof to the printer.*Pay the invoice|Pay the invoice.*Send the proof/);
+  expect(screen.queryByText("Order the sample copies")).toBeNull();
 });

@@ -68,7 +68,6 @@ function showToday(lines: Line[], extra: Routes = {}) {
     "GET today/agenda": () => [],
     "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
-    "GET today/priorities": () => ({ lines: [], more: 0, blocker: 0, coming: [] }),
     "GET today/week": () => ({ first: "2026-10-19", last: "2026-10-23", due: [], waiting: [], meetings: [] }),
     "GET watch": () => [],
     "GET projects": () => [],

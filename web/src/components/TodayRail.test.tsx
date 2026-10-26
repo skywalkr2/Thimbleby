@@ -1,8 +1,8 @@
+import { settingsView } from "../lib/views";
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { whenText } from "../lib/dates";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { TodayRail } from "./TodayRail";
 
@@ -45,15 +45,6 @@ const agenda: S["AgendaItemView"][] = [
   event({ title: "Workshop", start: at(LATER, 13), days: [LATER] }),
 ];
 
-const todo: S["TodoView"][] = [
-  { action: "ACT-1", text: "Send the index", project: "PRJ-1", due: "2026-10-08", overdue: true },
-  { action: "ACT-2", text: "Approve the proof", project: "PRJ-1", due: TODAY, overdue: false },
-  { action: "ACT-3", text: "Plan the launch", project: null, due: "2026-10-20", overdue: false },
-  { action: "ACT-4", text: "Tidy the notes", project: null, due: null, overdue: false },
-];
-
-const projects = [{ id: "PRJ-1", name: "Spring book", group: null, owner: null, owner_name: null }];
-
 const inbox: S["InboxView"] = {
   items: [
     message({ title: "Proof is ready", sender: "Robin Sample", unread: true, link: `${WEB}mail.example.com/m/1` }),
@@ -68,18 +59,16 @@ function routes(extra: Routes = {}): Routes {
     "GET today/week": () => ({ first: "2026-10-05", last: "2026-10-09", due: [], waiting: [], meetings: [] }),
     "GET today/agenda": () => agenda,
     "GET today/agenda-span": () => ({ first: "2026-10-09", last: "2026-10-15" }),
-    "GET today/todo": () => todo,
     "GET today/arrived": () => inbox,
-    "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
     "GET watch": () => [],
-    "GET projects": () => projects,
+    "GET setup": () => ({ finished: true, steps: [], settled: 0, total: 0 }),
     ...extra,
   };
 }
 
-function open(extra: Routes = {}, onView = vi.fn(), onAddSource?: () => void) {
+function open(extra: Routes = {}, onView = vi.fn(), onAddSource?: () => void, queueEmpty = false) {
   const calls = fakeApi(routes(extra));
-  renderApp(<TodayRail onView={onView} onAddSource={onAddSource} />);
+  renderApp(<TodayRail onView={onView} onAddSource={onAddSource} queueEmpty={queueEmpty} />);
   return { calls, onView };
 }
 
@@ -95,34 +84,56 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-narrow");
 });
 
-test("five panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
+test("the rail has at most three cards: Schedule and Came in here, and no Top priorities, Your to-dos, This week or Agenda", async () => {
   open();
-  const agendaColumn = await column("Agenda");
-  expect(await within(agendaColumn).findByText("3 events today")).toBeInTheDocument();
-  const list = await column("Your to-dos");
-  await within(list).findByText("4 things to do");
+  const schedule = await column("Schedule");
+  expect(await within(schedule).findByText("3 events today")).toBeInTheDocument();
+  await within(await column("Came in")).findByText("2 messages");
   const names = screen
     .getAllByRole("region")
     .map((r) => r.parentElement?.getAttribute("data-col"))
     .filter(Boolean);
-  expect(names).toEqual(["priorities", "week", "agenda", "todo", "arrived"]);
-  expect(screen.getByRole("heading", { level: 2, name: "Came in" })).toBeInTheDocument();
-  await within(await column("Came in")).findByText("2 messages");
+  expect(names).toEqual(["schedule", "arrived"]);
+  for (const gone of ["Top priorities", "Your to-dos", "This week", "Agenda"]) {
+    expect(screen.queryByRole("heading", { name: gone })).toBeNull();
+  }
   // What needs the person is the queue, which has its own tests; the rail never draws it.
   expect(screen.queryByRole("heading", { name: "Needs you" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "What changed" })).toBeNull();
 });
 
+test("the Schedule card shows the agenda and the week together, and a meeting is listed once whichever of them has it", async () => {
+  const person = "Dev Sample";
+  open({
+    "GET today/week": () => ({
+      first: "2026-10-05",
+      last: "2026-10-16",
+      due: [{ action: "ACT-5", text: "Send the estimate", due: TOMORROW, project: null, owners: [], mine: true, kind: "due" }],
+      waiting: [{ person: "PER-2", person_name: person, count: 2, due: null }],
+      meetings: [event({ title: "Standup", start: at(TODAY, 9), end: at(TODAY, 9, 30) }), event({ title: "Offsite", start: at(LATER, 9), days: [LATER] })],
+    }),
+  });
+  const col = await column("Schedule");
+  expect(await within(col).findByText("Standup")).toBeInTheDocument();
+  expect(within(col).getByRole("heading", { name: "Today" })).toBeInTheDocument();
+  expect(await within(col).findByText("Send the estimate")).toBeInTheDocument();
+  expect(within(col).getByText(new RegExp(person))).toBeInTheDocument();
+  // The agenda has Standup, so the week adds only the meeting beyond the agenda's days.
+  expect(within(col).getAllByText("Standup")).toHaveLength(1);
+  expect(within(col).getAllByText("Offsite")).toHaveLength(1);
+  expect(screen.getAllByRole("region", { name: "Schedule" })).toHaveLength(1);
+});
+
 test("the agenda card leads to the full schedule, a real link that works in a new tab", async () => {
   open();
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const link = await within(col).findByRole("link", { name: "Open the schedule" });
   expect(link).toHaveAttribute("href", expect.stringMatching(/#schedule$/));
 });
 
 test("the agenda groups by day, all-day first, with times, places, called-off labels and link domains", async () => {
   open();
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const days = await within(col).findAllByRole("heading", { level: 3 });
   expect(days.map((h) => h.textContent)).toEqual(["Today", "Tomorrow", expect.stringMatching(/14/)]);
   const today = within(within(col).getByRole("list", { name: "Today" })).getAllByRole("listitem");
@@ -154,7 +165,7 @@ test("the app's own entries follow the calendar events on each day they cover, m
       own({}),
     ],
   });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const today = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
   const rowOf = (text: string) => today.findIndex((row) => row.textContent?.includes(text));
   expect(rowOf("Planning")).toBeLessThan(rowOf("Standup"));
@@ -171,7 +182,7 @@ test("a meeting of a series says how many open items wait for it, linking to the
   const own = (extra: Partial<S["AgendaItemView"]>) =>
     event({ title: "Print sync", snapshot: "EVT-1", source: "", own: true, all_day: true, start: TODAY, days: [TODAY], series: "SER-1", ...extra });
   open({ "GET today/agenda": () => [own({ open_items: 3 }), own({ title: "Quiet sync", snapshot: "EVT-2", open_items: 0 }), event({ title: "Standup", start: at(TODAY, 9) })] });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
   const sync = rows.find((row) => row.textContent?.includes("Print sync"))!;
   expect(sync).toHaveTextContent("Print sync · 3 open");
@@ -190,7 +201,7 @@ test("a plain entry that reads as a task is offered as a to-do in its menu, one 
       "POST changesets/CS-9/undo": () => ({ restored: [0] }),
     },
   );
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
   const pay = rows.find((row) => row.textContent?.includes("Pay the deposit"))!;
   const standup = rows.find((row) => row.textContent?.includes("Standup"))!;
@@ -210,7 +221,7 @@ test("a date of an event read from a calendar links to its entry's page, where t
       event({ title: "Standup", start: at(TODAY, 10) }),
     ],
   });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
   const linked = rows.find((row) => row.textContent?.includes("Harbor stand-up"))!;
   expect(within(linked).getByRole("link", { name: "Harbor stand-up" }).getAttribute("href")).toMatch(/#records\/event\/EVT-7$/);
@@ -221,138 +232,10 @@ test("a date of an event read from a calendar links to its entry's page, where t
 
 test("the now line goes at the end of today's list when everything has ended, and is absent with no timed events", async () => {
   open({ "GET today/agenda": () => [event({ title: "Early", start: at(TODAY, 8), end: at(TODAY, 9) })] });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
   expect(rows[0]).toHaveTextContent("Early");
   expect(rows[1]).toHaveTextContent(/^Now · /);
-});
-
-test("to do: Overdue first with its label and count, then Today, Later and No date", async () => {
-  open();
-  const col = await column("Your to-dos");
-  const heads = await within(col).findAllByRole("heading", { level: 3 });
-  expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "No date 1"]);
-  const overdue = within(col).getByRole("heading", { name: "Overdue 1" }).closest("[data-group]") as HTMLElement;
-  expect(overdue).toHaveTextContent("Send the index");
-  expect(overdue).toHaveTextContent("Spring book");
-  expect(overdue).toHaveTextContent(/Due .*8/);
-  // A row due today doesn't repeat that in its line, and a row with no project shows none.
-  const due = within(col).getByText("Approve the proof").closest("li")!;
-  expect(due).not.toHaveTextContent("Due");
-});
-
-test("to do: a date to check is its own group, says so beside the date and is never overdue, today or later", async () => {
-  const checked: S["TodoView"] = { action: "ACT-6", text: "Book the printer", project: null, due: "2026-10-01", overdue: false, due_check: true, on_hold: null };
-  open({ "GET today/todo": () => [...todo, checked] });
-  const col = await column("Your to-dos");
-  const heads = await within(col).findAllByRole("heading", { level: 3 });
-  expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "Date to check 1", "No date 1"]);
-  const group = within(col).getByRole("heading", { name: "Date to check 1" }).closest("[data-group]") as HTMLElement;
-  expect(group).toHaveTextContent("Book the printer");
-  expect(group).toHaveTextContent(/Due .*1 \(check this date\)/);
-  expect(within(col).getByRole("heading", { name: "Overdue 1" }).closest("[data-group]")).not.toHaveTextContent("Book the printer");
-});
-
-test("to do: an action on hold leaves Overdue and sits last under On hold, saying what it waits for", async () => {
-  const held: S["TodoView"] = { action: "ACT-5", text: "Sign the contract", project: null, due: "2026-10-01", overdue: false, on_hold: "legal review" };
-  open({ "GET today/todo": () => [...todo, held] });
-  const col = await column("Your to-dos");
-  const heads = await within(col).findAllByRole("heading", { level: 3 });
-  expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "No date 1", "On hold 1"]);
-  const group = within(col).getByRole("heading", { name: "On hold 1" }).closest("[data-group]") as HTMLElement;
-  expect(within(group).getByText("On hold: legal review")).toHaveAttribute("title", expect.stringMatching(/^Was due .*1/));
-  expect(group).not.toHaveTextContent(/Due /);
-  const overdue = within(col).getByRole("heading", { name: "Overdue 1" }).closest("[data-group]") as HTMLElement;
-  expect(overdue).not.toHaveTextContent("Sign the contract");
-});
-
-test("to do: a to-do whose blocker is over goes first under Unblocked, saying who answered and when, and Take off hold clears it", async () => {
-  const user = userEvent.setup();
-  const answered: S["TodoView"] = {
-    action: "ACT-6",
-    text: "Ship the proofs",
-    project: null,
-    due: "2026-10-01",
-    overdue: true,
-    on_hold: null,
-    blocker: { kind: "question", id: "Q-4", name: "Can proof copies ship by Nov 3?", who: "Morgan Sample", state: "answered", answered: "2026-10-09" },
-  };
-  const calls = fakeApi(routes({ "GET today/todo": () => [...todo, answered], "POST actions/ACT-6/unhold": () => ({ ok: "ACT-6", previous: { waiting_for: "Morgan Sample", since: "2026-10-01", on: "Q-4" } }) }));
-  renderApp(<TodayRail onView={vi.fn()} />);
-  const col = await column("Your to-dos");
-  const heads = await within(col).findAllByRole("heading", { level: 3 });
-  expect(heads.map((h) => h.textContent)).toEqual(["Unblocked 1", "Overdue 1", "Today 1", "Later 1", "No date 1"]);
-  const group = within(col).getByRole("heading", { name: "Unblocked 1" }).closest("[data-group]") as HTMLElement;
-  expect(group).toHaveTextContent("Ship the proofs");
-  expect(within(group).getByText(/^Unblocked: Morgan Sample answered .*9$/)).toBeInTheDocument();
-  await user.click(within(group).getByRole("button", { name: "More actions for Ship the proofs" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Take off hold" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-6/unhold")).toBe(true));
-});
-
-test("to do: a blocked to-do stays under On hold and says Blocked, waiting on who or what it waits on", async () => {
-  const blocked: S["TodoView"] = {
-    action: "ACT-7",
-    text: "Sign the contract",
-    project: null,
-    due: null,
-    overdue: false,
-    on_hold: "Morgan Sample",
-    blocker: { kind: "person", id: "PER-9", name: "Morgan Sample", state: "waiting" },
-  };
-  open({ "GET today/todo": () => [blocked] });
-  const col = await column("Your to-dos");
-  const group = (await within(col).findByRole("heading", { name: "On hold 1" })).closest("[data-group]") as HTMLElement;
-  expect(within(group).getByText(/Blocked, waiting on/)).toHaveTextContent("Blocked, waiting on Morgan Sample");
-});
-
-test("marking a to-do done uses the action path and offers Undo", async () => {
-  const user = userEvent.setup({ advanceTimers: () => {} });
-  const { calls } = open({
-    "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }),
-  });
-  await user.click(await screen.findByRole("checkbox", { name: "Mark done: Send the index" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(true));
-  expect(calls.find((c) => c.route === "POST actions/ACT-1/status")!.body).toEqual({ status: "done" });
-  expect(await screen.findByText("Marked done.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
-});
-
-test("Drop on a to-do asks why with the cursor in the field, acts at once and Undo takes it back", async () => {
-  const user = userEvent.setup({ advanceTimers: () => {} });
-  const { calls } = open({
-    "POST actions/ACT-1/drop": () => ({ changeset: "CS-9" }),
-    "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
-  });
-  await user.click(await screen.findByRole("button", { name: "More actions for Send the index" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
-  const field = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
-  expect(field).toHaveFocus();
-  const form = field.closest("form") as HTMLElement;
-  expect(within(form).getByRole("button", { name: "Drop it" })).toBeDisabled();
-  await user.type(field, "The index moved to the printer");
-  await user.click(within(form).getByRole("button", { name: "Drop it" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/drop")?.body).toEqual({ reason: "The index moved to the printer" }));
-  expect(await screen.findByText("Dropped.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
-});
-
-test("a to-do's menu adds a note to Mark done, with the cursor in the box", async () => {
-  const user = userEvent.setup({ advanceTimers: () => {} });
-  const { calls } = open({
-    "POST actions/ACT-1/status": () => ({ ok: "ACT-1", request: "REQ-4" }),
-  });
-  await user.click(await screen.findByRole("button", { name: "More actions for Send the index" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Add a note" }));
-  const box = await screen.findByRole("textbox", { name: "Your note" });
-  expect(box).toHaveFocus();
-  await user.type(box, "The printer has it now.");
-  await user.keyboard("{Enter}");
-  await waitFor(() =>
-    expect(calls.find((c) => c.route === "POST actions/ACT-1/status")!.body).toEqual({ status: "done", note: "The printer has it now." }),
-  );
-  expect(await screen.findByText("Marked done. Helper will read your note.")).toBeInTheDocument();
 });
 
 test("came in: unread shows a New label, today's mail its time and older mail its weekday, and nothing about what was handled", async () => {
@@ -385,26 +268,53 @@ test("with a second source the rows say which one they came from", async () => {
       event({ title: "Piano", source: "cal-2", start: at(TODAY, 17) }),
     ],
   });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   expect(await within(col).findByText("Home calendar")).toBeInTheDocument();
   expect(within(col).getByText("Work calendar")).toBeInTheDocument();
 });
 
-test("empty agenda, list and mail each say so, and the buttons go to Connections", async () => {
+test("with nothing connected and setup finished, Schedule and Came in each offer to connect, and open Connections", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { onView } = open({
     "GET today/agenda": () => [],
-    "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0 }),
   });
   expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
-  expect(await screen.findByText("Nothing on your list today.")).toBeInTheDocument();
   expect(await screen.findByText("No mail has come in lately.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Connect a calendar" }));
-  expect(onView).toHaveBeenLastCalledWith("sources");
+  expect(onView).toHaveBeenLastCalledWith(settingsView("connections"));
   await user.click(screen.getByRole("button", { name: "Connect a mailbox" }));
   expect(onView).toHaveBeenCalledTimes(2);
-  expect(onView).toHaveBeenLastCalledWith("sources");
+  expect(onView).toHaveBeenLastCalledWith(settingsView("connections"));
+});
+
+test("while setup is open the cards leave the connect lines out, and an empty rail with an empty queue says so once", async () => {
+  open(
+    { "GET today/agenda": () => [], "GET today/arrived": () => ({ items: [], left_out: 0 }), "GET setup": () => ({ finished: false, steps: [], settled: 0, total: 3 }) },
+    vi.fn(),
+    vi.fn(),
+    true,
+  );
+  expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Connect a mailbox" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Came in" })).toBeNull();
+});
+
+test("the connect lines come back once setup is finished", async () => {
+  open({ "GET today/agenda": () => [], "GET today/arrived": () => ({ items: [], left_out: 0 }) });
+  expect(await screen.findByRole("button", { name: "Connect a calendar" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
+});
+
+test("the empty line is said only when the queue is empty too", async () => {
+  const { calls } = open({ "GET today/agenda": () => [], "GET today/arrived": () => ({ items: [], left_out: 0 }), "GET watch": () => [watched("a")] }, vi.fn(), vi.fn(), false);
+  const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
+  // Every card has answered once the rail has drawn nothing and the queue is the only thing that could have been empty.
+  await waitFor(() => expect(calls.some((c) => c.route === "GET watch")).toBe(true));
+  expect(within(rail).queryByRole("region")).toBeNull();
+  expect(screen.queryByText("Nothing else needs you today")).toBeNull();
 });
 
 function watched(id: string, extra: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] {
@@ -426,7 +336,6 @@ function watched(id: string, extra: Partial<S["WatchSourceView"]> = {}): S["Watc
 
 const EMPTY: Routes = {
   "GET today/agenda": () => [],
-  "GET today/todo": () => [],
   "GET today/arrived": () => ({ items: [], left_out: 0 }),
 };
 
@@ -448,31 +357,30 @@ test("when every source is off, the cards still offer Connect", async () => {
   expect(screen.queryByText(/^Checked /)).toBeNull();
 });
 
-test("with sources set up, the empty cards say they were checked, with the latest read across sources, and have no button", async () => {
-  open({
-    ...EMPTY,
-    "GET watch": () => [
-      watched("a", { last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 8, 5) }),
-      watched("b", { last: { outcome: "ok", started_at: at(TODAY, 11, 40), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 11, 40) }),
-      watched("c", { last: null, read_at: null }),
-    ],
-  });
-  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
-  expect(await screen.findByText("No mail has come in lately.")).toBeInTheDocument();
-  await waitFor(() => expect(screen.getAllByText(`Checked ${whenText(at(TODAY, 11, 40))}`)).toHaveLength(2));
+test("with sources reading and nothing in them, no card is drawn, and nothing says checked or offers to connect", async () => {
+  open(
+    {
+      ...EMPTY,
+      "GET watch": () => [
+        watched("a", { last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 8, 5) }),
+        watched("c", { last: null, read_at: null }),
+      ],
+    },
+    vi.fn(),
+    undefined,
+    true,
+  );
+  expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
+  expect(within(screen.getByRole("group", { name: "Briefing, schedule and mail" })).queryByRole("region")).toBeNull();
+  expect(screen.queryByText(/^Checked /)).toBeNull();
+  expect(screen.queryByText("Not checked yet")).toBeNull();
   expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Connect a mailbox" })).toBeNull();
 });
 
-test("a source that hasn't been read yet says the cards are not checked yet", async () => {
-  open({ ...EMPTY, "GET watch": () => [watched("a", { last: null, read_at: null })] });
-  await waitFor(() => expect(screen.getAllByText("Not checked yet")).toHaveLength(2));
-  expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
-});
-
 test("cards that have rows show no connect button or checked line", async () => {
   open({ "GET watch": () => [] });
-  await within(await column("Agenda")).findByText("Standup");
+  await within(await column("Schedule")).findByText("Standup");
   expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
   expect(screen.queryByText(/^Checked /)).toBeNull();
 });
@@ -483,7 +391,7 @@ test("a column that can't load says so and offers Try again without hiding the o
   } });
   expect(await screen.findByText("Your calendar couldn't be loaded.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-  expect(await screen.findByText("Send the index")).toBeInTheDocument();
+  expect(await screen.findByText("Proof is ready")).toBeInTheDocument();
 });
 
 function checked(over: Partial<S["InboxCheckView"]> = {}): S["InboxCheckView"] {
@@ -557,18 +465,6 @@ test("Check now is offered only while a source is on", async () => {
 
 // ---- Change this, and what was learned -------------------------------------------------------------------------------
 
-test("a to-do's menu has Change this, which posts the person's note about that action", async () => {
-  const user = userEvent.setup({ advanceTimers: () => {} });
-  const { calls } = open({ "POST items/action/ACT-2/change": () => ({ ok: "ACT-2", request: "REQ-7", signal: "SIG-1" }) });
-  const col = await column("Your to-dos");
-  await user.click(await within(col).findByRole("button", { name: "More actions for Approve the proof" }));
-  await user.click(screen.getByRole("menuitem", { name: "Change this" }));
-  await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Due on Friday instead");
-  await user.click(screen.getByRole("button", { name: "Ask for the change" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST items/action/ACT-2/change")?.body).toEqual({ note: "Due on Friday instead" }));
-  expect(await screen.findByText("Helper will look at it.")).toBeInTheDocument();
-});
-
 test("an entry in the app's own calendar has Change this; an event read from a calendar does not", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { calls } = open({
@@ -578,7 +474,7 @@ test("an entry in the app's own calendar has Change this; an event read from a c
     ],
     "POST items/event/EVT-1/change": () => ({ ok: "EVT-1", request: null, signal: "SIG-2" }),
   });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   await within(col).findByText("Delivery window");
   expect(within(col).queryByRole("button", { name: "More actions for Standup" })).toBeNull();
   await user.click(within(col).getByRole("button", { name: "More actions for Delivery window" }));
@@ -586,17 +482,6 @@ test("an entry in the app's own calendar has Change this; an event read from a c
   await user.type(await screen.findByRole("textbox", { name: "Your note" }), "It is a day later");
   await user.click(screen.getByRole("button", { name: "Ask for the change" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST items/event/EVT-1/change")?.body).toEqual({ note: "It is a day later" }));
-});
-
-test("what is being learned from a change asked for on a to-do shows on that row", async () => {
-  open({
-    "GET knowledge/learned": () => ({
-      lines: [{ signal: "SIG-1", kind: "change_requested", changeset: null, refs: ["ACT-2"], state: "learning", waiting: "With the assistant, starting now" }],
-    }),
-  });
-  const col = await column("Your to-dos");
-  const row = (await within(col).findByText("Approve the proof")).closest("li")!;
-  expect(await within(row).findByRole("status")).toHaveTextContent("Learning from this…");
 });
 
 const unread = (id: string, reads: S["WatchSourceView"]["reads"], outcome: "failed" | "offline", over: Partial<S["WatchSourceView"]> = {}) =>
@@ -619,13 +504,13 @@ test("an empty calendar card says the calendar couldn't be read, with why and wh
       watched("mail", { reads: ["mail"] }),
     ],
   });
-  const col = await column("Agenda");
+  const col = await column("Schedule");
   expect(await within(col).findByText("Your calendar couldn't be read, so this list may be missing events.")).toBeInTheDocument();
   expect(within(col).getByRole("alert")).toHaveTextContent("the service refused the sign-in. Sign in to it again");
   expect(within(col).queryByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeNull();
   expect(within(col).queryByText(/^Checked /)).toBeNull();
-  // The mail card has no unread source of its own: it says what it always says.
-  expect(await within(await column("Came in")).findByText("No mail has come in lately.")).toBeInTheDocument();
+  // The mail card has no unread source of its own and nothing in it, so it is not drawn.
+  expect(screen.queryByRole("region", { name: "Came in" })).toBeNull();
 });
 
 test("an empty mail card says the mailbox wasn't read when there was no network, and the calendar card is unaffected", async () => {
@@ -637,12 +522,14 @@ test("an empty mail card says the mailbox wasn't read when there was no network,
   expect(await within(col).findByText("Your mail couldn't be read, so this list may be missing messages.")).toBeInTheDocument();
   expect(within(col).getByRole("alert")).toHaveTextContent("Work mail couldn't be checked without an internet connection. It will retry automatically.");
   expect(within(col).queryByText("No mail has come in lately.")).toBeNull();
-  expect(await within(await column("Agenda")).findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
+  // The calendar card has no unread source of its own and nothing in it, so it is not drawn.
+  expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull();
 });
 
-test("a source of a kind with no unread source never changes the empty card, and a source that is off is not reported", async () => {
-  open({ ...EMPTY, "GET watch": () => [unread("cal", ["calendar"], "failed", { enabled: false }), watched("b", { reads: ["calendar"] })] });
-  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
+test("a source that is off is not reported, so a calendar with nothing in it draws no card", async () => {
+  open({ ...EMPTY, "GET watch": () => [unread("cal", ["calendar"], "failed", { enabled: false }), watched("b", { reads: ["calendar"] })] }, vi.fn(), vi.fn(), true);
+  expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull();
 });
 
 test("Check now says which source couldn't be read and why, in place of only a count", async () => {
@@ -658,18 +545,23 @@ test("Check now says which source couldn't be read and why, in place of only a c
   ).toBeInTheDocument();
 });
 
-test("empty panels show no count of zero, in words or as a badge", async () => {
+test("a card shows no count of zero: a Schedule drawn for the week's due items alone has no event count", async () => {
   open({
+    "GET watch": () => [watched("a")],
     "GET today/agenda": () => [],
-    "GET today/todo": () => [],
-    "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
+    "GET today/week": () => ({
+      first: "2026-10-05",
+      last: "2026-10-16",
+      due: [{ action: "ACT-5", text: "Send the estimate", due: TOMORROW, project: null, owners: [], mine: true, kind: "due" }],
+      waiting: [],
+      meetings: [],
+    }),
   });
-  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
+  const col = await column("Schedule");
+  expect(await within(col).findByText("Send the estimate")).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 (events|things|messages)/);
-  for (const column of ["agenda", "todo", "arrived"]) {
-    const col = document.querySelector(`[data-col="${column}"]`) as HTMLElement;
-    expect(within(col).queryByText("0")).toBeNull();
-  }
+  expect(within(col).queryByText("0")).toBeNull();
+  expect(within(col).queryByText(/^Nothing on your calendar from/)).toBeNull();
 });
 
 // A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add to agenda".
@@ -681,14 +573,14 @@ const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: 
 
 /** Opens the drawer from the agenda's button and returns the drawer. */
 const addLine = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(await within(await column("Agenda")).findByRole("button", { name: "Add to agenda" }));
+  await user.click(await within(await column("Schedule")).findByRole("button", { name: "Add to agenda" }));
   return screen.findByRole("dialog", { name: "Add a meeting" });
 };
 
 test("the agenda has no form of its own: one button opens the drawer, with the cursor in its first field", async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   open(meetingRoutes());
-  const panel = await column("Agenda");
+  const panel = await column("Schedule");
   expect(within(panel).queryByRole("textbox", { name: "What" })).toBeNull();
   const drawer = await addLine(user);
   await waitFor(() => expect(within(drawer).getByRole("textbox", { name: "What" })).toHaveFocus());
@@ -737,14 +629,6 @@ test("a refusal is told in the server's words and the drawer stays open with wha
   expect(within(drawer).getByRole("textbox", { name: "What" })).toHaveValue("Print sync");
 });
 
-test("an empty agenda is one line, with when it was checked and no form", async () => {
-  open({ "GET today/agenda": () => [] });
-  const line = await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/);
-  expect(line.tagName).toBe("P");
-  expect(line.closest("[data-col='agenda']")!.querySelectorAll(".tb-empty p")).toHaveLength(0);
-  expect(screen.queryByRole("textbox", { name: "What" })).toBeNull();
-});
-
 test("on the phone a panel folded to one line says its source couldn't be read, never that it is empty", async () => {
   document.documentElement.setAttribute("data-narrow", "");
   open({
@@ -754,8 +638,8 @@ test("on the phone a panel folded to one line says its source couldn't be read, 
       unread("mail", ["mail"], "offline", { label: "Work mail" }),
     ],
   });
-  expect(await screen.findByRole("button", { name: "Agenda · couldn't be read" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Schedule · couldn't be read" })).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: "Came in · couldn't be read" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Agenda · nothing today" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Schedule · nothing today" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Came in · nothing" })).toBeNull();
 });

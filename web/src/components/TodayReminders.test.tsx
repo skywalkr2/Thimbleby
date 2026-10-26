@@ -11,7 +11,6 @@ import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Notifications } from "./Notifications";
 import { Today } from "./Today";
-import { TodoRow } from "./TodayRail";
 
 // Reminders on Today (design 6.32, 7.7): a line for a reminder that has reached the person, with Done first and the snooze
 // choices in its menu, each with the time it moves to; the one line for reminders that waited for quiet hours; and the
@@ -280,29 +279,4 @@ test("Settings says when notifications are allowed, blocked or not possible here
   vi.stubGlobal("Notification", undefined);
   showNotices();
   expect(screen.getByText("This browser can't show notifications.")).toBeInTheDocument();
-});
-
-// ---- setting a reminder on a to-do --------------------------------------------------------------------------------
-
-const todo = (over: Partial<S["TodoView"]> = {}): S["TodoView"] => ({ action: "ACT-1", text: "Send Oren the estimate", overdue: false, ...over });
-
-test("a to-do's menu sets a reminder from a day and time, and a set one can be changed or removed", async () => {
-  const user = userEvent.setup();
-  const calls = fakeApi({ "POST reminders/ACT-1": () => ({ changeset: "CS-6" }), "GET today/todo": () => [] });
-  const first = renderApp(<TodoRow item={todo()} project="" showDue />);
-  await user.click(screen.getByRole("button", { name: /More actions for/ }));
-  expect(screen.queryByRole("menuitem", { name: "Remove reminder" })).toBeNull();
-  await user.click(screen.getByRole("menuitem", { name: "Remind me…" }));
-  const box = await screen.findByLabelText("Remind me at");
-  fireEvent.change(box, { target: { value: "2026-10-21T10:30" } });
-  await user.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/ACT-1")?.body).toEqual({ at: "2026-10-21T10:30" }));
-  first.unmount();
-
-  renderApp(<TodoRow item={todo({ remind_at: "2026-10-21T10:30:00-04:00" })} project="" showDue />);
-  expect(screen.getByText(`Reminder ${dateAndTime("2026-10-21T10:30:00-04:00")}`)).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: /More actions for/ }));
-  expect(screen.getByRole("menuitem", { name: "Change reminder…" })).toBeInTheDocument();
-  await user.click(screen.getByRole("menuitem", { name: "Remove reminder" }));
-  await waitFor(() => expect(calls.filter((c) => c.route === "POST reminders/ACT-1").map((c) => c.body)).toEqual([{ at: "2026-10-21T10:30" }, {}]));
 });

@@ -713,6 +713,8 @@ function QueueRow(props: {
 }) {
   const { t, tn } = useWords();
   const act = useAct();
+  // The person's own id, so the overdue line opens the list narrowed to their own to-dos, the ones it counts.
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const titleWords = useTitleWords();
   const lineTitle = useLineTitle();
   const reviewCount = useReviewCount();
@@ -897,7 +899,14 @@ function QueueRow(props: {
             : line.count === 1 && line.subject
               ? tn("queue.overdue.was_due", line.waiting_days ?? 0, { date: day(line.due) })
               : tn("queue.overdue.oldest", line.waiting_days ?? 0, { date: day(line.due) }),
-          primary: { label: t("queue.act.show") },
+          // A to-do is acted on in To-dos and questions, so the line opens that list narrowed to the overdue ones.
+          primary: {
+            label: t("queue.overdue.open"),
+            run: () => {
+              chooseFilters({ state: "overdue", person: me.data?.person ?? "" });
+              props.handlers.onOpenView?.("work/open");
+            },
+          },
           menu: [],
         };
       case "review": {

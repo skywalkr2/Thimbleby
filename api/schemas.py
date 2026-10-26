@@ -6043,6 +6043,9 @@ class OpenActionView(BaseModel):
     )
     repeat: RepeatView | None = Field(None, description="How it repeats, when it does, said back from data.")
     effort_minutes: int | None = Field(None, description="About how long it takes, in minutes, when it says.")
+    remind_at: datetime | None = Field(
+        None, description="When the person asked to be reminded of it, on their own clock (their time zone)."
+    )
 
 
 class MeetingIn(BaseModel):

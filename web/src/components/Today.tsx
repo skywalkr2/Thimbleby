@@ -1,6 +1,6 @@
 // The Today screen (design 7.7): what needs the person as a ranked queue, the line that has the cursor in the inspector
-// (from 1680px; below that a line's items open under it), and the rail of top priorities, the week, the agenda, the person's
-// to-dos and what came in.
+// (from 1680px; below that a line's items open under it), and the rail of at most three cards: the briefing, the schedule and
+// what came in.
 import { useEffect, useRef, useState } from "react";
 import { longDay } from "../lib/dates";
 import { useMediaQuery } from "../lib/media";
@@ -10,7 +10,6 @@ import { useQueue, useTodayCount } from "../lib/today";
 import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
-import { BriefCard } from "./BriefCard";
 import { CoverageLine, useNoneText } from "./Coverage";
 import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
@@ -59,7 +58,7 @@ export function Today(props: {
   };
   useReveal("changeset", (id) => open((l) => l.changeset === id));
   useReveal("question", (id) => open((l) => l.question === id));
-  // A line named by its key (Top priorities links to the queue line of what it lists): it opens, with the cursor on it.
+  // A line named by its key (the briefing links to the queue line of what it lists): it opens, with the cursor on it.
   useReveal("line", (key) => {
     const found = queue.data?.find((l) => l.key === key);
     if (!found) return false;
@@ -82,7 +81,7 @@ export function Today(props: {
     onOpenKnowledge: () => props.onView("records/knowledge"),
     onOpenAnswer: props.onOpenAnswer,
     onAddAccount: props.onAddAccount,
-    onOpenSources: () => props.onView("sources"),
+    onOpenSources: () => props.onView(settingsView("connections")),
     onOpenRecord: props.onOpenRecord,
     onOpenGuide: props.onOpenGuide,
     onHandIn: props.onHandIn,
@@ -104,12 +103,8 @@ export function Today(props: {
         <SetupLine workspace={props.workspace} onOpenGuide={props.onOpenGuide} />
       </div>
       <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} shortcuts={props.shortcuts} />
-      {/* The brief opens the rail, so the queue's own lines stay first on the page. */}
-      <TodayRail
-        onView={props.onView}
-        onAddSource={props.onAddSource}
-        brief={<BriefCard workspace={props.workspace} onOpenRecord={props.onOpenRecord} onOpenView={props.onView} />}
-      />
+      {/* The briefing opens the rail, so the queue's own lines stay first on the page. */}
+      <TodayRail onView={props.onView} onAddSource={props.onAddSource} workspace={props.workspace} onOpenRecord={props.onOpenRecord} queueEmpty={count === 0} />
     </div>
   );
 }

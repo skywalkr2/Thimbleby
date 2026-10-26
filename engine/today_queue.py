@@ -1447,7 +1447,18 @@ def _everything(
         # What the assistant or a rule added on its own waits for the person's hours; what waited arrives under one row.
         caused = release_hours.causes(lines, reader, requests, by_changeset, sources)
         lines = release_hours.keep_hours(lines, caused, cfg, now, Line)
-    return sorted(lines, key=_rank)
+    return sorted(once_each(lines), key=_rank)
+
+
+def once_each(lines: list[Line]) -> list[Line]:
+    """Each key once: a line that would fall in two groups stays in the higher one only (`GROUPS` is in order, the first
+    highest); of two in the same group the one found first stays."""
+    best: dict[str, Line] = {}
+    for line in lines:
+        held = best.get(line.key)
+        if held is None or GROUPS.index(line.group) < GROUPS.index(held.group):
+            best[line.key] = line
+    return [line for line in lines if best[line.key] is line]
 
 
 def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:

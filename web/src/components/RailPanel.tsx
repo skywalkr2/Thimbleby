@@ -1,6 +1,6 @@
 // The panels of Today's rail (design 7.7): a heading with its count, a body sized to its content, and the two one-line
 // states a panel has besides its rows, empty and failed to load. On the phone, below the queue, a panel is folded to one
-// line that says what is in it ("Agenda · nothing today") and a press opens it.
+// line that says what is in it ("Schedule · nothing today") and a press opens it.
 import { useId, useState, type ReactNode } from "react";
 import { useIsNarrow } from "../lib/media";
 import { useWords } from "../lib/wording";
@@ -68,13 +68,12 @@ export function RailPanel(props: {
   );
 }
 
-/** An empty panel's words. With `inline` they are one line: the words, then when it was checked, then the button. */
-export function Empty(props: { text: string; note?: string; inline?: boolean; button?: { label: string; run: () => void } }) {
+/** An empty panel's words. With `inline` they are one line: the words, then the button. */
+export function Empty(props: { text: string; inline?: boolean; button?: { label: string; run: () => void } }) {
   if (props.inline) {
     return (
       <p className="tb-empty tb-empty-line">
         {props.text}
-        {props.note && <> <span className="hint">{props.note}</span></>}
         {props.button && (
           <>
             {" "}
@@ -89,7 +88,6 @@ export function Empty(props: { text: string; note?: string; inline?: boolean; bu
   return (
     <div className="tb-empty">
       <p>{props.text}</p>
-      {props.note && <p className="hint">{props.note}</p>}
       {props.button && (
         <button type="button" className="btn" onClick={props.button.run}>
           {props.button.label}

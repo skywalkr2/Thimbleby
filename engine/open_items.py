@@ -73,6 +73,8 @@ class OpenAction:
     repeat: dict[str, Any] | None = None
     #: About how long it takes, in minutes, when it says.
     effort_minutes: int | None = None
+    #: When the person asked to be reminded of it, on their own clock.
+    remind_at: datetime | None = None
 
 
 @dataclass
@@ -200,6 +202,7 @@ def open_actions(
                 due_check=bool(d.get("due_check")) and due is not None,
                 repeat=repeats.view_of(d.get("repeat")),
                 effort_minutes=d.get("effort_minutes"),
+                remind_at=datetime.fromisoformat(str(d["remind_at"])).astimezone(here) if d.get("remind_at") else None,
             )
         )
     if not light:

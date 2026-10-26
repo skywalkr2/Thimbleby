@@ -13,7 +13,8 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { Skeleton } from "../ui/Skeleton";
 
-export function Panel(props: { name: string; project?: string; onOpenRecord: (kind: string, id: string) => void }) {
+/** `embedded`: the panel sits under a heading of its own (a folded line on Today), so it draws no title or count of its own. */
+export function Panel(props: { name: string; project?: string; embedded?: boolean; onOpenRecord: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
   const panels = useQuery({ queryKey: props.project ? ["panels", props.project] : ["panels"], queryFn: () => api.panels(props.project) });
   const panel = panels.data?.find((p) => p.name === props.name);
@@ -69,11 +70,13 @@ export function Panel(props: { name: string; project?: string; onOpenRecord: (ki
   }
 
   return (
-    <section className="panel-section" aria-labelledby={headingId}>
-      <div className="heading">
-        {props.project ? <h3 id={headingId}>{title}</h3> : <h1 id={headingId}>{title}</h1>}
-        {!isDocument && rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
-      </div>
+    <section className="panel-section" aria-labelledby={props.embedded ? undefined : headingId} aria-label={props.embedded ? title : undefined}>
+      {!props.embedded && (
+        <div className="heading">
+          {props.project ? <h3 id={headingId}>{title}</h3> : <h1 id={headingId}>{title}</h1>}
+          {!isDocument && rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
+        </div>
+      )}
       {newAction && (
         <div className="panel-new">
           <button

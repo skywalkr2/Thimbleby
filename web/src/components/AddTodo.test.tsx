@@ -5,12 +5,11 @@ import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { OpenItems } from "./OpenItems";
-import { TodoRow } from "./TodayRail";
 import { Today } from "./Today";
 
 // Adding a to-do by hand (design 6.32): the cursor starts in the words, the day and the repeat are said back before
 // anything is kept, who and which project are lists, and the toast's Undo takes back every change made. The repeat mark
-// shows in words on Today's to-do rows.
+// shows in words on the to-do rows.
 
 const ME = person("P-1", "Quinn Sample", { is_pm: true });
 const OTHER = person("P-2", "Robin Example");
@@ -143,33 +142,30 @@ test("a refusal is said in the toast and the form stays open", async () => {
   expect(screen.getByRole("textbox", { name: "What to do" })).toBeInTheDocument();
 });
 
-test("Today's to-do row carries the repeat mark in words", async () => {
+test("a to-do row carries the repeat mark in words", async () => {
   const weekly: S["RepeatView"] = {
     phrase: "every Friday",
     rule: "FREQ=WEEKLY;BYDAY=FR",
     start: "2026-11-06",
     shape: { kind: "weekly", interval: 1, weekday: "friday", weekdays: [], days: [], ordinals: [] },
   };
-  fakeApi({ "GET projects": () => [], "GET people": () => [ME] });
-  const { container } = renderApp(
-    <ul>
-      <TodoRow item={{ action: "A-1", text: "Send the weekly update", project: null, due: "2026-11-06", overdue: false, repeat: weekly }} project="" showDue />
-      <TodoRow item={{ action: "A-2", text: "Tidy the notes", project: null, due: null, overdue: false }} project="" showDue />
-    </ul>,
-  );
-  const rows = container.querySelectorAll("li");
-  expect(within(rows[0] as HTMLElement).getByText("Repeats")).toBeInTheDocument();
+  const base = { version: 1, state: "open" as const, owners: [{ person: "P-1", name: "Quinn Sample" }], project: null, project_name: "", parent_name: null, notes: null, since: "2026-10-01", on_hold: null, blocker: null, duplicate: null, origin: null, untouched_days: null, owner_question: null, to_send: false };
+  api([
+    { ...base, id: "A-1", text: "Send the weekly update", due: "2026-11-06", repeat: weekly },
+    { ...base, id: "A-2", text: "Tidy the notes", due: null },
+  ]);
+  renderApp(<OpenItems />);
+  const list = await screen.findByRole("list", { name: "Open to-dos" });
+  const rows = await within(list).findAllByRole("listitem");
   expect(within(rows[0] as HTMLElement).getByText("Repeats")).toHaveAttribute("title", "Every Friday, starting November 6");
   expect(within(rows[1] as HTMLElement).queryByText("Repeats")).toBeNull();
 });
 
-test("Add a to-do is a quiet button with Today's to-dos, not in the heading, which stays one row", async () => {
+test("Today has no Add a to-do button: a to-do is added where the to-dos are listed", async () => {
   fakeApi({ "GET projects": () => [], "GET people": () => [ME] });
-  const { container } = renderApp(<Today workspace="Demo" onView={() => undefined} onAddSource={() => undefined} onOpenGuide={() => undefined} onOpenRecord={() => undefined} />);
-  const button = await screen.findByRole("button", { name: "Add a to-do" });
-  expect(button).toHaveAttribute("data-variant", "ghost");
-  expect(button.closest('[data-col="todo"]')).not.toBeNull();
-  expect(container.querySelector("h1")?.parentElement?.contains(button)).toBe(false);
+  renderApp(<Today workspace="Demo" onView={() => undefined} onAddSource={() => undefined} onOpenGuide={() => undefined} onOpenRecord={() => undefined} />);
+  await screen.findByRole("heading", { level: 1 });
+  expect(screen.queryByRole("button", { name: "Add a to-do" })).toBeNull();
 });
 
 test("how long it takes is a list of common sizes, with another length typed, and is sent as minutes", async () => {

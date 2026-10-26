@@ -74,10 +74,6 @@
 .railBody { padding: var(--space-2) var(--space-3); display: grid; align-content: start; gap: var(--space-3); }
 .railFoot { border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); }
 
-/* Top priorities: a row may wrap so its button and menu drop under the words in a narrow rail. */
-.priority { flex-wrap: wrap; }
-.priority > :global(.tb-what) { flex: 1 1 8rem; }
-
 /* A rail panel folded to one line on the phone, and the week's own pieces. */
 .fold { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .foldHead { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
@@ -89,6 +85,8 @@
 .foldToggle::before { content: "▸"; color: var(--text-subtle); }
 .foldToggle[aria-expanded="true"]::before { content: "▾"; }
 .foldSummary { color: var(--text-muted); font-weight: var(--weight-regular); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.pluginPanels { display: grid; gap: var(--space-2); grid-column: 1 / -1; min-width: 0; }
+.railNothing { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
 .foldAction { display: flex; justify-content: flex-end; padding: 0 var(--row-px) var(--space-2); }
 .weekBody { display: grid; gap: var(--space-3); padding: var(--space-2) var(--row-px) var(--space-3); min-width: 0; }
 .weekBody p { margin: 0; }

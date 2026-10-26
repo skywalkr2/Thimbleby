@@ -276,3 +276,108 @@ def test_a_line_that_holds_one_thing_carries_that_things_own_words_as_its_subjec
     set_due({mine_open[1].id: past})
     (overdue,) = [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "overdue"]
     assert overdue["count"] == 2 and overdue["subject"] is None
+
+
+def _keys(client, base) -> list[str]:
+    return [line["key"] for line in client.get(f"{base}/today/queue").json()]
+
+
+def _each_once(client, base) -> None:
+    keys = _keys(client, base)
+    assert len(keys) == len(set(keys)), sorted(k for k in keys if keys.count(k) > 1)
+
+
+@pytest.mark.parametrize("case_id", ["production-checkin", "decision-for-pm", "no-owner", "shared-first-name"])
+def test_no_line_key_repeats_on_today_after_each_kind_of_input(api, case_id):
+    """Each item once (check C57): a decision, a question, a Pick an owner, a name to place and a review each show one
+    line, whatever else is there."""
+    client, base, worker = api
+    _each_once(client, base)
+    hand_in(client, base, worker, case_id)
+    _each_once(client, base)
+    hand_in(client, base, worker, "production-checkin")
+    _each_once(client, base)
+
+
+def test_no_line_key_repeats_with_overdue_to_dos_setup_open_and_mail_not_connected(api):
+    from datetime import date, timedelta
+
+    from engine.storage import WriteContext
+
+    client, base, worker = api
+    store = client.app_store
+    for case_id in ("no-owner", "decision-for-pm", "production-checkin"):
+        hand_in(client, base, worker, case_id)
+    assert client.get(f"{base}/setup").json()["finished"] is False
+    mine = client.get(f"{base}/me").json()["person"]
+    past = (date.today() - timedelta(days=30)).isoformat()
+    for a in store.read().list("action"):
+        if a.data["status"] == "open" and any(o["person"] == mine for o in a.data.get("owners") or []):
+            with store.transaction() as tx:
+                tx.update(
+                    "action",
+                    a.id,
+                    {"due": past},
+                    WriteContext(actor="pm", trust="trusted", op="test.queue"),
+                    read_version=a.version,
+                )
+    lines = client.get(f"{base}/today/queue").json()
+    assert any(line["kind"] == "overdue" for line in lines)
+    _each_once(client, base)
+
+
+def test_an_item_that_would_fall_in_two_groups_stays_in_the_higher_one_only():
+    from engine.today_queue import Line, once_each
+
+    low = Line(key="same", group="send", kind="nudge")
+    high = Line(key="same", group="decide", kind="question")
+    other = Line(key="other", group="review", kind="review")
+    assert once_each([low, other, high]) == [other, high]
+    twin = Line(key="same", group="decide", kind="decision")
+    assert once_each([high, twin]) == [high]
+
+
+def test_the_overdue_summary_line_counts_the_to_dos_the_list_shows_as_overdue(api):
+    """One summary line for the person's overdue to-dos; its button opens the to-dos list filtered to the overdue state,
+    so the line's items are the rows that filter shows."""
+    from datetime import date, timedelta
+
+    from engine.storage import WriteContext
+
+    client, base, worker = api
+    store = client.app_store
+    mine = client.get(f"{base}/me").json()["person"]
+    past = (date.today() - timedelta(days=400)).isoformat()
+    owned = [
+        a
+        for a in store.read().list("action")
+        if a.data["status"] == "open" and any(o["person"] == mine for o in a.data.get("owners") or [])
+    ]
+    assert len(owned) >= 2
+    others = [
+        a
+        for a in store.read().list("action")
+        if a.data["status"] == "open"
+        and a.data.get("owners")
+        and not a.data.get("on_hold")
+        and all(o["person"] != mine for o in a.data["owners"])
+    ]
+    assert others, "the fixture has an open to-do that is someone else's"
+    for a in [*owned[:2], others[0]]:
+        with store.transaction() as tx:
+            tx.update(
+                "action",
+                a.id,
+                {"due": past},
+                WriteContext(actor="pm", trust="trusted", op="test.queue"),
+                read_version=a.version,
+            )
+    lines = [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "overdue"]
+    assert len(lines) == 1 and lines[0]["group"] == "risk" and lines[0]["key"] == "overdue"
+    rows = [a for a in client.get(f"{base}/open-items").json()["actions"] if a["state"] == "overdue"]
+    # Someone else's overdue to-do is in the list, so the link narrows it to the person's own, as the line does.
+    assert others[0].id in {a["id"] for a in rows}
+    shown = {a["id"] for a in rows if any(o["person"] == mine for o in a["owners"])}
+    assert lines[0]["count"] == len(shown) >= 2
+    assert set(lines[0]["actions"]) == shown
+    assert others[0].id not in lines[0]["actions"]

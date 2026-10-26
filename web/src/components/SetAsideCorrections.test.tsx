@@ -20,7 +20,6 @@ function today(extra: Routes = {}, setAside = 6) {
   const received = new Date().toISOString();
   const calls = fakeApi({
     "GET today/agenda": () => [],
-    "GET today/todo": () => [],
     "GET today/arrived": () => ({
       items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Spring sale", sender: "Shop", received, unread: true }],
       left_out: 0,

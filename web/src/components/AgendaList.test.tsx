@@ -113,14 +113,12 @@ test("a meeting's row in Today's agenda lists what is on its agenda as links", a
   fakeApi({
     "GET today/week": () => ({ first: iso, last: iso, due: [], waiting: [], meetings: [] }),
     "GET today/agenda": () => [meetingRow, { ...meetingRow, snapshot: "EVT-2", title: "Quiet sync", agenda: [] }],
-    "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
-    "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
     "GET watch": () => [],
-    "GET projects": () => [],
+    "GET setup": () => ({ finished: true, steps: [], settled: 0, total: 0 }),
   });
   renderApp(<TodayRail onView={() => {}} />);
-  const rail = await screen.findByRole("region", { name: "Agenda" });
+  const rail = await screen.findByRole("region", { name: "Schedule" });
   const rows = within(await within(rail).findByRole("list", { name: "Today" })).getAllByRole("listitem");
   const planning = rows.find((row) => row.textContent?.includes("Planning sessions"))!;
   const list = within(planning).getByRole("list", { name: "Agenda" });

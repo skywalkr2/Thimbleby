@@ -13,6 +13,7 @@ import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { Pill } from "../ui/Pill";
 import { Skeleton } from "../ui/Skeleton";
+import { AddMeeting } from "./ScheduleCard";
 import { SafeLink } from "./SafeText";
 import styles from "./Schedule.module.css";
 
@@ -173,10 +174,14 @@ export function Schedule() {
     <section className="panel-section" aria-labelledby="schedule-title" ref={region}>
       <div className="heading">
         <h1 id="schedule-title">{t("schedule.title")}</h1>
-        <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
-          <IconButton icon="chevron" label={t("schedule.back")} className={styles.back} variant="secondary" isDisabled={!first} onPress={() => go(-1)} />
-          <Button onClick={() => setFrom(null)}>{t("schedule.today")}</Button>
-          <IconButton icon="chevron" label={t("schedule.forward")} variant="secondary" isDisabled={!first} onPress={() => go(1)} />
+        <div className={styles.tools}>
+          {/* Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. */}
+          {data && <AddMeeting today={data.today} />}
+          <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
+            <IconButton icon="chevron" label={t("schedule.back")} className={styles.back} variant="secondary" isDisabled={!first} onPress={() => go(-1)} />
+            <Button onClick={() => setFrom(null)}>{t("schedule.today")}</Button>
+            <IconButton icon="chevron" label={t("schedule.forward")} variant="secondary" isDisabled={!first} onPress={() => go(1)} />
+          </div>
         </div>
       </div>
       <p className="hint" aria-live="polite">

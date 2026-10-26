@@ -1,7 +1,6 @@
 // Today's first screen and one row per thing (design 7.7, batch B-7): the backup reminder is an At risk line and not a bar,
-// This week is a panel of the rail at every width, a person waited on is one follow-up line, Top priorities holds no
-// buttons and links to the queue, the phone folds the rail's panels to one line each, and what came from outside is tagged
-// "Outside" with the full phrase as its name.
+// the week is part of the Schedule card of the rail at every width, a person waited on is one follow-up line, the phone folds
+// the rail's cards to one line each, and what came from outside is tagged "Outside" with the full phrase as its name.
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -38,10 +37,9 @@ function show(lines: Line[], extra: Routes = {}, over: { narrow?: boolean } = {}
     "GET stages/ready": () => [],
     "GET stages/requests": () => [],
     "GET today/agenda": () => [],
-    "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
-    "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
     "GET today/week": () => weekFixture,
+    "GET setup": () => ({ finished: false, steps: [], settled: 0, total: 3 }),
     "GET watch": () => [],
     "GET projects": () => [],
     "GET status": () => statusFixture(),
@@ -92,13 +90,13 @@ test("a failed backup and an overdue one are each said in words, the overdue one
   expect(await screen.findByRole("group", { name: "Back up your work" })).toHaveTextContent("The last backup was 4 days ago");
 });
 
-// ---- This week is a rail panel at every width -------------------------------------------------------------------------
+// ---- the week is in the Schedule card at every width ------------------------------------------------------------------
 
-test("This week is a panel of the rail at every width, never a section above the queue", async () => {
+test("the week is part of the Schedule card at every width, never a section above the queue", async () => {
   show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })]);
-  const panel = await screen.findByRole("region", { name: "This week" });
-  expect(panel.closest("[data-col='week']")).not.toBeNull();
-  expect(panel.closest("[aria-label='Agenda, to-dos and mail']")).not.toBeNull();
+  const panel = await screen.findByRole("region", { name: "Schedule" });
+  expect(panel.closest("[data-col='schedule']")).not.toBeNull();
+  expect(panel.closest("[aria-label='Briefing, schedule and mail']")).not.toBeNull();
   expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
   expect(document.querySelector("[data-week='section']")).toBeNull();
 });
@@ -152,86 +150,40 @@ test("a follow-up that went out today says so, never a wait of zero days", async
   expect(found).not.toHaveTextContent(/0 days/);
 });
 
-// ---- Top priorities: context, no buttons --------------------------------------------------------------------------------
+// ---- the rail has no filled button -----------------------------------------------------------------------------------
 
-const priorities = (lines: S["PriorityLineView"][]): S["TopPrioritiesView"] => ({ lines, more: 0, blocked: 0, coming: [] });
-const entry = (over: Partial<S["PriorityLineView"]> & Pick<S["PriorityLineView"], "key" | "kind" | "text">): S["PriorityLineView"] => ({
-  rank: "overdue",
-  person: null,
-  person_name: null,
-  project: null,
-  project_name: null,
-  due: null,
-  days: null,
-  owners: [],
-  things: [],
-  send: 0,
-  chase: 0,
-  overdue: 0,
-  due_soon: 0,
-  ...over,
-});
-
-test("Top priorities has no buttons: each entry is a link, to its queue line when it has one and to its record when it has none", async () => {
-  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 2, overdue: 2, due: "2026-10-13", waiting_days: 4, actions: ["ACT-2"] })], {
-    "GET today/priorities": () =>
-      priorities([
-        entry({ key: "person:PER-2", kind: "person", person: "PER-2", text: "Robin Sample", person_name: "Robin Sample", overdue: 2, things: [{ kind: "action", id: "ACT-2", text: "Send the index", why: "overdue" }] }),
-        entry({ key: "action:ACT-9", kind: "action", text: "Tidy the schedule", action: "ACT-9", version: 1, rank: "at_risk" }),
-      ]),
-  });
-  const panel = await screen.findByRole("region", { name: "Top priorities" });
-  const toQueue = await within(panel).findByRole("link", { name: "Robin Sample" });
-  const toRecord = within(panel).getByRole("link", { name: "Tidy the schedule" });
-  expect(toRecord).toHaveAttribute("href", expect.stringContaining("#records/action/ACT-9"));
-  expect(within(panel).queryAllByRole("button")).toEqual([]);
-  expect(within(panel).queryAllByRole("menuitem")).toEqual([]);
-  // The first link selects the follow-up line in the queue instead of leaving Today.
-  const user = userEvent.setup();
-  await user.click(toQueue);
-  const followUp = row("nudge");
-  await waitFor(() => expect(within(followUp).getByRole("button", { name: "Draft a nudge" })).toHaveAttribute("aria-expanded", "true"));
-});
-
-test("no filled button is anywhere in the rail; the one button it adds is Add to agenda", async () => {
-  show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], {
-    "GET today/priorities": () => priorities([entry({ key: "action:ACT-9", kind: "action", text: "Tidy the schedule", action: "ACT-9", version: 1, rank: "at_risk" })]),
-    "GET today/todo": () => [{ action: "ACT-1", text: "Send the index", project: null, due: "2026-10-08", overdue: true }],
-  });
-  const rail = await screen.findByRole("group", { name: "Agenda, to-dos and mail" });
-  await within(rail).findByRole("link", { name: "Tidy the schedule" });
+test("no filled button is anywhere in the rail; the one button the Schedule card adds is Add to agenda", async () => {
+  show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })]);
+  const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
+  await within(rail).findByText("Send the proofs");
   expect(rail.querySelectorAll("button[data-key='primary'], .btn.primary")).toHaveLength(0);
   expect(within(rail).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
 });
 
 // ---- the phone folds the rail's panels ---------------------------------------------------------------------------------
 
-test("on the phone each panel below the queue is one line that says what is in it, and a press opens it", async () => {
+test("on the phone each card below the queue is one line that says what is in it, and a press opens it", async () => {
   const user = userEvent.setup();
   show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], {
-    "GET today/todo": () => [
-      { action: "ACT-1", text: "Send the index", project: null, due: "2026-10-08", overdue: true },
-      { action: "ACT-2", text: "Approve the proof", project: null, due: null, overdue: false },
-      { action: "ACT-3", text: "Plan the launch", project: null, due: null, overdue: false },
-    ],
+    "GET today/arrived": () => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", received: new Date().toISOString(), unread: true }], left_out: 0, set_aside: 0 }),
   }, { narrow: true });
-  const agenda = await screen.findByRole("button", { name: "Agenda · nothing today" });
-  expect(agenda).toHaveAttribute("aria-expanded", "false");
-  const todos = await screen.findByRole("button", { name: "Your to-dos · 3" });
-  expect(screen.queryByText("Send the index")).toBeNull();
+  const schedule = await screen.findByRole("button", { name: /^Schedule · / });
+  expect(schedule).toHaveAttribute("aria-expanded", "false");
+  const cameIn = await screen.findByRole("button", { name: "Came in · 1" });
+  expect(screen.queryByText("Proof is ready")).toBeNull();
   expect(screen.queryByRole("button", { name: "Add to agenda" })).toBeNull();
-  await user.click(todos);
-  expect(todos).toHaveAttribute("aria-expanded", "true");
-  expect(await screen.findByText("Send the index")).toBeInTheDocument();
-  await user.click(agenda);
+  await user.click(cameIn);
+  expect(cameIn).toHaveAttribute("aria-expanded", "true");
+  expect(await screen.findByText("Proof is ready")).toBeInTheDocument();
+  await user.click(schedule);
   expect(await screen.findByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
 });
 
-test("off the phone the panels are open", async () => {
+test("off the phone the cards are open", async () => {
   show([]);
-  const agenda = await screen.findByRole("region", { name: "Agenda" });
-  expect(within(agenda).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: /^Agenda ·/ })).toBeNull();
+  const schedule = await screen.findByRole("region", { name: "Schedule" });
+  expect(within(schedule).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^Schedule ·/ })).toBeNull();
 });
 
 // ---- "Outside" ---------------------------------------------------------------------------------------------------------

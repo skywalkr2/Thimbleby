@@ -14882,6 +14882,19 @@
             "title": "Project Name",
             "type": "string"
           },
+          "remind_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the person asked to be reminded of it, on their own clock (their time zone).",
+            "title": "Remind At"
+          },
           "repeat": {
             "anyOf": [
               {

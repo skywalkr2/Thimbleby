@@ -36,6 +36,7 @@ import { useEditAction } from "./EditAction";
 import { Button } from "../ui/Button";
 import { useStopRepeat } from "./StopRepeat";
 import { NoteBox, useNoted } from "./NoteBox";
+import { LearnedLines } from "./Learned";
 import { HoldNote, useHold } from "./OnHold";
 import styles from "./OpenItems.module.css";
 import { OriginLink } from "./Origin";
@@ -43,6 +44,7 @@ import { useHandToAssistant } from "./HandToAssistant";
 import { ProjectTag } from "./ProjectTag";
 import { NotesTitle } from "./ActionNotes";
 import { useReassign } from "./ReassignAction";
+import { dateAndTime, useRemindMe } from "./ReminderLine";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
 
@@ -189,6 +191,7 @@ function ActionRow(props: { action: OpenAction }) {
   const reassign = useReassign(a, focus);
   const hand = useHandToAssistant(a, focus);
   const edit = useEditAction(a, focus);
+  const remind = useRemindMe(a.id, a.remind_at, focus);
   const stopRepeat = useStopRepeat(a);
   const said = useSaid();
   const done = (note?: string) =>
@@ -215,7 +218,7 @@ function ActionRow(props: { action: OpenAction }) {
     ...(unowned ? [] : [edit.entry, reassign.entry]),
     ...(merge ? [merge] : []),
     ...(unowned || !hand.entry ? [] : [hand.entry]),
-    ...(unowned ? [] : [hold.entry]),
+    ...(unowned ? [] : [...remind.entries, hold.entry]),
     ...(stopRepeat ? [stopRepeat] : []),
     change.entry,
     drop.entry,
@@ -228,6 +231,7 @@ function ActionRow(props: { action: OpenAction }) {
       </strong>
     ),
     a.due && t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }),
+    a.remind_at && t("today.todo.reminder", { when: dateAndTime(a.remind_at) }),
     a.repeat && (
       <span key="r" data-repeat="" title={said(a.repeat)}>
         {t("repeat.mark")}
@@ -277,9 +281,11 @@ function ActionRow(props: { action: OpenAction }) {
       {edit.form}
       {reassign.form}
       {hand.form}
+      {remind.form}
       {hold.form}
       {change.form}
       {drop.form}
+      <LearnedLines records={[a.id]} />
     </Row>
   );
 }

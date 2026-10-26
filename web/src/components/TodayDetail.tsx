@@ -14,14 +14,13 @@ import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
 import { ReassignForm } from "./ReassignAction";
 import { SideChoose } from "./SideChoose";
-import { TodoRow } from "./TodayRail";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
 import { ProjectEndingDetail } from "./ProjectEndingDetail";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "send", "nudge", "escalate", "overdue", "promise"]);
+const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "send", "nudge", "escalate", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
   // The line that asks which side items belong to opens the list of sides to pick from.
@@ -66,8 +65,6 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
       return <NudgeDetail line={line} />;
     case "escalate":
       return <EscalateDetail line={line} />;
-    case "overdue":
-      return <OverdueDetail line={line} />;
     case "capacity":
       return <CapacityDetail />;
     case "unfiled":
@@ -178,23 +175,6 @@ function NudgeDetail(props: { line: QueueLine }) {
     <ol className="queue">
       <WaitingSection section={section} compact nudgeOpen />
     </ol>
-  );
-}
-
-/** The person's own overdue to-dos, each to mark done. */
-function OverdueDetail(props: { line: QueueLine }) {
-  const todo = useQuery({ queryKey: ["today", "todo"], queryFn: api.todo });
-  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  if (todo.isPending) return <Skeleton />;
-  const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
-  const rows = (todo.data ?? []).filter((x) => (props.line.actions ?? []).includes(x.action));
-  if (rows.length === 0) return <Gone />;
-  return (
-    <ul className="tb-list">
-      {rows.map((item) => (
-        <TodoRow key={item.action} item={item} project={item.project ? (names.get(item.project) ?? "") : ""} showDue />
-      ))}
-    </ul>
   );
 }
 

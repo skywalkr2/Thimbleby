@@ -133,10 +133,6 @@ function railRoutes(): Routes {
   const event = (extra: Partial<S["AgendaItemView"]> & Pick<S["AgendaItemView"], "title">): S["AgendaItemView"] => ({ snapshot: `snap-${extra.title}`, source: "cal-1", start: at(TODAY, 15), all_day: false, cancelled: false, own: false, open_items: 0, days: [TODAY], ...extra });
   return {
     "GET today/agenda": () => [event({ title: "Standup", start: at(TODAY, 9), end: at(TODAY, 9, 30), where: "Room A" }), event({ title: "Quarterly planning", all_day: true, start: TODAY, days: [TODAY, TOMORROW] }), event({ title: "Workshop", start: at(TOMORROW, 13), days: [TOMORROW], open_items: 2 })],
-    "GET today/todo": () => [
-      { action: "ACT-1", text: "Send the index", project: "PRJ-1", due: "2026-10-08", overdue: true },
-      { action: "ACT-4", text: "Tidy the notes", project: null, due: null, overdue: false },
-    ],
     "GET today/arrived": () => ({
       items: [
         { snapshot: "s1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", unread: true, received: at(TODAY, 9, 14) },
@@ -144,34 +140,6 @@ function railRoutes(): Routes {
       ],
       left_out: 3,
       set_aside: 2,
-    }),
-    "GET today/priorities": () => ({
-      lines: [
-        {
-          key: "action:ACT-1",
-          rank: "overdue",
-          kind: "action",
-          text: "Send the proofs",
-          person: "PER-1",
-          person_name: "Pat Example",
-          project: "PRJ-1",
-          project_name: "Spring book",
-          due: "2026-10-08",
-          days: 3,
-          owners: [{ person: "PER-1", name: "Pat Example" }],
-          things: [],
-          holds_up: 0,
-          send: 0,
-          chase: 0,
-          overdue: 0,
-          due_soon: 0,
-          action: "ACT-1",
-          version: 4,
-        },
-      ],
-      more: 0,
-      blocked: 0,
-      coming: [],
     }),
     "GET today/week": () => ({
       first: "2026-10-05",

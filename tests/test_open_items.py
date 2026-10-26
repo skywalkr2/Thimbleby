@@ -358,3 +358,14 @@ def test_an_owner_change_from_the_row_is_the_persons_edit_with_undo_and_a_signal
     assert [s.data["kind"] for s in store.read().list("signal")] == ["edited"]
     client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={"ops": None})
     assert [o["person"] for o in store.read().get("action", action).data["owners"]] == [OTHER]
+
+
+def test_an_open_to_do_carries_its_reminder_on_the_persons_own_clock(api):
+    client, store, cfg = api
+    action = add_action(store, "Send the estimate")
+    rows = {a["id"]: a for a in client.get("/api/open-items").json()["actions"]}
+    assert rows[action]["remind_at"] is None
+    done = client.post(f"/api/reminders/{action}", json={"at": "2030-10-21T10:30:00"})
+    assert done.status_code == 200, done.text
+    rows = {a["id"]: a for a in client.get("/api/open-items").json()["actions"]}
+    assert rows[action]["remind_at"] is not None and rows[action]["remind_at"].startswith("2030-10-21T10:30")

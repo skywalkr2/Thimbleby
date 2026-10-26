@@ -5,6 +5,7 @@
 // (kept as confirmed) and the message to whoever the person reports to.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
+import { useIsNarrow } from "../lib/media";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { copyMessage } from "../lib/copy";
@@ -49,6 +50,13 @@ function closeFor(workspace: string, form: string, on: string) {
 
 export function useBrief(form: Form | null) {
   return useQuery({ queryKey: ["brief", form], queryFn: () => api.brief(form ?? undefined) });
+}
+
+/** Whether Today's Briefing card has anything to draw: a form is due, it was not closed for the day, and it is not a quiet day
+ * with no message and no goals (a card with nothing in it is not drawn). */
+export function hasBrief(data: Brief | undefined, workspace: string): boolean {
+  if (!data || data.form === null || closedFor(workspace, data.form, data.day)) return false;
+  return !data.quiet || !!data.message || !!data.goals || data.sections.length > 0;
 }
 
 const clock = (at: string | null | undefined) => (at ? wallTime(`T${at}`) : "");
@@ -402,10 +410,19 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
   );
 }
 
-export function BriefCard(props: { workspace: string; onOpenRecord: (kind: string, id: string) => void; onOpenView?: (view: View) => void }) {
+export function BriefCard(props: {
+  workspace: string;
+  onOpenRecord: (kind: string, id: string) => void;
+  onOpenView?: (view: View) => void;
+  /** Called when the card is closed for the day, so the screen around it can count it gone. */
+  onClosed?: () => void;
+}) {
   const { t, tn } = useWords();
   const [asked, setAsked] = useState<Form | null>(null);
   const [, shut] = useState(0);
+  // On the phone the card is folded to its title until it is opened.
+  const narrow = useIsNarrow();
+  const [unfolded, setUnfolded] = useState(false);
   const found = useBrief(asked);
   const queue = useQueue();
   const id = useId();
@@ -418,11 +435,28 @@ export function BriefCard(props: { workspace: string; onOpenRecord: (kind: strin
   const title = form === "morning" ? t("brief.title.morning") : form === "evening" ? t("brief.title.evening") : t("brief.title.monday");
   const showWords = (f: Form) => (f === "morning" ? t("brief.show.morning") : f === "evening" ? t("brief.show.evening") : t("brief.show.monday"));
   const quiet = form === "morning" ? t("brief.quiet.morning") : form === "evening" ? t("brief.quiet.evening") : t("brief.quiet.monday");
+  if (narrow && !unfolded) {
+    return (
+      <section className={styles.card} aria-labelledby={`${id}-head`} data-brief={form} data-folded="">
+        <h2 id={`${id}-head`} className={styles.title}>
+          <button type="button" className={styles.foldToggle} aria-expanded={false} onClick={() => setUnfolded(true)}>
+            {title}
+          </button>
+        </h2>
+      </section>
+    );
+  }
   return (
     <section className={styles.card} aria-labelledby={`${id}-head`} data-brief={form}>
       <div className={styles.head}>
         <h2 id={`${id}-head`} className={styles.title}>
-          {title}
+          {narrow ? (
+            <button type="button" className={styles.foldToggle} aria-expanded onClick={() => setUnfolded(false)}>
+              {title}
+            </button>
+          ) : (
+            title
+          )}
         </h2>
         <div className={styles.headActions}>
           {others.map((f) => (
@@ -434,6 +468,7 @@ export function BriefCard(props: { workspace: string; onOpenRecord: (kind: strin
             onClick={() => {
               closeFor(props.workspace, form, data.day);
               shut((n) => n + 1);
+              props.onClosed?.();
             }}
           >
             {t("brief.close")}

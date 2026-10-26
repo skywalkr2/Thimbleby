@@ -182,7 +182,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     // The calendar's entry two days ahead is on the agenda once; the booking made no second entry and no clash.
-    const agenda = page.getByRole("region", { name: "Agenda" });
+    const agenda = page.getByRole("region", { name: "Schedule" });
     await expect(agenda.getByText(HALL).first()).toBeVisible({ timeout: 60_000 });
     await expect(agenda.getByText(new RegExp(HALL))).toHaveCount(1);
     // The fake calendar's two back-to-back meetings in different rooms are a real clash line; the appointment is in none.

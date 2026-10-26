@@ -256,7 +256,7 @@ test.describe.serial("journey: new start", () => {
 
     // 9. The recent mail is on Came in within seconds, and today's meetings are on the agenda; what is older isn't.
     const came = page.getByRole("region", { name: "Came in" });
-    const agenda = page.getByRole("region", { name: "Agenda" });
+    const agenda = page.getByRole("region", { name: "Schedule" });
     await expect(came.getByText(recentMail[0])).toBeVisible({ timeout: 10_000 });
     for (const title of recentMail) await expect(came.getByText(title, { exact: true })).toBeVisible();
     // A meeting that runs past midnight is listed under both days, so the first is enough.

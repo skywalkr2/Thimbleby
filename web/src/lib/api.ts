@@ -397,8 +397,6 @@ export const api = {
   agendaSpan: () => call<S["AgendaSpanView"]>("GET", "today/agenda-span"),
   /** Make the to-do a plain calendar entry is offered as: the person's own, due on the entry's day. */
   entryTodo: (entry: string) => call<S["EntryTodoMade"]>("POST", `events/${id(entry)}/todo`),
-  todo: () => call<S["TodoView"][]>("GET", "today/todo"),
-  priorities: () => call<S["TopPrioritiesView"]>("GET", "today/priorities"),
   thisWeek: () => call<S["ThisWeekView"]>("GET", "today/week"),
   /** The form of the brief that is due now, or the one named: the morning brief, the evening wrap-up or the Monday briefing. */
   brief: (form?: string) => call<S["BriefView"]>("GET", form ? `brief?form=${id(form)}` : "brief"),

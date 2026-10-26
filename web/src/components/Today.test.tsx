@@ -5,6 +5,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { useShortcuts } from "../lib/keys";
+import { takeFilters } from "../lib/open-items";
 import { showNewLines } from "../lib/queue-hold";
 import { RestartProvider } from "../lib/restart";
 import { forgetLine } from "../lib/today";
@@ -117,10 +118,9 @@ function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean; unnamed
     "GET stages/ready": () => [],
     "GET stages/requests": () => [],
     "GET today/agenda": () => [],
-    "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
-    "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
     "GET today/week": () => emptyWeek,
+    "GET setup": () => ({ finished: false, steps: [], settled: 0, total: 3 }),
     "GET watch": () => [],
     "GET projects": () => [],
     // An assistant that has already worked on something: an empty Today then says nothing needs the person.
@@ -399,22 +399,18 @@ test("a card's menu has Look closer and Send back, which opens the note to send 
   expect(screen.getByRole("button", { name: "Send back" })).toBeDisabled();
 });
 
-test("an overdue line opens the to-dos it counts, each to mark done", async () => {
+test("an overdue line is one summary line, whose button opens To-dos and questions filtered to the overdue ones", async () => {
   const user = userEvent.setup();
   const overdue = line("overdue", { key: "overdue", group: "risk", count: 2, actions: ["ACT-1", "ACT-2"], due: "2026-10-08", waiting_days: 5 });
-  show([overdue], {
-    "GET today/todo": () => [
-      { action: "ACT-1", text: "Send the index", project: null, due: "2026-10-08", overdue: true },
-      { action: "ACT-2", text: "Approve the proof", project: null, due: "2026-10-09", overdue: true },
-      { action: "ACT-3", text: "Plan the launch", project: null, due: "2026-10-20", overdue: false },
-    ],
-  });
+  const { onView, calls } = show([overdue], { "GET me": () => ({ person: "P-1", full_name: "Quinn Sample" }) });
   expect(await screen.findByText("Finish 2 overdue to-dos")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Show" }));
-  const open = row("overdue");
-  expect(await within(open).findByText("Send the index")).toBeInTheDocument();
-  expect(within(open).getByText("Approve the proof")).toBeInTheDocument();
-  expect(within(open).queryByText("Plan the launch")).toBeNull();
+  // The to-dos are ticked in their own list, so the line lists none of them and has no tick of its own.
+  expect(within(row("overdue")).queryByRole("checkbox")).toBeNull();
+  await waitFor(() => expect(calls.some((c) => c.route === "GET me")).toBe(true));
+  await user.click(within(row("overdue")).getByRole("button", { name: "Open the list" }));
+  expect(onView).toHaveBeenCalledWith("work/open");
+  // Narrowed to the person's own overdue to-dos, the ones the line counts.
+  expect(takeFilters()).toEqual({ project: "", person: "P-1", state: "overdue" });
 });
 
 test("the restart and paused lines are rows of the queue, drawn with their own words", async () => {
@@ -842,10 +838,11 @@ const busyWeek: S["ThisWeekView"] = {
   meetings: [{ snapshot: "EVT-1", source: "", title: "Print sync", start: "2026-10-22T10:00:00", end: null, all_day: false, cancelled: false, own: true, open_items: 0, days: ["2026-10-22"] }],
 };
 
-test("This week is a panel of the rail with what is due, who is waiting and which meetings", async () => {
+test("The week is in the Schedule card with what is due, who is waiting and the meetings the agenda does not list", async () => {
   show([decision], { "GET today/week": () => busyWeek });
-  const panel = await screen.findByRole("region", { name: "This week" });
-  expect(panel.closest("[data-col='week']")).not.toBeNull();
+  const panel = await screen.findByRole("region", { name: "Schedule" });
+  expect(panel.closest("[data-col='schedule']")).not.toBeNull();
+  expect(screen.queryByRole("region", { name: "This week" })).toBeNull();
   expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
   expect(within(panel).getByText("Robin Sample · 2 things")).toBeInTheDocument();
   expect(within(panel).getByText("Print sync")).toBeInTheDocument();
@@ -867,11 +864,85 @@ test("a to-do counted ahead by its own lead time is named with the day it must b
   }
 });
 
-test("This week is not counted in the heading or the menu", async () => {
+test("The Schedule card is not counted in the heading or the menu", async () => {
   show([decision], { "GET today/week": () => busyWeek });
-  await screen.findByRole("region", { name: "This week" });
+  await screen.findByRole("region", { name: "Schedule" });
   expect((await screen.findAllByText(/1 thing needs you/)).length).toBeGreaterThan(0);
   expect(screen.queryByText(/2 things need you/)).toBeNull();
+});
+
+// ---- the rail: at most three cards, none drawn empty, an empty Today one line (design 7.7, check U10) -------------------------
+
+const todayIso = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const RAIL = "Briefing, schedule and mail";
+const briefing: S["BriefView"] = {
+  form: "morning",
+  day: "2026-10-20",
+  forms: ["morning"],
+  quiet: false,
+  on_today: 0,
+  sections: [{ key: "changed", more: 0, lines: [{ key: "since:1", kind: "moved", text: "Send the draft", change: "said", day: "2026-10-22", ready: false, you: false }] }],
+};
+const meeting = (): S["AgendaItemView"] => ({ snapshot: "EVT-1", source: "", title: "Print sync", start: todayIso(), all_day: true, cancelled: false, own: true, open_items: 0, days: [todayIso()] });
+const mail = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", received: new Date().toISOString(), unread: true }], left_out: 0, set_aside: 0 });
+
+test("the rail is at most three cards, Briefing, Schedule and Came in, and has no Top priorities or Your to-dos", async () => {
+  show([decision], { "GET brief": () => briefing, "GET today/agenda": () => [meeting()], "GET today/arrived": () => mail(), "GET today/week": () => busyWeek });
+  const rail = await screen.findByRole("group", { name: RAIL });
+  await within(rail).findByRole("region", { name: "Morning brief" });
+  await within(rail).findByRole("region", { name: "Schedule" });
+  await within(rail).findByRole("region", { name: "Came in" });
+  expect(within(rail).getAllByRole("region")).toHaveLength(3);
+  expect(within(rail).getAllByRole("region").map((r) => r.parentElement?.getAttribute("data-col") ?? "briefing")).toEqual(["briefing", "schedule", "arrived"]);
+  for (const gone of ["Top priorities", "Your to-dos", "This week", "Agenda"]) {
+    expect(screen.queryByRole("heading", { name: gone })).toBeNull();
+  }
+  expect(screen.queryByText("Nothing else needs you today")).toBeNull();
+});
+
+test("a card with nothing in it is not drawn: a rail with only mail has one card", async () => {
+  show([decision], { "GET today/arrived": () => mail() });
+  const rail = await screen.findByRole("group", { name: RAIL });
+  await within(rail).findByRole("region", { name: "Came in" });
+  expect(within(rail).getAllByRole("region")).toHaveLength(1);
+});
+
+test("a quiet day's brief is not drawn as a card of its own", async () => {
+  show([decision], { "GET brief": () => ({ ...briefing, quiet: true, sections: [] }), "GET today/arrived": () => mail() });
+  const rail = await screen.findByRole("group", { name: RAIL });
+  await within(rail).findByRole("region", { name: "Came in" });
+  expect(within(rail).queryByRole("region", { name: "Morning brief" })).toBeNull();
+});
+
+test("with nothing in any card and an empty queue, Today says one line: nothing else needs you", async () => {
+  show([]);
+  expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
+  expect(screen.getAllByText("Nothing else needs you today")).toHaveLength(1);
+  expect(within(screen.getByRole("group", { name: RAIL })).queryByRole("region")).toBeNull();
+});
+
+test("the empty line is left out while the queue has a line", async () => {
+  show([decision]);
+  await screen.findByText("Matte or soft-touch?", { selector: "li *" });
+  await waitFor(() => expect(screen.getByRole("group", { name: RAIL })).toBeInTheDocument());
+  expect(screen.queryByText("Nothing else needs you today")).toBeNull();
+});
+
+test("an add-on's Today panel stays below the cards, folded to one line, and is not one of the three", async () => {
+  const user = userEvent.setup();
+  const panel: S["PanelView"] = { name: "demo/board", title: "Board", tab: "today", kind: "demo/item", view: "list", columns: [], row_actions: [], primary_action: null };
+  show([decision], { "GET panels": () => [panel], "GET panels/demo/board/rows": () => [], "GET today/arrived": () => mail(), "GET today/agenda": () => [meeting()] });
+  const rail = await screen.findByRole("group", { name: RAIL });
+  const fold = await within(rail).findByRole("button", { name: "Board" });
+  expect(fold).toHaveAttribute("aria-expanded", "false");
+  const cameIn = await within(rail).findByRole("region", { name: "Came in" });
+  expect(cameIn.compareDocumentPosition(fold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(rail.querySelectorAll("[data-col]:not([data-col='plugin-panels'])")).toHaveLength(2);
+  await user.click(fold);
+  expect(fold).toHaveAttribute("aria-expanded", "true");
 });
 
 test("the inspector shows the week when nothing needs the person", async () => {
