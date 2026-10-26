@@ -1030,6 +1030,10 @@ yet follow, that it is *designed*, with its phase.
 ## 199. One appointment, one entry; a week of agenda; lead time (2026-10-26; P44, P54)
 
 - **One appointment, one entry; a week of agenda; lead time (6.32, 7.7):** the agenda reaches six days ahead and names the days when empty; a booking already on a calendar is linked, not copied, and a copy never clashes with its original; a sign-in warns a day before its end, never before three quarters of its life; a meeting to set up counts on Today `steward.meetings.setup_lead_working_days` working days ahead.
+- **Today (P44, P55 d and e):** a clash line names both entries with their times and calendars and offers Open and
+  "It's fine"; a sign-in's renewal line uses sign-in words; the header button reads "Missed something?"; the header keeps
+  every control inside the window. Built: `tests/test_day_capacity.py::test_a_clash_line_names_both_calendars_and_times_and_its_fine_mark_hides_only_that_clash`,
+  `web/e2e/layout.spec.ts` (the header with every chip shown).
 
 ## 198. A failing step and a stopped loop (2026-10-26; P53)
 

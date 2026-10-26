@@ -3863,7 +3863,11 @@ renewal warning starts at the later of `ai.credential_warn_days` before its end 
 short test sign-in never warns on its first day. A meeting the person sets up (a to-do whose words include one of
 `steward.meetings.setup_words`) counts from `steward.meetings.setup_lead_working_days` working days before its day, names
 the day when that is past this week, and once its invitation is out (told to someone, or a linked calendar entry) shows
-only on its day, as hold.
+only on its day, as hold. A clash line names both entries, each with its time and the calendar it comes from ("your
+notes" for the app's own), opens either entry, and offers "It's fine", which keeps that clash (those two entries on that
+day) off Today until the person takes it back; moving or declining an entry on a connected calendar waits for the
+add-ons' calendar channel. A sign-in's renewal line uses sign-in words, never a key's, and lists what it serves by plain
+name.
 
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 
