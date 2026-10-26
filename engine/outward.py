@@ -35,6 +35,8 @@ from engine.titles import title_for
 #: The setting that holds the assistant's name, and the key its history is kept under.
 NAME_KEY = "workspace.assistant_name"
 DEFAULT_NAME = WorkspaceFile.model_fields["assistant_name"].default
+#: The plain word an earlier default name was, and what the assistant is called when it has no name of its own.
+GENERIC_DEFAULT = "Assistant"
 #: What a changeset made by the sweep is recorded as (`Changeset.by_rule`).
 RULE = "history_resourced"
 
@@ -74,7 +76,7 @@ def assistant_names(view: Any, current: str) -> list[str]:
     for stored in view.list("setting_change"):
         if stored.data.get("key") == NAME_KEY:
             found += [stored.data.get("before"), stored.data.get("after")]
-    found.append(DEFAULT_NAME)
+    found += [DEFAULT_NAME, GENERIC_DEFAULT]
     names: list[str] = []
     seen: set[str] = set()
     for name in found:

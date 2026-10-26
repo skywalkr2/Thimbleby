@@ -290,17 +290,25 @@ def test_the_names_are_whole_words_ignoring_case(env):
 
 
 def test_an_ordinary_word_that_is_also_the_default_name_counts_only_where_it_attributes():
-    from engine.outward import DEFAULT_NAME, name_in
+    from engine.outward import DEFAULT_NAME, GENERIC_DEFAULT, assistant_names, name_in
 
-    names = [DEFAULT_NAME]
-    for sentence in (f"Hire an executive {DEFAULT_NAME.lower()}", f"{DEFAULT_NAME} professor joins the review"):
+    names = [GENERIC_DEFAULT]
+    for sentence in (f"Hire an executive {GENERIC_DEFAULT.lower()}", f"{GENERIC_DEFAULT} professor joins the review"):
         assert name_in(sentence, names) is None
     for attributed in (
-        f"Reported by {DEFAULT_NAME}, 10/20",
-        f"{DEFAULT_NAME}, 10/8",
-        f"{DEFAULT_NAME} PM judgment, 10/6",
+        f"Reported by {GENERIC_DEFAULT}, 10/20",
+        f"{GENERIC_DEFAULT}, 10/8",
+        f"{GENERIC_DEFAULT} PM judgment, 10/6",
     ):
-        assert name_in(attributed, names) == DEFAULT_NAME
+        assert name_in(attributed, names) == GENERIC_DEFAULT
+
+    # The product's own default name is specific, so it counts wherever it appears; the plain word is still watched.
+    class _View:
+        def list(self, kind):
+            return []
+
+    assert assistant_names(_View(), "Ada") == ["Ada", DEFAULT_NAME, GENERIC_DEFAULT]
+    assert name_in(f"{DEFAULT_NAME} found the date", [DEFAULT_NAME]) == DEFAULT_NAME
 
 
 def test_the_sweep_replaces_a_whole_attribution_with_the_source_not_only_the_name():
