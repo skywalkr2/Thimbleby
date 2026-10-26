@@ -46,3 +46,19 @@ announced to the pack builders once. After it the hold applies again.
 
 One version (0.3.90), one `docs/plugin-api-0.x.md` note listing every part, one guide regeneration, one message per pack
 builder naming what they asked for and its guide section.
+
+## Parts (owner, 2026-10-26: "go ahead and run the plugin updates + any that might have been waiting from the writers plugin")
+
+Built one part per builder, at most two at a time, merged and checked part by part; the version (0.3.90), the
+`docs/plugin-api-0.x.md` note and the guide are finished once at the end, then one full run, one push and one message per
+pack builder.
+
+- **A1, endings and pairs:** `registrar.project_ending` and the drop hook (step 1, lesson 8: an action and its paired
+  record), Helpful / Not helpful signal kinds (step 2).
+- **A2, sources and records:** the sent folder of an add-on's sign-in (step 3), a connector's bounded look-back (step 4),
+  lead time on any to-do and facts on any tracked item (step 7).
+- **B1, reviewing, applying and records:** 170, 194, 201, 205, 197, 200, 204, 193, 199, 188.
+- **B2, screens, runs and packets:** 195, 187, 189, 207, 210, 209, 191, 196, 203.
+- **B3, install, setup, tiers and guide fixes:** 173, 183, 185, 219, 172, 184, 186, 206.
+
+190 (a conversation on a record) is already built (phase S5).
