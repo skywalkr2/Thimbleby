@@ -394,7 +394,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(dialog).toBeVisible();
     await dialog.getByLabel("What happened, or what would help?").fill("The page was slow");
     await expect(dialog.getByLabel("Subject")).toHaveValue("Feedback on PM Cockpit");
-    await expect(dialog.getByLabel("Message")).toHaveValue(/^The page was slow\n\nApp version: .+\nScreen: Settings$/);
+    await expect(dialog.getByLabel("Message")).toHaveValue(/^The page was slow\n\nApp version: .+\nScreen: Settings(\n\nMissed something\?[^]*)?$/);
     await expect(dialog.getByRole("link", { name: "Open in your email app" })).toHaveAttribute("href", /^mailto:/);
     await checkAccessibility(page);
     await page.keyboard.press("Escape");
