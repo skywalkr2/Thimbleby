@@ -3171,6 +3171,14 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 - With no account set up, the stand-in answers by quoting the first guide passage chosen for the question (7.8).
 - An ask that comes up again and again is a signal (6.20): it may deserve a Today line, a panel or a playbook entry.
 
+
+**The app's own screens, answers and summaries (P55).** The guide an ask reads has a section that names every screen in
+the side menu and Settings, what each is for and the near names people use ("panel", "page", "screen", "tab"); a test
+asks for each screen by those names, with the screen list read from the navigation code. An answer to the person's own
+question changed nothing: it has no review, no approve button and nothing waiting, and the request closes as looked over.
+It shows once, on Ask, with "Correct it", which records one `change_requested` correction naming the answer. The
+assistant's one-line summary of a run is internal and never shown, and the ask prompt calls the reader "the person".
+
 ## 6.26 Stages
 
 Work that moves through steps (a title from manuscript to launch, a deal from first contact to signed, a document from

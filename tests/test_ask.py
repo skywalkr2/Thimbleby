@@ -230,3 +230,73 @@ def test_an_answer_that_cites_a_settings_line_shows_no_settings_key(app):
     assert found["answer"]["cites"][0]["quote"] == quoted
     shown = json.dumps([found["answer"], [p["why"] for p in found["proposals"]]])
     assert item.key not in shown
+
+
+def test_an_answer_to_the_persons_question_leaves_nothing_to_look_over(app):
+    """Reading the answer is enough: an answer changed nothing, so Today holds no review line for it."""
+    from datetime import UTC, datetime
+
+    from engine.storage import Store
+    from engine.today_queue import queue
+
+    ws, c, api, worker = app
+    answer_with({"op": "answer", "text": "Choose a backup folder in Settings.", "cites": [{"quote": BACKUP_WORDS}]})
+    asked = c.post(f"{api}/ask", json={"question": "How do I set up backups?"}).json()["id"]
+    worker.run_pending()
+    assert next(a for a in c.get(f"{api}/asks").json() if a["id"] == asked)["answer"]
+    store = Store(ws.db_path, cfg=ws.config(env={}))
+    try:
+        lines = queue(ws, store, ws.config(env={}), datetime.now(UTC))
+    finally:
+        store.close()
+    assert not [x for x in lines if x.kind == "review" and x.request == asked]
+    found = next(a for a in c.get(f"{api}/asks").json() if a["id"] == asked)
+    assert found["state"] == "done" and found["reviewed"]
+
+
+def _screen_names():
+    """Every screen's name as the app's navigation shows it, read from the navigation code and the wording sheet."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "web" / "src"
+    words = json.loads((root / "wording" / "en.json").read_text(encoding="utf-8"))
+    keys = re.findall(r't\("(nav\.[a-z]+)"\)', (root / "shell" / "nav.ts").read_text(encoding="utf-8"))
+    names = [words[k] for k in keys if k != "nav.home"] + [words["nav.home"], words["quality.title"]]
+    return sorted(set(names))
+
+
+NEAR_NAMES = ("the {} panel", "the {} page", "the {} screen", "the {} tab")
+
+
+@pytest.mark.parametrize("name", _screen_names())
+def test_the_guide_names_every_screen_and_is_found_by_its_near_names(name):
+    screens = next(s for s in guide_sections() if s.title.startswith("The screens"))
+    assert f"- {name}:" in screens.text
+    for near in NEAR_NAMES:
+        question = f"what is {near.format(name)}?"
+        assert screens in chosen_sections(question), question
+
+
+def test_the_guide_has_the_owners_question_about_the_knowledge_panel():
+    chosen = chosen_sections("what is the knowledge panel?")
+    assert chosen[0].title.startswith("The screens") and "- Knowledge:" in chosen[0].text
+
+
+def test_correcting_an_answer_records_a_signal_naming_the_answer(app):
+    ws, c, api, worker = app
+    answer_with({"op": "answer", "text": "Choose a backup folder in Settings.", "cites": [{"quote": BACKUP_WORDS}]})
+    asked = c.post(f"{api}/ask", json={"question": "How do I set up backups?"}).json()["id"]
+    worker.run_pending()
+    made = c.post(f"{api}/asks/{asked}/correction", json={"note": "Backups are under Connections, not Settings."})
+    assert made.status_code == 200, made.text
+    from engine.storage import Store
+
+    store = Store(ws.db_path, cfg=ws.config(env={}))
+    try:
+        found = store.read().get("signal", made.json()["id"])
+        answer = store.read().find("answer", {"request": asked})[-1]
+    finally:
+        store.close()
+    assert found.data["kind"] == "change_requested" and found.data["refs"] == [answer.id]
+    assert found.data["note"].startswith("Backups are under")
+    assert c.post(f"{api}/asks/NOPE-1/correction", json={"note": "x"}).status_code == 404

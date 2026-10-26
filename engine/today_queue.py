@@ -1595,10 +1595,10 @@ def _outcome_of(
 ) -> tuple[dict[str, int], list[dict[str, Any]]]:
     """What a changeset did, counted by the outcome word the screen uses (held and refused ops counted as such), and
     the ops that were applied or are held. The ops whose index is in `leave_out` (those asked on a line of their own)
-    are counted nowhere."""
+    are counted nowhere, and neither is an answer, which changed nothing: reading it is enough (design 6.25)."""
     outcome: dict[str, int] = {}
     for o in cs.get("ops", []):
-        if o.get("index") in leave_out:
+        if o.get("index") in leave_out or (o.get("op") or {}).get("op") == "answer":
             continue
         status = o.get("status")
         if status in ("held", "refused"):
@@ -1608,7 +1608,11 @@ def _outcome_of(
         word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
         outcome[word] = outcome.get(word, 0) + 1
     return outcome, [
-        o for o in cs.get("ops", []) if o.get("status") in ("applied", "held") and o.get("index") not in leave_out
+        o
+        for o in cs.get("ops", [])
+        if o.get("status") in ("applied", "held")
+        and o.get("index") not in leave_out
+        and (o.get("op") or {}).get("op") != "answer"
     ]
 
 

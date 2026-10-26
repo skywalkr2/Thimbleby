@@ -4044,6 +4044,12 @@ class AskIn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
 
 
+class AnswerCorrectionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    note: str = Field(min_length=1, max_length=2000, description="What the answer got wrong, in the person's words.")
+
+
 class CiteView(BaseModel):
     quote: str = Field(description="The exact words from the cited material; the input's own text, never checked.")
     source: str | None = None

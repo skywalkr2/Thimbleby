@@ -95,12 +95,12 @@ const rowButton = (title: string) => screen.getByRole("button", { name: new RegE
 test("only the first item is chosen, so its details are shown; the others are one line each, with nothing of their details", async () => {
   show([change("A", "First thing"), change("B", "Second thing"), change("C", "Third thing")]);
   renderApp(<WhatChanged />);
-  expect(await screen.findByText("Summary of First thing.")).toBeInTheDocument();
+  expect(await screen.findByText("Send First thing")).toBeInTheDocument();
   expect(rowButton("First thing")).toHaveAttribute("aria-expanded", "true");
   expect(rowButton("Second thing")).toHaveAttribute("aria-expanded", "false");
   expect(rowButton("Third thing")).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByText("Summary of Second thing.")).toBeNull();
-  expect(screen.queryByText("Summary of Third thing.")).toBeNull();
+  expect(screen.queryByText("Send Second thing")).toBeNull();
+  expect(screen.queryByText("Send Third thing")).toBeNull();
   // The rows still say what is to be looked at: each line keeps its primary action (and the detail has its own).
   expect(screen.getAllByRole("button", { name: "Looks good" })).toHaveLength(4);
   expect(within(screen.getByRole("complementary")).getAllByRole("button", { name: "Looks good" })).toHaveLength(1);
@@ -110,10 +110,10 @@ test("another item is chosen by its line, and its details replace the first's", 
   const user = userEvent.setup();
   show([change("A", "First thing"), change("B", "Second thing")]);
   renderApp(<WhatChanged />);
-  await screen.findByText("Summary of First thing.");
+  await screen.findByText("Send First thing");
   await user.click(rowButton("Second thing"));
-  expect(await screen.findByText("Summary of Second thing.")).toBeInTheDocument();
-  expect(screen.queryByText("Summary of First thing.")).toBeNull();
+  expect(await screen.findByText("Send Second thing")).toBeInTheDocument();
+  expect(screen.queryByText("Send First thing")).toBeNull();
   expect(rowButton("Second thing")).toHaveAttribute("aria-expanded", "true");
   expect(rowButton("First thing")).toHaveAttribute("aria-expanded", "false");
 });

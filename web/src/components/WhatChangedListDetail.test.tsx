@@ -39,7 +39,7 @@ function change(id: string, title: string, extra: Partial<S["ChangeItem"]> = {})
           status: "applied",
           reason: null,
           group: "op0",
-          title: `Fact from ${title}`,
+          title: `Send ${title}`,
           meta: { owners: [] },
           evidence: null,
           record: { kind: "fact", id: `FACT-${id}` },
@@ -75,16 +75,16 @@ describe("beside the list", () => {
     fakeApi(routes(() => [change("A", "First thing"), change("B", "Second thing")]));
     renderApp(<WhatChanged />);
     const pane = await screen.findByRole("complementary", { name: "First thing" });
-    expect(within(pane).getByText("Summary of First thing.")).toBeInTheDocument();
-    expect(within(pane).getByText("Fact from First thing")).toBeInTheDocument();
+    expect(within(pane).getByText("Send First thing")).toBeInTheDocument();
+    expect(within(pane).getByText("Send First thing")).toBeInTheDocument();
     expect(chosenId()).toBe("A");
     // The line holds the state, the title, one line of what was done, the one primary and the menu: nothing of the details.
     const second = await line("Second thing");
     expect(within(second).getByText("Second thing")).toBeInTheDocument();
     expect(within(second).getByText(/Recorded 1 thing|Recorded a fact|Handed in/)).toBeInTheDocument();
     expect(within(second).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([expect.stringMatching(/^Second thing/), "Looks good", "More actions for Second thing"]);
-    expect(within(second).queryByText("Summary of Second thing.")).toBeNull();
-    expect(screen.queryByText("Summary of Second thing.")).toBeNull();
+    expect(within(second).queryByText("Send Second thing")).toBeNull();
+    expect(screen.queryByText("Send Second thing")).toBeNull();
   });
 
   test("a click on a line chooses it, and its detail replaces the one shown", async () => {
@@ -94,8 +94,8 @@ describe("beside the list", () => {
     await screen.findByRole("complementary", { name: "First thing" });
     await user.click(await line("Second thing"));
     const pane = await screen.findByRole("complementary", { name: "Second thing" });
-    expect(within(pane).getByText("Summary of Second thing.")).toBeInTheDocument();
-    expect(screen.queryByText("Summary of First thing.")).toBeNull();
+    expect(within(pane).getByText("Send Second thing")).toBeInTheDocument();
+    expect(screen.queryByText("Send First thing")).toBeNull();
     expect(chosenId()).toBe("B");
   });
 
@@ -155,7 +155,7 @@ describe("beside the list", () => {
     await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-A/looks-good")).toBe(true));
     // The change that was approved is gone from the list; the one after it is chosen.
     expect(await screen.findByRole("complementary", { name: "Second thing" })).toBeInTheDocument();
-    expect(screen.queryByText("Summary of First thing.")).toBeNull();
+    expect(screen.queryByText("Send First thing")).toBeNull();
     expect(chosenId()).toBe("B");
   });
 
@@ -212,7 +212,7 @@ describe("below 1024px", () => {
     expect(chosenId()).toBeUndefined();
     await user.click(within(row).getByRole("button", { name: /^Second thing/ }));
     const drawer = await screen.findByRole("dialog", { name: "Second thing" });
-    expect(within(drawer).getByText("Summary of Second thing.")).toBeInTheDocument();
+    expect(within(drawer).getByText("Send Second thing")).toBeInTheDocument();
     await user.click(within(drawer).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(async () => expect(await line("Second thing")).toHaveFocus());

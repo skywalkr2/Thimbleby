@@ -350,3 +350,14 @@ test("Ask offers to set up kinds of items of your own, listing the starting temp
   await waitFor(() => expect(calls.find((c) => c.route === "POST templates/apply")?.body).toEqual({ id: "tpl-a" }));
   expect(await screen.findByText("Applied Client requests.")).toBeInTheDocument();
 });
+
+test("an answer offers Correct it, and the correction is sent with the person's words", async () => {
+  const user = userEvent.setup();
+  const answered = ask("Q-9", { state: "done", answer: { text: "It is in Settings.", cites: [] } });
+  const { calls } = open([answered], { "POST asks/Q-9/correction": () => ({ id: "SIG-1" }) });
+  const row = await item("Question Q-9");
+  await user.click(within(row).getByRole("button", { name: "Correct it" }));
+  await user.type(within(row).getByLabelText("What was wrong in this answer?"), "It is under Connections");
+  await user.click(within(row).getByRole("button", { name: "Send correction" }));
+  await waitFor(() => expect(sent(calls, "POST asks/Q-9/correction")).toEqual({ note: "It is under Connections" }));
+});

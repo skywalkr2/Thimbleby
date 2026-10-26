@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
+    AnswerCorrectionIn,
     AnswerView,
     AskIn,
     AskView,
@@ -61,6 +62,27 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         worker.poke()
         events.changed()
         return Created(id=request.id)
+
+    @r.post("/asks/{request_id}/correction")
+    def correct_answer(request_id: str, body: AnswerCorrectionIn) -> Created:
+        """The person says what an answer got wrong: one correction signal naming the answer, the change and the run
+        that made it, so the assistant learns from it."""
+        from engine.dispatcher import signal
+
+        view = store.read()
+        asked = view.get("request", request_id)
+        answers = view.find("answer", {"request": request_id}) if asked is not None else []
+        if asked is None or asked.data["task"] != "ask" or not answers:
+            raise HTTPException(status_code=404, detail="There is no answer to correct.")
+        made = signal(
+            store,
+            "change_requested",
+            [answers[-1].id],
+            note=" ".join(body.note.split()),
+            changeset=asked.data.get("changeset"),
+        )
+        events.changed()
+        return Created(id=made)
 
     #: The ops an ask shows apart from its changes: the answer, a suggested setting and a drafted report.
     own_ops = ("answer", "setting.propose", "report.draft")

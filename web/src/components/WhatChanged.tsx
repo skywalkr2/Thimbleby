@@ -536,10 +536,9 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
           {actions}
         </div>
       )}
-      {(cs?.second_opinion || item.follows_summary) && (
+      {cs?.second_opinion && (
         <div className={props.pane ? "detail-notes" : "text row-notes"}>
           {cs?.second_opinion && <span className="sub second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span>}
-          {item.follows_summary && <span className="sub">{t("changes.follows", { summary: item.follows_summary })}</span>}
         </div>
       )}
       {!props.pane && <OnTheRow item={item} />}
@@ -555,14 +554,8 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
           {(item.state === "review" || item.state === "done") && spentLine(item.spent_usd, item.range_usd) && (
             <p className="hint">{spentLine(item.spent_usd, item.range_usd)}</p>
           )}
-          {cs && cs.summary.trim() && (
-            <div className="assistant-summary">
-              <span className="what">{t("changes.summary_label")}</span>
-              <p>{cs.summary}</p>
-            </div>
-          )}
           {cs && <Because cs={cs} />}
-          {cs && cs.ops.length === 0 && !cs.summary.trim() && <p className="hint">{t("changes.nothing_done")}</p>}
+          {cs && cs.ops.length === 0 && <p className="hint">{t("changes.nothing_done")}</p>}
           {cs && cs.ops.length > 0 && (
             <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>
               {cs.ops.map((op) =>

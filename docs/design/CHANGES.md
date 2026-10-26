@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 206. The app's own screens are in the guide; an answer is read, not reviewed; run summaries never show (2026-10-26; P55 a, b, c)
+
+- **Design 6.25 (asking):** the user guide has a section naming every screen of the side menu and Settings with what it is
+  for and the near names people use; the ask prompt points to it. An answer that changed nothing closes the request as
+  looked over (`engine/dispatcher.py`, `_answer_only`); `POST /api/asks/{id}/correction` records a `change_requested`
+  signal naming the answer. **Built:** `tests/test_ask.py` (`test_the_guide_names_every_screen_and_is_found_by_its_near_names`,
+  `test_the_guide_has_the_owners_question_about_the_knowledge_panel`, `test_an_answer_to_the_persons_question_leaves_nothing_to_look_over`,
+  `test_correcting_an_answer_records_a_signal_naming_the_answer`), `web/src/components/Ask.test.tsx`. Not built: "Helpful"
+  and "Not helpful" (two new signal kinds).
+- **Design 7 (Today, Review):** a review line never counts an answer (`_outcome_of`); the assistant's own summary of a run
+  and the summary of the change an item follows are not shown (`web/src/components/WhatChanged.test.tsx`: "the
+  assistant's own summary of a run never shows").
+
 ## 204. One-time-code mail is set aside by rules; a read with nothing to record closes itself; each mail in one list (2026-10-26; P42, P47)
 
 - **Design 6.5 (built-in sorting):** after the workspace's rules, automated one-time-code mail (a no-reply sender and a code

@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The assistant knows the app's own screens; an answer is read, never reviewed; run summaries never show (P55 a, b, c)
+
+**Decided:** (1) The user guide the ask reads has a section naming every screen in the side menu and Settings (Today,
+What changed, Follow-ups, To-dos and questions, Waiting to go out, Stages, Projects, People, Files, Knowledge,
+Connections, Add-ons, Settings, Quality) with what each is for, and the near names people use ("panel", "page",
+"screen", "tab"); a test asks for each screen by each near name, with the names read from the navigation code. Before,
+"what is the knowledge panel?" was answered "nothing of that name" although Knowledge is in the side menu. (2) An answer
+to the person's own question changed nothing, so it has no Review line and no approve button, and the request closes
+itself as looked over; the answer shows once, on Ask, with "Correct it" recording one correction. If a question also
+changed something, the review of those changes stays and the answer text is not counted in it. (3) The assistant's
+one-line summary of a run is internal: it is not shown on any screen, nor is the summary of the change an item follows,
+and the ask prompt calls the reader "the person". Not decided here: "Helpful" and "Not helpful" need two new signal
+kinds, a core record shape the plugin API hold keeps closed.
+**Why:** the owner's first real use showed all three on one screen. Change log: section 206.
+
 ## 2026-10-26: One-time-code mail is set aside by rules, a read with nothing to record closes itself, and each mail shows in one list (P42, P47)
 
 **Decided:** (1) The built-in sorting after the workspace's rules also sets aside automated one-time-code mail with no AI

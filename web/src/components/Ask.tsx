@@ -196,6 +196,7 @@ function AskRow(props: { item: AskItem; onApplied: () => void; mailTo?: string |
               )}
             </div>
           )}
+          {item.answer && <CorrectIt request={item.id} />}
           {proposals.map((p) => (
             <Proposal key={p.id} proposal={p} onApplied={props.onApplied} />
           ))}
@@ -205,6 +206,55 @@ function AskRow(props: { item: AskItem; onApplied: () => void; mailTo?: string |
         </div>
       )}
     </li>
+  );
+}
+
+function CorrectIt(props: { request: string }) {
+  const { t } = useWords();
+  const act = useAct();
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const field = useRef<HTMLTextAreaElement>(null);
+  const send = async () => {
+    if (!note.trim()) return;
+    const done = await act(
+      () => api.correctAnswer(props.request, note.trim()),
+      () => ({ message: t("ask.toast.corrected") }),
+    );
+    if (done) {
+      setNote("");
+      setOpen(false);
+    }
+  };
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="btn quiet"
+        onClick={() => {
+          setOpen(true);
+          setTimeout(() => field.current?.focus(), 0);
+        }}
+      >
+        {t("ask.correct")}
+      </button>
+    );
+  }
+  return (
+    <div className="correct-it">
+      <label>
+        <span className="what">{t("ask.correct_label")}</span>
+        <textarea ref={field} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+      </label>
+      <div className="acts">
+        <button type="button" className="btn primary" disabled={!note.trim()} onClick={() => void send()}>
+          {t("ask.correct_send")}
+        </button>
+        <button type="button" className="btn quiet" onClick={() => setOpen(false)}>
+          {t("ask.correct_cancel")}
+        </button>
+      </div>
+    </div>
   );
 }
 

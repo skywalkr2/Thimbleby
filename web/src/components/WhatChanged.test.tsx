@@ -153,14 +153,13 @@ test("a who-is question offers the likely people first", async () => {
   await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-7/answer")?.body).toEqual({ person: "PER-5" }));
 });
 
-test("when nothing was recorded, the assistant's summary says why", async () => {
+test("when nothing was recorded, the row says so and never shows the assistant's summary", async () => {
   const item = change("REQ-9", { source: null, source_title: null, note: "Write an email to the printer" });
   item.changeset!.ops = [];
   item.changeset!.summary = "You asked for an email draft; writing emails isn't something I can do from here.";
   fakeApi({ "GET changes": () => [item] });
   renderApp(<WhatChanged />);
-  expect(await screen.findByText(item.changeset!.summary)).toBeInTheDocument();
-  expect(within(await findPane()).getByText("Helper says")).toBeInTheDocument();
+  expect(within(await findPane()).queryByText(item.changeset!.summary)).toBeNull();
   expect(within(await findPane()).getByText(/Nothing recorded/)).toBeInTheDocument();
 });
 
@@ -330,11 +329,14 @@ test("a second opinion is labeled in words, by where it came from, in the change
   expect(within(screen.getByRole("listitem", { name: "From the same account" })).queryByText(/Second opinion/)).toBeNull();
 });
 
-test("work a plugin did in answer to a change says which change it followed", async () => {
-  const after = change("REQ-1", { source_title: "Chapter updates", follows: "CS-3", follows_summary: "Accept chapter 4" });
+test("the assistant's own summary of a run never shows, in the row or its details", async () => {
+  const after = change("REQ-1", { source_title: "Chapter updates", follows: "CS-3", follows_summary: "Told the user about chapter 4" });
   fakeApi({ "GET changes": () => [after] });
   renderApp(<WhatChanged />);
-  expect(await within(await findPane()).findByText("After: Accept chapter 4")).toBeInTheDocument();
+  const pane = await findPane();
+  expect(within(pane).queryByText(/Told the user/)).toBeNull();
+  expect(within(pane).queryByText(/One fact\./)).toBeNull();
+  expect(document.body.textContent).not.toMatch(/the user|assistant says/i);
 });
 
 test("a refused request offers Send to another account, with Try again and Dismiss in its menu", async () => {
@@ -423,9 +425,9 @@ test("a request waiting for the person to be named offers Say who you are, which
 
 test("a change asked for before this screen opened is opened once its list has loaded", async () => {
   const done = change("REQ-2", { state: "done" });
-  done.changeset!.summary = "Added the action about the proofs.";
+  done.changeset!.ops[0].title = "Added the action about the proofs.";
   const third = change("REQ-3", { state: "done" });
-  third.changeset!.summary = "Another summary, not asked for.";
+  third.changeset!.ops[0].title = "Another summary, not asked for.";
   fakeApi({ "GET changes": () => [change("REQ-1", { state: "done" }), done, third] });
   // The person chose "Where it came from" on another screen, which then opened this one.
   expect(revealOrKeep("changeset", "CS-REQ-2")).toBe(false);
@@ -572,8 +574,8 @@ describe("review mode on a phone", () => {
   beforeEach(() => document.documentElement.setAttribute("data-narrow", ""));
   afterEach(() => document.documentElement.removeAttribute("data-narrow"));
 
-  const first = () => change("A", { source_title: "First thing", changeset: { ...change("A").changeset!, summary: "Summary of the first thing." } });
-  const second = () => change("B", { source_title: "Second thing", changeset: { ...change("B").changeset!, summary: "Summary of the second thing." } });
+  const first = () => change("A", { source_title: "First thing", changeset: { ...change("A").changeset!, ops: [{ ...change("A").changeset!.ops[0], title: "Send the first thing" }] } });
+  const second = () => change("B", { source_title: "Second thing", changeset: { ...change("B").changeset!, ops: [{ ...change("B").changeset!.ops[0], title: "Send the second thing" }] } });
 
   test("is offered only on a phone and only for items waiting for a look", async () => {
     const user = userEvent.setup();
@@ -591,14 +593,14 @@ describe("review mode on a phone", () => {
     fakeApi(routes([first(), second()]));
     renderApp(<WhatChanged />);
     await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
-    expect(await screen.findByText("Summary of the first thing.")).toBeInTheDocument();
-    expect(screen.queryByText("Summary of the second thing.")).toBeNull();
+    expect(await screen.findByText("Send the first thing")).toBeInTheDocument();
+    expect(screen.queryByText("Send the second thing")).toBeNull();
     expect(screen.getByRole("heading", { name: "1 of 2 to look at" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Summary of the second thing.")).toBeInTheDocument();
+    expect(await screen.findByText("Send the second thing")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "2 of 2 to look at" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Summary of the first thing.")).toBeInTheDocument();
+    expect(await screen.findByText("Send the first thing")).toBeInTheDocument();
   });
 
   test("Looks good approves the item on screen with Undo, and the next one takes its place", async () => {
@@ -615,10 +617,10 @@ describe("review mode on a phone", () => {
     );
     renderApp(<WhatChanged />);
     await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
-    await screen.findByText("Summary of the first thing.");
+    await screen.findByText("Send the first thing");
     await user.click(within(screen.getByRole("group", { name: "What to do with this one" })).getByRole("button", { name: "Looks good" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-A/looks-good")).toBe(true));
-    expect(await screen.findByText("Summary of the second thing.")).toBeInTheDocument();
+    expect(await screen.findByText("Send the second thing")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "1 of 1 to look at" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
@@ -628,7 +630,7 @@ describe("review mode on a phone", () => {
     fakeApi(routes([first()]));
     renderApp(<WhatChanged />);
     await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
-    await screen.findByText("Summary of the first thing.");
+    await screen.findByText("Send the first thing");
     await user.click(within(screen.getByRole("group", { name: "What to do with this one" })).getByRole("button", { name: "Send back" }));
     expect(await screen.findByLabelText(/^What should .* do differently\?/)).toBeInTheDocument();
   });
@@ -647,7 +649,7 @@ describe("review mode on a phone", () => {
     );
     renderApp(<WhatChanged />);
     await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
-    await screen.findByText("Summary of the first thing.");
+    await screen.findByText("Send the first thing");
     await user.click(within(screen.getByRole("group", { name: "What to do with this one" })).getByRole("button", { name: "Looks good" }));
     expect(await screen.findByRole("heading", { name: "Nothing left to look at." })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back to the list" }));

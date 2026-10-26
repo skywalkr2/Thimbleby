@@ -102,8 +102,6 @@ main p { max-width: var(--measure); }
 .body { border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); overflow-wrap: anywhere; }
 .your-note { border-left: 3px solid var(--accent); padding-left: var(--space-3); }
 .your-note p { white-space: pre-wrap; }
-.assistant-summary { border-left: 3px solid var(--border); padding-left: var(--space-3); }
-.assistant-summary p { white-space: pre-wrap; }
 .what { font-size: var(--text-sm); line-height: var(--lh-sm); color: var(--text-muted); font-weight: var(--weight-semibold); }
 .learned-inset { padding: 0 var(--space-4); }
 .made { list-style: none; padding: 0 var(--space-4) var(--space-3); margin: 0; font-size: var(--text-sm); }

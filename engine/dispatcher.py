@@ -415,7 +415,7 @@ def process(
     if run_id is not None:
         record_applied(store, run_id, cs_id)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
-    if _nothing_to_do(req.data, kind.name, changeset, problems):
+    if _nothing_to_do(req.data, kind.name, changeset, problems) or (kind.name == "ask" and _answer_only(store, cs_id)):
         close_nothing_to_do(store, cs_id)
     if learn.is_learning(kind.name):
         learn.finish(store, request_id, cs_id)
@@ -1500,6 +1500,14 @@ def _nothing_to_do(request: dict, kind_name: str, changeset: ChangesetIn, proble
     if kind_name == follow_on.TASK:
         return False
     return not (changeset.ops or changeset.ask or changeset.missing or problems)
+
+
+def _answer_only(store: Store, changeset_id: str) -> bool:
+    """Whether an answered question changed nothing: its only applied op is the answer. Reading it is enough, so nothing
+    waits for a look (design 6.25)."""
+    cs = store.read().get("changeset", changeset_id)
+    applied = [o for o in (cs.data["ops"] if cs is not None else []) if o.get("status") in ("applied", "held")]
+    return bool(applied) and all((o.get("op") or {}).get("op") == "answer" for o in applied)
 
 
 def close_nothing_to_do(store: Store, changeset_id: str) -> None:

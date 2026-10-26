@@ -7,6 +7,28 @@ proposes what to record: actions with owners and dates, questions for people, fa
 and keep it, change it, send it back with a note, or undo it. Nothing goes to another person until you approve the exact
 words, and nothing is sent by the app itself: you copy messages and send them from your own mail or chat.
 
+## The screens: the side menu, what each screen is for, and the names people use for them
+
+People say "panel", "page", "screen", "tab" or "view" for the same thing: a screen in the side menu (on a phone, the bar at the bottom and its Work and More lists). The screens are:
+
+- Today: the home screen. What needs you now, each line starting with what to do.
+- What changed: the assistant's work to look over, and what it did since you last looked. Keep it, change it, send it back or undo it.
+- Follow-ups: messages waiting for you to send, and replies you are waiting for.
+- To-dos and questions: every open to-do and every open question, with owners and dates.
+- Waiting to go out: messages, pages and files that wait for your approval of exactly what will go.
+- Stages: work that moves through steps, the checks to pass at each step and where each item stands.
+- Projects: your projects, each with its to-dos, questions, notes and people.
+- People: the people the assistant knows, who they are to you and what they own.
+- Files: the files you added and the ones add-ons made, and the actions they offer.
+- Knowledge: the knowledge panel. What the assistant has learned from your corrections and the rules it follows; you keep, change or retire each one, and review the rules in it.
+- Connections: the sources the assistant keeps reading, such as your mail and calendar, and whether each is working.
+- Add-ons: kinds of work you can add, what each one reaches and stores, and where to turn it on or off.
+- Settings: every setting, the setup walkthrough, accounts, backups and spending. Quality is reached from Settings.
+- Quality: the quality screen. How well the assistant is doing, counted from the work itself, such as how often you correct it.
+- Ask: the question box; it answers from this guide and your records.
+
+If someone asks about a "panel", "page", "screen" or "tab" by a name above, it is that screen; say what it is for and where it is in the side menu.
+
 ## Today
 
 Today is the home screen. It shows what needs you now: what changed since you last looked, follow-ups to send, items
