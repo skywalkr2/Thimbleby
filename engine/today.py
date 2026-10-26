@@ -72,12 +72,16 @@ def agenda_span(cfg: Any, now: datetime) -> tuple[date, date]:
     return first, first + timedelta(days=cfg.ui.today.agenda_days_ahead)
 
 
-def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> list[AgendaItem]:
-    """Events on today and the configured days after it (or every day through `through`), earliest first; all-day ones
-    first on their day. The app's own calendar entries follow the connected calendars' events, in start order, each on
-    every day it covers."""
+def agenda(
+    store: Any, cfg: Any, now: datetime, through: date | None = None, start: date | None = None
+) -> list[AgendaItem]:
+    """Events on today and the configured days after it (or every day from `start` through `through`), earliest first;
+    all-day ones first on their day. The app's own calendar entries follow the connected calendars' events, in start
+    order, each on every day it covers. Counts that look ahead (open items on a series) count from today, not
+    `start`."""
     here = zone(cfg)
-    first = now.astimezone(here).date()
+    today = now.astimezone(here).date()
+    first = start or today
     ahead = cfg.ui.today.agenda_days_ahead if through is None else max(0, (through - first).days)
     days = [first + timedelta(days=n) for n in range(ahead + 1)]
     found = []
@@ -110,17 +114,17 @@ def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> 
                     days=on,
                     entry=entry.id if entry is not None else None,
                     series=entry.data.get("series") if entry is not None else None,
-                    open_items=_open_on(view, entry, days[0], here)
+                    open_items=_open_on(view, entry, today, here)
                     if entry is not None and entry.data.get("series")
                     else 0,
                     todo_offer=entry_rules.task_offer(entry.data, cfg)
                     if entry is not None and entry.id not in with_todo
                     else None,
-                    agenda=agenda_module.for_entry(view, entry, days[0], here) if entry is not None else [],
+                    agenda=agenda_module.for_entry(view, entry, today, here) if entry is not None else [],
                 )
             )
     found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
-    return [*found, *_own_entries(store, days, here)]
+    return [*found, *_own_entries(store, days, here, today)]
 
 
 def _dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
@@ -153,7 +157,7 @@ def _dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
     ]
 
 
-def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaItem]:
+def _own_entries(store: Any, days: list[date], here: ZoneInfo, today: date) -> list[AgendaItem]:
     """The app's own calendar entries that overlap the listed days, earliest first. A range counts every day from its
     start to its end, both included; an entry with no time of day is all-day."""
     found = []
@@ -186,8 +190,8 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaIte
                 days=on,
                 own=True,
                 series=data.get("series"),
-                open_items=_open_on(view, entry, days[0], here) if data.get("series") else 0,
-                agenda=agenda_module.for_entry(view, entry, days[0], here),
+                open_items=_open_on(view, entry, today, here) if data.get("series") else 0,
+                agenda=agenda_module.for_entry(view, entry, today, here),
             )
         )
     return sorted(found, key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))

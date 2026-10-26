@@ -1,6 +1,6 @@
 // Which screen is showing (design 7.1). Every view has a real link in the address's #fragment, so one build works at any
 // base path with no server routes, and a view can be bookmarked and opened in a new tab:
-//   #today  #work/changed  #work/since  #work/followups  #work/open  #work/outgoing  #work/stages  #work/panel/<name>
+//   #today  #schedule  #work/changed  #work/since  #work/followups  #work/open  #work/outgoing  #work/stages  #work/panel/<name>
 //   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
 //   #sources  #addons  #settings  #settings/<section> (you, ai, backups, today, appearance, lists, files, advanced, addon/<name>)
@@ -8,6 +8,7 @@
 // A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
 export type CoreView =
   | "today"
+  | "schedule"
   | "work/changed"
   | "work/since"
   | "work/followups"
@@ -35,6 +36,7 @@ export type View = CoreView | `${PanelGroup}/panel/${string}` | `records/${strin
 
 export const CORE_VIEWS: readonly CoreView[] = [
   "today",
+  "schedule",
   "work/changed",
   "work/since",
   "work/followups",

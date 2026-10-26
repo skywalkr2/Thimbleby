@@ -23,6 +23,7 @@ import { FollowUps } from "./components/FollowUps";
 import { OpenItems } from "./components/OpenItems";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
+import { Schedule } from "./components/Schedule";
 import { Quality } from "./components/Quality";
 import { Knowledge } from "./components/Knowledge";
 import { MissedOneProvider } from "./components/MissedOne";
@@ -126,7 +127,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   };
   const shown = parseView(view);
   // The grid of what each account can do and the quality figures belong to Settings, so Settings stays marked in the navigation.
-  const navView: View = view === "settings/ai-compare" || view === "quality" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
+  const navView: View = view === "schedule" ? "today" : view === "settings/ai-compare" || view === "quality" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened
@@ -222,6 +223,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             }}
           />
         );
+      case "schedule":
+        return <Schedule />;
       case "work/changed":
         return <WhatChanged onOpenGuide={openGuide} />;
       case "work/since":

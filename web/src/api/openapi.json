@@ -21372,6 +21372,246 @@
         "title": "RuntimeConfig",
         "type": "object"
       },
+      "ScheduleDayView": {
+        "description": "One day of the schedule.",
+        "properties": {
+          "all_day": {
+            "description": "The all-day entries: the calendars' first, then the app's own.",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleEntryView"
+            },
+            "title": "All Day",
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "timed": {
+            "description": "The timed entries by when they begin that day.",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleEntryView"
+            },
+            "title": "Timed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "all_day",
+          "timed"
+        ],
+        "title": "ScheduleDayView",
+        "type": "object"
+      },
+      "ScheduleEntryView": {
+        "description": "One entry on one day of the schedule: the agenda item and the part of it that falls on that day.",
+        "properties": {
+          "agenda": {
+            "description": "What is to be taken up at this meeting: its own agenda items and, for the next meeting of a series, the series' agenda after them.",
+            "items": {
+              "$ref": "#/components/schemas/AgendaLine"
+            },
+            "title": "Agenda",
+            "type": "array"
+          },
+          "all_day": {
+            "title": "All Day",
+            "type": "boolean"
+          },
+          "begins": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it starts, as a date-time on the person's clock, when that is on this day; none for an entry that came in from the day before.",
+            "title": "Begins"
+          },
+          "cancelled": {
+            "description": "The organizer called it off.",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
+          "days": {
+            "description": "The days it falls on, in the person's time zone.",
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "ends": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it ends, as a date-time on the person's clock, when that is on this day; none for an entry that goes on past it or names no end.",
+            "title": "Ends"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an event read from a connected calendar: the id of the calendar entry kept for this date (its page shows who is asked), when there is one.",
+            "title": "Entry"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where to open it; untrusted, so show its real domain.",
+            "title": "Link"
+          },
+          "open_items": {
+            "default": 0,
+            "description": "For a meeting of a series: how many open actions and questions sit on it (never shown as zero).",
+            "title": "Open Items",
+            "type": "integer"
+          },
+          "own": {
+            "default": false,
+            "description": "An entry in the app's own calendar (recorded from what came in), not an event read from a connected calendar. Its end is the last day or moment, included.",
+            "title": "Own",
+            "type": "boolean"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The series this date or entry is one meeting of, when it is.",
+            "title": "Series"
+          },
+          "slot": {
+            "description": "Where it sits in its day: with the all-day entries at the top, or among the timed ones in time order. An entry with no time of day, or one that goes on through the whole day, is all-day.",
+            "enum": [
+              "all_day",
+              "timed"
+            ],
+            "title": "Slot",
+            "type": "string"
+          },
+          "snapshot": {
+            "description": "The item's id: the snapshot of a watched event, or the id of an own entry.",
+            "title": "Snapshot",
+            "type": "string"
+          },
+          "source": {
+            "description": "The watched source's id; its label is in GET /api/sources. For an own entry, the source it came from, or empty.",
+            "title": "Source",
+            "type": "string"
+          },
+          "start": {
+            "description": "ISO 8601: a date-time with its offset, or a date for an all-day event.",
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "todo_offer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a plain entry (nobody else invited, no description) whose title starts with a task verb and that has no to-do yet: the to-do it is offered as, in its own words. Posting to `/api/events/{entry}/todo` makes it.",
+            "title": "Todo Offer"
+          },
+          "where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Where"
+          }
+        },
+        "required": [
+          "snapshot",
+          "source",
+          "title",
+          "start",
+          "all_day",
+          "cancelled",
+          "days",
+          "slot"
+        ],
+        "title": "ScheduleEntryView",
+        "type": "object"
+      },
+      "ScheduleView": {
+        "description": "The schedule (GET /api/schedule): a run of days from `first`, in the person's time zone.",
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleDayView"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "first": {
+            "format": "date",
+            "title": "First",
+            "type": "string"
+          },
+          "today": {
+            "description": "The person's today, so a screen can mark it and return to it.",
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          }
+        },
+        "required": [
+          "today",
+          "first",
+          "days"
+        ],
+        "title": "ScheduleView",
+        "type": "object"
+      },
       "Scope": {
         "additionalProperties": false,
         "description": "What a rule or a piece of knowledge applies to: one shape for both. Empty lists mean no narrowing. `scope` is\n\"workspace\" (everywhere, less the projects in `except`) or \"projects\" (only those in `projects`).",
@@ -36065,6 +36305,76 @@
           }
         },
         "summary": "Runtime Config"
+      }
+    },
+    "/api/schedule": {
+      "get": {
+        "description": "A run of days from `from`, each with its all-day entries apart and its timed entries in time order, from the\nconnected calendars and the app's own entries, in the person's time zone.",
+        "operationId": "schedule_api_schedule_get",
+        "parameters": [
+          {
+            "description": "The first day; today when none.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The first day; today when none.",
+              "title": "From"
+            }
+          },
+          {
+            "description": "How many days; `ui.today.schedule_days` when none.",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 14,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "How many days; `ui.today.schedule_days` when none.",
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schedule"
       }
     },
     "/api/series/{series_id}/page": {

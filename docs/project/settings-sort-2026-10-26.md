@@ -1,7 +1,7 @@
 # Settings sort, 2026-10-26
 
 Where every setting of the app's own files is shown (design 7.9, change 210). Rule: basic is on screen, advanced is behind Advanced, internal is kept only in files. The markers are applied in `engine/config/levels.py` (fronts, longest wins) and `engine.settings.BASIC`; add-on settings keep their own markers. "More settings" is empty after this sort: every field is one of the three.
-Counts: basic 32, advanced 155, files only 198.
+Counts: basic 32, advanced 156, files only 198.
 
 
 | Field | Where | Why |
@@ -256,6 +256,7 @@ Counts: basic 32, advanced 155, files only 198.
 | `ui.today.mail_hours` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
 | `ui.today.mail_max` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
 | `ui.today.agenda_days_ahead` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
+| `ui.today.schedule_days` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
 | `ui.today.stale_after_days` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
 | `ui.today.top_priorities_lines` | advanced | What Today shows and when: its windows and counts; a person may want them different. |
 | `ui.today.top_priorities_ahead_days` | advanced | What Today shows and when: its windows and counts; a person may want them different. |

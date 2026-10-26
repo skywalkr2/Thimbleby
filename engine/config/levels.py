@@ -80,6 +80,7 @@ ADVANCED = (
     "ui.feedback_to",
     "ui.today.mail_hours",
     "ui.today.agenda_days_ahead",
+    "ui.today.schedule_days",
     "ui.today.stale_after_days",
     "ui.today.top_priorities_lines",
     "ui.followups.action_due_within_days",

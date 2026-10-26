@@ -1,0 +1,28 @@
+/* The schedule: its days side by side when the screen's own width allows, one under another when it does not. Nothing
+   here is wider than its column: titles and places wrap. */
+.nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.back svg { transform: rotate(180deg); }
+.frame { container-type: inline-size; min-width: 0; }
+.days { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-width: 0; }
+@container (min-width: 45rem) {
+  .days { grid-template-columns: repeat(var(--days, 3), minmax(0, 1fr)); }
+}
+.day {
+  display: flex; flex-direction: column; gap: var(--space-2); min-width: 0;
+  padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.day[data-today] { border-color: var(--border-strong); border-width: 2px; }
+.dayHead { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); overflow-wrap: anywhere; }
+.none { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
+.caption { margin: 0; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); }
+.allDay { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); min-width: 0; }
+.entry { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-1) var(--space-3); min-width: 0; padding-left: var(--space-2); border-left: 3px solid var(--border-strong); }
+/* The app's own entries have a dashed edge as well as their words, so the two kinds differ by shape. */
+.own { border-left-style: dashed; }
+.when { flex: none; min-width: 4.5rem; color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.what { flex: 1 1 8rem; min-width: 0; display: grid; gap: var(--space-1); }
+.title { font-weight: var(--weight-semibold); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.struck { text-decoration: line-through; }
+.meta { color: var(--text-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.from { font-weight: var(--weight-medium); }

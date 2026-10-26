@@ -175,7 +175,14 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
               : t("today.agenda.none_today")
           : ""
       }
-      footer={<AddMeeting today={today} />}
+      footer={
+        <div className="row-end">
+          <AddMeeting today={today} />
+          <a className="btn small" href={viewHref("schedule")}>
+            {t("schedule.open")}
+          </a>
+        </div>
+      }
     >
       {agenda.isPending ? (
         <Skeleton />

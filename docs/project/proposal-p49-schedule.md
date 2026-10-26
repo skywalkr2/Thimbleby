@@ -1,6 +1,6 @@
 # Proposal for the owner: the agenda becomes a schedule (P49)
 
-Status: **proposal, waiting for the owner's yes.** Nothing here is built. The agenda's fixes are built (CHANGES section
+Status: **approved by the owner on 2026-10-26 with the proposed defaults (design CHANGES 214), and built** except what `open-promises.md` P49 lists as left. The agenda's fixes are built (CHANGES section
 199): it covers today and the six days after, and names the days it looked at when it is empty.
 
 ## The proposal

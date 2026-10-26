@@ -2146,6 +2146,43 @@ class AgendaItemView(BaseModel):
     )
 
 
+class ScheduleEntryView(AgendaItemView):
+    """One entry on one day of the schedule: the agenda item and the part of it that falls on that day."""
+
+    slot: Literal["all_day", "timed"] = Field(
+        description="Where it sits in its day: with the all-day entries at the top, or among the timed ones in time "
+        "order. An entry with no time of day, or one that goes on through the whole day, is all-day."
+    )
+    begins: str | None = Field(
+        None,
+        description="When it starts, as a date-time on the person's clock, when that is on this day; none for an entry "
+        "that came in from the day before.",
+    )
+    ends: str | None = Field(
+        None,
+        description="When it ends, as a date-time on the person's clock, when that is on this day; none for an entry "
+        "that goes on past it or names no end.",
+    )
+
+
+class ScheduleDayView(BaseModel):
+    """One day of the schedule."""
+
+    date: date
+    all_day: list[ScheduleEntryView] = Field(
+        description="The all-day entries: the calendars' first, then the app's own."
+    )
+    timed: list[ScheduleEntryView] = Field(description="The timed entries by when they begin that day.")
+
+
+class ScheduleView(BaseModel):
+    """The schedule (GET /api/schedule): a run of days from `first`, in the person's time zone."""
+
+    today: date = Field(description="The person's today, so a screen can mark it and return to it.")
+    first: date
+    days: list[ScheduleDayView]
+
+
 class ArrivedView(BaseModel):
     """A message from a watched mailbox, received within the configured hours."""
 

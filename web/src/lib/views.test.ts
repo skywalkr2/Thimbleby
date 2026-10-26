@@ -2,6 +2,7 @@ import { fromHash, panelView, parseView, recordView, settingsSectionOf, settings
 
 const routes = [
   "today",
+  "schedule",
   "work/changed",
   "work/followups",
   "work/open",

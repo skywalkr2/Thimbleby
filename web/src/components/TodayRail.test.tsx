@@ -113,6 +113,13 @@ test("five panels in reading order, each with its heading and count, and nothing
   expect(screen.queryByRole("heading", { name: "What changed" })).toBeNull();
 });
 
+test("the agenda card leads to the full schedule, a real link that works in a new tab", async () => {
+  open();
+  const col = await column("Agenda");
+  const link = await within(col).findByRole("link", { name: "Open the schedule" });
+  expect(link).toHaveAttribute("href", expect.stringMatching(/#schedule$/));
+});
+
 test("the agenda groups by day, all-day first, with times, places, called-off labels and link domains", async () => {
   open();
   const col = await column("Agenda");

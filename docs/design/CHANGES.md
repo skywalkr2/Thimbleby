@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 214. The agenda becomes a schedule (2026-10-26; P49)
+
+- **Design 7.7 (the schedule), 4.0:** the owner approved the proposal with its proposed defaults. Today's Agenda panel is the
+  first days of a full schedule screen (`#schedule`, "Open the schedule"): days shown as days (a heading each, all-day
+  entries apart, timed entries in time order), three side by side on a wide window and stacked on a narrow one, no week view;
+  back and forward arrows, a Today button and the Left and Right keys (Shift for a week) that never fire in a field; every
+  entry opening its page; the app's own entries and each calendar's told apart by a word on the row (and a dashed edge for the
+  own), never by color alone. New route `GET /api/schedule?from=&days=` (`ScheduleView`), new setting
+  `ui.today.schedule_days` (3, advanced, demo values in both workspaces); `today.agenda` takes a start day. A booking
+  already on a calendar stays one entry. Not built: swiping between days, a color per calendar, a page for a connected event
+  with no kept entry. Built: `tests/test_schedule.py`, `web/src/components/Schedule.test.tsx`; `web/e2e/schedule.spec.ts` is
+  written and has not yet run.
 ## 213. The product's own add-ons catalog is built in (2026-10-26; P37)
 
 The address of the product's own packs catalog is committed in `catalog/product.yaml`, so a run from a checkout and every

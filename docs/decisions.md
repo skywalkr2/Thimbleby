@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: The agenda becomes a schedule: Today's card is its first days, with a full screen of three days (P49)
+
+**Decided:** Today's Agenda card stays as the first days of the schedule and gains "Open the schedule", which leads to a full
+screen: three days side by side on a wide window (a setting, `ui.today.schedule_days`, 1 to 7), stacked on a narrow one; a
+heading per day, all-day entries apart, timed entries in time order; arrows, a Today button and the Left and Right keys (Shift
+for a week) to move, never firing in a field; every entry opening its page; where an entry comes from said in words on its row.
+No week view. *Why:* the owner asked for "a nice schedule with day showing and you can move forward and backward"; the card
+keeps the glance, the screen gives the room. Impact: design 7.7 (the Agenda bullet and a new schedule bullet), 4.0 (one
+setting); no change to scope. Left: swiping between days on a phone, a color per calendar in Settings, a page for a connected
+event the app keeps no entry for.
+
+**Decided by:** the owner, 2026-10-26: both proposals approved with their proposed defaults.
+
+Change log: section 214.
 ## 2026-10-26: The add-ons catalog's address is the product's, not a setting
 
 **Decided:** The product's own packs catalog address is committed in `catalog/product.yaml` and always read; the person

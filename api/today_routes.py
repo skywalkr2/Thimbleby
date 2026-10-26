@@ -1,12 +1,13 @@
-"""Top priorities and This week on Today (design 7.7). Both are read from the records each time they are asked for; a
-row's actions use the routes the other screens use (`POST /api/actions/{id}/status` to mark done, `POST
+"""Top priorities and This week on Today, and the schedule (design 7.7). Each is read from the records each time it is
+asked for; a row's actions use the routes the other screens use (`POST /api/actions/{id}/status` to mark done, `POST
 /api/records/edit` to reassign), each the person's own change with Undo."""
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import date
+from typing import Annotated, Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
 from api.schemas import (
     AgendaItemView,
@@ -14,11 +15,15 @@ from api.schemas import (
     OwnerNameView,
     PriorityLineView,
     PriorityThingView,
+    ScheduleDayView,
+    ScheduleEntryView,
+    ScheduleView,
     ThisWeekView,
     TopPrioritiesView,
     WeekDueView,
     WeekWaitingView,
 )
+from engine import schedule as schedule_module
 from engine.config import Config
 from engine.names import People, render_owner
 from engine.storage import Store
@@ -26,6 +31,10 @@ from engine.this_week import this_week
 from engine.top_priorities import top_priorities
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
+
+
+def _entry_view(entry: schedule_module.Entry) -> ScheduleEntryView:
+    return ScheduleEntryView(**vars(entry.item), slot=entry.slot, begins=entry.begins, ends=entry.ends)
 
 
 def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
@@ -130,6 +139,36 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 for w in found.waiting
             ],
             meetings=[AgendaItemView(**vars(m)) for m in found.meetings],
+        )
+
+    @r.get("/schedule")
+    def schedule(
+        start: Annotated[date | None, Query(alias="from", description="The first day; today when none.")] = None,
+        days: Annotated[
+            int | None,
+            Query(ge=1, le=schedule_module.MOST_DAYS, description="How many days; `ui.today.schedule_days` when none."),
+        ] = None,
+    ) -> ScheduleView:
+        """A run of days from `from`, each with its all-day entries apart and its timed entries in time order, from the
+        connected calendars and the app's own entries, in the person's time zone."""
+        from engine.today import zone
+
+        now = worker.now()
+        try:
+            found = schedule_module.schedule(store, cfg, now, start, days)
+        except (OverflowError, ValueError):
+            raise HTTPException(status_code=422, detail="that day is out of range") from None
+        return ScheduleView(
+            today=now.astimezone(zone(cfg)).date(),
+            first=found[0].date,
+            days=[
+                ScheduleDayView(
+                    date=d.date,
+                    all_day=[_entry_view(e) for e in d.all_day],
+                    timed=[_entry_view(e) for e in d.timed],
+                )
+                for d in found
+            ],
         )
 
     return r

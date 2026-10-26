@@ -337,6 +337,8 @@ export const api = {
 
   pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),
   agenda: () => call<S["AgendaItemView"][]>("GET", "today/agenda"),
+  /** A run of days from a day (today when none), each with its all-day and timed entries. */
+  schedule: (from: string | null) => call<S["ScheduleView"]>("GET", from ? `schedule?from=${id(from)}` : "schedule"),
   agendaSpan: () => call<S["AgendaSpanView"]>("GET", "today/agenda-span"),
   /** Make the to-do a plain calendar entry is offered as: the person's own, due on the entry's day. */
   entryTodo: (entry: string) => call<S["EntryTodoMade"]>("POST", `events/${id(entry)}/todo`),

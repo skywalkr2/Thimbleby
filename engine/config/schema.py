@@ -2266,6 +2266,13 @@ class TodaySettings(ConfigModel):
     agenda_days_ahead: int = Field(
         6, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
     )
+    schedule_days: int = Field(
+        3,
+        ge=1,
+        le=7,
+        description="How many days the schedule screen shows at once: side by side on a wide window, one under "
+        "another on a narrow one.",
+    )
     stale_after_days: int = Field(
         21,
         ge=0,

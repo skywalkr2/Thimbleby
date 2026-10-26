@@ -7,7 +7,7 @@ import { useEffect } from "react";
 export type RowKey = "primary" | "send_back" | "copy" | "edit" | "move" | "toggle";
 export const ROW_EVENT = "rowkey";
 
-function typing(target: EventTarget | null): boolean {
+export function typing(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }

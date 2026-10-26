@@ -17,6 +17,7 @@ import { ModalPanel } from "./ModalPanel";
 
 const VIEW_LABEL: Record<CoreView, string> = {
   today: "nav.home",
+  schedule: "schedule.title",
   "work/changed": "nav.changed",
   "work/since": "since.title",
   "work/followups": "nav.followups",
