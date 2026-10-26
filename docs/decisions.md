@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: No Google verification for the free core; Gmail through an app password and the calendar's private address
+
+**Decided:** The project does not apply for Google's app verification or its yearly security assessment; that waits until
+something earns money, and the free core (open source, Apache-2.0) never will. The free way in for a personal Gmail
+account is the core's own mailbox connection with an app password (the person turns on two-step sign-in and makes one),
+and the calendar's private address for reading the calendar. One-click Google sign-in stays in the mail add-on for
+testers and for people who make their own registration. The guided steps name the service, so they live in the mail
+add-on or in shipped data, never in core code (the boundary in CLAUDE.md).
+
+**Decided by:** the owner ("I have NO plan for google validation until such time as we would make money and that will
+NEVER happen on the thimbleby core as its apache-2 open source").
+
+**Why:** Research (2026-10-26) found the 100-user cap applies only to unverified apps, reading Gmail needs a yearly paid
+assessment once verified, and app passwords still work for personal Gmail with two-step sign-in.
+
+**Impact:** Open promises P66 and P67; the business model (P66). Change log: none.
+
 ## 2026-10-26: The owner's answers to the designer's full read: one batched plugin API release, the review before the gate, nothing held back
 
 **Decided:**
