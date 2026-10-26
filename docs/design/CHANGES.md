@@ -1027,15 +1027,6 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
-## 210. Every setting is basic, advanced or files only; pages reached from Settings keep its side bar (2026-10-26; P40 points 19, 20)
-
-- **Design 7.9:** the rule for new settings, the three kinds and what each holds, the list of what is internal, and that
-  Connections, Quality, Add-ons and the accounts grid open inside Settings with its side bar. Code:
-  `engine/config/levels.py` (the fronts), `engine/settings.py` (`BASIC` takes the promoted keys), `SettingsNav` and
-  `SettingsFrame` in `web/src/components/Settings.tsx`, `web/src/App.tsx`. Tests: `tests/test_internal_settings.py`,
-  `web/e2e/settings-walk.spec.ts`. The sort: `docs/project/settings-sort-2026-10-26.md`. The server's address, port, base
-  path and public address are now files only (they were advanced and read-only on screen).
-
 ## 211. Ending a project drops what is open on it, in the same undoable change (2026-10-26; P52)
 
 (The top section was 209; 211 is the number the brief gave.)
@@ -1047,6 +1038,15 @@ yet follow, that it is *designed*, with its phase.
   `project-ending`) and the person keeps an item by declining its drop. Dropping an action drafts the existing called-off
   note to whoever was told. Not covered: risks (no core record). **Built:**
   `tests/test_project_ending.py`
+
+## 210. Every setting is basic, advanced or files only; pages reached from Settings keep its side bar (2026-10-26; P40 points 19, 20)
+
+- **Design 7.9:** the rule for new settings, the three kinds and what each holds, the list of what is internal, and that
+  Connections, Quality, Add-ons and the accounts grid open inside Settings with its side bar. Code:
+  `engine/config/levels.py` (the fronts), `engine/settings.py` (`BASIC` takes the promoted keys), `SettingsNav` and
+  `SettingsFrame` in `web/src/components/Settings.tsx`, `web/src/App.tsx`. Tests: `tests/test_internal_settings.py`,
+  `web/e2e/settings-walk.spec.ts`. The sort: `docs/project/settings-sort-2026-10-26.md`. The server's address, port, base
+  path and public address are now files only (they were advanced and read-only on screen).
 
 ## 209. The Personal project reads as the person's own: no target day, no work-style questions, notices never become facts, short fact labels (2026-10-26; P43 a, b, d, e)
 
