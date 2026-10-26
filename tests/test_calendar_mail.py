@@ -138,7 +138,7 @@ def test_new_messages_are_read_without_marking_them(tmp_path, monkeypatch):
     settings = MailboxSettings(host=N["mail_host"], user=N["mail_user"], password="env:MAIL_PASSWORD", first_read=2)
     first = read_mailbox(settings, {}, ConnectorContext(tmp_path))
     assert [i.key for i in first.items] == ["<msg-2@mail.example.com>", "<msg-3@mail.example.com>"]
-    assert first.state == {"validity": "42", "last_uid": 9} and first.complete is False
+    assert first.state == {"validity": "42", "last_uid": 9, "capped": True} and first.complete is False
     assert ("select", '"INBOX"', True) in FakeImap.asked
     assert all("PEEK" in a[2] for a in FakeImap.asked if a[0] == "FETCH")
     again = read_mailbox(settings, first.state, ConnectorContext(tmp_path))
