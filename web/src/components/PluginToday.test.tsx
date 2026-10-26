@@ -189,7 +189,7 @@ test("review of the assistant's answer opens that answer's review in What change
     state: "done",
     approval: null,
     source_title: "Email from the printer",
-    changeset: { id: "CS-8", summary: "One thing was filed.", status: "applied", reviewed: true, trust: "trusted", ops: [] },
+    changeset: { id: "CS-8", summary: "One thing was filed.", status: "applied", reviewed: true, trust: "trusted", ops: [{ index: 0, op: "fact", status: "applied", reason: null, group: "op0", title: "One thing was filed.", meta: { owners: [] }, evidence: null, record: { kind: "fact", id: "FACT-1" }, ask: null }] },
   } as Partial<S["ChangeItem"]>);
   fakeApi({
     "GET plugin-today": () => [core("review", { kind: "changeset", id: "CS-8" })],
