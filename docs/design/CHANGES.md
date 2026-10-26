@@ -1027,6 +1027,21 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 226. Setup: Welcome, seven counted steps, true ticks, and names introduced (2026-10-26; phase U, F1, F5 and F11; P69)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup's opening (7.8) | Opened on the You form under "Set up your workspace", with no step count | A Welcome screen, not counted (what it does, what you'll need, Start). The title is "Getting started", and each step shows "You · 1 of 7". On a phone the step list is one line with a Steps button |
+| Progress (7.8) | Five counted steps on Today, eight in the walkthrough, five on Done. "Your promises ✓ Done" with mail skipped | One list of seven counted steps for the walkthrough, Done and Today. Done only when the step's own thing happened, Skipped otherwise, with "Skipped (needs mail)" |
+| Names (7.8) | "Reginald" first appeared in the AI step's question. The workspace showed as "Workspace" | The You step introduces the assistant with Rename. A workspace on its default name is named after the person ("Avery's"), shown on Done with Rename |
+
+## 225. Personal mail is never set aside; Handled for you in two tabs grouped by kind (2026-10-26; phase U, F2 and F23; P69)
+
+| Where | Before | Now |
+|---|---|---|
+| Sorting (6.5) | The assistant's "personal" answer, a `set_aside: personal` rule and "Set aside: personal" by hand put mail in the Set aside folder, so a "Just me" person's mail was never read | Set aside means sales and notices only. A personal answer or rule files the mail under the Personal project, handed in. "Set aside: personal" leaves the menus. `watch.handled_rule_section: personal` reads as notices. The mail step's words no longer offer to set aside personal mail |
+| Handled for you (7.20) | Three tabs (Set aside, Closed by a rule, Read with nothing to do), grouped by reason | Two tabs: Set aside before reading (rule closes included) and Read, nothing to do (with Closed without you seeing under it). Grouped by kind by default (`ui.handled_group: kind`), by reason and by sender one button away. `tab=closed` reads as `set_aside` |
+
 ## 224. The reviewing, applying and records answers of the batched plugin API release: groups of an answer, a record made earlier in the same change, references that don't block deleting, where a record is written, and a part's address and a request's tag (2026-10-26; P2, answers 170, 194, 201, 205, 197, 200, 204, 193, 199, 188)
 
 Part B1 of the one batched plugin API release (`docs/project/plugin-api-release-plan.md`; the version and the guide's

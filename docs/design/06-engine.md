@@ -274,8 +274,10 @@ the address), from the add-on (plugin API 0.3.58, optional, empty by default) or
 Cc headers; the snapshot keeps it. It lets a first name in the text mean the person on the message (6.11).
 
 It is sorted in this order, first match wins:
-1. **The person's own rules**, in the `triage:` list (4.5). A rule with `set_aside: personal`, `sales` or `notices` sets mail aside in that
-   section instead of plainly closing it; `set_aside: never` keeps mail with the assistant against every set-aside rule after it
+1. **The person's own rules**, in the `triage:` list (4.5). A rule with `set_aside: sales` or `notices` sets mail aside in that
+   section instead of plainly closing it. **Personal mail is never set aside** (the UI/UX review's F2, 2026-10-26; check U5):
+   a rule with `set_aside: personal` (written by an earlier "Always like this") files that mail under the Personal project
+   instead, handed in like any other mail, and `watch.handled_rule_section: personal` reads as `notices`; `set_aside: never` keeps mail with the assistant against every set-aside rule after it
    and against the built-in sorting. The app keeps one rule of its own per choice (a `sender-rule` with the senders and domains
    listed), so the list stays short: "never" goes first in the list, a set-aside rule right after the last "never", and a sender
    moves out of the other choices when the person changes their mind. A `sender-rule` matches the sender's address (read from
@@ -294,7 +296,7 @@ It is sorted in this order, first match wins:
    - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body, the thread
      or an attachment. Each message is an opaque id (`m1`, `m2`, ...) with those three things, marked as outside content,
      in a batch that comes last in the packet after the instructions and the playbook's practice (6.6);
-   - it answers work, personal or sales for each id. **Unsure means work**: a message the answer leaves out, or answers with
+   - it answers work, personal, sales or notice for each id. **Unsure means work**: a message the answer leaves out, or answers with
      another word, counts as work, so nothing is hidden on a guess;
    - one run covers a batch of headers, not one per message: the mail of a read that no rule placed goes in groups of
      `watch.sorting_batch` (25), one run each, after the rules and before anything is handed in. Only new mail is sorted
@@ -304,8 +306,9 @@ It is sorted in this order, first match wins:
      on the tier's escalation tier when that run's estimate is within the caps (6.16); after that every message in the
      batch counts as work;
    - **where items wait:** an item isn't written or handed in until its batch has its answer, so a sorted message is set
-     aside from the start and never queued for the assistant. Personal and sales answers set it aside with the reason "the
-     assistant sorted it as personal mail" or "... sales mail" and `by: assistant`, shown in the Set aside folder (the first tab of Handled for you, 7.20); "This is
+     aside from the start and never queued for the assistant. Sales and notice answers set it aside with the reason "the
+     assistant sorted it as sales mail" or "... automated notices" and `by: assistant`; a personal answer is never set
+     aside: the mail is handed in for the Personal project (`workspace.project.personal`), as Treat as personal does, shown in the Set aside folder (the first tab of Handled for you, 7.20); "This is
      work" and the sorting rules from a correction work exactly as for mail a rule set aside. "Look at the last day" sorts
      the mail a first read only noted in the same way;
    - **cost is the person's choice, as for any run (6.16):** the run is the task kind `sort-mail`, role `write`, at the
@@ -319,14 +322,16 @@ It is sorted in this order, first match wins:
    - **The first go covers it:** before the person's first go in a workspace the run isn't made, so the mail of the
      first read is handed in as work and waits with every other run. When the person gives the first go, the mail
      requests still waiting for it (or queued) whose message was never sorted go through the sorting run first, in
-     the same batches and under the same limits, the go covering the checks that wait for a go. Personal and sales
-     answers set the message aside (its request is closed as set aside) and only the rest run. Mail the person
+     the same batches and under the same limits, the go covering the checks that wait for a go. Sales and notice
+     answers set the message aside (its request is closed as set aside), a personal answer files the request under the
+     Personal project, and only the set-aside ones are left out of the run. Mail the person
      pulled back as work, mail a rule now places or keeps, and changed messages are left alone;
    - **nothing from it is learned:** a set-aside request and snapshot carry the `set_aside` mark that
      `engine.set_aside.learnable` leaves out, so no signal, fact, lesson or evaluation case comes from them (above).
 
 **Correcting it** (all built):
-- **Any item in Came in or What changed that is a mail message** has "Set aside: personal" and "Set aside: sales" in its menu.
+- **Any item in Came in or What changed that is a mail message** has "Set aside" in its menu (as sales mail; "Set aside:
+  personal" is gone, since personal mail is tracked under the Personal project and is never set aside).
   The message moves to the folder at once, and a request of it that hasn't started (queued, or stopped for the person) is
   closed, remembering where it was. Undo puts both back. What the person set aside by hand stays set aside if the message
   changes. Each records a `set_aside` signal (6.20; undo records none). Learning (6.22) reads requests and snapshots only through
@@ -358,8 +363,9 @@ It is sorted in this order, first match wins:
 
 Sorting corrections tune sorting only. They never become content lessons.
 
-**On screen:** the folder is a section of Connections beside Auto-closed, one row per message (subject, sender, date, why it was
-set aside), grouped into Personal and Sales and promotions. Today never lists set-aside mail; Came in shows a count ("6 set
+**On screen:** the folder is the first tab of Handled for you (7.20), one row per message (subject, sender, date, why it was
+set aside), grouped by kind (7.20). Mail set aside as personal before 2026-10-26 stays listed until it ages out, with
+Treat as personal and Treat as work. Today never lists set-aside mail; Came in shows a count ("6 set
 aside") that opens the folder and counts what the folder lists, so a confirmed message is no longer in it. Set-aside mail is kept like other sources and follows retention (5.2).
 
 **A note typed on a button is an input** (phase L0, **built**). Anything the person types that could change the work reaches the

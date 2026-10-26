@@ -4,6 +4,44 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Setup opens on Welcome, counts seven steps everywhere, ticks only what happened, and names the assistant first
+
+**Decided:** A fresh workspace opens on a Welcome screen that isn't counted (what the app does, what the person will need,
+Start). The walkthrough is "Getting started" and never says "workspace". Seven steps count (You, Work, Your AI account, Mail
+and calendar, Your promises, Backups, People), one list for the walkthrough, Done and Today's setup line. A step is Done only
+when its own thing happened, and Skipped otherwise ("Skipped (needs mail)" for Your promises with mail skipped). The You step
+introduces the assistant by name with Rename. A workspace still on its default name is named after the person when they give
+their name. On a phone the step list is one line with a Steps button.
+
+**Decided by:** the owner, sending the UI/UX reviewer's findings F1, F5 and F11 to be built (P69).
+
+**Why:** Ticks that weren't true and three different counts broke trust in the first minutes, and the assistant and the
+workspace carried names nobody chose.
+
+**Impact:** Design 7.8; roadmap U1, U2, U3, U9, U11; open promise P69. Change log: section 226.
+
+## 2026-10-26: Personal mail is never set aside; Handled for you's two tabs are grouped by kind
+
+**Decided:**
+- **Personal mail is never set aside** (core concept). Set aside means sales and automated notices only. When the
+  assistant's sorting answers "personal", the mail is handed in and filed under the Personal project
+  (`workspace.project.personal`), as Treat as personal does. A sorting rule with `set_aside: personal` (written by an earlier
+  "Always like this") now files that sender's mail under Personal, and `watch.handled_rule_section: personal` reads as
+  notices. "Set aside: personal" leaves the Came in menu. The mail step offers "Set aside newsletters, sales and mailing
+  lists", and uncertain mail "stays with you".
+- **Handled for you has two tabs, Set aside before reading and Read, nothing to do.** What a rule closed joins the first tab,
+  and the assistant's own closes ("Closed without you seeing") sit under the second. Rows are grouped by kind by default
+  (`ui.handled_group: kind`), with by reason and by sender one button away.
+
+**Decided by:** the owner, relaying the UI/UX reviewer's F2 and F23 and the functional designer (decision of 2026-10-26 above);
+the main session decided how a personal sorting answer and an existing `personal` rule behave.
+
+**Why:** For a "Just me" person all mail is personal, so setting it aside meant reading nothing. Personal is the default
+project (6.32), so mail sorted as personal belongs there. Existing rules keep working: they file the mail instead of
+hiding it.
+
+**Impact:** Design 6.5 and 7.20; roadmap U5; open promise P69. Change log: section 225.
+
 ## 2026-10-26: The reviewing, applying and records answers of the batched plugin API release (P2, answers 170, 194, 201, 205, 197, 200, 204, 193, 199, 188)
 
 **Decided:** The answers promised to a pack's builder in `docs/project/plugin-answers-34-48.md` for reviewing and applying, and
