@@ -16,6 +16,7 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { FirstPromises } from "./FirstPromises";
 import { StepList, WorkspaceStep } from "./Welcome";
+import { WalkthroughPeople } from "./WalkthroughPeople";
 import { WalkthroughMail } from "./WalkthroughMail";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
@@ -279,13 +280,7 @@ export function Walkthrough(
           )}
           {current === "promises" && <FirstPromises go={go} onOpenSources={props.onOpenSources} />}
           {current === "backup" && <WelcomeBackup local={data.local} />}
-          {current === "people" && (
-            <div className="row-end">
-              <button type="button" className="btn" onClick={props.onOpenPeople}>
-                {t("walkthrough.people.open")}
-              </button>
-            </div>
-          )}
+          {current === "people" && <WalkthroughPeople />}
           {current === "done" && <DoneScreen go={go} {...handlers} />}
           {problem && (
             <p className="problem-note" role="alert">

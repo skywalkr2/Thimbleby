@@ -18,11 +18,11 @@ function show(status: S["Status"], onOpenGuide: (step?: string) => void = () => 
   );
 }
 
-const line = () => screen.findByRole("button", { name: /^Assistant/ });
+const line = () => screen.findByRole("button", { name: /^Helper/ });
 const lineNow = () => document.querySelector("[data-alive]") as HTMLElement;
 const open = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(await line());
-  return screen.getByRole("dialog", { name: "Assistant" });
+  return screen.getByRole("dialog", { name: "Helper" });
 };
 
 const ran = { last_run_at: `${TODAY}T09:42:00+09:00` };
@@ -30,7 +30,7 @@ const ran = { last_run_at: `${TODAY}T09:42:00+09:00` };
 test("fine: the line says the assistant is working and when it last ran, with an icon and words", async () => {
   show(statusFixture({}, { assistant: ran }));
   const button = await line();
-  expect(button).toHaveTextContent("Assistant");
+  expect(button).toHaveTextContent("Helper");
   expect(button).toHaveTextContent(/last task 9:42/);
   expect(button).toHaveAttribute("data-tone", "ok");
   expect(button.querySelector("[data-icon='check']")).toHaveAccessibleName("Working");
@@ -161,7 +161,7 @@ test("accounts are called by the names the person gave them, in the line and in 
   await waitFor(() => expect(button).toHaveTextContent("Main account"));
   expect(button).not.toHaveTextContent("acct-1");
   await user.click(button);
-  const dialog = screen.getByRole("dialog", { name: "Assistant" });
+  const dialog = screen.getByRole("dialog", { name: "Helper" });
   expect(dialog).toHaveTextContent("Main account");
   expect(dialog).toHaveTextContent("Service A account");
   expect(dialog).not.toHaveTextContent(/acct-/);

@@ -1012,6 +1012,10 @@ class PersonView(BaseModel):
     how_to_reach: dict[str, str] = Field(
         default_factory=dict, description="How to reach them: a channel name mapped to its address or handle."
     )
+    relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
+    side: Literal["personal", "business", "both"] | None = Field(
+        None, description="Which side of the person's life they belong to; empty when not known."
+    )
 
 
 class PersonIn(BaseModel):
@@ -1022,6 +1026,8 @@ class PersonIn(BaseModel):
     role: str | None = None
     org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
+    relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
+    side: Literal["personal", "business", "both"] | None = Field(None, description="Which side of life they belong to.")
 
 
 class PersonPatch(BaseModel):
@@ -1031,6 +1037,8 @@ class PersonPatch(BaseModel):
     org: str | None = Field(None, description="An organization's id; null for none.")
     aliases: list[str] | None = None
     status: Literal["active", "left"] | None = None
+    relation: str | None = Field(None, description="How they relate to the person; null clears it.")
+    side: Literal["personal", "business", "both"] | None = Field(None, description="Which side they belong to.")
 
 
 class OrganizationView(BaseModel):
@@ -1198,7 +1206,8 @@ class RuntimeConfig(BaseModel):
     api_base: str
     assistant_name: str
     assistant_named: bool = Field(
-        True, description="The assistant has a name of its own; false while it still has the default name."
+        True,
+        description="The assistant has a name to show (the default or the person's own); false when blank.",
     )
     workspace_name: str
     version: str

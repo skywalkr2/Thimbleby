@@ -1,7 +1,7 @@
-// A time zone picked by city (design 7.8, 7.9): type to narrow the list ("new yo"), then choose "New York (Eastern time)".
-// The setting holds the zone's id; the person only ever sees cities.
+// A time zone picked from one searchable list (design 7.8, 7.9): type to narrow it by city, region or offset ("Pacific",
+// "UTC-8"), then choose "Los Angeles (Pacific time)". The setting holds the zone's id; the person only ever sees cities.
 import { useId, useMemo, useState } from "react";
-import { zoneChoices, zoneMatches } from "../lib/time-zones";
+import { zoneChoices, zoneLabel, zoneMatches, zoneOffset } from "../lib/time-zones";
 import { useWords } from "../lib/wording";
 
 export function TimeZoneSelect(props: {
@@ -14,39 +14,89 @@ export function TimeZoneSelect(props: {
   describedBy?: string;
 }) {
   const { t } = useWords();
-  const [typed, setTyped] = useState("");
-  const findId = useId();
+  const listId = useId();
+  const [typed, setTyped] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
   const all = useMemo(() => zoneChoices(props.options.includes(props.value) || !props.value ? props.options : [props.value, ...props.options]), [props.options, props.value]);
-  // The chosen zone stays in the list whatever was typed, so the select never shows one that isn't the value.
-  const shown = all.filter((c) => c.id === props.value || zoneMatches(c, typed));
+  const shown = typed === null ? all : all.filter((c) => zoneMatches(c, typed));
+  const chosenLabel = props.value ? zoneLabel(props.value) : "";
+  const pick = (id: string) => {
+    props.onChange(id);
+    setTyped(null);
+    setOpen(false);
+  };
   return (
     <div className="time-zone-select">
-      <label htmlFor={findId} className="sr">
-        {t("timezone.find")}
-      </label>
       <input
-        id={findId}
-        type="search"
-        value={typed}
-        autoComplete="off"
-        placeholder={t("timezone.find")}
-        disabled={props.disabled}
-        onChange={(e) => setTyped(e.target.value)}
-      />
-      <select
         id={props.id}
-        value={props.value}
-        disabled={props.disabled}
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && shown[active] ? `${listId}-${active}` : undefined}
         aria-describedby={props.describedBy}
-        onChange={(e) => props.onChange(e.target.value)}
-      >
-        {shown.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.label}
-          </option>
-        ))}
-      </select>
-      {typed.trim() !== "" && shown.length <= 1 && (
+        value={typed ?? chosenLabel}
+        autoComplete="off"
+        disabled={props.disabled}
+        placeholder={t("timezone.find")}
+        onFocus={(e) => {
+          setOpen(true);
+          e.currentTarget.select();
+        }}
+        // A click lands after the focus, and would put the caret back; select again so typing replaces the shown city.
+        onClick={(e) => {
+          if (typed === null) e.currentTarget.select();
+        }}
+        onBlur={() => {
+          setOpen(false);
+          setTyped(null);
+        }}
+        onChange={(e) => {
+          setTyped(e.target.value);
+          setActive(0);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setOpen(true);
+            setActive(Math.min(active + 1, shown.length - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActive(Math.max(active - 1, 0));
+          } else if (e.key === "Enter" && open && shown[active]) {
+            e.preventDefault();
+            pick(shown[active].id);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+            setTyped(null);
+          }
+        }}
+      />
+      {open && (
+        <ul id={listId} role="listbox" aria-label={t("timezone.find")} className="time-zone-list">
+          {shown.map((c, i) => (
+            <li
+              key={c.id}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={c.id === props.value}
+              data-active={i === active || undefined}
+              // Choosing before the input loses focus, so the list is still there to be clicked.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(c.id);
+              }}
+            >
+              {c.label}
+              <span className="hint"> {zoneOffset(c.id)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && typed !== null && typed.trim() !== "" && shown.length === 0 && (
         <p className="hint" role="status">
           {t("timezone.none")}
         </p>

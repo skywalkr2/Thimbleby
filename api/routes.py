@@ -1936,6 +1936,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 is_pm=p.id == pm,
                 track_only=bool(p.data.get("track_only")),
                 how_to_reach=p.data.get("how_to_reach") or {},
+                relation=p.data.get("relation"),
+                side=p.data.get("side"),
                 **seen.get(p.id, {}),
             )
             for p in store.read().list("person")

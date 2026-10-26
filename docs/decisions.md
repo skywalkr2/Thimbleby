@@ -4,6 +4,25 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Setup's first step asks the names and personal or business; Reginald is the default (phase B)
+
+**Decided:** The assistant's default name is Reginald (`workspace.assistant_name`), shown wherever the screen names it,
+the header chip included. Setup's first step asks, in order, the person's name, the workspace's name (offered as
+"{first name}'s workspace") and the assistant's name (both prefilled, free to change), then "Is this for you, or for you
+and a business?"; a business is asked for by name and saved through the business route. The people step asks how each
+person relates ("my sister", "our neighbor") and, with a business, the business's people with their part. The time zone is
+one searchable list (city, region or offset) that starts at this computer's zone. With no backup account the accounts
+summary says none is set and that work waits.
+
+**Decided by:** the owner (P40, points 2, 11, 16, 17, 18).
+
+**Why:** A fresh workspace asked only for a project, never named the assistant, called it "Assistant" and ended on the
+old people screen; the time zone box suggested any city works; "Nothing stands in yet" did not say what it meant.
+
+**Impact:** Design 7 (setup for a person, the walkthrough's You and People steps, the time zone list). `workspace.assistant_name`
+default changes from Assistant to Reginald; the runtime config's `assistant_named` is true whenever a name is set. A person
+record can be added and edited with `relation` and `side`. Change log: section 200.
+
 ## 2026-10-26: One appointment is one entry; the agenda reaches a week; lead time on Today (phase B)
 
 **Decision:** The agenda shows today and six days after (`ui.today.agenda_days_ahead`, 6), and when empty names the days

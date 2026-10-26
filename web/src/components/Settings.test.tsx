@@ -943,12 +943,16 @@ test("a time zone is picked by its city, with a search, and the setting still ho
   );
   open();
   const select = await screen.findByLabelText("Your time zone");
-  const labels = within(select).getAllByRole("option").map((o) => o.textContent);
-  expect(labels).toContain("New York (Eastern time)");
+  await user.click(select);
+  const labels = within(screen.getByRole("listbox")).getAllByRole("option").map((o) => o.textContent);
+  expect(labels.join(" ")).toMatch(/New York \(Eastern time\)/);
   expect(labels.join(" ")).not.toMatch(/America\/|Europe\//);
-  await user.type(screen.getByRole("searchbox", { name: "Find a city" }), "new yo");
-  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["New York (Eastern time)", "UTC"]);
-  await user.selectOptions(select, "America/New_York");
+  // Typing narrows by city, region or offset.
+  await user.keyboard("eastern");
+  expect(within(screen.getByRole("listbox")).getAllByRole("option")).toHaveLength(1);
+  await user.clear(select);
+  await user.keyboard("new yo");
+  await user.click(within(screen.getByRole("listbox")).getByRole("option", { name: /New York/ }));
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.timezone": "America/New_York" } });
 });

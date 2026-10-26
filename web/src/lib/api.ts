@@ -81,6 +81,8 @@ export const api = {
   settleAct: (a: string, answer: S["ActSettleIn"]["answer"]) => call<S["ActResultView"]>("POST", `acts/${id(a)}/settle`, { answer }),
   /** Whether the person has a business and what it is called, for the Personal / business filter. */
   business: () => call<S["BusinessState"]>("GET", "setup/business"),
+  /** Say what the business is called: makes its top-level project, or renames it. */
+  saveBusiness: (name: string) => call<S["BusinessView"]>("POST", "setup/business", { name }),
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
   /** The go for a newly added source's intake: every item held for it starts. */

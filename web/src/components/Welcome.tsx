@@ -307,6 +307,7 @@ function StepSection(props: { step: Step; label: string; explanation: string; ch
 // ---- workspace -----------------------------------------------------------------------------------------------------
 
 const NAME = "workspace.name";
+const ASSISTANT = "workspace.assistant_name";
 const TIMEZONE = "workspace.user.timezone";
 
 function browserZone(): string {
@@ -339,6 +340,12 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   const me = { data: props.me };
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [nameEdit, setNameEdit] = useState<string | null>(null);
+  const business = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const [kindEdit, setKindEdit] = useState<"alone" | "business" | null>(null);
+  const [bizEdit, setBizEdit] = useState<string | null>(null);
+  const kind = kindEdit ?? (business.data?.business ? "business" : "alone");
+  const bizName = bizEdit ?? business.data?.name ?? "";
+  const bizChanged = kind === "business" && bizName.trim() !== "" && bizName.trim() !== (business.data?.name ?? "");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const fullName = nameEdit ?? me.data.full_name;
@@ -352,20 +359,25 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
     // new workspace's files hold every default): the time zone is offered from this browser, the name starts empty.
     const unchosen = found != null && found.source !== "env" && found.source !== "flag" && found.value === found.default;
     if (key === TIMEZONE && unchosen) return browserZone() || value;
-    if (key === NAME && unchosen) return "";
+    // A workspace still called by its default is offered the person's first name; the assistant keeps its default name.
+    if (key === NAME && unchosen) {
+      const first = fullName.trim().split(/\s+/)[0] ?? "";
+      return first ? t("welcome.workspace.default_name", { name: first }) : value;
+    }
     return value;
   };
   const shown = (key: string) => edits[key] ?? current(key);
   const stored = (key: string) => (item(key)?.value == null ? "" : String(item(key)?.value));
   const changes: Record<string, string> = {};
-  for (const key of [NAME, TIMEZONE]) {
+  for (const key of [NAME, ASSISTANT, TIMEZONE]) {
     const found = item(key);
     // An empty name leaves the stored default alone rather than saving an empty one.
-    if (key === NAME && shown(key).trim() === "") continue;
+    if ((key === NAME || key === ASSISTANT) && shown(key).trim() === "") continue;
     if (found && found.editable && !found.locked && shown(key).trim() !== stored(key)) changes[key] = shown(key).trim();
   }
-  const empty = Object.values(changes).some((v) => v === "") || (nameChanged && !fullName.trim());
-  const pending = Object.keys(changes).length > 0 || nameChanged;
+  const noBusinessName = kind === "business" && bizName.trim() === "";
+  const empty = Object.values(changes).some((v) => v === "") || (nameChanged && !fullName.trim()) || noBusinessName;
+  const pending = Object.keys(changes).length > 0 || nameChanged || bizChanged;
 
   /** Saves the name and the settings that changed. True when it all went through. */
   const save = async (): Promise<boolean> => {
@@ -378,8 +390,14 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
         await client.invalidateQueries({ queryKey: ["me"] });
         await client.invalidateQueries({ queryKey: ["people"] });
       }
+      if (bizChanged) {
+        await api.saveBusiness(bizName.trim());
+        setBizEdit(null);
+        await client.invalidateQueries({ queryKey: ["business"] });
+        await client.invalidateQueries({ queryKey: ["projects"] });
+      }
       if (Object.keys(changes).length) {
-        const fresh = nameChanged ? await api.settings() : settings.data!;
+        const fresh = nameChanged || bizChanged ? await api.settings() : settings.data!;
         const saved = await api.saveSettings({ changes, reset: [], fingerprint: fresh.fingerprint });
         setEdits({});
         await afterSave(saved);
@@ -398,7 +416,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   };
 
   // Inside the walkthrough the screen's one Continue saves this form (when it has something to save) and moves on.
-  const missing = !props.done && (empty || !pending) ? t(empty ? "welcome.workspace.why_blank" : "welcome.workspace.why") : "";
+  const missing = !props.done && (empty || !pending) ? t(noBusinessName ? "welcome.workspace.why_business" : empty ? "welcome.workspace.why_blank" : "welcome.workspace.why") : "";
   useContinue(hasSlot ? { run: async () => (pending ? save() : true), disabled: !!missing, why: missing } : null);
 
   const field = (key: string, labelKey: string, hintKey: string | null, placeholderKey?: string) => {
@@ -477,6 +495,28 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
         </p>
       </div>
       {field(NAME, "welcome.workspace.name", null, "welcome.workspace.name_placeholder")}
+      {field(ASSISTANT, "welcome.workspace.assistant", "welcome.workspace.assistant_hint")}
+      <fieldset className="field">
+        <legend>{t("welcome.workspace.kind")}</legend>
+        {(["alone", "business"] as const).map((k) => (
+          <label key={k} className="choice">
+            <input type="radio" name="workspace-kind" checked={kind === k} onChange={() => setKindEdit(k)} />
+            {t(`welcome.workspace.kind.${k}`)}
+          </label>
+        ))}
+        {kind === "business" && (
+          <div className="field">
+            <label htmlFor="workspace-business-name">{t("welcome.workspace.business_name")}</label>
+            <input
+              id="workspace-business-name"
+              type="text"
+              value={bizName}
+              autoComplete="organization"
+              onChange={(e) => setBizEdit(e.target.value)}
+            />
+          </div>
+        )}
+      </fieldset>
       {field(TIMEZONE, "welcome.workspace.timezone", "welcome.workspace.timezone_hint")}
       {problem && (
         <p className="problem-note" role="alert">

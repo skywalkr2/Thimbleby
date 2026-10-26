@@ -74,7 +74,7 @@ test("a heading with the count, the account that does the work, the one that sta
   open();
   expect(await screen.findByRole("heading", { name: /AI accounts/ })).toHaveTextContent("AI accounts3");
   const summary = screen.getByRole("group", { name: "Who does the work" });
-  expect(summary).toHaveTextContent("Main account does Helper's work → if it can't answer, Second account stands in.");
+  expect(summary).toHaveTextContent("Main account does Helper's work → if it can't answer, Second account takes over.");
   expect(summary).toHaveTextContent("Every kind of work has a backup");
   expect(within(summary).getByText("Main account", { selector: "strong" })).toBeInTheDocument();
 });
@@ -95,6 +95,14 @@ test("harder work with no backup says so and offers Add one", async () => {
   expect(onAdd).toHaveBeenCalledTimes(1);
 });
 
+test("with no backup account at all, the summary says none is set and that work waits", async () => {
+  api({ "GET ai/accounts": () => [account("main", { label: "Main account", used_for: ["routine", "deep"] })] });
+  open();
+  const summary = await screen.findByRole("group", { name: "Who does the work" });
+  expect(summary).toHaveTextContent("No backup account is set. If the main account can't answer, work waits");
+  expect(summary).not.toHaveTextContent("stands in");
+});
+
 test("every row says its role in words, its own name, what it covers, its state in words, and shows no id", async () => {
   api();
   open();
@@ -104,7 +112,7 @@ test("every row says its role in words, its own name, what it covers, its state 
   expect(main).toHaveTextContent("Ready · answered 2 hours ago · $1.20 today");
   const second = await row("Second account");
   expect(second).toHaveTextContent("Backup");
-  expect(second).toHaveTextContent("Signed-in app · App A · stands in for everyday and harder work");
+  expect(second).toHaveTextContent("Signed-in app · App A · backup for everyday and harder work");
   expect(second).toHaveTextContent("Checked for every kind of work · Oct 14");
   const trial = await row("Trial account");
   expect(trial).toHaveTextContent("Not used");
@@ -219,7 +227,7 @@ test("Make this the main account shows its check and cost under it, switches, an
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST ai/accounts/main")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "everyday" } }),
   );
-  expect(await screen.findByText("Helper now works with Trial account. Main account stands in if it can't answer.")).toBeInTheDocument();
+  expect(await screen.findByText("Helper now works with Trial account. Main account is the backup if it can't answer.")).toBeInTheDocument();
 });
 
 test("when the account it replaces fails its check it is not made a backup, and the switch still happens", async () => {
@@ -510,7 +518,7 @@ test("a backup that gains a harder model offers to move its harder work there, c
     { fingerprint: "fp-1", models: { everyday: "model-a", harder: "model-y" } },
     { fingerprint: "fp-1", backup: { deep: "harder" } },
   ]);
-  expect(await screen.findByText("Stand now stands in for harder work with its harder model.")).toBeInTheDocument();
+  expect(await screen.findByText("Stand is now the backup for harder work, with its harder model.")).toBeInTheDocument();
 });
 
 test("when the harder model fails its check the models are still saved and harder work stays where it was", async () => {
@@ -579,7 +587,7 @@ test("Use as backup checks the account for each kind of work first, with its cos
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/second")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "harder" } }));
   const tests = calls.filter((c) => c.route.startsWith("POST ai/accounts/second/test")).map((c) => c.route);
   expect(tests).toEqual(["POST ai/accounts/second/test?tier=routine&model=everyday", "POST ai/accounts/second/test?tier=deep&model=harder"]);
-  expect(await screen.findByText("Second now stands in when the main account can't answer")).toBeInTheDocument();
+  expect(await screen.findByText("Second is now the backup account. It takes over when the main account can't answer")).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: "Undo" })).toBeInTheDocument();
 });
 
@@ -602,7 +610,7 @@ test("Stop using as backup takes the account out of every backup with Undo", asy
   open();
   await menu(user, "Second account", "Stop using as backup");
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/second")?.body).toEqual({ fingerprint: "fp-1", stop_backup: true }));
-  expect(await screen.findByText("Second account no longer stands in for any work.")).toBeInTheDocument();
+  expect(await screen.findByText("Second account is no longer a backup for any work.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
 });
 

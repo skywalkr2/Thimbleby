@@ -54,6 +54,20 @@ const SETTINGS = [
     editable: true,
   },
   {
+    key: "workspace.assistant_name",
+    file: "workspace",
+    group: "workspace",
+    description: "The assistant's name.",
+    type: "text",
+    options: [],
+    value: "Reginald",
+    default: "Reginald",
+    source: "default",
+    locked: false,
+    basic: true,
+    editable: true,
+  },
+  {
     key: "workspace.user.timezone",
     file: "workspace",
     group: "workspace",
@@ -157,6 +171,8 @@ function routes(over: Record<string, (body: unknown) => unknown> = {}, steps = C
     "GET setup": () => setupView(steps, { walkthrough: { open: true, ...walk } }),
     "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS }),
     "GET me": () => ({ person: null, full_name: "" }),
+    "GET setup/business": () => ({ business: false, name: null }),
+    "GET people": () => [],
     "GET ai/endpoints": () => [],
     "GET ai/accounts": () => [],
     "GET ai/local": () => [],
@@ -541,6 +557,36 @@ describe("each screen", () => {
     expect(screen.getByText(/Saving adds you to People/)).toBeInTheDocument();
   });
 
+  test("You: the names are prefilled, and a business is asked for by name and saved through its own route", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes({
+        "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
+        "POST setup/business": (body) => ({ project: "PRJ-1", name: (body as { name: string }).name, created: true, changeset: "CS-1" }),
+        "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+      }),
+    );
+    open();
+    const full = await screen.findByLabelText("Your full name");
+    expect(screen.getByLabelText("Workspace name")).toHaveValue("Workspace");
+    expect(screen.getByLabelText("Your assistant's name")).toHaveValue("Reginald");
+    await user.type(full, "Sam Tester");
+    expect(screen.getByLabelText("Workspace name")).toHaveValue("Sam's workspace");
+    expect(screen.getByRole("radio", { name: "Just for me" })).toBeChecked();
+    expect(screen.queryByLabelText("What is the business called?")).toBeNull();
+    await user.click(screen.getByRole("radio", { name: "For me and a business" }));
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    await user.type(screen.getByLabelText("What is the business called?"), "Harbor Goods");
+    await user.clear(screen.getByLabelText("Your assistant's name"));
+    await user.type(screen.getByLabelText("Your assistant's name"), "Ada");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+    expect(calls.find((c) => c.route === "POST setup/business")!.body).toEqual({ name: "Harbor Goods" });
+    expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({
+      changes: { "workspace.name": "Sam's workspace", "workspace.assistant_name": "Ada" },
+    });
+  });
+
   test("Your AI account: spending is one sentence with its starting amounts, and Continue saves a change to them", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
@@ -631,14 +677,40 @@ describe("each screen", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  test("People: optional, with the plain reason that skipping is fine, and a button to add them", async () => {
+  test("People: asked by how they relate, saved with that relation and the personal side, with the business's people after it", async () => {
     const user = userEvent.setup();
-    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "people" }));
-    const { onOpenPeople } = open();
+    let added = false;
+    const calls = fakeApi(
+      routes(
+        {
+          "GET people": () => (added ? [{ id: "PER-9", name: "Pat Kin", role: null, aliases: [], status: "active", is_pm: false, relation: "my sister or brother", side: "personal" }] : []),
+          "GET setup/business": () => ({ business: true, name: "Harbor Goods" }),
+          "POST people": () => {
+            added = true;
+            return { id: "PER-9" };
+          },
+        },
+        CORE.map((id) => step(id)),
+        { step: "people" },
+      ),
+    );
+    open();
     expect(await screenTitle()).toHaveTextContent("People");
     expect(screen.getByText(/You can skip this: it will ask about names it doesn't recognize/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Add people" }));
-    expect(onOpenPeople).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("heading", { name: "The people at Harbor Goods" })).toBeInTheDocument();
+    const personal = screen.getByRole("region", { name: "The people in your life" });
+    await user.type(within(personal).getByLabelText("Their name"), "Pat Kin");
+    await user.selectOptions(within(personal).getByLabelText("How they relate to you"), "sibling");
+    await user.click(within(personal).getByRole("button", { name: "Add" }));
+    expect(await within(personal).findByRole("listitem")).toHaveTextContent("Pat Kin · my sister or brother");
+    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], side: "personal", relation: "my sister or brother" });
+  });
+
+  test("People: with no business named, only the people in the person's life are asked", async () => {
+    fakeApi(routes({ "GET people": () => [] }, CORE.map((id) => step(id)), { step: "people" }));
+    open();
+    await screen.findByRole("region", { name: "The people in your life" });
+    expect(screen.queryByRole("heading", { name: /The people at/ })).toBeNull();
   });
 
   test("Skip for now skips the step and moves to the next screen; Back and the list move too, and each is kept", async () => {
@@ -1122,7 +1194,7 @@ describe("the look", { timeout: 20_000 }, () => {
     const main = screen.getByRole("main");
     expect(primaries(main).map((b) => b.textContent)).toEqual(["Continue"]);
     expect(within(main).getByRole("button", { name: "I'll do this later" })).toBeEnabled();
-    expect(within(main).getByRole("button", { name: "Add people" })).toBeEnabled();
+    expect(await within(main).findByRole("button", { name: "Add" })).toBeDisabled();
   });
 
   test("a screen that is done has the same primary button, Continue, and no I'll do this later", async () => {

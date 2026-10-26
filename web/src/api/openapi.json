@@ -15477,6 +15477,18 @@
             "description": "An organization's id, from GET /api/organizations.",
             "title": "Org"
           },
+          "relation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How they relate to the person, in plain words ('my sister').",
+            "title": "Relation"
+          },
           "role": {
             "anyOf": [
               {
@@ -15487,6 +15499,23 @@
               }
             ],
             "title": "Role"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side of life they belong to.",
+            "title": "Side"
           }
         },
         "required": [
@@ -15628,6 +15657,18 @@
             "description": "An organization's id; null for none.",
             "title": "Org"
           },
+          "relation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How they relate to the person; null clears it.",
+            "title": "Relation"
+          },
           "role": {
             "anyOf": [
               {
@@ -15638,6 +15679,23 @@
               }
             ],
             "title": "Role"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side they belong to.",
+            "title": "Side"
           },
           "status": {
             "anyOf": [
@@ -15819,6 +15877,18 @@
             "description": "That organization's name, for showing.",
             "title": "Org Name"
           },
+          "relation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How they relate to the person, in plain words ('my sister').",
+            "title": "Relation"
+          },
           "role": {
             "anyOf": [
               {
@@ -15829,6 +15899,23 @@
               }
             ],
             "title": "Role"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side of the person's life they belong to; empty when not known.",
+            "title": "Side"
           },
           "status": {
             "default": "active",
@@ -21170,7 +21257,7 @@
           },
           "assistant_named": {
             "default": true,
-            "description": "The assistant has a name of its own; false while it still has the default name.",
+            "description": "The assistant has a name to show (the default or the person's own); false when blank.",
             "title": "Assistant Named",
             "type": "boolean"
           },

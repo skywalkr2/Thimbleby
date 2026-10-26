@@ -42,8 +42,9 @@ def test_the_runtime_config_says_whether_the_assistant_has_a_name_of_its_own(tmp
         app = create_app(ws, ws.config(env={}), TOKEN, start_worker=False)
         return TestClient(app).get("/api/runtime-config", headers={"Authorization": f"Bearer {TOKEN}"}).json()
 
-    # The default name is the one the person hasn't chosen yet; the screens word themselves for that.
-    assert asked("plain")["assistant_named"] is False
+    # A fresh workspace's assistant is called by the default name on every screen; the person can rename it.
+    plain = asked("plain")
+    assert plain["assistant_name"] == "Reginald" and plain["assistant_named"] is True
     named = asked("named", assistant="Ada")
     assert named["assistant_name"] == "Ada" and named["assistant_named"] is True
 

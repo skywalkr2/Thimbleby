@@ -58,7 +58,6 @@ from api.watch_routes import build_watch_router
 from engine import __version__, problems
 from engine.ai.router import Router
 from engine.config import Config
-from engine.config.schema import WorkspaceFile
 from engine.local_guards import allowed_hosts, allowed_origins
 from engine.shipped import product, shipped
 from engine.storage import Store
@@ -98,7 +97,6 @@ SECURITY_HEADERS = {
 log = logging.getLogger(__name__)
 
 #: The name the assistant has until the person gives it one.
-_DEFAULT_ASSISTANT_NAME = WorkspaceFile.model_fields["assistant_name"].default
 
 
 #: What the browser shows when this copy of the code has no built screens: the app runs, and the screens are a
@@ -299,7 +297,7 @@ def create_app(
             base_path=base_path,
             api_base=f"{prefix}/api",
             assistant_name=cfg.workspace.assistant_name,
-            assistant_named=cfg.workspace.assistant_name.strip() not in ("", _DEFAULT_ASSISTANT_NAME),
+            assistant_named=bool(cfg.workspace.assistant_name.strip()),
             workspace_name=cfg.workspace.name,
             version=__version__,
             pm=cfg.workspace.user.person,

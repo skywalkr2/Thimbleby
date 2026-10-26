@@ -1027,6 +1027,10 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 200. Setup's names, personal or business, people by relation, one time zone list (2026-10-26; P40)
+
+- **Design 7.8 (setup):** the You step asks the person's name, the workspace's name, the assistant's name (default Reginald) and whether this is for the person alone or also a business, whose name is saved through the business route; the People step asks by relation, and a business's people by their part; the time zone is one searchable list defaulting to this computer's zone; no backup account is said plainly
+
 ## 199. One appointment, one entry; a week of agenda; lead time (2026-10-26; P44, P54)
 
 - **One appointment, one entry; a week of agenda; lead time (6.32, 7.7):** the agenda reaches six days ahead and names the days when empty; a booking already on a calendar is linked, not copied, and a copy never clashes with its original; a sign-in warns a day before its end, never before three quarters of its life; a meeting to set up counts on Today `steward.meetings.setup_lead_working_days` working days ahead.

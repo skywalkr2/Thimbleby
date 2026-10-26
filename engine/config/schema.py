@@ -224,7 +224,9 @@ class PluginSettings(ConfigModel):
 
 class WorkspaceFile(FileModel):
     name: str = Field("Workspace", description="The workspace's display name.")
-    assistant_name: str = Field("Assistant", description="The assistant's display name; the only name people see.")
+    assistant_name: str = Field(
+        "Reginald", description="The assistant's display name; the only name people see. Setup offers it to rename."
+    )
     user: UserSettings = Field(default_factory=UserSettings, description="Who you are.")
     owner_format: str = Field(
         "{full_name}",

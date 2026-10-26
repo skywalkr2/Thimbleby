@@ -85,3 +85,20 @@ def test_every_reference_marked_on_a_core_record_is_guarded():
     for kind, model in REGISTRY.items():
         marked = set(ref_fields(model))
         assert marked <= set(REFERENCES.get(kind, [])), f"{kind}: {sorted(marked - set(REFERENCES.get(kind, [])))}"
+
+
+def test_a_person_is_added_with_how_they_relate_and_the_side_they_belong_to(tmp_path):
+    from api.app import create_app
+    from engine.workspace import init_workspace
+
+    ws = init_workspace(tmp_path / "rel", git=False)
+    app = create_app(ws, ws.config(env={}, flags={"server.base_path": "/"}), "tok-rel", ui_dist=tmp_path / "no-ui")
+    with TestClient(app, headers={"Authorization": "Bearer tok-rel"}) as c:
+        made = c.post("/api/people", json={"full_name": "Pat Kin", "relation": "my sister", "side": "personal"})
+        assert made.status_code == 200, made.text
+        row = next(p for p in c.get("/api/people").json() if p["id"] == made.json()["id"])
+        assert row["relation"] == "my sister" and row["side"] == "personal"
+        edited = c.post(f"/api/people/{row['id']}", json={"relation": "our neighbor"})
+        assert edited.status_code == 200, edited.text
+        row = next(p for p in c.get("/api/people").json() if p["id"] == row["id"])
+        assert row["relation"] == "our neighbor"

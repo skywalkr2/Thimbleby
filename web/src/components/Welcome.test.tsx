@@ -149,7 +149,7 @@ test("the workspace step starts the time zone from this browser while it is stil
   // The name goes to the person record (the one place it is kept); the time zone is a setting.
   expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester" });
   const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
-  expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
+  expect(body.changes).toEqual({ "workspace.name": "Sam's workspace", "workspace.user.timezone": "Europe/Paris" });
   vi.restoreAllMocks();
 });
 
@@ -167,7 +167,7 @@ test("on a workspace made by the init command, the defaults written in its files
   });
   open();
   expect(await screen.findByLabelText("Your time zone")).toHaveValue("America/Chicago");
-  expect(screen.getByLabelText("Workspace name")).toHaveValue("");
+  expect(screen.getByLabelText("Workspace name")).toHaveValue("Workspace");
   vi.restoreAllMocks();
 });
 
@@ -188,20 +188,23 @@ test("the time zone is picked from a list when the setting offers one", async ()
   });
   open();
   const zone = await screen.findByRole("combobox", { name: "Your time zone" });
-  expect(zone).toHaveValue("America/Chicago");
+  // One searchable list, starting at this computer's zone, with no separate search box.
+  expect(zone).toHaveValue("Chicago (Central time)");
+  expect(screen.queryByRole("searchbox")).toBeNull();
+  await user.click(zone);
   // Zones are cities with their general names, never the ids the settings hold.
-  const labels = within(zone).getAllByRole("option").map((o) => o.textContent);
-  expect(labels).toContain("New York (Eastern time)");
-  expect(labels).toContain("Chicago (Central time)");
+  const labels = within(screen.getByRole("listbox")).getAllByRole("option").map((o) => o.textContent);
+  expect(labels.join(" ")).toMatch(/New York \(Eastern time\)/);
+  expect(labels.join(" ")).toMatch(/Chicago \(Central time\)/);
   expect(labels.join(" ")).not.toMatch(/America\/|Europe\//);
-  await user.type(screen.getByRole("searchbox", { name: "Find a city" }), "par");
-  expect(within(zone).getAllByRole("option").map((o) => o.textContent)).toEqual(["Chicago (Central time)", "Paris (Central European time)"]);
-  await user.selectOptions(zone, "Europe/Paris");
+  await user.keyboard("par");
+  expect(within(screen.getByRole("listbox")).getAllByRole("option").map((o) => o.textContent?.split(" UTC")[0])).toEqual(["Paris (Central European time)"]);
+  await user.click(within(screen.getByRole("listbox")).getByRole("option"));
   await user.type(screen.getByLabelText("Your full name"), "Sam Tester");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
   const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
-  expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
+  expect(body.changes).toEqual({ "workspace.name": "Sam's workspace", "workspace.user.timezone": "Europe/Paris" });
   vi.restoreAllMocks();
 });
 

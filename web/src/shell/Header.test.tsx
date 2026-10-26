@@ -84,7 +84,7 @@ test("a demo workspace shows the Demo chip, in words, and others don't", () => {
 test("the assistant's alive line is in the header beside the status chip", async () => {
   show();
   const chip = await screen.findByRole("button", { name: /^App status: / });
-  const alive = await screen.findByRole("button", { name: /^Assistant/ });
+  const alive = await screen.findByRole("button", { name: /^Helper/ });
   expect(alive).toHaveTextContent("no tasks yet");
   expect(alive.parentElement).toBe(chip.parentElement);
 });
@@ -178,7 +178,7 @@ test("on a phone only the logo, the status chip and the avatar are in the header
   expect(brand).not.toHaveTextContent("Example Workspace");
   expect(brand).toHaveTextContent("EW");
   await within(header).findByRole("button", { name: /^App status: / });
-  expect(within(header).queryByRole("button", { name: /^Assistant/ })).toBeNull();
+  expect(within(header).queryByRole("button", { name: /^Helper/ })).toBeNull();
   expect(Array.from(header.querySelectorAll("button, a")).map((el) => el.getAttribute("aria-label") ?? el.textContent)).toHaveLength(3);
 });
 
@@ -187,7 +187,7 @@ test("on a phone the assistant's state is in the status chip's popover", async (
   show({ narrow: true });
   await user.click(await screen.findByRole("button", { name: /^App status: / }));
   const dialog = await screen.findByRole("dialog", { name: "Status" });
-  const alive = within(dialog).getByText("Assistant", { selector: "p" }).closest("li")!;
+  const alive = within(dialog).getByText("Helper", { selector: "p" }).closest("li")!;
   expect(alive).toHaveAttribute("data-state", "alive");
   expect(alive).toHaveTextContent("no tasks yet");
 });
@@ -205,7 +205,7 @@ test("below 1440px the assistant's state moves into the status chip's popover, a
   below1440();
   show();
   const chip = await screen.findByRole("button", { name: /^App status: / });
-  expect(screen.queryByRole("button", { name: /^Assistant/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Helper/ })).toBeNull();
   await user.click(chip);
   const dialog = await screen.findByRole("dialog", { name: "Status" });
   const alive = dialog.querySelector('[data-state="alive"]') as HTMLElement;

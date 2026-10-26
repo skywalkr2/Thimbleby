@@ -172,11 +172,11 @@ test("the row follows the checks, kind of work by kind of work, and one toast sa
   expect(within(row).queryByText("Checking for everyday work…")).toBeNull();
   await act(async () => deep.release());
   // One toast says it is done, and the row ends on who it backs up.
-  expect(await screen.findByText("Service A account now stands in when the main account can't answer")).toBeInTheDocument();
+  expect(await screen.findByText("Service A account is now the backup account. It takes over when the main account can't answer")).toBeInTheDocument();
   await waitFor(() => expect(within(row).queryByText(/Checking for/)).toBeNull());
   expect(await within(row).findByText("Backs up Main account")).toBeInTheDocument();
   expect(checked).toEqual(["routine", "deep"]);
-  expect(screen.getAllByText(/stands in when the main account can't answer/)).toHaveLength(1);
+  expect(screen.getAllByText(/takes over when the main account can't answer/)).toHaveLength(1);
 });
 
 test("a check that fails says what failed on the row, with one toast, and offers Use it anyway", async () => {

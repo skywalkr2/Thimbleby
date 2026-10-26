@@ -217,7 +217,7 @@ test("for the work it replaces the main account, which stays as its backup when 
   await user.click(screen.getByRole("button", { name: /Add and check/ }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
   expect(body(calls).use).toEqual({ routine: "everyday", deep: "everyday" });
-  expect(await screen.findByText("Helper now works with Service A account. Main account stands in if it can't answer.")).toBeInTheDocument();
+  expect(await screen.findByText("Helper now works with Service A account. Main account is the backup if it can't answer.")).toBeInTheDocument();
   expect(calls.find((c) => c.route === "POST ai/accounts/main")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "everyday" } });
 });
 

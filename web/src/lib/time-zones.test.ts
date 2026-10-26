@@ -25,3 +25,11 @@ test("typing narrows by city, by the zone's name or by the id's words", () => {
   expect(zoneMatches(ny, "paris")).toBe(false);
   expect(zoneMatches(ny, "  ")).toBe(true);
 });
+
+test("typing also matches the region and the offset from UTC", () => {
+  const la = { id: "America/Los_Angeles", label: zoneLabel("America/Los_Angeles") };
+  expect(zoneMatches(la, "pacific")).toBe(true);
+  expect(zoneMatches(la, "america")).toBe(true);
+  expect(zoneMatches(la, "utc-")).toBe(true);
+  expect(zoneMatches({ id: "Europe/Paris", label: zoneLabel("Europe/Paris") }, "utc-8")).toBe(false);
+});

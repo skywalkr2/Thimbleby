@@ -34,8 +34,23 @@ export function zoneChoices(ids: string[]): { id: string; label: string }[] {
     .sort((a, b) => a.label.localeCompare(b.label, "en"));
 }
 
-/** Whether a zone matches what was typed: by its label, or by its id's words ("new york", "eastern"). */
+/** The zone's offset from UTC now, as a person writes it: "UTC-8", "UTC+5:30", "UTC". */
+export function zoneOffset(id: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: id, timeZoneName: "shortOffset" }).formatToParts(new Date());
+    return (parts.find((p) => p.type === "timeZoneName")?.value ?? "").replace("GMT", "UTC").replace("\u2212", "-");
+  } catch {
+    return "";
+  }
+}
+
+/** Whether a zone matches what was typed: by its label, its id's words ("new york", "pacific", "america") or its offset ("utc-8"). */
 export function zoneMatches(choice: { id: string; label: string }, typed: string): boolean {
-  const wanted = typed.trim().toLowerCase().replace(/_/g, " ");
-  return !wanted || choice.label.toLowerCase().includes(wanted) || choice.id.toLowerCase().replace(/_/g, " ").includes(wanted);
+  const wanted = typed.trim().toLowerCase().replace(/_/g, " ").replace(/^gmt/, "utc");
+  return (
+    !wanted ||
+    choice.label.toLowerCase().includes(wanted) ||
+    choice.id.toLowerCase().replace(/_/g, " ").includes(wanted) ||
+    zoneOffset(choice.id).toLowerCase().includes(wanted)
+  );
 }
