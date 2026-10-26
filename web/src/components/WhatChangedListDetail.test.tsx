@@ -78,11 +78,11 @@ describe("beside the list", () => {
     expect(within(pane).getByText("Send First thing")).toBeInTheDocument();
     expect(within(pane).getByText("Send First thing")).toBeInTheDocument();
     expect(chosenId()).toBe("A");
-    // The line holds the state, the title, one line of what was done, the one primary and the menu: nothing of the details.
+    // The line holds the state, the title, one line of what was done and the menu, with no button for the work: nothing of the details.
     const second = await line("Second thing");
     expect(within(second).getByText("Second thing")).toBeInTheDocument();
     expect(within(second).getByText(/Recorded 1 thing|Recorded a fact|Handed in/)).toBeInTheDocument();
-    expect(within(second).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([expect.stringMatching(/^Second thing/), "Looks good", "More actions for Second thing"]);
+    expect(within(second).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([expect.stringMatching(/^Second thing/), "More actions for Second thing"]);
     expect(within(second).queryByText("Send Second thing")).toBeNull();
     expect(screen.queryByText("Send Second thing")).toBeNull();
   });
@@ -139,7 +139,7 @@ describe("beside the list", () => {
     expect(await line("First thing")).toHaveFocus();
   });
 
-  test("Looks good works from the detail, as from the line, and the next change takes its place", async () => {
+  test("Looks good is the first choice in the detail's menu, and the next change takes its place", async () => {
     const user = userEvent.setup();
     let items = [change("A", "First thing"), change("B", "Second thing")];
     const calls = fakeApi(
@@ -153,7 +153,9 @@ describe("beside the list", () => {
     );
     renderApp(<WhatChanged />);
     const pane = await screen.findByRole("complementary", { name: "First thing" });
-    await user.click(within(pane).getByRole("button", { name: "Looks good" }));
+    expect(within(pane).queryByRole("button", { name: "Looks good" })).toBeNull();
+    await user.click(within(pane).getByRole("button", { name: "More actions for First thing" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Looks good" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-A/looks-good")).toBe(true));
     // The change that was approved is gone from the list; the one after it is chosen.
     expect(await screen.findByRole("complementary", { name: "Second thing" })).toBeInTheDocument();

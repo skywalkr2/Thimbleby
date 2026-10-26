@@ -122,7 +122,7 @@ test("Send reply drafts the drafted reply to the message that asked, with its su
     recipients: [],
     parts: { subject: "Re: Interior proofs", body: DRAFT },
   });
-  await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+  await waitFor(() => expect(window.location.hash).toBe("#work/followups"));
   expect(calls.some((c) => c.route === "POST actions/ACT-1/reply")).toBe(false); // nothing was copied or marked reviewed
 });
 

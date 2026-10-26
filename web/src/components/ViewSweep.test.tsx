@@ -486,7 +486,7 @@ const aiRouting: S["AiRoutingView"] = {
 
 function SettingsScreen() {
   const [section, setSection] = useState<SettingsSection>("you");
-  return <Settings section={section} onSection={setSection} onOpenGuide={vi.fn()} onOpenAddons={vi.fn()} onChooseSource={vi.fn()} />;
+  return <Settings section={section} onSection={setSection} onOpenGuide={vi.fn()} onChooseSource={vi.fn()} />;
 }
 
 test("Settings, in every section, says names, dates and words", async () => {

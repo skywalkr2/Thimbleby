@@ -1,11 +1,13 @@
-// Follow-ups by person (design 7.5): the PM first (decisions and their own actions), then everyone A to Z, each with
-// one clean message to copy, then mark sent. The message can be edited where it is shown; what is marked sent is the box's text.
+// Follow-ups by person (design 7.5): the PM first (decisions and their own actions, each a link to the screen where it is
+// acted on), then everyone A to Z, each with one clean message to copy, then mark sent. The To send tab also holds what
+// waits for the person's approval to go out (design 7.4), above the messages, in one list | detail. The message can be edited where it is shown; what is marked sent is the box's text.
 // The same follow-ups can be shown as a table (Message | Table) and copied as one: as an HTML table for mail and chat, or as
 // tab-separated cells for a spreadsheet. The table is on screen before anything is copied, and no AI run makes it.
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { actTitle, useWaitingActs } from "../lib/acts";
 import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
 import { day, localDate, monthDay, sinceDay } from "../lib/dates";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
@@ -16,15 +18,16 @@ import { showRow, useReveal } from "../lib/reveal";
 import { hasSeenMessage, markMessageSeen } from "../lib/seen-messages";
 import { onSide, useSideFilter, useSides, type SideChoice } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
+import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AfterMoveAnswers } from "./AfterMoveAnswers";
+import { AnswerOnToday } from "./AnswerOnToday";
 import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
 import { useDropAction } from "./DropAction";
 import { HoldNote, useHold } from "./OnHold";
 import { useHoldFor, useSendNow } from "./HoldFor";
-import { useHandToAssistant } from "./HandToAssistant";
 import { NotesTitle } from "./ActionNotes";
 import { NoteBox, useNoted } from "./NoteBox";
 import { NudgeLeftOut } from "./NudgeLeftOut";
@@ -40,6 +43,9 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 import { SideFilter } from "./SideFilter";
+import { ActsList, actKey } from "./ToSendActs";
+import { OutgoingDetail } from "./OutgoingDetail";
+import { SentActs } from "./SentActs";
 import { FollowUpsByProject } from "./FollowUpsByProject";
 import { ReviewMode } from "./ReviewMode";
 import { CurrentCopy } from "./SameDocument";
@@ -84,21 +90,10 @@ export function FollowUps(props: { compact?: boolean }) {
   const [filter, setFilter] = useState<Filter>("send");
   const [group, setGroup] = useState<Group>("person");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
-  // A Today line asking for a question to be answered: the PM's own questions show under "to send", so the row is there.
-  const [revealed, setRevealed] = useState<{ id: string; n: number } | null>(null);
   const latest = useRef(followups.data);
   latest.current = followups.data;
   // A row the person is sent to (a question to answer, a person's group): once the list shows it, it is chosen and in view.
-  const [picked, setPicked] = useState<{ key: string; n: number; focus: boolean } | null>(null);
-  useReveal("question", (question) => {
-    const mine = latest.current?.find((s) => s.is_pm && s.questions.some((q) => q.id === question));
-    if (!mine) return false;
-    setGroup("person");
-    setFilter("send");
-    setRevealed({ id: question, n: Date.now() });
-    setPicked({ key: mine.person, n: Date.now(), focus: false });
-    return true;
-  });
+  const [picked, setPicked] = useState<{ key: string; n: number; focus: boolean; enter?: boolean } | null>(null);
   // A link to a person's group (a to-do that waits on them): the filter that shows them is chosen, and their group is looked at.
   const seek = (person: string) => {
     const found = latest.current?.find((s) => !s.is_pm && s.person === person);
@@ -127,14 +122,36 @@ export function FollowUps(props: { compact?: boolean }) {
   // The list | detail choice (design 7.13): beside the list the first row is chosen as the list opens; below 1024px a row opens
   // its detail as a drawer.
   const beside = useMediaQuery("(min-width: 1024px)") && !compact;
-  const choice = useListChoice({ keys: shown.map((s) => s.person), beside, reset: `${group}|${filter}|${side.choice}` });
+  // What waits to go out is the first part of To send, ahead of the messages: one list, one detail.
+  const acts = useWaitingActs();
+  const actRows = !compact && !byProject && filter === "send" ? (acts.data ?? []) : [];
+  const choice = useListChoice({ keys: [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)], beside, reset: `${group}|${filter}|${side.choice}` });
   useEffect(() => {
     if (!picked) return;
-    choice.choose(picked.key);
-    // A question goes on to take the cursor in its own answer box; a person's line takes it here.
+    if (picked.enter) choice.enter(picked.key);
+    else choice.choose(picked.key);
+    // A person's line takes the cursor here.
     if (picked.focus) showRow(choiceRow(picked.key) ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
+  // The acts the person has looked at again since they went stale; a fresh read keeps it.
+  const [looked, setLooked] = useState<Record<string, true>>({});
+  // Another part of the app (a Today line, a record page) asks for an act to be opened; it may be asked before the list has loaded.
+  const [wantAct, setWantAct] = useState<string | null>(null);
+  useReveal("act", (id) => {
+    setWantAct(id);
+    return true;
+  });
+  useEffect(() => {
+    if (wantAct === null || !acts.data) return;
+    if (acts.data.some((a) => a.id === wantAct)) {
+      setGroup("person");
+      setFilter("send");
+      setPicked({ key: actKey(wantAct), n: Date.now(), focus: false, enter: true });
+    }
+    setWantAct(null);
+  }, [wantAct, acts.data]);
+  const selectedAct = actRows.find((a) => actKey(a.id) === choice.chosen) ?? null;
   const selected = shown.find((s) => s.person === choice.chosen) ?? null;
   // What a person's message keeps while it is shown on the line and in the detail.
   const [messages, setMessages] = useState<Record<string, MessageState>>({});
@@ -150,7 +167,7 @@ export function FollowUps(props: { compact?: boolean }) {
     filter === "later" ? (
       <LaterSection section={s} pane />
     ) : s.is_pm ? (
-      <YourSection section={s} compact={compact} reveal={revealed} pane />
+      <YourSection section={s} compact={compact} pane />
     ) : filter === "send" ? (
       <PersonSection section={s} pane shared={sharedMessage(s.person)} />
     ) : (
@@ -192,11 +209,11 @@ export function FollowUps(props: { compact?: boolean }) {
             {t("action.try_again")}
           </button>
         </p>
-      ) : sections.length === 0 ? (
+      ) : sections.length === 0 && actRows.length === 0 ? (
         <p className="empty">{present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")}</p>
       ) : byProject ? (
         <FollowUpsByProject sections={sections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
-      ) : shown.length === 0 ? (
+      ) : shown.length === 0 && actRows.length === 0 ? (
         <p className="empty">{t(`followups.empty_${filter}`)}</p>
       ) : reviewing && phone && reviewable.length > 0 ? (
         <ReviewMode
@@ -208,34 +225,58 @@ export function FollowUps(props: { compact?: boolean }) {
         />
       ) : (
         <ListDetail
-          title={selected ? (selected.is_pm ? t("followups.you") : selected.name) : ""}
+          title={selectedAct ? actTitle(selectedAct, t) : selected ? (selected.is_pm ? t("followups.you") : selected.name) : ""}
           onClose={choice.close}
           fit={FOLLOWUPS_FIT}
-          detail={selected ? <ol className="queue detail-queue">{detailOf(selected)}</ol> : null}
-        >
-          <ol className="queue">
-            {phone && reviewable.length > 0 && (
-              <li className="review-start">
-                <button type="button" className="btn primary" onClick={() => setReviewing(true)}>
-                  {t("followups.review.start")}
-                </button>
-              </li>
-            )}
-            {shown.map((s) => (
-              <FollowListRow
-                key={s.person}
-                section={s}
-                kind={filter === "later" ? "later" : s.is_pm ? "you" : filter}
-                choice={choice}
-                compact={compact}
-                copied={sharedMessage(s.person).state.copied}
-                message={sharedMessage(s.person).state.draft ?? s.message}
-                onCopied={() => sharedMessage(s.person).set({ copied: true })}
+          detail={
+            selectedAct ? (
+              <OutgoingDetail
+                key={`${selectedAct.id}:${selectedAct.fingerprint}`}
+                act={selectedAct}
+                looked={!!looked[selectedAct.id]}
+                onLook={() => setLooked((now) => ({ ...now, [selectedAct.id]: true }))}
               />
-            ))}
-          </ol>
+            ) : selected ? (
+              <ol className="queue detail-queue">{detailOf(selected)}</ol>
+            ) : null
+          }
+        >
+          {actRows.length > 0 && <ActsList acts={actRows} choice={choice} onLook={(id) => setLooked((now) => ({ ...now, [id]: true }))} />}
+          {shown.length > 0 && actRows.length > 0 && <h2 id="followups-messages-title">{t("followups.messages_title")}</h2>}
+          {shown.length > 0 && (
+            <ol className="queue" aria-labelledby={actRows.length > 0 ? "followups-messages-title" : undefined}>
+              {phone && reviewable.length > 0 && (
+                <li className="review-start">
+                  <button type="button" className="btn primary" onClick={() => setReviewing(true)}>
+                    {t("followups.review.start")}
+                  </button>
+                </li>
+              )}
+              {shown.map((s) => (
+                <FollowListRow
+                  key={s.person}
+                  section={s}
+                  kind={filter === "later" ? "later" : s.is_pm ? "you" : filter}
+                  choice={choice}
+                  compact={compact}
+                  copied={sharedMessage(s.person).state.copied}
+                  message={sharedMessage(s.person).state.draft ?? s.message}
+                  onCopied={() => sharedMessage(s.person).set({ copied: true })}
+                />
+              ))}
+            </ol>
+          )}
         </ListDetail>
       )}
+      {!compact && !byProject && filter === "send" && acts.isError && (
+        <p className="empty">
+          {t("outgoing.load_failed")}{" "}
+          <button type="button" className="btn" onClick={() => void acts.refetch()}>
+            {t("action.try_again")}
+          </button>
+        </p>
+      )}
+      {!compact && !byProject && filter === "send" && acts.isSuccess && <SentActs />}
     </section>
   );
 }
@@ -352,7 +393,7 @@ function FollowListRow(props: {
   );
 }
 
-function YourSection(props: { section: S["FollowupSection"]; compact: boolean; reveal: { id: string; n: number } | null; pane?: boolean }) {
+function YourSection(props: { section: S["FollowupSection"]; compact: boolean; pane?: boolean }) {
   const { t, tn } = useWords();
   const s = props.section;
   const actions = props.compact ? [] : s.actions;
@@ -371,7 +412,7 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; r
         {s.questions.length > 0 && (
           <ul className="children">
             {s.questions.map((q) => (
-              <DecisionRow key={q.id} question={q} reveal={props.reveal?.id === q.id ? props.reveal.n : 0} />
+              <YourQuestionRow key={q.id} question={q} />
             ))}
           </ul>
         )}
@@ -383,6 +424,43 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; r
           </ul>
         )}
       </div>
+    </li>
+  );
+}
+
+/** A decision or a question to the person, as Follow-ups lists it: what it is and where it came from, and a link to its line on
+ * Today, where it is answered. Its menu keeps the other things that can be done with it (reword it, ask someone else, drop it). */
+function YourQuestionRow(props: { question: S["FollowupQuestion"] }) {
+  const { t } = useWords();
+  const q = props.question;
+  const ref = useRef<HTMLLIElement>(null);
+  const who = q.about === "owner" || q.about === "held-op";
+  const back = () => ref.current?.focus();
+  const menu = useQuestionMenu(q, { canMarkSent: false, onClosed: back });
+  const change = useChangeThis({ kind: q.kind === "decision" ? "decision" : "question", id: q.id }, back);
+  const titleId = `your-q-${q.id}`;
+  return (
+    <li className="child" data-row tabIndex={-1} ref={ref}>
+      <div>
+        <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
+        <div className="title" id={titleId}>
+          {q.title}
+        </div>
+        {q.text && <SafeText text={q.text} />}
+        {q.links.map((l) => (
+          <div key={l.url}>
+            <SafeLink label={l.label} url={l.url} />
+          </div>
+        ))}
+        <OriginLink origin={q.origin} />
+      </div>
+      <div className="acts">
+        <AnswerOnToday question={q.id} describedBy={titleId} />
+        <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
+      </div>
+      {menu.form}
+      {change.form}
+      <LearnedLines records={[q.id]} />
     </li>
   );
 }
@@ -456,27 +534,16 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
   );
 }
 
+/** One of the person's own to-dos, as Follow-ups lists it: its words, due date and project, and a link to To-dos and questions,
+ * where it is marked done and changed. */
 function OwnActionRow(props: { action: S["FollowupAction"] }) {
   const { t } = useWords();
-  const act = useAct();
-  const noted = useNoted();
   const a = props.action;
-  const ref = useRef<HTMLLIElement>(null);
-  const hold = useHold(a);
-  const [noting, setNoting] = useState(false);
-  const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
-  const drop = useDropAction(a, () => ref.current?.focus());
-  const hand = useHandToAssistant(a, () => ref.current?.focus());
-  const done = (note?: string) =>
-    act(
-      () => api.actionStatus(a.id, "done", note),
-      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(a.id, "open") }),
-    );
-  useRowKeys(ref, { primary: () => void done() });
+  const titleId = `your-a-${a.id}`;
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <li className="child" data-row tabIndex={-1}>
       <div>
-        <div className="title">
+        <div className="title" id={titleId}>
           <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
           <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} />
         </div>
@@ -486,25 +553,10 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
         <OriginLink origin={a.origin} />
       </div>
       <div className="acts">
-        <button type="button" className="btn primary" onClick={() => void done()}>
-          {t("followups.mark_done")}
-        </button>
-        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, ...(hand.entry ? [hand.entry] : []), hold.entry, change.entry, drop.entry]} />
+        <a className="link-button" href={viewHref("work/open")} aria-describedby={titleId}>
+          {t("followups.open_todos")}
+        </a>
       </div>
-      {noting && (
-        <NoteBox
-          sends={[{ label: t("followups.mark_done"), run: done }]}
-          onClose={() => {
-            setNoting(false);
-            ref.current?.focus();
-          }}
-        />
-      )}
-      {hand.form}
-      {hold.form}
-      {change.form}
-      {drop.form}
-      <LearnedLines records={[a.id]} />
     </li>
   );
 }

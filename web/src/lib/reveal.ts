@@ -15,6 +15,9 @@ export function reveal(type: Revealable, id: string): boolean {
 
 let waiting: { type: Revealable; id: string } | null = null;
 
+/** How long a request kept for a screen that was still loading waits for its list to hold the row. */
+const KEPT_FOR_MS = 5000;
+
 /** Like `reveal`, for a caller that can take the person to the screen that holds the item: when no list on this screen
  * does, the request is kept for the list that mounts next, which opens the row. True when one did at once. */
 export function revealOrKeep(type: Revealable, id: string): boolean {
@@ -27,6 +30,13 @@ export function revealOrKeep(type: Revealable, id: string): boolean {
 export function useReveal(type: Revealable, handle: (id: string) => boolean): void {
   const latest = useRef(handle);
   latest.current = handle;
+  // A request kept for this screen that its list could not answer yet (the rows were still loading) is tried again as the
+  // screen changes, for a short time.
+  const retry = useRef<{ id: string; until: number } | null>(null);
+  useEffect(() => {
+    const kept = retry.current;
+    if (kept && (Date.now() > kept.until || latest.current(kept.id))) retry.current = null;
+  });
   useEffect(() => {
     const onReveal = (event: Event) => {
       const detail = (event as CustomEvent<{ type: Revealable; id: string }>).detail;
@@ -36,7 +46,7 @@ export function useReveal(type: Revealable, handle: (id: string) => boolean): vo
     if (waiting?.type === type) {
       const kept = waiting;
       waiting = null;
-      latest.current(kept.id);
+      if (!latest.current(kept.id)) retry.current = { id: kept.id, until: Date.now() + KEPT_FOR_MS };
     }
     return () => window.removeEventListener(EVENT, onReveal);
   }, [type]);

@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import type { Act } from "../lib/acts";
 import { actFixture, recipient } from "../lib/acts-fixtures";
 import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
-import { WaitingToGoOut } from "./WaitingToGoOut";
+import { FollowUps } from "./FollowUps";
 
 // What each kind of act says it does (design 6.12, 7.4): the list line and the detail in words for a reply, a change to the
 // mail, an answer to an invitation and an event, with each saved message listed and counted; why Copy carries an act; the undo
@@ -15,8 +15,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 function show(acts: Act[], extra: Routes = {}, options: { unnamed?: boolean } = {}) {
   besidePane();
-  const calls = fakeApi({ "GET acts": () => ({ acts }), ...extra });
-  renderApp(<WaitingToGoOut onView={vi.fn()} />, {}, options);
+  const calls = fakeApi({ "GET acts": () => ({ acts }), "GET followups": () => [], ...extra });
+  renderApp(<FollowUps />, {}, options);
   return calls;
 }
 

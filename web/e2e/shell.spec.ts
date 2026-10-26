@@ -416,7 +416,7 @@ test.describe("screen use and the shell", () => {
       return [header, brand, nav].map((b) => [b.x, b.y, b.width, b.height]);
     };
     const first = await frame();
-    for (const label of [/^Stages/, /^People/, /^Settings/, /^Connections/]) {
+    for (const label of [/^Stages/, /^People/, /^Settings/]) {
       await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: label }).click();
       await page.waitForTimeout(100);
       expect(await frame()).toEqual(first);
@@ -581,21 +581,18 @@ test.describe("screen use and the shell", () => {
     await signIn(page);
     const links = page.getByRole("navigation", { name: "Views" }).getByRole("link");
     const entries = await links.evaluateAll((els) => els.map((a) => ({ href: a.getAttribute("href")!, name: (a.textContent ?? "").trim() })));
-    expect(entries.length).toBeGreaterThanOrEqual(11);
+    expect(entries.length).toBeGreaterThanOrEqual(10);
     const expected: Record<string, string> = {
       "#today": "Today",
       "#work/changed": "What changed",
       "#work/handled": "Handled for you",
       "#work/followups": "Follow-ups",
       "#work/open": "To-dos and questions",
-      "#work/outgoing": "Waiting to go out",
       "#work/stages": "Stages",
       "#records/projects": "Projects",
       "#records/people": "People",
       "#records/files": "Files",
       "#records/knowledge": "Knowledge",
-      "#sources": "Connections",
-      "#addons": "Add-ons",
       "#settings": "Settings",
     };
     for (const [fragment, title] of Object.entries(expected)) {
@@ -607,9 +604,20 @@ test.describe("screen use and the shell", () => {
       await expect(fresh.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", entry!.href);
       await fresh.close();
     }
+    // The side menu has no entry for what moved: Waiting to go out is a tab of Follow-ups, and Connections and Add-ons are
+    // sections of Settings.
+    for (const gone of ["Waiting to go out", "Connections", "Add-ons"]) {
+      expect(entries.map((e) => e.name), gone).not.toContain(gone);
+    }
     // The old address for a view still opens it, and the guide has its own.
     await page.goto("#stages");
     await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeVisible();
+    await page.goto("#work/outgoing");
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
+    await page.goto("#sources");
+    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeVisible();
+    await page.goto("#addons");
+    await expect(page.getByRole("heading", { level: 1, name: "Add-ons" })).toBeVisible();
     await page.goto("#setup");
     await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
   });
@@ -619,8 +627,8 @@ test.describe("screen use and the shell", () => {
     await signIn(page);
     await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Stages/ }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeFocused();
-    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Connections/ }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeFocused();
+    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Follow-ups/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeFocused();
   });
 
   // The cursor starts where you type (design 7.0): in a screen's first main field, or on its heading when it has none.
@@ -634,15 +642,14 @@ test.describe("screen use and the shell", () => {
     { name: "Since yesterday", hash: "work/since" },
     { name: "Handled for you", hash: "work/handled", field: (page) => page.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" }) },
     { name: "Follow-ups", hash: "work/followups" },
-    { name: "Waiting to go out", hash: "work/outgoing" },
     { name: "Stages", hash: "work/stages" },
     { name: "Projects", hash: "records/projects" },
     { name: "People", hash: "records/people" },
     { name: "Files", hash: "records/files" },
     { name: "Knowledge", hash: "records/knowledge" },
     { name: "Rules review", hash: "records/rules-review" },
-    { name: "Connections", hash: "sources" },
-    { name: "Add-ons", hash: "addons" },
+    { name: "Connections", hash: "settings/connections" },
+    { name: "Add-ons", hash: "settings/addons" },
     { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "Workspace name" }) },
     { name: "What each account can do", hash: "settings/ai-compare" },
     { name: "Quality", hash: "quality", field: (page) => page.locator("main form input[type=date]").first() },

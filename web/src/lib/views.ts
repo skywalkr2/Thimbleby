@@ -1,9 +1,11 @@
 // Which screen is showing (design 7.1). Every view has a real link in the address's #fragment, so one build works at any
 // base path with no server routes, and a view can be bookmarked and opened in a new tab:
-//   #today  #schedule  #work/changed  #work/since  #work/handled  #work/followups  #work/open  #work/outgoing  #work/stages  #work/panel/<name>
+//   #today  #schedule  #work/changed  #work/since  #work/handled  #work/followups  #work/open  #work/stages  #work/panel/<name>
 //   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
-//   #sources  #addons  #settings  #settings/<section> (you, ai, backups, today, appearance, lists, files, advanced, addon/<name>)
+//   #settings  #settings/<section> (you, ai, connections, addons, backups, today, appearance, lists, files, advanced, addon/<name>)
+// Three fragments earlier versions used are redirected: #work/outgoing (Follow-ups, where what waits to go out is the To send
+// tab), #sources and #addons (the Connections and Add-ons sections of Settings).
 //   #settings/ai-compare (what each AI account can do)  #setup (the guide)  #handover (which copy to keep)  #quality  #styleguide
 // A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
 export type CoreView =
@@ -14,26 +16,25 @@ export type CoreView =
   | "work/handled"
   | "work/followups"
   | "work/open"
-  | "work/outgoing"
   | "work/stages"
   | "records/projects"
   | "records/people"
   | "records/files"
   | "records/knowledge"
   | "records/rules-review"
-  | "sources"
-  | "addons"
   | "settings"
   | "settings/ai-compare"
   | "setup"
   | "handover"
   | "quality"
   | "styleguide";
+/** Views that moved: a link to one still works, and opens the view that took its place (`REDIRECTS`). */
+export type MovedView = "work/outgoing" | "sources" | "addons";
 export type PanelGroup = "work" | "records";
 /** The sections of Settings that are always there; an add-on's own is `addon/<name>`. */
-export const SETTINGS_SECTIONS = ["you", "ai", "backups", "today", "appearance", "lists", "files", "advanced"] as const;
+export const SETTINGS_SECTIONS = ["you", "ai", "connections", "addons", "backups", "today", "appearance", "lists", "files", "advanced"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number] | `addon/${string}`;
-export type View = CoreView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}` | `settings/${SettingsSection}`;
+export type View = CoreView | MovedView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}` | `settings/${SettingsSection}`;
 
 export const CORE_VIEWS: readonly CoreView[] = [
   "today",
@@ -43,15 +44,12 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "work/handled",
   "work/followups",
   "work/open",
-  "work/outgoing",
   "work/stages",
   "records/projects",
   "records/people",
   "records/files",
   "records/knowledge",
   "records/rules-review",
-  "sources",
-  "addons",
   "settings",
   "settings/ai-compare",
   "setup",
@@ -60,16 +58,26 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "styleguide",
 ];
 
+/** Where a moved view's fragment goes: Waiting to go out is the To send tab of Follow-ups, and Connections and Add-ons are
+ * sections of Settings. */
+export const REDIRECTS: Record<MovedView, View> = {
+  "work/outgoing": "work/followups",
+  sources: "settings/connections",
+  addons: "settings/addons",
+};
+
+/** The view that opens for a view or fragment name that may have moved; any other is itself. */
+export const canonical = (view: View): View => (view in REDIRECTS ? REDIRECTS[view as MovedView] : view);
+
+
 /** Fragments earlier versions used, and the view each still opens. */
 const LEGACY: Record<string, CoreView> = {
   home: "today",
   stages: "work/stages",
   files: "records/files",
-  sources: "sources",
   setup: "setup",
   welcome: "setup",
   settings: "settings",
-  addons: "addons",
 };
 
 const enc = encodeURIComponent;
@@ -105,7 +113,8 @@ export type ParsedView =
   | { type: "panel"; group: PanelGroup; name: string }
   | { type: "record"; kind: string; id: string };
 
-export function parseView(view: View): ParsedView {
+export function parseView(moved: View): ParsedView {
+  const view = canonical(moved);
   const section = settingsSectionOf(view);
   if (section) return { type: "core", view: "settings", section };
   if (view.startsWith("work/panel/") || view.startsWith("records/panel/")) {
@@ -117,14 +126,21 @@ export function parseView(view: View): ParsedView {
   return { type: "record", kind: decodeURIComponent(kind), id: decodeURIComponent(id) };
 }
 
-/** The #fragment for a view (without the "#"). */
-export const toHash = (view: View): string => view;
+/** The #fragment for a view (without the "#"); a moved view gets the fragment of the view that took its place. */
+export const toHash = (view: View): string => canonical(view);
+
+/** Whether an address's #fragment is one that moved: the fragment of the view that took its place, or null. */
+export function movedTo(hash: string): string | null {
+  const text = hash.replace(/^#/, "");
+  return text in REDIRECTS ? toHash(text as MovedView) : null;
+}
 
 /** The view an address's #fragment names; anything unknown is Today. */
 export function fromHash(hash: string): View {
   const text = hash.replace(/^#/, "");
   if (!text) return "today";
   if ((CORE_VIEWS as readonly string[]).includes(text)) return text as CoreView;
+  if (text in REDIRECTS) return canonical(text as MovedView);
   if (text.startsWith("settings/")) return settingsSectionOf(text) ? (text as View) : "settings";
   try {
     // Fragments from earlier versions.

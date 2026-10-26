@@ -69,8 +69,8 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
     },
   },
   { name: "Files", hash: () => "records/files", ready: (page) => heading(page, "Files") },
-  { name: "Connections", hash: () => "sources", ready: (page) => heading(page, "Connections") },
-  { name: "Add-ons", hash: () => "addons", ready: (page) => heading(page, "Add-ons") },
+  { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections") },
+  { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons") },
   { name: "Settings: You and the workspace", hash: () => "settings/you", ready: (page) => section(page, "You and the workspace") },
   { name: "Settings: AI accounts", hash: () => "settings/ai", ready: (page) => section(page, "AI accounts") },
   { name: "Settings: Backups and sync", hash: () => "settings/backups", ready: (page) => section(page, "Backups and sync") },
@@ -91,7 +91,7 @@ test.describe('"Just me" sees no work words', () => {
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Personal", exact: true })).toBeVisible(LOADED);
   });
 
-  test("the side menu has no Work heading and no Stages, Waiting to go out or Projects, and Personal is a page of its own", async ({ page }) => {
+  test("the side menu has no Work heading and no Stages or Projects, and Personal is a page of its own", async ({ page }) => {
     const nav = page.getByRole("navigation", { name: "Views" });
     const labels = (await nav.getByRole("link").allInnerTexts()).map((text) => text.replace(/\s*\d+$/, "").trim());
     expect(labels).toEqual([
@@ -104,8 +104,6 @@ test.describe('"Just me" sees no work words', () => {
       "People",
       "Files",
       "Knowledge",
-      "Connections",
-      "Add-ons",
       "Settings",
     ]);
     await expect(nav.getByText("Work", { exact: true })).toHaveCount(0);

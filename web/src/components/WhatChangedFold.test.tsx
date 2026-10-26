@@ -101,9 +101,8 @@ test("only the first item is chosen, so its details are shown; the others are on
   expect(rowButton("Third thing")).toHaveAttribute("aria-expanded", "false");
   expect(screen.queryByText("Send Second thing")).toBeNull();
   expect(screen.queryByText("Send Third thing")).toBeNull();
-  // The rows still say what is to be looked at: each line keeps its primary action (and the detail has its own).
-  expect(screen.getAllByRole("button", { name: "Looks good" })).toHaveLength(4);
-  expect(within(screen.getByRole("complementary")).getAllByRole("button", { name: "Looks good" })).toHaveLength(1);
+  // What changed is the history: no line and no detail has a button for Looks good, which is on Today's review line.
+  expect(screen.queryByRole("button", { name: "Looks good" })).toBeNull();
 });
 
 test("another item is chosen by its line, and its details replace the first's", async () => {

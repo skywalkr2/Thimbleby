@@ -1,5 +1,6 @@
 // The navigation (design 7.1): the groups and the bottom entries are fixed, and a plugin's panel adds an entry only under
-// Work (its tab is `work`) or Records (`people`). Panels for Settings and Today do not appear here. The counts come from
+// Work (its tab is `work`) or Records (`people`). Panels for Settings and Today do not appear here. What waits to go out is
+// a tab of Follow-ups, and Connections and Add-ons are sections of Settings, so none of the three has an entry. The counts come from
 // the queries the screens already make.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
@@ -66,7 +67,6 @@ export function useNav(): NavModel {
   const wait: NavEntry[] = justMe
     ? []
     : [
-        { view: "work/outgoing", label: t("nav.outgoing"), icon: "upload", sub: true },
         { view: "work/stages", label: t("nav.stages"), icon: "layers", sub: true },
       ];
   return {
@@ -89,8 +89,6 @@ export function useNav(): NavModel {
       ...plugin("people", "records"),
     ],
     bottom: [
-      { view: "sources", label: t("nav.sources"), icon: "rss" },
-      { view: "addons", label: t("nav.addons"), icon: "puzzle" },
       { view: "settings", label: t("nav.settings"), icon: "gear" },
     ],
   };

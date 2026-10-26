@@ -47,19 +47,19 @@ test("Work opens a sheet with its views, as links", async () => {
   show();
   await user.click(screen.getByRole("button", { name: "Work" }));
   const sheet = await screen.findByRole("dialog", { name: "Work" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "To-dos and questions", "Waiting to go out", "Stages"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "To-dos and questions", "Stages"]);
   expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
-test("More lists Records, Connections, Add-ons and Settings, the help items, and this device's theme and density", async () => {
+test("More lists Records and Settings, with no Connections or Add-ons beside it, the help items, and this device's theme and density", async () => {
   const user = userEvent.setup();
   const onHelp = vi.fn();
   show({ onHelp });
   await user.click(screen.getByRole("button", { name: "More" }));
   const sheet = await screen.findByRole("dialog", { name: "More" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Knowledge", "Connections", "Add-ons", "Settings"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Knowledge", "Settings"]);
   expect(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Setup guide" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Write feedback" })).toBeInTheDocument();
@@ -70,7 +70,7 @@ test("More lists Records, Connections, Add-ons and Settings, the help items, and
   await waitFor(() => expect(onHelp).toHaveBeenCalledTimes(1));
 });
 
-test("with no side besides Personal the phone's bar says Your day, not Work, and its sheet lists no Stages or Waiting to go out", async () => {
+test("with no side besides Personal the phone's bar says Your day, not Work, and its sheet lists no Stages", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET panels": () => [],

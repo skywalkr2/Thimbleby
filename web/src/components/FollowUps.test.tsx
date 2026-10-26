@@ -149,14 +149,68 @@ test("the menu's Copy as plain text puts only the plain text on the clipboard, a
   expect(screen.getAllByRole("button", { name: "Mark sent" }).length).toBeGreaterThan(0);
 });
 
-test("the person's own to-do can be handed to the assistant from its row's menu", async () => {
-  const user = userEvent.setup();
-  const calls = fakeApi({ ...markSentRoutes, "POST actions/ACT-9/hand-over": () => ({ request: "R-1" }) });
+const withAsks = (): S["FollowupSection"][] => {
+  const ask = (id: string, title: string, kind: string): S["FollowupQuestion"] => ({
+    id,
+    title,
+    text: "",
+    links: [],
+    kind,
+    status: "open",
+    sent: null,
+    waiting_days: null,
+    chase_due: false,
+    chases: 0,
+    about: null,
+    options: [],
+  });
+  const all = structuredClone(sections);
+  all[0].questions = [ask("Q-7", "Ship the proof now?", "decision"), ask("Q-8", "Which cover do you prefer?", "question")];
+  return all;
+};
+
+test("the You group shows each decision and question as a link, Answer on Today, with no Answer button and no form", async () => {
+  fakeApi({ "GET followups": () => withAsks(), "GET people": () => [] });
   renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: "More actions for Approve the proof" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Hand to the assistant" }));
-  await user.click(await screen.findByRole("button", { name: "Hand it over" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-9/hand-over")).toBe(true));
+  const decision = (await screen.findByText("Ship the proof now?")).closest("li") as HTMLElement;
+  const question = screen.getByText("Which cover do you prefer?").closest("li") as HTMLElement;
+  for (const row of [decision, question]) {
+    expect(within(row).getByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Answer" })).toBeNull();
+    expect(within(row).queryByRole("textbox")).toBeNull();
+  }
+  expect(screen.queryByRole("button", { name: "Answer" })).toBeNull();
+});
+
+test("Answer on Today asks Today to open that question's line, and takes the person to Today when no list here holds it", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => withAsks(), "GET people": () => [] });
+  renderApp(<FollowUps />);
+  window.location.hash = "#work/followups";
+  const asked: Array<{ type: string; id: string }> = [];
+  const listen = (event: Event) => asked.push((event as CustomEvent<{ type: string; id: string }>).detail);
+  window.addEventListener("reveal-row", listen);
+  try {
+    const link = within((await screen.findByText("Ship the proof now?")).closest("li") as HTMLElement).getByRole("link", { name: "Answer on Today" });
+    expect(link).toHaveAttribute("href", expect.stringMatching(/#today$/));
+    await user.click(link);
+    expect(asked).toContainEqual({ type: "question", id: "Q-7" });
+    // Nothing on this screen holds a question's line, so Today opens, and opens that line when it has loaded.
+    expect(window.location.hash).toBe("#today");
+  } finally {
+    window.removeEventListener("reveal-row", listen);
+    window.location.hash = "";
+  }
+});
+
+test("the person's own to-dos are links to To-dos and questions, where Mark done is, and carry no button or menu here", async () => {
+  fakeApi({ "GET followups": () => sections, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  const row = (await screen.findByText("Approve the proof")).closest("li") as HTMLElement;
+  expect(within(row).getByRole("link", { name: "Open in To-dos and questions" })).toHaveAttribute("href", expect.stringMatching(/#work\/open$/));
+  expect(within(row).queryByRole("button", { name: "Mark done" })).toBeNull();
+  expect(within(row).queryByRole("button", { name: /More actions/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
 });
 
 test("Copy on a closed card opens the message first and copies nothing, with the cursor in the message", async () => {
@@ -527,9 +581,10 @@ test("Drop on an action row asks why with the cursor in the field, acts at once 
 
 test("Escape closes the Drop form and sends nothing", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [] });
+  const calls = fakeApi({ "GET followups": () => waitingSections(), "GET people": () => [] });
   renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: "More actions for Approve the proof" }));
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await user.click(await screen.findByRole("button", { name: "More actions for Send the index" }));
   await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
   const field = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
   await user.type(field, "x{Escape}");

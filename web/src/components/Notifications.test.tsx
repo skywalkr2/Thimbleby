@@ -160,7 +160,7 @@ describe("Settings", () => {
         }),
       }),
     );
-    renderApp(<Settings section="today" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+    renderApp(<Settings section="today" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
     expect(await screen.findByRole("region", { name: "Tell me when something needs me" })).toBeInTheDocument();
     expect(screen.queryByLabelText("The address.")).toBeNull();
   });

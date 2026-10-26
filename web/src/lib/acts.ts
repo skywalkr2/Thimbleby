@@ -50,9 +50,10 @@ export function useSentActs() {
 /** How many of the acts that went out the list shows. */
 const SENT_SHOWN = 10;
 
-/** Open an act in Waiting to go out: the list there opens its row, or, from another screen, the screen opens with it. */
+/** Open an act where it waits, in Follow-ups' To send tab: the list there opens its row, or, from another screen, the screen
+ * opens with it. */
 export function showInOutgoing(id: string): void {
-  if (!revealOrKeep("act", id)) window.location.hash = toHash("work/outgoing");
+  if (!revealOrKeep("act", id)) window.location.hash = toHash("work/followups");
 }
 
 /** What can be done about a saved message, a calendar entry or a reply owed (its action's id): the account it came in on,

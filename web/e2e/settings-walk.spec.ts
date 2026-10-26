@@ -27,6 +27,7 @@ test("every Settings page keeps the side bar, and the person can go back to any 
   const names = (await bar(page).getByRole("link").allTextContents()).map((n) => n.trim());
   expect(names.length).toBeGreaterThan(4);
   expect(names).toContain("Connections");
+  expect(names).toContain("Add-ons");
 
   for (const size of WIDTHS) {
     await page.setViewportSize(size);
@@ -55,7 +56,14 @@ test("Connections, Add-ons and what each account can do open inside Settings", a
   await page.goto("?token=e2e-token#settings/ai-compare");
   await expect(bar(page)).toBeVisible(LOADED);
   await notWider(page, "what each account can do");
-  await page.goto("?token=e2e-token#addons");
+  await page.goto("?token=e2e-token#settings/addons");
   await expect(bar(page)).toBeVisible(LOADED);
   await notWider(page, "Add-ons");
+  // The old addresses of the two screens open their sections, and the address says where they went.
+  await page.goto("?token=e2e-token#addons");
+  await expect(page.getByRole("heading", { level: 1, name: "Add-ons", exact: true })).toBeVisible(LOADED);
+  expect(new URL(page.url()).hash).toBe("#settings/addons");
+  await page.goto("?token=e2e-token#sources");
+  await expect(page.getByRole("heading", { level: 1, name: "Connections", exact: true })).toBeVisible(LOADED);
+  expect(new URL(page.url()).hash).toBe("#settings/connections");
 });

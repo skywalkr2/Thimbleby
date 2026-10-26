@@ -111,7 +111,7 @@ describe("a saved message", () => {
       parts: { subject: "Re: The proofs", body: "The proofs ship on Monday." },
     });
     expect(await screen.findByText(/Drafted the reply to Ana Example/)).toBeInTheDocument();
-    await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+    await waitFor(() => expect(window.location.hash).toBe("#work/followups"));
     expect(screen.queryByRole("textbox", { name: "Your reply" })).toBeNull();
   });
 
@@ -167,7 +167,7 @@ describe("a saved message", () => {
     await user.click(await screen.findByRole("menuitem", { name }));
     await waitFor(() => expect(post(calls)).toHaveLength(1));
     expect(post(calls)[0].body).toEqual({ kind: "mailbox", action, about: [MESSAGE] });
-    await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+    await waitFor(() => expect(window.location.hash).toBe("#work/followups"));
   });
 
   test("Move to is a pick list of the mailbox's own folders", async () => {
@@ -229,7 +229,7 @@ describe("a saved message", () => {
     await user.click(screen.getByRole("button", { name: "Draft the label" }));
     expect(await screen.findByText(/can't label for a mailbox act/)).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Label" })).toHaveValue("Waiting");
-    expect(window.location.hash).not.toBe("#work/outgoing");
+    expect(window.location.hash).not.toBe("#work/followups");
   });
 });
 
@@ -259,7 +259,7 @@ describe("an invitation", () => {
     }
     await waitFor(() => expect(post(calls)).toHaveLength(1));
     expect(post(calls)[0].body).toEqual({ kind: "calendar", action: "answer", about: [ENTRY], answer });
-    await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+    await waitFor(() => expect(window.location.hash).toBe("#work/followups"));
   });
 
   const slots = {

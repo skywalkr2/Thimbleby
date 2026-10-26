@@ -59,12 +59,12 @@ test("nothing shows for acts that are waiting for a yes, sent or approved", asyn
   await waitFor(() => expect(screen.queryByText(/Check the Sent folder|Look again at|which didn't go out/)).toBeNull());
 });
 
-test("a failure is one line that starts with the verb and says why, and opens the message in Waiting to go out", async () => {
+test("a failure is one line that starts with the verb and says why, and opens the message in the To send tab", async () => {
   const user = userEvent.setup();
   const { onView } = show([failed()]);
   const row = await rowOf("Look at the message to Ana Example, which didn't go out: The service was down.");
   await user.click(within(row).getByRole("button", { name: "Open" }));
-  expect(onView).toHaveBeenLastCalledWith("work/outgoing");
+  expect(onView).toHaveBeenLastCalledWith("work/followups");
 });
 
 test("a withdrawn sign-in says which account to sign in to again, in the channel's words", async () => {
@@ -114,7 +114,7 @@ test("a stale act is a line that says what changed, and its button opens it to l
   const { onView } = show([actFixture({ status: "stale", why: ["target"] })]);
   const row = await rowOf("Look again at the message to Ana Example: who it goes to");
   await user.click(within(row).getByRole("button", { name: "Look again" }));
-  expect(onView).toHaveBeenLastCalledWith("work/outgoing");
+  expect(onView).toHaveBeenLastCalledWith("work/followups");
 });
 
 test("the lines are counted in what needs the person, and the empty Today is not shown beside them", async () => {

@@ -10,7 +10,7 @@ import { useRowKeys } from "../lib/keys";
 import { useFieldLabel } from "../lib/records";
 import { useHeldAnswers } from "../lib/held-answers";
 import { heldTold, titleWords } from "../lib/queue-words";
-import { useIsNarrow, useMediaQuery } from "../lib/media";
+import { useMediaQuery } from "../lib/media";
 import { useListChoice, type ListChoice } from "../lib/list-choice";
 import { showRow, useReveal } from "../lib/reveal";
 import { recordView, viewHref } from "../lib/views";
@@ -31,7 +31,6 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
-import { ReviewMode } from "./ReviewMode";
 
 /** The width the list needs beside the pane: a state, a title with one line under it, the primary and the menu. */
 const CHANGES_FIT = 480;
@@ -135,10 +134,6 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   );
   const stageRows = (filter === "attention" ? stageToday.count : 0) + (firstLine ? 1 : 0);
   const filters: Filter[] = ["attention", "done", "all"];
-  // On a phone the items waiting for a look can be gone through one at a time (design 7.1).
-  const phone = useIsNarrow() && !props.compact;
-  const [reviewing, setReviewing] = useState(false);
-  const reviewable = rows.filter((c) => c.state === "review" && !!c.changeset);
   // A list with nothing in it has nothing to hold still: what arrives shows at once, so the first results after a first go are
   // one list, never "5 new · Show" over an empty one.
   useEffect(() => {
@@ -213,13 +208,6 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
             {t("action.try_again")}
           </button>
         </p>
-      ) : reviewing && phone ? (
-        <ReviewMode
-          items={reviewable}
-          render={(item) => <ChangeRow key={item.id} item={item} reveal={0} onOpenGuide={props.onOpenGuide} open />}
-          canSendBack={(item) => item.state === "review" && !!item.changeset}
-          onClose={() => setReviewing(false)}
-        />
       ) : rows.length === 0 && stageRows === 0 ? (
         <p className="empty">{t(filter === "attention" ? "changes.empty_attention" : "changes.empty")}</p>
       ) : (
@@ -235,6 +223,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
                   key={selected.id}
                   item={selected}
                   pane
+                  history
                   reveal={0}
                   want={want?.id === selected.id ? want : null}
                   onOpenGuide={props.onOpenGuide}
@@ -244,13 +233,6 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           }
         >
           <ol className="queue">
-            {phone && reviewable.length > 0 && (
-              <li className="review-start">
-                <button type="button" className="btn primary" onClick={() => setReviewing(true)}>
-                  {t("review.start")}
-                </button>
-              </li>
-            )}
             {firstLine && <FirstGoRow first={first} />}
             {filter === "attention" && <StageTodayRows today={stageToday} />}
             {rows.map((item) => (
@@ -390,11 +372,26 @@ function useChangeActions(item: S["ChangeItem"], hooks: { onOpenGuide?: (step: s
   return { gated, cs, title, primary, menu, canSendBack: !!cs && item.state === "review" };
 }
 
+/** What What changed offers on a row: it is the history, so nothing on the row is a button. The choice that would have been
+ * its primary is the first entry of the row's menu, and the rest follow. Acting on the assistant's work is done on Today's
+ * review line; Undo stays here, in each row's menu. */
+function historyMenu(primary: { label: string; run: () => void } | null, menu: MenuAction[]): MenuAction[] {
+  return primary ? [{ id: "first-choice", label: primary.label, run: primary.run }, ...menu] : menu;
+}
+
 /** What a change's list row says under its title: the estimate while it waits for the go, else what was done. */
 function useChangeSub(item: S["ChangeItem"]): string {
   const { t, tn } = useWords();
   const estimate = useEstimate();
   return waitsForGo(item) ? (estimate(item.estimate_usd) ?? t("changes.sub.go_waiting", { when: dayAndTime(item.created_at) })) : subLine(item, t, tn);
+}
+
+/** The word a row's state is written in: what happened, so a change the assistant finished and nobody has checked yet reads
+ * "Done, not yet checked" and not as an instruction. */
+function stateWord(item: S["ChangeItem"], gated: boolean): string {
+  if (item.dismissed) return "changes.state.dismissed";
+  if (gated) return "changes.state.cost_go";
+  return item.state === "review" ? "changes.history.review" : `changes.state.${item.state}`;
 }
 
 /** One change as a line of the list (design 7.13): its state, its title, what was done in one line, its one primary and the
@@ -414,26 +411,18 @@ function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; revea
   }, [props.reveal]);
   useRowKeys(ref, {
     toggle: () => choice.enter(item.id),
-    primary: primary?.run,
     send_back: canSendBack ? () => props.onWant("sendback") : undefined,
   });
   return (
     <li className="line" ref={ref} aria-labelledby={`t-${item.id}`} data-changeset={cs?.id} {...choice.rowProps(item.id)}>
       <div className="row">
-        <span className={`kind ${PILL[item.state]}`}>
-          {t(item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
-        </span>
+        <span className={`kind ${PILL[item.state]}`}>{t(stateWord(item, gated))}</span>
         <button type="button" className="expander text" aria-expanded={choice.chosen === item.id} data-inert={choice.chosen === item.id ? "" : undefined} onClick={() => choice.choose(item.id)}>
           <strong id={`t-${item.id}`}>{title}</strong>
           <span className="sub">{sub}</span>
         </button>
         <div className="acts">
-          {primary && (
-            <button type="button" className="btn primary" onClick={primary.run}>
-              {primary.label}
-            </button>
-          )}
-          <RowMenu label={title} actions={menu} />
+          <RowMenu label={title} actions={historyMenu(primary, menu)} />
         </div>
       </div>
       <OnTheRow item={item} />
@@ -459,7 +448,17 @@ function OnTheRow(props: { item: S["ChangeItem"] }) {
 /** One change in full: what the assistant did, nested, with the buttons for it. `open` shows it expanded from the start (the
  * Today inspector), `sendBack` starts with the note to send it back with, and `pane` is the detail beside the list, where the
  * title is the pane's own heading and `want` is what the list row asked to have opened. */
-export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?: (step: string) => void; open?: boolean; sendBack?: boolean; pane?: boolean; want?: ChangeWant | null }) {
+export function ChangeRow(props: {
+  item: S["ChangeItem"];
+  reveal: number;
+  onOpenGuide?: (step: string) => void;
+  open?: boolean;
+  sendBack?: boolean;
+  pane?: boolean;
+  /** What changed's own detail: the history, with every choice in the menu and no button (Today's inspector has them). */
+  history?: boolean;
+  want?: ChangeWant | null;
+}) {
   const { t, tn } = useWords();
   const spentLine = useSpent();
   const { item } = props;
@@ -500,7 +499,7 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
 
   useRowKeys(ref, {
     toggle: props.pane ? undefined : () => setOpen((v) => !v),
-    primary: primary?.run,
+    primary: props.history ? undefined : primary?.run,
     send_back: canSendBack ? () => {
       setOpen(true);
       setSendingBack(true);
@@ -509,19 +508,15 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
 
   const actions = (
     <div className="acts">
-      {primary && (
+      {primary && !props.history && (
         <button type="button" className="btn primary" onClick={primary.run}>
           {primary.label}
         </button>
       )}
-      <RowMenu label={title} actions={menu} />
+      <RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />
     </div>
   );
-  const pill = (
-    <span className={`kind ${PILL[item.state]}`}>
-      {t(item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
-    </span>
-  );
+  const pill = <span className={`kind ${PILL[item.state]}`}>{t(props.history ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}</span>;
   return (
     <li className={props.pane ? "line in-pane" : "line"} data-row tabIndex={-1} ref={ref} aria-labelledby={props.pane ? undefined : `t-${item.id}`} data-changeset={cs?.id}>
       {props.pane ? (

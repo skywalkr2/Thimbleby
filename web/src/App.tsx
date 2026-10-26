@@ -11,7 +11,7 @@ import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
-import { EVENT_PAGE, fromHash, parseView, recordView, settingsView, toHash, type SettingsSection, type View } from "./lib/views";
+import { EVENT_PAGE, canonical, fromHash, movedTo, parseView, recordView, settingsView, toHash, type SettingsSection, type View } from "./lib/views";
 import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
@@ -43,7 +43,6 @@ import { Today } from "./components/Today";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { Handled } from "./components/Handled";
 import { SinceYesterday } from "./components/SinceYesterday";
-import { WaitingToGoOut } from "./components/WaitingToGoOut";
 import { WhatChanged } from "./components/WhatChanged";
 import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
@@ -112,7 +111,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   const openAddSource = (plugin: string | null = null) => {
     ownFocus.current = true;
     setAddSource({ plugin, n: Date.now() });
-    setView("sources");
+    setView(settingsView("connections"));
   };
   const openGuide = (step?: string) => {
     // The walkthrough puts focus on its own heading.
@@ -160,9 +159,11 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       return;
     }
     window.scrollTo?.(0, 0);
-    // Settings and Handled for you put the cursor in their first field themselves.
+    // Settings and Handled for you put the cursor in their first field themselves; Connections and Add-ons, which sit in
+    // Settings' frame, take it on their heading like any screen.
     const now = parseView(view);
-    if (now.type === "core" && (now.view === "settings" || now.view === "work/handled")) {
+    const ownScreen = now.type === "core" && now.view === "settings" && (now.section === "connections" || now.section === "addons");
+    if (now.type === "core" && !ownScreen && (now.view === "settings" || now.view === "work/handled")) {
       ownFocus.current = false;
       return;
     }
@@ -200,14 +201,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;
     }
     // A screen reached from Settings keeps the Settings side bar, so every other section is one choice away.
-    const framed = (page: "sources" | "quality" | undefined, under: SettingsSection | undefined, body: ReactNode) => (
-      <SettingsFrame
-        page={page}
-        under={under}
-        choose={(section) => setView(settingsView(section))}
-        onOpenSources={() => setView("sources")}
-        onOpenQuality={() => setView("quality")}
-      >
+    const framed = (page: "quality" | undefined, under: SettingsSection | undefined, body: ReactNode) => (
+      <SettingsFrame page={page} under={under} choose={(section) => setView(settingsView(section))} onOpenQuality={() => setView("quality")}>
         {body}
       </SettingsFrame>
     );
@@ -241,8 +236,6 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <FollowUps />;
       case "work/open":
         return <OpenItems />;
-      case "work/outgoing":
-        return <WaitingToGoOut onView={setView} />;
       case "work/stages":
         return <Stages />;
       case "records/projects":
@@ -255,28 +248,29 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <Knowledge onOpenReview={() => setView("records/rules-review")} />;
       case "records/rules-review":
         return <RuleReview onBack={() => setView("records/knowledge")} />;
-      case "sources":
-        return framed(
-          "sources",
-          undefined,
-          <Sources
-            onAsk={(question) => setAsk({ question })}
-            add={addSource}
-            onAddOpened={() => setAddSource(null)}
-            onOpenAddons={() => setView("addons")}
-          />,
-        );
       case "setup":
         return null;
       case "settings":
+        // Connections and Add-ons are sections of Settings: each shows its own screen beside the Settings side bar.
+        if (shown.section === "connections") {
+          return framed(
+            undefined,
+            "connections",
+            <Sources
+              onAsk={(question) => setAsk({ question })}
+              add={addSource}
+              onAddOpened={() => setAddSource(null)}
+              onOpenAddons={() => setView(settingsView("addons"))}
+            />,
+          );
+        }
+        if (shown.section === "addons") return framed(undefined, "addons", <Addons />);
         return (
           <Settings
             onOpenGuide={openGuide}
-            onOpenAddons={() => setView("addons")}
             onChooseSource={openAddSource}
             onOpenKnowledge={() => setView("records/knowledge")}
             onOpenCompare={() => setView("settings/ai-compare")}
-            onOpenSources={() => setView("sources")}
             onOpenQuality={() => setView("quality")}
             section={shown.section}
             onSection={(section) => setView(settingsView(section))}
@@ -286,8 +280,6 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         );
       case "settings/ai-compare":
         return framed(undefined, "ai", <AiCompare onBack={() => setView(settingsView("ai"))} />);
-      case "addons":
-        return framed(undefined, undefined, <Addons onBack={() => setView("settings")} />);
       case "handover":
         return <Handover />;
       case "quality":
@@ -335,7 +327,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         <Walkthrough
           at={guideAt}
           onOpenPeople={leaveSetup(() => setView("records/people"))}
-          onOpenAddons={leaveSetup(() => setView("addons"))}
+          onOpenAddons={leaveSetup(() => setView(settingsView("addons")))}
           onHandIn={leaveSetup(() => {
             // The hand-in box takes focus itself.
             ownFocus.current = true;
@@ -346,7 +338,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             setFromSetup(true);
             openAddSource(plugin);
           }}
-          onOpenSources={leaveSetup(() => setView("sources"))}
+          onOpenSources={leaveSetup(() => setView(settingsView("connections")))}
           onFinishLater={() => setView("today")}
           onDone={() => {
             setView("today");
@@ -433,17 +425,31 @@ export type { View } from "./lib/views";
 
 /** Which view is showing, kept in the address's #fragment so a refresh, the back button and a bookmark all keep it. */
 function useView(): [View, (v: View) => void] {
-  const [view, setViewState] = useState<View>(() => fromHash(window.location.hash));
+  const [view, setViewState] = useState<View>(() => settled());
   useEffect(() => {
-    const onHash = () => setViewState(fromHash(window.location.hash));
+    const onHash = () => setViewState(settled());
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
   const setView = (v: View) => {
     window.location.hash = toHash(v);
-    setViewState(v);
+    setViewState(canonical(v));
   };
   return [view, setView];
+}
+
+/** The view the address names. A fragment that moved (Waiting to go out, Connections, Add-ons) is rewritten to the one that
+ * took its place, so a bookmark opens it and the address then says where the person is. */
+function settled(): View {
+  const moved = movedTo(window.location.hash);
+  if (moved) {
+    try {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${moved}`);
+    } catch {
+      // The address can't be rewritten; the view still opens.
+    }
+  }
+  return fromHash(window.location.hash);
 }
 
 /** Puts focus on Today's first-go line once it is on the page, after the walkthrough closes onto Today. The line may take a

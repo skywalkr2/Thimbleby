@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 // The note box on the action buttons: each button still acts at once; its menu's "Add a note" opens a box that sends
-// the note on the same route. No note sends none.
+// the note on the same route. No note sends none. (A to-do's Mark done is on To-dos and questions only; its note box is
+// tested with that screen.)
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
@@ -37,8 +38,6 @@ const section = (over: Partial<S["FollowupSection"]>): S["FollowupSection"] => (
   ...over,
 });
 
-const mine = [section({ actions: [action({ id: "ACT-9", text: "Approve the proof" })] })];
-
 /** One person's action that was sent and is now waiting on them. */
 const waiting = (over: Partial<S["FollowupAction"]> = {}) => [
   section({
@@ -51,7 +50,6 @@ const waiting = (over: Partial<S["FollowupAction"]> = {}) => [
 
 const routes = {
   "GET people": () => [],
-  "POST actions/ACT-9/status": () => ({ ok: "ACT-9", request: "REQ-7" }),
   "POST followups/PER-2/actions/ACT-1/finished": () => ({ ok: "ACT-1", request: "REQ-8" }),
   "POST followups/PER-2/actions/ACT-1/followed-up": () => ({ on: "2026-10-13", previous_told: null, request: "REQ-8" }),
 };
@@ -62,34 +60,12 @@ async function openNote(user: ReturnType<typeof userEvent.setup>, rowName: strin
   return screen.findByRole("textbox", { name: "Your note" });
 }
 
-test("Mark done: the note box takes the cursor, and Enter sends the note with the act", async () => {
-  const user = userEvent.setup();
-  const calls = fakeApi({ "GET followups": () => mine, ...routes });
-  renderApp(<FollowUps />);
-  const box = await openNote(user, "Approve the proof");
-  expect(box).toHaveFocus();
-  await user.type(box, NOTE);
-  await user.keyboard("{Enter}");
-  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-9/status")?.body).toEqual({ status: "done", note: NOTE }));
-  expect(await screen.findByText("Marked done. Helper will read your note.")).toBeInTheDocument();
-  expect(screen.queryByRole("textbox", { name: "Your note" })).toBeNull();
-});
-
-test("Mark done with no note sends none and says nothing about reading one", async () => {
-  const user = userEvent.setup();
-  const calls = fakeApi({ "GET followups": () => mine, ...routes, "POST actions/ACT-9/status": () => ({ ok: "ACT-9", request: null }) });
-  renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: "Mark done" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-9/status")?.body).toEqual({ status: "done" }));
-  expect(await screen.findByText("Marked done.")).toBeInTheDocument();
-  expect(screen.queryByText(/will read your note/)).toBeNull();
-});
-
 test("Escape closes the box without acting, and Enter in an empty box sends nothing", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({ "GET followups": () => mine, ...routes });
+  const calls = fakeApi({ "GET followups": () => waiting(), ...routes });
   renderApp(<FollowUps />);
-  const box = await openNote(user, "Approve the proof");
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const box = await openNote(user, "Send the index");
   await user.keyboard("{Enter}");
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
   await user.type(box, "Half a thought");
@@ -100,9 +76,10 @@ test("Escape closes the box without acting, and Enter in an empty box sends noth
 
 test("a note that could not be sent stays in the box", async () => {
   const user = userEvent.setup();
-  fakeApi({ "GET followups": () => mine, ...routes, "POST actions/ACT-9/status": () => new Refuse(409, "this action needs an owner first") });
+  fakeApi({ "GET followups": () => waiting(), ...routes, "POST followups/PER-2/actions/ACT-1/finished": () => new Refuse(409, "this action needs an owner first") });
   renderApp(<FollowUps />);
-  const box = await openNote(user, "Approve the proof");
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const box = await openNote(user, "Send the index");
   await user.type(box, NOTE);
   await user.keyboard("{Enter}");
   expect(await screen.findByText(/needs an owner first/)).toBeInTheDocument();

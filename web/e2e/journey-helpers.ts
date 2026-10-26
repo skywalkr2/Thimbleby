@@ -134,6 +134,13 @@ export async function dismissToasts(page: Page) {
 /** Opens a view from the sidebar, or on a phone from the bottom bar's sheets. */
 export async function openView(page: Page, label: string) {
   await dismissToasts(page);
+  // Connections and Add-ons are sections of Settings, reached from its side bar and not from the side menu.
+  if (label === "Connections" || label === "Add-ons") {
+    await openView(page, "Settings");
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: label, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible();
+    return;
+  }
   const nav = page.getByRole("navigation", { name: "Views" });
   const name = new RegExp(`^${label}`);
   const link = nav.getByRole("link", { name });

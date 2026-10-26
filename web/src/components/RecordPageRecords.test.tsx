@@ -327,6 +327,22 @@ test("an item the assistant filed by words says why on its page, and Move to the
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-30/undo")).toBe(true));
 });
 
+test("a question waiting on the person links to its line on Today, and one waiting on someone else does not", async () => {
+  api("question", "Q-6", { title: "Which one?", status: "open", to: "PER-1" }, page({ kind: "question", id: "Q-6", name: "Which one?" }), {
+    "GET me": () => ({ full_name: "Robin Sample", person: "PER-1" }),
+  });
+  const mine = renderApp(<RecordPage kind="question" id="Q-6" onBack={() => {}} />);
+  expect(await screen.findByRole("link", { name: "Answer on Today" })).toHaveAttribute("href", expect.stringMatching(/#today$/));
+  expect(screen.queryByRole("button", { name: "Answer" })).toBeNull();
+  mine.unmount();
+  api("question", "Q-6", { title: "Which one?", status: "open", to: "PER-1" }, page({ kind: "question", id: "Q-6", name: "Which one?" }), {
+    "GET me": () => ({ full_name: "Casey Example", person: "PER-9" }),
+  });
+  renderApp(<RecordPage kind="question" id="Q-6" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: "Which one?" });
+  expect(screen.queryByRole("link", { name: "Answer on Today" })).toBeNull();
+});
+
 test("a question is moved by its list of projects, and an item nobody filed by words has no such line", async () => {
   const user = userEvent.setup();
   const calls = api("question", "Q-5", { title: "Which one?", projects: ["PRJ-1"] }, page({ kind: "question", id: "Q-5", name: "Which one?", filed: { ...FILED, by: "domain", word: "example.com", field: "projects" } }), {

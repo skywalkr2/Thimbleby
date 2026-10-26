@@ -48,7 +48,6 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "To-dos and questions", hash: "work/open", ready: (page) => heading(page, "To-dos and questions") },
   { name: "What changed", hash: "work/changed", ready: (page) => heading(page, "What changed") },
   { name: "Handled for you", hash: "work/handled", ready: (page) => heading(page, "Handled for you") },
-  { name: "Outgoing", hash: "work/outgoing", ready: (page) => heading(page, "Waiting to go out") },
   { name: "Stages", hash: "work/stages", ready: (page) => heading(page, "Stages") },
   { name: "Projects", hash: "records/projects", ready: (page) => text(page, strings["token-02"]) },
   { name: "People", hash: "records/people", ready: (page) => text(page, strings["email-03"]) },
@@ -56,13 +55,13 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "Knowledge", hash: "records/knowledge", ready: (page) => heading(page, "Knowledge") },
   {
     name: "Connections",
-    hash: "sources",
+    hash: "settings/connections",
     ready: async (page) => {
       await heading(page, "Connections");
       await text(page, strings["mail-01"].slice(0, 12));
     },
   },
-  { name: "Add-ons", hash: "addons", ready: (page) => heading(page, "Add-ons") },
+  { name: "Add-ons", hash: "settings/addons", ready: (page) => heading(page, "Add-ons") },
   { name: "Settings", hash: "settings", ready: (page) => heading(page, "Settings") },
   { name: "Quality", hash: "quality", ready: (page) => heading(page, "Quality") },
   // Each section of Settings, with its help beside the settings or under them.

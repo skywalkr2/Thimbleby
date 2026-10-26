@@ -2,54 +2,87 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
+import type { S } from "../lib/api";
 import type { Act } from "../lib/acts";
 import { actFixture, recipient } from "../lib/acts-fixtures";
 import { reveal, revealOrKeep } from "../lib/reveal";
 import { besidePane, fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
-import { WaitingToGoOut } from "./WaitingToGoOut";
+import { FollowUps } from "./FollowUps";
 
-// Waiting to go out (design 7.4, 6.12): one line for each thing that will leave, its state in words and an icon, its one button;
-// the one chosen in full beside the list, with its exact content, its target, the recipients called out to acknowledge by name,
-// and Approve and send, which confirms and then says yes on exactly what is shown and sends. With nothing waiting, the screen is
-// its empty state.
+// Waiting to go out, now Follow-ups' To send tab (design 7.4, 6.12): one line for each thing that will leave, its state in
+// words and an icon, its one button; the one chosen in full beside the list, with its exact content, its target, the recipients
+// called out to acknowledge by name, and Approve and send, which confirms and then says yes on exactly what is shown and sends.
+// The guards are the ones the screen had on its own.
 
 afterEach(() => vi.unstubAllGlobals());
 
 function show(acts: Act[], extra: Routes = {}) {
   besidePane();
-  const calls = fakeApi({ "GET acts": () => ({ acts }), ...extra });
-  const onView = vi.fn();
-  renderApp(<WaitingToGoOut onView={onView} />);
-  return { calls, onView };
+  const calls = fakeApi({ "GET acts": () => ({ acts }), "GET followups": () => [], ...extra });
+  renderApp(<FollowUps />);
+  return { calls };
 }
 
 const sent = (status: Act["status"] = "sent") => ({ id: "XACT-1", status, reason: null, changeset: null });
 
 describe("nothing waiting", () => {
-  test("the screen says what waits here and that nothing goes without the person's approval", async () => {
+  test("the To send tab is Follow-ups' own: nothing is listed to approve and the screen says nobody is waiting", async () => {
     show([]);
-    expect(screen.getByRole("heading", { level: 1, name: "Waiting to go out" })).toBeInTheDocument();
-    expect(screen.getByText(/Nothing is sent, published or posted without your approval/)).toBeInTheDocument();
-    expect(await screen.findByText("Nothing is waiting to go out.")).toBeInTheDocument();
-  });
-
-  test("with nothing waiting it shows how a message leaves today", async () => {
-    show([]);
-    expect(await screen.findByText(/copy a message in Follow-ups, send it yourself/i)).toBeInTheDocument();
-  });
-
-  test("its one button goes to what changed, and a link goes to Follow-ups", async () => {
-    const user = userEvent.setup();
-    const { onView } = show([]);
-    await user.click(await screen.findByRole("button", { name: "See what changed" }));
-    expect(onView).toHaveBeenLastCalledWith("work/changed");
-    await user.click(screen.getByRole("button", { name: "Open Follow-ups" }));
-    expect(onView).toHaveBeenLastCalledWith("work/followups");
+    expect(screen.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByText(/Nobody is waiting on anything from you/)).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
   });
 
   test("acts that have gone out or been taken back are not listed", async () => {
     show([actFixture({ status: "sent" }), actFixture({ id: "XACT-2", status: "withdrawn" })]);
-    expect(await screen.findByText("Nothing is waiting to go out.")).toBeInTheDocument();
+    expect(await screen.findByText(/Nobody is waiting on anything from you/)).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
+  });
+});
+
+describe("the To send tab holds what waits to go out with the messages to send", () => {
+  const person = (): S["FollowupSection"] => ({
+    person: "PER-2",
+    name: "Robin Sample",
+    is_pm: false,
+    questions: [
+      { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
+    ],
+    actions: [],
+    message: "Hi Robin,\n\nIs the index final?\n\nThanks!",
+    to_send: 1,
+  });
+
+  test("the acts come first under their own heading, and a person's message to copy is below them in the same list", async () => {
+    show([actFixture()], { "GET followups": () => [person()] });
+    const waiting = await screen.findByRole("list", { name: "Waiting to go out" });
+    expect(within(waiting).getByText("Message to Ana Example")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Waiting to go out" })).toBeInTheDocument();
+    const row = await screen.findByRole("listitem", { name: "Robin Sample" });
+    expect(within(row).getByRole("button", { name: "Copy 1" })).toBeInTheDocument();
+    // Both are in the one tab, and the act is the one chosen beside the list.
+    expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("complementary", { name: "Message to Ana Example" })).toBeInTheDocument();
+  });
+
+  test("choosing the person's line shows their message in the same pane, and choosing the act shows the act again", async () => {
+    const user = userEvent.setup();
+    show([actFixture()], { "GET followups": () => [person()] });
+    await screen.findByRole("complementary", { name: "Message to Ana Example" });
+    await user.click(within(await screen.findByRole("listitem", { name: "Robin Sample" })).getByRole("button", { name: /Robin Sample/ }));
+    expect(await screen.findByRole("complementary", { name: "Robin Sample" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve and send" })).toBeNull();
+    await user.click(within(await screen.findByRole("list", { name: "Waiting to go out" })).getByRole("button", { name: "Review and send" }));
+    expect(await screen.findByRole("complementary", { name: "Message to Ana Example" })).toBeInTheDocument();
+  });
+
+  test("the other tabs list only follow-ups: no act is shown under Later or Waiting on them", async () => {
+    const user = userEvent.setup();
+    show([actFixture()], { "GET followups": () => [person()] });
+    await screen.findByRole("list", { name: "Waiting to go out" });
+    await user.click(screen.getByRole("button", { name: "Waiting on them" }));
+    expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
   });
 });
 

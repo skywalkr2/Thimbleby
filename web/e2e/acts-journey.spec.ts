@@ -1,6 +1,6 @@
 // Mail and calendar acts, end to end (design 6.12, 7.4): on the core's stand-in channel serving a plain mailbox with acting
 // switched on, the person replies to a saved message and sends the reply, files a message away and takes that back, and
-// answers an invitation. Each time the person sees the act's exact content in Waiting to go out, its state in words, and the
+// answers an invitation. Each time the person sees the act's exact content in Follow-ups' To send tab, its state in words, and the
 // confirm before it goes; what the channel was handed (`/__e2e/acts`) is what was shown. Its server is started with `--acts`,
 // which seeds the messages and the invitation, and the reply's words are the only thing the test makes up.
 import { expect, test, type Page } from "@playwright/test";
@@ -50,7 +50,7 @@ const wentOut = (page: Page) => page.getByRole("list", { name: "Went out" }).get
 test.describe.configure({ mode: "serial" });
 
 test.describe("mail and calendar acts", () => {
-  test("a reply is drafted from the message, read in full in Waiting to go out, approved and sent as shown", async ({ page }) => {
+  test("a reply is drafted from the message, read in full in the To send tab, approved and sent as shown", async ({ page }) => {
     const problems: string[] = [];
     collectProblems(page, problems);
     const first = await seeded(page);
@@ -67,8 +67,8 @@ test.describe("mail and calendar acts", () => {
     await words.fill(reply);
     await page.getByRole("button", { name: "Draft the reply" }).click();
 
-    // It opens in Waiting to go out, a draft to approve, with the exact words, who it goes to and the account's channel.
-    await expect(page.getByRole("heading", { level: 1, name: "Waiting to go out" })).toBeVisible();
+    // It opens in the To send tab, a draft to approve, with the exact words, who it goes to and the account's channel.
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
     await expect(waiting(page)).toHaveCount(1);
     await expect(waiting(page)).toContainText(`Reply to ${first.reply.sender}`);
     await expect(waiting(page)).toContainText("To approve");
@@ -119,7 +119,7 @@ test.describe("mail and calendar acts", () => {
     await page.getByRole("menuitem", { name: "Archive" }).click();
 
     // The act says what it does in words and lists the message it is about: its sender, subject and date.
-    await expect(page.getByRole("heading", { level: 1, name: "Waiting to go out" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
     await expect(waiting(page)).toHaveCount(1);
     await expect(waiting(page)).toContainText("Archive 1 message");
     const pane = page.getByRole("complementary", { name: "Archive 1 message" });
@@ -159,7 +159,7 @@ test.describe("mail and calendar acts", () => {
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Accept", exact: true }).click();
 
-    await expect(page.getByRole("heading", { level: 1, name: "Waiting to go out" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
     const title = `Answer to ${first.invitation.title}: accept`;
     await expect(waiting(page)).toHaveCount(1);
     await expect(waiting(page)).toContainText(title);
@@ -204,9 +204,9 @@ test.describe("mail and calendar acts", () => {
     await expect(page.getByRole("menuitem", { name: "Propose a time…" })).toHaveCount(0);
     await checkAccessibility(page);
 
-    // The choices it does offer draft the answer and send nothing: Maybe waits in Waiting to go out, read in full.
+    // The choices it does offer draft the answer and send nothing: Maybe waits in the To send tab, read in full.
     await page.getByRole("menuitem", { name: "Maybe" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Waiting to go out" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
     const title = `Answer to ${first.invitation.title}: maybe`;
     const pane = page.getByRole("complementary", { name: title });
     await expect(pane.getByRole("region", { name: "The event" })).toContainText("Your answer: maybe");

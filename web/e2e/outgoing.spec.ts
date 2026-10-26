@@ -1,4 +1,4 @@
-// Waiting to go out, end to end (design 6.12, 7.4): a message drafted to a known person on the core's stand-in channel waits
+// What waits to go out, in Follow-ups' To send tab, end to end (design 6.12, 7.4): a message drafted to a known person on the core's stand-in channel waits
 // for the person's yes. The person opens the screen, reads the exact content and who it goes to, acknowledges the recipient
 // called out, chooses Approve and send, confirms, and the message is handed to the channel exactly as shown. The project has a
 // server of its own (`--fake-channel`), which says what the channel was handed.
@@ -21,7 +21,7 @@ async function signIn(page: Page) {
 
 const handed = async (page: Page): Promise<Outgoing> => (await page.request.get("/__e2e/delivered")).json();
 
-test.describe("Waiting to go out", () => {
+test.describe("To send", () => {
   test("a message is approved and sent as shown: the content, the target, the recipient acknowledged, a confirm, then the channel has it", async ({ page }) => {
     const problems: string[] = [];
     collectProblems(page, problems);
@@ -30,8 +30,12 @@ test.describe("Waiting to go out", () => {
     expect(first.delivered).toEqual([]);
 
     await signIn(page);
-    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Waiting to go out/ }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Waiting to go out" })).toBeVisible();
+    // The side menu has no entry of its own for it: it is a tab of Follow-ups, and the old address lands there.
+    await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Waiting to go out/ })).toHaveCount(0);
+    await page.goto("?token=e2e-token#work/outgoing");
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+    expect(new URL(page.url()).hash).toBe("#work/followups");
 
     // One line for the message, with its state in words, and its detail beside it with the exact content and the target.
     const line = page.getByRole("list", { name: "Waiting to go out" }).getByRole("listitem");
@@ -58,7 +62,7 @@ test.describe("Waiting to go out", () => {
     await dialog.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByText(`Sent the message to ${first.name}.`)).toBeVisible();
-    await expect(page.getByText("Nothing is waiting to go out.")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Waiting to go out" })).toHaveCount(0);
 
     // The channel was handed exactly what was shown, once.
     const after = await handed(page);

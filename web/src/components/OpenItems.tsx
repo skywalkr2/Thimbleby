@@ -21,6 +21,7 @@ import {
 } from "../lib/open-items";
 import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
+import { openOnToday } from "./AnswerOnToday";
 import { useSides } from "../lib/sides";
 import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -305,13 +306,17 @@ function QuestionRow(props: { question: OpenQuestion }) {
   const focus = () => ref.current?.focus();
   const menu = useQuestionMenu(q, { canMarkSent: q.state === "not_sent", onClosed: focus });
   const change = useChangeThis({ kind: q.kind === "decision" ? "decision" : "question", id: q.id }, focus);
-  // The step itself is in Follow-ups, where the answer, the reply and the message are; the row takes the person to it.
+  // The step itself is elsewhere: a question to the person is answered on Today, and the reply and the message are in
+  // Follow-ups. The row takes the person to it.
   const open = () => {
-    const mine = q.state === "yours";
-    if (!revealOrKeep(mine ? "question" : "person", mine ? q.id : q.to)) window.location.hash = toHash("work/followups");
+    if (q.state === "yours") {
+      openOnToday(q.id);
+      return;
+    }
+    if (!revealOrKeep("person", q.to)) window.location.hash = toHash("work/followups");
   };
   useRowKeys(ref, { primary: open });
-  const label = { yours: "followups.answer", waiting: "followups.record_reply", not_sent: "open.q.to_send", later: "open.q.to_send" }[q.state];
+  const label = { yours: "followups.answer_on_today", waiting: "followups.record_reply", not_sent: "open.q.to_send", later: "open.q.to_send" }[q.state];
   const who =
     q.state === "yours"
       ? t("open.q.on_you")

@@ -34,14 +34,13 @@ const SCREENS = [
   { name: "Since yesterday", hash: "work/since" },
   { name: "Handled for you", hash: "work/handled" },
   { name: "Follow-ups", hash: "work/followups" },
-  { name: "Drafts to approve", hash: "work/outgoing" },
   { name: "Stages", hash: "work/stages" },
   { name: "Projects", hash: "records/projects" },
   { name: "People", hash: "records/people" },
   { name: "Files", hash: "records/files" },
   { name: "Knowledge", hash: "records/knowledge" },
-  { name: "Connections", hash: "sources" },
-  { name: "Add-ons", hash: "addons" },
+  { name: "Connections", hash: "settings/connections" },
+  { name: "Add-ons", hash: "settings/addons" },
   { name: "Settings", hash: "settings" },
   { name: "Settings, Today", hash: "settings/today" },
   { name: "Quality", hash: "quality" },
@@ -109,20 +108,6 @@ for (const scheme of ["light", "dark"] as const) {
         await expectNoViolations(page);
         await page.keyboard.press("Escape");
         await expect(asking).toHaveCount(0);
-      }
-    });
-
-    test(`the phone's review mode passes in ${scheme}`, async ({ page }) => {
-      await page.emulateMedia({ colorScheme: scheme });
-      await page.setViewportSize({ width: 390, height: 844 });
-      await signIn(page);
-      await open(page, "work/changed");
-      const start = page.getByRole("button", { name: "Review one at a time" });
-      // The fixture workspace may have nothing waiting for a look; the mode is checked when it has.
-      if (await start.count()) {
-        await start.click();
-        await expect(page.getByRole("group", { name: "What to do with this one" })).toBeVisible();
-        await expectNoViolations(page);
       }
     });
   });

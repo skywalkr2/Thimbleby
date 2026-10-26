@@ -61,10 +61,10 @@ test("a section lists its basic settings first, and every setting is in exactly 
 
 test("the section list has the basic sections first, then lists and files where there are some, Advanced, then each add-on", () => {
   expect(navSections(ITEMS, { lists: true, files: true })).toEqual([
-    "you", "ai", "backups", "today", "appearance", "lists", "files", "advanced", "addon/sample-pack",
+    "you", "ai", "connections", "addons", "backups", "today", "appearance", "lists", "files", "advanced", "addon/sample-pack",
   ]);
-  // Nothing to show means no entry, except AI accounts, which always has its list.
-  expect(navSections([item("workspace.name", "workspace")], { lists: false, files: false })).toEqual(["you", "ai"]);
+  // Nothing to show means no entry, except AI accounts, Connections and Add-ons, which always have their lists.
+  expect(navSections([item("workspace.name", "workspace")], { lists: false, files: false })).toEqual(["you", "ai", "connections", "addons"]);
 });
 
 test("Advanced is grouped by topic, one topic for each group, in the order the groups first appear", () => {

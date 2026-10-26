@@ -1,4 +1,4 @@
-import { EVENT_PAGE, eventPageView, fromHash, panelView, parseView, recordView, settingsSectionOf, settingsView, toHash, viewHref } from "./views";
+import { EVENT_PAGE, canonical, eventPageView, fromHash, movedTo, panelView, parseView, recordView, settingsSectionOf, settingsView, toHash, viewHref } from "./views";
 
 const routes = [
   "today",
@@ -7,15 +7,12 @@ const routes = [
   "work/handled",
   "work/followups",
   "work/open",
-  "work/outgoing",
   "work/stages",
   "records/projects",
   "records/people",
   "records/files",
   "records/knowledge",
   "records/rules-review",
-  "sources",
-  "addons",
   "settings",
   "settings/ai-compare",
   "setup",
@@ -36,14 +33,29 @@ test("every view's fragment names it, and Today is the empty fragment's view", (
 test("fragments from earlier versions still open the matching view", () => {
   expect(fromHash("#stages")).toBe("work/stages");
   expect(fromHash("#files")).toBe("records/files");
-  expect(fromHash("#sources")).toBe("sources");
   expect(fromHash("#settings")).toBe("settings");
-  expect(fromHash("#addons")).toBe("addons");
   // The guide had two names; both open it.
   expect(fromHash("#welcome")).toBe("setup");
   expect(fromHash("#setup")).toBe("setup");
   expect(fromHash("#panel:demo%2Fgoals")).toBe(panelView("demo/goals", "work"));
   expect(fromHash("#record:demo%2Fchapter:CH%201")).toBe(recordView("demo/chapter", "CH 1"));
+});
+
+test("the fragments of the screens that moved redirect: Waiting to go out to Follow-ups, Connections and Add-ons to Settings", () => {
+  expect(fromHash("#work/outgoing")).toBe("work/followups");
+  expect(fromHash("#sources")).toBe("settings/connections");
+  expect(fromHash("#addons")).toBe("settings/addons");
+  // A moved view written by code is written as the fragment of the view that took its place.
+  expect(toHash("work/outgoing")).toBe("work/followups");
+  expect(toHash("sources")).toBe("settings/connections");
+  expect(toHash("addons")).toBe("settings/addons");
+  expect(canonical("addons")).toBe("settings/addons");
+  expect(canonical("work/changed")).toBe("work/changed");
+  expect(movedTo("#work/outgoing")).toBe("work/followups");
+  expect(movedTo("#sources")).toBe("settings/connections");
+  expect(movedTo("#work/followups")).toBeNull();
+  expect(movedTo("#settings/connections")).toBeNull();
+  expect(parseView("sources")).toEqual({ type: "core", view: "settings", section: "connections" });
 });
 
 test("a plugin's panel round trips under Work or Records, with awkward characters in its name", () => {
@@ -84,7 +96,7 @@ test("a view's link keeps this page's path and query, so it works in a new tab",
 });
 
 test("each section of Settings has its own address, and an add-on's section carries the add-on's name", () => {
-  for (const section of ["you", "ai", "backups", "today", "appearance", "lists", "files", "advanced"] as const) {
+  for (const section of ["you", "ai", "connections", "addons", "backups", "today", "appearance", "lists", "files", "advanced"] as const) {
     const view = settingsView(section);
     expect(toHash(view)).toBe(`settings/${section}`);
     expect(fromHash(`#${toHash(view)}`)).toBe(view);

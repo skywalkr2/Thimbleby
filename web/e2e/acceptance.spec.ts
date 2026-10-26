@@ -121,7 +121,7 @@ async function handIn(page: Page, c: Case) {
   // What changed is newest first and titles a change as Today does, so the change just handed in is the top line. Choosing
   // the line shows the whole change in the detail pane beside the list, which is what the steps read.
   const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
-  await expect(line.locator(".kind").first()).toHaveText(/Review/i, { timeout: 20_000 });
+  await expect(line.locator(".kind").first()).toHaveText(/Review|not yet checked/i, { timeout: 20_000 });
   const expander = line.locator(".expander").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
   const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
@@ -134,6 +134,13 @@ async function go(page: Page, label: string) {
   // As a person does before moving on.
   const dismiss = page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Dismiss" });
   while (await dismiss.count()) await dismiss.last().click();
+  // Connections and Add-ons are sections of Settings, reached from its side bar and not from the side menu.
+  if (label === "Connections" || label === "Add-ons") {
+    await go(page, "Settings");
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: label, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible({ timeout: 20_000 });
+    return;
+  }
   const nav = page.getByRole("navigation", { name: "Views" });
   const name = new RegExp(`^${label}`);
   const link = nav.getByRole("link", { name });
@@ -441,7 +448,9 @@ test.describe.serial("acceptance scenario", () => {
     await row.getByRole("button", { name: "Show source" }).first().click();
     await expect(row.locator("mark").first()).toBeVisible();
     await checkAccessibility(page);
-    await row.getByRole("button", { name: "Looks good" }).click();
+    // What changed is the history, so the choice is in the detail's menu; the button is on Today's review line.
+    await row.getByRole("button", { name: /^More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Looks good" }).click();
     await expect(page.getByText("Reviewed and filed.")).toBeVisible();
 
     // A first name two contributors share is one decision, and nothing is filed under either until the person picks.
@@ -1249,10 +1258,10 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("Add-ons opens from the views and from Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
+  test("Add-ons is a section of Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
     await signIn(page);
     await go(page, "Settings");
-    await page.getByRole("main").getByRole("button", { name: "Open Add-ons", exact: true }).click();
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Add-ons", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
     await go(page, "Today");
     await go(page, "Add-ons");
@@ -1313,11 +1322,12 @@ test.describe.serial("acceptance scenario", () => {
     await expect(bar.getByRole("button", { name: "Hand something in" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await shoot(page, "header-390");
-    // A view in the More sheet can be reached by keyboard.
+    // A view in the More sheet can be reached by keyboard; Connections and Add-ons are in Settings, not in the sheet.
     await bar.getByRole("button", { name: "More" }).focus();
     await bar.getByRole("button", { name: "More" }).press("Enter");
-    await page.getByRole("dialog", { name: "More" }).getByRole("link", { name: "Add-ons" }).press("Enter");
-    await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "More" }).getByRole("link", { name: "Add-ons" })).toHaveCount(0);
+    await page.getByRole("dialog", { name: "More" }).getByRole("link", { name: "Settings" }).press("Enter");
+    await expect(page.getByRole("heading", { level: 1, name: "Settings", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });

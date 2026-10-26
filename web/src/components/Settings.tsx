@@ -74,17 +74,16 @@ type Edits = Record<string, Draft>;
 const FIRST_FIELD =
   "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled])";
 
-/** The sections listed down the side of Settings, with the screens that open inside Settings: Connections and Quality.
- * The pages reached from Settings (Connections, Quality, Add-ons, what each account can do) show it too, so the person
- * can go to any other section from where they are. */
+/** The sections listed down the side of Settings (Connections and Add-ons among them), with the Quality screen that opens
+ * inside Settings. The pages reached from Settings (Quality, what each account can do) show it too, so the person can go to
+ * any other section from where they are. */
 export function SettingsNav(props: {
   listed: SettingsSection[];
   /** The section whose page is open; none when the page is one of the screens reached from Settings. */
   current: SettingsSection | null;
   /** The screen reached from Settings that is open, to mark it in the list. */
-  page?: "sources" | "quality" | null;
+  page?: "quality" | null;
   choose: (section: SettingsSection) => void;
-  onOpenSources?: () => void;
   onOpenQuality?: () => void;
 }) {
   const { t, has } = useWords();
@@ -115,21 +114,6 @@ export function SettingsNav(props: {
               {label(id)}
             </a>
           </li>,
-          ...(id === "ai"
-            ? [
-                <li key="sources">
-                  <a
-                    href={viewHref("sources")}
-                    aria-current={props.page === "sources" ? "page" : undefined}
-                    onClick={(e) =>
-                      props.onOpenSources && follow(e, props.onOpenSources)
-                    }
-                  >
-                    {t("settings.section.sources")}
-                  </a>
-                </li>,
-              ]
-            : []),
           ...(id === lastOwn
             ? [
                 <li key="quality">
@@ -153,11 +137,10 @@ export function SettingsNav(props: {
 
 /** A screen reached from Settings, shown beside the Settings side bar. */
 export function SettingsFrame(props: {
-  /** The section this page belongs under, marked in the list; none for Connections and Quality, which are listed. */
+  /** The section this page belongs under, marked in the list; none for Quality, which is listed. */
   under?: SettingsSection;
-  page?: "sources" | "quality";
+  page?: "quality";
   choose: (section: SettingsSection) => void;
-  onOpenSources: () => void;
   onOpenQuality: () => void;
   children: ReactNode;
 }) {
@@ -184,7 +167,6 @@ export function SettingsFrame(props: {
             current={props.under ?? null}
             page={props.page ?? null}
             choose={props.choose}
-            onOpenSources={props.onOpenSources}
             onOpenQuality={props.onOpenQuality}
           />
         </div>
@@ -197,10 +179,7 @@ export function SettingsFrame(props: {
 export function Settings(props: {
   /** Opens the setup guide, at the step named when one is. */
   onOpenGuide: (step?: string) => void;
-  onOpenAddons: () => void;
   onChooseSource: (plugin: string | null) => void;
-  /** Opens the Sources screen, which the section list links to. */
-  onOpenSources?: () => void;
   /** Opens the Knowledge screen, where the standing rules are kept and reviewed. */
   onOpenKnowledge?: () => void;
   /** Opens the grid of what each AI account can do. */
@@ -673,9 +652,6 @@ export function Settings(props: {
       <div className="heading">
         <h1 id="settings-title">{t("settings.title")}</h1>
         <div className="acts">
-          <button type="button" className="btn" onClick={props.onOpenAddons}>
-            {t("settings.open_addons")}
-          </button>
           <button
             type="button"
             className="btn"
@@ -702,7 +678,6 @@ export function Settings(props: {
             listed={listed}
             current={!query.trim() ? section : null}
             choose={choose}
-            onOpenSources={props.onOpenSources}
             onOpenQuality={props.onOpenQuality}
           />
         </div>

@@ -52,7 +52,7 @@ function routes(local: boolean, extra: Record<string, (body: unknown) => unknown
 }
 
 const openSettings = (section: SettingsSection) =>
-  renderApp(<Settings section={section} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section={section} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
 const post = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
 describe("the backup key", () => {

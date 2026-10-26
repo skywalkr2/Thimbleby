@@ -165,7 +165,7 @@ test("a promise someone owes you can be followed up from its line: the message i
     recipients: [{ person: "PER-2", kind: "email", role: "to", called_out: false, from_text: false }],
     parts,
   });
-  await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+  await waitFor(() => expect(window.location.hash).toBe("#work/followups"));
 });
 
 test("a promise the person made has no follow-up to send, and Snooze is a list of days", async () => {

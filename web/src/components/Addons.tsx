@@ -42,7 +42,8 @@ type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
 type Installed = S["InstalledPackView"];
 
-export function Addons(props: { onBack: () => void }) {
+/** `onBack` is for a screen that opens Add-ons away from Settings; as a section of Settings it has none. */
+export function Addons(props: { onBack?: () => void }) {
   const { t } = useWords();
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
   const [tab, setTab] = useState("available");
@@ -50,9 +51,11 @@ export function Addons(props: { onBack: () => void }) {
     <section className="panel-section" aria-labelledby="addons-title">
       <div className="heading">
         <h1 id="addons-title">{t("addons.title")}</h1>
-        <button type="button" className="btn" onClick={props.onBack}>
-          {t("addons.back")}
-        </button>
+        {props.onBack && (
+          <button type="button" className="btn" onClick={props.onBack}>
+            {t("addons.back")}
+          </button>
+        )}
       </div>
       <p className="hint">{t("addons.intro")}</p>
       <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key))} className="addon-tabs">

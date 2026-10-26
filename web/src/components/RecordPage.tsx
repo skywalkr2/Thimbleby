@@ -12,6 +12,7 @@ import { reconcile, type Refreshed } from "../lib/refreshed";
 import { time } from "../lib/dates";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { AnswerOnToday } from "./AnswerOnToday";
 import { useChangeThis, useQuestionMenu, type ChangeKind } from "./ChangeThis";
 import { FactSource } from "./FactSource";
 import { FiledLine } from "./Filed";
@@ -62,6 +63,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const change = useChangeThis({ kind: kind as ChangeKind, id });
   // A question also has its own menu: reword it, ask someone else, drop it, or say it was already sent.
   const questionFields = record.data?.fields;
+  // A question or decision waiting on the person is answered on Today; the page links to its line there.
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const waitingOnYou = kind === "question" && questionFields?.status === "open" && !!me.data?.person && questionFields?.to === me.data.person;
   const questionMenu = useQuestionMenu(
     { id, title: String(questionFields?.title ?? ""), text: String(questionFields?.text ?? "") },
     { canMarkSent: questionFields?.status === "open" },
@@ -137,6 +141,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
             {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
             {invite.buttons}
+            {waitingOnYou && <AnswerOnToday question={id} />}
             {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
           </div>
         )}

@@ -193,7 +193,7 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
 
     // Connections: add a folder, pointing at the folder the test put the file in.
-    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Connections/ }).click();
+    await openView(page, "Connections");
     await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeVisible();
     await page.getByRole("button", { name: /Add a connection/ }).first().click();
     await page.getByLabel("A folder", { exact: true }).check();

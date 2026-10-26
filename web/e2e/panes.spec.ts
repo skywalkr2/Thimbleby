@@ -161,26 +161,15 @@ async function openFresh(page: Page, hash: string) {
 }
 
 test.describe("the phone's review mode", () => {
-  test("goes through the items waiting for a look one at a time, with Looks good, Send back and Next across the bottom", async ({ page }) => {
+  test("What changed is the history: it has no review mode on a phone, and no row has a button for the work", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);
     await somethingToLookAt(page);
     await openFresh(page, "work/changed");
     await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
-    const start = page.getByRole("button", { name: "Review one at a time" });
-    await expect(start).toBeVisible();
-    await start.click();
-    const bar = page.getByRole("group", { name: "What to do with this one" });
-    await expect(bar).toBeVisible();
-    const box = (await bar.boundingBox())!;
-    // Across the bottom, above the bottom bar, inside the window, and three full buttons.
-    expect(box.x).toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width).toBeLessThanOrEqual(390);
-    expect(box.y + box.height).toBeLessThanOrEqual(844);
-    for (const name of ["Send back", "Looks good", "Next"]) await expect(bar.getByRole("button", { name })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review one at a time" })).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("button", { name: "Looks good" })).toHaveCount(0);
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0);
-    await page.getByRole("button", { name: "Back to the list" }).click();
-    await expect(start).toBeVisible();
   });
 
   test("goes through the messages waiting to be sent one person at a time, with the message's own Copy and Next across the bottom", async ({ page, baseURL }) => {

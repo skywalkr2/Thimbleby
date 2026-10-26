@@ -1,7 +1,7 @@
 // Today's lines for what went wrong on the way out or can't be told (design 6.12, 7.7): one line for each act that failed
 // ("Sign in to <account> again", or the reason), that may or may not have gone out ("Check the Sent folder for the message to
 // <person>", with It was sent and Send it again), or whose yes no longer covers it ("Look again at the message to <person>: <what
-// changed>"). Each starts with the verb and opens the act in Waiting to go out. A line goes when the act does.
+// changed>"). Each starts with the verb and opens the act in Follow-ups' To send tab. A line goes when the act does.
 import { useId, useState } from "react";
 import { actPhrase, changedWords, useOutgoing, type Act, type ActLine } from "../lib/acts";
 import { revealOrKeep } from "../lib/reveal";
@@ -13,9 +13,9 @@ import { ConfirmSend } from "./ConfirmSend";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 
-/** Opens the act in Waiting to go out, where the screen is asked for it as it opens. */
+/** Opens the act in the To send tab, where the screen is asked for it as it opens. */
 export function openAct(act: Act, onView?: (view: View) => void): void {
-  if (onView) onView("work/outgoing");
+  if (onView) onView("work/followups");
   revealOrKeep("act", act.id);
 }
 

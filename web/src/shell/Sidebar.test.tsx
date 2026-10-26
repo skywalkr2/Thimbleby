@@ -54,7 +54,6 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Handled for you",
     "Follow-ups",
     "To-dos and questions",
-    "Waiting to go out",
     "Stages",
     "Goals",
     "Projects",
@@ -62,8 +61,6 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Files",
     "Knowledge",
     "Contacts",
-    "Connections",
-    "Add-ons",
     "Settings",
   ]);
   const href = (label: string) => links.find((l) => l.label === label)?.href;
@@ -71,6 +68,13 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
   expect(href("Stages")).toMatch(/#work\/stages$/);
   expect(href("Goals")).toMatch(/#work\/panel\/demo%2Fgoals$/);
   expect(href("Contacts")).toMatch(/#records\/panel\/demo%2Fcontacts$/);
+});
+
+test("the side menu has no Connections, Add-ons or Waiting to go out entry: they are Settings' sections and Follow-ups' To send tab", async () => {
+  show();
+  await screen.findByText("Follow-ups");
+  for (const name of ["Connections", "Add-ons", "Waiting to go out"]) expect(within(nav()).queryByRole("link", { name })).toBeNull();
+  expect(within(nav()).getByRole("link", { name: "Settings" })).toBeInTheDocument();
 });
 
 test("the current view is marked, and it is the only one", async () => {
@@ -141,7 +145,7 @@ const labels = () =>
     .getAllByRole("link")
     .map((a) => a.querySelector('[class*="label"]')?.textContent);
 
-test("with no side besides Personal the first group has no Work heading, and Stages, Waiting to go out and Projects are not listed", async () => {
+test("with no side besides Personal the first group has no Work heading, and Stages and Projects are not listed", async () => {
   showWithSides([]);
   await screen.findByRole("link", { name: "Personal" });
   expect(labels()).toEqual([
@@ -154,8 +158,6 @@ test("with no side besides Personal the first group has no Work heading, and Sta
     "People",
     "Files",
     "Knowledge",
-    "Connections",
-    "Add-ons",
     "Settings",
   ]);
   expect(within(nav()).queryByText("Work")).toBeNull();
@@ -174,7 +176,6 @@ test("with sides the menu has Personal and each side by its own name, each a lin
     "Handled for you",
     "Follow-ups",
     "To-dos and questions",
-    "Waiting to go out",
     "Stages",
     "Personal",
     FIRST.name,
@@ -182,8 +183,6 @@ test("with sides the menu has Personal and each side by its own name, each a lin
     "People",
     "Files",
     "Knowledge",
-    "Connections",
-    "Add-ons",
     "Settings",
   ]);
   expect(within(nav()).getByText("Work")).toBeInTheDocument();
@@ -206,7 +205,7 @@ test("the current top project's page is the marked one", async () => {
   expect(await screen.findByRole("link", { name: FIRST.name, current: "page" })).toBeInTheDocument();
 });
 
-test("a workspace with projects of its own and no side keeps the Projects, Stages and Waiting to go out entries", async () => {
+test("a workspace with projects of its own and no side keeps the Projects and Stages entries", async () => {
   fakeApi({
     "GET panels": () => [],
     "GET changes": () => [],
@@ -218,6 +217,6 @@ test("a workspace with projects of its own and no side keeps the Projects, Stage
   });
   renderApp(<Sidebar current="today" expanded onToggle={() => undefined} />);
   await screen.findByText("Work");
-  expect(labels()).toEqual(expect.arrayContaining(["Waiting to go out", "Stages", "Projects"]));
+  expect(labels()).toEqual(expect.arrayContaining(["Stages", "Projects"]));
   expect(labels()).not.toContain("Personal");
 });

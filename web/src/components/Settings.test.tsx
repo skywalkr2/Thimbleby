@@ -83,7 +83,7 @@ function api(items = ITEMS, extra: Record<string, (body: unknown) => unknown> = 
 }
 
 const open = (section: SettingsSection = "you") =>
-  renderApp(<Settings section={section} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section={section} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
 const posted = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.route === "POST settings").map((c) => c.body);
 const saveButtons = () => screen.queryAllByRole("button", { name: /^Save/ });
 const rowOf = (label: string) => screen.getByText(label).closest(".setting") as HTMLElement;
@@ -110,6 +110,7 @@ test("the section list sits down the side, one link for each section that has so
     "You and the workspace",
     "AI accounts",
     "Connections",
+    "Add-ons",
     "Backups and sync",
     "Appearance",
     "Lists",
@@ -118,14 +119,15 @@ test("the section list sits down the side, one link for each section that has so
   expect(within(nav).getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
   expect(within(nav).getByRole("link", { name: "Quality" })).toHaveAttribute("href", expect.stringMatching(/#quality$/));
   expect(within(nav).getByRole("link", { name: "Backups and sync" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
-  expect(within(nav).getByRole("link", { name: "Connections" })).toHaveAttribute("href", expect.stringMatching(/#sources$/));
+  expect(within(nav).getByRole("link", { name: "Connections" })).toHaveAttribute("href", expect.stringMatching(/#settings\/connections$/));
+  expect(within(nav).getByRole("link", { name: "Add-ons" })).toHaveAttribute("href", expect.stringMatching(/#settings\/addons$/));
 });
 
 test("choosing a section shows that section's settings and no others; the choice goes to the address when the screen asks", async () => {
   const user = userEvent.setup();
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
   const chosen = vi.fn();
-  renderApp(<Settings section="you" onSection={chosen} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="you" onSection={chosen} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByLabelText("The display name.");
   expect(screen.queryByLabelText("How it looks.")).toBeNull();
   await user.click(screen.getByRole("link", { name: "Appearance" }));
@@ -160,7 +162,7 @@ test("Appearance has the list of the person's own pages as a part of its own, no
 test("without an address to change, the section list still moves between sections", async () => {
   const user = userEvent.setup();
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByLabelText("The display name.");
   await user.click(screen.getByRole("link", { name: "Appearance" }));
   expect(await screen.findByLabelText("How it looks.")).toBeInTheDocument();
@@ -516,7 +518,7 @@ function RestartHarness() {
       <button type="button" onClick={() => setHellos(hellos + 1)}>
         reconnect
       </button>
-      <Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />
+      <Settings onOpenGuide={() => undefined} onChooseSource={() => undefined} />
     </RestartProvider>
   );
 }
@@ -681,13 +683,17 @@ test("where folders can't be listed the folder setting is a plain text box with 
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
-test("Add-ons opens the add-ons screen", async () => {
+test("Connections and Add-ons are sections of Settings, chosen like any other, and Settings has no button for Add-ons beside its title", async () => {
   api();
-  const onOpenAddons = vi.fn();
   const user = userEvent.setup();
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
-  await user.click(screen.getByRole("button", { name: "Open Add-ons" }));
-  expect(onOpenAddons).toHaveBeenCalled();
+  const chosen = vi.fn();
+  renderApp(<Settings section="you" onSection={chosen} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  expect(screen.queryByRole("button", { name: "Open Add-ons" })).toBeNull();
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+  await user.click(within(nav).getByRole("link", { name: "Add-ons" }));
+  expect(chosen).toHaveBeenLastCalledWith("addons");
+  await user.click(within(nav).getByRole("link", { name: "Connections" }));
+  expect(chosen).toHaveBeenLastCalledWith("connections");
 });
 
 test("Lists is a section of its own, where the choices dropdowns offer can be changed", async () => {
@@ -781,7 +787,7 @@ test("Advanced groups the rest by topic, each topic closed until it is opened, a
     item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false, description: "Learn from corrections." }),
   ]);
   renderApp(
-    <Settings section="advanced" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenKnowledge={onOpenKnowledge} />,
+    <Settings section="advanced" onOpenGuide={() => undefined} onChooseSource={() => undefined} onOpenKnowledge={onOpenKnowledge} />,
   );
   const topic = await screen.findByRole("button", { name: "Rules" });
   expect(topic).toHaveAttribute("aria-expanded", "false");
@@ -842,7 +848,7 @@ test("Add an account opens its form in a drawer inside Settings, never the setup
   const user = userEvent.setup();
   const onOpenGuide = vi.fn();
   api(ITEMS, AI_ROUTES);
-  renderApp(<Settings section="ai" onOpenGuide={onOpenGuide} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="ai" onOpenGuide={onOpenGuide} onChooseSource={() => undefined} />);
   await user.click(await screen.findByRole("button", { name: "Add an account" }));
   const drawer = await screen.findByRole("dialog", { name: "Add an account" });
   expect(onOpenGuide).not.toHaveBeenCalled();
@@ -856,7 +862,7 @@ test("Add an account opens its form in a drawer inside Settings, never the setup
 test("a Today line that asks for an account to be added opens the same drawer", async () => {
   api(ITEMS, AI_ROUTES);
   const done = vi.fn();
-  renderApp(<Settings section="ai" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} addAccount={Date.now()} onAddAccountOpened={done} />);
+  renderApp(<Settings section="ai" onOpenGuide={() => undefined} onChooseSource={() => undefined} addAccount={Date.now()} onAddAccountOpened={done} />);
   expect(await screen.findByRole("dialog", { name: "Add an account" })).toBeInTheDocument();
   expect(done).toHaveBeenCalled();
 });
@@ -865,7 +871,7 @@ test("Compare what they can do opens the grid", async () => {
   const user = userEvent.setup();
   const onOpenCompare = vi.fn();
   api(ITEMS, AI_ROUTES);
-  renderApp(<Settings section="ai" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenCompare={onOpenCompare} />);
+  renderApp(<Settings section="ai" onOpenGuide={() => undefined} onChooseSource={() => undefined} onOpenCompare={onOpenCompare} />);
   await user.click(await screen.findByRole("button", { name: "Compare what they can do" }));
   expect(onOpenCompare).toHaveBeenCalledTimes(1);
 });
@@ -977,7 +983,7 @@ test("the notices switch is labelled Turn on notices, and the spending settings 
     ],
     AI_ROUTES,
   );
-  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   expect(await screen.findByRole("checkbox", { name: "Turn on notices" })).toBeInTheDocument();
   expect(document.body.textContent ?? "").not.toMatch(/Turn on “/);
 });
@@ -989,7 +995,7 @@ test("Advanced topics have plain names", async () => {
     item("watch.x", { type: "yes_no", group: "watch", value: true, default: true, basic: false }),
     item("language.reported_speech.x", { type: "yes_no", group: "language.reported_speech", value: true, default: true, basic: false }),
   ]);
-  renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByRole("button", { name: "What the assistant has learned" });
   for (const name of ["How strict the checks are", "How mail and connections are read", "Wording of quoted speech"]) {
     expect(screen.getByRole("button", { name })).toBeInTheDocument();
@@ -1013,7 +1019,7 @@ test("the Today section holds the reminder settings as lists, and the button tha
     item("steward.reminders.quiet_start", { group: "steward.reminders", type: "choice", options: ["20:00", "21:00"], value: "21:00", default: "21:00", choices: "times_of_day" }),
     item("steward.reminders.working_first_day", { group: "steward.reminders", type: "choice", options: ["monday", "tuesday"], value: "monday", default: "monday" }),
   ]);
-  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   expect(await screen.findByRole("combobox", { name: "Quiet hours start" })).toHaveValue("21:00");
   const first = screen.getByRole("combobox", { name: "First working day" });
   expect(within(first).getAllByRole("option").map((o) => o.textContent)).toEqual(["Monday", "Tuesday"]);
@@ -1032,7 +1038,7 @@ test("who people are to you is a list in words, and what you keep track of is ti
     ],
     { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
   );
-  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   const stance = await screen.findByRole("combobox", { name: "Who people are to you until you say otherwise" });
   expect(within(stance).getAllByRole("option").map((o) => o.textContent)).toEqual(["I manage them", "I work alongside them", "I report to them", "I only watch them"]);
   const group = screen.getByRole("group", { name: "What you keep track of" });

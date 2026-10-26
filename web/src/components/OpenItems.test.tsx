@@ -145,6 +145,21 @@ test("the questions are another list: who each waits on and since when", async (
   expect(yours).toHaveTextContent("since Oct 10");
 });
 
+test("a question waiting on you says Answer on Today, and takes you there; it has no answer form on this screen", async () => {
+  const user = userEvent.setup();
+  api();
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: /Questions/ }));
+  const list = await screen.findByRole("list", { name: "Open questions" });
+  const yours = within(list).getAllByRole("listitem")[1];
+  expect(within(yours).queryByRole("button", { name: "Answer" })).toBeNull();
+  expect(within(yours).queryByRole("textbox")).toBeNull();
+  window.location.hash = "";
+  await user.click(within(yours).getByRole("button", { name: "Answer on Today" }));
+  expect(window.location.hash).toBe("#today");
+  window.location.hash = "";
+});
+
 test("project, person and state each narrow the list, from lists to pick from", async () => {
   const user = userEvent.setup();
   api();

@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "./lib/api";
+import { actFixture } from "./lib/acts-fixtures";
 import { fakeApi, renderApp, setupView, statusFixture } from "./test-utils";
 import { App } from "./App";
 
@@ -79,7 +80,8 @@ test("Connect on Today's empty card opens Sources with the add form open, and on
   // Going away and coming back by the views doesn't open it again.
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Connections" }));
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Settings" }));
+  await user.click(await within(await screen.findByRole("navigation", { name: "Settings sections" })).findByRole("link", { name: "Connections" }));
   expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
   expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
 });
@@ -88,7 +90,8 @@ test("the workspace name goes to Today from any screen", async () => {
   fakeApi(today);
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Connections" }));
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Settings" }));
+  await user.click(await within(await screen.findByRole("navigation", { name: "Settings sections" })).findByRole("link", { name: "Connections" }));
   expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
@@ -106,12 +109,43 @@ const quiet = {
 };
 
 test("an address names the view it opens, and the sidebar marks it", async () => {
-  window.location.hash = "#work/outgoing";
+  window.location.hash = "#work/followups";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name: "Waiting to go out" })).toBeInTheDocument();
-  expect(await screen.findByText("Nothing is waiting to go out.")).toBeInTheDocument();
-  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out", current: "page" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Follow-ups" })).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Follow-ups", current: "page" })).toBeInTheDocument();
+});
+
+test("the old address of Waiting to go out opens Follow-ups on its To send tab, and the address says so", async () => {
+  window.location.hash = "#work/outgoing";
+  fakeApi({ ...quiet, "GET acts": () => ({ acts: [actFixture()] }) });
+  renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Follow-ups" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+  expect(await screen.findByRole("list", { name: "Waiting to go out" })).toBeInTheDocument();
+  expect(window.location.hash).toBe("#work/followups");
+  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Follow-ups", current: "page" })).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Views" })).queryByRole("link", { name: "Waiting to go out" })).toBeNull();
+});
+
+test.each([
+  ["#sources", "Connections", "#settings/connections"],
+  ["#addons", "Add-ons", "#settings/addons"],
+])("the old address %s opens the %s section of Settings, beside Settings' side bar, and the address says so", async (hash, name, now) => {
+  window.location.hash = hash;
+  fakeApi({ ...quiet, "GET watch": () => [], "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [] }) });
+  renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name })).toBeInTheDocument();
+  expect(window.location.hash).toBe(now);
+  const sections = screen.getByRole("navigation", { name: "Settings sections" });
+  expect(within(sections).getByRole("link", { name: "Connections" })).toBeInTheDocument();
+  expect(within(sections).getByRole("link", { name: "Add-ons" })).toBeInTheDocument();
+  expect(within(sections).getByRole("link", { name })).toHaveAttribute("aria-current", "page");
+  // Settings stays marked in the side menu, which has neither entry of its own.
+  const views = within(screen.getByRole("navigation", { name: "Views" }));
+  expect(views.getByRole("link", { name: "Settings", current: "page" })).toBeInTheDocument();
+  expect(views.queryByRole("link", { name: "Connections" })).toBeNull();
+  expect(views.queryByRole("link", { name: "Add-ons" })).toBeNull();
 });
 
 test("the projects and people views open the people and projects screen at their own part", async () => {
@@ -139,8 +173,8 @@ test("going to another view moves focus to its heading, but the first load does 
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
   expect(await screen.findByRole("heading", { level: 1, name: "Today" })).not.toHaveFocus();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out" }));
-  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Waiting to go out" })).toHaveFocus());
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Follow-ups" }));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Follow-ups" })).toHaveFocus());
 });
 
 test("Today's heading carries the date, and every view has one h1", async () => {

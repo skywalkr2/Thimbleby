@@ -329,7 +329,7 @@ test("where an account can act, Send sits beside Copy, drafts the message as an 
     recipients: [{ person: "PER-9", kind: "email", role: "to", called_out: false, from_text: false }],
     parts: { subject: "My week", body: text },
   });
-  await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+  await waitFor(() => expect(window.location.hash).toBe("#work/followups"));
   expect(calls.some((c) => c.route === "POST brief/message/copied")).toBe(false); // nothing was copied or approved here
 });
 
