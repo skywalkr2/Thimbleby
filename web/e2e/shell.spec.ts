@@ -364,7 +364,8 @@ test.describe("screen use and the shell", () => {
         )
         .toBe(true);
       await main.getByRole("button", { name: "Back" }).click();
-      await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
+      // Back from the AI step is the Work step, which comes between You and Your AI account.
+      await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
       await expect(notices.getByText("Nothing to undo.")).toHaveCount(0);
     });
   }

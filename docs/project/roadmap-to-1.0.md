@@ -1160,6 +1160,10 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S)
 
+- [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches
+  the app, so the user needs to be able to reboot it"): the app's icon starts it when it isn't running and opens the page
+  when it is; a page the browser shows when the app can't be reached says plainly that it isn't running and how to start
+  it; and a Restart in the app's menu, at the person's choice only (the app never restarts on its own).
 - [ ] [I-0c] **Before any installer work: everything batched from the owner's first fresh-workspace setup is fixed**
   (owner, 2026-10-22: "for sure all of what is batched up has to be fixed before we spend time on installers"): open
   promises P34, P36, P37, P38's free-add-on part, P39 and P40 (all twelve setup findings), each with its named test.

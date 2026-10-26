@@ -49,8 +49,10 @@ const view = (tab: Tab, group: "reason" | "sender") => {
     group === "reason"
       ? KINDS.map((kind) => {
           const items = rows.filter((r) => r.kind === kind);
-          const key = tab === "read" ? `kind:${kind}` : String(items[0].reason);
-          return { key, label: tab === "read" ? null : key, count: 2, items };
+          // Each group's key is its own, as the app's are: one reason per kind here.
+          const reason = String(items[0].reason);
+          const key = tab === "read" ? `kind:${kind}` : `${reason}#${kind}`;
+          return { key, label: tab === "read" ? null : reason, count: 2, items };
         })
       : [
           { key: "long", label: strings["token-02"], count: KINDS.length, items: rows.filter((r) => r.title === strings["web-01"]) },

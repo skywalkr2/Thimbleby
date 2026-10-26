@@ -119,7 +119,7 @@ export function Handled() {
         </p>
       ) : (
         <div className={styles.groups}>
-          {list.data.groups.map((g) => {
+          {list.data.groups.map((g, index) => {
             const key = `${tab}|${shownGroup}|${item ?? ""}|${g.key}`;
             const limit = pageRows + (more[key] ?? 0);
             // A search shows the mail it found, so its groups are open.
@@ -132,7 +132,7 @@ export function Handled() {
             return (
               <section key={key} className={styles.group} data-group={g.key}>
                 <h2>
-                  <button type="button" className="expander text" aria-expanded={open} aria-controls={`${ids}-${key}`} onClick={() => toggle(key)}>
+                  <button type="button" className="expander text" aria-expanded={open} aria-controls={open ? `${ids}-group-${index}` : undefined} onClick={() => toggle(key)}>
                     <span className={styles.head}>
                       <span className={styles.chevron} data-open={open ? "" : undefined}>
                         <Icon name="chevron" size={16} />
@@ -142,7 +142,7 @@ export function Handled() {
                   </button>
                 </h2>
                 {open && (
-                  <ul className="queue" id={`${ids}-${key}`}>
+                  <ul className="queue" id={`${ids}-group-${index}`}>
                     {g.items.slice(0, limit).map((row) => (
                       <HandledRow key={row.id} item={row} />
                     ))}
