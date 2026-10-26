@@ -80,9 +80,19 @@ def _when(data: dict[str, Any]) -> datetime | None:
 def looked_back_to(source: Any, items: list[Any], now: datetime) -> date | None:
     """The day before which a source's mail isn't looked at by its first read: `first_run_days` before the read. None
     for a source that holds no mail (any other kind of source is taken in whole)."""
-    if not any(getattr(item, "message", None) is not None for item in items):
+    mail = [item for item in items if getattr(item, "message", None) is not None]
+    if not mail:
         return None
-    return (now - timedelta(days=source.first_run_days)).date()
+    window = (now - timedelta(days=source.first_run_days)).date()
+    # A read that returned less than the window holds (the connector took only the latest messages) looked back only as
+    # far as the oldest message it returned, so the date says that day, the same day a look further back starts from.
+    days = [at.astimezone(UTC).date() for item in mail if (at := _item_when(item)) is not None]
+    return max(window, min(days)) if days else window
+
+
+def _item_when(item: Any) -> datetime | None:
+    """When a mail item was received (else when it changed), as a moment with a zone; None when it says neither."""
+    return _when({"message": {"received": getattr(item.message, "received", None)}, "changed_at": item.changed_at})
 
 
 def _in_window(back_to: date | None, until: date | None, now: datetime) -> Callable[[dict[str, Any]], bool]:
@@ -267,7 +277,7 @@ def days_taken(view: Any, source_id: str) -> int | None:
         return None
     # The look-back date is a UTC day (`looked_back_to`), so the read is counted in UTC days too.
     read = datetime.fromisoformat(str(run.data["started_at"])).date()
-    return (read - date.fromisoformat(str(run.data["looked_back_to"])[:10])).days
+    return max(1, (read - date.fromisoformat(str(run.data["looked_back_to"])[:10])).days)
 
 
 # ---- looking further back -----------------------------------------------------------------------------------
@@ -313,6 +323,59 @@ def _candidates(ws: Any, store: Any, cfg: Any, source: Any, accept: Callable[[di
     return found
 
 
+def can_look_back(source: Any) -> bool:
+    """Whether the source can be asked for mail older than its first read took: a core mail connector that reads older
+    mail. A source of an add-on can't be asked, so it is never offered a look further back."""
+    from engine.connectors import older_mail
+
+    return older_mail(source.connector) is not None
+
+
+def _older_context(ws: Any, cfg: Any, now: datetime) -> Any:
+    from engine.connectors import ConnectorContext
+
+    return ConnectorContext(
+        workspace_root=ws.root, now=now, timezone=cfg.workspace.user.timezone, hosted=cfg.server.mode == "hosted"
+    )
+
+
+def _remote_range(store: Any, source_id: str, asked: date, old: date, available: date | None) -> tuple[date, date]:
+    """The days the source itself is asked about: from the day asked up to the oldest day the app already holds."""
+    return asked, min(old, available) if available is not None else old
+
+
+def _remote_count(ws: Any, cfg: Any, source: Any, since: date, before: date, now: datetime) -> int:
+    """How many older messages the source would give for these days, within the setting's limit; 0 when it can't be
+    asked or the days are empty. Reads no message."""
+    from engine.connectors import CORE, ConnectorError, older_mail
+
+    asking = older_mail(source.connector)
+    if asking is None or since >= before:
+        return 0
+    settings = CORE[source.connector].settings.model_validate(source.settings)
+    try:
+        return asking.count(settings, since, before, cfg.watch.look_back_max_items, _older_context(ws, cfg, now))
+    except ConnectorError as err:
+        raise StoreError(err.detail or "the source couldn't be asked for older mail") from None
+
+
+def _fetch_older(ws: Any, store: Any, cfg: Any, source: Any, since: date, before: date, now: datetime) -> int:
+    """Ask the source for its older mail of these days, within the setting's limit, and note it the way a first read
+    notes what it doesn't hand in. Returns how many messages came."""
+    from engine.connectors import CORE, ConnectorError, Poll, older_mail
+
+    asking = older_mail(source.connector)
+    if asking is None or since >= before:
+        return 0
+    settings = CORE[source.connector].settings.model_validate(source.settings)
+    try:
+        items = asking.read(settings, since, before, cfg.watch.look_back_max_items, _older_context(ws, cfg, now))
+    except ConnectorError as err:
+        raise StoreError(err.detail or "the source couldn't be asked for older mail") from None
+    watch._compare(ws, store, cfg, source, Poll(items, complete=False), now, True)
+    return len(items)
+
+
 def _source(cfg: Any, source_id: str) -> Any:
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
     if source is None:
@@ -337,7 +400,7 @@ def _plan(store: Any, cfg: Any, source_id: str, days: int) -> tuple[date, date, 
         ),
         default=None,
     )
-    available = oldest.date() if oldest is not None else None
+    available = oldest.astimezone(UTC).date() if oldest is not None else None
     reaches = available is None or available <= asked
     return asked, old, asked if reaches else min(old, available or old), available
 
@@ -350,18 +413,25 @@ def look_back_preview(
     and whether the source holds mail that far back. Writes nothing."""
     source = _source(cfg, source_id)
     asked, old, _new, available = _plan(store, cfg, source_id, days)
-    found = _candidates(ws, store, cfg, source, _in_window(asked, old, now or datetime.now(UTC)))
+    now = now or datetime.now(UTC)
+    if not can_look_back(source):
+        raise StoreError("this source can't be asked for older mail")
+    found = _candidates(ws, store, cfg, source, _in_window(asked, old, now))
+    remote = _remote_count(ws, cfg, source, *_remote_range(store, source_id, asked, old, available), now)
     prices = [
         r.data["estimate_usd"]
         for r in store.read().list("request")
         if r.data.get("intake") == source_id and r.data.get("estimate_usd") is not None
     ]
-    result = LookBack(days, asked, len(found), available_from=available if available and available > asked else None)
-    result.reaches = result.available_from is None
-    if found and prices:
-        result.estimate_usd = round(sum(prices) / len(prices) * len(found), 4)
-    elif found:
-        result.unpriced = len(found)
+    count = len(found) + remote
+    result = LookBack(days, asked, count, available_from=available if available and available > asked else None)
+    result.reaches = result.available_from is None or (remote > 0 and remote < cfg.watch.look_back_max_items)
+    if result.reaches:
+        result.available_from = None
+    if count and prices:
+        result.estimate_usd = round(sum(prices) / len(prices) * count, 4)
+    elif count:
+        result.unpriced = count
     return result
 
 
@@ -374,8 +444,12 @@ def look_further_back(
     when that is later. The result says so when the source doesn't reach that far."""
     now = now or datetime.now(UTC)
     source = _source(cfg, source_id)
+    if not can_look_back(source):
+        raise StoreError("this source can't be asked for older mail")
     with watch._read_lock(ws, source_id):
         asked, old, new, available = _plan(store, cfg, source_id, days)
+        if _fetch_older(ws, store, cfg, source, *_remote_range(store, source_id, asked, old, available), now):
+            asked, old, new, available = _plan(store, cfg, source_id, days)
         found = _candidates(ws, store, cfg, source, _in_window(asked, old, now))
         result = LookBack(
             days, asked, len(found), available_from=available if available and available > asked else None

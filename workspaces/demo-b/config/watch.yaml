@@ -53,6 +53,7 @@ propose_days: 14   # days ahead to look for a free time when proposing another t
 propose_slots: 6   # free times offered at most when proposing another time
 propose_round_minutes: 15   # the first free time offered starts at the next multiple of this many minutes
 look_back_choices: [30, 90, 365]   # days a mail source can be asked to look further back, shown as a list
+look_back_max_items: 100   # the most older messages one look further back asks a mail source for
 failures_before_asking: 3
 unread_gap_factor: 2   # a failing source becomes a line on Today after this many of its own read intervals
 stale_after_hours: 36   # hours without a good read before Today names a source instead of saying nothing needs you

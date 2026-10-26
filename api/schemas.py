@@ -4200,7 +4200,8 @@ class WatchSourceView(BaseModel):
     )
     look_back_choices: list[int] = Field(
         default_factory=list,
-        description="When `looked_back_to` is set: how many more days the person can ask to look, to pick from.",
+        description="When `looked_back_to` is set and the source can be asked for older mail: how many more days the "
+        "person can ask to look, to pick from. Empty when the source can't be asked, so none is offered.",
     )
     secrets: list[SourceSecretView] = Field(
         default_factory=list, description="Where each secret setting it has set is read from."

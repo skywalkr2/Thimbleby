@@ -417,7 +417,7 @@ function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; revea
         <span className={`kind ${PILL[item.state]}`}>
           {t(item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
         </span>
-        <button type="button" className="expander text" aria-expanded={choice.chosen === item.id} onClick={() => choice.choose(item.id)}>
+        <button type="button" className="expander text" aria-expanded={choice.chosen === item.id} data-inert={choice.chosen === item.id ? "" : undefined} onClick={() => choice.choose(item.id)}>
           <strong id={`t-${item.id}`}>{title}</strong>
           <span className="sub">{sub}</span>
         </button>

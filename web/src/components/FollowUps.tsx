@@ -329,7 +329,7 @@ function FollowListRow(props: {
   return (
     <li className="line" ref={ref} aria-label={name} {...choice.rowProps(s.person)}>
       <div className="row pair">
-        <button type="button" className="expander text" aria-expanded={choice.chosen === s.person} onClick={() => choice.choose(s.person)}>
+        <button type="button" className="expander text" aria-expanded={choice.chosen === s.person} data-inert={choice.chosen === s.person ? "" : undefined} onClick={() => choice.choose(s.person)}>
           <strong>{name}</strong>
           <span className="sub">
             {sub}

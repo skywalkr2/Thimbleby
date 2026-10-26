@@ -185,3 +185,11 @@ test("the meta line names who it was promised to, and how it is known when that 
   const line = (await screen.findByRole("button", { name: /^promised to Ana Person/ })).closest("[data-promise-line]") as HTMLElement;
   expect(line).toHaveTextContent("Robin Sample · no date · promised to Ana Person · said by Ana Person");
 });
+
+test("a title whose click would change nothing (its row is already chosen) is not offered as clickable; the others are", async () => {
+  show([change("A", "First thing"), change("B", "Second thing")]);
+  renderApp(<WhatChanged />);
+  await screen.findByText("Send First thing");
+  expect(rowButton("First thing")).toHaveAttribute("data-inert");
+  expect(rowButton("Second thing")).not.toHaveAttribute("data-inert");
+});

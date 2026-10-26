@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 208. Looking further back asks the source, only when it can, and is offered on the source's page; the dates agree (2026-10-26; P41, P48)
+
+- **Design 6.32 and 7.7:** the date a first read looked back to is the oldest day of the mail it returned when that is later than
+  the window, counted in UTC; "Look further back" is not in Today's header but in the source's own menu, and only for a source
+  whose connector can be asked for older mail (the core mailbox; an add-on's source can't until the plugin API says how). A look
+  asks the source for the older mail (at most `watch.look_back_max_items`, 100) and is estimated and held like any intake.
+- **Design 4.5:** new key `watch.look_back_max_items` (schema, default, description, demo values in both workspaces).
+- **Design 7 (lists):** a list row's title underlines on pointing only while clicking it changes something.
+- Built: `tests/test_source_intake.py`, `tests/test_source_intake_routes.py`, `web/src/components/LookBack.test.tsx`,
+  `web/src/components/WhatChangedFold.test.tsx`.
+
 ## 207. An unknown term is a question to the person, not a proposal (2026-10-26; P50, P43 c, f, g)
 
 - **Design 6.22 and 6.8:** the scan for new terms (`engine/new_terms.py`) asks one question to the person, "What does X

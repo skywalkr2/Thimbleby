@@ -1,21 +1,15 @@
 // Coverage (design 6.32, 7.7): what the assistant read and when, and which sources it couldn't read, so an empty Today is
 // never mistaken for "couldn't check". Read sources are said in the quiet style; a source that couldn't be read is said
 // in its own words and style, never as "nothing new".
-import { useState } from "react";
-import type { S } from "../lib/api";
 import { useCoverage, whenWords, type Coverage } from "../lib/coverage";
 import { day, localDate } from "../lib/dates";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
-import { LookBack } from "./LookBack";
 import styles from "./Today.module.css";
 
 interface Part {
   kind: "read" | "looked" | "unread" | "stale" | "pending";
   text: string;
   key: string;
-  /** The source whose mail wasn't looked at before a day: its part offers to look further back. */
-  source?: S["WatchSourceView"];
 }
 
 /** The coverage as the parts of one line: what was read, how far back each new mail source looked, then each source that
@@ -30,7 +24,7 @@ function useParts(found: Coverage): Part[] {
     parts.push({ kind: "read", key: "read", text: today ? tn("coverage.read", found.read.length, { when }) : tn("coverage.read_earlier", found.read.length, { when }) });
   }
   for (const source of found.read) {
-    if (source.looked_back_to) parts.push({ kind: "looked", key: `looked:${source.id}`, text: t("coverage.not_looked_at", { date: day(source.looked_back_to) }), source });
+    if (source.looked_back_to) parts.push({ kind: "looked", key: `looked:${source.id}`, text: t("coverage.not_looked_at", { date: day(source.looked_back_to) }) });
   }
   for (const { source, kind } of found.unread) {
     const label = source.label;
@@ -44,8 +38,7 @@ function useParts(found: Coverage): Part[] {
   return parts;
 }
 
-export function Parts(props: { found: Coverage; onLookBack?: (source: string) => void }) {
-  const { t } = useWords();
+export function Parts(props: { found: Coverage }) {
   const parts = useParts(props.found);
   return (
     <>
@@ -55,33 +48,21 @@ export function Parts(props: { found: Coverage; onLookBack?: (source: string) =>
           <span data-coverage={part.kind} className={styles.coverageSource}>
             {part.text}
           </span>
-          {part.source && props.onLookBack && (
-            <>
-              {" "}
-              <Button size="sm" variant="ghost" aria-label={t("coverage.look_back.label", { label: part.source.label })} onClick={() => props.onLookBack!(part.source!.id)}>
-                {t("coverage.look_back.open")}
-              </Button>
-            </>
-          )}
         </span>
       ))}
     </>
   );
 }
 
-/** The one line in Today's header: what was read and when, and what couldn't be. Nothing while no source is on. */
+/** The one line in Today's header: what was read and when, and what couldn't be. Nothing while no source is on. Looking further
+ * back is not offered here: it is in the source's own row menu. */
 export function CoverageLine() {
   const found = useCoverage();
-  const [looking, setLooking] = useState<string | null>(null);
   if (!found) return null;
-  const source = looking ? found.read.find((s) => s.id === looking) : undefined;
   return (
-    <>
-      <p className={styles.coverage} data-coverage-line="">
-        <Parts found={found} onLookBack={setLooking} />
-      </p>
-      {source && <LookBack key={source.id} source={source} onClose={() => setLooking(null)} />}
-    </>
+    <p className={styles.coverage} data-coverage-line="">
+      <Parts found={found} />
+    </p>
   );
 }
 

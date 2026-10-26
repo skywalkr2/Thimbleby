@@ -2991,6 +2991,13 @@ class WatchFile(FileModel):
         description="How many more days further back than the first read the person can ask a mail source to look, "
         "offered as a list to pick from. Each shows its item count and cost before anything is read.",
     )
+    look_back_max_items: int = Field(
+        100,
+        ge=1,
+        le=1000,
+        description="The most older messages one look further back asks a mail source for. A look that would find "
+        "more takes the newest of them and says where the mail it took starts.",
+    )
     sorting_batch: int = Field(
         25,
         ge=1,

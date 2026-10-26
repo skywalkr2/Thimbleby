@@ -110,7 +110,9 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             failures=failures,
             problem=problem,
             looked_back_to=back_to,
-            look_back_choices=list(current().watch.look_back_choices) if back_to else [],
+            look_back_choices=list(current().watch.look_back_choices)
+            if back_to and source_intake.can_look_back(source)
+            else [],
             secrets=secret_states(connector, source.settings),
         )
 

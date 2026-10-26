@@ -17,6 +17,7 @@ import re
 import socket
 import ssl
 from dataclasses import dataclass
+from datetime import date
 from email.message import EmailMessage
 from email.utils import getaddresses
 from typing import Any
@@ -289,6 +290,55 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
                     items.append(item)
         newest = max(uids, default=last)
         return Poll(items, {"validity": validity, "last_uid": newest}, complete=False)
+    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
+        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    finally:
+        _close(server)
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _imap_day(day: date) -> str:
+    return f"{day.day:02d}-{_MONTHS[day.month - 1]}-{day.year}"
+
+
+def _older_uids(server: imaplib.IMAP4, settings: MailboxSettings, since: date, before: date) -> list[int]:
+    """The messages the server has from the start of `since` up to the start of `before`, oldest first."""
+    status, _data = server.select(_quoted(settings.folder), readonly=True)
+    if status != "OK":
+        raise ConnectorError("not_found", f"there is no folder {settings.folder}")
+    status, found = server.uid("SEARCH", None, f"SINCE {_imap_day(since)} BEFORE {_imap_day(before)}")
+    if status != "OK":
+        raise ConnectorError("outage", "the mail server didn't answer the search")
+    return sorted(int(u) for u in (found[0] or b"").split())
+
+
+def count_older(settings: MailboxSettings, since: date, before: date, limit: int, context: ConnectorContext) -> int:
+    """How many messages dated from `since` up to `before` a look further back would read, at most `limit`. Reads no
+    message and changes nothing."""
+    server = _open(settings)
+    try:
+        return min(len(_older_uids(server, settings, since, before)), limit)
+    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
+        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    finally:
+        _close(server)
+
+
+def read_older(
+    settings: MailboxSettings, since: date, before: date, limit: int, context: ConnectorContext
+) -> list[SourceItem]:
+    """The newest `limit` messages dated from `since` up to `before`, fetched without marking them read."""
+    server = _open(settings)
+    try:
+        items = []
+        for uid in _older_uids(server, settings, since, before)[-limit:]:
+            status, parts = server.uid("FETCH", str(uid), "(BODY.PEEK[])")
+            raw = next((p[1] for p in parts or [] if isinstance(p, tuple) and len(p) > 1), None)
+            if status == "OK" and raw and (item := message_item(raw)) is not None:
+                items.append(item)
+        return items
     except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
         raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
     finally:

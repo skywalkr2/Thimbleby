@@ -3765,11 +3765,14 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     what they did counted ("3 actions, 2 questions, 4 held for you"). It opens What changed narrowed to that source's intake
     and marks it seen (`POST /api/watch/{source}/intake/seen`, with Undo); after that, whatever still needs a look shows
     line by line. Held items stay held, and nothing applied is undone or hidden from the records screens.
-  - "Look further back" on the coverage line offers a list of days (`watch.look_back_choices`: 30, 90, 365 more), shows the
-    count and about what it costs before anything is read (`GET /api/watch/{source}/look-back?days=`), and takes in the older
-    mail the source already returned the same quiet way, under the same go rules, moving the date back. The core can only take
-    in what the connector returned: when the source holds no mail that far back the result says "Only mail from <date> is
-    available to read" and the date moves only as far as that mail goes. Built: `tests/test_source_intake.py`,
+  - "Look further back" is in the source's own menu on Sources (not in Today's header, which only says "Not looked at before
+    <day>"), offered only for a source whose connector can be asked for older mail (the core mailbox; an add-on's source has no
+    way yet, so `look_back_choices` is empty). It offers a list of days (`watch.look_back_choices`: 30, 90, 365 more), shows the
+    count and about what it costs before anything is read (`GET /api/watch/{source}/look-back?days=`, the count the source's
+    own), asks the source for the older mail within `watch.look_back_max_items` and takes it in the same quiet way, under the
+    same go rules, moving the date back. The day a first read looked back to is the oldest day of the mail it returned when that
+    is later than the window, counted in UTC, and the answer's day is counted the same way; when the source holds no mail that far
+    back the result says "Only mail from <date> is available to read". Built: `tests/test_source_intake.py`,
     `tests/test_source_intake_routes.py`, `web/src/components/LookBack.test.tsx`, `web/src/shell/HeldLines.test.tsx`,
     `web/src/components/Today.test.tsx`, `web/src/components/WhatChanged.test.tsx`. A source a sign-in starts is taken in this way too (6.27;
     `tests/test_sign_in_sources.py`). *Not built:* a connector's own first read is bounded by its own settings (the mailbox

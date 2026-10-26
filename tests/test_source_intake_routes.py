@@ -10,7 +10,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.app import create_app
-from tests.test_source_intake import item, mail, make, requests_of, with_changeset
+from tests.test_source_intake import (  # noqa: F401  (the fixture is used by every test here)
+    item,
+    mail,
+    make,
+    requests_of,
+    stand_in_asks_for_older_mail,
+    with_changeset,
+)
 
 TOKEN = "intake-token"
 

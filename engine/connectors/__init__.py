@@ -530,3 +530,27 @@ def _core() -> dict[str, Connector]:
 
 
 CORE: dict[str, Connector] = _core()
+
+
+@dataclass(frozen=True)
+class OlderMail:
+    """How a core mail connector reads mail older than its first read took: `count(settings, since, before, limit,
+    context)` says how many messages dated from `since` up to `before` there are (at most `limit`), reading none;
+    `read(...)` returns the newest `limit` of them."""
+
+    count: Callable[[Any, date, date, int, ConnectorContext], int]
+    read: Callable[[Any, date, date, int, ConnectorContext], list[SourceItem]]
+
+
+#: The core connectors that can be asked for older mail, by name. A plugin's connector isn't here: the plugin API has no
+#: way to ask a connector for older mail, so a source of an add-on is never offered a look further back.
+_OLDER: dict[str, OlderMail] = {}
+
+
+def older_mail(connector: str) -> OlderMail | None:
+    """How to ask a connector for older mail, or None when it can't be asked."""
+    if connector == "mailbox" and connector not in _OLDER:
+        from engine.connectors.mailbox import count_older, read_older
+
+        _OLDER[connector] = OlderMail(count_older, read_older)
+    return _OLDER.get(connector)

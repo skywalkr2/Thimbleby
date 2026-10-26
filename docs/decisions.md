@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Looking further back asks the source, only when it can, and lives on the source's page; a title that does nothing doesn't look clickable (P41, P48)
+
+**Decided:** (1) The day a mail source's first read says it looked back to is the oldest day of the mail the read returned
+when that is later than the window (a connector that took only its latest messages), and every day is counted in UTC from the
+message's own moment, so a mail late in the evening in a zone behind UTC is the same day in Today's header and in the answer.
+(2) Looking further back is offered only for a source whose connector can be asked for older mail: the core mailbox can (a
+search by days, its messages fetched without marking them read); a source of an add-on can't, because the plugin API has no way
+to ask for older mail, so it is not offered one. The source's list of days is empty then. (3) A look asks the source for the
+older mail of the chosen days, at most `watch.look_back_max_items` (100) of the newest, notes it like a first read and takes it
+in under the same estimate and go rules; the count shown first is the source's own, with nothing read. (4) The offer moves out
+of Today's header (which only says how far back it looked) to the source's menu on its own page. (5) A list row's title
+underlines on pointing only while a click would change something; the row already chosen beside its detail is inert. Not
+decided here: a link from a change's title to its saved source page, and older mail for add-on sources, which need a plugin
+API capability the hold keeps closed.
+**Why:** the owner's first real use: the header said Oct 8, the answer Oct 9, the offer did nothing, and a title looked like a
+link. No plugin API, manifest, event or record-shape change. Change log: section 208.
+
 ## 2026-10-26: An unknown term is a question to the person, never a proposal; well-known words and automatic mail raise none (P50, P43 c, f, g)
 
 **Decided:** (1) A word the glossary lacks is no longer proposed as a glossary entry marked "not known yet" (a term

@@ -100,7 +100,7 @@ function ProjectLine(props: { group: Group; id: string; title: string; choice: L
   return (
     <li className="line" ref={ref} aria-label={props.title} data-project-group={props.group.project} {...choice.rowProps(props.id)}>
       <div className="row single">
-        <button type="button" className="expander text" aria-expanded={choice.chosen === props.id} onClick={() => choice.choose(props.id)}>
+        <button type="button" className="expander text" aria-expanded={choice.chosen === props.id} data-inert={choice.chosen === props.id ? "" : undefined} onClick={() => choice.choose(props.id)}>
           <strong>{props.title}</strong>
           <span className="sub">{tn("followups.by_project.count", props.group.items.length)}</span>
         </button>

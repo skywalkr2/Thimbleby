@@ -17,6 +17,7 @@ import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, t
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { LookBack } from "./LookBack";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
@@ -221,6 +222,7 @@ function SourceRow(props: {
   const client = useQueryClient();
   const save = useSourceSave();
   const [busy, setBusy] = useState(false);
+  const [looking, setLooking] = useState(false);
   const { source } = props;
   const titleId = `source-${source.id}`;
   const menuId = `${titleId}-menu`;
@@ -259,6 +261,10 @@ function SourceRow(props: {
     { id: "read", label: t("sources.read_now"), run: () => void readNow(), disabled: !source.enabled || busy },
     { id: "recent", label: t("sources.recent"), run: recent, disabled: busy || source.items === 0 },
     { id: "change", label: t("sources.change"), run: props.onChange },
+    // Offered only when the source can be asked for older mail (it says so by listing the days to pick from).
+    ...(source.looked_back_to && (source.look_back_choices ?? []).length > 0
+      ? [{ id: "look_back", label: t("coverage.look_back.open"), run: () => setLooking(true) }]
+      : []),
     { id: "power", label: t(source.enabled ? "sources.turn_off" : "sources.turn_on"), run: () => turn(!source.enabled) },
     { id: "remove", label: t("sources.remove"), run: remove },
   ];
@@ -299,6 +305,7 @@ function SourceRow(props: {
           <RowMenu label={source.label} actions={actions} buttonId={menuId} />
         </div>
       </div>
+      {looking && <LookBack source={source} onClose={() => { setLooking(false); restoreFocus(() => document.getElementById(menuId)); }} />}
       {props.changing && (
         <SourceForm
           mode={{ type: "change", source }}

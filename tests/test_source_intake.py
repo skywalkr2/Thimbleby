@@ -195,7 +195,7 @@ def test_above_the_amount_to_confirm_the_requests_wait_for_one_go_with_the_total
             )
         (line,) = [x for x in queue(ws, store, cfg, NOW) if x.kind == "intake_go"]
         assert (line.group, line.source, line.subject, line.count, line.unpriced) == ("decide", "m", "Inbox", 3, 0)
-        assert line.days == 14
+        assert line.days == 10  # the oldest mail the read returned is 10 days back
         assert line.estimate_usd == pytest.approx(sum(r.data["estimate_usd"] for r in held))
         # No line of their own for each, and nothing has run.
         assert not [x for x in queue(ws, store, cfg, NOW) if x.kind in ("go", "refused", "failed", "first_go")]
@@ -372,6 +372,14 @@ def test_nothing_applied_is_hidden_from_the_changes_or_undone(env):
 # ---- looking further back -----------------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def stand_in_asks_for_older_mail(monkeypatch):
+    """The stand-in source can be asked for older mail, and holds none beyond what its first read listed."""
+    from engine import connectors
+
+    monkeypatch.setitem(connectors._OLDER, "fake", connectors.OlderMail(lambda *a: 0, lambda *a: []))
+
+
 @pytest.fixture
 def old_mail(tmp_path):
     items = [mail("new", 2), mail("a", 20), mail("b", 40), mail("c", 100), mail("d", 300), item("page")]
@@ -461,6 +469,91 @@ def test_a_source_without_mail_has_no_look_back(tmp_path):
     ws, cfg, store = make(tmp_path, [item("a")])
     try:
         read((ws, cfg, store))
+        with pytest.raises(StoreError):
+            source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
+    finally:
+        store.close()
+
+
+# ---- the date the header and the answer give, and what a source can be asked ---------------------------------
+
+
+def _capped(tmp_path, held_days=(1, 2, 3, 6)):
+    """A source whose first read returned only its latest mail (the oldest 6 days back, inside the 14-day window)."""
+    return make(tmp_path, [mail(f"m{d}", d) for d in held_days])
+
+
+def test_the_date_it_was_looked_back_to_is_the_oldest_mail_the_read_returned_and_the_answer_gives_the_same_day(
+    tmp_path,
+):
+    ws, cfg, store = _capped(tmp_path)
+    try:
+        read((ws, cfg, store))
+        header = source_intake.back_to_of(store.read(), "m")
+        assert header == (NOW - timedelta(days=6)).date() != (NOW - timedelta(days=14)).date()
+        found = source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
+        # Nothing held or asked for is older, and the day the answer would name is the header's own day.
+        assert found.available_from in (None, header)
+    finally:
+        store.close()
+
+
+def test_a_late_evening_in_a_zone_behind_utc_is_the_same_day_in_the_header_and_the_answer(tmp_path):
+    # Received 23:30 on Oct 12 at -05:00 is 04:30 on Oct 13 in UTC; both ends count that one way.
+    late = mail("late", 0)
+    late["message"]["received"] = "2026-10-12T23:30:00-05:00"
+    ws, cfg, store = make(tmp_path, [late, mail("x", 1)])
+    try:
+        read((ws, cfg, store))
+        header = source_intake.back_to_of(store.read(), "m")
+        found = source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
+        assert header == date(2026, 10, 13) and found.available_from in (None, header)
+    finally:
+        store.close()
+
+
+def test_a_look_back_asks_the_source_for_older_mail_within_the_limit_and_is_held_like_other_work(tmp_path, monkeypatch):
+    from engine import connectors
+
+    older = [mail(f"o{d}", d) for d in (8, 9, 10)]
+    seen = {}
+
+    def count(settings, since, before, limit, context):
+        seen["limit"] = limit
+        return min(len(older), limit)
+
+    def read_old(settings, since, before, limit, context):
+        seen["asked"] = (since, before)
+        return [
+            connectors.SourceItem(
+                **{k: v for k, v in m.items() if k != "message"}, message=connectors.MessageDetails(**m["message"])
+            )
+            for m in older[-limit:]
+        ]
+
+    monkeypatch.setitem(connectors._OLDER, "fake", connectors.OlderMail(count, read_old))
+    ws, cfg, store = _capped(tmp_path)
+    try:
+        cfg.watch.look_back_max_items = 2
+        read((ws, cfg, store))
+        found = source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
+        assert found.count == 2 and found.estimate_usd > 0 and seen["limit"] == 2
+        done = source_intake.look_further_back(ws, store, cfg, "m", 30, NOW)
+        assert done.taken == 2 and seen["asked"][0] < seen["asked"][1]
+        assert source_intake.can_look_back(cfg.watch.sources[0])
+    finally:
+        store.close()
+
+
+def test_a_source_that_cannot_be_asked_for_older_mail_is_not_offered_a_look_back(tmp_path, monkeypatch):
+    from engine import connectors
+    from engine.storage import StoreError
+
+    monkeypatch.delitem(connectors._OLDER, "fake")
+    ws, cfg, store = _capped(tmp_path)
+    try:
+        read((ws, cfg, store))
+        assert not source_intake.can_look_back(cfg.watch.sources[0])
         with pytest.raises(StoreError):
             source_intake.look_back_preview(ws, store, cfg, "m", 30, NOW)
     finally:

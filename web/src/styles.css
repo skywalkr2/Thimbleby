@@ -86,6 +86,9 @@ main p { max-width: var(--measure); }
 .acts { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .expander { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; }
 .expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
+/* A title whose click would change nothing (its row is already chosen) neither looks nor feels clickable. */
+.expander[data-inert] { cursor: default; }
+.expander[data-inert]:hover strong { text-decoration: none; }
 .expander:hover strong { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
 /* A change or a person's message in the detail pane of a list | detail view: no frame of its own inside the pane's. */
 .detail-queue { border: 0; border-radius: 0; background: none; overflow: visible; }
