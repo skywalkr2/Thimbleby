@@ -398,6 +398,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             problems.append(Problem("stage-confirm", "hold", i, "; ".join(messages)))
         if isinstance(op, FactOp) and (why := _fact_problem(op, ctx)) is not None:
             refuse(i, "targets", why)
+        if isinstance(op, FactOp) and op.about and (why := _about_problem(op.about, ctx, view)) is not None:
+            refuse(i, "targets", why)
         # evidence
         evidence = _evidence(op)
         needs = (
@@ -994,6 +996,16 @@ def _fact_problem(op: FactOp, ctx: Context) -> str | None:
         return "said_by goes with basis said"
     if ctx.people.resolve(op.said_by).status != "ok":
         return f"{op.said_by} isn't one known person, so the fact can't be said by them"
+    return None
+
+
+def _about_problem(about: str, ctx: Context, view: Any) -> str | None:
+    """Why the record a fact says it is about can't be used, or None: its id names no record that exists."""
+    from engine.learn import kind_of_id
+
+    kind = kind_of_id(ctx.store.plugins.records, about)
+    if kind is None or view.get(kind, about) is None:
+        return f"{about} isn't the id of a record, so a fact can't be about it"
     return None
 
 
@@ -3391,6 +3403,7 @@ def _apply_op(
             "said_by": said_by,
             "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
             "series": op.series,
+            "about": op.about,
             "reaches_children": op.reaches_children,
             "on": op.on.isoformat() if op.on else None,
             "on_kind": op.on_kind,

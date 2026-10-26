@@ -129,3 +129,93 @@ def test_a_meeting_whose_invitation_is_out_shows_only_on_its_day_as_a_hold(env):
     assert todo not in {x.action for x in this_week(store, cfg, datetime(2026, 10, 24, 9, 0, tzinfo=UTC)).due}
     [on_the_day] = [x for x in this_week(store, cfg, datetime(2026, 10, 26, 9, 0, tzinfo=UTC)).due if x.action == todo]
     assert on_the_day.kind == "hold"
+
+
+# ---- lead time on any to-do (plugin API 0.3.90) ------------------------------------------------------------------
+
+
+def plain_todo(store, cfg, due, **more):
+    return make(store, "action", text="Prepare the board pack", owners=[{"person": me(cfg)}], due=due, **more)
+
+
+def test_on_a_friday_a_to_do_with_two_days_of_lead_time_due_monday_is_counted_and_without_it_is_not(env):
+    _, cfg, store = env
+    monday = (FRIDAY.date() + timedelta(days=3)).isoformat()
+    with_lead = plain_todo(store, cfg, monday, lead_days=2)
+    none_set = plain_todo(store, cfg, monday)
+    zero = plain_todo(store, cfg, monday, lead_days=0)
+    found = {x.action: x for x in this_week(store, cfg, FRIDAY).due}
+    assert with_lead in found and found[with_lead].kind == "lead" and found[with_lead].due.isoformat() == monday
+    assert none_set not in found and zero not in found
+
+
+def test_the_lead_time_counts_working_days_back_from_the_day_it_is_due(env):
+    _, cfg, store = env
+    tuesday = (FRIDAY.date() + timedelta(days=4)).isoformat()
+    todo = plain_todo(store, cfg, tuesday, lead_days=2)  # the work starts on Friday: Tuesday, Monday, then Friday
+    assert todo in {x.action for x in this_week(store, cfg, FRIDAY).due}
+    assert todo not in {x.action for x in this_week(store, cfg, WEDNESDAY).due}
+    longer = plain_todo(store, cfg, tuesday, lead_days=5)
+    assert longer in {x.action for x in this_week(store, cfg, WEDNESDAY).due}
+
+
+def test_a_to_dos_own_lead_time_replaces_the_default_a_meeting_gets_from_its_setup_words(env):
+    _, cfg, store = env
+    monday = (FRIDAY.date() + timedelta(days=3)).isoformat()
+    by_default = meeting_todo(store, cfg, monday)
+    none = meeting_todo(store, cfg, monday, lead_days=0)
+    long = meeting_todo(store, cfg, (WEDNESDAY.date() + timedelta(days=7)).isoformat(), lead_days=5)
+    found = {x.action: x for x in this_week(store, cfg, FRIDAY).due}
+    assert found[by_default].kind == "setup" and none not in found
+    assert long in {x.action for x in this_week(store, cfg, WEDNESDAY).due}
+
+
+def test_the_person_sets_the_lead_time_with_their_own_edit_and_undo_takes_it_back(env):
+    from engine.applier import apply_as_person
+    from engine.dispatcher import undo_changeset
+
+    _, cfg, store = env
+    monday = (FRIDAY.date() + timedelta(days=3)).isoformat()
+    todo = plain_todo(store, cfg, monday)
+    assert todo not in {x.action for x in this_week(store, cfg, FRIDAY).due}
+    edit = {
+        "op": "record.edit",
+        "record": {"kind": "action", "id": todo},
+        "fields": {"lead_days": 2},
+        "read_version": store.read().get("action", todo).version,
+    }
+    made = apply_as_person(store, cfg, [edit], "Set how early to start")
+    assert store.read().get("action", todo).data["lead_days"] == 2
+    assert todo in {x.action for x in this_week(store, cfg, FRIDAY).due}
+    undo_changeset(store, made)
+    assert store.read().get("action", todo).data["lead_days"] is None
+    assert todo not in {x.action for x in this_week(store, cfg, FRIDAY).due}
+
+
+def test_the_assistant_cannot_set_a_lead_time_with_record_set(env):
+    from engine.ops import SETTABLE
+
+    assert "lead_days" not in SETTABLE["action"]
+
+
+def test_the_lead_time_is_a_pick_list_of_days_on_the_to_dos_page_and_a_save_keeps_it(env, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    ws, cfg, store = env
+    todo = plain_todo(store, cfg, (FRIDAY.date() + timedelta(days=3)).isoformat())
+    store.close()
+    application = create_app(ws, cfg, "t", ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(application, headers={"Authorization": "Bearer t"}) as client:
+        field = next(f for f in client.get("/api/kinds/action").json()["fields"] if f["name"] == "lead_days")
+        assert (
+            field["type"] == "number" and field["editable"] and "2" in field["options"] and "" not in field["options"]
+        )
+        record = client.get("/api/record", params={"kind": "action", "id": todo}).json()
+        saved = client.post(
+            "/api/records/edit",
+            json={"kind": "action", "id": todo, "fields": {"lead_days": 3}, "read_version": record["version"]},
+        )
+        assert saved.status_code == 200, saved.text
+        assert client.get("/api/record", params={"kind": "action", "id": todo}).json()["fields"]["lead_days"] == 3

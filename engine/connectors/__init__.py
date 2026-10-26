@@ -337,6 +337,11 @@ class Connector:
     test_only: bool = False
     #: What the connector reads, when it says: "mail" or "calendar". Left out, the kind is guessed from its name.
     reads: ReadKind | None = None
+    #: A plugin's connector that can be asked for items older than its first read took (a look further back):
+    #: `older(settings, since, before, max_items, context)` returns the newest `max_items` items dated from `since` up
+    #: to `before`, and `older_count(...)` optionally says how many there are, reading none of them.
+    older: Callable[..., Any] | None = None
+    older_count: Callable[..., Any] | None = None
 
 
 #: Words in a connector's name (the part after the add-on's name) that say what kind of thing it reads. Used only for a
@@ -543,8 +548,8 @@ class OlderMail:
     read: Callable[[Any, date, date, int, ConnectorContext], list[SourceItem]]
 
 
-#: The core connectors that can be asked for older mail, by name. A plugin's connector isn't here: the plugin API has no
-#: way to ask a connector for older mail, so a source of an add-on is never offered a look further back.
+#: The core connectors that can be asked for older mail, by name. A plugin's connector that can be asked says so when it
+#: registers (`older=`), and its way of being asked comes from the plugin host (`PluginHost.older_mail`).
 _OLDER: dict[str, OlderMail] = {}
 
 

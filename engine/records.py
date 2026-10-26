@@ -506,6 +506,16 @@ class Action(Record):
         "suggest one from an input, which waits for the person's yes. It is what the day's capacity check adds up; a "
         "to-do with none counts as no time.",
     )
+    lead_days: int | None = Field(
+        None,
+        ge=0,
+        le=30,
+        json_schema_extra={"choices": [0, 1, 2, 3, 4, 5, 7, 10]},
+        description="How many working days before its day the work must start (a meeting to set up, a document to "
+        "prepare, an invitation that needs a room). Today counts the to-do from that many working days before it is "
+        "due and names the day, not only in its week. Empty: a meeting you set up takes the usual lead time from the "
+        "settings and any other to-do has none. 0: none, even for a meeting. The person sets it.",
+    )
     status: Literal["held", "open", "done", "dropped"] = Field(
         "open",
         description="held: waiting for an owner to be picked. open: to be done. done: finished. dropped: closed "
@@ -1519,6 +1529,12 @@ class Fact(Record):
     series: Annotated[str | None, RefTo("series")] = Field(
         None, description="The id of the series it belongs to; it sits on the series' next instance."
     )
+    about: str | None = Field(
+        None,
+        description="The id of the record it is about when that is any record (a to-do, a question, a person, an "
+        "organization, a pack's own record), not only a project, a calendar entry or a series. The record's page shows "
+        "it, and a run working on that record reads it. Added with the fact; never changed after.",
+    )
     reaches_children: bool = Field(
         False,
         description="True for a fact about a project that holds for the projects inside it too (a series' fact for "
@@ -1538,7 +1554,7 @@ class Fact(Record):
         "from the day and the settings; it waits for the person's yes, and the person may set or move it. The "
         "reminder is a line on Today from that moment until the day has passed.",
     )
-    fixed_fields: ClassVar[tuple[str, ...]] = ("supersedes", "basis", "said_by")
+    fixed_fields: ClassVar[tuple[str, ...]] = ("supersedes", "basis", "said_by", "about")
 
 
 class Scope(BaseModel):

@@ -89,7 +89,7 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
             set_aside=(keys(s.plugin) / f"{s.client_id}.set-aside").is_file(),
             default_unusable=bool(s.default_client_id) and not host.default_app_fits(s),
             own_app_steps=[SignInStep(text=text, link=link) for text, link in s.own_app_steps],
-            not_reading=not_read(ws, s) if status == "signed_in" else [],
+            not_reading=not_read(ws, s, host.connectors()) if status == "signed_in" else [],
         )
 
     @r.get("/sign-ins")

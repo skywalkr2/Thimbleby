@@ -1102,6 +1102,47 @@ class PluginHost:
             return []
         return sorted(name for name, kind in registrar.tasks.items() if kind.defaults.get("tier") == tier)
 
+    def older_mail(self, connector: Any, account: str | None = None) -> Any:
+        """How to ask a plugin's connector for items older than its first read took, as the account a source reads
+        with (the core's `OlderMail`), or None when the connector says it can't be asked. A call is contained like a
+        poll: its `ConnectorError` passes through, anything else is noted on the plugin and becomes an outage."""
+        from engine.connectors import ConnectorError, OlderMail, Poll, checked_poll
+
+        if connector.older is None:
+            return None
+        plugin = connector.name.split("/", 1)[0]
+        where = f"connector {connector.name} (older items)"
+
+        def ask(settings: Any, since: Any, before: Any, limit: int, context: Any, counting: bool) -> Any:
+            context = self.connector_context(plugin, context.workspace_root, account)
+            try:
+                if counting and connector.older_count is not None:
+                    found = connector.older_count(deepcopy(settings), since, before, limit, context)
+                    if isinstance(found, bool) or not isinstance(found, int) or found < 0:
+                        raise ValueError("older_count returns a whole number")
+                    result: Any = min(found, limit)
+                else:
+                    items = list(connector.older(deepcopy(settings), since, before, limit, context))
+                    checked_poll(Poll(items, complete=False))
+                    result = items[:limit]
+                    if counting:
+                        result = len(result)
+            except ConnectorError:
+                raise
+            except Exception as err:
+                self.failed(plugin, where, err)
+                raise ConnectorError("outage", f"the add-on {plugin} failed reading older items: {err}") from None
+            finally:
+                if context.web is not None:
+                    context.web.close()
+            self.succeeded(plugin, where)
+            return result
+
+        return OlderMail(
+            lambda settings, since, before, limit, context: ask(settings, since, before, limit, context, True),
+            lambda settings, since, before, limit, context: ask(settings, since, before, limit, context, False),
+        )
+
     def setup_steps(self) -> list[tuple[str, Any]]:
         """(plugin, step) for every running plugin's setup steps."""
         found = []

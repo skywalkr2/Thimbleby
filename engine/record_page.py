@@ -145,6 +145,7 @@ def page(
             for q in questions
         ],
         "completed_actions": _completed(view, kind, record_id, name_of),
+        "facts": facts_about(view, kind, record_id),
         "fact_source": fact_source(view, record) if kind == "fact" else None,
         "filed": sides.filed_view(view, cfg, kind, record) if cfg is not None else None,
         "agenda": _agenda(view, record, today, here),
@@ -154,6 +155,30 @@ def page(
         else [],
         "activity": _activity(view, kind, record_id, actions, questions, name_of, pm, second_move_days),
     }
+
+
+def facts_about(view: Any, kind: str, record_id: str) -> list[dict[str, Any]]:
+    """The facts recorded about this record (a fact's `about` names it), that no newer fact replaces: the ones that
+    matter most first, then the newest."""
+    facts = view.list("fact")
+    replaced = {f.data["supersedes"] for f in facts if f.data.get("supersedes")}
+    mine = [f for f in facts if f.data.get("about") == record_id and f.id not in replaced]
+    mine.sort(
+        key=lambda f: (
+            not f.data.get("key"),
+            -(date.fromisoformat(str(f.data["as_of"])).toordinal() if f.data.get("as_of") else 0),
+            f.id,
+        )
+    )
+    return [
+        {
+            "id": f.id,
+            "text": f.data["text"],
+            "as_of": str(f.data["as_of"]) if f.data.get("as_of") else None,
+            "key": bool(f.data.get("key")),
+        }
+        for f in mine
+    ]
 
 
 def _agenda(view: Any, record: Any, today: date | None, here: ZoneInfo | None) -> list[dict[str, Any]]:

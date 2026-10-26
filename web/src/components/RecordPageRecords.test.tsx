@@ -22,6 +22,7 @@ const page = (over: Partial<S["RecordPageView"]> = {}): S["RecordPageView"] => (
   open_actions: [],
   open_questions: [],
   completed_actions: [],
+  facts: [],
   fact_source: null,
   activity: [],
   ...over,
@@ -342,4 +343,33 @@ test("an item with no filing reason shows no filed line", async () => {
   renderApp(<RecordPage kind="action" id="ACT-6" onBack={() => {}} />);
   await screen.findByRole("heading", { level: 1, name: "Call" });
   expect(screen.queryByText(/Filed under/)).toBeNull();
+});
+
+test("a to-do's page lists the facts recorded about it, each linking to the fact, with the day it holds as of", async () => {
+  api(
+    "action",
+    "ACT-1",
+    { text: "Prepare the board pack", status: "open" },
+    page({
+      kind: "action",
+      id: "ACT-1",
+      name: "Prepare the board pack",
+      facts: [
+        { id: "FACT-4", text: "The board wants the pack in two parts", as_of: "2026-10-12", key: true },
+        { id: "FACT-2", text: "The pack goes out on Friday", as_of: null, key: false },
+      ],
+    }),
+  );
+  renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
+  const facts = await screen.findByRole("region", { name: "Facts" });
+  const first = within(facts).getByRole("link", { name: "The board wants the pack in two parts" });
+  expect(first.closest("li")).toHaveTextContent(`as of ${day("2026-10-12")}`);
+  expect(within(facts).getByRole("link", { name: "The pack goes out on Friday" }).closest("li")).not.toHaveTextContent("as of");
+});
+
+test("a page with no facts about it has no Facts section", async () => {
+  api("action", "ACT-1", { text: "Prepare the board pack" }, page({ kind: "action", id: "ACT-1", name: "Prepare the board pack" }));
+  renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
+  await screen.findByRole("heading", { name: "Prepare the board pack" });
+  expect(screen.queryByRole("region", { name: "Facts" })).toBeNull();
 });

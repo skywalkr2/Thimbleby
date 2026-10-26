@@ -1393,6 +1393,16 @@ class CompletedAction(BaseModel):
     done_on: str | None = Field(None, description="The day it was closed, YYYY-MM-DD.")
 
 
+class FactLine(BaseModel):
+    """A fact recorded about a record, for the record's page: the statement, the day it held as of, and whether it is
+    one of the facts that matter most."""
+
+    id: str
+    text: str
+    as_of: str | None = Field(None, description="The day it was true as of, YYYY-MM-DD.")
+    key: bool = False
+
+
 class FactSource(BaseModel):
     """Who a fact rests on and where it came from, for the label in its meta line (never part of copied or published
     text). `basis` is person (the person said it), said (someone else did: `by`, reported by `reported_by` when another
@@ -1736,6 +1746,11 @@ class RecordPageView(BaseModel):
         default_factory=list,
         description="Finished actions credited to this person (who did the work) or in this project, newest first.",
     )
+    facts: list[FactLine] = Field(
+        default_factory=list,
+        description="The facts recorded about this record (a to-do, a question, a person, an organization, a pack's "
+        "record), key facts first, then the newest.",
+    )
     fact_source: FactSource | None = Field(None, description="For a fact: who it rests on and where it came from.")
     filed: FiledView | None = Field(
         None, description="For an item the assistant filed by words or the sender's domain: why, and where it can move."
@@ -1961,7 +1976,10 @@ class FieldView(BaseModel):
     type: Literal["text", "long_text", "number", "yes_no", "date", "choice", "reference", "list", "other"] = Field(
         "other", description="What kind of value it holds, for the edit form."
     )
-    options: list[str] = Field(default_factory=list, description="For a choice: the values allowed.")
+    options: list[str] = Field(
+        default_factory=list,
+        description="For a choice: the values allowed. For a number: the values to pick from, when it has a known set.",
+    )
     value_list: str | None = Field(
         None, description="For a field whose values come from a value list: its name, so the form can add to it."
     )
@@ -5965,7 +5983,7 @@ class WeekDueView(BaseModel):
     project_name: str | None = None
     owners: list[OwnerNameView] = Field(default_factory=list)
     mine: bool = False
-    kind: Literal["due", "setup", "hold"] = "due"
+    kind: Literal["due", "lead", "setup", "hold"] = "due"
 
 
 class WeekWaitingView(BaseModel):

@@ -1027,6 +1027,34 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 222. An add-on sign-in's sent mail, an add-on's look further back, lead time on any to-do, facts about any record (2026-10-26; plugin API release part A2; P40 point 13, P48, the designer's lessons 4 and 5)
+
+- **Design 3.3, 3.12 and 6.33 (P40 point 13):** a source a sign-in declares may be marked `sent` (`registrar.sign_in(sources=[{...,
+  "sent": True}])`): the core starts it with the account's other sources (`engine/sign_in_sources.py`), once for each
+  account, with the person as its author, so the first result finds the promises made in sent mail and a mail account with a
+  sign-in no longer shows "Add your sent folder". It waits until the workspace knows the person and is started when they are
+  named (`start_signed_in` runs at start-up and when `workspace.user.person` is saved); the row's "not reading" list and
+  "Start reading" cover it. **Built:** `tests/test_sign_in_sources.py` (the first four tests of the sent-mail block).
+- **Design 3.3 and 6.32 (P48):** `registrar.connector(older=, older_count=)`: a connector that says it can read items older than
+  its first read took is offered "Look further back" (`source_intake.can_look_back(source, store)`), asked as the source's
+  account for a count and then for the items within `watch.look_back_max_items`, contained like a poll
+  (`PluginHost.older_mail`), estimated and held for the go like the core mailbox's. **Built:**
+  `tests/test_look_back_addons.py`.
+- **Design 6.32 and 7.7 (lesson 4):** `Action.lead_days` (working days before its day when the work must start; a list of days on the
+  to-do's page, 0 to 10; set only by the person's own edit): This week counts any to-do from that many working days before its
+  day, `kind` "lead" (`WeekDueView.kind` gains "lead"; "Start 1 to-do by Mon 10/26"). The setup words and
+  `steward.meetings.setup_lead_working_days` are only the default for a meeting with the field empty; 0 means none. A number
+  field with a known set of values (`json_schema_extra={"choices": ...}`) is a pick list on a record's edit form
+  (`FieldView.options` for a number). **Built:** `tests/test_this_week.py`, `web/src/components/RecordPage.test.tsx`,
+  `web/src/components/Today.test.tsx`.
+- **Design 5.1, 6.7 and 7.14 (lesson 5, second half):** `Fact.about` (and the `fact` op's `about`): the id of any record,
+  checked to exist, fixed once made; the record's page lists its facts (`RecordPageView.facts`, a Facts section) and a run
+  working on the record reads them (`per_input_section(about=)`, the ask packet of a conversation on a record, an add-on's
+  `view.knowledge`). **Built:** `tests/test_facts_about.py`, `web/src/components/RecordPageRecords.test.tsx`.
+- The export round trip keeps `lead_days` and `about` (`tests/test_facts_about.py::test_the_fields_the_person_and_the_fact_added_survive_the_export_round_trip`).
+  No new setting; two settings' descriptions say a to-do's own lead time wins. Plugin API 0.3.90 notes and the guide are
+  finished once for the release.
+
 ## 221. The install and setup answers of the batched plugin API release: a pack's own libraries, values added to a list setting, a pack's own tiers, and the guide's corrections (2026-10-26; P2, answers 173, 183, 185, 219, 172, 184, 186, 206)
 
 Part B3 of the one batched plugin API release (`docs/project/plugin-api-release-plan.md`; the version and the guide's

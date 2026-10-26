@@ -20,10 +20,12 @@ export function useThisWeek() {
 /** "3 due · 2 waiting on you · 4 meetings": the one line a folded week says. */
 export function weekSummary(week: Week, tn: Tn): string {
   const setUp = week.due.filter((d) => d.kind === "setup");
-  const counted = week.due.length - setUp.length;
+  const started = week.due.filter((d) => d.kind === "lead");
+  const counted = week.due.length - setUp.length - started.length;
   return [
     counted > 0 ? tn("today.week.due", counted) : "",
     setUp.length > 0 ? tn("today.week.setup", setUp.length, { date: day(setUp.map((d) => d.due).sort()[0]) }) : "",
+    started.length > 0 ? tn("today.week.lead", started.length, { date: day(started.map((d) => d.due).sort()[0]) }) : "",
     week.waiting.length > 0 ? tn("today.week.waiting", week.waiting.length) : "",
     week.meetings.length > 0 ? tn("today.week.meetings", week.meetings.length) : "",
   ]

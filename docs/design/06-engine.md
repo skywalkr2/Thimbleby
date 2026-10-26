@@ -3904,14 +3904,17 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     and marks it seen (`POST /api/watch/{source}/intake/seen`, with Undo); after that, whatever still needs a look shows
     line by line. Held items stay held, and nothing applied is undone or hidden from the records screens.
   - "Look further back" is in the source's own menu on Sources (not in Today's header, which only says "Not looked at before
-    <day>"), offered only for a source whose connector can be asked for older mail (the core mailbox; an add-on's source has no
-    way yet, so `look_back_choices` is empty). It offers a list of days (`watch.look_back_choices`: 30, 90, 365 more), shows the
+    <day>"), offered only for a source whose connector can be asked for older mail (the core mailbox, and a plugin's connector that
+    declares `older=`, plugin API 0.3.90; any other source has `look_back_choices` empty). It offers a list of days (`watch.look_back_choices`: 30, 90, 365 more), shows the
     count and about what it costs before anything is read (`GET /api/watch/{source}/look-back?days=`, the count the source's
     own), asks the source for the older mail within `watch.look_back_max_items` and takes it in the same quiet way, under the
     same go rules, moving the date back. The day a first read looked back to is the oldest day of the mail it returned when that
     is later than the window, counted in UTC, and the answer's day is counted the same way; when the source holds no mail that far
     back the result says "Only mail from <date> is available to read". Built: `tests/test_source_intake.py`,
     `tests/test_source_intake_routes.py`, `web/src/components/LookBack.test.tsx`, `web/src/shell/HeldLines.test.tsx`,
+    `tests/test_look_back_addons.py` (a connector's bounded look-back: it declares `older(settings, since, before, max_items,
+    context)` and optionally `older_count(...)`, is asked as the source's account within `watch.look_back_max_items`, and the
+    estimate and the go are the core mailbox's own),
     `web/src/components/Today.test.tsx`, `web/src/components/WhatChanged.test.tsx`. A source a sign-in starts is taken in this way too (6.27;
     `tests/test_sign_in_sources.py`). *Not built:* a connector's own first read is bounded by its own settings (the mailbox
     connector takes its latest `first_read` messages, with no date), so the date a first read says it looked back to is the
@@ -3931,8 +3934,9 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   never says the mail held none while something wasn't read, so an incomplete first result never looks complete; when the
   only gap is a missing sent folder, the list says everything listed was read but not the mail the person sent, never that
   something connected wasn't read (change log 168, 173; `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`). Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`,
-  journeys J2 (nothing found) and J6 (a promise found). *Not built:* a sent folder offered by a sign-in itself (6.33), so the
-  look back reads it only when the person added it.
+  journeys J2 (nothing found) and J6 (a promise found). A sign-in can declare the folder or label that holds the account's sent
+  mail (a declared source marked `sent`, plugin API 0.3.90): the core starts it with the account's other sources, credits it to
+  the person, so the look back reads it with no button (`tests/test_sign_in_sources.py`).
 - **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that
   has failed for longer than its usual gap becomes a line for the person ("work mail hasn't been read since yesterday
   6 PM: sign in again?"). A day whose right top line is "nothing needs you, and here is what was read" is a test case.
@@ -4058,13 +4062,32 @@ entry, makes no second entry, and the clash check never pairs an entry with its 
 the six days after (`ui.today.agenda_days_ahead`), and when it is empty it names the days it looked at. A sign-in's
 renewal warning starts at the later of `ai.credential_warn_days` before its end and three quarters of its life, so a
 short test sign-in never warns on its first day. A meeting the person sets up (a to-do whose words include one of
-`steward.meetings.setup_words`) counts from `steward.meetings.setup_lead_working_days` working days before its day, names
-the day when that is past this week, and once its invitation is out (told to someone, or a linked calendar entry) shows
+`steward.meetings.setup_words`) counts from `steward.meetings.setup_lead_working_days` working days before its day when its to-do has no lead time of its
+own, names the day when that is past this week, and once its invitation is out (told to someone, or a linked calendar entry) shows
 only on its day, as hold. A clash line names both entries, each with its time and the calendar it comes from ("your
 notes" for the app's own), opens either entry, and offers "It's fine", which keeps that clash (those two entries on that
 day) off Today until the person takes it back; moving or declining an entry on a connected calendar waits for the
 add-ons' calendar channel. A sign-in's renewal line uses sign-in words, never a key's, and lists what it serves by plain
 name.
+
+**Lead time on any to-do** (*built*, plugin API release part A2, 2026-10-26; the designer's lesson 4). A to-do has a field,
+`lead_days`: how many working days before its day the work must start (a meeting to set up, a document to prepare, an
+invitation that needs a room). This week counts a to-do from that many working days before its day, in any language, and
+names the day when that is past the week's end ("Start 1 to-do by Mon 10/26"; a meeting to set up still reads "Set up 1
+meeting by Mon 10/26"). With the field empty, a meeting the person sets up (the words in `steward.meetings.setup_words`)
+takes `steward.meetings.setup_lead_working_days`, so the words rule is only a default suggestion; any other to-do has none;
+0 says none, even for a meeting. A meeting whose invitation is out is still counted only on its day, as hold. The person sets
+it on the to-do's page from a list of days (the field says which values it offers), as their own edit with Undo; the
+assistant has no op that sets it (`record.set` leaves it out), and a pack sets it only as a person action's edit. **Built:**
+`tests/test_this_week.py` (a Friday, a to-do due Monday with two days' lead shows and with none does not),
+`web/src/components/RecordPage.test.tsx`, `web/src/components/Today.test.tsx`.
+
+**Facts about any record** (*built*, plugin API release part A2, 2026-10-26; the designer's lesson 5). A fact has `about`,
+the id of any record (a to-do, a question, a person, an organization, a pack's own record), where it could be about only a
+project, a calendar entry or a series. The `fact` op takes it (an id that names no record is refused with the reason); the
+record's page lists the facts about it, and a run working on that record (an ask or a conversation on it, an add-on's task kind
+on its record, through `view.knowledge`) reads them in its facts section, under the same budget as the project's.
+**Built:** `tests/test_facts_about.py`.
 
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 
@@ -4255,7 +4278,7 @@ nothing heard, never while on hold or with news since their day (`tests/test_pro
 under a mailbox, the server's marked folder picked, taken in quietly (`tests/test_sent_folder.py`,
 `web/src/components/Sources.test.tsx`). The prompts and playbook entries ask for promises both
 ways, and the golden cases and harness pairs are in demo-b (`tests/test_followups_backup_eval.py`,
-`tests/test_evaluate_harness.py`). *Not built yet:* the sent folder offered by a plugin's sign-in sources.
+`tests/test_evaluate_harness.py`). The sent folder of a plugin's sign-in is started by the sign-in itself (`tests/test_sign_in_sources.py`).
 
 **From three weeks of running** (the designer's S1-1 notes, 2026-10-19, `docs/project/designer-s1-1-notes-2026-10-19.md`):
 - **On hold until a trigger** is its own state: `action.hold` stores what it waits for, and a held promise is out of due

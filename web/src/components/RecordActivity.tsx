@@ -134,6 +134,19 @@ export function RecordActivity(props: { page: Page }) {
           </ul>
         </Section>
       )}
+      {(page.facts ?? []).length > 0 && (
+        <Section id="record-facts" title={t("record.facts")} count={(page.facts ?? []).length}>
+          <ul className="queue">
+            {(page.facts ?? []).map((f) => (
+              <Row
+                key={f.id}
+                title={<a href={viewHref(recordView("fact", f.id))}>{f.text}</a>}
+                meta={f.as_of ? t("record.facts_as_of", { date: day(f.as_of) }) : undefined}
+              />
+            ))}
+          </ul>
+        </Section>
+      )}
       {page.activity.length > 0 && (
         <Section id="record-activity" title={t("record.activity")}>
           <ol className="timeline">

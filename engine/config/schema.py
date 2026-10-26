@@ -3439,12 +3439,12 @@ class MeetingSettings(ConfigModel):
         le=30,
         description="A meeting you set up (an open to-do that names one) counts on Today from this many working days "
         "before its day, not only in its week; on that day it says by when to set it up. Once its invitation is out it "
-        "shows only on its day.",
+        "shows only on its day. A to-do with a lead time of its own uses that instead.",
     )
     setup_words: list[str] = Field(
         default_factory=lambda: ["meeting"],
-        description="Words that mark an open to-do as a meeting you set up: one with any of them in its text gets the "
-        "lead time above.",
+        description="Words that mark an open to-do as a meeting you set up: one with any of them in its text and no "
+        "lead time of its own gets the lead time above.",
     )
     invitation_days_ahead: int = Field(
         14,

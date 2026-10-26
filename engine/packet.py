@@ -254,6 +254,7 @@ def _learned(
     today: date,
     learns: bool = True,
     hide: Callable[[Mapping], bool] | None = None,
+    about: tuple[str, ...] = (),
 ) -> _Learned:
     """What the workspace has learned that applies to this run (design 6.22), and the log of it for the run's record.
     The input's projects are the one it was handed in for and the ones its source names; its people are those the text
@@ -280,6 +281,7 @@ def _learned(
         facts=learns,
         scope_projects=with_ancestors(view, in_input),
         hide=hide,
+        about=about,
     )
     stable_text = "\n\n".join(part for part in (stable.text, seeds.text) if part)
 
@@ -486,6 +488,7 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
         text=f"{question}\n{record_block}",
         today=today,
         learns=request_learns(store, req.data),
+        about=(place[1],) if place else (),
     )
     records = "\n\n".join(
         part
@@ -720,6 +723,7 @@ def _knowledge_reader(store: Store, cfg: Config, kind: TaskKind, req: Stored, ta
             text=text,
             today=today,
             learns=request_learns(store, req.data),
+            about=(target.id,) if target is not None else (),
         )
         return KnowledgeParts(
             KnowledgePart("Standing knowledge", learned.stable, True, section="stable", _given=learned.stable_log),

@@ -283,7 +283,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   multiple of this many minutes after now. Live.
 - `look_back_choices` (30, 90, 365): how many more days further back than a new source's first read the person can ask a mail
   source to look, offered as a list to pick from; each shows its item count and cost first (6.32).
-- `look_back_max_items` (100): the most older messages one look further back asks a mail source for; a look that would find
+- `look_back_max_items` (100): the most older messages one look further back asks a mail source for, the core's own or an
+  add-on's connector that can be asked (it is the `max_items` the connector is given); a look that would find
   more takes the newest and says where the mail it took starts (6.32).
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
   read.

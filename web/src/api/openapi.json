@@ -7981,6 +7981,42 @@
         "title": "Evidence",
         "type": "object"
       },
+      "FactLine": {
+        "description": "A fact recorded about a record, for the record's page: the statement, the day it held as of, and whether it is\none of the facts that matter most.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it was true as of, YYYY-MM-DD.",
+            "title": "As Of"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "default": false,
+            "title": "Key",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "FactLine",
+        "type": "object"
+      },
       "FactSource": {
         "description": "Who a fact rests on and where it came from, for the label in its meta line (never part of copied or published\ntext). `basis` is person (the person said it), said (someone else did: `by`, reported by `reported_by` when another\nperson's input carried it) or inferred (the assistant worked it out, so it feeds the record only until the person\nconfirms it); null for a fact recorded before this was kept.",
         "properties": {
@@ -8255,7 +8291,7 @@
             "type": "string"
           },
           "options": {
-            "description": "For a choice: the values allowed.",
+            "description": "For a choice: the values allowed. For a number: the values to pick from, when it has a known set.",
             "items": {
               "type": "string"
             },
@@ -21032,6 +21068,14 @@
             ],
             "description": "For a fact: who it rests on and where it came from."
           },
+          "facts": {
+            "description": "The facts recorded about this record (a to-do, a question, a person, an organization, a pack's record), key facts first, then the newest.",
+            "items": {
+              "$ref": "#/components/schemas/FactLine"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
           "filed": {
             "anyOf": [
               {
@@ -27905,6 +27949,7 @@
             "default": "due",
             "enum": [
               "due",
+              "lead",
               "setup",
               "hold"
             ],

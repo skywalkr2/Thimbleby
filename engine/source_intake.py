@@ -325,12 +325,31 @@ def _candidates(ws: Any, store: Any, cfg: Any, source: Any, accept: Callable[[di
     return found
 
 
-def can_look_back(source: Any) -> bool:
+def _asker(store: Any, source: Any) -> tuple[Any, type] | None:
+    """How a source is asked for older mail, and the settings model it reads with: a core mail connector that reads
+    older mail, or a plugin's connector that said it can (`older=`). None when the source can't be asked, which is
+    when it is never offered a look further back."""
+    from engine.connectors import CORE, older_mail
+
+    asking = older_mail(source.connector)
+    if asking is not None:
+        return asking, CORE[source.connector].settings
+    plugins = getattr(store, "plugins", None)
+    connector = plugins.connectors().get(source.connector) if plugins is not None else None
+    if connector is None or connector.older is None:
+        return None
+    return plugins.older_mail(connector, source.account), connector.settings
+
+
+def can_look_back(source: Any, store: Any = None) -> bool:
     """Whether the source can be asked for mail older than its first read took: a core mail connector that reads older
-    mail. A source of an add-on can't be asked, so it is never offered a look further back."""
+    mail, or a plugin's connector that declares it can (`store` says which plugins run). Any other source is never
+    offered a look further back."""
     from engine.connectors import older_mail
 
-    return older_mail(source.connector) is not None
+    if older_mail(source.connector) is not None:
+        return True
+    return store is not None and _asker(store, source) is not None
 
 
 def _older_context(ws: Any, cfg: Any, now: datetime) -> Any:
@@ -346,15 +365,17 @@ def _remote_range(store: Any, source_id: str, asked: date, old: date, available:
     return asked, min(old, available) if available is not None else old
 
 
-def _remote_count(ws: Any, cfg: Any, source: Any, since: date, before: date, now: datetime) -> int:
+def _remote_count(ws: Any, store: Any, cfg: Any, source: Any, since: date, before: date, now: datetime) -> int:
     """How many older messages the source would give for these days, within the setting's limit; 0 when it can't be
-    asked or the days are empty. Reads no message."""
-    from engine.connectors import CORE, ConnectorError, older_mail
+    asked or the days are empty. A core mailbox reads no message to say; a plugin's connector that gives no count is
+    read for it."""
+    from engine.connectors import ConnectorError
 
-    asking = older_mail(source.connector)
-    if asking is None or since >= before:
+    asker = _asker(store, source)
+    if asker is None or since >= before:
         return 0
-    settings = CORE[source.connector].settings.model_validate(source.settings)
+    asking, model = asker
+    settings = model.model_validate(source.settings)
     try:
         return asking.count(settings, since, before, cfg.watch.look_back_max_items, _older_context(ws, cfg, now))
     except ConnectorError as err:
@@ -364,12 +385,13 @@ def _remote_count(ws: Any, cfg: Any, source: Any, since: date, before: date, now
 def _fetch_older(ws: Any, store: Any, cfg: Any, source: Any, since: date, before: date, now: datetime) -> int:
     """Ask the source for its older mail of these days, within the setting's limit, and note it the way a first read
     notes what it doesn't hand in. Returns how many messages came."""
-    from engine.connectors import CORE, ConnectorError, Poll, older_mail
+    from engine.connectors import ConnectorError, Poll
 
-    asking = older_mail(source.connector)
-    if asking is None or since >= before:
+    asker = _asker(store, source)
+    if asker is None or since >= before:
         return 0
-    settings = CORE[source.connector].settings.model_validate(source.settings)
+    asking, model = asker
+    settings = model.model_validate(source.settings)
     try:
         items = asking.read(settings, since, before, cfg.watch.look_back_max_items, _older_context(ws, cfg, now))
     except ConnectorError as err:
@@ -416,10 +438,10 @@ def look_back_preview(
     source = _source(cfg, source_id)
     asked, old, _new, available = _plan(store, cfg, source_id, days)
     now = now or datetime.now(UTC)
-    if not can_look_back(source):
+    if not can_look_back(source, store):
         raise StoreError("this source can't be asked for older mail")
     found = _candidates(ws, store, cfg, source, _in_window(asked, old, now))
-    remote = _remote_count(ws, cfg, source, *_remote_range(store, source_id, asked, old, available), now)
+    remote = _remote_count(ws, store, cfg, source, *_remote_range(store, source_id, asked, old, available), now)
     prices = [
         r.data["estimate_usd"]
         for r in store.read().list("request")
@@ -447,7 +469,7 @@ def look_further_back(
     when that is later. The result says so when the source doesn't reach that far."""
     now = now or datetime.now(UTC)
     source = _source(cfg, source_id)
-    if not can_look_back(source):
+    if not can_look_back(source, store):
         raise StoreError("this source can't be asked for older mail")
     with watch._read_lock(ws, source_id):
         asked, old, new, available = _plan(store, cfg, source_id, days)

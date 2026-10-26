@@ -280,6 +280,7 @@ def per_input_section(
     facts: bool = True,
     scope_projects: Iterable[str] | None = None,
     hide: Callable[[Mapping[str, Any]], bool] | None = None,
+    about: Iterable[str] = (),
 ) -> PerInput:
     """The knowledge that depends on the input: rules narrowed to some projects or task kinds that cover it, rules a
     stage check enforces (in full) and rules that moved out of the stable part; lessons for its projects or people;
@@ -289,7 +290,8 @@ def per_input_section(
     fit. With `facts` False (work the core's learning doesn't run on) the facts are left out. Scopes are matched against
     `scope_projects` (the projects and their ancestors; the projects alone when None); facts stay per exact project,
     except a fact marked as reaching the projects inside its own, which goes with them too. A fact `hide` is true for
-    (one made from a message the draft's reader may not see) is never shown."""
+    (one made from a message the draft's reader may not see) is never shown. `about` names the records the run works
+    on: the facts recorded about them (a fact's `about`) go with the projects' facts, under the same budget."""
     project_set, people_set, moved_set = set(projects), set(people), set(moved)
     scoped = set(scope_projects) if scope_projects is not None else project_set
     ids: list[str] = []
@@ -378,7 +380,9 @@ def per_input_section(
     add(HEADINGS["input_glossary"], terms)
 
     fact_text, fact_ids, cut = (
-        _facts_section(view, project_set, text, today, settings.facts_budget, scoped, hide) if facts else ("", [], 0)
+        _facts_section(view, project_set, text, today, settings.facts_budget, scoped, hide, set(about))
+        if facts
+        else ("", [], 0)
     )
     if fact_text:
         sections.append(fact_text)
@@ -394,11 +398,13 @@ def _facts_section(
     budget: int,
     scoped: set[str] | None = None,
     hide: Callable[[Mapping[str, Any]], bool] | None = None,
+    about: set[str] | None = None,
 ) -> tuple[str, list[str], int]:
     """The input's projects' facts that no newer fact replaces, key facts first, then by how many of the input's words
     and ids they share, then newest; cut at `budget` characters with the count of those left out said. A fact of a
     project above them (`scoped` holds the projects and their ancestors) goes too when it is marked as reaching the
-    projects inside it; any other fact of an ancestor stays with that project."""
+    projects inside it; any other fact of an ancestor stays with that project. A fact about one of the records the run
+    works on (`about`) goes with them."""
     facts = view.list("fact")
     replaced = {f.data["supersedes"] for f in facts if f.data.get("supersedes")}
     above = (scoped or projects) - projects
@@ -407,7 +413,11 @@ def _facts_section(
         for f in facts
         if f.id not in replaced
         and not (hide is not None and hide(f.data))
-        and (f.data.get("project") in projects or (f.data.get("project") in above and f.data.get("reaches_children")))
+        and (
+            f.data.get("project") in projects
+            or (f.data.get("project") in above and f.data.get("reaches_children"))
+            or (about and f.data.get("about") in about)
+        )
     ]
     if not mine:
         return "", [], 0
@@ -447,6 +457,6 @@ def _facts_section(
     cut = len(mine) - len(shown)
     lines = [HEADINGS["facts"], *(rendered for _, rendered in shown)]
     if cut:
-        on = "this project" if len(projects) == 1 else "these projects"
+        on = "this work" if about else "this project" if len(projects) == 1 else "these projects"
         lines.append(f"- {cut} more {'fact' if cut == 1 else 'facts'} on {on}; ask to search for them")
     return "\n".join(lines), [f.id for f, _ in shown], cut

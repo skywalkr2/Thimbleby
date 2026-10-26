@@ -280,10 +280,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def person_named() -> None:
         """Work that waited for the workspace to have a person is queued again by itself."""
         from engine.dispatcher import requeue_waiting_for_person
+        from engine.sign_in_sources import start_signed_in
 
         if requeue_waiting_for_person(store):
             events.changed()
             worker.poke()
+        # A mail account signed in before the person was named gets its sent mail read now.
+        try:
+            if start_signed_in(ws, current(), store):
+                worker.read_sources_now()
+                events.changed()
+        except Exception as err:  # the person is named either way; the sources can be started from their sign-in
+            log.warning("Couldn't start the sent-mail sources of sign-ins made earlier: %s", err)
 
     # ---- the person the app is for --------------------------------------------------------------------------------
 

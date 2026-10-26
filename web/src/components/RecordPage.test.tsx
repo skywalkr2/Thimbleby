@@ -331,6 +331,29 @@ test("Save sends only the changed fields with the version that was read, then of
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-9/undo"));
 });
 
+test("a number with a known set of values is a list of days to pick from, and the pick is saved as a number", async () => {
+  const user = userEvent.setup();
+  const leadKind: S["KindView"] = {
+    kind: KIND,
+    fields: [{ name: "lead_days", description: "How many working days before its day the work must start.", type: "number", options: ["0", "1", "2", "3"], required: false, editable: true }],
+  };
+  const calls = fakeApi(
+    editRoutes({
+      [`GET kinds/${KIND}`]: () => leadKind,
+      [`GET record?${on}`]: () => ({ kind: KIND, id: ID, version: 4, fields: { id: ID, title: "The harbor", lead_days: 2 }, long_text: [] }),
+      "POST records/edit": () => ({ changeset: "CS-9" }),
+    }),
+  );
+  const form = await openForm(user);
+  const lead = within(form).getByRole("combobox", { name: "Lead days" });
+  expect(lead).toHaveValue("2");
+  expect(within(lead).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "0", "1", "2", "3"]);
+  expect(within(form).queryByRole("spinbutton")).toBeNull();
+  await user.selectOptions(lead, "3");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: KIND, id: ID, read_version: 4, fields: { lead_days: 3 } }));
+});
+
 test("a refusal shows the server's words and keeps the form open with what was typed", async () => {
   const user = userEvent.setup();
   fakeApi(editRoutes({ "POST records/edit": () => new Refuse(409, "This record changed after you opened it.") }));

@@ -22,9 +22,10 @@ from engine.today import AgendaItem, agenda, zone
 @dataclass
 class Due:
     """An open to-do due from today through the week's end (or overdue), with its owners' ids and whether it is the
-    person's own. A meeting to set up is also counted from `steward.meetings.setup_lead_working_days` working days
-    before its day (`kind` "setup" when that day is past the week's end); one whose invitation is out is counted only
-    on its day (`kind` "hold")."""
+    person's own. A to-do with a lead time (`lead_days`: the working days before its day when the work must start) is
+    also counted from that many working days before its day (`kind` "lead" when that day is past the week's end, "setup"
+    for a meeting to set up). A meeting to set up with no lead time of its own takes `steward.meetings.
+    setup_lead_working_days`; one whose invitation is out is counted only on its day (`kind` "hold")."""
 
     action: str
     text: str
@@ -32,7 +33,9 @@ class Due:
     project: str | None
     owners: list[str]
     mine: bool
-    kind: str = "due"  # "due" (by the week's end), "setup" (a meeting counted ahead by its lead time) or "hold"
+    #: "due" (by the week's end), "lead" (a to-do counted ahead by its lead time), "setup" (a meeting counted ahead) or
+    #: "hold"
+    kind: str = "due"
 
 
 @dataclass
@@ -73,8 +76,17 @@ def invitation_out(data: dict[str, Any]) -> bool:
     return bool(data.get("told") or data.get("event"))
 
 
-def lead_start(cfg: Any, day: date) -> date:
-    """The day `steward.meetings.setup_lead_working_days` working days before `day`."""
+def lead_of(cfg: Any, data: dict[str, Any]) -> int:
+    """The working days before its day that an open to-do's work must start: its own `lead_days`; with none, a meeting
+    the person sets up (its text has a setup word) takes the setting's default, and any other to-do has none."""
+    own = data.get("lead_days")
+    if own is not None:
+        return int(own)
+    return cfg.steward.meetings.setup_lead_working_days if is_meeting_to_set_up(cfg, data) else 0
+
+
+def lead_start(cfg: Any, day: date, lead: int) -> date:
+    """The day `lead` working days before `day`."""
     first = WEEKDAYS.index(cfg.steward.reminders.working_first_day)
     last = WEEKDAYS.index(cfg.steward.reminders.working_last_day)
 
@@ -82,7 +94,7 @@ def lead_start(cfg: Any, day: date) -> date:
         return (d.weekday() - first) % 7 <= (last - first) % 7
 
     back = day
-    left = cfg.steward.meetings.setup_lead_working_days
+    left = lead
     for _ in range(366):
         if left <= 0:
             break
@@ -110,11 +122,12 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
         mine = pm is not None and pm in owners
         kind = "due"
         counted = day is not None and today <= day <= last
-        if day is not None and is_meeting_to_set_up(cfg, d):
-            if invitation_out(d):
-                counted, kind = day == today, "hold"
-            elif day > last and lead_start(cfg, day) <= today:
-                counted, kind = True, "setup"
+        meeting = is_meeting_to_set_up(cfg, d)
+        lead = lead_of(cfg, d)
+        if day is not None and meeting and invitation_out(d):
+            counted, kind = day == today, "hold"
+        elif day is not None and lead > 0 and day > last and lead_start(cfg, day, lead) <= today:
+            counted, kind = True, "setup" if meeting else "lead"
         if counted:
             due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine, kind))
         if not mine or (day is not None and day > last):

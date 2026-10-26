@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: An add-on's sign-in names its sent mail, an add-on's source can look further back, any to-do has a lead time, any record has facts (plugin API release, part A2)
+
+**Decided:** The second part of the one batched plugin API release. (1) A source a sign-in declares may be marked `sent`: the
+account's sent mail, credited to the person, started with the account's other sources and once the person is known, so
+reading sent mail for promises needs no button for add-on accounts either. (2) A plugin's connector may declare `older=` (and
+`older_count=`), which offers "Look further back" for its sources, asked within `watch.look_back_max_items`, estimated and held
+for the go like the core mailbox's. (3) A to-do has `lead_days`, the working days before its day when the work must start;
+Today counts it from then, and the setup words rule is only the default for a meeting with the field empty; the person sets
+it on the to-do's page from a list of days, and the assistant has no op for it. (4) A fact has `about`, the id of any record,
+so a to-do, a question, a person, an organization or a pack's record has a place for facts, shown on its page and read by a
+run working on it. Not decided here: a manifest entry for `older` or `sent` (the registration says it, like `reads` did at
+first), and setting `lead_days` by the assistant from an input.
+**Decided by:** the owner, 2026-10-26, the one batched plugin API release; the functional designer, lessons 4 and 5.
+**Why:** the owner's first real use found a Google account's sent mail unread without a button nobody could find, and older mail
+unreachable for add-on sources; lesson 4 said a lead time tied to the word "meeting" is tied to one language; lesson 5 said facts
+about a bare to-do or a pack's record had nowhere to live. **Impact:** design 3.3, 3.12, 5.1, 6.32, 6.33 and 7.14; plugin API
+0.3.90 (version and guide finished once for the release); a new field on `action` and on `fact`, a `sent` flag on a declared
+source, two connector arguments, a pick list for a number with a known set; no new setting. Change log: section 222.
 ## 2026-10-26: The install and setup answers of the batched plugin API release (P2, answers 173, 183, 185, 219, 172, 184, 186, 206)
 
 **Decided:** The answers promised to a pack's builder in `docs/project/plugin-answers-34-48.md` for install, setup and the guide

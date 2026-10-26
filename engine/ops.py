@@ -139,6 +139,12 @@ class FactOp(OpModel):
     series: Annotated[str | None, RefTo("series")] = Field(
         None, description="The series of a repeating meeting it is for; it sits on the next instance."
     )
+    about: str | None = Field(
+        None,
+        description="The id of the record the fact is about, when it is about one to-do, question, person, "
+        "organization or other record listed in the material (a fact about a project goes in `project`). The record's "
+        "page shows the fact and a run working on that record reads it. An id that names no record is refused.",
+    )
     reaches_children: bool = Field(
         False,
         description="True only for a fact about a project that holds for every project inside it too (a fact about a "

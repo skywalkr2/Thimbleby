@@ -3,6 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
+import { day } from "../lib/dates";
 import { useShortcuts } from "../lib/keys";
 import { showNewLines } from "../lib/queue-hold";
 import { RestartProvider } from "../lib/restart";
@@ -849,6 +850,21 @@ test("This week is a panel of the rail with what is due, who is waiting and whic
   expect(within(panel).getByText("Robin Sample · 2 things")).toBeInTheDocument();
   expect(within(panel).getByText("Print sync")).toBeInTheDocument();
   expect(document.querySelector("[data-week='section']")).toBeNull();
+});
+
+test("a to-do counted ahead by its own lead time is named with the day it must be started by", async () => {
+  // On a narrow screen the week is folded and says in one line what is in it.
+  document.documentElement.setAttribute("data-narrow", "");
+  const week: S["ThisWeekView"] = {
+    ...busyWeek,
+    due: [{ action: "ACT-2", text: "Prepare the board pack", due: "2026-10-26", project: null, project_name: null, owners: [], mine: true, kind: "lead" }],
+  };
+  try {
+    show([decision], { "GET today/week": () => week });
+    expect(await screen.findByText(`· Start 1 to-do by ${day("2026-10-26")} · 1 person waiting on you · 1 meeting`)).toBeInTheDocument();
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
 });
 
 test("This week is not counted in the heading or the menu", async () => {

@@ -634,9 +634,10 @@ class PacketContext(ReadView):
         `text` is the words that decide which terms and facts apply (a chapter's text, say); it is only read, never
         sent. The run's projects are the request's project and the one the record is in; `projects` adds others. A
         rule or lesson whose scope excludes every one of them is left out, and lessons and rules aimed at this task
-        kind (by its `<plugin>/<name>`) reach it. For work declared `learning` "own" (a task kind, or the record type
-        it works on), facts are left out and no names are matched against people. A packet that never calls this gets
-        nothing new."""
+        kind (by its `<plugin>/<name>`) reach it. The facts include those recorded about the record the work is on (a
+        fact's `about`, which any record can have, a pack's own included). For work declared `learning` "own" (a task
+        kind, or the record type it works on), facts are left out and no names are matched against people. A packet
+        that never calls this gets nothing new."""
         if not isinstance(text, str):
             raise PluginMisuse("the text knowledge is chosen by must be a string")
         named = list(projects) if isinstance(projects, (list, tuple)) else None
@@ -1861,6 +1862,8 @@ class Registrar:
         settings: type[BaseModel],
         poll: Callable,
         reads: Literal["mail", "calendar"] | None = None,
+        older: Callable | None = None,
+        older_count: Callable | None = None,
     ) -> None:
         """A place the assistant can keep reading (listed in `provides.connectors`). A workspace watches it by naming
         it in `watch.yaml` with its settings, which `settings` (a pydantic model) checks. `poll(settings, state,
@@ -1892,17 +1895,42 @@ class Registrar:
         add-on as a mail or calendar service, also before it is installed. Say it in the manifest too, as
         `provides.connector_reads: {<connector>: mail}`, which the registration must match. A connector that says
         nothing is told apart by its name (mail, mailbox, email or inbox; calendar), and the app logs that it
-        should say so."""
+        should say so.
+
+        **Older items (a look further back):** a connector that can read items older than its first read took
+        passes `older=fn`, with `fn(settings, since, before, max_items, context) -> list[SourceItem]`: the newest
+        `max_items` items dated from the day `since` up to, not including, the day `before` (both are dates; each
+        item carries its date as the poll's items do), as a poll's items are, with the same keys, so an item a
+        poll already returned is the same item. Only then is "Look further back" offered for a source of the
+        connector, on the source's menu: the person picks how many days, the core shows how many items and about what
+        reading them costs, holds the work for the person's go like any other AI work, and never asks for more than
+        `watch.look_back_max_items` (it is `max_items`); an answer of fewer says the service holds nothing older. The
+        function runs with the source's own settings and account, reads only, and a failure is contained like a
+        poll's (`ConnectorError` kinds pass through). `older_count=fn`, with the same arguments, returns how many
+        items there are (at most `max_items`) without reading them, so the estimate costs no more than a count; left
+        out, the estimate calls `older` and counts what comes back."""
         self._name(name)
         if name in self.connectors or not callable(poll):
             raise ValueError("duplicate connector or invalid poll function")
+        if (older is not None and not callable(older)) or (older_count is not None and not callable(older_count)):
+            raise ValueError("older and older_count are functions")
+        if older_count is not None and older is None:
+            raise ValueError("older_count goes with older")
         if reads not in (None, "mail", "calendar"):
             raise ValueError("a connector reads mail or a calendar, or says nothing")
         if not isinstance(settings, type) or not issubclass(settings, BaseModel):
             raise ValueError("a connector's settings are a pydantic model")
         from engine.connectors import Connector
 
-        self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll, reads=reads)
+        self.connectors[name] = Connector(
+            name,
+            " ".join(str(label).split()) or name,
+            settings,
+            poll,
+            reads=reads,
+            older=older,
+            older_count=older_count,
+        )
 
     def channel(
         self,
@@ -2096,7 +2124,15 @@ class Registrar:
         "settings": {...}, "every_minutes": 15}` (settings checked against the connector's, defaults filling the
         rest). Each is added once per sign-in, and only when the workspace reads nothing with that connector yet; a
         source the person later removes or changes stays as they left it. Choose settings that read something
-        useful with no further choice (the inbox, the main calendar); the person narrows them later."""
+        useful with no further choice (the inbox, the main calendar); the person narrows them later.
+
+        **The account's sent mail:** a source declared with `"sent": True` reads the folder or label the service
+        keeps the person's own sent mail in (name it in the source's `settings`, as the connector's settings take it;
+        it is the same connector as the inbox). The core starts it with the others, credits it to the person (what it
+        holds is their own mail, so the promises they made in it are found and a reply they sent ends the one they
+        owed), and shows no button for it. It is started once the workspace knows who the person is, so a sign-in made
+        before that gets it then. Each account gets its own; one the person removed isn't brought back by a new
+        sign-in, and "Start reading" brings it back."""
         self._name(name)
         if name in self.sign_ins or not str(label).strip() or not scopes:
             raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
@@ -2130,8 +2166,14 @@ class Registrar:
             raise ValueError("a sign-in's acting_scopes are words")
         started = []
         for source in sources:
-            if not isinstance(source, dict) or not set(source) <= {"connector", "label", "settings", "every_minutes"}:
-                raise ValueError("each of sources is {connector, label, settings, every_minutes}")
+            if not isinstance(source, dict) or not set(source) <= {
+                "connector",
+                "label",
+                "settings",
+                "every_minutes",
+                "sent",
+            }:
+                raise ValueError("each of sources is {connector, label, settings, every_minutes, sent}")
             connector, title = source.get("connector"), str(source.get("label") or "").strip()
             if not isinstance(connector, str) or not connector.startswith(self.name + "/") or not title:
                 raise ValueError("each of sources names one of this plugin's connectors and a label")
@@ -2140,12 +2182,15 @@ class Registrar:
                 raise ValueError("a source's every_minutes is a whole number from 1 to 1440")
             if not isinstance(source.get("settings", {}), dict):
                 raise ValueError("a source's settings are a mapping")
+            if not isinstance(source.get("sent", False), bool):
+                raise ValueError("a source's sent is true or false")
             started.append(
                 {
                     "connector": connector,
                     "label": title,
                     "settings": dict(source.get("settings", {})),
                     "every_minutes": every,
+                    "sent": bool(source.get("sent", False)),
                 }
             )
         from engine.sign_in import SignIn

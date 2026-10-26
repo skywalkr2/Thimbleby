@@ -73,6 +73,23 @@ Part B3 (install, setup, tiers and the guide's corrections):
   a model validator, because the forms build the model with no values; and the request record says a request waiting for the
   go is `needs_you` with approval `required`.
 
+- **The account's sent mail (`registrar.sign_in`):** a declared source may carry `"sent": True` beside `connector`, `label`,
+  `settings` and `every_minutes`. It reads the folder or label the service keeps the person's own sent mail in (named in
+  `settings`; the same connector as the inbox). The core starts it with the account's other sources, once for each account,
+  credited to the person (so the promises they made in sent mail are found and a reply they sent ends the one they owed),
+  with no button; it waits until the workspace knows who the person is. A removed one comes back only through "Start reading".
+- **Older items (`registrar.connector(older=, older_count=)`):** `older(settings, since, before, max_items, context) ->
+  list[SourceItem]` returns the newest `max_items` items dated from `since` up to `before`, with the same keys a poll uses;
+  `older_count(...)` optionally returns how many (at most `max_items`) without reading them. A connector that passes `older`
+  is offered "Look further back" for its sources; the core asks as the source's account, within `watch.look_back_max_items`,
+  estimates and holds the work for the person's go, and contains a failure like a poll's. No manifest entry.
+- **Facts about any record:** the core's `fact` record and the `fact` op have `about`, the id of any record (a pack's own
+  included), checked to exist and fixed once made. The record's page lists the facts about it, and `view.knowledge` includes
+  the facts about the record the work is on.
+- **Lead time on any to-do:** the core's `action` record has `lead_days` (0 to 30): the working days before its day when the
+  work must start. This week counts the to-do from then; a meeting to set up with the field empty takes
+  `steward.meetings.setup_lead_working_days`. It is the person's own edit (`record.edit`); `record.set` doesn't offer it.
+
 ## What 0.3.89 adds
 
 - `context.web` (connectors and channels) also has `.put`, `.patch` and `.delete`, with the same host limits, errors

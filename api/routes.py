@@ -389,6 +389,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if name == "ext":
                 continue
             value_type, options = _field_type(info.annotation)
+            extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+            if value_type == "number" and isinstance(extra.get("choices"), (list, tuple)):
+                # A number with a known set of values is a list to pick from.
+                options = [str(v) for v in extra["choices"]]
             if name in texts:
                 value_type = "long_text"
             elif name in refs:

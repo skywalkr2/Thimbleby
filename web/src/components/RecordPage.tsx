@@ -436,7 +436,7 @@ function DetailInput(props: {
       </>
     );
   }
-  if (f.type === "choice") {
+  if (f.type === "choice" || (f.type === "number" && (f.options ?? []).length > 0)) {
     const options = (f.options ?? []).map((o) => ({ value: o, label: o }));
     control = (
       <select id={id} value={text} required={required} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)}>
