@@ -456,8 +456,9 @@ test.describe.serial("acceptance scenario", () => {
     await row.getByRole("button", { name: "Show source" }).first().click();
     await expect(row.locator("mark").first()).toBeVisible();
     await checkAccessibility(page);
-    // What changed is the history, so the choice is in the detail's menu; the button is on Today's review line.
-    await row.getByRole("button", { name: /^More actions for/ }).click();
+    // What changed is the history, so the choice is in the menu of the change itself (the first menu of its detail, ahead of
+    // those of the items it made); the button is on Today's review line.
+    await row.getByRole("button", { name: /^More actions for/ }).first().click();
     await page.getByRole("menuitem", { name: "Looks good" }).click();
     await expect(page.getByText("Reviewed and filed.")).toBeVisible();
 

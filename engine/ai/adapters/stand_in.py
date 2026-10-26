@@ -99,7 +99,7 @@ def answer(request: str, stable: str) -> dict[str, Any]:
     """An answer quoting the first sentence of the first guide passage chosen for the question."""
     guide = request.split("# From the user guide", 1)[1] if "# From the user guide" in request else ""
     guide = guide.split("<question>", 1)[0]
-    section = re.search(r"^## (?P<title>.+)\n(?P<text>.+?)(?=\n## |\Z)", guide.strip(), re.S | re.M)
+    section = re.search(r"^## (?P<title>[^\n]+)\n(?P<text>.+?)(?=\n## |\Z)", guide.strip(), re.S | re.M)
     if section:
         first = re.split(r"(?<=[.!?])\s", " ".join(section.group("text").split()), maxsplit=1)[0]
         return {

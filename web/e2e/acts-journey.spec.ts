@@ -90,7 +90,8 @@ test.describe("mail and calendar acts", () => {
     await dialog.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByText(`Sent the reply to ${first.reply.sender}.`)).toBeVisible();
-    await expect(page.getByText("Nothing is waiting to go out.")).toBeVisible();
+    // Nothing waits any more, so the part of To send that lists what waits is gone, and what went out is listed below.
+    await expect(page.getByRole("list", { name: "Waiting to go out" })).toHaveCount(0);
     await expect(wentOut(page)).toHaveCount(1);
     await expect(wentOut(page)).toContainText("Sent");
 

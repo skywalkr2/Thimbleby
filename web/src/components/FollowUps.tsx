@@ -125,7 +125,14 @@ export function FollowUps(props: { compact?: boolean }) {
   // What waits to go out is the first part of To send, ahead of the messages: one list, one detail.
   const acts = useWaitingActs();
   const actRows = !compact && !byProject && filter === "send" ? (acts.data ?? []) : [];
-  const choice = useListChoice({ keys: [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)], beside, reset: `${group}|${filter}|${side.choice}` });
+  // What waits to go out leads the list, so no row is chosen as the first until it has been read: the messages below may be
+  // here sooner, and the first row would then be one of them.
+  const actsComing = !compact && !byProject && filter === "send" && acts.isPending;
+  const choice = useListChoice({
+    keys: actsComing ? [] : [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)],
+    beside,
+    reset: `${group}|${filter}|${side.choice}`,
+  });
   useEffect(() => {
     if (!picked) return;
     if (picked.enter) choice.enter(picked.key);

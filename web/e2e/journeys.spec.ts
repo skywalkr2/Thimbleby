@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, connectedAgain, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
+import { collectProblems, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
@@ -203,11 +203,16 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("listitem", { name: "A folder" })).toBeVisible();
     await visit(page);
 
-    // Came in has Check now. The first read only notes what is there, so nothing is handed in yet.
-    await page.getByRole("link", { name: /^Today/ }).first().click();
+    // The connection's own menu has Read now: Today's Came in card is drawn only when mail arrived, so an empty folder has no
+    // Check now there. The first read only notes what is there, so nothing is handed in yet.
+    const folder = page.getByRole("listitem", { name: "A folder" });
+    const readNow = async () => {
+      await folder.getByRole("button", { name: /^More actions for / }).click();
+      await page.getByRole("menuitem", { name: "Read now" }).click();
+    };
     const before = await requests();
-    await page.getByRole("button", { name: "Check now" }).click();
-    await expect(page.getByText(/^Checked /).last()).toBeVisible();
+    await readNow();
+    await expect(page.getByText(/^A folder: /).last()).toBeVisible();
     await visit(page);
     expect(await requests()).toEqual(before);
 
@@ -217,7 +222,9 @@ test.describe.serial("journeys", () => {
       body: JSON.stringify({ text: "I will book the venue by 2026-11-05.\nWe need a printed agenda.\n" }),
     });
     expect(put.ok).toBe(true);
-    await page.getByRole("button", { name: "Check now" }).click();
+    await dismissToasts(page);
+    await readNow();
+    await page.getByRole("link", { name: /^Today/ }).first().click();
     await expect(page.getByText("Book the venue by 2026-11-05.").first()).toBeVisible({ timeout: 20_000 });
     expect((await requests()).work).toBe(before.work + 1);
     // The item that arrived is on What changed, named for the file.

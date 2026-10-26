@@ -94,7 +94,7 @@ test("the workspace name goes to Today from any screen", async () => {
   await user.click(await within(await screen.findByRole("navigation", { name: "Settings sections" })).findByRole("link", { name: "Connections" }));
   expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
-  expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
 });
 
 const quiet = {

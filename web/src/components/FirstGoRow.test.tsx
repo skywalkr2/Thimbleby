@@ -84,7 +84,10 @@ test("no line shows when nothing waits for the first go, and a run held for its 
   });
   renderApp(<WhatChanged />);
   const row = await screen.findByRole("listitem", { name: "Item REQ-9" });
-  expect(within(row).getByRole("button", { name: "Start" })).toBeInTheDocument();
+  // What changed is a history: the row has no button, and Start is the first entry of its menu.
+  expect(within(row).queryByRole("button", { name: "Start" })).toBeNull();
+  await userEvent.setup().click(within(row).getByRole("button", { name: /More actions for/ }));
+  expect(await screen.findByRole("menuitem", { name: "Start" })).toBeInTheDocument();
   expect(screen.queryByText(/Start the assistant/)).toBeNull();
 });
 

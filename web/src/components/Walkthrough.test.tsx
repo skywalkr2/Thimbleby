@@ -570,8 +570,10 @@ describe("a way back to the step", () => {
     const user = userEvent.setup();
     started("mail");
     renderApp(<App rc={rcFixture()} />);
+    // Today's own heading is on the page until the walkthrough has loaded, so the step is waited for first.
+    const connect = await screen.findByRole("button", { name: "Connect one" });
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
-    await user.click(await screen.findByRole("button", { name: "Connect one" }));
+    await user.click(connect);
     const back = await screen.findByRole("button", { name: "Back to setup" });
     await user.click(back);
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");

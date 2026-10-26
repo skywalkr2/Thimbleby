@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
+import { actFixture } from "../lib/acts-fixtures";
 import { nextMonday } from "../lib/dates";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
@@ -211,6 +212,21 @@ test("the person's own to-dos are links to To-dos and questions, where Mark done
   expect(within(row).queryByRole("button", { name: "Mark done" })).toBeNull();
   expect(within(row).queryByRole("button", { name: /More actions/ })).toBeNull();
   expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
+});
+
+test("what waits to go out is the first row chosen even when the messages are here before it", async () => {
+  fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    // The server answers for the acts later than for the messages.
+    "GET acts": async () => {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      return { acts: [actFixture()] };
+    },
+  });
+  renderApp(<FollowUps />);
+  expect(await screen.findByRole("complementary", { name: "Message to Ana Example" })).toBeInTheDocument();
+  expect(screen.queryByRole("complementary", { name: "You" })).toBeNull();
 });
 
 test("Copy on a closed card opens the message first and copies nothing, with the cursor in the message", async () => {

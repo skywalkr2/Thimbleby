@@ -583,7 +583,12 @@ def test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_n
 def anytime(tmp_path):
     """The app with no hours held back, so a line is on Today whatever time the test runs."""
     ws = init_workspace(tmp_path / "ws", git=False, you="Pat Example")
-    flags = {"server.base_path": "/", "storage.backups.automatic": False, "steward.hold_outside_hours": False}
+    flags = {
+        "server.base_path": "/",
+        "storage.backups.automatic": False,
+        "steward.hold_outside_hours": False,
+        "steward.attention.quiet": False,
+    }
     app = create_app(ws, ws.config(env={}, flags=flags), TOKEN, ui_dist=tmp_path / "no-ui")
     with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
         yield client, ws, app.state.store

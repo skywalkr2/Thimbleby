@@ -2,7 +2,6 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, besidePane, fakeApi, renderApp } from "../test-utils";
-import { FollowUps } from "./FollowUps";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
 import { WhatChanged } from "./WhatChanged";
@@ -255,39 +254,28 @@ test("go on a request that no longer waits just opens it", async () => {
   expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
 });
 
-test("answer opens the question where the questions list shows it", async () => {
+test("answer asks for the question's line where Today's queue holds it, and opens no record then", async () => {
+  // A question is answered on Today's queue line and nowhere else (design 7.7), so the list that handles the request is
+  // Today's; Follow-ups only links there.
   const user = userEvent.setup();
-  besidePane();
   const open = vi.fn();
-  const sections: S["FollowupSection"][] = [
-    {
-      person: "PER-1",
-      name: "Pat Example",
-      is_pm: true,
-      questions: [
-        { id: "Q-5", title: "Which cover?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
-      ],
-      actions: [],
-      message: "",
-      to_send: 0,
-    },
-  ];
-  fakeApi({
-    "GET plugin-today": () => [core("answer", { kind: "question", id: "Q-5" })],
-    "GET followups": () => sections,
-    "GET people": () => [],
-  });
-  renderApp(
-    <>
-      <FollowUps />
-      <PluginToday onOpenRecord={open} />
-    </>,
-  );
-  await screen.findByText("Which cover?");
-  const lineRow = screen.getByRole("listitem", { name: "Chapter 3 is ready to look at" });
-  await user.click(within(lineRow).getByRole("button", { name: "Answer" }));
-  await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
-  expect(open).not.toHaveBeenCalled();
+  const asked: Array<{ type: string; id: string }> = [];
+  const listen = (event: Event) => {
+    const detail = (event as CustomEvent<{ type: string; id: string }>).detail;
+    asked.push(detail);
+    if (detail.type === "question") event.preventDefault();
+  };
+  window.addEventListener("reveal-row", listen);
+  try {
+    fakeApi({ "GET plugin-today": () => [core("answer", { kind: "question", id: "Q-5" })] });
+    renderApp(<PluginToday onOpenRecord={open} />);
+    const lineRow = await screen.findByRole("listitem", { name: "Chapter 3 is ready to look at" });
+    await user.click(within(lineRow).getByRole("button", { name: "Answer" }));
+    expect(asked).toContainEqual({ type: "question", id: "Q-5" });
+    expect(open).not.toHaveBeenCalled();
+  } finally {
+    window.removeEventListener("reveal-row", listen);
+  }
 });
 
 test("answer falls back to the record when no list shows the question", async () => {
