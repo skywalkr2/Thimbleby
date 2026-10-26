@@ -18,6 +18,7 @@ People say "panel", "page", "screen", "tab" or "view" for the same thing: a scre
 - To-dos and questions: every open to-do and every open question, with owners and dates.
 - Waiting to go out: messages, pages and files that wait for your approval of exactly what will go.
 - Stages: work that moves through steps, the checks to pass at each step and where each item stands.
+- Personal: your own life: the to-dos, questions, notes and people that aren't work, grouped into areas such as home or health. With a job or a business, each one has its own entry beside it.
 - Projects: your projects, each with its to-dos, questions, notes and people.
 - People: the people the assistant knows, who they are to you and what they own.
 - Files: the files you added and the ones add-ons made, and the actions they offer.

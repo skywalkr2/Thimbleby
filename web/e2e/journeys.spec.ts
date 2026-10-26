@@ -170,8 +170,8 @@ test.describe.serial("journeys", () => {
     expect((await requests()).work).toBe(1);
     await visit(page);
 
-    // Opened, the review lists what the assistant did, with my name on the action it filed from my own words; the one
-    // with no owner asks who it belongs to, and the hand-in did not stop anywhere.
+    // Opened, the review lists what the assistant did, with my name on the action it filed from my own words, and the
+    // hand-in did not stop anywhere.
     await review.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Look closer" }).click();
     await expect(review.getByText("Added a to-do").first()).toBeVisible();
@@ -179,7 +179,8 @@ test.describe.serial("journeys", () => {
     // A new workspace files what it can't place under Personal, so the line ends with that side's name.
     await expect(review.getByText(new RegExp(`^${info.people[0]} · due [^·]+ · Personal$`))).toBeVisible();
     await expect(review.locator("[data-promise-line]").first()).toContainText(new RegExp(`${info.people[0]} · due`));
-    await expect(review.getByText("Who owns this?")).toBeVisible();
+    // On the Personal side a to-do that names nobody is my own, so nothing asks who owns it.
+    await expect(review.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
   });

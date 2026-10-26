@@ -229,12 +229,14 @@ test.describe.serial("journey: mail", () => {
     if (await showNew.count()) await showNew.click();
     await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
     for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);
-    // My own words filed my action; what has no owner asks who it belongs to.
+    // My own words filed my action.
     await expect(page.getByRole("region", { name: "Your to-dos" })).toContainText("Send the venue list by 2026-11-02.");
     const catering = reviews.filter({ hasText: mail.find((title) => /quote/i.test(title)) ?? "" });
     await catering.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Look closer" }).click();
-    await expect(catering.getByText("Who owns this?").first()).toBeVisible();
+    // Filed under Personal, a to-do that names nobody is my own, so nothing asks who owns it.
+    await expect(catering.getByText("Added a to-do").first()).toBeVisible();
+    await expect(catering.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
     expect((await requests()).work).toBe(handedIn);

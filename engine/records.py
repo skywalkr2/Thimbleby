@@ -2633,7 +2633,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("project", "project"),
     ],
     "standing_yes": [("person", "person")],
-    "person": [("team", "team"), ("org", "organization")],
+    "person": [("team", "team"), ("org", "organization"), ("sides[]", "project")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],
     "action": [
