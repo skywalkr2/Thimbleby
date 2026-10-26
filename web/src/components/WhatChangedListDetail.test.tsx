@@ -122,6 +122,8 @@ describe("beside the list", () => {
     // Closed, the choice does not follow the cursor, and Enter chooses the line again.
     await user.keyboard("{ArrowDown}");
     expect(screen.queryByRole("complementary")).toBeNull();
+    // The cursor moves a moment after the key: wait for it to be on the line before Enter acts on it.
+    await waitFor(async () => expect(await line("Third thing")).toHaveFocus());
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("complementary", { name: "Third thing" })).toBeInTheDocument();
   });

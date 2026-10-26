@@ -1,10 +1,11 @@
 // A drawer from the right (design 7.12, 7.13): for forms and hand-in, so the list stays visible. It has a sticky footer for
 // its actions, closes with Esc, and when it holds unsaved text (`dirty`) Esc or a click outside asks first instead of
 // losing it. Focus returns to what opened it when it closes.
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { useCursorRef } from "../lib/cursor";
 import { useWords } from "../lib/wording";
+import { restoreFocus } from "../components/ModalPanel";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
 import styles from "./Drawer.module.css";
@@ -27,6 +28,29 @@ export function Drawer(props: {
   const titleId = useId();
   // The cursor starts in the drawer's first field, or on its heading when it has none (design 7.0).
   const cursor = useCursorRef(titleId);
+  // Remember what opened the drawer and give it focus back once the drawer has gone. If the opener was re-rendered in the
+  // meantime (a new element), the control with the same name takes focus instead.
+  // It is read while rendering, before any field inside takes focus.
+  const openerRef = useRef<HTMLElement | null>(null);
+  if (props.open && !openerRef.current && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+    openerRef.current = document.activeElement;
+  }
+  useEffect(() => {
+    if (!props.open) return;
+    const opener = openerRef.current;
+    const name = opener?.getAttribute("aria-label") || opener?.textContent?.trim() || "";
+    return () => {
+      openerRef.current = null;
+      if (!opener || opener === document.body) return;
+      restoreFocus(() => {
+        if (opener.isConnected) return opener;
+        const same = Array.from(document.querySelectorAll<HTMLElement>("button, a, [role=button]")).filter(
+          (el) => name && (el.getAttribute("aria-label") || el.textContent?.trim()) === name,
+        );
+        return same[0] ?? null;
+      });
+    };
+  }, [props.open]);
   const close = () => {
     setGuarding(false);
     props.onClose();

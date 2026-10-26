@@ -440,9 +440,5 @@ def test_the_effort_cases_of_both_workspaces_pass_on_their_stub_answers():
     from tests.conftest import DEMO_A
 
     for template in (DEMO_A, DEMO_B):
-        results = [
-            r
-            for r in evaluate(template, stub=True, runs=1, env={}).results
-            if r.case == "effort-stated-for-an-open-todo"
-        ]
+        results = evaluate(template, stub=True, runs=1, env={}, only=["effort-stated-for-an-open-todo"]).results
         assert results and all(r.passed and not r.missing and not r.forbidden for r in results), results
