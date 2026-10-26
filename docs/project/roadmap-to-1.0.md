@@ -44,8 +44,10 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
      `includes:`) and the small fix-batch leftovers (P36, P44, P49).
   3. The rest of phase U: each item once on Today and one place to act (F6, C57, the reviewer's section 4), the
      Settings cut with B-11b's screens folded in (F8, U12), day mode (F7), the P1 and P2 findings, the U checks.
-  4. Every kind of AI account hardened (B-11c, gate I-0a), checked on a low-cost model first, then the owner's re-run.
-  5. The UI/UX reviewer's second pass with both personas; the writer walk-through (P70) once the writing pack has screens.
+  4. The UI/UX reviewer's second pass with both personas (fresh captures, the six judgement calls on P69), and every
+     fix it brings built before this step counts as done (owner, 2026-10-26: "we should do 7 before 6 and then any fix
+     that comes from that before 7 is finally done"); the writer walk-through (P70) once the writing pack has screens.
+  5. Every kind of AI account hardened (B-11c, gate I-0a), checked on a low-cost model first, then the owner's re-run.
   6. The owner's part: the laptop and phone exit checks (B-6a, B-6b), an add-on installed from a real private release
      host (B-5), the gate week with its pass bar (P65), the AI re-run (B-10, O3).
   7. Phase S's small "Left:" items that the gate week shows matter; the rest stay listed where they are.
