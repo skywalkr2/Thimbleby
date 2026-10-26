@@ -17,12 +17,23 @@ from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from engine.ai.adapters import make_adapter
+from engine.ai.presets import suggest_models
 from engine.ai.smoke import SmokeResult, smoke_test, where_of
-from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN
+from engine.ai.task import RETIRED_PLAIN, UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN, ModelInfo
 from engine.config import Config
 from engine.config.schema import ProviderSettings, TierSettings
 
-Reason = Literal["works", "key_missing", "key_refused", "no_credit", "unreachable", "wait", "not_signed_in", "failed"]
+Reason = Literal[
+    "works",
+    "key_missing",
+    "key_refused",
+    "no_credit",
+    "unreachable",
+    "wait",
+    "not_signed_in",
+    "model_retired",
+    "failed",
+]
 
 #: The name the account has inside the copy of the settings the check runs on.
 CHECKED = "checked"
@@ -35,6 +46,8 @@ class KeyCheck:
     message: str  # in words that fit the kind of account; "" when it works
     identity: str | None = None  # the sign-in it runs as, when the check found it
     identity_unknown: str | None = None  # why that can't be told, in plain words, when it can't
+    model: str | None = None  # for model_retired: the id of the model the service no longer offers
+    next_model: str | None = None  # for model_retired: the id of the next model that fits, when the listing has one
 
 
 #: What a failure means for an account reached with a key, by the kind the call itself gave.
@@ -79,6 +92,8 @@ def check_account(
     use: Mapping[str, str] | None = None,
     adapter_factory: Callable[[str, Any, str | None], Any] = make_adapter,
     store: Any = None,
+    listed: Callable[[], Mapping[str, ModelInfo]] | None = None,
+    entry: Mapping[str, Any] | None = None,
 ) -> KeyCheck:
     """Check a new account on every tier of the settings. `provider` is the account as it would be saved (its models,
     address and, for an agent, its command); `key` is the pasted key, used for the calls and kept nowhere; `use` names
@@ -100,6 +115,12 @@ def check_account(
     bad = next((r for r in results if not r.ok and r.error_kind != ""), None) or next(
         (r for r in results if not r.ok), None
     )
+    if bad is not None and bad.error_kind == "model_retired":
+        short = bad.ref.split("/", 1)[-1]
+        gone = provider.models.get(short, short)
+        # The next fitting model comes only from the service's listing, never the one just refused or a retired one.
+        easy, _ = suggest_models(entry, listed() if listed else {}, avoid=frozenset({gone}))
+        return KeyCheck(False, "model_retired", RETIRED_PLAIN.format(model=gone), model=gone, next_model=easy)
     if bad is not None:
         reason, words = _failure(bad, where)
         return KeyCheck(False, reason, words)

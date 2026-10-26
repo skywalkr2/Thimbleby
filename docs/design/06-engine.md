@@ -2026,6 +2026,15 @@ A person who adds an account gets every tier filled in, so routine work never la
   person accepts or not. Cost is measured, not read from the price list, because a higher effort writes more tokens: a
   low-cost model at high effort may or may not beat a stronger one at low effort, and only the run says which. A measurement older than
   the service's newest listed model is offered again.
+- **A model is picked only from what the service's listing says is usable, and a retired one is named and replaced**
+  (owner, 2026-10-26, P36; change log 201; *built*, `tests/test_retired_model.py`): a model the listing marks retired
+  (`ModelInfo.retired`) or as not answering in text (`ModelInfo.chat`) is never picked, by a preset family, by price or
+  as the first listed, and is never offered by the weekly look at newer models; a listing that says nothing about a model
+  leaves it usable, and its name is never read. The Add account screen lists only usable models and offers the preset's
+  pick first. When a check still stops because the service says the model is retired, `classify_error` (the only place
+  reading the service's words) gives the kind `model_retired`; the check says "{model} is no longer offered by this
+  service", keeps that model out of the list for the rest of the setup, and offers the next fitting model from the listing
+  with one button.
 - **A newer model is asked about, and moved to only by the person's setting, after a check** (designer, 2026-10-22;
   owner, 2026-10-22; change log 174 and 178; *built*, `tests/test_model_watch.py`, `tests/test_family.py`): the preset
   takes the newest model of the family, and setup asks nothing (owner, 2026-10-22); a check every `ai.models.check_every_days` days (default 7) lists each account's

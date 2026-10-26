@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
+from engine.ai.task import AiError, AiResult, AiTask, ModelInfo, says_retired
 
 
 class OpenAICompatibleAdapter:
@@ -147,6 +147,8 @@ class OpenAICompatibleAdapter:
                     output_per_million=_per_million(pricing.get("completion")),
                     cached_input_per_million=_per_million(pricing.get("input_cache_read")),
                     released=_released(item.get("created")),
+                    retired=_listed_retired(item),
+                    chat=_listed_chat(item),
                 )
             if more is None or more == after or len(out) == before:
                 break
@@ -171,6 +173,20 @@ class OpenAICompatibleAdapter:
         except (ValueError, AttributeError):
             raise AiError("invalid_output", "the model list wasn't in the expected format") from None
         return (items if isinstance(items, list) else []), more
+
+
+def _listed_retired(item: dict[str, Any]) -> bool | None:
+    """True when the listing itself marks the model retired (a `deprecated` flag); otherwise nobody said."""
+    return True if item.get("deprecated") is True else None
+
+
+def _listed_chat(item: dict[str, Any]) -> bool | None:
+    """Whether the listing says the model answers in text: its output kinds when it lists them, else nobody said."""
+    arch = item.get("architecture") if isinstance(item.get("architecture"), dict) else {}
+    kinds = arch.get("output_modalities") if isinstance(arch.get("output_modalities"), list) else None
+    if kinds is None:
+        kinds = item.get("output_modalities") if isinstance(item.get("output_modalities"), list) else None
+    return ("text" in kinds) if kinds else None
 
 
 def _released(value: Any) -> str | None:
@@ -219,6 +235,11 @@ def _error_body(response: httpx.Response) -> dict[str, Any]:
     return error if isinstance(error, dict) else {}
 
 
+def _error_message(response: httpx.Response) -> str:
+    message = _error_body(response).get("message")
+    return message if isinstance(message, str) else ""
+
+
 def _refusal_code(response: httpx.Response) -> bool:
     error = _error_body(response)
     return any(str(error.get(key, "")).lower() in REFUSAL_CODES for key in ("code", "type"))
@@ -251,6 +272,8 @@ def classify_http_error(response: httpx.Response, settings: Any = None, *, listi
             return AiError("auth", detail)
         if status == 400 and _key_refused_by_reason(response, getattr(settings, "auth_reasons", [])):
             return AiError("auth", detail)
+    if status in (400, 404, 410) and says_retired(_error_message(response)):
+        return AiError("model_retired", detail)
     if status == 402:
         return AiError("quota", detail, retry_after=retry_after)
     if status == 429:

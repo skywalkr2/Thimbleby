@@ -1036,6 +1036,16 @@ yet follow, that it is *designed*, with its phase.
   `web/src/components/Walkthrough.test.tsx` ("Mail and calendar"), `tests/test_setup.py`
   (`test_turning_an_add_on_on_never_restarts_and_the_restart_is_the_persons_own_call`).
 
+## 201. A retired or non-chat model is never picked; a retired one is named and replaced (2026-10-26; P36)
+
+- **Design 6.16 (A model is picked only from what the service's listing says is usable):** the Add account screen picked
+  the first model listed, which for the owner was one the service had retired and that is not a chat model, and the check
+  stopped on the service's "has been deprecated" error. Now the model description carries `retired` and `chat` (filled by
+  an adapter only from what its listing says), the models list leaves out unusable models and offers a pick
+  (`suggested`), presets, the split by price and the weekly look at newer models skip them, `classify_error` gives
+  `model_retired`, and the check says which model failed and offers the next fitting one with one button. Built:
+  `tests/test_retired_model.py`, `tests/test_family.py`, `tests/test_first_run_ai.py`.
+
 ## 200. Setup's names, personal or business, people by relation, one time zone list (2026-10-26; P40)
 
 - **Design 7.8 (setup):** the You step asks the person's name, the workspace's name, the assistant's name (default Reginald) and whether this is for the person alone or also a business, whose name is saved through the business route; the People step asks by relation, and a business's people by their part; the time zone is one searchable list defaulting to this computer's zone; no backup account is said plainly

@@ -14,7 +14,7 @@ from typing import Any
 import httpx
 
 from engine.ai.adapters.openai_compatible import _int, _retry_after, transport_error
-from engine.ai.task import AiError, AiResult, AiTask, ErrorKind, ModelInfo
+from engine.ai.task import AiError, AiResult, AiTask, ErrorKind, ModelInfo, says_retired
 
 #: The interface's version header, which every request carries.
 API_VERSION = "2023-06-01"
@@ -163,6 +163,7 @@ class AnthropicMessagesAdapter:
                     efforts=efforts,
                     adaptive_thinking=adaptive,
                     released=_released(item.get("created_at")),
+                    retired=True if item.get("deprecated") is True else None,
                 )
             if more is None or more == after or len(out) == before:
                 break
@@ -310,12 +311,24 @@ def _error_type(response: httpx.Response) -> str:
     return kind if isinstance(kind, str) else ""
 
 
+def _error_message(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        return ""
+    error = body.get("error") if isinstance(body, dict) else None
+    message = error.get("message") if isinstance(error, dict) else None
+    return message if isinstance(message, str) else ""
+
+
 def classify_http_error(response: httpx.Response) -> AiError:
     """Turn an HTTP error into an error kind from the error body's own type, or from the status when the body gives
     none this adapter knows, never from its wording."""
     status = response.status_code
     detail = f"HTTP {status}: {response.text[:500]}"
     kind: ErrorKind | None = ERROR_TYPES.get(_error_type(response)) or STATUS_KINDS.get(status)
+    if kind is None and status in (400, 404, 410) and says_retired(_error_message(response)):
+        kind = "model_retired"
     if kind is None:
         kind = "provider_down" if status >= 500 else "other"
     if kind in ("quota", "rate_limited", "provider_down"):

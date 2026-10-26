@@ -32,7 +32,7 @@ from typing import Any
 from engine.ai import native_move, switch_check
 from engine.ai.adapters import make_adapter
 from engine.ai.family import is_newer, newest_of_family, of_family
-from engine.ai.task import ModelInfo
+from engine.ai.task import ModelInfo, usable_for_chat
 from engine.config import Config, load_config
 from engine.secrets import SecretError, resolve_secret
 from engine.state_file import changing, write_whole
@@ -193,7 +193,7 @@ def look(
     results and price rises are kept while they still apply."""
     provider = cfg.ai.providers[account]
     entry = entry_of(provider, endpoints)
-    ids = list(listing)
+    ids = [i for i, info in listing.items() if usable_for_chat(info)]  # never offer a retired or non-chat model
     found: dict[str, dict[str, Any]] = {}
     seen: dict[str, list[float | None]] = {}
     for tier_name, tier in cfg.ai.tiers.items():

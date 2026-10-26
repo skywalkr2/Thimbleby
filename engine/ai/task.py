@@ -11,6 +11,7 @@ ErrorKind = Literal[
     "quota",
     "auth",
     "unsupported",  # the service no longer lets this program be used with this kind of account
+    "model_retired",  # the service says the model asked for is no longer offered
     "no_key",
     "timeout",
     "invalid_output",
@@ -27,6 +28,26 @@ ErrorKind = Literal[
 #: what to do about it. It is never a sign-in hint, because signing in again does not help.
 UNSUPPORTED_PLAIN = "The service no longer lets this program run with your kind of account"
 UNSUPPORTED_ADVICE = "Pick another account, or use a key instead"
+
+
+#: What the person reads when the service no longer offers the model an account was set to use.
+RETIRED_PLAIN = "{model} is no longer offered by this service"
+
+#: Phrases in a service's error words that say the model asked for is retired. An adapter reads them only in its
+#: `classify_error`, and an account's settings may list others (`retired_markers`).
+RETIRED_MARKERS = (
+    "has been deprecated",
+    "is deprecated",
+    "has been retired",
+    "no longer available",
+    "no longer offered",
+)
+
+
+def says_retired(message: str, markers: Any = None) -> bool:
+    """Whether a service's error words say the model is retired. Only a classifier calls this."""
+    text = " ".join(str(message).lower().split())
+    return any(m.lower() in text for m in (markers or RETIRED_MARKERS))
 
 
 #: Failed runs that say nothing about an account or the model's work: no connection could be made, or the run did
@@ -108,6 +129,16 @@ class ModelInfo:
     # a model is never assumed to from its name or its vendor.
     transcribes: bool | None = None
     audio_per_minute: float | None = None  # what it costs a minute of speech in USD, where that is known
+    # Whether the service lists the model as retired (or on its way out), and whether it answers in text as a chat
+    # model does; None means the listing didn't say, and a model is never judged from its name.
+    retired: bool | None = None
+    chat: bool | None = None
+
+
+def usable_for_chat(info: ModelInfo | None) -> bool:
+    """Whether a model may be picked to do the app's work: not listed as retired and not listed as something other than
+    a text-answering model. A model whose listing says nothing about it is usable; its name is never read."""
+    return info is None or (info.retired is not True and info.chat is not False)
 
 
 class AiError(Exception):

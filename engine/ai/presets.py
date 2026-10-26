@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from engine.ai.family import newest_of_family
-from engine.ai.task import ModelInfo
+from engine.ai.task import ModelInfo, usable_for_chat
 
 EFFORTS = ("low", "medium", "high")
 
@@ -83,9 +83,6 @@ def plan_tiers(
     plan = TierPlan()
     presets = clean_presets(entry.get("tier_presets"))
     if presets:
-        ids = list(models.values())
-        if entry.get("adapter") == "cli-agent" and entry.get("model_examples"):
-            ids = [str(m) for m in entry["model_examples"]]
         info: Mapping[str, ModelInfo] | None = None
 
         def dates() -> Mapping[str, ModelInfo]:
@@ -94,6 +91,11 @@ def plan_tiers(
                 info = listed() if listed is not None else {}
             return info
 
+        ids = list(models.values())
+        if listed is not None:
+            ids = [i for i in ids if usable_for_chat(dates().get(i))]
+        if entry.get("adapter") == "cli-agent" and entry.get("model_examples"):
+            ids = [str(m) for m in entry["model_examples"]]
         previous = ""
         for tier, preset in presets.items():
             exists = tier in tiers
@@ -116,7 +118,11 @@ def plan_tiers(
                 plan.escalate_to[previous] = tier
             previous = tier
         return plan
-    priced = [(price, short) for short, i in models.items() if (price := _price(prices().get(i))) is not None]
+    priced = [
+        (price, short)
+        for short, i in models.items()
+        if usable_for_chat(known := prices().get(i)) and (price := _price(known)) is not None
+    ]
     if priced:
         cheapest = min(priced, key=lambda p: p[0])[1]
         dearest = max(priced, key=lambda p: p[0])[1]
@@ -125,3 +131,32 @@ def plan_tiers(
                 plan.use[tier] = short
                 plan.by_price.append(tier)
     return plan
+
+
+def usable_models(listing: Mapping[str, ModelInfo]) -> dict[str, ModelInfo]:
+    """The listed models the app may pick: those the listing doesn't mark retired or as something other than a text
+    model. Their order is kept."""
+    return {i: info for i, info in listing.items() if usable_for_chat(info)}
+
+
+def suggest_models(
+    entry: Mapping[str, Any] | None, listing: Mapping[str, ModelInfo], *, avoid: frozenset[str] = frozenset()
+) -> tuple[str | None, str | None]:
+    """The model for everyday work and the one for harder work to offer for a service, from its listing alone: only
+    usable models (never one in `avoid`, the models the service already refused as retired). The service's preset
+    families come first (`routine` and `deep`), else the cheapest and dearest priced model, else the first listed.
+    Either is None when nothing fits."""
+    usable = {i: info for i, info in usable_models(listing).items() if i not in avoid}
+    ids = list(usable)
+    if not ids:
+        return None, None
+    presets = clean_presets((entry or {}).get("tier_presets"))
+    easy = match_family(presets["routine"]["family"], ids, usable) if "routine" in presets else None
+    hard = match_family(presets["deep"]["family"], ids, usable) if "deep" in presets else None
+    if easy is None or hard is None:
+        priced = [(p, i) for i in ids if (p := _price(usable[i])) is not None]
+        if priced:
+            easy = easy or min(priced)[1]
+            hard = hard or max(priced)[1]
+    easy = easy or ids[0]
+    return easy, hard or easy

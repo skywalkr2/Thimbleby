@@ -1045,6 +1045,7 @@
   "welcome.ai.step.opens": "({domain}, opens in a new tab)",
   "welcome.ai.checking_key": "Checking it…",
   "welcome.ai.works": "Works. Ready to use.",
+  "welcome.ai.retired_use_next": "Use {model} instead",
   "welcome.ai.check_failed": "That didn't work. Try again.",
   "welcome.ai.model_auto": "A fitting model is picked for each kind of work. You can change it under Advanced.",
   "welcome.ai.allow.title": "Allow {account}, signed in as {identity}, to read your work mail and notes?",

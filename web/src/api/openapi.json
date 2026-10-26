@@ -2771,6 +2771,30 @@
             "title": "Message",
             "type": "string"
           },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the service no longer offers a model: its id.",
+            "title": "Model"
+          },
+          "next_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the service no longer offers a model: the next model that fits, if the listing has one.",
+            "title": "Next Model"
+          },
           "ok": {
             "title": "Ok",
             "type": "boolean"
@@ -2784,6 +2808,7 @@
               "unreachable",
               "wait",
               "not_signed_in",
+              "model_retired",
               "failed"
             ],
             "title": "Reason",
@@ -3551,6 +3576,7 @@
       "AiModelsView": {
         "properties": {
           "models": {
+            "description": "The models the app may use: those listed as retired, or as not answering in text, are left out.",
             "items": {
               "$ref": "#/components/schemas/AiModelView"
             },
@@ -3568,6 +3594,30 @@
             ],
             "description": "Why the list couldn't be read, in plain words.",
             "title": "Problem"
+          },
+          "suggested": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The model to offer first for everyday work.",
+            "title": "Suggested"
+          },
+          "suggested_harder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The model to offer first for harder work.",
+            "title": "Suggested Harder"
           }
         },
         "title": "AiModelsView",

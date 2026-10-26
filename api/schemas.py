@@ -3923,9 +3923,21 @@ class AiAccountChecked(BaseModel):
 
     ok: bool
     reason: Literal[
-        "works", "key_missing", "key_refused", "no_credit", "unreachable", "wait", "not_signed_in", "failed"
+        "works",
+        "key_missing",
+        "key_refused",
+        "no_credit",
+        "unreachable",
+        "wait",
+        "not_signed_in",
+        "model_retired",
+        "failed",
     ]
     message: ScreenText = Field(description="What to do about it, in plain words; empty when it works.")
+    model: str | None = Field(None, description="When the service no longer offers a model: its id.")
+    next_model: str | None = Field(
+        None, description="When the service no longer offers a model: the next model that fits, if the listing has one."
+    )
     identity: str | None = Field(None, description="The sign-in the account runs as, when the check found it.")
     identity_unknown: ScreenText | None = Field(
         None, description="Why that can't be told, in plain words, when the account works but it can't."
@@ -3940,7 +3952,12 @@ class AiModelView(BaseModel):
 
 
 class AiModelsView(BaseModel):
-    models: list[AiModelView] = Field(default_factory=list)
+    models: list[AiModelView] = Field(
+        default_factory=list,
+        description="The models the app may use: those listed as retired, or as not answering in text, are left out.",
+    )
+    suggested: str | None = Field(None, description="The model to offer first for everyday work.")
+    suggested_harder: str | None = Field(None, description="The model to offer first for harder work.")
     problem: ScreenText | None = Field(None, description="Why the list couldn't be read, in plain words.")
 
 

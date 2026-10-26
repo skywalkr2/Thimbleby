@@ -41,6 +41,24 @@ old people screen; the time zone box suggested any city works; "Nothing stands i
 default changes from Assistant to Reginald; the runtime config's `assistant_named` is true whenever a name is set. A person
 record can be added and edited with `relation` and `side`. Change log: section 200.
 
+## 2026-10-26: A retired or non-chat model is never picked, and a retired one is named and replaced (P36)
+
+**Decided:** The model picked for a tier, or offered first when an account is added, comes only from models the service's
+listing does not mark as retired or as something other than a text model (`ModelInfo.retired`, `ModelInfo.chat`, filled
+by an adapter only from its listing; a model the listing says nothing about stays usable, and a name is never read). The
+weekly look at newer models skips them too. When a check still stops because the service says the model is retired,
+`classify_error` gives the kind `model_retired`; the setup line says "{model} is no longer offered by this service",
+keeps that model out of the list, and offers the next fitting one with one button.
+
+**Decided by:** the owner (P36).
+
+**Why:** On a fresh workspace the owner's first account got a retired, non-chat model (the screen took the first model
+listed), and the check stopped on the service's "has been deprecated" words with no way forward.
+
+**Impact:** Design 6.16 and CHANGES section 201. API: `suggested` and `suggested_harder` on the models list, `model` and
+`next_model` and reason `model_retired` on the account check. No new setting, no change to scope or the plugin API.
+Change log: section 201.
+
 ## 2026-10-26: One appointment is one entry; the agenda reaches a week; lead time on Today (phase B)
 
 **Decision:** The agenda shows today and six days after (`ui.today.agenda_days_ahead`, 6), and when empty names the days

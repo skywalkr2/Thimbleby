@@ -72,7 +72,7 @@ def test_the_preset_takes_the_newest_of_each_family_in_whatever_order_the_list_c
     assert models[plan.use["routine"]] == "x-small-12" and models[plan.use["deep"]] == "x-medium-10"
 
 
-def test_the_preset_asks_the_service_for_dates_only_when_a_family_has_several_models():
+def test_the_preset_reads_the_listing_once_to_leave_out_retired_models():
     entry = {"tier_presets": {"routine": {"family": "small"}}}
     asked = []
 
@@ -82,9 +82,9 @@ def test_the_preset_asks_the_service_for_dates_only_when_a_family_has_several_mo
 
     tiers = {"routine": TierSettings()}
     one = plan_tiers(entry, {"a": "x-small-1"}, tiers, {"routine"}, lambda: {}, listing)
-    assert one.use == {"routine": "a"} and asked == []
+    assert one.use == {"routine": "a"} and asked == [1]
     two = plan_tiers(entry, {"a": "x-small-1", "b": "x-small-2"}, tiers, {"routine"}, lambda: {}, listing)
-    assert two.use == {"routine": "a"} and asked == [1]  # the service says the first is the newer
+    assert two.use == {"routine": "a"} and asked == [1, 1]  # the service says the first is the newer
 
 
 def test_the_adapters_listings_carry_the_release_date_the_service_gives():

@@ -86,7 +86,7 @@ type Verdict =
   | { state: "idle" }
   | { state: "checking" }
   | { state: "works"; identity: string | null; unknown: string | null }
-  | { state: "failed"; message: string };
+  | { state: "failed"; message: string; retired?: { model: string; next: string | null } };
 /** What "Allow" lets a new account read: open material and the internal kind work mail and notes are. */
 const ALLOWED: Level[] = ["open", "internal"];
 
@@ -144,6 +144,7 @@ export function WelcomeAi(props: {
   const [testProblem, setTestProblem] = useState("");
   const [testing, setTesting] = useState(false);
   const lookup = useRef(0);
+  const retiredIds = useRef(new Set<string>());
   const verifying = useRef(0);
   /** The key the last check was made with, so the box changing to that same key (a paste) doesn't undo the check. */
   const verifiedKey = useRef("");
@@ -225,7 +226,7 @@ export function WelcomeAi(props: {
   };
 
   /** Ask the service for its models. A newer question, or a different choice, makes an older answer irrelevant (null). */
-  const check = async (picked: Kind, over?: { key?: string; address?: string }): Promise<{ models: ModelInfo[]; problem: string } | null> => {
+  const check = async (picked: Kind, over?: { key?: string; address?: string }): Promise<{ models: ModelInfo[]; problem: string; suggested?: string } | null> => {
     const mine = ++lookup.current;
     setListing(true);
     setListProblem("");
@@ -234,15 +235,17 @@ export function WelcomeAi(props: {
     try {
       const answer = await api.aiModels(body);
       if (mine !== lookup.current) return null;
-      const got = answer.models ?? [];
+      // A model this account's check found retired stays out of the list for the rest of the setup.
+      const got = (answer.models ?? []).filter((m) => !retiredIds.current.has(m.id));
+      const suggested = got.some((m) => m.id === answer.suggested) ? (answer.suggested as string) : got[0]?.id;
       setModels(got);
       setListProblem(answer.problem ?? "");
       setFilter("");
       if (got.length) {
-        setEveryday((cur) => (got.some((m) => m.id === cur) ? cur : got[0].id));
+        setEveryday((cur) => (got.some((m) => m.id === cur) ? cur : suggested));
         setHarder((cur) => (got.some((m) => m.id === cur) ? cur : HARDER_SAME));
       }
-      return { models: got, problem: answer.problem ?? "" };
+      return { models: got, problem: answer.problem ?? "", suggested };
     } catch (err) {
       if (mine !== lookup.current) return null;
       const problem = err instanceof ApiError && err.detail ? err.detail : problemText(err, t);
@@ -301,7 +304,7 @@ export function WelcomeAi(props: {
         return;
       }
       if (got.models.length) {
-        first = got.models.some((m) => m.id === first) ? first : got.models[0].id;
+        first = got.models.some((m) => m.id === first) ? first : (got.suggested ?? got.models[0].id);
         second = got.models.some((m) => m.id === second) ? second : HARDER_SAME;
       }
     }
@@ -327,8 +330,14 @@ export function WelcomeAi(props: {
       setVerdict(
         answer.ok
           ? { state: "works", identity: answer.identity ?? null, unknown: answer.identity_unknown ?? null }
-          : { state: "failed", message: answer.message },
+          : answer.reason === "model_retired" && answer.model
+            ? { state: "failed", message: answer.message, retired: { model: answer.model, next: answer.next_model ?? null } }
+            : { state: "failed", message: answer.message },
       );
+      if (!answer.ok && answer.reason === "model_retired" && answer.model) {
+        retiredIds.current.add(answer.model);
+        setModels((cur) => (cur ? cur.filter((m) => m.id !== answer.model) : cur));
+      }
     } catch (err) {
       if (mine !== verifying.current) return;
       setVerdict({ state: "failed", message: err instanceof ApiError && err.detail ? err.detail : problemText(err, t) });
@@ -753,6 +762,20 @@ export function WelcomeAi(props: {
       {verdict.state === "failed" && (
         <p className="problem-note" role="alert">
           {verdict.message}
+          {verdict.retired?.next && kind && (
+            <>
+              {" "}
+              <Button
+                onClick={() => {
+                  const next = verdict.retired?.next ?? "";
+                  setEveryday(next);
+                  void verify(kind, { everyday: next, model: next });
+                }}
+              >
+                {t("welcome.ai.retired_use_next", { model: verdict.retired.next })}
+              </Button>
+            </>
+          )}
         </p>
       )}
     </div>

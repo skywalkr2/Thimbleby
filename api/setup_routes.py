@@ -1766,8 +1766,15 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             key = body.key.strip() if body.key else resolve_secret(body.key_ref)
         except SecretError as err:
             return AiModelsView(problem=str(err))
-        models, problem = setup.list_models(kind, base_url, key)
+        found, problem = setup.list_models(kind, base_url, key)
+        from engine.ai.presets import suggest_models, usable_models
+
+        usable = usable_models(dict(found))
+        easy, hard = suggest_models(kind, usable)
+        models = [(name, info) for name, info in found if name in usable]
         return AiModelsView(
+            suggested=easy,
+            suggested_harder=hard,
             models=[
                 AiModelView(
                     id=name,
@@ -1819,11 +1826,21 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except ConfigError as err:
             log.warning("The settings couldn't be loaded: %s", err)
             raise HTTPException(status_code=400, detail=err.plain) from None
-        found = key_check.check_account(now, os.environ, provider, key, use=body.use, store=store)
+
+        def listing() -> dict[str, Any]:
+            """Asked only when a model was refused as retired: the listing says which models fit in its place."""
+            listed, _ = setup.list_models(kind, base_url, key) if base_url else ([], None)
+            return dict(listed)
+
+        found = key_check.check_account(
+            now, os.environ, provider, key, use=body.use, store=store, listed=listing, entry=kind
+        )
         return AiAccountChecked(
             ok=found.ok,
             reason=found.reason,
             message=found.message,
+            model=found.model,
+            next_model=found.next_model,
             identity=found.identity,
             identity_unknown=found.identity_unknown,
         )

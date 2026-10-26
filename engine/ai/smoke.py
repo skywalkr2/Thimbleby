@@ -21,6 +21,7 @@ from engine.ai.adapters import make_adapter
 from engine.ai.calibration import SAMPLE_INSTRUCTIONS, SAMPLE_REQUEST, estimate_tokens
 from engine.ai.task import (
     NO_WORK_KINDS,
+    RETIRED_PLAIN,
     UNSUPPORTED_ADVICE,
     UNSUPPORTED_PLAIN,
     AiError,
@@ -138,7 +139,7 @@ def smoke_test(
                 except SecretError as err:
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
-                    ok, detail, failed_kind = False, _problem(err, where_of(settings)), err.kind
+                    ok, detail, failed_kind = False, _problem(err, where_of(settings), model_id), err.kind
                     raw_detail = err.detail
                     no_network = err.kind == "offline"
                     if err.kind in ("auth", "no_key"):
@@ -235,6 +236,7 @@ PROBLEMS = {
     "no_output": "It finished without giving an answer",
     "no_work": "It started but did nothing; it may be signed out",
     "refused": "It refused the request",
+    "model_retired": "The model is no longer offered by this service",
 }
 
 
@@ -299,9 +301,11 @@ def where_of(settings: Any) -> str:
     return "local" if found.is_loopback or found.is_private or found.is_link_local else "hosted"
 
 
-def _problem(err: AiError, where: str = "local") -> str:
+def _problem(err: AiError, where: str = "local", model: str = "") -> str:
     """A failed test call in plain words: what it means, the account's own words for it, and what to do. `where` is
     where the account lives (`where_of`), so a hosted service never gets the advice for a local one."""
+    if err.kind == "model_retired" and model:
+        return f"{RETIRED_PLAIN.format(model=model)}."
     reason = "" if err.kind in TRANSPORT_KINDS else provider_reason(err.detail)
     plain = PROBLEMS.get(err.kind, "It stopped with an error")
     detail = f"{plain} ({reason})" if reason else plain
