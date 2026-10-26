@@ -1,6 +1,5 @@
-// Sources: the places the assistant keeps reading, one row each with how often it reads and how the last read went,
-// and under them what a rule closed without the assistant reading it, with a way to hand it in after all. Mail set aside
-// as not work is on Handled for you.
+// Sources: the places the assistant keeps reading, one row each with how often it reads and how the last read went.
+// Mail set aside, changes a rule closed and mail read with nothing to do are on Handled for you.
 // A source is added from a kind (the app's own or an add-on's) with a form built from that kind's settings; a row's menu
 // reads it now, changes it, turns it off or on, and removes it, each with Undo. Sources are taken in without a restart.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,8 +25,6 @@ import { SignIns } from "./SignIns";
 import { Skeleton } from "../ui/Skeleton";
 
 type Source = S["WatchSourceView"];
-type Closed = S["AutoClosedView"];
-type SilentClose = S["SilentCloseView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
 export interface AddRequest {
@@ -200,8 +197,6 @@ export function Sources(props: {
           ))}
         </ul>
       )}
-      <AutoClosed />
-      <SilentCloses />
     </section>
   );
 }
@@ -755,168 +750,5 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         </button>
       </div>
     </form>
-  );
-}
-
-function AutoClosed() {
-  const { t } = useWords();
-  const closed = useQuery({ queryKey: ["auto-closed"], queryFn: api.autoClosed });
-  return (
-    <section className="panel-section" aria-labelledby="auto-closed-title">
-      <div className="heading">
-        <h3 id="auto-closed-title">{t("sources.closed.title")}</h3>
-      </div>
-      <p className="hint">{t("sources.closed.intro")}</p>
-      {closed.isPending ? (
-        <Skeleton />
-      ) : closed.isError ? (
-        <p className="empty">
-          {t("sources.closed.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void closed.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
-      ) : closed.data.length === 0 ? (
-        <p className="empty">{t("sources.closed.empty")}</p>
-      ) : (
-        <ul className="queue">
-          {closed.data.map((item) => (
-            <ClosedRow key={item.id} item={item} />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function ClosedRow(props: { item: Closed }) {
-  const { t } = useWords();
-  const act = useAct();
-  const [busy, setBusy] = useState(false);
-  const { item } = props;
-  const titleId = `closed-${item.id}`;
-  const lookCloser = async () => {
-    setBusy(true);
-    await act(
-      () => api.closerLook(item.id, item.version),
-      () => ({ message: t("sources.closed.toast", { title: item.title }) }),
-    );
-    setBusy(false);
-  };
-  const facts = [item.source, when(item.created_at)].filter(Boolean);
-  return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className="row">
-        <span className="kind k-done">{t(`sources.closed.change.${item.change}`)}</span>
-        <div className="text">
-          <strong id={titleId}>{item.title}</strong>
-          <span className="sub">{facts.join(" · ")}</span>
-          <span className="sub">{t("sources.closed.why", { reason: item.reason })}</span>
-        </div>
-        <div className="acts">
-          <button
-            type="button"
-            className="btn primary"
-            data-key="primary"
-            disabled={busy}
-            aria-label={t("sources.closed.look_named", { title: item.title })}
-            onClick={() => void lookCloser()}
-          >
-            {t("sources.closed.look")}
-          </button>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-/** Every close nobody has seen: a rule's, the sorting's, the assistant's own drops and closes, with what, when, by whom
- * and why, and the share of all closes they are. Looks right marks a rule's or the assistant's close as seen; set-aside
- * mail is reviewed in its folder above. */
-function SilentCloses() {
-  const { t } = useWords();
-  const found = useQuery({ queryKey: ["silent-closes"], queryFn: api.silentCloses });
-  return (
-    <section className="panel-section" aria-labelledby="silent-closes-title">
-      <div className="heading">
-        <h3 id="silent-closes-title">{t("sources.silent.title")}</h3>
-      </div>
-      <p className="hint">{t("sources.silent.intro")}</p>
-      {found.isPending ? (
-        <Skeleton />
-      ) : found.isError ? (
-        <p className="empty">
-          {t("sources.silent.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void found.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
-      ) : (
-        <>
-          {found.data.measure.total > 0 ? (
-            <p className="hint" data-testid="silent-measure">
-              {found.data.measure.silent === 0
-                ? t("sources.silent.measure_none", { days: found.data.measure.days })
-                : t("sources.silent.measure", {
-                    silent: found.data.measure.silent,
-                    total: found.data.measure.total,
-                    days: found.data.measure.days,
-                  })}
-            </p>
-          ) : null}
-          {found.data.closes.length === 0 ? (
-            <p className="empty">{t("sources.silent.empty")}</p>
-          ) : (
-            <ul className="queue">
-              {found.data.closes.map((item) => (
-                <SilentCloseRow key={item.ref} item={item} />
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    </section>
-  );
-}
-
-function SilentCloseRow(props: { item: SilentClose }) {
-  const { t } = useWords();
-  const act = useAct();
-  const [busy, setBusy] = useState(false);
-  const { item } = props;
-  const titleId = `silent-${item.ref}`;
-  const seen = async () => {
-    setBusy(true);
-    await act(
-      () => api.closeSeen(item.ref),
-      () => ({ message: t("sources.silent.toast", { title: item.title }) }),
-    );
-    setBusy(false);
-  };
-  const by = item.rule ? t("sources.silent.by_rule", { rule: item.rule }) : t("sources.silent.by_assistant");
-  const facts = [by, when(item.when)].filter(Boolean);
-  return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className="row">
-        <span className="kind k-done">{t(`sources.silent.how.${item.how}`)}</span>
-        <div className="text">
-          <strong id={titleId}>{item.title}</strong>
-          <span className="sub">{facts.join(" · ")}</span>
-          {item.why ? <span className="sub">{t("sources.silent.why", { reason: item.why })}</span> : null}
-        </div>
-        <div className="acts">
-          <button
-            type="button"
-            className="btn primary"
-            data-key="primary"
-            disabled={busy}
-            aria-label={t("sources.silent.seen_named", { title: item.title })}
-            onClick={() => void seen()}
-          >
-            {t("sources.silent.seen")}
-          </button>
-        </div>
-      </div>
-    </li>
   );
 }

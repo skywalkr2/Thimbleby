@@ -58,7 +58,7 @@ doesn't make a new family. A bare number of three or more digits is an id, never
 "<form> 5678" stay apart. The current copy is the highest date, then version, then modified time among the family's files
 that exist outside an archive folder; a deleted file or one in an archive folder is never current. A change to any other
 copy (including a copy moved into an archive folder and the removal at its old place) closes itself under the rule "Older
-version", "an older version; the current one is <file>", listed with the other auto-closed changes, where Take a closer
+version", "an older version; the current one is <file>", listed with the other changes a rule closed on Handled for you (7.20), where Take a closer
 look brings it back and records the usual pulled-back signal (6.22). The current copy's change says which version it
 replaces, and the notes prompt says the newer version wins: record what it says now, write a correction when it contradicts
 an earlier fact, never report a discrepancy against an older copy. Files with unrelated names aren't linked; no existing op
@@ -3756,8 +3756,9 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   - Mail set aside is left out of that list, which has its own folder: each mail shows in one place (the measure still
     counts it as a kind). An input the assistant read that recorded nothing and asked nothing closes by itself, Done
     with Undo (a `pulled_back` signal), and never waits under Needs attention (decision 2026-10-26, section 204).
-  - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Connections screen under "Closed
-    without you seeing", below the rule closes (the Set aside folder is now the first tab of Handled for you, 7.20). The measure, silent closes out of all closes in
+  - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on Handled for you under "Closed
+    without you seeing", below the list of changes a rule closed (the third tab, 7.20), for the assistant's own closes;
+    a rule's close is a row of that list, with Looks right in its menu. The measure, silent closes out of all closes in
     the quality window with the counts for each kind, is `closes.measure`, shown on the Quality screen (see Measures).
   - Tests: `tests/test_silent_closes.py::test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_what_when_by_and_why`,
     `::test_the_persons_own_close_is_not_silent_but_is_counted_in_all_closes`,

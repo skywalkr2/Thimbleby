@@ -114,12 +114,16 @@ export const api = {
   closeSeen: (ref: string) => call<S["Created"]>("POST", "silent-closes/seen", { ref } satisfies S["SilentCloseSeen"]),
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),
-  /** Mail handled for the person: one list (`tab`), grouped by `group` (the configured one when empty), narrowed by `q`. */
-  handled: (tab: S["HandledView"]["tab"], group: S["HandledView"]["group"] | null, q: string) => {
+  /** What was handled for the person: one list (`tab`), grouped by `group` (the configured one when empty), narrowed by `q` and by the kind of `item`. */
+  handled: (tab: S["HandledView"]["tab"], group: S["HandledView"]["group"] | null, q: string, item: S["HandledView"]["item"] = null) => {
     const query = new URLSearchParams({ tab, q });
     if (group) query.set("group", group);
+    if (item) query.set("item", item);
     return call<S["HandledView"]>("GET", `handled?${query.toString()}`);
   },
+  /** How many each list on Handled for you holds, for a line that only counts. */
+  handledCounts: () => call<S["HandledCounts"]>("GET", "handled/counts"),
+  closerLookUndo: (req: string) => call<S["Created"]>("POST", `requests/${id(req)}/closer-look/undo`),
   handledWork: (item: string, readVersion: number) =>
     call<S["HandledDone"]>("POST", `handled/${id(item)}/work`, { read_version: readVersion }),
   handledPersonal: (item: string, readVersion: number) =>

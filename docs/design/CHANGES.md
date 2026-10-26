@@ -1027,6 +1027,36 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 216. Handled for you by how each item was handled; kept for 30 days; nothing about it on Today (2026-10-26; P58, F34)
+
+- **Design 7.20, 7.1, 6.4, 6.32, 4.0:** the owner's yes (30 days; the closed lists move) and the functional designer's answer
+  F34 shape the screen: three tabs by how each item was handled, **Set aside before reading**, **Closed by a rule** (what a
+  rule closed, of any kind of item, which is what Connections held as "Set aside by rules") and **Read, nothing to do**.
+  Every row has a chip for its kind of item (mail, calendar entry, file, page, action, question, item) and the reason it was
+  handled; a kind filter sits on top; groups are by reason (a mail read with nothing to do, which has no recorded reason, by
+  what the mail is), collapsed, with a count, a page of rows (`ui.handled_rows_shown`, 25) and "Show more". One click on
+  every row: Treat as work on set-aside mail, **Take a closer look** on a closed change or a read mail, each recording a
+  signal and with Undo (new: `POST /api/requests/{request}/closer-look/undo`, which closes a brought-back change again
+  while the assistant hasn't started). "Closed without you seeing" (the assistant's own closes of actions and questions,
+  with the measure) leaves Connections for the third tab; a rule's close is a row there with Looks right in its menu.
+  Connections holds only accounts and sources.
+- **Kept for {n} days:** a new setting `watch.handled_keep_days` (30, advanced, demo values in both workspaces). The list is
+  filtered when it is read, from when each item was handled; nothing is deleted or changed, so the ledger and Undo are whole.
+  A hand set-aside now carries its time in the mark (`at`). The app's own copy is not purged by age (not built).
+- **Settings:** `ui.handled_group` is now `reason` or `sender` (`kind` still reads as `reason`); new `ui.handled_rows_shown`.
+- **Today:** the Came in card no longer shows "N set aside" or "N closed by your rules" (Today lists only what the person
+  does); What changed carries a quiet "N handled for you" link (`GET /api/handled/counts`). The arrived view still carries
+  both counts for other readers.
+- **API:** `GET /api/handled` takes `tab=closed`, `group=reason|sender` and `item=`; its answer has `kinds`, `kept_days`,
+  `page_rows`, `item`, and rows carry `item`, `rule`, `change`; the counts have `closed`. New `GET /api/handled/counts`.
+  `SilentCloseView.item`. Core records and the plugin API are unchanged.
+- **Not built:** "Not an older version" on a closed older version (it needs a place to remember that two files are not
+  versions of each other, a core record change held with the plugin API); file, page and calendar items read with nothing
+  to do (the third tab lists mail only); a "tracker" kind chip (no source says it reads one); purging the app's copy by age.
+  **Built:** `tests/test_handled.py`, `tests/test_handled_closed.py`, `web/src/components/Handled.test.tsx`,
+  `Sources.test.tsx`, `TodayRail.test.tsx`, `WhatChanged.test.tsx`, `ViewSweep.test.tsx`; `web/e2e/handled.spec.ts`,
+  `journeys-mail.spec.ts`, `journeys-owner-evening.spec.ts` and `acceptance.spec.ts` are written, not yet run.
+
 ## 215. Handled for you: one screen for mail set aside and mail read with nothing to do (2026-10-26; P41, P45, P46, P47)
 
 - **Design 7.20 (new) and 7.1:** a sidebar entry under Work, **Handled for you**, with two tabs, each with a one-line

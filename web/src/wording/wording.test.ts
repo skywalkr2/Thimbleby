@@ -78,6 +78,7 @@ test("key families built at run time are complete", () => {
     ...(s.SinceEntryView.properties.because.enum ?? []).map((x) => `since.why.${x}`),
     ...(s.HandledRow.properties.kind.enum ?? []).map((x) => `handled.kind.${x}`),
     ...(s.HandledView.properties.tab.enum ?? []).flatMap((x) => [`handled.tab.${x}`, `handled.explain.${x}`, `handled.empty.${x}`]),
+    ...(s.HandledRow.properties.item.enum ?? []).map((x) => `handled.item.${x}`),
     ...(s.HandledView.properties.group.enum ?? []).map((x) => `handled.group.${x}`),
     ...(s.SettingProposalView.properties.status.enum ?? []).filter((x) => x !== "open").map((x) => `ask.proposal.${x}`),
     ...(s.ReportView.properties.status.enum ?? []).filter((x) => x !== "draft").map((x) => `ask.report_status.${x}`),

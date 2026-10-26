@@ -35,6 +35,7 @@ CLOSING_OPS: dict[str, tuple[str, How]] = {
     "question.done": ("question", "answered"),
 }
 _SEEN = WriteContext(actor="pm", trust="trusted", op="closes.seen")
+_SEEN_UNDO = WriteContext(actor="pm", trust="trusted", op="triage.closer_look_undo")
 
 
 class NotAClose(StoreError):
@@ -261,3 +262,38 @@ def mark_seen(store: Any, ref: str, now: datetime | None = None) -> None:
         raise ReviewElsewhere("Mail that was set aside is reviewed in the Set aside folder.")
     else:
         raise NotAClose("That isn't a close.")
+
+
+def take_back_closer_look(store: Any, request_id: str) -> None:
+    """Undo Take a closer look on a change a rule closed, while the assistant hasn't started on it: the request is
+    closed by the same rule with the same reason again, read from the ledger's earlier value, and the item is left out
+    of Today's list again. Raises `NotAClose` when nothing was handed in this way and `StoreError` once the assistant
+    has started."""
+    view = store.read()
+    request = view.get("request", request_id)
+    if request is None or request.data.get("auto_closed"):
+        raise NotAClose("That isn't a change that was brought back.")
+    earlier = [
+        e
+        for e in view.ledger(kind="request", record_id=request_id)
+        if e["field"] == "auto_closed" and e["before"] and e["after"] is None
+    ]
+    if not earlier:
+        raise NotAClose("That isn't a change that was brought back.")
+    if request.data["state"] != "queued":
+        raise StoreError("The assistant has started reading it, so it can't be put back.")
+    mark = earlier[-1]["before"]
+    source = view.get("source", request.data["source"]) if request.data.get("source") else None
+    watched = (source.data.get("watched") if source else None) or {}
+    with store.transaction() as tx:
+        current = tx.get("request", request_id)
+        tx.update(
+            "request",
+            request_id,
+            {"state": "done", "waiting": f"Closed by {mark['rule']}: {mark['reason']}", "auto_closed": mark},
+            _SEEN_UNDO,
+            read_version=current.version,
+        )
+        for snap in tx.find("snapshot", {"source": watched.get("source", ""), "key": watched.get("key", "")}):
+            if not snap.data.get("closed_by"):
+                tx.update("snapshot", snap.id, {"closed_by": mark["rule"]}, _SEEN_UNDO, read_version=snap.version)

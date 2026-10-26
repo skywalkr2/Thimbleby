@@ -14,6 +14,7 @@ from api.schemas import (
     CloseKindCountView,
     CloseMeasureView,
     Created,
+    HandledCounts,
     HandledDone,
     HandledView,
     IntakeSeen,
@@ -251,6 +252,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         since = until - timedelta(days=days)
         found = closes.silent(view, since)
         measure = closes.measure(view, since)
+        said = handled.declared(store)
         return SilentClosesView(
             count=len(found),
             closes=[
@@ -267,6 +269,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     changeset=c.changeset,
                     snapshot=c.snapshot,
                     record=RecordRef(kind=c.record[0], id=c.record[1]) if c.record else None,
+                    item=handled.item_of_close(view, cfg, said, c),
                 )
                 for c in found
             ],
@@ -339,6 +342,18 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         _show_again(request_id)
         events.changed()
         worker.poke()
+        return Created(id=request_id)
+
+    @r.post("/requests/{request_id}/closer-look/undo")
+    def closer_look_undo(request_id: str) -> Created:
+        """Undo Take a closer look on a change a rule closed, while the assistant hasn't started on it."""
+        try:
+            closes.take_back_closer_look(store, request_id)
+        except closes.NotAClose as err:
+            raise HTTPException(status_code=404, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
         return Created(id=request_id)
 
     def _show_again(request_id: str) -> None:
@@ -463,14 +478,23 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/handled")
     def handled_list(
-        tab: Literal["set_aside", "read"] = "set_aside", group: Literal["kind", "sender"] | None = None, q: str = ""
+        tab: Literal["set_aside", "closed", "read"] = "set_aside",
+        group: Literal["reason", "sender"] | None = None,
+        q: str = "",
+        item: Literal["mail", "calendar", "file", "page", "action", "question", "other"] | None = None,
     ) -> HandledView:
-        """One of the two lists of mail handled for the person, in groups: by kind or by sender (the configured
-        grouping when none is asked for), newest first, narrowed by the words of `q`, with the counts of both lists."""
+        """One of the three lists of what was handled for the person, in groups: by reason or by sender (the
+        configured grouping when none is asked for), newest first, narrowed by the words of `q` and by the kind of
+        item, with the counts of all three lists."""
         set_aside.purge_due(ws, store, cfg)
         config = current()
-        found = handled.listing(ws, store, config, tab, group or config.ui.handled_group, q.strip())
+        found = handled.listing(ws, store, config, tab, group or config.ui.handled_group, q.strip(), worker.now(), item)
         return HandledView.model_validate(found)
+
+    @r.get("/handled/counts")
+    def handled_counts() -> HandledCounts:
+        """How many each of the three lists holds, for a line that only counts."""
+        return HandledCounts.model_validate(handled.counts(ws, store, current(), worker.now()))
 
     def handled_done(snapshot_id: str, request: str | None = None) -> HandledDone:
         snap = store.read().get("snapshot", snapshot_id)

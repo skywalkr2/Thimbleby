@@ -181,9 +181,10 @@ test.describe.serial("journey: mail", () => {
     for (const title of recentMail) await expect(came.getByText(title, { exact: true })).toBeVisible();
     // A meeting that runs past midnight is listed under both days, so the first is enough.
     for (const title of recentEvents) await expect(agenda.getByText(title, { exact: true }).first()).toBeVisible();
-    // Came in shows only the work mail, and says how many were set aside.
+    // Came in shows only the work mail; what was set aside is counted on What changed and listed on Handled for you,
+    // never on Today.
     for (const title of aside) await expect(came.getByText(title, { exact: true })).toHaveCount(0);
-    await expect(came.getByRole("button", { name: "2 set aside" })).toBeVisible();
+    await expect(came.getByRole("button", { name: /set aside/ })).toHaveCount(0);
     for (const title of recentNoted) await expect(came.getByText(title, { exact: true })).toHaveCount(0);
     seen = await service();
     expect(seen).toMatchObject({ mail_reads: 1, calendar_reads: 1, unauthorized: 0 });
@@ -237,7 +238,8 @@ test.describe.serial("journey: mail", () => {
     // Handled for you lists both messages, grouped and collapsed, each with why it was set aside.
     const social = aside.find((t) => /neighbors/i.test(t)) ?? "";
     const sales = aside.find((t) => /sale/i.test(t)) ?? "";
-    await came.getByRole("button", { name: "2 set aside" }).click();
+    await openView(page, "What changed");
+    await page.getByRole("link", { name: /handled for you$/ }).click();
     const folder = page.locator("[data-handled]");
     await expect(folder.getByRole("heading", { level: 1, name: "Handled for you" })).toBeVisible();
     // The groups arrive after the heading; open each once they are there.
@@ -273,13 +275,13 @@ test.describe.serial("journey: mail", () => {
     const later = await (await fetch(`${FAKE}/__e2e/mail-later`, { method: "POST" })).json();
     await openView(page, "Today");
     const cameIn = page.getByRole("region", { name: "Came in" });
-    // The earlier message is still in the folder, so it is counted until the new one is read, then both are.
     await expect(cameIn.getByRole("button", { name: "Check now" })).toBeVisible();
     await cameIn.getByRole("button", { name: "Check now" }).click();
-    await expect(cameIn.getByRole("button", { name: "2 set aside" })).toBeVisible({ timeout: 30_000 });
     await expect(cameIn.getByText(later.subject)).toHaveCount(0);
+    // The earlier message is still in the list, so it is counted until the new one is read, then both are.
     await openView(page, "Handled for you");
     const handled = page.locator("[data-handled]");
+    await expect(handled.getByRole("button", { name: "Set aside before reading · 2" })).toBeVisible({ timeout: 30_000 });
     await expect(handled.locator("[data-group]").first()).toBeVisible();
     const shut = handled.locator("[data-group] > h2 button[aria-expanded=false]");
     for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();

@@ -873,7 +873,8 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await go(page, "Connections");
     await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Set aside by rules" })).toBeVisible();
+    // Connections holds only accounts and sources: what a rule closed is on Handled for you.
+    await expect(page.getByRole("heading", { name: "Set aside by rules" })).toHaveCount(0);
     await checkAccessibility(page);
     // The Ask box: focus goes to the question, Escape closes it, and focus returns to the button that opens it.
     const opener = page.getByRole("button", { name: "Ask", exact: true });

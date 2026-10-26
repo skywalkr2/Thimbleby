@@ -115,16 +115,23 @@ def learnable(view: Any, kind: str) -> list[Any]:
     return [r for r in view.list(kind) if not is_set_aside(r)]
 
 
-def set_aside_item(store: Any, snapshot_id: str, section: str) -> list[str]:
+def set_aside_item(store: Any, snapshot_id: str, section: str, now: datetime | None = None) -> list[str]:
     """Set a mail item aside by hand. A request for it that hasn't started (queued, or stopped for the person) is
-    closed, remembering what it was so putting the item back restores it. Returns the ids of the requests closed."""
+    closed, remembering what it was so putting the item back restores it. The mark carries the time it was set aside,
+    so the list that holds it keeps it from then. Returns the ids of the requests closed."""
     if section not in SECTIONS:
         raise StoreError("Choose personal, sales or notices.")
     reason = f"you set it aside as {SECTION_WORDS[section]}"
     closed_ids: list[str] = []
     with store.transaction() as tx:
         snap = _mail_snapshot(tx, snapshot_id)
-        mark = {"section": section, "rule": BY_PERSON, "reason": reason, "by": "person"}
+        mark = {
+            "section": section,
+            "rule": BY_PERSON,
+            "reason": reason,
+            "by": "person",
+            "at": (now or datetime.now(UTC)).isoformat(),
+        }
         tx.update("snapshot", snap.id, {"set_aside": mark, "closed_by": None}, _PM, read_version=snap.version)
         for req in requests_of(tx, snap):
             d = req.data

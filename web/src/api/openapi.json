@@ -9746,6 +9746,11 @@
       },
       "HandledCounts": {
         "properties": {
+          "closed": {
+            "description": "Changes a rule closed before they were read, whatever the search.",
+            "title": "Closed",
+            "type": "integer"
+          },
           "read": {
             "description": "Mail read with nothing to do, whatever the search.",
             "title": "Read",
@@ -9759,6 +9764,7 @@
         },
         "required": [
           "set_aside",
+          "closed",
           "read"
         ],
         "title": "HandledCounts",
@@ -9838,7 +9844,7 @@
             "type": "array"
           },
           "key": {
-            "description": "The kind (by kind) or the sender's address (by sender); empty for no known sender.",
+            "description": "The reason (by reason; `kind:` and the mail's kind for mail read with nothing to do) or the sender's address (by sender); empty for none known.",
             "title": "Key",
             "type": "string"
           },
@@ -9851,7 +9857,7 @@
                 "type": "null"
               }
             ],
-            "description": "By sender: the sender's name or address. Empty by kind (the screen words the kind).",
+            "description": "By reason: the reason in words. By sender: the sender's name or address. Empty when the screen words it (a kind, or no known reason or sender).",
             "title": "Label"
           }
         },
@@ -9863,14 +9869,59 @@
         "title": "HandledGroup",
         "type": "object"
       },
+      "HandledKindCount": {
+        "properties": {
+          "count": {
+            "description": "Rows of this kind in the chosen list, whatever the search.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "item": {
+            "enum": [
+              "mail",
+              "calendar",
+              "file",
+              "page",
+              "action",
+              "question",
+              "other"
+            ],
+            "title": "Item",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "count"
+        ],
+        "title": "HandledKindCount",
+        "type": "object"
+      },
       "HandledRow": {
-        "description": "One mail on the Handled for you screen: set aside before the assistant read it, or read with nothing to do.",
+        "description": "One item on the Handled for you screen: mail set aside before the assistant read it, a change a rule closed, or\nmail read with nothing to do.",
         "properties": {
           "address": {
             "default": "",
             "description": "The sender's address, when the mail holds one.",
             "title": "Address",
             "type": "string"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "enum": [
+                  "new",
+                  "changed",
+                  "removed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a change a rule closed: whether the item was new, changed or removed.",
+            "title": "Change"
           },
           "domain": {
             "anyOf": [
@@ -9885,8 +9936,22 @@
             "title": "Domain"
           },
           "id": {
-            "description": "The mail item's snapshot, which every choice names.",
+            "description": "The mail item's snapshot, which every choice on mail names; for a change a rule closed, its request.",
             "title": "Id",
+            "type": "string"
+          },
+          "item": {
+            "description": "What kind of item it is (mail, a file, a page...); the screen words it.",
+            "enum": [
+              "mail",
+              "calendar",
+              "file",
+              "page",
+              "action",
+              "question",
+              "other"
+            ],
+            "title": "Item",
             "type": "string"
           },
           "kind": {
@@ -9924,7 +9989,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why it was set aside, in plain words; empty for mail the assistant read.",
+            "description": "Why it was set aside or closed, in plain words; empty for mail the assistant read.",
             "title": "Reason"
           },
           "received": {
@@ -9950,6 +10015,18 @@
             ],
             "description": "For mail the assistant read: the request that read it.",
             "title": "Request"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a change a rule closed: the rule's name.",
+            "title": "Rule"
           },
           "saved": {
             "anyOf": [
@@ -9992,6 +10069,7 @@
           "tab": {
             "enum": [
               "set_aside",
+              "closed",
               "read"
             ],
             "title": "Tab",
@@ -10010,6 +10088,7 @@
           "id",
           "version",
           "tab",
+          "item",
           "kind",
           "title",
           "source",
@@ -10019,7 +10098,7 @@
         "type": "object"
       },
       "HandledView": {
-        "description": "Mail handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest mail.",
+        "description": "What the app handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest\nrow.",
         "properties": {
           "counts": {
             "$ref": "#/components/schemas/HandledCounts"
@@ -10027,7 +10106,7 @@
           "group": {
             "description": "How the groups were made.",
             "enum": [
-              "kind",
+              "reason",
               "sender"
             ],
             "title": "Group",
@@ -10040,6 +10119,45 @@
             "title": "Groups",
             "type": "array"
           },
+          "item": {
+            "anyOf": [
+              {
+                "enum": [
+                  "mail",
+                  "calendar",
+                  "file",
+                  "page",
+                  "action",
+                  "question",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The kind of item the rows are narrowed to; empty for all.",
+            "title": "Item"
+          },
+          "kept_days": {
+            "description": "How many days an item stays listed before it leaves the list.",
+            "title": "Kept Days",
+            "type": "integer"
+          },
+          "kinds": {
+            "description": "The kinds of item the chosen list holds, most first.",
+            "items": {
+              "$ref": "#/components/schemas/HandledKindCount"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "page_rows": {
+            "description": "How many rows a group shows before Show more.",
+            "title": "Page Rows",
+            "type": "integer"
+          },
           "query": {
             "description": "The search the rows match; empty for all.",
             "title": "Query",
@@ -10048,6 +10166,7 @@
           "tab": {
             "enum": [
               "set_aside",
+              "closed",
               "read"
             ],
             "title": "Tab",
@@ -10058,7 +10177,10 @@
           "tab",
           "group",
           "query",
+          "kept_days",
+          "page_rows",
           "counts",
+          "kinds",
           "groups"
         ],
         "title": "HandledView",
@@ -23551,6 +23673,21 @@
             "title": "How",
             "type": "string"
           },
+          "item": {
+            "default": "other",
+            "description": "What kind of item was closed (mail, a file, a page, an action...).",
+            "enum": [
+              "mail",
+              "calendar",
+              "file",
+              "page",
+              "action",
+              "question",
+              "other"
+            ],
+            "title": "Item",
+            "type": "string"
+          },
           "kind": {
             "description": "rule: a triage rule closed a change before it was read. set_aside: mail set aside as not work by a rule or the assistant's sorting. assistant: an action or question the assistant closed as data.",
             "enum": [
@@ -31827,7 +31964,7 @@
     },
     "/api/handled": {
       "get": {
-        "description": "One of the two lists of mail handled for the person, in groups: by kind or by sender (the configured\ngrouping when none is asked for), newest first, narrowed by the words of `q`, with the counts of both lists.",
+        "description": "One of the three lists of what was handled for the person, in groups: by reason or by sender (the\nconfigured grouping when none is asked for), newest first, narrowed by the words of `q` and by the kind of\nitem, with the counts of all three lists.",
         "operationId": "handled_list_api_handled_get",
         "parameters": [
           {
@@ -31838,6 +31975,7 @@
               "default": "set_aside",
               "enum": [
                 "set_aside",
+                "closed",
                 "read"
               ],
               "title": "Tab",
@@ -31852,7 +31990,7 @@
               "anyOf": [
                 {
                   "enum": [
-                    "kind",
+                    "reason",
                     "sender"
                   ],
                   "type": "string"
@@ -31872,6 +32010,31 @@
               "default": "",
               "title": "Q",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "item",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "mail",
+                    "calendar",
+                    "file",
+                    "page",
+                    "action",
+                    "question",
+                    "other"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Item"
             }
           }
         ],
@@ -31898,6 +32061,25 @@
           }
         },
         "summary": "Handled List"
+      }
+    },
+    "/api/handled/counts": {
+      "get": {
+        "description": "How many each of the three lists holds, for a line that only counts.",
+        "operationId": "handled_counts_api_handled_counts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandledCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Handled Counts"
       }
     },
     "/api/handled/{snapshot_id}/personal": {
@@ -36573,6 +36755,46 @@
           }
         },
         "summary": "Closer Look"
+      }
+    },
+    "/api/requests/{request_id}/closer-look/undo": {
+      "post": {
+        "description": "Undo Take a closer look on a change a rule closed, while the assistant hasn't started on it.",
+        "operationId": "closer_look_undo_api_requests__request_id__closer_look_undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Closer Look Undo"
       }
     },
     "/api/requests/{request_id}/dismiss": {

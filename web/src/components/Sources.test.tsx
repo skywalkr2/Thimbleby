@@ -33,41 +33,6 @@ const source = (id: string, extra: Partial<Source> = {}): Source => ({
   ...extra,
 });
 
-const closed = (id: string, extra: Partial<S["AutoClosedView"]> = {}): S["AutoClosedView"] => ({
-  id,
-  version: 4,
-  title: `Item ${id}`,
-  source: "Source a",
-  change: "changed",
-  rule: "rule-a",
-  reason: "only spacing changed",
-  created_at: "2026-03-04T09:00:00+00:00",
-  ...extra,
-});
-
-const silent = (ref: string, extra: Partial<S["SilentCloseView"]> = {}): S["SilentCloseView"] => ({
-  ref,
-  kind: "assistant",
-  how: "dropped",
-  title: `Closed ${ref}`,
-  when: "2026-03-04T09:00:00+00:00",
-  why: "no longer needed",
-  ...extra,
-});
-
-const measure = (extra: Partial<S["CloseMeasureView"]> = {}): S["CloseMeasureView"] => ({
-  days: 28,
-  since: "2026-02-04T09:00:00+00:00",
-  until: "2026-03-04T09:00:00+00:00",
-  total: 0,
-  silent: 0,
-  by_person: 0,
-  approved: 0,
-  rate: null,
-  kinds: [],
-  ...extra,
-});
-
 type Item = S["SettingItem"];
 const field = (key: string, type: Item["type"], extra: Partial<Item> = {}): Item => ({
   key,
@@ -117,14 +82,11 @@ const stored = (list: Array<{ id: string; settings: Record<string, unknown> }>) 
 
 function open(
   sources: Source[],
-  items: S["AutoClosedView"][] = [],
   extra: Record<string, (b: unknown) => unknown> = {},
   props: Partial<Parameters<typeof Sources>[0]> = {},
 ) {
   const calls = fakeApi({
     "GET watch": () => sources,
-    "GET auto-closed": () => items,
-    "GET silent-closes": () => ({ count: 0, closes: [], measure: measure() }),
     "GET watch/kinds": () => KINDS,
     "GET settings": () => stored(sources.map((s) => ({ id: s.id, settings: { path: `${s.id}-folder` } }))),
     "GET projects": () => [],
@@ -238,7 +200,6 @@ test("a failing source's problem is announced when the screen opens, and not aga
   let sources = [source("a", { last: run({ outcome: "failed" }), failures: 1, problem: "Can't reach it." })];
   fakeApi({
     "GET watch": () => sources,
-    "GET auto-closed": () => [],
     // Reading a also finds that a second source has started failing.
     "POST watch/a/read": () => {
       sources = [...sources, source("b", { last: run({ outcome: "failed" }), failures: 1, problem: "Gone missing." })];
@@ -264,7 +225,6 @@ test("Read now reads that source and shows what the read returned", async () => 
   let a = source("a");
   const calls = fakeApi({
     "GET watch": () => [a, source("b")],
-    "GET auto-closed": () => [],
     "POST watch/a/read": () => (a = source("a", { last: run({ new: 4 }), items: 7 })),
   });
   renderApp(<Sources onAsk={() => {}} />);
@@ -278,7 +238,7 @@ test("Read now reads that source and shows what the read returned", async () => 
 });
 
 test("a read that fails says why in the message", async () => {
-  open([source("a")], [], {
+  open([source("a")], {
     "POST watch/a/read": () =>
       source("a", { last: run({ outcome: "failed" }), failures: 1, problem: "Can't reach it. Try later." }),
   });
@@ -295,71 +255,13 @@ test("with no connections, the screen says what to add and offers to ask how", a
   expect(onAsk).toHaveBeenCalledWith("How do I connect something for Helper to read?");
 });
 
-test("auto-closed items show their title, source, reason and time", async () => {
-  open([source("a")], [closed("r1"), closed("r2", { title: "Other item", change: "removed", reason: "made by us" })]);
-  const first = await row("Item r1");
-  expect(first).toHaveTextContent("Changed");
-  expect(first).toHaveTextContent("Source a");
-  expect(first).toHaveTextContent("Set aside because: only spacing changed");
-  expect(await row("Other item")).toHaveTextContent("Removed");
-});
-
-test("nothing set aside says so", async () => {
-  open([source("a")], []);
-  expect(await screen.findByText("Nothing has been set aside.")).toBeInTheDocument();
-});
-
-test("Take a closer look sends the version that was read, and says so", async () => {
-  const { calls } = open([source("a")], [closed("r1", { version: 9 })], {
-    "POST requests/r1/closer-look": () => ({ id: "r1" }),
-  });
-  const user = userEvent.setup();
-  await user.click(within(await row("Item r1")).getByRole("button", { name: "Take a closer look at Item r1" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST requests/r1/closer-look")?.body).toEqual({ read_version: 9 }));
-  expect(await screen.findByText("Handed in Item r1. Helper is on it.")).toBeInTheDocument();
-});
-
-describe("closes nobody has seen", () => {
-  const two = [
-    silent("changeset:CS-1:0", { title: "Send the proof", why: "the printer said so", run: "RUN-1" }),
-    silent("request:REQ-2", { kind: "rule", how: "closed", title: "Plan", rule: "Spacing", why: "only spacing changed" }),
-  ];
-
-  test("each shows what, by whom, when and why, with the count out of all closes", async () => {
-    open([source("a")], [], {
-      "GET silent-closes": () => ({ count: 2, closes: two, measure: measure({ total: 12, silent: 3, rate: 0.25 }) }),
-    });
-    const assistant = await row("Send the proof");
-    expect(assistant).toHaveTextContent("Dropped");
-    expect(assistant).toHaveTextContent("By Helper");
-    expect(assistant).toHaveTextContent("Because: the printer said so");
-    expect(await row("Plan")).toHaveTextContent("By the rule Spacing");
-    expect(screen.getByTestId("silent-measure")).toHaveTextContent("3 of 12 closes in the last 28 days weren't seen by you.");
-  });
-
-  test("with nothing closed unseen the measure says the person saw everything, not a count of none", async () => {
-    open([source("a")], [], {
-      "GET silent-closes": () => ({ count: 0, closes: [], measure: measure({ total: 1, silent: 0, rate: 0 }) }),
-    });
-    expect(await screen.findByTestId("silent-measure")).toHaveTextContent("You saw everything closed in the last 28 days.");
-  });
-
-  test("Looks right sends the close's reference and says it was marked", async () => {
-    const { calls } = open([source("a")], [], {
-      "GET silent-closes": () => ({ count: 1, closes: [two[1]], measure: measure({ total: 1, silent: 1, rate: 1 }) }),
-      "POST silent-closes/seen": () => ({ id: "request:REQ-2" }),
-    });
-    const user = userEvent.setup();
-    await user.click(within(await row("Plan")).getByRole("button", { name: "Looks right: Plan" }));
-    await waitFor(() => expect(calls.find((c) => c.route === "POST silent-closes/seen")?.body).toEqual({ ref: "request:REQ-2" }));
-    expect(await screen.findByText("Marked as seen: Plan.")).toBeInTheDocument();
-  });
-
-  test("with none, it says everything closed was made or seen by the person", async () => {
-    open([source("a")]);
-    expect(await screen.findByText("Everything that was closed, you made or saw.")).toBeInTheDocument();
-    expect(screen.queryByTestId("silent-measure")).toBeNull();
-  });
+test("Connections holds only accounts and sources: nothing closed or set aside is listed or asked for there", async () => {
+  const { calls } = open([source("a")]);
+  await screen.findByRole("listitem", { name: "Source a" });
+  expect(screen.queryByText("Set aside by rules")).not.toBeInTheDocument();
+  expect(screen.queryByText("Closed without you seeing")).not.toBeInTheDocument();
+  expect(screen.queryByText("Nothing has been set aside.")).not.toBeInTheDocument();
+  expect(calls.some((c) => c.route === "GET auto-closed" || c.route === "GET silent-closes")).toBe(false);
 });
 
 describe("adding a source", () => {
@@ -402,7 +304,7 @@ describe("adding a source", () => {
 
   test("a kind that is taken in quietly says what the first read does: one list to look over, and older mail isn't read", async () => {
     const user = userEvent.setup();
-    open([], [], { "GET watch/kinds": () => [kind("folder", "A folder", null, [field("path", "text")], "intake")] });
+    open([], { "GET watch/kinds": () => [kind("folder", "A folder", null, [field("path", "text")], "intake")] });
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     const form = await screen.findByRole("form", { name: "Add a connection" });
     await user.click(within(form).getByRole("radio", { name: "A folder" }));
@@ -426,7 +328,7 @@ describe("adding a source", () => {
 
   test("saving sends the kind, name, schedule, project and the settings as nested values with the fresh fingerprint, then reads back with Undo", async () => {
     const user = userEvent.setup();
-    const { calls } = open([], [], {
+    const { calls } = open([], {
       "GET projects": () => [{ id: "p1", name: "Harbor", parent: null }],
       "POST watch/sources": () => SAVED([], [{ id: "work-calendar" }]),
       "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
@@ -465,7 +367,7 @@ describe("adding a source", () => {
       field("file", "text", { picker: "file", file_types: [".ics"] }),
       field("expand_days", "integer", { value: 60, default: 60 }),
     ]);
-    const { calls } = open([], [], {
+    const { calls } = open([], {
       "GET watch/kinds": () => [...KINDS, calendar],
       "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["Calendars"], files: [] }),
       [`GET setup/folders?files=${enc(".ics")}`]: () => ({ path: "/home/me", parent: "/home", folders: ["Calendars"], files: ["notes.ics"] }),
@@ -502,7 +404,7 @@ describe("adding a source", () => {
   test("where the app can't list folders (hosted), a file is not offered from a list", async () => {
     const user = userEvent.setup();
     const calendar = kind("calendar", "A calendar file", null, [field("file", "text", { picker: "file", file_types: [".ics"] })]);
-    open([], [], {
+    open([], {
       "GET watch/kinds": () => [...KINDS, calendar],
       "GET setup/folders": () => new Refuse(403, "Folders on the server can't be browsed; type the path."),
     });
@@ -514,7 +416,7 @@ describe("adding a source", () => {
 
   test("a refusal that names a field is shown on the form, which stays open with what was typed", async () => {
     const user = userEvent.setup();
-    open([], [], { "POST watch/sources": () => new Refuse(400, "address: Field required") });
+    open([], { "POST watch/sources": () => new Refuse(400, "address: Field required") });
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     await user.click(await screen.findByRole("radio", { name: "A calendar" }));
     await user.type(screen.getByLabelText("Name"), "Mine");
@@ -537,7 +439,7 @@ describe("adding a source", () => {
 
   test("from a sign-in, only the kinds of that add-on are offered, and a lone kind is already chosen", async () => {
     const user = userEvent.setup();
-    open([source("a")], [], {}, { add: { plugin: "other", n: 1 } });
+    open([source("a")], {}, { add: { plugin: "other", n: 1 } });
     const form = await screen.findByRole("form", { name: "Add a connection" });
     expect(await within(form).findAllByRole("radio")).toHaveLength(1);
     expect(within(form).getByRole("radio", { name: "A feed" })).toBeChecked();
@@ -549,21 +451,21 @@ describe("adding a source", () => {
   });
 
   test("an add-on with several kinds offers just those", async () => {
-    open([], [], {}, { add: { plugin: "demo", n: 1 } });
+    open([], {}, { add: { plugin: "demo", n: 1 } });
     const form = await screen.findByRole("form", { name: "Add a connection" });
     expect((await within(form).findAllByRole("radio")).map((r) => r.parentElement?.textContent)).toEqual(["A calendar", "A mailbox"]);
   });
 
   test("asking to add one tells the app the request was taken up, so it isn't repeated", async () => {
     const onAddOpened = vi.fn();
-    open([], [], {}, { add: { plugin: null, n: 5 }, onAddOpened });
+    open([], {}, { add: { plugin: null, n: 5 }, onAddOpened });
     await screen.findByRole("form", { name: "Add a connection" });
     expect(onAddOpened).toHaveBeenCalled();
   });
 
   test("with no kinds running, the form says what to turn on", async () => {
     const user = userEvent.setup();
-    open([], [], { "GET watch/kinds": () => [] });
+    open([], { "GET watch/kinds": () => [] });
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     expect(await screen.findByText(/Turn on a mail or calendar add-on, then sign in to add a connection/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add connection" })).toBeDisabled();
@@ -582,7 +484,7 @@ describe("a mailbox's folders", () => {
 
   test("the sent and archive folders are pick lists of the mailbox's own folders, and a pick is saved", async () => {
     const user = userEvent.setup();
-    const { calls } = open([source("a", { connector: "mailbox" })], [], {
+    const { calls } = open([source("a", { connector: "mailbox" })], {
       "GET watch/kinds": () => [mailboxKind],
       "GET settings": () => stored(mailbox()),
       "GET watch/a/folders": () => FOLDERS,
@@ -605,7 +507,7 @@ describe("a mailbox's folders", () => {
 
   test("a folder the mailbox no longer lists stays in the list so the setting isn't lost", async () => {
     const user = userEvent.setup();
-    open([source("a", { connector: "mailbox" })], [], {
+    open([source("a", { connector: "mailbox" })], {
       "GET watch/kinds": () => [mailboxKind],
       "GET settings": () => stored([{ id: "a", settings: { sent_folder: "Old sent", archive_folder: "", folder: "INBOX" } }]),
       "GET watch/a/folders": () => FOLDERS,
@@ -619,7 +521,7 @@ describe("a mailbox's folders", () => {
 
   test("when the folders can't be read the two settings stay text boxes", async () => {
     const user = userEvent.setup();
-    open([source("a", { connector: "mailbox" })], [], {
+    open([source("a", { connector: "mailbox" })], {
       "GET watch/kinds": () => [mailboxKind],
       "GET settings": () => stored(mailbox()),
       "GET watch/a/folders": () => new Refuse(409, "The mailbox can't be reached."),
@@ -647,7 +549,7 @@ describe("a source's menu", () => {
 
   test("Change opens the same form filled from the source, and saves the name, schedule and settings", async () => {
     const user = userEvent.setup();
-    const { calls } = open([source("a", { connector: "folder", every_minutes: 30 })], [], {
+    const { calls } = open([source("a", { connector: "folder", every_minutes: 30 })], {
       "GET settings": () => stored(items("folder")),
       "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
     });
@@ -678,7 +580,7 @@ describe("a source's menu", () => {
   test("a save made from a form opened before the settings changed sends the fingerprint it opened with, is refused, and keeps what was typed", async () => {
     const user = userEvent.setup();
     let fingerprint = "fp-1";
-    const { calls } = open([source("a", { connector: "folder", every_minutes: 60 })], [], {
+    const { calls } = open([source("a", { connector: "folder", every_minutes: 60 })], {
       "GET settings": () => ({ ...stored(items("folder")), fingerprint }),
       "POST watch/sources/a": (sent) =>
         (sent as { fingerprint: string }).fingerprint === fingerprint
@@ -714,7 +616,7 @@ describe("a source's menu", () => {
   test("after the refusal what the person did not touch is refreshed and listed, and what they typed is kept", async () => {
     const user = userEvent.setup();
     let moved = false;
-    const { calls } = open([source("a", { connector: "folder", every_minutes: 60 })], [], {
+    const { calls } = open([source("a", { connector: "folder", every_minutes: 60 })], {
       "GET watch": () => [source("a", { connector: "folder", every_minutes: moved ? 240 : 60 })],
       "GET settings": () => ({
         ...stored([{ id: "a", settings: { path: moved ? "elsewhere" : "inbox", patterns: ["*.md"] } }].map((x) => x)),
@@ -751,7 +653,7 @@ describe("a source's menu", () => {
 
   test("the form for a new source opens with the cursor in its first field, and the form for changing one in its name", async () => {
     const user = userEvent.setup();
-    open([source("a", { connector: "folder" })], []);
+    open([source("a", { connector: "folder" })]);
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     const adding = await screen.findByRole("form", { name: "Add a connection" });
     await waitFor(() => expect(adding.contains(document.activeElement) && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement!.tagName)).toBe(true));
@@ -769,7 +671,7 @@ describe("a source's menu", () => {
       { id: "p2", name: "Robin Example", kind: "person" },
       { id: "t1", name: "Design team", kind: "team" },
     ];
-    const { calls } = open([source("a", { connector: "folder", author: "p2", author_name: "Robin Example" })], [], {
+    const { calls } = open([source("a", { connector: "folder", author: "p2", author_name: "Robin Example" })], {
       "GET watch/authors": () => authors,
       "GET settings": () => stored(items("folder")),
       "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
@@ -799,7 +701,7 @@ describe("a source's menu", () => {
 
     test("with several signed in, adding a source asks which account, and saves it", async () => {
       const user = userEvent.setup();
-      const { calls } = open([], [], {
+      const { calls } = open([], {
         "GET watch/kinds": () => withAccounts(["pat@example.com", "sam@example.com"]),
         "POST watch/sources": () => SAVED([], [{ id: "a" }]),
       }, { add: { plugin: "demo", n: 1 } });
@@ -823,7 +725,7 @@ describe("a source's menu", () => {
 
     test("with one signed in it is already chosen, and a source's own account is shown on its row and in Change", async () => {
       const user = userEvent.setup();
-      const { calls } = open([source("a", { connector: "demo/mailbox", account: "sam@example.com" })], [], {
+      const { calls } = open([source("a", { connector: "demo/mailbox", account: "sam@example.com" })], {
         "GET watch/kinds": () => withAccounts(["pat@example.com", "sam@example.com"]),
         "GET settings": () => stored(items("demo/mailbox")),
         "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
@@ -841,7 +743,7 @@ describe("a source's menu", () => {
     });
 
     test("a kind with no accounts has no account list and sends none", async () => {
-      open([], [], { "GET watch/kinds": () => KINDS }, { add: { plugin: "other", n: 1 } });
+      open([], { "GET watch/kinds": () => KINDS }, { add: { plugin: "other", n: 1 } });
       const form = await screen.findByRole("form", { name: "Add a connection" });
       await screen.findByLabelText("How often to read");
       expect(within(form).queryByLabelText("Account to read")).toBeNull();
@@ -850,7 +752,7 @@ describe("a source's menu", () => {
 
   test("when the saved settings don't hold the source's own, only its name and schedule can change", async () => {
     const user = userEvent.setup();
-    const { calls } = open([source("a", { connector: "folder" })], [], {
+    const { calls } = open([source("a", { connector: "folder" })], {
       "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
       "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
     });
@@ -865,7 +767,7 @@ describe("a source's menu", () => {
 
   test("Turn off acts at once, reads back with Undo, and a source that is off offers Turn on", async () => {
     const user = userEvent.setup();
-    const { calls } = open([source("a")], [], {
+    const { calls } = open([source("a")], {
       "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
       "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
     });
@@ -878,7 +780,7 @@ describe("a source's menu", () => {
 
   test("Turn on turns a source that is off back on", async () => {
     const user = userEvent.setup();
-    const { calls } = open([source("a", { enabled: false })], [], { "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]) });
+    const { calls } = open([source("a", { enabled: false })], { "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]) });
     await choose(user, "Source a", "Turn on");
     await waitFor(() => expect(body(calls, "POST watch/sources/a")).toEqual({ enabled: true, fingerprint: "fp-1" }));
     expect(await screen.findByText("Turned on Source a.")).toBeInTheDocument();
@@ -886,7 +788,7 @@ describe("a source's menu", () => {
 
   test("Remove acts at once with Undo, naming the source", async () => {
     const user = userEvent.setup();
-    const { calls } = open([source("a")], [], {
+    const { calls } = open([source("a")], {
       "POST watch/sources/a/remove": () => SAVED([{ id: "a" }], []),
       "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
     });
@@ -898,7 +800,7 @@ describe("a source's menu", () => {
 
   test("Remove says when the password kept for the source is deleted from this computer, once Undo can't need it", async () => {
     const user = userEvent.setup();
-    open([source("a")], [], {
+    open([source("a")], {
       "POST watch/sources/a/remove": () => ({ ...SAVED([{ id: "a" }], []), kept_secrets_going: 1, kept_secrets_undo_minutes: 10 }),
     });
     await choose(user, "Source a", "Remove");
@@ -907,7 +809,7 @@ describe("a source's menu", () => {
 
   test("Remove with no wait says the saved password or key was deleted", async () => {
     const user = userEvent.setup();
-    open([source("a")], [], {
+    open([source("a")], {
       "POST watch/sources/a/remove": () => ({ ...SAVED([{ id: "a" }], []), kept_secrets_going: 2, kept_secrets_undo_minutes: 0 }),
     });
     await choose(user, "Source a", "Remove");
@@ -916,7 +818,7 @@ describe("a source's menu", () => {
 
   test("a refusal is said in a toast, and the source stays as it was", async () => {
     const user = userEvent.setup();
-    open([source("a")], [], { "POST watch/sources/a/remove": () => new Refuse(409, "The settings changed. Try again.") });
+    open([source("a")], { "POST watch/sources/a/remove": () => new Refuse(409, "The settings changed. Try again.") });
     await choose(user, "Source a", "Remove");
     expect(await screen.findByText("That didn't work. The settings changed. Try again.")).toBeInTheDocument();
     expect(await row("Source a")).toBeInTheDocument();
@@ -940,7 +842,7 @@ describe("a secret setting typed on the screen", () => {
 
   test("on a local app it is a password box, and what is typed goes apart from the settings", async () => {
     const user = userEvent.setup();
-    const calls = open([], [], routes()).calls;
+    const calls = open([], routes()).calls;
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     await user.type(screen.getByLabelText("Name"), "Work mail");
@@ -960,7 +862,7 @@ describe("a secret setting typed on the screen", () => {
 
   test("Where it is kept instead shows a text box for the reference, and nothing typed is sent", async () => {
     const user = userEvent.setup();
-    const calls = open([], [], routes()).calls;
+    const calls = open([], routes()).calls;
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     await user.type(await screen.findByLabelText("Where the password is kept, as a reference."), "abandoned");
@@ -980,7 +882,7 @@ describe("a secret setting typed on the screen", () => {
   test("a secret the app keeps shows Kept on this computer, and Replace takes a new one", async () => {
     const user = userEvent.setup();
     const mine = source("a", { connector: "demo/mailbox", secrets: [{ field: "password", where: "kept", name: null }] });
-    const calls = open([mine], [], routes(true, [mine])).calls;
+    const calls = open([mine], routes(true, [mine])).calls;
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: /Change/ });
     expect(await within(form).findByText("Kept on this computer")).toBeInTheDocument();
@@ -997,7 +899,7 @@ describe("a secret setting typed on the screen", () => {
   test("a secret read from a named place says where, never its value, and keeping the current one sends nothing new", async () => {
     const user = userEvent.setup();
     const mine = source("a", { connector: "demo/mailbox", secrets: [{ field: "password", where: "env", name: "MAIL_PASSWORD" }] });
-    const calls = open([mine], [], routes(true, [mine])).calls;
+    const calls = open([mine], routes(true, [mine])).calls;
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: /Change/ });
     expect(await within(form).findByText("Stored in the setting named MAIL_PASSWORD")).toBeInTheDocument();
@@ -1013,7 +915,7 @@ describe("a secret setting typed on the screen", () => {
       field("file", "text", { picker: "file", file_types: [".ics"], description: "A calendar file on this computer." }),
     ]);
     const address = "https" + "://calendar.example.com/private/token-9.ics";
-    const calls = open([], [], { ...routes(), "GET watch/kinds": () => [CALENDAR] }).calls;
+    const calls = open([], { ...routes(), "GET watch/kinds": () => [CALENDAR] }).calls;
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     const box = await screen.findByLabelText("The calendar's link.");
     expect(box).toHaveAttribute("type", "password");
@@ -1028,7 +930,7 @@ describe("a secret setting typed on the screen", () => {
 
   test("on a hosted app only the box for where it is kept is offered", async () => {
     const user = userEvent.setup();
-    open([], [], routes(false));
+    open([], routes(false));
     await user.click(await screen.findByRole("button", { name: "Add a connection" }));
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     const box = await screen.findByLabelText("Where the password is kept, as a reference.");
@@ -1061,7 +963,7 @@ const folders = (extra: Partial<S["MailFoldersView"]> = {}): S["MailFoldersView"
 
 test("a mailbox offers the folder its server marks as sent, picked already, with one button to read it too", async () => {
   const user = userEvent.setup();
-  const { calls } = open([mailbox()], [], {
+  const { calls } = open([mailbox()], {
     "GET watch/work-mail/folders": () => folders(),
     "POST watch/work-mail/sent-folder": () => SAVED([], []),
   });
@@ -1076,7 +978,7 @@ test("a mailbox offers the folder its server marks as sent, picked already, with
 
 test("when the server marks no sent folder the person picks, and the button waits for the pick", async () => {
   const user = userEvent.setup();
-  open([mailbox()], [], { "GET watch/work-mail/folders": () => folders({ sent: null }) });
+  open([mailbox()], { "GET watch/work-mail/folders": () => folders({ sent: null }) });
   const item = await row("Source work-mail");
   const list = await within(item).findByRole("combobox", { name: "Folder of the mail you sent" });
   expect(list).toHaveValue("");
@@ -1086,7 +988,7 @@ test("when the server marks no sent folder the person picks, and the button wait
 });
 
 test("nothing is offered once the sent folder is read, for another kind of source, or while the mailbox can't be read", async () => {
-  open([mailbox(), source("a"), mailbox({ id: "broken", label: "Broken", problem: "It can't be read: refused." })], [], {
+  open([mailbox(), source("a"), mailbox({ id: "broken", label: "Broken", problem: "It can't be read: refused." })], {
     "GET watch/work-mail/folders": () => folders({ taken: ["INBOX", "Sent Items"] }),
   });
   await row("Source work-mail");

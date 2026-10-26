@@ -178,12 +178,13 @@ test.describe.serial("journey: the owner's first evening", () => {
     await visit(page);
 
     // The one-time code is set aside under notices, and is not under Needs attention.
-    // It is on Handled for you, under Automated notices, which is collapsed until it is opened.
+    // It is on Handled for you, in the group of its reason, which is collapsed until it is opened.
     await openView(page, "Handled for you");
-    const notices = page.locator('[data-group="notices"]');
-    await expect(notices).toBeVisible({ timeout: 60_000 });
-    await notices.getByRole("button", { name: /^Automated notices/ }).click();
-    await expect(notices.getByText("Your verification code")).toBeVisible();
+    const handled = page.locator("[data-handled]");
+    await expect(handled.locator("[data-group]").first()).toBeVisible({ timeout: 60_000 });
+    const shut = handled.locator("[data-group] > h2 button[aria-expanded=false]");
+    for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();
+    await expect(handled.getByText("Your verification code")).toBeVisible();
     await openView(page, "What changed");
     await page.getByRole("button", { name: /^Needs attention/ }).click();
     await expect(page.getByText("Your verification code")).toHaveCount(0);

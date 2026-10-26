@@ -77,6 +77,7 @@ mail_kinds:   # bills, orders and deliveries are tracked for the Personal projec
 sorting_batch: 25   # messages covered by one sorting run
 set_aside_keep_seconds: 60   # how long a confirmed message's copy is kept so Undo can bring it back
 handled_rule_section: notices   # where Always set aside goes for mail the assistant already read: personal, sales or notices
+handled_keep_days: 30   # how many days an item stays listed on Handled for you, then it leaves the list
 public_mail_domains_extra: [mail.example.net]   # more free mail domains, so no rule is offered for the whole domain
 triage:
   - name: Spacing only

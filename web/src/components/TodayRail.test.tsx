@@ -355,9 +355,8 @@ test("a to-do's menu adds a note to Mark done, with the cursor in the box", asyn
   expect(await screen.findByText("Marked done. Helper will read your note.")).toBeInTheDocument();
 });
 
-test("came in: unread shows a New label, today's mail its time and older mail its weekday, with the closed-by-rules line", async () => {
-  const user = userEvent.setup({ advanceTimers: () => {} });
-  const { onView } = open();
+test("came in: unread shows a New label, today's mail its time and older mail its weekday, and nothing about what was handled", async () => {
+  open();
   const col = await column("Came in");
   const rows = await within(col).findAllByRole("listitem");
   expect(rows[0]).toHaveTextContent("New");
@@ -368,17 +367,11 @@ test("came in: unread shows a New label, today's mail its time and older mail it
   expect(rows[0].querySelector("time")!.textContent).toMatch(/9:14|09:14/);
   expect(rows[1]).not.toHaveTextContent("New");
   expect(rows[1].querySelector("time")!.textContent).toBe("Fri");
-  await user.click(within(col).getByRole("button", { name: "3 closed by your rules" }));
-  expect(onView).toHaveBeenCalledWith("sources");
-  await user.click(within(col).getByRole("button", { name: "2 set aside" }));
-  expect(onView).toHaveBeenLastCalledWith("work/handled");
-});
-
-test("no closed-by-rules line when nothing was closed", async () => {
-  open({ "GET today/arrived": () => ({ ...inbox, left_out: 0 }) });
-  const col = await column("Came in");
-  await within(col).findAllByRole("listitem");
-  expect(within(col).queryByRole("button", { name: /closed by your rules/ })).toBeNull();
+  // Today lists what the person does: what was set aside or closed is counted on What changed, never here.
+  expect(inbox.set_aside).toBeGreaterThan(0);
+  expect(inbox.left_out).toBeGreaterThan(0);
+  expect(within(col).queryByRole("button", { name: /set aside|closed by your rules/ })).toBeNull();
+  expect(within(col).queryByText(/set aside|closed by your rules/)).toBeNull();
 });
 
 test("with a second source the rows say which one they came from", async () => {

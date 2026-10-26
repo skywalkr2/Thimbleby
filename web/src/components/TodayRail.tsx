@@ -583,11 +583,7 @@ function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () =>
   const now = useNow();
   const today = localDate(now);
   const items = arrived.data?.items ?? [];
-  const leftOut = arrived.data?.left_out ?? 0;
-  const setAside = arrived.data?.set_aside ?? 0;
   const { setAside: moveToFolder } = useSetAside();
-  // The mail set aside is the first list of Handled for you.
-  const openFolder = () => props.onView("work/handled");
   const sourceName = useSourceNames(items.map((m) => m.source));
   const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
 
@@ -607,22 +603,6 @@ function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () =>
           : ""
       }
       action={watch.data && anyReading(watch.data) ? <CheckNow /> : undefined}
-      footer={
-        (setAside > 0 || leftOut > 0) && (
-          <>
-            {setAside > 0 && (
-              <button type="button" className="link-button" onClick={openFolder}>
-                {t("today.arrived.set_aside", { n: setAside })}
-              </button>
-            )}
-            {leftOut > 0 && (
-              <button type="button" className="link-button" onClick={() => props.onView("sources")}>
-                {t("today.arrived.closed", { n: leftOut })}
-              </button>
-            )}
-          </>
-        )
-      }
     >
       {arrived.isPending ? (
         <Skeleton />

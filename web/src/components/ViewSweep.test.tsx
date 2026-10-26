@@ -404,7 +404,7 @@ function watched(id: string, label: string, over: Partial<S["WatchSourceView"]> 
   return { id, label, connector: "folder", connector_label: "A folder", enabled: true, every_minutes: 15, items: 3, last: { outcome: "ok", started_at: started, new: 0, changed: 0, removed: 0 }, read_at: started, failures: 0, problem: null, ...over };
 }
 
-test("Sources, with every kind of read and the closes nobody saw, says names, dates and words", async () => {
+test("Sources, with every kind of read, says names, dates and words", async () => {
   const started = at("2026-10-10", 10, 30);
   const sources: S["WatchSourceView"][] = [
     watched("SRC-A", "Inbox", { connector_label: "A mailbox", items: 12, last: { outcome: "ok", started_at: started, new: 2, changed: 1, removed: 0, unsorted: "2 messages weren't sorted by the assistant, so they were handed in as work." }, looked_back_to: "2026-09-10", look_back_choices: [7, 30], account: `pat${AT}example.com`, author: "PER-1", author_name: "Pat Example", reads: ["mail"] }),
@@ -419,16 +419,6 @@ test("Sources, with every kind of read and the closes nobody saw, says names, da
   ];
   fakeApi({
     "GET watch": () => sources,
-    "GET auto-closed": () => [{ id: "REQ-9", version: 4, title: "Spacing change in the style sheet", source: "Quiet folder", change: "changed", rule: "Spacing only", reason: "only spacing changed", created_at: at("2026-10-10", 9) }],
-    "GET silent-closes": () => ({
-      count: 3,
-      closes: [
-        { ref: "changeset:CS-1:0", kind: "assistant", how: "dropped", title: "Send the proof", when: at("2026-10-10", 9), why: "the printer said so", run: "RUN-1" },
-        { ref: "request:REQ-2", kind: "rule", how: "closed", title: "Plan the launch", rule: "Spacing", when: at("2026-10-10", 9), why: "only spacing changed" },
-        { ref: "snapshot:SN-3", kind: "set_aside", how: "set_aside", title: "A newsletter", rule: "Bulk mail", when: at("2026-10-10", 9), why: "bulk" },
-      ],
-      measure: { days: 28, since: at("2026-09-13", 9), until: at("2026-10-11", 9), total: 12, silent: 3, by_person: 6, approved: 3, rate: 0.25, kinds: [{ kind: "rule", silent: 1, total: 4 }] },
-    }),
     "GET sign-ins": () => [
       { name: "demo/one", label: "Service one", status: "signed_in", ready: true, callback: "http://localhost:8080/auth/demo/one/callback", app: "workspace", account: `pat${AT}example.com`, missing: ["Mail.Read"] },
       { name: "demo/two", label: "Service two", status: "expired", ready: true, callback: "http://localhost:8080/auth/demo/two/callback", app: "workspace", allows: ["Read your mail"] },
@@ -440,7 +430,6 @@ test("Sources, with every kind of read and the closes nobody saw, says names, da
   });
   const view = renderApp(<Sources onAsk={vi.fn()} />);
   await screen.findByText("Switched off");
-  await screen.findByText("Send the proof");
   sweep(view.container);
 });
 
@@ -582,7 +571,7 @@ test("Since yesterday, with every kind of act and reason, says names, dates and 
   sweep(view.container);
 });
 
-test("Handled for you, with both lists and every kind of group, says names, dates and words", async () => {
+test("Handled for you, with every kind of group, chip and filter, says names, dates and words", async () => {
   const AT = "@";
   const mail = (id: string, over: Partial<S["HandledRow"]>): S["HandledRow"] => ({
     id,
@@ -600,23 +589,79 @@ test("Handled for you, with both lists and every kind of group, says names, date
     domain: "lists.example.com",
     section: "sales",
     request: null,
+    item: "mail",
+    rule: null,
+    change: null,
     ...over,
   });
   const kinds: S["HandledRow"]["kind"][] = ["bills", "orders", "deliveries", "personal", "sales", "notices", "other"];
-  const rows = kinds.map((kind) => mail(`m-${kind}`, { kind, received: kind === "other" ? null : at("2026-10-11", 8, 30) }));
+  const items: S["HandledRow"]["item"][] = ["mail", "calendar", "file", "page", "action", "question", "other"];
+  const rows = kinds.map((kind, n) => mail(`m-${kind}`, { kind, item: items[n], reason: `it was ${kind}`, received: kind === "other" ? null : at("2026-10-11", 8, 30) }));
   fakeApi({
     "GET handled?tab=set_aside&q=": () => ({
       tab: "set_aside",
-      group: "kind",
+      group: "reason",
       query: "",
-      counts: { set_aside: rows.length, read: 1 },
-      groups: rows.map((row) => ({ key: row.kind, label: null, count: 1, items: [row] })),
+      item: null,
+      kept_days: 30,
+      page_rows: 25,
+      counts: { set_aside: rows.length, closed: 1, read: 1 },
+      kinds: items.map((item) => ({ item, count: 1 })),
+      groups: rows.map((row) => ({ key: row.reason ?? "", label: row.reason ?? null, count: 1, items: [row] })),
     }),
   });
   const view = renderApp(<Handled />);
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   for (const header of await screen.findAllByRole("button", { name: /· 1$/, expanded: false })) await user.click(header);
   expect(screen.getAllByRole("listitem")).toHaveLength(rows.length);
+  sweep(view.container);
+});
+
+test("Handled for you, the closed list with a rule's closes and the assistant's own, says names, dates and words", async () => {
+  const closed: S["HandledRow"] = {
+    id: "REQ-9",
+    version: 4,
+    tab: "closed",
+    kind: "other",
+    item: "file",
+    title: "Spacing change in the style sheet",
+    sender: null,
+    source: "Quiet folder",
+    received: at("2026-10-10", 9),
+    reason: "only spacing changed",
+    link: null,
+    saved: "SRC-9",
+    address: "",
+    domain: null,
+    section: "notices",
+    request: "REQ-9",
+    rule: "Spacing only",
+    change: "changed",
+  };
+  fakeApi({
+    "GET handled?tab=set_aside&q=": () => ({ tab: "set_aside", group: "reason", query: "", item: null, kept_days: 30, page_rows: 25, counts: { set_aside: 0, closed: 1, read: 0 }, kinds: [], groups: [] }),
+    "GET handled?tab=closed&q=": () => ({
+      tab: "closed",
+      group: "reason",
+      query: "",
+      item: null,
+      kept_days: 30,
+      page_rows: 25,
+      counts: { set_aside: 0, closed: 1, read: 0 },
+      kinds: [{ item: "file", count: 1 }],
+      groups: [{ key: "only spacing changed", label: "only spacing changed", count: 1, items: [closed] }],
+    }),
+    "GET silent-closes": () => ({
+      count: 1,
+      closes: [{ ref: "changeset:CS-1:0", kind: "assistant", how: "dropped", title: "Send the proof", when: at("2026-10-10", 9), why: "the printer said so", run: "RUN-1", item: "action" }],
+      measure: { days: 28, since: at("2026-09-13", 9), until: at("2026-10-11", 9), total: 12, silent: 3, by_person: 6, approved: 3, rate: 0.25, kinds: [{ kind: "rule", silent: 1, total: 4 }] },
+    }),
+  });
+  const view = renderApp(<Handled />);
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  await user.click(await screen.findByRole("button", { name: "Closed by a rule · 1" }));
+  await user.click(await screen.findByRole("button", { name: "only spacing changed · 1", expanded: false }));
+  await screen.findByText("Send the proof");
   sweep(view.container);
 });
 

@@ -51,6 +51,9 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const { t, tn, has } = useWords();
   useReviewTime("changes", !props.compact);
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
+  // A quiet count of what was handled without the person, a link to the screen that lists it.
+  const handled = useQuery({ queryKey: ["handled", "counts"], queryFn: api.handledCounts });
+  const handledCount = handled.data ? handled.data.set_aside + handled.data.closed + handled.data.read : 0;
   const own = useOwnRequests();
   const stageToday = useStageToday();
   const [filter, setFilter] = useState<Filter>("attention");
@@ -179,6 +182,11 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       <p className="sr" aria-live="polite">
         {announce}
       </p>
+      {handledCount > 0 && (
+        <p className="hint" data-handled-count="">
+          <a href={viewHref("work/handled")}>{t("changes.handled", { n: handledCount })}</a>
+        </p>
+      )}
       {intake !== null && (
         <p className="hint" data-intake-filter="">
           {t("changes.intake.title", { source: watched.data?.find((w) => w.id === intake)?.label ?? intake })}{" "}

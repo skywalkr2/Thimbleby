@@ -105,7 +105,7 @@ def row(view, title):
 def test_the_two_lists_hold_different_mail_and_no_mail_is_in_both(app):
     ws, cfg, store, client, base = app
     aside, read = get(client, base, tab="set_aside"), get(client, base, tab="read")
-    assert aside["counts"] == read["counts"] == {"set_aside": 4, "read": 2}
+    assert aside["counts"] == read["counts"] == {"set_aside": 4, "closed": 0, "read": 2}
     assert {i["tab"] for g in aside["groups"] for i in g["items"]} == {"set_aside"}
     assert {i["tab"] for g in read["groups"] for i in g["items"]} == {"read"}
     assert not (ids(aside) & ids(read))
@@ -115,19 +115,34 @@ def test_the_two_lists_hold_different_mail_and_no_mail_is_in_both(app):
     assert folder == ids(aside)
 
 
-def test_rows_are_grouped_by_kind_by_default_with_a_count_and_newest_first(app):
+def test_rows_are_grouped_by_reason_by_default_with_a_count_and_newest_first(app):
     ws, cfg, store, client, base = app
     view = get(client, base, tab="set_aside")
-    assert view["group"] == "kind"
-    groups = {g["key"]: g for g in view["groups"]}
-    assert set(groups) == {"sales", "notices"}
-    assert groups["sales"]["count"] == 3 and groups["notices"]["count"] == 1
-    assert groups["sales"]["label"] is None, "the screen words a kind"
-    assert [i["title"] for i in groups["sales"]["items"]] == ["Sale sale-a", "Sale sale-b", "Sale sale-c"]
-    # Groups are ordered by their newest mail: the sales mail came in after the code mail's hour.
-    assert [g["key"] for g in view["groups"]] == ["notices", "sales"]
+    assert view["group"] == "reason"
+    assert all(g["key"] == g["label"] and g["key"] for g in view["groups"]), "a reason group is named by its words"
+    by_reason = {g["key"]: g for g in view["groups"]}
+    bulk = next(g for g in view["groups"] if any(i["title"] == "Sale sale-a" for i in g["items"]))
+    assert bulk["count"] == 3 and [i["title"] for i in bulk["items"]] == ["Sale sale-a", "Sale sale-b", "Sale sale-c"]
+    other = next(g for g in view["groups"] if g is not bulk)
+    assert [i["title"] for i in other["items"]] == ["Your verification code"] and len(by_reason) == 2
+    # Groups are ordered by their newest row: the code mail is newer than all the bulk mail.
+    assert view["groups"] == [other, bulk]
     read = get(client, base, tab="read")
-    assert {g["key"] for g in read["groups"]} == {"bills", "other"}, "a statement is a bill, the lunch note is other"
+    assert {g["key"] for g in read["groups"]} == {"kind:bills", "kind:other"}, "a mail read has no reason, so its kind"
+    assert all(g["label"] is None for g in read["groups"]), "the screen words a kind"
+
+
+def test_every_row_says_what_kind_of_item_it_is_and_the_list_names_the_kinds_it_holds(app):
+    ws, cfg, store, client, base = app
+    view = get(client, base, tab="set_aside")
+    assert {i["item"] for g in view["groups"] for i in g["items"]} == {"mail"}
+    assert view["kinds"] == [{"item": "mail", "count": 4}]
+    assert get(client, base, tab="set_aside", item="mail")["counts"]["set_aside"] == 4
+    assert get(client, base, tab="set_aside", item="file")["groups"] == []
+    assert get(client, base, tab="set_aside", item="file")["kinds"] == [{"item": "mail", "count": 4}], (
+        "the filter stays"
+    )
+    assert view["page_rows"] == cfg.ui.handled_rows_shown == 25
 
 
 def test_the_other_grouping_is_by_sender(app):
@@ -143,10 +158,12 @@ def test_the_other_grouping_is_by_sender(app):
 def test_the_settings_grouping_applies_when_none_is_asked_for(tmp_path):
     ws, cfg, store, client, base = start(tmp_path, [promo("one", SHOP_LIST, 1)])
     try:
-        assert get(client, base)["group"] == "kind"
+        assert get(client, base)["group"] == "reason"
         (ws.config_dir / "ui.yaml").write_text("version: 1\nhandled_group: sender\n")
         assert get(client, base)["group"] == "sender"
-        assert get(client, base, group="kind")["group"] == "kind"
+        assert get(client, base, group="reason")["group"] == "reason"
+        (ws.config_dir / "ui.yaml").write_text("version: 1\nhandled_group: kind\n")
+        assert get(client, base)["group"] == "reason", "the first name of the grouping still works"
     finally:
         store.close()
 
@@ -158,8 +175,9 @@ def test_a_search_narrows_by_sender_subject_and_kind_and_leaves_the_counts_alone
     assert len(titles(get(client, base, tab="set_aside", q="sales"))) == 3, "a kind"
     assert len(titles(get(client, base, tab="set_aside", q="sale zebra"))) == 0, "every word must be found"
     none = get(client, base, tab="read", q="no such words")
-    assert none["groups"] == [] and none["counts"] == {"set_aside": 4, "read": 2}
+    assert none["groups"] == [] and none["counts"] == {"set_aside": 4, "closed": 0, "read": 2}
     assert titles(get(client, base, tab="read", q="bills")) == ["Your statement is ready"]
+    assert len(titles(get(client, base, tab="set_aside", q="mailing list"))) == 3, "a reason"
 
 
 def test_each_row_carries_what_its_choices_need(app):

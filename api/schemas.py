@@ -4280,6 +4280,9 @@ class WatchAuthorOption(BaseModel):
     kind: Literal["you", "person", "team"]
 
 
+ItemKind = Literal["mail", "calendar", "file", "page", "action", "question", "other"]
+
+
 class AutoClosedView(BaseModel):
     """A watched change a triage rule closed before the assistant read it."""
 
@@ -4312,6 +4315,7 @@ class SilentCloseView(BaseModel):
     changeset: str | None = None
     snapshot: str | None = Field(None, description="The mail item, for one set aside.")
     record: RecordRef | None = Field(None, description="The record that was closed.")
+    item: ItemKind = Field("other", description="What kind of item was closed (mail, a file, a page, an action...).")
 
 
 class CloseKindCountView(BaseModel):
@@ -4445,11 +4449,20 @@ class SetAsideDone(BaseModel):
 
 
 class HandledRow(BaseModel):
-    """One mail on the Handled for you screen: set aside before the assistant read it, or read with nothing to do."""
+    """One item on the Handled for you screen: mail set aside before the assistant read it, a change a rule closed, or
+    mail read with nothing to do."""
 
-    id: str = Field(description="The mail item's snapshot, which every choice names.")
+    id: str = Field(
+        description="The mail item's snapshot, which every choice on mail names; for a change a rule closed, its "
+        "request."
+    )
     version: int
-    tab: Literal["set_aside", "read"]
+    tab: Literal["set_aside", "closed", "read"]
+    item: ItemKind = Field(description="What kind of item it is (mail, a file, a page...); the screen words it.")
+    rule: str | None = Field(None, description="For a change a rule closed: the rule's name.")
+    change: Literal["new", "changed", "removed"] | None = Field(
+        None, description="For a change a rule closed: whether the item was new, changed or removed."
+    )
     kind: Literal["bills", "orders", "deliveries", "personal", "sales", "notices", "other"] = Field(
         description="What the mail is, for grouping and the search. The screen words it."
     )
@@ -4458,7 +4471,8 @@ class HandledRow(BaseModel):
     source: str = Field(description="The watched source's label.")
     received: str | None = Field(None, description="ISO 8601 date-time with its offset, as the service gave it.")
     reason: str | None = Field(
-        None, description="Why it was set aside, in plain words; empty for mail the assistant read."
+        None,
+        description="Why it was set aside or closed, in plain words; empty for mail the assistant read.",
     )
     link: str | None = Field(None, description="Where the message opens in the person's mail service, when it has one.")
     saved: str | None = Field(None, description="The saved source record of the message, whose page opens it.")
@@ -4476,9 +4490,14 @@ class HandledRow(BaseModel):
 
 
 class HandledGroup(BaseModel):
-    key: str = Field(description="The kind (by kind) or the sender's address (by sender); empty for no known sender.")
+    key: str = Field(
+        description="The reason (by reason; `kind:` and the mail's kind for mail read with nothing to do) or the "
+        "sender's address (by sender); empty for none known."
+    )
     label: str | None = Field(
-        None, description="By sender: the sender's name or address. Empty by kind (the screen words the kind)."
+        None,
+        description="By reason: the reason in words. By sender: the sender's name or address. Empty when the screen "
+        "words it (a kind, or no known reason or sender).",
     )
     count: int
     items: list[HandledRow] = Field(description="Newest first.")
@@ -4486,16 +4505,27 @@ class HandledGroup(BaseModel):
 
 class HandledCounts(BaseModel):
     set_aside: int = Field(description="Mail set aside before it was read, whatever the search.")
+    closed: int = Field(description="Changes a rule closed before they were read, whatever the search.")
     read: int = Field(description="Mail read with nothing to do, whatever the search.")
 
 
-class HandledView(BaseModel):
-    """Mail handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest mail."""
+class HandledKindCount(BaseModel):
+    item: ItemKind
+    count: int = Field(description="Rows of this kind in the chosen list, whatever the search.")
 
-    tab: Literal["set_aside", "read"]
-    group: Literal["kind", "sender"] = Field(description="How the groups were made.")
+
+class HandledView(BaseModel):
+    """What the app handled for the person (design 7.20): the chosen list in groups, groups ordered by their newest
+    row."""
+
+    tab: Literal["set_aside", "closed", "read"]
+    group: Literal["reason", "sender"] = Field(description="How the groups were made.")
     query: str = Field(description="The search the rows match; empty for all.")
+    item: ItemKind | None = Field(None, description="The kind of item the rows are narrowed to; empty for all.")
+    kept_days: int = Field(description="How many days an item stays listed before it leaves the list.")
+    page_rows: int = Field(description="How many rows a group shows before Show more.")
     counts: HandledCounts
+    kinds: list[HandledKindCount] = Field(description="The kinds of item the chosen list holds, most first.")
     groups: list[HandledGroup]
 
 

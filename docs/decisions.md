@@ -46,6 +46,30 @@ wants the reviewer to see the whole app before measuring it.
 
 **Impact:** Open promises P33, P56, P61, P63; the roadmap's next steps. The designer's point 2 (the gate after what it
 gates) is the owner's accepted risk; the pass bar (R10) is still to be set before the gate week. Change log: none.
+## 2026-10-26: Handled for you by how each item was handled; kept for 30 days; nothing about it on Today (P58)
+
+**Decided:** (1) What the app handled stays listed for 30 days (`watch.handled_keep_days`), then leaves the list; the
+original stays where it came from. The list is filtered when it is read, so nothing is deleted and the ledger and Undo
+are whole. The screen says "Kept for {n} days". (2) What a rule closed, and the assistant's own unseen closes, leave
+Connections for Handled for you, which holds three tabs by how each item was handled: Set aside before reading, Closed
+by a rule, Read, nothing to do. Every row has a chip for the kind of item and the reason; a kind filter; groups by reason,
+collapsed, with Show more; one click on every row (Treat as work or Take a closer look) with a signal and Undo. (3) Today
+carries nothing about handled items (its "N set aside" and "N closed by your rules" lines go); What changed carries one
+quiet count linking to the screen. Connections holds only accounts and sources.
+
+**Decided by:** the owner, 2026-10-26 ("yes to both": 30 days; the closed lists move), and the functional designer's answer
+F34, 2026-10-26 (three tabs by how each was handled, chips, filter, reasons, Show more, Today's lines out, a count on What
+changed).
+
+**Why:** The same kinds of item appeared on two screens under two names, and Today is for what the person does. A read-time
+filter keeps the retention reversible; purging would redact ledger entries (design 5.2) and waits for a decision.
+
+**Left open:** "Not an older version" (needs a field on the watched item, a core record change held with the plugin API);
+mail only on the Read tab; no purge of the app's copy by age.
+
+**Impact:** Design 7.20, 7.1, 6.4, 6.32, 4.0 (`watch.handled_keep_days`, `ui.handled_group` renamed values,
+`ui.handled_rows_shown`). API: `/api/handled` (tab `closed`, `item`), `/api/handled/counts`, `/api/requests/{request}/closer-look/undo`.
+No change to scope. Change log: section 216.
 
 ## 2026-10-26: Handled for you: one screen for mail set aside and mail read with nothing to do (P45, P46, P47, P41)
 

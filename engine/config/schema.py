@@ -2514,11 +2514,24 @@ class UiFile(FileModel):
         default_factory=lambda: dict(DEFAULT_SHORTCUTS),
         description="Single-key shortcuts by action; they never fire while typing.",
     )
-    handled_group: Literal["kind", "sender"] = Field(
-        "kind",
-        description="How the Handled for you screen groups mail to start with: by kind (bills, orders, newsletters, "
-        "sales, automated notices) or by sender. The other grouping is one click away.",
+    handled_group: Literal["reason", "sender"] = Field(
+        "reason",
+        description="How the Handled for you screen groups what it lists to start with: by the reason it was handled "
+        "(a rule's own words) or by sender. The other grouping is one click away.",
     )
+    handled_rows_shown: int = Field(
+        25,
+        ge=5,
+        le=500,
+        description="How many rows a group on the Handled for you screen shows before Show more.",
+    )
+
+    @field_validator("handled_group", mode="before")
+    @classmethod
+    def _handled_group_was_kind(cls, value: Any) -> Any:
+        """The first grouping was named kind; a file that still says so means the reason grouping."""
+        return "reason" if value == "kind" else value
+
     narrow_below_px: int = Field(
         640,
         ge=320,
@@ -3086,6 +3099,14 @@ class WatchFile(FileModel):
         description="Where mail goes when you choose Always set aside mail like this on mail the assistant already "
         "read and found nothing to do in (that mail has no section of its own): personal, sales or notices "
         "(automated notices).",
+    )
+    handled_keep_days: int = Field(
+        30,
+        ge=1,
+        le=3650,
+        description="How many days an item stays listed on Handled for you after the app set it aside, a rule closed "
+        "it or the assistant read it with nothing to do. Then it leaves the list; the original stays where it came "
+        "from (your mailbox, say).",
     )
     public_mail_domains_extra: list[str] = Field(
         default_factory=list,
