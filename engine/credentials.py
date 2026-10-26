@@ -6,7 +6,7 @@ two references are the same credential when they point at the same environment v
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -70,8 +70,26 @@ def uses_of(cfg: Any, ref: str, skip_account: str | None = None) -> list[str]:
     return found
 
 
+#: How much of a credential's life has passed before a warning may start, when its start is known.
+LIFE_BEFORE_WARNING = 0.75
+
+
+def warning_starts(ends: date, window: int, began: Any = None) -> date:
+    """The first day Today may warn about a credential ending on `ends`: `window` days before the end, but not before
+    three quarters of its life have passed when its start (a timestamp) is known, so a short life never warns
+    at once."""
+    first = ends - timedelta(days=window)
+    if isinstance(began, (int, float)):
+        start = datetime.fromtimestamp(began, UTC)
+        end = datetime.combine(ends, datetime.min.time(), UTC)
+        if end > start:
+            first = max(first, (start + (end - start) * LIFE_BEFORE_WARNING).date())
+    return first
+
+
 def expiring(ws: Any, cfg: Any, store: Any, now: datetime) -> list[Expiry]:
-    """The credentials with a known end that is within `ai.credential_warn_days` days or already past, soonest first.
+    """The credentials with a known end that is within `ai.credential_warn_days` days (and, for a sign-in, past three
+    quarters of its life) or already past, soonest first.
     An account's own end date comes from its settings; a sign-in's from what the service said when it was granted."""
     today = now.astimezone(UTC).date()
     window = cfg.ai.credential_warn_days
@@ -89,7 +107,7 @@ def expiring(ws: Any, cfg: Any, store: Any, now: datetime) -> list[Expiry]:
         if not isinstance(stamp, (int, float)):
             continue
         ends = datetime.fromtimestamp(stamp, UTC).date()
-        if (ends - today).days > window:
+        if today < warning_starts(ends, window, tokens.get("signed_in_at")):
             continue
         reading = [
             f"the source {s.label or s.id}" for s in cfg.watch.sources if s.connector.split("/", 1)[0] == sign_in.plugin

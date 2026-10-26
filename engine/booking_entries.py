@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from engine.bookings import Booking, read_bookings
 from engine.records import canonical_time
+from engine.same_entry import same_entry
 from engine.sides import word
 
 
@@ -94,10 +95,23 @@ def entries(cfg: Any, text: str) -> Made:
     return Made(tuple(ops), tuple(skipped))
 
 
+def _held(view: Any) -> list[tuple[str, str]]:
+    """The title and start of every entry already held: the app's own and each date of a calendar source's events."""
+    from engine.today import _dates
+
+    held = [(e.data["title"], e.data["start"]) for e in view.list("event") if e.data.get("title")]
+    for snap in view.list("snapshot"):
+        event = snap.data.get("event")
+        if event and not snap.data.get("gone"):
+            held.extend((d["title"], d["start"]) for d in _dates(event, snap.data["title"], snap.data["key"]))
+    return held
+
+
 def add_to(changeset: Any, cfg: Any, view: Any, text: str) -> Any:
     """The changeset with the entries the input's bookings make added, and without an `event.add` of the assistant's
     own that starts at the same moment as one of them (the same booking read twice). An entry that is already in the
-    calendar with the same title and start is not made again. Returns the changeset unchanged when the input carries
+    calendar (the app's own or a connected one) at the same moment with the same or a containing title is not made
+    again. Returns the changeset unchanged when the input carries
     no booking."""
     made = entries(cfg, text)
     if made.skipped:
@@ -108,8 +122,13 @@ def add_to(changeset: Any, cfg: Any, view: Any, text: str) -> Any:
         return changeset
     from engine.ops import EventAddOp
 
-    have = {(e.data["title"], e.data["start"]) for e in view.list("event")}
-    fresh = [EventAddOp.model_validate(o) for o in made.ops if (o["title"], canonical_time(o["start"])) not in have]
+    zone = ZoneInfo(cfg.workspace.user.timezone)
+    have = _held(view)
+    fresh = [
+        EventAddOp.model_validate(o)
+        for o in made.ops
+        if not any(same_entry(o["title"], o["start"], title, start, zone) for title, start in have)
+    ]
     if not fresh:
         return changeset
     starts = {op.start for op in fresh}

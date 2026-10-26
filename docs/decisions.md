@@ -5327,3 +5327,21 @@ where pasted material belongs (it stays untrusted there).
 **Impact:** Design 6.5, 6.6, 6.9, 4.6 and CHANGES section 43. New setting `language.bare_confirmation_words` (live) with demo
 values in both workspaces. API: optional `note` on the action status, They finished it, Followed up and pick-owner
 routes; `request` on their responses. No change to scope.
+
+## 2026-10-24: One appointment is one entry; the agenda reaches a week; lead time on Today (phase B)
+
+**Decision:** The agenda shows today and six days after (`ui.today.agenda_days_ahead`, 6), and when empty names the days
+it looked at. A booking whose appointment is already held (the app's own entry or a connected calendar's) at the same
+moment with the same or a containing title makes no entry, and the clash check never pairs an entry with its own copy
+(`engine/same_entry.py`). A sign-in warning starts at the later of the configured days before its end
+(`ai.credential_warn_days`, now 1) and three quarters of its life. A meeting to set up counts on Today from
+`steward.meetings.setup_lead_working_days` (2) working days before its day, and shows only on its day once its invitation
+is out; `steward.meetings.setup_words` (meeting) marks which to-dos these are.
+
+**Why:** The owner's first real use showed an appointment two days away missing from the agenda, a false clash between an
+appointment and the copy made from its confirmation, a renewal warning on day one, and a Friday count that left out
+Monday's meeting.
+
+**Impact:** Design 6.32, 7.7 and CHANGES section 72 (Change log: section 72). New settings `steward.meetings.setup_lead_working_days` and
+`setup_words` (live), changed defaults above, demo values in both workspaces. API: `GET /today/agenda-span`, `kind` on a
+week to-do. No change to scope.

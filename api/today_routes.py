@@ -121,6 +121,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     project_name=projects.get(d.project or ""),
                     owners=owner_ids(people, d.owners),
                     mine=d.mine,
+                    kind=d.kind,
                 )
                 for d in found.due
             ],

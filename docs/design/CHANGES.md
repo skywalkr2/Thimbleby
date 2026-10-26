@@ -2541,6 +2541,10 @@ All *not yet built*: L7, phase B and phase P.
 | Follow-ups (7.5) | One message per person | A Message / Table switch; the table is shown before it is copied; Copy as table (HTML) and Copy for a spreadsheet (tab-separated) |
 | Today | None | A held line when work has no AI account; the backup line's button is at the row's end |
 
+## 72. One appointment, one entry; a week of agenda; lead time (2026-10-24)
+
+- **One appointment, one entry; a week of agenda; lead time (6.32, 7.7):** the agenda reaches six days ahead and names the days when empty; a booking already on a calendar is linked, not copied, and a copy never clashes with its original; a sign-in warns a day before its end, never before three quarters of its life; a meeting to set up counts on Today `steward.meetings.setup_lead_working_days` working days ahead.
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

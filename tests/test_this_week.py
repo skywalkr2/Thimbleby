@@ -90,3 +90,42 @@ def test_the_meetings_of_the_week_include_the_apps_own_entries_through_the_last_
     outside = make(store, "event", trust="trusted", title="Next week's sync", start=f"{day(8)}T10:00:00+00:00")
     found = {m.snapshot for m in this_week(store, cfg, NOW).meetings}
     assert inside in found and outside not in found
+
+
+FRIDAY = datetime(2026, 10, 23, 14, 0, tzinfo=UTC)
+WEDNESDAY = datetime(2026, 10, 21, 14, 0, tzinfo=UTC)
+
+
+def meeting_todo(store, cfg, due, **more):
+    return make(
+        store, "action", text="Set up and hold the planning meeting", owners=[{"person": me(cfg)}], due=due, **more
+    )
+
+
+def test_on_a_friday_a_meeting_due_on_monday_is_counted_and_names_its_day(env):
+    _, cfg, store = env
+    monday = (FRIDAY.date() + timedelta(days=3)).isoformat()
+    todo = meeting_todo(store, cfg, monday)
+    plain = make(store, "action", text="Send the notes", owners=[{"person": me(cfg)}], due=monday)
+    found = {x.action: x for x in this_week(store, cfg, FRIDAY).due}
+    assert todo in found and found[todo].kind == "setup" and found[todo].due.isoformat() == monday
+    assert plain not in found, "only a meeting to set up has lead time"
+
+
+def test_on_a_wednesday_a_meeting_due_next_wednesday_is_not_counted_until_its_lead_time(env):
+    _, cfg, store = env
+    next_wednesday = (WEDNESDAY.date() + timedelta(days=7)).isoformat()
+    todo = meeting_todo(store, cfg, next_wednesday)
+    assert todo not in {x.action for x in this_week(store, cfg, WEDNESDAY).due}
+    cfg.steward.meetings.setup_lead_working_days = 5
+    assert todo in {x.action for x in this_week(store, cfg, WEDNESDAY).due}, "the lead time is a live setting"
+
+
+def test_a_meeting_whose_invitation_is_out_shows_only_on_its_day_as_a_hold(env):
+    _, cfg, store = env
+    sent = make(store, "event", trust="trusted", title="Planning", start="2026-10-26T10:00:00+00:00")
+    todo = meeting_todo(store, cfg, "2026-10-26", event=sent)
+    assert todo not in {x.action for x in this_week(store, cfg, FRIDAY).due}
+    assert todo not in {x.action for x in this_week(store, cfg, datetime(2026, 10, 24, 9, 0, tzinfo=UTC)).due}
+    [on_the_day] = [x for x in this_week(store, cfg, datetime(2026, 10, 26, 9, 0, tzinfo=UTC)).due if x.action == todo]
+    assert on_the_day.kind == "hold"

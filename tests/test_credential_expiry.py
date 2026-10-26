@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.app import create_app
+from engine import credentials
 from engine import sign_in as flow
 from engine.ai.adapters import ADAPTERS
 from engine.config.schema import ProviderSettings, WatchSource
@@ -45,6 +46,7 @@ def add_account(cfg, name, **more):
 
 def test_a_key_ending_within_the_warning_days_is_a_line_naming_every_place_the_same_key_is_used(env):
     ws, cfg, store = env
+    cfg.ai.credential_warn_days = 7
     add_account(cfg, "main", auth=SHARED, credential_expires=NOW.date() + timedelta(days=5))
     add_account(cfg, "backup", auth=SHARED)
     add_account(cfg, "unrelated", auth="env:ANOTHER_KEY")
@@ -72,6 +74,7 @@ def test_a_key_ending_within_the_warning_days_is_a_line_naming_every_place_the_s
 
 def test_the_line_comes_exactly_when_the_end_is_within_the_setting_and_stays_after_the_day(env):
     ws, cfg, store = env
+    cfg.ai.credential_warn_days = 7
     add_account(cfg, "main", auth=SHARED, credential_expires=NOW.date() + timedelta(days=8))
     assert lines(env) == [], "eight days out is beyond the seven the setting gives"
     assert len(lines(env, NOW + timedelta(days=1))) == 1, "seven days out is inside it"
@@ -101,7 +104,7 @@ def test_the_expiry_the_person_enters_reaches_the_line_through_the_account_route
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     cfg = ws.config(env={}, flags={"storage.backups.automatic": False})
     application = create_app(ws, cfg, "screen-token", ui_dist=tmp_path / "no-ui", start_worker=False)
-    soon = (datetime.now(UTC).date() + timedelta(days=3)).isoformat()
+    soon = (datetime.now(UTC).date() + timedelta(days=1)).isoformat()
     with TestClient(application, headers={"Authorization": "Bearer screen-token"}) as client:
         fingerprint = client.get("/api/settings").json()["fingerprint"]
         added = client.post(
@@ -166,6 +169,7 @@ def test_a_sign_in_whose_credential_ends_soon_is_a_line_naming_the_sign_in_and_w
     sign_in = store.plugins.sign_ins()["p18/service"]
     keys = ws.root / ".cockpit" / "keys" / "p18"
     now = datetime.now(UTC)
+    cfg.ai.credential_warn_days = 7
     ends = (now + timedelta(days=2)).timestamp()
     flow.keep(
         keys,
@@ -196,3 +200,27 @@ def test_a_workspace_with_no_account_at_all_is_left_to_the_setup_line(env):
     for tier in cfg.ai.tiers.values():
         tier.use = ""
     assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == []
+
+
+def test_a_seven_day_sign_in_made_today_warns_a_day_before_its_end_and_not_on_day_one(signing):  # noqa: F811
+    ws, cfg, store, _ = signing
+    cfg.ai.credential_warn_days = type(cfg.ai).model_fields["credential_warn_days"].default
+    assert cfg.ai.credential_warn_days == 1
+    sign_in = store.plugins.sign_ins()["p18/service"]
+    keys = ws.root / ".cockpit" / "keys" / "p18"
+    began = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
+    flow.keep(
+        keys,
+        sign_in,
+        {
+            "access_token": "t",
+            "expires_at": began.timestamp() + 3600,
+            "refresh_token": "r",
+            "refresh_expires_at": (began + timedelta(days=7)).timestamp(),
+            "signed_in_at": began.timestamp(),
+        },
+    )
+    for days_in in range(0, 6):
+        assert credentials.expiring(ws, cfg, store, began + timedelta(days=days_in)) == [], days_in
+    [found] = credentials.expiring(ws, cfg, store, began + timedelta(days=6))
+    assert found.name == "p18/service"

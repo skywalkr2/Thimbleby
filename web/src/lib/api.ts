@@ -334,6 +334,7 @@ export const api = {
 
   pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),
   agenda: () => call<S["AgendaItemView"][]>("GET", "today/agenda"),
+  agendaSpan: () => call<S["AgendaSpanView"]>("GET", "today/agenda-span"),
   /** Make the to-do a plain calendar entry is offered as: the person's own, due on the entry's day. */
   entryTodo: (entry: string) => call<S["EntryTodoMade"]>("POST", `events/${id(entry)}/todo`),
   todo: () => call<S["TodoView"][]>("GET", "today/todo"),

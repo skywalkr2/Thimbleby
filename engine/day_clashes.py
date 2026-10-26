@@ -15,6 +15,7 @@ from typing import Any
 
 from engine import clashes as clash_rules
 from engine.day_calendar import Timed, timed
+from engine.same_entry import same_entry
 from engine.today import zone
 
 
@@ -64,6 +65,8 @@ def upcoming(store: Any, cfg: Any, now: datetime) -> list[Found]:
         first, second = by_id[clash.first.id], by_id[clash.second.id]
         if first.start > second.start:
             first, second = second, first
+        if same_entry(first.item.title, first.start, second.item.title, second.start):
+            continue  # one appointment held twice, not a clash
         if max(first.end, second.end) <= now:
             continue
         later = second.start.astimezone(here)

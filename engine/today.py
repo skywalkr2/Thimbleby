@@ -66,6 +66,12 @@ def zone(cfg: Any) -> ZoneInfo:
         return ZoneInfo("UTC")
 
 
+def agenda_span(cfg: Any, now: datetime) -> tuple[date, date]:
+    """The first and last day the agenda covers: today and the configured days after it."""
+    first = now.astimezone(zone(cfg)).date()
+    return first, first + timedelta(days=cfg.ui.today.agenda_days_ahead)
+
+
 def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> list[AgendaItem]:
     """Events on today and the configured days after it (or every day through `through`), earliest first; all-day ones
     first on their day. The app's own calendar entries follow the connected calendars' events, in start order, each on

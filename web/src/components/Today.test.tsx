@@ -836,7 +836,7 @@ test("a review line with a project alone on the screen has no tag", async () => 
 const busyWeek: S["ThisWeekView"] = {
   first: "2026-10-19",
   last: "2026-10-23",
-  due: [{ action: "ACT-1", text: "Send the proofs", due: "2026-10-21", project: null, project_name: null, owners: [], mine: true }],
+  due: [{ action: "ACT-1", text: "Send the proofs", due: "2026-10-21", project: null, project_name: null, owners: [], mine: true, kind: "due" }],
   waiting: [{ person: "PER-5", person_name: "Robin Sample", count: 2, due: "2026-10-22" }],
   meetings: [{ snapshot: "EVT-1", source: "", title: "Print sync", start: "2026-10-22T10:00:00", end: null, all_day: false, cancelled: false, own: true, open_items: 0, days: ["2026-10-22"] }],
 };

@@ -82,7 +82,7 @@ estimates: {calibration_runs: 20}   # an account's estimates are corrected from 
 models: {follow_newest: true, check_every_days: 7, use_days: 7}   # a tier moves to a newer model of its own family after a check; how often to look; how many days of use the cost change is worked out from
 catalog_refresh_hours: 24
 borrow_other_tier: ask      # ask: Today asks before another kind of work's account fills in for a paused one; never: the work waits
-credential_warn_days: 7     # Today says this many days before a key or sign-in with a known end date stops working
+credential_warn_days: 1     # Today says this many days before a key or sign-in with a known end date stops working
 content_levels:
   mature: Sex or graphic violence in the story.
 routing:

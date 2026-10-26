@@ -1038,11 +1038,12 @@ class AiFile(FileModel):
         "is borrowed without a yes); never means the work always waits.",
     )
     credential_warn_days: int = Field(
-        7,
+        1,
         ge=0,
         le=365,
         description="How many days before a key or sign-in with a known end date stops working Today says so, naming "
-        "everywhere the same key is used.",
+        "everywhere the same key is used. A sign-in whose start is known is not warned about before three quarters of "
+        "its life have passed.",
     )
     content_levels: dict[str, str] = Field(
         default_factory=dict,
@@ -2249,7 +2250,7 @@ class TodaySettings(ConfigModel):
     )
     mail_max: int = Field(50, ge=1, le=500, description="The most messages Today lists at once.")
     agenda_days_ahead: int = Field(
-        1, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
+        6, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
     )
     stale_after_days: int = Field(
         21,
@@ -3150,6 +3151,19 @@ class MeetingSettings(ConfigModel):
         ge=1,
         le=30,
         description="The most open things the prep shows for each person coming. The rest are counted.",
+    )
+    setup_lead_working_days: int = Field(
+        2,
+        ge=0,
+        le=30,
+        description="A meeting you set up (an open to-do that names one) counts on Today from this many working days "
+        "before its day, not only in its week; on that day it says by when to set it up. Once its invitation is out it "
+        "shows only on its day.",
+    )
+    setup_words: list[str] = Field(
+        default_factory=lambda: ["meeting"],
+        description="Words that mark an open to-do as a meeting you set up: one with any of them in its text gets the "
+        "lead time above.",
     )
     invitation_days_ahead: int = Field(
         14,

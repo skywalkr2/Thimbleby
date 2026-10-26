@@ -20,7 +20,7 @@ function line(kind: Line["kind"], over: Partial<Line> = {}): Line {
 const weekFixture: S["ThisWeekView"] = {
   first: "2026-10-19",
   last: "2026-10-23",
-  due: [{ action: "ACT-1", text: "Send the proofs", due: "2026-10-21", project: null, project_name: null, owners: [], mine: true }],
+  due: [{ action: "ACT-1", text: "Send the proofs", due: "2026-10-21", project: null, project_name: null, owners: [], mine: true, kind: "due" }],
   waiting: [],
   meetings: [],
 };

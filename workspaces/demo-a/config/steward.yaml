@@ -40,6 +40,8 @@ meetings:
   prep_min_open: 0   # the fewest open things with the people coming that an entry needs for a line on Today; 0 gives every one a line
   capture_hours_after: 48   # the question of what happened at an entry stays on Today this many hours after it ends
   max_items: 6   # the most open things the prep shows for each person coming
+  setup_lead_working_days: 2   # a meeting you set up counts on Today from this many working days before its day; once its invitation is out it shows only on its day
+  setup_words: [meeting]   # words in an open to-do's text that mark it as a meeting you set up
   invitation_days_ahead: 14   # an unanswered invitation gets a line on Today when its entry starts within this many days; 0 is off
 people:
   quiet_promise_days: 7   # a promise to or from someone with no news for this many days gets a line on Today; 0 is off

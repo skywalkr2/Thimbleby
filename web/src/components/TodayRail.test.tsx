@@ -67,6 +67,7 @@ function routes(extra: Routes = {}): Routes {
   return {
     "GET today/week": () => ({ first: "2026-10-05", last: "2026-10-09", due: [], waiting: [], meetings: [] }),
     "GET today/agenda": () => agenda,
+    "GET today/agenda-span": () => ({ first: "2026-10-09", last: "2026-10-15" }),
     "GET today/todo": () => todo,
     "GET today/arrived": () => inbox,
     "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
@@ -394,7 +395,7 @@ test("empty agenda, list and mail each say so, and the buttons go to Connections
     "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0 }),
   });
-  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
   expect(await screen.findByText("Nothing on your list today.")).toBeInTheDocument();
   expect(await screen.findByText("No mail has come in lately.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Connect a calendar" }));
@@ -454,7 +455,7 @@ test("with sources set up, the empty cards say they were checked, with the lates
       watched("c", { last: null, read_at: null }),
     ],
   });
-  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
   expect(await screen.findByText("No mail has come in lately.")).toBeInTheDocument();
   await waitFor(() => expect(screen.getAllByText(`Checked ${whenText(at(TODAY, 11, 40))}`)).toHaveLength(2));
   expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
@@ -619,7 +620,7 @@ test("an empty calendar card says the calendar couldn't be read, with why and wh
   const col = await column("Agenda");
   expect(await within(col).findByText("Your calendar couldn't be read, so this list may be missing events.")).toBeInTheDocument();
   expect(within(col).getByRole("alert")).toHaveTextContent("the service refused the sign-in. Sign in to it again");
-  expect(within(col).queryByText("Nothing on your calendar for the next few days.")).toBeNull();
+  expect(within(col).queryByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeNull();
   expect(within(col).queryByText(/^Checked /)).toBeNull();
   // The mail card has no unread source of its own: it says what it always says.
   expect(await within(await column("Came in")).findByText("No mail has come in lately.")).toBeInTheDocument();
@@ -634,12 +635,12 @@ test("an empty mail card says the mailbox wasn't read when there was no network,
   expect(await within(col).findByText("Your mail couldn't be read, so this list may be missing messages.")).toBeInTheDocument();
   expect(within(col).getByRole("alert")).toHaveTextContent("Work mail couldn't be checked without an internet connection. It will retry automatically.");
   expect(within(col).queryByText("No mail has come in lately.")).toBeNull();
-  expect(await within(await column("Agenda")).findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(await within(await column("Agenda")).findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
 });
 
 test("a source of a kind with no unread source never changes the empty card, and a source that is off is not reported", async () => {
   open({ ...EMPTY, "GET watch": () => [unread("cal", ["calendar"], "failed", { enabled: false }), watched("b", { reads: ["calendar"] })] });
-  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
 });
 
 test("Check now says which source couldn't be read and why, in place of only a count", async () => {
@@ -661,7 +662,7 @@ test("empty panels show no count of zero, in words or as a badge", async () => {
     "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
   });
-  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 (events|things|messages)/);
   for (const column of ["agenda", "todo", "arrived"]) {
     const col = document.querySelector(`[data-col="${column}"]`) as HTMLElement;
@@ -736,7 +737,7 @@ test("a refusal is told in the server's words and the drawer stays open with wha
 
 test("an empty agenda is one line, with when it was checked and no form", async () => {
   open({ "GET today/agenda": () => [] });
-  const line = await screen.findByText("Nothing on your calendar for the next few days.");
+  const line = await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/);
   expect(line.tagName).toBe("P");
   expect(line.closest("[data-col='agenda']")!.querySelectorAll(".tb-empty p")).toHaveLength(0);
   expect(screen.queryByRole("textbox", { name: "What" })).toBeNull();

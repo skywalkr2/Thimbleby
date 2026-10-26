@@ -19,8 +19,11 @@ export function useThisWeek() {
 
 /** "3 due · 2 waiting on you · 4 meetings": the one line a folded week says. */
 export function weekSummary(week: Week, tn: Tn): string {
+  const setUp = week.due.filter((d) => d.kind === "setup");
+  const counted = week.due.length - setUp.length;
   return [
-    week.due.length > 0 ? tn("today.week.due", week.due.length) : "",
+    counted > 0 ? tn("today.week.due", counted) : "",
+    setUp.length > 0 ? tn("today.week.setup", setUp.length, { date: day(setUp.map((d) => d.due).sort()[0]) }) : "",
     week.waiting.length > 0 ? tn("today.week.waiting", week.waiting.length) : "",
     week.meetings.length > 0 ? tn("today.week.meetings", week.meetings.length) : "",
   ]
@@ -51,7 +54,7 @@ export function WeekBody(props: { week: Week }) {
                 <div className="tb-what">
                   <div className="tb-title">{item.text}</div>
                   <div className="tb-meta">
-                    {[item.project_name, item.mine ? t("today.priorities.yours") : (item.owners ?? []).map((o) => o.name).join(", ")].filter(Boolean).join(" · ")}
+                    {[item.kind === "hold" ? t("today.week.hold") : null, item.project_name, item.mine ? t("today.priorities.yours") : (item.owners ?? []).map((o) => o.name).join(", ")].filter(Boolean).join(" · ")}
                   </div>
                 </div>
               </li>

@@ -2082,6 +2082,13 @@ class AgendaLine(BaseModel):
     added_at: datetime = Field(description="When it was put on the agenda.")
 
 
+class AgendaSpanView(BaseModel):
+    """The first and last day the agenda covers."""
+
+    first: date
+    last: date
+
+
 class AgendaItemView(BaseModel):
     """An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days."""
 
@@ -5548,6 +5555,7 @@ class WeekDueView(BaseModel):
     project_name: str | None = None
     owners: list[OwnerNameView] = Field(default_factory=list)
     mine: bool = False
+    kind: Literal["due", "setup", "hold"] = "due"
 
 
 class WeekWaitingView(BaseModel):

@@ -7,6 +7,7 @@ after it, the week is the next one. Something on hold is never due, so it is not
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -21,7 +22,9 @@ from engine.today import AgendaItem, agenda, zone
 @dataclass
 class Due:
     """An open to-do due from today through the week's end (or overdue), with its owners' ids and whether it is the
-    person's own."""
+    person's own. A meeting to set up is also counted from `steward.meetings.setup_lead_working_days` working days
+    before its day (`kind` "setup" when that day is past the week's end); one whose invitation is out is counted only
+    on its day (`kind` "hold")."""
 
     action: str
     text: str
@@ -29,6 +32,7 @@ class Due:
     project: str | None
     owners: list[str]
     mine: bool
+    kind: str = "due"  # "due" (by the week's end), "setup" (a meeting counted ahead by its lead time) or "hold"
 
 
 @dataclass
@@ -58,6 +62,36 @@ def week_end(cfg: Any, today: date) -> date:
     return today + timedelta(days=(target - today.weekday()) % 7)
 
 
+def is_meeting_to_set_up(cfg: Any, data: dict[str, Any]) -> bool:
+    """Whether an open to-do is a meeting the person sets up: its text has one of `steward.meetings.setup_words`."""
+    words = {w.casefold() for w in cfg.steward.meetings.setup_words}
+    return bool(words & set(re.findall(r"\w+", str(data.get("text") or "").casefold())))
+
+
+def invitation_out(data: dict[str, Any]) -> bool:
+    """Whether the invitation for a meeting to set up has gone out: someone was told, or it has a calendar entry."""
+    return bool(data.get("told") or data.get("event"))
+
+
+def lead_start(cfg: Any, day: date) -> date:
+    """The day `steward.meetings.setup_lead_working_days` working days before `day`."""
+    first = WEEKDAYS.index(cfg.steward.reminders.working_first_day)
+    last = WEEKDAYS.index(cfg.steward.reminders.working_last_day)
+
+    def working(d: date) -> bool:
+        return (d.weekday() - first) % 7 <= (last - first) % 7
+
+    back = day
+    left = cfg.steward.meetings.setup_lead_working_days
+    for _ in range(366):
+        if left <= 0:
+            break
+        back -= timedelta(days=1)
+        if working(back):
+            left -= 1
+    return back
+
+
 def this_week(store: Any, cfg: Any, now: datetime) -> Week:
     """This week as of `now`."""
     today = now.astimezone(zone(cfg)).date()
@@ -74,8 +108,15 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
         day = firm_due(d)
         owners = [o["person"] for o in d.get("owners") or [] if o.get("person")]
         mine = pm is not None and pm in owners
-        if day is not None and today <= day <= last:
-            due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine))
+        kind = "due"
+        counted = day is not None and today <= day <= last
+        if day is not None and is_meeting_to_set_up(cfg, d):
+            if invitation_out(d):
+                counted, kind = day == today, "hold"
+            elif day > last and lead_start(cfg, day) <= today:
+                counted, kind = True, "setup"
+        if counted:
+            due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine, kind))
         if not mine or (day is not None and day > last):
             continue
         asked = [d["asker"]] if d.get("reply_owed") and d.get("asker") else []

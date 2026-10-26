@@ -2283,6 +2283,27 @@
         "title": "AgendaLine",
         "type": "object"
       },
+      "AgendaSpanView": {
+        "description": "The first and last day the agenda covers.",
+        "properties": {
+          "first": {
+            "format": "date",
+            "title": "First",
+            "type": "string"
+          },
+          "last": {
+            "format": "date",
+            "title": "Last",
+            "type": "string"
+          }
+        },
+        "required": [
+          "first",
+          "last"
+        ],
+        "title": "AgendaSpanView",
+        "type": "object"
+      },
       "AiAccountAdd": {
         "additionalProperties": false,
         "description": "A new AI account from the Add account screen. A pasted key is kept on this computer, never in ai.yaml.",
@@ -26256,6 +26277,16 @@
             "title": "Due",
             "type": "string"
           },
+          "kind": {
+            "default": "due",
+            "enum": [
+              "due",
+              "setup",
+              "hold"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "mine": {
             "default": false,
             "title": "Mine",
@@ -37948,6 +37979,25 @@
           }
         },
         "summary": "Today Agenda"
+      }
+    },
+    "/api/today/agenda-span": {
+      "get": {
+        "description": "The first and last day the agenda covers, so an empty agenda can say which days it looked at.",
+        "operationId": "today_agenda_span_api_today_agenda_span_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgendaSpanView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Today Agenda Span"
       }
     },
     "/api/today/arrived": {

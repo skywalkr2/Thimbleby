@@ -149,6 +149,7 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
   const { t, tn } = useWords();
   const sourceState = useSourceState(props.onAddSource, t("today.agenda.connect"), "calendar");
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
+  const span = useQuery({ queryKey: ["today", "agenda-span"], queryFn: api.agendaSpan });
   const now = useNow();
   const today = localDate(now);
   const tomorrow = addDays(today, 1);
@@ -187,7 +188,7 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
             <SourceProblems problems={sourceState.problems} />
           </div>
         ) : (
-          <Empty inline text={t("today.agenda.empty")} note={sourceState.note} button={sourceState.button} />
+          <Empty inline text={span.data ? t("today.agenda.empty", { start: day(span.data.first), end: day(span.data.last) }) : t("today.agenda.empty_today")} note={sourceState.note} button={sourceState.button} />
         )
       ) : (
         groups.map((group) => {

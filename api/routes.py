@@ -30,6 +30,7 @@ from api.schemas import (
     ActionRun,
     ActionState,
     AgendaItemView,
+    AgendaSpanView,
     AiState,
     Answer,
     Applied,
@@ -604,6 +605,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         from engine import today
 
         return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, worker.now())]
+
+    @r.get("/today/agenda-span")
+    def today_agenda_span() -> AgendaSpanView:
+        """The first and last day the agenda covers, so an empty agenda can say which days it looked at."""
+        from engine import today
+
+        first, last = today.agenda_span(cfg, worker.now())
+        return AgendaSpanView(first=first, last=last)
 
     @r.post("/events/{event_id}/todo")
     def entry_todo(event_id: str) -> EntryTodoMade:
