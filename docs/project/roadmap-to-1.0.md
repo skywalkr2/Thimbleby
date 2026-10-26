@@ -631,7 +631,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     each label above its value…"); R8 `web/src/shell/HeldLines.test.tsx` (the pill "Rules"; the weight is a stylesheet rule,
     not measured); R9 `web/src/theme/targets.test.ts` ("a checkbox or radio is a 24px control itself…"); R10
     `web/src/components/WhatChanged.test.tsx` ("a change from an email is titled by Today's rule…"); R11
-    `web/src/components/TopPriorities.test.tsx` ("a person's row reads name · 1 overdue · 1 waiting 10 days…"). *Left:* the
+    TopPriorities.test.tsx (removed with Top priorities, change log 229) ("a person's row reads name · 1 overdue · 1 waiting 10 days…"). *Left:* the
     browser checks for R6 (`web/e2e/acceptance.spec.ts`, "the setup walkthrough and Settings are screens of their own…":
     every recap row at most 64px high), R9 (`web/e2e/a11y.spec.ts`, "… has no visible interactive element under 24×24
     at 1024, 1440 and 390px", measuring the control itself) and R10 (`web/e2e/shell.spec.ts`, "What changed titles follow

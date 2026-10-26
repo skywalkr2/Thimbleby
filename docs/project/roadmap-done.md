@@ -1915,7 +1915,7 @@ From the original designer's lessons of 2026-10-14:
   *Built (B-6a):* a hold names a person, an action or a question; the row says what it waits on; the count for Top
   priorities (`tests/test_blocked_actions.py`, `web/src/components/OnHold.test.tsx`). *Left:* the count shown on Top
   priorities, which B-6b builds.
-  *Built (B-6b):* the blocked count under Top priorities (`web/src/components/TopPriorities.test.tsx`).
+  *Built (B-6b):* the blocked count under Top priorities (TopPriorities.test.tsx (removed with Top priorities, change log 229)).
 - [x] **An unnamed assistant reads as one:** with the default name, lines say "Assistant is on it". The `.unnamed`
   wording variant (built for the AI screen's heading) is used for the other `{assistant}` lines.
   *Built (B-6b):* every `{assistant}` line has its `.unnamed` variant (`web/src/wording/wording.test.ts`,
@@ -2010,7 +2010,7 @@ From the original designer's lessons of 2026-10-14:
   one "Chase" line per promise (a promise owed by someone the person reports to, and the person's own, keep their lines)
   (`tests/test_follow_up_lines.py`, `tests/test_promise_lines.py`,
   `tests/test_stance_lines.py`); Top priorities as links with no buttons and no menu
-  (`web/src/components/TopPriorities.test.tsx`: "an entry has no buttons and no menu, only its words as a link", "an
+  (TopPriorities.test.tsx (removed with Top priorities, change log 229): "an entry has no buttons and no menu, only its words as a link", "an
   entry that has a line in the queue links to it, and choosing it asks Today to open that line"; `web/src/components/TodayFirstScreen.test.tsx`).
 - [x] **Demo data for answers 27 to 31** (B-7; C53): a moved meeting, a held inference, an inferred fact, a series and a
   rules line in both fictional workspaces.
@@ -2045,7 +2045,7 @@ From the original designer's lessons of 2026-10-14:
   a non-answer restarts the chase clock once, and a second brings the line back (F22, with its test); a new AI account
   reads nothing of work until the person allows it, with its sign-in identity shown (F25).
   *Built (B-7):* F15 `tests/test_chase_moves_to_the_blocker.py`, `tests/test_hold_on_self_is_own_todo.py`; F16
-  `tests/test_top_priorities.py`, `web/src/components/TopPriorities.test.tsx`; F17 `tests/test_second_move_in_history.py`,
+  `tests/test_top_priorities.py`, TopPriorities.test.tsx (removed with Top priorities, change log 229); F17 `tests/test_second_move_in_history.py`,
   `web/src/components/RecordPageRecords.test.tsx`; F19 `tests/test_approved_draft_is_not_done.py`,
   `web/src/components/HandToAssistant.test.tsx`; F20 `tests/test_plain_calendar_entries.py`,
   `web/src/components/TodayRail.test.tsx`; F21 `tests/test_condition_words_hold.py`; F22
@@ -2095,13 +2095,13 @@ From the original designer's lessons of 2026-10-14:
   yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
   that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
   *Built (B-6b):* the ranked list, one line per person, passed dated to-dos and the next days (`tests/test_top_priorities.py`,
-  `web/src/components/TopPriorities.test.tsx`).
+  TopPriorities.test.tsx (removed with Top priorities, change log 229)).
   *Changed (B-7, decisions 2026-10-20: the re-review's §3.4 and the designer's F16 and F24):* Top priorities is context
   with no buttons and no menu; each entry's words link to its queue line or its record, so "Mark done", "Reassign" and
   "Hand to the assistant" on its rows are not built, by decision (the queue is the place to act). The order is overdue,
   waiting on the person, due within the window, at risk, and a blocked to-do appears as the question or action that
   holds it up (`tests/test_top_priorities.py`, `tests/test_chase_moves_to_the_blocker.py`,
-  `web/src/components/TopPriorities.test.tsx`: "an entry has no buttons and no menu, only its words as a link").
+  TopPriorities.test.tsx (removed with Top priorities, change log 229): "an entry has no buttons and no menu, only its words as a link").
   *Built (cleanup batch, change log 181):* "who suggested it" is said in the inspector, not on a second line: what made
   the item, from the change and the item, never outward (`tests/test_line_maker.py`,
   `web/src/components/MadeBy.test.tsx`).
