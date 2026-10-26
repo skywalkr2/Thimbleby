@@ -2,7 +2,7 @@
    here is wider than its column: titles and places wrap. */
 .nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .back svg { transform: rotate(180deg); }
-.frame { container-type: inline-size; min-width: 0; }
+.frame { container-type: inline-size; min-width: 0; touch-action: pan-y; }
 .days { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-width: 0; }
 @container (min-width: 45rem) {
   .days { grid-template-columns: repeat(var(--days, 3), minmax(0, 1fr)); }
@@ -26,3 +26,13 @@
 .struck { text-decoration: line-through; }
 .meta { color: var(--text-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .from { font-weight: var(--weight-medium); }
+/* A calendar's color: a small round mark beside its name. The name is always there, so the mark is never the only sign. */
+.mark { display: inline-block; flex: none; width: 0.65em; height: 0.65em; margin-right: var(--space-1); border-radius: var(--radius-full); background: var(--text-subtle); vertical-align: baseline; }
+.mark[data-color="blue"] { background: var(--cal-blue); }
+.mark[data-color="teal"] { background: var(--cal-teal); }
+.mark[data-color="green"] { background: var(--cal-green); }
+.mark[data-color="orange"] { background: var(--cal-orange); }
+.mark[data-color="red"] { background: var(--cal-red); }
+.mark[data-color="pink"] { background: var(--cal-pink); }
+.mark[data-color="purple"] { background: var(--cal-purple); }
+.mark[data-color="gray"] { background: var(--cal-gray); }

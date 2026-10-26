@@ -11,7 +11,7 @@ import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
-import { fromHash, parseView, recordView, settingsView, toHash, type SettingsSection, type View } from "./lib/views";
+import { EVENT_PAGE, fromHash, parseView, recordView, settingsView, toHash, type SettingsSection, type View } from "./lib/views";
 import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
@@ -31,6 +31,7 @@ import { Panel } from "./components/Panel";
 import { People } from "./components/People";
 import { Projects } from "./components/Projects";
 import { restoreFocus } from "./components/ModalPanel";
+import { ConnectedEventPage } from "./components/ConnectedEventPage";
 import { RecordPage } from "./components/RecordPage";
 import { RuleReview } from "./components/RuleReview";
 import { SeriesPage } from "./components/SeriesPage";
@@ -190,6 +191,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     if (shown.type === "panel") return <Panel key={shown.name} name={shown.name} onOpenRecord={openRecord} />;
     if (shown.type === "record" && shown.kind === "series") {
       return <SeriesPage key={shown.id} id={shown.id} onBack={() => setView(origin.current)} />;
+    }
+    // A connected calendar's event the app keeps no entry for has a read-only page of its own, not a record.
+    if (shown.type === "record" && shown.kind === EVENT_PAGE) {
+      return <ConnectedEventPage key={shown.id} id={shown.id} onBack={() => setView(origin.current)} />;
     }
     if (shown.type === "record") {
       return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;

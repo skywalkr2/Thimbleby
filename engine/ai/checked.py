@@ -23,7 +23,7 @@ from engine.state_file import write_whole
 from engine.workspace import Workspace
 
 CHECKED_FILE = "ai-checked.json"
-NOT_ACCOUNT = ("accepted_unchecked", "label", "identity_level")
+NOT_ACCOUNT = ("accepted_unchecked", "label", "identity_level", "refused_models")
 
 
 def account_fingerprint(cfg: Config, ref: str) -> str | None:

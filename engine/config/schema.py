@@ -808,6 +808,12 @@ class ProviderSettings(ConfigModel):
         "that stands in for another is a switch nobody chose in the moment, so only a checked account may do it "
         "unless you accept it here.",
     )
+    refused_models: list[str] = Field(
+        default_factory=list,
+        description="The ids of models this account's service refused as no longer offered. The app adds one when a "
+        "check stops on it, and never picks one of these by itself or offers it as a replacement. It is kept by the "
+        "app; you do not need to edit it.",
+    )
 
 
 class TierSettings(ConfigModel):
@@ -2845,6 +2851,10 @@ class RulesFile(FileModel):
 # ---- config/watch.yaml ----------------------------------------------------------------------------------------------
 
 
+#: The small fixed palette a calendar source's mark is picked from, by name.
+CalendarColor = Literal["blue", "teal", "green", "orange", "red", "pink", "purple", "gray"]
+
+
 class WatchSource(ConfigModel):
     id: str = Field(
         "", pattern=r"^[a-z0-9][a-z0-9-]*$", description="The source's short name: lowercase letters, digits, dashes."
@@ -2891,6 +2901,12 @@ class WatchSource(ConfigModel):
         None,
         description="For a source of an add-on that signs in as you: which signed-in account it reads, by its address. "
         "Empty: the only account signed in; with several signed in, a source must say which.",
+    )
+    color: CalendarColor | None = Field(
+        None,
+        description="For a calendar source: the color of the small mark the schedule shows beside the calendar's name, "
+        "picked from a short list. The name is always shown as well, so the color is never the only way to tell "
+        "calendars apart. Empty: no mark.",
     )
     author: str | None = Field(
         None,

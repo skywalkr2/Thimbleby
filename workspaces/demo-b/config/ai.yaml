@@ -6,6 +6,7 @@ providers:
     label: Stand-in account
     models: {default: scripted}
     accepted_unchecked: false
+    refused_models: []
     work_data: ''
     allowed_data: [open, internal, restricted]
   # Examples of other accounts, left out so a new workspace lists only what it can use. Add one

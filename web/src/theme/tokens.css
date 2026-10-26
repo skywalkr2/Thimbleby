@@ -100,6 +100,11 @@
   --ok: var(--green-700);     --ok-soft: var(--green-50);
   --mark: var(--yellow-200);  --mark-text: #14171f;     /* evidence highlight */
 
+  /* Calendar marks (the schedule): each is at least 4.5:1 on --surface and 3:1 on --canvas and --surface-sunk (WCAG
+     non-text contrast), in dark too; the calendar's name is always shown beside it. */
+  --cal-blue: #2b63c4; --cal-teal: #0b7a75; --cal-green: #2f7d32; --cal-orange: #b85c00;
+  --cal-red: #c0392b; --cal-pink: #b83280; --cal-purple: #7a4bc0; --cal-gray: #5f6675;
+
   --focus-gap: var(--surface);
   --focus-ring: var(--accent);
   --overlay: rgb(14 16 20 / 0.40);
@@ -136,6 +141,8 @@
     --danger: var(--red-300);   --danger-soft: var(--red-950);
     --ok: var(--green-300);     --ok-soft: var(--green-950);
     --mark: #5e5016; --mark-text: #f4ecc8;
+    --cal-blue: #7fa8f5; --cal-teal: #4fd1c5; --cal-green: #7fd18a; --cal-orange: #f5a455;
+    --cal-red: #f28b82; --cal-pink: #f58ac0; --cal-purple: #b79af2; --cal-gray: #a7afbd;
     --overlay: rgb(0 0 0 / 0.55);
     --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
@@ -164,6 +171,8 @@
   --danger: var(--red-300);   --danger-soft: var(--red-950);
   --ok: var(--green-300);     --ok-soft: var(--green-950);
   --mark: #5e5016; --mark-text: #f4ecc8;
+  --cal-blue: #7fa8f5; --cal-teal: #4fd1c5; --cal-green: #7fd18a; --cal-orange: #f5a455;
+  --cal-red: #f28b82; --cal-pink: #f58ac0; --cal-purple: #b79af2; --cal-gray: #a7afbd;
   --overlay: rgb(0 0 0 / 0.55);
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
   --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);

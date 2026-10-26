@@ -193,7 +193,9 @@ def look(
     results and price rises are kept while they still apply."""
     provider = cfg.ai.providers[account]
     entry = entry_of(provider, endpoints)
-    ids = [i for i, info in listing.items() if usable_for_chat(info)]  # never offer a retired or non-chat model
+    refused = set(provider.refused_models)
+    # Never offer a retired or non-chat model, nor one the service already refused on this account.
+    ids = [i for i, info in listing.items() if usable_for_chat(info) and i not in refused]
     found: dict[str, dict[str, Any]] = {}
     seen: dict[str, list[float | None]] = {}
     for tier_name, tier in cfg.ai.tiers.items():

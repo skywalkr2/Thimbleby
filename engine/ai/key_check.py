@@ -19,7 +19,7 @@ from typing import Any, Literal
 from engine.ai.adapters import make_adapter
 from engine.ai.presets import suggest_models
 from engine.ai.smoke import SmokeResult, smoke_test, where_of
-from engine.ai.task import RETIRED_PLAIN, UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN, ModelInfo
+from engine.ai.task import RETIRED_PLAIN, UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN, ModelInfo, work_in_words
 from engine.config import Config
 from engine.config.schema import ProviderSettings, TierSettings
 
@@ -120,7 +120,9 @@ def check_account(
         gone = provider.models.get(short, short)
         # The next fitting model comes only from the service's listing, never the one just refused or a retired one.
         easy, _ = suggest_models(entry, listed() if listed else {}, avoid=frozenset({gone}))
-        return KeyCheck(False, "model_retired", RETIRED_PLAIN.format(model=gone), model=gone, next_model=easy)
+        return KeyCheck(
+            False, "model_retired", RETIRED_PLAIN.format(work=work_in_words(bad.tier)), model=gone, next_model=easy
+        )
     if bad is not None:
         reason, words = _failure(bad, where)
         return KeyCheck(False, reason, words)

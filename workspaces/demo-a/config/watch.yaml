@@ -23,6 +23,7 @@ sources:
   - id: calendar
     connector: calendar
     label: Work calendar
+    color: blue          # the small mark beside its name on the schedule: blue, teal, green, orange, red, pink, purple or gray; left out, none
     enabled: false        # turn on once the calendar's private address is set
     every_minutes: 60
     first_run: recent     # the first read hands in what happens within a day of now; the rest is only noted

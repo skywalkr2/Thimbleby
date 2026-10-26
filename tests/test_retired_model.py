@@ -141,6 +141,7 @@ def test_a_check_stopped_by_a_retired_model_names_it_and_offers_the_next(tmp_pat
     }
     got = c.post(f"{api}/ai/account-check", json=body).json()
     assert got["ok"] is False and got["reason"] == "model_retired"
-    assert got["message"] == "fit-a is no longer offered by this service"
+    assert got["message"] == "The model this account was using for everyday work is no longer offered by this service"
+    assert "fit-a" not in got["message"] and "fit-b" not in got["message"]  # the model's name is never shown
     assert got["model"] == "fit-a" and got["next_model"] == "fit-b"
     assert "deprecated" not in got["message"]  # the service's words are not the explanation

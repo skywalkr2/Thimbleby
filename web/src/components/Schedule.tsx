@@ -3,11 +3,11 @@
 // arrows, the keyboard and the Today button move through the days; every entry opens its page, and says which calendar
 // it comes from in words (the app's own entries say so too), so nothing is told apart by color alone.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
 import { addDays, day, wallTime } from "../lib/dates";
 import { typing } from "../lib/keys";
-import { recordView, viewHref } from "../lib/views";
+import { eventPageView, recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
@@ -21,6 +21,8 @@ type T = ReturnType<typeof useWords>["t"];
 
 /** How many days a Shift press moves. */
 const WEEK = 7;
+/** How far, in pixels, a touch must travel sideways to count as a swipe. */
+const SWIPE_MIN = 60;
 
 /** When an entry is on its day: the start, the start and end, "Until" the end for one that began earlier, or nothing for an
  * all-day entry (its place is the all-day list). */
@@ -31,12 +33,14 @@ function whenText(entry: Entry, t: T): string {
   return entry.ends ? t("today.agenda.until", { time: wallTime(entry.ends) }) : t("schedule.all_day");
 }
 
-/** One entry. Its title opens its page in the app (a connected calendar's event once the app keeps it, the app's own entry
- * always); an event with no page of its own opens in its calendar. Where it comes from is a word on the row. */
-function EntryRow(props: { entry: Entry; source: string | undefined; timed: boolean }) {
+/** One entry. Its title always opens a page in the app: the calendar entry the app keeps for an event, the app's own entry,
+ * or, for a connected event the app keeps no entry for, a read-only page of what its calendar says. An event that has an
+ * address in its calendar also links there, with the domain shown. Where it comes from is a word on the row, with the
+ * calendar's color as a small mark beside it when one is set: the word is never left out. */
+function EntryRow(props: { entry: Entry; source: string | undefined; color: string | undefined; timed: boolean }) {
   const { t } = useWords();
   const { entry } = props;
-  const page = entry.own ? entry.snapshot : entry.entry;
+  const href = viewHref(entry.own ? recordView("event", entry.snapshot) : entry.entry ? recordView("event", entry.entry) : eventPageView(entry.snapshot, entry.start));
   const from = entry.own ? t("today.agenda.own") : props.source ? t("schedule.from_source", { source: props.source }) : t("schedule.from_source_unknown");
   return (
     <li className={entry.own ? `${styles.entry} ${styles.own}` : styles.entry} data-source={entry.own ? "own" : entry.source}>
@@ -45,19 +49,14 @@ function EntryRow(props: { entry: Entry; source: string | undefined; timed: bool
         <div className={styles.title}>
           {entry.cancelled && <Pill tone="warn">{t("today.agenda.called_off")}</Pill>}
           <span className={entry.cancelled ? styles.struck : undefined}>
-            {page ? (
-              <a href={viewHref(recordView("event", page))}>{entry.title}</a>
-            ) : entry.link ? (
-              <SafeLink label={entry.title} url={entry.link} />
-            ) : (
-              entry.title
-            )}
+            <a href={href}>{entry.title}</a>
           </span>
         </div>
         {entry.where && <div className={styles.meta}>{entry.where}</div>}
         <div className={styles.meta}>
+          {!entry.own && props.color && <span className={styles.mark} data-color={props.color} aria-hidden="true" />}
           <span className={styles.from}>{from}</span>
-          {page && entry.link && (
+          {entry.link && (
             <>
               {" · "}
               <SafeLink label={t("schedule.open_calendar")} url={entry.link} />
@@ -69,7 +68,7 @@ function EntryRow(props: { entry: Entry; source: string | undefined; timed: bool
   );
 }
 
-function DayColumn(props: { view: S["ScheduleDayView"]; today: string; source: (id: string) => string | undefined }) {
+function DayColumn(props: { view: S["ScheduleDayView"]; today: string; source: (id: string) => string | undefined; color: (id: string) => string | undefined }) {
   const { t } = useWords();
   const { view } = props;
   const headId = `schedule-day-${view.date}`;
@@ -94,7 +93,7 @@ function DayColumn(props: { view: S["ScheduleDayView"]; today: string; source: (
           </h3>
           <ul className={styles.list} aria-labelledby={`${headId}-all`}>
             {view.all_day.map((entry, i) => (
-              <EntryRow key={`${entry.snapshot}:${i}`} entry={entry} source={props.source(entry.source)} timed={false} />
+              <EntryRow key={`${entry.snapshot}:${i}`} entry={entry} source={props.source(entry.source)} color={props.color(entry.source)} timed={false} />
             ))}
           </ul>
         </div>
@@ -102,7 +101,7 @@ function DayColumn(props: { view: S["ScheduleDayView"]; today: string; source: (
       {view.timed.length > 0 && (
         <ul className={styles.list} aria-labelledby={headId}>
           {view.timed.map((entry, i) => (
-            <EntryRow key={`${entry.snapshot}:${i}`} entry={entry} source={props.source(entry.source)} timed />
+            <EntryRow key={`${entry.snapshot}:${i}`} entry={entry} source={props.source(entry.source)} color={props.color(entry.source)} timed />
           ))}
         </ul>
       )}
@@ -117,6 +116,7 @@ export function Schedule() {
   const page = useQuery({ queryKey: ["today", "schedule", from], queryFn: () => api.schedule(from), placeholderData: keepPreviousData });
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const names = new Map((watch.data ?? []).map((s) => [s.id, s.label]));
+  const colors = new Map((watch.data ?? []).flatMap((s) => (s.color ? [[s.id, s.color] as const] : [])));
   const region = useRef<HTMLDivElement>(null);
   const data = page.data;
   const first = data?.first;
@@ -143,6 +143,24 @@ export function Schedule() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
+
+  // On the phone layout a sideways swipe moves a day, as the arrows do (they stay, so nobody is left without a way to move).
+  // A swipe is mostly sideways and long enough; one that is mostly up or down is the page scrolling and moves nothing.
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const swipeStart = (event: TouchEvent) => {
+    const [first] = Array.from(event.touches);
+    touch.current = event.touches.length === 1 && first && document.documentElement.hasAttribute("data-narrow") && !typing(event.target) ? { x: first.clientX, y: first.clientY } : null;
+  };
+  const swipeEnd = (event: TouchEvent) => {
+    const from = touch.current;
+    touch.current = null;
+    const [end] = Array.from(event.changedTouches);
+    if (!from || !end) return;
+    const across = end.clientX - from.x;
+    const down = end.clientY - from.y;
+    if (Math.abs(across) < SWIPE_MIN || Math.abs(across) < Math.abs(down) * 1.5) return;
+    goRef.current(across < 0 ? 1 : -1);
+  };
 
   const last = data && data.days.length > 0 ? data.days[data.days.length - 1].date : undefined;
   const shown =
@@ -174,10 +192,10 @@ export function Schedule() {
           </button>
         </p>
       ) : (
-        <div className={styles.frame}>
+        <div className={styles.frame} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
           <div className={styles.days} style={{ ["--days" as string]: data.days.length }}>
             {data.days.map((view) => (
-              <DayColumn key={view.date} view={view} today={data.today} source={(id) => names.get(id)} />
+              <DayColumn key={view.date} view={view} today={data.today} source={(id) => names.get(id)} color={(id) => colors.get(id)} />
             ))}
           </div>
         </div>

@@ -106,6 +106,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             author=source.author,
             author_name=author_names().get(source.author or ""),
             account=source.account,
+            color=source.color,
             items=len(items),
             last=WatchRunView(
                 **{

@@ -77,6 +77,11 @@ const enc = encodeURIComponent;
 export const panelView = (name: string, group: PanelGroup = "work"): View => `${group}/panel/${enc(name)}`;
 export const recordView = (kind: string, id: string): View => `records/${enc(kind)}/${enc(id)}`;
 
+/** The page of a connected calendar's event the app keeps no entry for: not a record, so it has a kind of its own. The id
+ * names the event and the date of it that was opened. */
+export const EVENT_PAGE = "calendar-event";
+export const eventPageView = (snapshot: string, start: string): View => recordView(EVENT_PAGE, `${snapshot}@${start}`);
+
 export const settingsView = (section: SettingsSection): View =>
   section.startsWith("addon/") ? `settings/addon/${enc(section.slice("addon/".length))}` : (`settings/${section}` as View);
 

@@ -127,6 +127,11 @@ def agenda(
     return [*found, *_own_entries(store, days, here, today)]
 
 
+def event_dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
+    """The dates a calendar item's details stand for (see `_dates`), for a screen that shows one of them."""
+    return _dates(event, title, key)
+
+
 def _dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
     """The dates an event item stands for: each date of a series the connector expanded, or the one date it has. Each is
     a start, an end, a title, a place, whether it is called off, and the key of the entry kept for it."""

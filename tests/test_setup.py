@@ -962,7 +962,9 @@ def test_an_account_says_whether_its_key_is_there_and_can_be_tested_before_it_do
     assert "COCKPIT_TEST_KEY_NOT_SET" in accounts["unset-key"]["key_where"]
     assert accounts[stand_in]["key_state"] == "none"
     tested = c.post(f"{api}/ai/accounts/{stand_in}/test").json()
-    assert tested == [{"tier": "account", "account": stand_in, "main": True, "ok": True, "detail": "answered"}]
+    assert [{k: v for k, v in line.items() if v is not None} for line in tested] == [
+        {"tier": "account", "account": stand_in, "main": True, "ok": True, "detail": "answered"}
+    ]
     missing = c.post(f"{api}/ai/accounts/unset-key/test").json()
     assert not missing[0]["ok"] and "COCKPIT_TEST_KEY_NOT_SET" in missing[0]["detail"]
     assert c.post(f"{api}/ai/accounts/nobody/test").status_code == 404

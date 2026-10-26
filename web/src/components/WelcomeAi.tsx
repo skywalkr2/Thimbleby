@@ -517,7 +517,7 @@ export function WelcomeAi(props: {
         void (async () => {
           const step = (name: string) => (tier: string) => setAccountCheck(name, { running: tier, failed: null });
           const ended = (name: string, bad: S["AiTestResult"] | null) =>
-            setAccountCheck(name, bad ? { running: null, failed: { detail: bad.detail ?? "", tiers: plan.map(([tier]) => tier) } } : null);
+            setAccountCheck(name, bad ? { running: null, failed: { detail: bad.detail ?? "", tiers: plan.map(([tier]) => tier), result: bad } } : null);
           try {
             if (forBackup) {
               const bad = await acts.standIn(accountId, plan, t("ai_accounts.backup_set", { name: shown }), step(accountId));
@@ -772,7 +772,7 @@ export function WelcomeAi(props: {
                   void verify(kind, { everyday: next, model: next });
                 }}
               >
-                {t("welcome.ai.retired_use_next", { model: verdict.retired.next })}
+                {t("welcome.ai.retired_use_next")}
               </Button>
             </>
           )}

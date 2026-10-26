@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.screen_text import ScreenText
+from engine.config.schema import CalendarColor
 from engine.ops import ActRecipientIn
 from engine.records import KnowledgeEvidence, Scope
 
@@ -2310,6 +2311,34 @@ class ScheduleDayView(BaseModel):
     timed: list[ScheduleEntryView] = Field(description="The timed entries by when they begin that day.")
 
 
+class ConnectedPersonView(BaseModel):
+    """Someone on a connected calendar's event, as the calendar names them."""
+
+    address: str | None = None
+    name: str | None = None
+    response: str | None = Field(None, description="Their answer to the invitation as the calendar says it.")
+
+
+class ConnectedEventView(BaseModel):
+    """What a connected calendar says about one date of an event the app keeps no entry for (GET
+    /api/schedule/events/{snapshot}). Read-only; every word is the calendar's, so it is untrusted text."""
+
+    snapshot: str
+    source: str = Field(description="The watched source's id; its label is in GET /api/watch.")
+    title: str
+    start: str = Field(description="A date-time on the person's clock, or a date for an all-day event.")
+    end: str | None = Field(
+        None, description="When it ends, or for an all-day event its last day; none when it names none."
+    )
+    all_day: bool
+    where: str | None = None
+    cancelled: bool = Field(description="The organizer called it off.")
+    link: str | None = Field(None, description="Where to open it in the calendar; untrusted, so show its real domain.")
+    repeats: str | None = Field(None, description="The repeat rule as the calendar wrote it, for an item of a series.")
+    organizer: ConnectedPersonView | None = None
+    attendees: list[ConnectedPersonView] = Field(default_factory=list)
+
+
 class ScheduleView(BaseModel):
     """The schedule (GET /api/schedule): a run of days from `first`, in the person's time zone."""
 
@@ -4286,6 +4315,22 @@ class AiTestResult(BaseModel):
     detail: ScreenText = Field(
         description='"answered", followed by any setting that was left out and why, or what went wrong in plain words.'
     )
+    reason: Literal["model_retired"] | None = Field(
+        None,
+        description="When the test stopped because the service no longer offers the model it used for that work: "
+        "model_retired. The account remembers the refusal.",
+    )
+    work: str | None = Field(
+        None, description="With model_retired: the kind of work (a tier) whose model the service refused."
+    )
+    model_short: str | None = Field(
+        None, description="With model_retired: the short name, under the account's models, of the model refused."
+    )
+    next_model: str | None = Field(
+        None,
+        description="With model_retired: the id of the next model the service's own listing says fits that kind of "
+        "work, never the one refused or one it refused before; none when the listing has no other. Never shown.",
+    )
 
 
 # ---- asking the assistant --------------------------------------------------------------------------------------------
@@ -4441,6 +4486,9 @@ class WatchSourceView(BaseModel):
     author_name: str | None = Field(None, description="Their name, for showing; empty when none is set or it is gone.")
     account: str | None = Field(
         None, description="For a source of an add-on that signs in as you: the account it reads, by its address."
+    )
+    color: CalendarColor | None = Field(
+        None, description="For a calendar: the color of its mark on the schedule, from a short named list."
     )
     items: int = Field(description="Items it held at the last read.")
     last: WatchRunView | None = None
@@ -5421,6 +5469,7 @@ class WatchSourceIn(BaseModel):
         description="For a kind with accounts (GET /api/watch/kinds): the address of the signed-in account it reads. "
         "Required when several are signed in; the only one is used when it is left out.",
     )
+    color: CalendarColor | None = Field(None, description="For a calendar: the color of its mark on the schedule.")
     settings: dict[str, Any] = Field(default_factory=dict, description="Its settings, by field (nested as objects).")
     secrets: dict[str, str] = Field(
         default_factory=dict,
@@ -5444,6 +5493,9 @@ class WatchSourceChange(BaseModel):
         None,
         description="The address of the signed-in account it reads (GET /api/watch/kinds); empty, when sent, goes "
         "back to the only account, and is refused while several are signed in.",
+    )
+    color: CalendarColor | None = Field(
+        None, description="For a calendar: the color of its mark on the schedule; null, when sent, clears it."
     )
     settings: dict[str, Any] | None = None
     secrets: dict[str, str] = Field(

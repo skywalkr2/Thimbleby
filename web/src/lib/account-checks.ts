@@ -3,12 +3,14 @@
 // work is being checked now and, when one didn't pass, why. Nothing here is kept past a reload: the row's state comes from
 // the account itself.
 import { useSyncExternalStore } from "react";
+import type { S } from "./api";
 
 export interface AccountCheck {
   /** The kind of work being checked now (a tier), or null when no check is running. */
   running: string | null;
-  /** The check that didn't pass: what the account said, and the kinds of work it was being checked for. */
-  failed: { detail: string; tiers: string[] } | null;
+  /** The check that didn't pass: what the account said, the kinds of work it was being checked for, and the check's own
+   * answer (which says, for a model the service no longer offers, what to use instead). */
+  failed: { detail: string; tiers: string[]; result?: S["AiTestResult"] } | null;
 }
 
 const checks = new Map<string, AccountCheck>();

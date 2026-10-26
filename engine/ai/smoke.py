@@ -30,6 +30,7 @@ from engine.ai.task import (
     IdentityUnknown,
     ModelInfo,
     provider_reason,
+    work_in_words,
 )
 from engine.config import Config
 from engine.secrets import SecretError, describe_secret, resolve_secret
@@ -139,7 +140,7 @@ def smoke_test(
                 except SecretError as err:
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
-                    ok, detail, failed_kind = False, _problem(err, where_of(settings), model_id), err.kind
+                    ok, detail, failed_kind = False, _problem(err, where_of(settings), model_id, tier_name), err.kind
                     raw_detail = err.detail
                     no_network = err.kind == "offline"
                     if err.kind in ("auth", "no_key"):
@@ -301,12 +302,15 @@ def where_of(settings: Any) -> str:
     return "local" if found.is_loopback or found.is_private or found.is_link_local else "hosted"
 
 
-def _problem(err: AiError, where: str = "local", model: str = "") -> str:
+def _problem(err: AiError, where: str = "local", model: str = "", tier: str = "") -> str:
     """A failed test call in plain words: what it means, the account's own words for it, and what to do. `where` is
     where the account lives (`where_of`), so a hosted service never gets the advice for a local one."""
-    if err.kind == "model_retired" and model:
-        return f"{RETIRED_PLAIN.format(model=model)}."
+    if err.kind == "model_retired":
+        return f"{RETIRED_PLAIN.format(work=work_in_words(tier))}."
     reason = "" if err.kind in TRANSPORT_KINDS else provider_reason(err.detail)
+    if model and reason:
+        # The service's own words may name the model, which the person is never shown.
+        reason = reason.replace(model, "the model")
     plain = PROBLEMS.get(err.kind, "It stopped with an error")
     detail = f"{plain} ({reason})" if reason else plain
     hint = err.hint or (

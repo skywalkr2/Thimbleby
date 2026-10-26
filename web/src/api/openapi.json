@@ -4113,14 +4113,63 @@
             "title": "Main",
             "type": "boolean"
           },
+          "model_short": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With model_retired: the short name, under the account's models, of the model refused.",
+            "title": "Model Short"
+          },
+          "next_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With model_retired: the id of the next model the service's own listing says fits that kind of work, never the one refused or one it refused before; none when the listing has no other. Never shown.",
+            "title": "Next Model"
+          },
           "ok": {
             "title": "Ok",
             "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "const": "model_retired",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the test stopped because the service no longer offers the model it used for that work: model_retired. The account remembers the refusal.",
+            "title": "Reason"
           },
           "tier": {
             "description": "The kind of work: \"routine\" (everyday) or \"deep\" (harder), or another tier.",
             "title": "Tier",
             "type": "string"
+          },
+          "work": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With model_retired: the kind of work (a tier) whose model the service refused.",
+            "title": "Work"
           }
         },
         "required": [
@@ -7110,6 +7159,153 @@
           "text"
         ],
         "title": "CompletedAction",
+        "type": "object"
+      },
+      "ConnectedEventView": {
+        "description": "What a connected calendar says about one date of an event the app keeps no entry for (GET\n/api/schedule/events/{snapshot}). Read-only; every word is the calendar's, so it is untrusted text.",
+        "properties": {
+          "all_day": {
+            "title": "All Day",
+            "type": "boolean"
+          },
+          "attendees": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectedPersonView"
+            },
+            "title": "Attendees",
+            "type": "array"
+          },
+          "cancelled": {
+            "description": "The organizer called it off.",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it ends, or for an all-day event its last day; none when it names none.",
+            "title": "End"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where to open it in the calendar; untrusted, so show its real domain.",
+            "title": "Link"
+          },
+          "organizer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectedPersonView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repeats": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The repeat rule as the calendar wrote it, for an item of a series.",
+            "title": "Repeats"
+          },
+          "snapshot": {
+            "title": "Snapshot",
+            "type": "string"
+          },
+          "source": {
+            "description": "The watched source's id; its label is in GET /api/watch.",
+            "title": "Source",
+            "type": "string"
+          },
+          "start": {
+            "description": "A date-time on the person's clock, or a date for an all-day event.",
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Where"
+          }
+        },
+        "required": [
+          "snapshot",
+          "source",
+          "title",
+          "start",
+          "all_day",
+          "cancelled"
+        ],
+        "title": "ConnectedEventView",
+        "type": "object"
+      },
+      "ConnectedPersonView": {
+        "description": "Someone on a connected calendar's event, as the calendar names them.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their answer to the invitation as the calendar says it.",
+            "title": "Response"
+          }
+        },
+        "title": "ConnectedPersonView",
         "type": "object"
       },
       "ConversationIn": {
@@ -28011,6 +28207,28 @@
             "description": "A person's or team's id, from GET /api/watch/authors; empty, when sent, clears it.",
             "title": "Author"
           },
+          "color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "blue",
+                  "teal",
+                  "green",
+                  "orange",
+                  "red",
+                  "pink",
+                  "purple",
+                  "gray"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a calendar: the color of its mark on the schedule; null, when sent, clears it.",
+            "title": "Color"
+          },
           "enabled": {
             "anyOf": [
               {
@@ -28103,6 +28321,28 @@
             "description": "A person's or team's id, from GET /api/watch/authors.",
             "title": "Author"
           },
+          "color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "blue",
+                  "teal",
+                  "green",
+                  "orange",
+                  "red",
+                  "pink",
+                  "purple",
+                  "gray"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a calendar: the color of its mark on the schedule.",
+            "title": "Color"
+          },
           "connector": {
             "description": "The kind of source, from GET /api/watch/kinds.",
             "title": "Connector",
@@ -28194,6 +28434,28 @@
             ],
             "description": "Their name, for showing; empty when none is set or it is gone.",
             "title": "Author Name"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "blue",
+                  "teal",
+                  "green",
+                  "orange",
+                  "red",
+                  "pink",
+                  "purple",
+                  "gray"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a calendar: the color of its mark on the schedule, from a short named list.",
+            "title": "Color"
           },
           "connector": {
             "title": "Connector",
@@ -38797,6 +39059,64 @@
           }
         },
         "summary": "Schedule"
+      }
+    },
+    "/api/schedule/events/{snapshot}": {
+      "get": {
+        "description": "What a connected calendar says about one event the app keeps no entry for: title, time, place, who is\ncoming and where to open it. Nothing is read from the service.",
+        "operationId": "schedule_event_api_schedule_events__snapshot__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot",
+            "required": true,
+            "schema": {
+              "title": "Snapshot",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The start of the date of a repeating event to show; the first when none.",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The start of the date of a repeating event to show; the first when none.",
+              "title": "Start"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectedEventView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schedule Event"
       }
     },
     "/api/series/{series_id}/page": {

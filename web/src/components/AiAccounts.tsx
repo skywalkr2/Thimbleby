@@ -549,7 +549,8 @@ function AccountRow(props: {
   // The checks that went on after the account was added, and where the choice to use it without one passing is open: an account
   // that isn't doing the work, whose check failed, and that the person hasn't accepted yet.
   const running = useAccountCheck(account.name);
-  const whyFailed = running?.failed?.detail ?? "";
+  const checkRefusal = running?.failed?.result?.reason === "model_retired" ? running.failed.result : null;
+  const whyFailed = checkRefusal ? t("ai_accounts.retired", { work: checkRefusal.work ? workWords([checkRefusal.work], t) : t("ai_accounts.work.every") }) : (running?.failed?.detail ?? "");
   const canUseAnyway = role !== "work" && !account.accepted_unchecked && !running?.running && (state.kind === "failed" || !!running?.failed) && shorts.length > 0;
   const useAnyway = () =>
     void save(
@@ -642,13 +643,53 @@ function AccountRow(props: {
   const modelsBlank = Object.values(models).some((id) => id.trim() === "");
   const offeredModels = worksNow && modelsChanged && !modelsBlank && modelsOffer.data?.offered === true;
   const examplesId = `${base}-examples`;
+  // A check that stopped on a model the service no longer offers is said in words about the kind of work, never by the
+  // model's name, and offers the next model the service's own list says fits, in one step.
+  const refusal = result && !result.ok && result.reason === "model_retired" ? result : checkRefusal;
+  const refusedWork = refusal ? (refusal.work ? workWords([refusal.work], t) : t("ai_accounts.work.every")) : "";
+  const refusalText = refusal ? t("ai_accounts.retired", { work: refusedWork }) : "";
   const resultText = result
     ? result.ok
       ? t("ai_accounts.test_ok")
-      : result.detail
-        ? t("ai_accounts.test_failed", { detail: result.detail })
-        : t("ai_accounts.test_failed_plain")
+      : refusal === result
+        ? refusalText
+        : result.detail
+          ? t("ai_accounts.test_failed", { detail: result.detail })
+          : t("ai_accounts.test_failed_plain")
     : "";
+  /** Saves the next model in place of the refused one (with Undo, through the account change every other edit uses),
+   * then checks that kind of work again. */
+  const replaceRefused = async () => {
+    const short = refusal?.model_short;
+    const nextId = refusal?.next_model;
+    if (!refusal || !short || !nextId) return;
+    const work = refusal.work ?? undefined;
+    const done = await save((fingerprint) => api.changeAccount(account.name, { fingerprint, models: { ...account.models, [short]: nextId } }), () => t("ai_accounts.model_replaced", { name, work: refusedWork }));
+    if (!done) return;
+    setTesting(true);
+    setResult(null);
+    try {
+      const again = (await api.testAccount(account.name, work, short))[0] ?? null;
+      setResult(again);
+      setAccountCheck(account.name, again && !again.ok ? { running: null, failed: { detail: again.detail ?? "", tiers: work ? [work] : [], result: again } } : null);
+      void client.invalidateQueries({ queryKey: ["ai-accounts"] });
+    } catch (err) {
+      fail(err);
+    } finally {
+      setTesting(false);
+    }
+  };
+  const replaceOffer = refusal && (
+    <div className="row-end" data-refusal="">
+      {refusal.next_model ? (
+        <Button size="sm" variant="primary" disabled={busy || testing} aria-label={t("ai_accounts.retired_use_next_named", { name, work: refusedWork })} onClick={() => void replaceRefused()}>
+          {t("ai_accounts.retired_use_next")}
+        </Button>
+      ) : (
+        <p className="hint">{t("ai_accounts.retired_none")}</p>
+      )}
+    </div>
+  );
   const onlyMain = role === "work" && !heir;
   const extras = mode !== null || !!problem || testing || !!result || !!gate;
 
@@ -745,6 +786,7 @@ function AccountRow(props: {
       {whyFailed && (
         <div className={styles.outcome} role="status" aria-live="polite">
           <p className={styles.bad}>{t("ai_check.failed", { detail: whyFailed })}</p>
+          {checkRefusal && refusal !== result && replaceOffer}
           {canUseAnyway && (
             <>
               <p className="hint">{t("ai_check.use_anyway_hint")}</p>
@@ -935,6 +977,7 @@ function AccountRow(props: {
               <span aria-hidden="true">{result.ok ? " ✓" : " ✗"}</span>
             </p>
           )}
+          {result && refusal === result && replaceOffer}
         </div>
       </div>
     </Row>

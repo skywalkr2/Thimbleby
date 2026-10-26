@@ -355,6 +355,9 @@ function SentFolderOffer(props: { source: Source; save: ReturnType<typeof useSou
   );
 }
 
+/** The names a calendar's color is picked from (the colors themselves are the theme's). */
+const CALENDAR_COLORS = ["blue", "teal", "green", "orange", "red", "pink", "purple", "gray"] as const;
+
 /** The mailbox settings that name a folder of the mailbox. */
 const FOLDER_SETTINGS = ["sent_folder", "archive_folder"];
 
@@ -389,6 +392,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [project, setProject] = useState("");
   const [author, setAuthor] = useState(source?.author ?? "");
   const [account, setAccount] = useState(source?.account ?? "");
+  const [color, setColor] = useState<string>(source?.color ?? "");
   const [edits, setEdits] = useState<Record<string, Draft>>({});
   const [pasted, setPasted] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -398,7 +402,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [opened, setOpened] = useState<string | null>(null);
   // What the form showed when it opened (or was last refreshed), to tell which fields the person touched after a refusal,
   // and what a refusal refreshed.
-  const shown = useRef({ label: source?.label ?? "", every: String(source?.every_minutes ?? 60), author: source?.author ?? "", account: source?.account ?? "" });
+  const shown = useRef({ label: source?.label ?? "", every: String(source?.every_minutes ?? 60), author: source?.author ?? "", account: source?.account ?? "", color: source?.color ?? "" });
   const storedWas = useRef<unknown>(undefined);
   const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
 
@@ -486,6 +490,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const accountList = kind?.accounts ?? null;
   const accountChoices = accountList ? [...new Set([...(accountList ?? []), ...(account ? [account] : [])])] : [];
   const accountChosen = accountList === null ? "" : account || (accountList.length === 1 ? accountList[0] : "");
+  // A calendar can carry a color for its mark on the schedule, picked from a short named list.
+  const calendarSource = source?.reads?.includes("calendar") ?? false;
   const accountMissing = accountList !== null && accountList.length > 1 && accountChosen === "";
   const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null && !accountMissing;
 
@@ -498,17 +504,19 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
       ]);
       const now = list.find((x) => x.id === was.id);
       if (!now) return;
-      const saved = { label: now.label, every: String(now.every_minutes), author: now.author ?? "", account: now.account ?? "" };
-      const out = reconcile<string>(shown.current, { label, every, author, account }, saved);
+      const saved = { label: now.label, every: String(now.every_minutes), author: now.author ?? "", account: now.account ?? "", color: now.color ?? "" };
+      const out = reconcile<string>(shown.current, { label, every, author, account, color }, saved);
       setLabel(out.next.label);
       setEvery(out.next.every);
       setAuthor(out.next.author);
       setAccount(out.next.account);
+      setColor(out.next.color);
       shown.current = saved;
       const lines: Refreshed[] = [];
-      const words: Record<string, string> = { label: t("sources.field.label"), every: t("sources.field.every"), author: t("sources.field.author"), account: t("sources.field.account") };
+      const words: Record<string, string> = { label: t("sources.field.label"), every: t("sources.field.every"), author: t("sources.field.author"), account: t("sources.field.account"), color: t("sources.field.color") };
       for (const key of out.refreshed) {
-        const value = key === "every" ? tn("sources.every", now.every_minutes) : saved[key as keyof typeof saved] || t("settings.empty");
+        const value =
+          key === "every" ? tn("sources.every", now.every_minutes) : key === "color" && now.color ? t(`sources.color.${now.color}`) : saved[key as keyof typeof saved] || t("settings.empty");
         lines.push({ label: words[key], value });
       }
       const list2 = view.items.find((i) => i.key === "watch.sources")?.value;
@@ -555,6 +563,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           ...(name ? { label: name } : {}),
           every_minutes: minutes,
           author: author || null,
+          ...(calendarSource ? { color: (color || null) as Source["color"] } : {}),
           ...(accountList !== null && accountChosen ? { account: accountChosen } : {}),
           ...(items.length > 0 ? { settings: nest(sent) } : {}),
           ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
@@ -702,6 +711,22 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               </select>
               <p className="hint" id={`${base}-account-hint`}>
                 {t("sources.field.account_hint")}
+              </p>
+            </div>
+          )}
+          {calendarSource && (
+            <div className="field">
+              <label htmlFor={`${base}-color`}>{t("sources.field.color")}</label>
+              <select id={`${base}-color`} value={color} aria-describedby={`${base}-color-hint`} onChange={(e) => setColor(e.target.value)}>
+                <option value="">{t("sources.field.no_color")}</option>
+                {CALENDAR_COLORS.map((name) => (
+                  <option key={name} value={name}>
+                    {t(`sources.color.${name}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="hint" id={`${base}-color-hint`}>
+                {t("sources.field.color_hint")}
               </p>
             </div>
           )}

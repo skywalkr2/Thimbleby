@@ -12,6 +12,8 @@ from fastapi import APIRouter, HTTPException, Query
 from api.schemas import (
     AgendaItemView,
     ComingView,
+    ConnectedEventView,
+    ConnectedPersonView,
     OwnerNameView,
     PriorityLineView,
     PriorityThingView,
@@ -169,6 +171,24 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 )
                 for d in found
             ],
+        )
+
+    @r.get("/schedule/events/{snapshot}")
+    def schedule_event(
+        snapshot: str,
+        start: Annotated[
+            str | None, Query(description="The start of the date of a repeating event to show; the first when none.")
+        ] = None,
+    ) -> ConnectedEventView:
+        """What a connected calendar says about one event the app keeps no entry for: title, time, place, who is
+        coming and where to open it. Nothing is read from the service."""
+        found = schedule_module.connected_event(store, cfg, snapshot, start)
+        if found is None:
+            raise HTTPException(status_code=404, detail="That event isn't on a connected calendar any more.")
+        return ConnectedEventView(
+            **{k: v for k, v in vars(found).items() if k not in ("organizer", "attendees")},
+            organizer=ConnectedPersonView(**vars(found.organizer)) if found.organizer else None,
+            attendees=[ConnectedPersonView(**vars(p)) for p in found.attendees],
         )
 
     return r

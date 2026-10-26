@@ -788,6 +788,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["author"] = checked_author(body.author)
         if account := checked_account(body.connector, body.account):
             new["account"] = account
+        if body.color:
+            new["color"] = body.color
         fresh = keep_all(to_keep, f"source:{source_id}")
         try:
             done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
@@ -882,6 +884,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found["author"] = checked_author(body.author) if body.author else None
         if "account" in body.model_fields_set:
             found["account"] = checked_account(found["connector"], body.account)
+        if "color" in body.model_fields_set:
+            found["color"] = body.color
         fresh = keep_all(to_keep, f"source:{source_id}")
         try:
             return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
@@ -1418,7 +1422,41 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         for x in results:
             if not x.ok and line.ok:
                 line.ok, line.detail = False, x.detail
+                if x.error_kind == "model_retired":
+                    retired_by_check(now, name, tier, x, line)
         return [line]
+
+    def retired_by_check(now: Config, name: str, tier: str | None, result: Any, line: AiTestResult) -> None:
+        """A check that stopped on a model the service no longer offers: the refusal is remembered on the account, and
+        the line carries the kind of work, the model's short name and the next model the service's own listing says
+        fits that work (never the refused one or one refused before)."""
+        from engine.ai import model_watch
+        from engine.ai.adapters import make_adapter
+        from engine.ai.presets import suggest_models
+        from engine.ai.task import RETIRED_PLAIN, work_in_words
+
+        provider = now.ai.providers[name]
+        short = result.ref.partition("/")[2]
+        gone = provider.models.get(short, short)
+        refused = [*provider.refused_models, *([gone] if gone not in provider.refused_models else [])]
+        if refused != list(provider.refused_models):
+            try:
+                save(
+                    {f"ai.providers.{name}.refused_models": refused},
+                    [],
+                    config_screens.fingerprint(ws.config_dir),
+                    allow=("ai.providers.",),
+                )
+            except HTTPException:
+                log.warning("A refused model couldn't be remembered on account %s.", name)
+        work = tier or next((t for t, s in now.ai.tiers.items() if s.use == f"{name}/{short}"), None)
+        listing = model_watch.listing_of(now, name, os.environ, make_adapter)
+        entry = model_watch.entry_of(provider, setup.known_endpoints())
+        easy, hard = suggest_models(entry, listing, avoid=frozenset(refused))
+        line.reason, line.work, line.model_short = "model_retired", work, short
+        line.next_model = hard if work == "deep" else easy
+        # In the person's words: which work, never the model's name.
+        line.detail = RETIRED_PLAIN.format(work=work_in_words(work))
 
     def release_identity_waits() -> None:
         """After a check or an answer: work that waited on an agent's sign-in tries again unless that sign-in still

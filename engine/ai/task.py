@@ -31,7 +31,17 @@ UNSUPPORTED_ADVICE = "Pick another account, or use a key instead"
 
 
 #: What the person reads when the service no longer offers the model an account was set to use.
-RETIRED_PLAIN = "{model} is no longer offered by this service"
+#: It names the kind of work, never the model: a model's name is not shown to the person.
+RETIRED_PLAIN = "The model this account was using for {work} is no longer offered by this service"
+
+#: A kind of work (a tier) in the person's words, for a line that must not name the model.
+WORK_WORDS = {"routine": "everyday work", "deep": "harder work"}
+
+
+def work_in_words(tier: str | None) -> str:
+    """The kind of work a tier does, in plain words; a tier this doesn't know is "that work"."""
+    return WORK_WORDS.get(tier or "", "that work")
+
 
 #: Phrases in a service's error words that say the model asked for is retired. An adapter reads them only in its
 #: `classify_error`, and an account's settings may list others (`retired_markers`).

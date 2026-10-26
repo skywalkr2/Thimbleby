@@ -1,4 +1,4 @@
-import { fromHash, panelView, parseView, recordView, settingsSectionOf, settingsView, toHash, viewHref } from "./views";
+import { EVENT_PAGE, eventPageView, fromHash, panelView, parseView, recordView, settingsSectionOf, settingsView, toHash, viewHref } from "./views";
 
 const routes = [
   "today",
@@ -103,4 +103,10 @@ test("Settings without a section, the grid of what accounts can do, and a sectio
   expect(parseView("settings")).toEqual({ type: "core", view: "settings" });
   expect(fromHash("#settings/nonsense")).toBe("settings");
   expect(fromHash("#settings/addon/")).toBe("settings");
+});
+
+test("the page of a connected calendar's event survives the address, with the date it names", () => {
+  const view = eventPageView("SNAP-1", "2026-10-26T09:00:00+00:00");
+  const parsed = parseView(fromHash(`#${toHash(view)}`));
+  expect(parsed).toEqual({ type: "record", kind: EVENT_PAGE, id: "SNAP-1@2026-10-26T09:00:00+00:00" });
 });
