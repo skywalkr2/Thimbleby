@@ -23,6 +23,7 @@ from engine import (
     invitation_lines,
     meeting_prep,
     move_groups,
+    new_terms,
     patterns,
     people_memory,
     promises,
@@ -156,7 +157,8 @@ class Line:
     `person`, the follow-ups it has had in `count` and the days since the last word in `waiting_days`), stale (the
     person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`: `count` of them,
     their ids in `actions`, the longest untouched in `waiting_days`, and one's own words in `subject` when there is just
-    one).
+    one), terms (the questions about unknown words that wait for an answer, as one line: `count` of them, their ids in
+    `questions`).
     nudge is the one follow-up line for a person the person is waiting on (`count` of their items, `overdue` how many
     are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
     without an answer any of its promises has had, which the line says), opening the one message to them. A promise
@@ -436,6 +438,8 @@ def _everything(
                 line.suggestion = found.shown(people) if found is not None else None
         elif about in ROUTING or (about == "watch" and resolves.get("source") in unread):
             continue
+        elif new_terms.term_of(q) is not None:
+            continue  # the day's questions about words are one Review line, below
         else:
             line.kind = "decision" if d.get("kind") == "decision" else "question"
         lines.append(line)
@@ -446,8 +450,31 @@ def _everything(
         req = by_changeset.get(cs_id)
         if req is None or req.data.get("dismissed") or req.id in hidden:
             continue
+        # A project ending read from an input is one line with its drops inside it, not a line for each item.
+        winding = endings.held_endings(reader, cs_id, cs.get("ops", []))
+        folded = {i for each in winding for i in (each.index, *(item.index for item in each.items))}
+        for each in winding:
+            project = reader.get("project", each.project)
+            lines.append(
+                Line(
+                    key=f"ending:{cs_id}:{each.index}",
+                    group="decide",
+                    kind="project_ending",
+                    count=len(each.items),
+                    subject=project.data["name"] if project is not None else each.project,
+                    project=each.project,
+                    title=title(req.data, cs),
+                    request=req.id,
+                    changeset=cs_id,
+                    op=each.index,
+                    actions=[item.id for item in each.items if item.kind == "action"],
+                    questions=[item.id for item in each.items if item.kind == "question"],
+                    untrusted=cs.get("trust") == "untrusted",
+                    since=str(req.data.get("created_at") or ""),
+                )
+            )
         for outcome in cs.get("ops", []):
-            if outcome.get("status") != "held" or outcome.get("question"):
+            if outcome.get("status") != "held" or outcome.get("question") or outcome["index"] in folded:
                 continue
             lines.append(
                 Line(
@@ -1287,6 +1314,20 @@ def _everything(
                 subject=reader.get("project", business).data["name"] if business else None,
                 count=len(loose),
                 since=min(i.created_at for i in loose),
+            )
+        )
+
+    # Review: the questions about words the assistant asked, as one line that opens them together.
+    asked_words = new_terms.open_for(reader, people.pm)
+    if asked_words:
+        lines.append(
+            Line(
+                key="terms",
+                group="review",
+                kind="terms",
+                count=len(asked_words),
+                questions=[q.id for q in asked_words],
+                since=min(_created(reader, "question", q.id) for q in asked_words),
             )
         )
 

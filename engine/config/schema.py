@@ -1266,8 +1266,16 @@ class KnowledgeSettings(ConfigModel):
         3,
         ge=0,
         le=50,
-        description="The most unknown terms (acronyms and system names the glossary lacks) the assistant suggests "
-        "adding to the glossary from one input, found by the patterns in the language settings. 0 turns the scan off.",
+        description="The most unknown terms (acronyms and system names the glossary lacks) the assistant asks about "
+        "from one input, found by the patterns in the language settings. 0 turns the scan off.",
+    )
+    new_terms_per_day: int = Field(
+        3,
+        ge=0,
+        le=50,
+        description="The most questions about unknown words the assistant asks you in one day, over every input. Once "
+        "the day's questions are asked, other new words wait for another day. The day's questions come to Today "
+        "together as one line. 0 turns the questions off.",
     )
     learn_later_inputs: int = Field(
         5,
@@ -2023,9 +2031,9 @@ class LanguageFile(FileModel):
     )
     known_terms_shipped: bool = Field(
         True,
-        description="Never ask what a widely known word means: the core's list of common abbreviations (country and "
-        "state codes, units, time zone names, month and day names), mail folder labels and well-known service names. "
-        "Off turns the list off; the words you add in `known_terms` still count.",
+        description="Never ask what an unmistakable name means: the core's list of country names, time zone names, "
+        "mail folder names and well-known service names. Short abbreviations are not on it, since they often mean "
+        "something particular where you work. Off turns the list off; the words you add in `known_terms` still count.",
     )
     known_terms: list[str] = Field(
         default_factory=list,

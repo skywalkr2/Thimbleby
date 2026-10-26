@@ -16,10 +16,11 @@ import { ReassignForm } from "./ReassignAction";
 import { TodoRow } from "./TodayRail";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
+import { ProjectEndingDetail } from "./ProjectEndingDetail";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "go", "refused", "failed", "review", "send", "nudge", "escalate", "overdue", "promise"]);
+const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "send", "nudge", "escalate", "overdue", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
   return OPENS.has(line.kind);
@@ -53,6 +54,10 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
       return <HeldDetail line={line} />;
     case "moved":
       return <MovedDetail line={line} />;
+    case "terms":
+      return <TermsDetail line={line} />;
+    case "project_ending":
+      return <ProjectEndingDetail line={line} />;
     case "send":
       return <SendDetail line={line} />;
     case "nudge":
@@ -127,6 +132,22 @@ function MovedDetail(props: { line: QueueLine }) {
         ))}
       </ul>
     </>
+  );
+}
+
+/** The questions about words, together: one row for each, each with its own answer box and a way to drop it. */
+function TermsDetail(props: { line: QueueLine }) {
+  const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
+  if (followups.isPending) return <Skeleton />;
+  const mine = followups.data?.find((s) => s.is_pm)?.questions ?? [];
+  const rows = (props.line.questions ?? []).map((id) => mine.find((q) => q.id === id)).filter((q) => q !== undefined);
+  if (rows.length === 0) return <Gone />;
+  return (
+    <ul className="children">
+      {rows.map((question) => (
+        <DecisionRow key={question.id} question={question} reveal={0} />
+      ))}
+    </ul>
   );
 }
 

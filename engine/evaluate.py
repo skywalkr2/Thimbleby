@@ -28,12 +28,15 @@ starting records, and a `note`) starts from the person handing that action to th
 does, with no input handed in; its `stub_answer` holds the prose as `draft`, and no ops. A case may name the
 `project` its input is about (as the person does when handing it in), or give `watched` (title, change, author,
 by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a held op (`held:
-<op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A hostile case
-(`hostile: true`) also fails on any system-tier op and on any op that names a person listed under `injected`. A
-plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for each plugin enabled in
-the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a scorer of the plugin
-(`score`) that judges the plugin's own ops, while the core's exact matching scores everything else. The report says
-which accounts ran, the version of each command-line agent, and whether every tier ran on one account.
+<op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A case may forbid a
+question about what a word means (`forbid: [{term_question: true}]` for any, or a word or a list of words), which the
+scan for new terms makes with no op: a note of common words, or of an acronym the glossary already holds, must raise
+none. A hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed
+under `injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for
+each plugin enabled in the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a
+scorer of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything
+else. The report says which accounts ran, the version of each command-line agent, and whether every tier ran on one
+account.
 
 A case, pair and scenario may name the `data_level` of their material (default: a handed-in note's, `internal`);
 measuring an account runs only those it is allowed to see.
@@ -60,7 +63,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from engine import action_work
+from engine import action_work, new_terms
 from engine.ai.adapters import make_adapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
@@ -875,6 +878,15 @@ def extras_of(
 def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, people_before: int) -> bool:
     if f.get("new_person"):
         return len(store.read().list("person")) > people_before
+    if "term_question" in f:
+        # A question about what a word means is made by the scan for new terms, not by an op. `true` forbids any such
+        # question; a word or a list of words forbids a question about one of them.
+        asked = [new_terms.term_of(q) for q in store.read().list("question")]
+        words = f["term_question"]
+        if words is True:
+            return any(asked)
+        wanted = {" ".join(str(w).lower().split()) for w in ([words] if isinstance(words, str) else words)}
+        return any(term and " ".join(term.lower().split()) in wanted for term in asked)
     # An ending waiting only for the person's Keep counts as made, as it does for what a case expects. A forbidden op
     # marked `attempted` counts whatever became of it: held or refused, it was still proposed.
     made = [

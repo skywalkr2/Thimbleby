@@ -75,6 +75,7 @@ LIVE_KEYS = (
     "dispatch.knowledge.check_on_switch",
     "dispatch.knowledge.learn_later_inputs",
     "dispatch.knowledge.new_terms_per_input",
+    "dispatch.knowledge.new_terms_per_day",
     "dispatch.knowledge.quality_window_days",
     "dispatch.knowledge.min_corrections_per_week",
 )

@@ -588,6 +588,12 @@ export function useLineTitle(): (line: QueueLine) => string {
         return line.state === "which_side" ? tn("queue.sides", line.count, { business: line.subject ?? "" }) : tn("queue.unfiled", line.count);
       case "moved":
         return moveTitle(line, t, tn);
+      case "terms":
+        return tn("queue.terms", line.count);
+      case "project_ending": {
+        const project = line.subject ?? "";
+        return line.count > 0 ? tn("queue.project_ending", line.count, { project }) : t("queue.project_ending.none", { project });
+      }
       case "go":
         return t("queue.go", { what });
       case "first_go":
@@ -791,6 +797,39 @@ function QueueRow(props: {
           primary: { label: t("queue.act.file_them"), run: () => props.handlers.onOpenView?.("records/projects") },
           menu: [],
         };
+      case "terms":
+        return { pill: t("queue.pill.terms"), tone: "neutral", meta: t("queue.terms.meta"), primary: { label: t("queue.act.answer") }, menu: [] };
+      case "project_ending": {
+        const cs = line.changeset ?? "";
+        const index = line.op ?? 0;
+        const project = line.subject ?? "";
+        return {
+          pill: t("queue.pill.project_ending"),
+          tone: "warn",
+          meta: meta(what, t("queue.project_ending.meta")),
+          primary: { label: t("queue.stale.open") },
+          menu: [
+            {
+              id: "keep-project",
+              label: t("project_ending.keep_project"),
+              run: () =>
+                void act(
+                  async () => {
+                    const view = await api.projectEnding(cs, index);
+                    await api.chooseProjectEnding(cs, index, { end: false, keep: [] });
+                    return [index, ...view.items.map((i) => i.index)];
+                  },
+                  (indexes) => ({
+                    message: t("project_ending.kept_project", { project }),
+                    undo: async () => {
+                      for (const i of indexes) await api.undeclineOp(cs, i);
+                    },
+                  }),
+                ),
+            },
+          ],
+        };
+      }
       case "moved": {
         const after = line.after_move;
         const others = after?.others ?? [];

@@ -80,6 +80,7 @@ from api.schemas import (
     ItemTitle,
     JobView,
     KindView,
+    LeftOpenItem,
     LeftOutView,
     LimitedOutView,
     ListRenameIn,
@@ -112,6 +113,9 @@ from api.schemas import (
     PersonPatch,
     PersonView,
     PluginStatusView,
+    ProjectEndingChoice,
+    ProjectEndingItem,
+    ProjectEndingView,
     ProjectIn,
     ProjectPatch,
     ProjectRoleIn,
@@ -1572,6 +1576,52 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         credits the owners, no longer needed credits nobody. Either applies at once, with Undo."""
         need("changeset", cs_id)
         guard(lambda: endings.answer(store, cfg, cs_id, index, body.ending))
+        changed()
+        return Ok(ok=cs_id)
+
+    @r.get("/changesets/{cs_id}/ops/{index}/project-ending")
+    def project_ending(cs_id: str, index: int) -> ProjectEndingView:
+        """A project ending that waits for the person: the open items it would drop, and what add-ons leave open."""
+        from engine.records import kind_label
+
+        need("changeset", cs_id)
+        view = store.read()
+        found = next(
+            (
+                e
+                for e in endings.held_endings(view, cs_id, view.get("changeset", cs_id).data["ops"])
+                if e.index == index
+            ),
+            None,
+        )
+        if found is None:
+            raise HTTPException(status_code=404, detail="That ending isn't waiting for you.")
+        project = view.get("project", found.project)
+        return ProjectEndingView(
+            project=found.project,
+            project_name=project.data["name"] if project is not None else found.project,
+            index=found.index,
+            items=[ProjectEndingItem(index=i.index, kind=i.kind, id=i.id, text=i.text) for i in found.items],
+            left_open=[
+                LeftOpenItem(
+                    kind=each.kind,
+                    kind_label=kind_label(store.plugins.records.get(each.kind), each.kind),
+                    id=each.id,
+                    title=each.title,
+                )
+                for each in endings.left_behind(store, found.project)
+            ],
+        )
+
+    @r.post("/changesets/{cs_id}/ops/{index}/project-ending")
+    def choose_project_ending(cs_id: str, index: int, body: ProjectEndingChoice) -> Ok:
+        """End the project and drop what is open on it except the items the person keeps (one Undo of the change takes
+        the ending back; kept items were never dropped), or keep the project and every item as they are."""
+        need("changeset", cs_id)
+        if body.end:
+            guard(lambda: endings.finish_ending(store, cfg, cs_id, index, body.keep))
+        else:
+            guard(lambda: endings.decline_ending(store, cs_id, index))
         changed()
         return Ok(ok=cs_id)
 

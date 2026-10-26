@@ -566,6 +566,7 @@ class PluginHost:
                     self.failed(plugin, f"Today lines {name}", err)
                     continue
                 self.succeeded(plugin, f"Today lines {name}")
+                lines = self._left_out_for_ended_projects(lines)
                 if any(line.group is None for line in lines) and (plugin, name) not in self._ungrouped:
                     self._ungrouped.add((plugin, name))
                     log.warning(
@@ -577,6 +578,33 @@ class PluginHost:
                     )
                 found += [(plugin, line) for line in lines]
         return found
+
+    def _left_out_for_ended_projects(self, lines: list[Any]) -> list[Any]:
+        """The Today lines of a plugin without those about a record of a project that has ended: nothing there is to be
+        chased, reminded of or notified. A line about no record, or about a record with no project, stays."""
+        from engine.endings import project_ended
+
+        view = self.store.read()
+        kept = []
+        for line in lines:
+            if line.about is not None:
+                kind, record_id = line.about
+                found = view.get(kind, record_id)
+                project = self._project_of(view, found) if found is not None else None
+                if project is not None and project_ended(view, project):
+                    continue
+            kept.append(line)
+        return kept
+
+    def _project_of(self, view: Any, record: Any) -> str | None:
+        """The project a record belongs to: its `project` field, or for a kind kept under another record's project the
+        project of the record its `layout_project` reference points at."""
+        model = self.records.get(record.kind)
+        project = record.data.get("project")
+        if isinstance(project, str) and project:
+            return project
+        via = getattr(model, "layout_project", None)
+        return self._project_through(view, record.kind, via, record) if via else None
 
     def connectors(self) -> dict[str, Any]:
         """Every running plugin's connectors, by name."""

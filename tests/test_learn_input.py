@@ -261,12 +261,12 @@ def shipped_service() -> str:
 
 
 def test_a_note_mentioning_the_owners_five_terms_raises_none(env):
-    """The learning pair for the owner's case: a country code, a state code, a mail folder label, a time zone and a
-    well-known service are never asked about."""
+    """The learning pair for the owner's case: a country, a mail folder name, a time zone and a well-known service are
+    never asked about. A state code is no longer on the list: two letters can mean something particular at work."""
     _, _, store = env
     service = shipped_service()
     request, made = scan(
-        env, f"Ship to the USA office, PA state, INBOX is full, meet at 14:00 UTC, see {service.upper()} and {service}."
+        env, f"Ship to the USA office, INBOX is full, meet at 14:00 UTC, see {service.upper()} and {service}."
     )
     assert made == [] and asked(store) == [] and entries(store, "glossary_entry") == []
 

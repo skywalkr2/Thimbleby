@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-26: Questions about words are capped, batched and trimmed; a pack's records after a project ends are left out and listed (P60, P61)
+
+**Decided:** (F33) A term question is asked only when the local meaning may differ from the common one, so the shipped
+list of known words keeps unmistakable names only (countries, time zones, mail folder names, well-known services) and no
+short acronym; the glossary is where an acronym's meaning is recorded, and a word it holds is never asked. At most
+`dispatch.knowledge.new_terms_per_day` (3) are asked in a day, they reach Today as one Review line that opens them
+together, and a dropped term question means the term is never raised again in this workspace. Negative evaluation cases
+prove common words and a glossary acronym raise no question. Not now: the three outcomes (known, assumed, asked) and known
+terms as glossary records.
+(F35, until the plugin API release) A pack's Today lines (and so its chasing and notices) skip records of a project that
+has ended; a project ending read from an input is one line whose detail lists the items with a "Keep these" multi-select
+(one action keeps every ticked item, the rest drop with the ending, one Undo) and the pack's records left open, which are
+never called resolved; there is no "Close these too", since the core has no close for a pack's record without the
+plugin API (a core delete is not a close). *Why:* the designer's lessons 2, 9 and 12 from the running deployment (the
+leftover risks kept being chased; dropped is not done; ask only after the glossary and the facts); 26 declines by hand
+are 26 clicks. Impact: one new setting with demo values in both workspaces; two new Today line kinds and two routes; no
+plugin API change; the ending hook waits for the batched release. **Decided by:** the functional designer, 2026-10-26, F33
+and F35. Change log: section 217.
 ## 2026-10-26: No Google verification for the free core; Gmail through an app password and the calendar's private address
 
 **Decided:** The project does not apply for Google's app verification or its yearly security assessment; that waits until

@@ -1,0 +1,16 @@
+id: common-words-raise-no-term-question
+title: Everyday capitalized words and unmistakable names raise no question about what a word means
+skills: [use-term]
+received: '2026-10-14'
+pasted: |-
+  From: Kofi Mensah-Hale
+
+  URGENT: please note the reminder, FYI, OK by Friday, ASAP. We meet at 14:00 UTC; the INBOX is full, the USA office is on GitHub.
+forbid:
+- term_question: true
+# The words are either everyday abbreviations the language settings ignore or names the core's shipped list holds.
+allow:
+- fact
+stub_answer:
+  summary: A note of everyday words; nothing to record and no new word to ask about.
+  ops: []

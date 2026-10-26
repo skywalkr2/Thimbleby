@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 from engine.ops import ActionCloseOp, ActionDropOp, QuestionDropOp, RecordSetOp
+from engine.records import values_at
 from engine.storage import StoreError
 
 Reading = Literal["done", "called_off", "choice"]
@@ -247,6 +249,15 @@ def ends_project(view: Any, op: Any) -> bool:
     return describe(view, "project-status", current.data.get("status")).meaning != "done"
 
 
+def project_ended(view: Any, project_id: str | None) -> bool:
+    """Whether a project's status means done (completed, archived, closed for good), by its list's meaning, never by
+    its wording. A project that doesn't exist has not ended."""
+    from engine.lists import describe
+
+    found = view.get("project", project_id) if project_id else None
+    return found is not None and describe(view, "project-status", found.data.get("status")).meaning == "done"
+
+
 def wind_down(cs: Any, ctx: Any) -> Any:
     """Add to a changeset, for each project it ends, a drop of every open action (one waiting for an owner too, with
     its "Pick an owner" question) and every open or sent question filed about the project, all in one op group with
@@ -281,3 +292,122 @@ def wind_down(cs: Any, ctx: Any) -> Any:
     if not extra and ops == list(cs.ops):
         return cs
     return cs.model_copy(update={"ops": [*ops, *extra]})
+
+
+@dataclass(frozen=True)
+class HeldItem:
+    """One open action or question an ending read from an input would drop: the held op's `index` in its change."""
+
+    index: int
+    kind: str
+    id: str
+    text: str
+
+
+@dataclass(frozen=True)
+class HeldEnding:
+    """A project ending that waits for the person, with the drops that wait beside it: `index` is the held op that moves
+    the project to its done status, `items` the drops it brought."""
+
+    changeset: str
+    index: int
+    project: str
+    items: tuple[HeldItem, ...]
+
+
+@dataclass(frozen=True)
+class LeftOpen:
+    """A record of an add-on's own kind that refers to a project that is ending. The core can't tell whether the add-on
+    counts it as open, so it is listed as left open for the add-on to close."""
+
+    kind: str
+    id: str
+    title: str
+
+
+def held_endings(view: Any, changeset_id: str, outcomes: list[dict[str, Any]]) -> list[HeldEnding]:
+    """The project endings waiting in a change, each with the drops of the same op group that wait with it."""
+    found = []
+    for outcome in outcomes:
+        raw = outcome.get("op") or {}
+        if outcome.get("status") != "held" or raw.get("op") != "record.set" or raw.get("kind") != "project":
+            continue
+        try:
+            op = RecordSetOp.model_validate(raw)
+        except ValueError:
+            continue
+        if not ends_project(view, op):
+            continue
+        items = []
+        for other in outcomes:
+            drop = other.get("op") or {}
+            if (
+                other.get("status") == "held"
+                and drop.get("op") in ("action.drop", "question.drop")
+                and drop.get("reason") == PROJECT_ENDED
+                and drop.get("group") == raw.get("group")
+            ):
+                kind = "action" if drop["op"] == "action.drop" else "question"
+                record = view.get(kind, drop.get("id", ""))
+                text = (
+                    " ".join(str(record.data.get("text") or record.data.get("title") or "").split()) if record else ""
+                )
+                items.append(HeldItem(other["index"], kind, drop.get("id", ""), text))
+        found.append(HeldEnding(changeset_id, outcome["index"], op.id, tuple(items)))
+    return found
+
+
+def left_behind(store: Any, project: str) -> list[LeftOpen]:
+    """The records of running add-ons' own kinds that refer to the project, in the order the kinds are declared. Only
+    the add-on knows whether one of its records is still open, so none is called open or closed here."""
+    from engine.stages import record_title
+
+    view = store.read()
+    found = []
+    for kind, paths in store.plugins.references().items():
+        if "/" not in kind or kind not in store.plugins.records:
+            continue
+        project_paths = [path for path, target in paths if target == "project"]
+        if not project_paths:
+            continue
+        for stored in view.list(kind):
+            if any(project in values_at(stored.data, path) for path in project_paths):
+                found.append(LeftOpen(kind, stored.id, record_title(stored)))
+    return found
+
+
+def finish_ending(
+    store: Any, cfg: Any, changeset_id: str, index: int, keep: Sequence[int], *, now: datetime | None = None
+) -> None:
+    """Confirm a project ending that waits for the person: the items in `keep` stay open (each is declined, and the
+    choice is a signal), and the ending and every other drop apply, so one Undo of the change takes them back."""
+    from engine.applier import decline_held_many, release
+
+    ending = _held_ending(store, changeset_id, index)
+    wanted = list(dict.fromkeys(keep))
+    named = {item.index for item in ending.items}
+    if not set(wanted) <= named:
+        raise StoreError("one of those isn't an item this ending would drop")
+    if wanted:
+        decline_held_many(store, changeset_id, wanted, now=now)
+    for position in [ending.index, *(item.index for item in ending.items if item.index not in wanted)]:
+        release(store, cfg, changeset_id, position, now=now)
+
+
+def decline_ending(store: Any, changeset_id: str, index: int, *, now: datetime | None = None) -> None:
+    """Keep the project as it is: the ending and every drop that waits with it are declined together."""
+    from engine.applier import decline_held_many
+
+    ending = _held_ending(store, changeset_id, index)
+    decline_held_many(store, changeset_id, [ending.index, *(item.index for item in ending.items)], now=now)
+
+
+def _held_ending(store: Any, changeset_id: str, index: int) -> HeldEnding:
+    view = store.read()
+    cs = view.get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    for ending in held_endings(view, changeset_id, cs.data["ops"]):
+        if ending.index == index:
+            return ending
+    raise StoreError("that ending isn't waiting for you")

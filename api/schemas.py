@@ -47,6 +47,44 @@ class EndingAnswer(BaseModel):
     ending: Literal["done", "called_off"]
 
 
+class ProjectEndingItem(BaseModel):
+    """One open item a waiting project ending would drop: the held op's `index` and the item's own words."""
+
+    index: int
+    kind: Literal["action", "question"]
+    id: str
+    text: str
+
+
+class LeftOpenItem(BaseModel):
+    """A record of an add-on's own kind that refers to the project. The app can't tell whether the add-on counts it
+    open, so it is listed as left open for the add-on to close; it is never called resolved."""
+
+    kind: str
+    kind_label: str = Field(description="What one record of the kind is called, in words.")
+    id: str
+    title: str
+
+
+class ProjectEndingView(BaseModel):
+    """A project ending that waits for the person (design 6.7): the open `items` it would drop, each of which the person
+    can keep, and what add-ons' records `left_open` on the project whichever way it goes."""
+
+    project: str
+    project_name: str
+    index: int = Field(description="The held op that ends the project.")
+    items: list[ProjectEndingItem]
+    left_open: list[LeftOpenItem]
+
+
+class ProjectEndingChoice(BaseModel):
+    """What the person does with a waiting project ending: `end` true ends the project and drops every item except the
+    ones in `keep` (held op indexes, which stay open); false keeps the project and every item as they are."""
+
+    end: bool = True
+    keep: list[int] = Field(default_factory=list)
+
+
 class SentText(BaseModel):
     text: str | None = Field(None, description="The message as the PM sent it, to notice edits.")
 
@@ -2510,7 +2548,12 @@ class QueueLineView(BaseModel):
     `quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its
     words in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they
     promised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is
-    open with them)."""
+    open with them); `terms` is the questions the assistant asked about unknown words, as one line (`count` of them,
+    their ids in `questions`; each is answered or dropped with the question routes, and a dropped one is never asked
+    again); `project_ending` is an ending of the project named in `subject` that was read from an input and waits for
+    the person, with the open items it would drop (`count`, their ids in `actions` and `questions`); the changeset is in
+    `changeset` and the held op in `op`; GET /api/changesets/{id}/ops/{index}/project-ending lists the items to keep
+    and what the add-ons leave open, and POST to it keeps the ticked items and ends the project with the rest."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -2573,6 +2616,8 @@ class QueueLineView(BaseModel):
         "answer",
         "area",
         "pattern",
+        "terms",
+        "project_ending",
     ]
     count: int
     fact: str | None = Field(

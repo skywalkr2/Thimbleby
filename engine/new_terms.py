@@ -1,15 +1,17 @@
 """The scan for new terms (design 6.22, 6.8): after the person's own notes or a mail from a person has been read, a
 plain function with no AI lists the words in it that look like the name of a system or an acronym and that the
 workspace doesn't know, and asks the person what each means: one question, "What does X mean here?", with an answer
-box, listed with their open questions. A term with no meaning is not knowledge, so nothing is proposed for the
-knowledge tabs; only the person's answer becomes a glossary term, as their own words (`keep_answer`).
+box. The day's term questions reach Today as one line that opens them together (`open_for`). A term with no meaning
+is not knowledge, so nothing is proposed for the knowledge tabs; only the person's answer becomes a glossary term, as
+their own words (`keep_answer`).
 
 What looks like a term is set by patterns in the language settings. Never asked about: the words in
 `language.new_term_ignore`, the core's list of well-known words (`language.known_terms_shipped`) and the person's own
 (`language.known_terms`), the names of the configured sources and connectors, a word the glossary, the people, the
 projects, the organizations or the teams already have, and a term the person already dismissed or was already asked
-about. Mail the app sorted as automatic, bulk or set aside raises none. At most
-`dispatch.knowledge.new_terms_per_input` are asked for one input.
+about. A term question the person dropped is a term never raised again in this workspace. Mail the app sorted as
+automatic, bulk or set aside raises none. At most `dispatch.knowledge.new_terms_per_input` are asked for one input
+and `dispatch.knowledge.new_terms_per_day` in one day.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from engine.config import Config
 from engine.names import People
 from engine.ops import GlossaryAddOp
 from engine.storage import WriteContext
+from engine.today import local_day, zone
 from engine.yaml_load import load_yaml
 
 KNOWN_TERMS_FILE = Path(__file__).parent / "defaults" / "known_terms.yaml"
@@ -161,28 +164,55 @@ def _term_questions(view: Any) -> list[Any]:
     return [q for q in view.list("question") if term_of(q) is not None]
 
 
+def _key(term: str) -> str:
+    return " ".join(_WORDS.findall(term.lower()))
+
+
+def raised_terms(view: Any) -> set[str]:
+    """The terms already asked about, whatever became of the question (open, answered or dropped), as the scan compares
+    them. A dropped question is the person's "never ask this again", so it stays in this set for good."""
+    return {_key(str(term_of(q))) for q in _term_questions(view)}
+
+
+def open_for(view: Any, person: str | None) -> list[Any]:
+    """The term questions waiting for this person's answer, oldest first: what Today shows as one line."""
+    if person is None:
+        return []
+    return [q for q in _term_questions(view) if q.data.get("to") == person and q.data.get("status") == "open"]
+
+
+def _asked_on(asked: list[Any], day: str) -> int:
+    """How many term questions were asked on this day (the person's own day)."""
+    return sum(1 for q in asked if (q.data.get("resolves") or {}).get("day") == day)
+
+
 def scan(store: Any, cfg: Config, request_id: str, text: str, now: datetime, *, trust: str = "untrusted") -> list[str]:
     """Ask the person what each new term in `text`, the input of a request that has been read, means, and return the
-    ids of the questions made. Nothing is asked when the limit is 0 or reached, when the input is automatic mail,
-    when nobody is set as the person, or for a term already asked about (open, answered or dismissed)."""
-    limit = cfg.dispatch.knowledge.new_terms_per_input
+    ids of the questions made. Nothing is asked when a limit is 0 or reached (for the input, or for the day), when the
+    input is automatic mail, when nobody is set as the person, or for a term already asked about (open, answered or
+    dropped: a dropped one is never raised again)."""
+    per_input = cfg.dispatch.knowledge.new_terms_per_input
+    per_day = cfg.dispatch.knowledge.new_terms_per_day
     view = store.read()
     request = view.get("request", request_id)
     source = request.data.get("source") if request is not None else None
     person = People(store, cfg).pm
-    if limit <= 0 or person is None or automatic_source(view, source):
+    if per_input <= 0 or per_day <= 0 or person is None or automatic_source(view, source):
         return []
     asked = _term_questions(view)
-    room = limit - sum(
-        1 for q in asked if (q.data.get("resolves") or {}).get("source") == source and source is not None
+    today = local_day(now, zone(cfg)).isoformat()
+    room = min(
+        per_input
+        - sum(1 for q in asked if (q.data.get("resolves") or {}).get("source") == source and source is not None),
+        per_day - _asked_on(asked, today),
     )
     if room <= 0:
         return []
     known = known_names(view) | never_asked(cfg)
-    before = {" ".join(_WORDS.findall(str(term_of(q)).lower())) for q in asked}
+    before = raised_terms(view)
     chosen: list[tuple[str, str]] = []
     for word, line in candidates(text, cfg.language.new_term_patterns, cfg.language.new_term_ignore):
-        key = " ".join(_WORDS.findall(word.lower()))
+        key = _key(word)
         if key in known or key in before:
             continue
         chosen.append((word, line))
@@ -203,7 +233,13 @@ def scan(store: Any, cfg: Config, request_id: str, text: str, now: datetime, *, 
                 "title": TITLE.format(term=word),
                 "text": f"It came up in: {line}",
                 "kind": "question",
-                "resolves": {"kind": TERM_QUESTION, "term": word, "source": source, "request": request_id},
+                "resolves": {
+                    "kind": TERM_QUESTION,
+                    "term": word,
+                    "source": source,
+                    "request": request_id,
+                    "day": today,
+                },
             }
             if projects:
                 data["projects"] = projects
@@ -254,11 +290,7 @@ def clear_old_entries(store: Any, cfg: Config) -> str | None:
     person = People(store, cfg).pm
     if not old or person is None:
         return None
-    skip = (
-        never_asked(cfg)
-        | known_names(view, frozenset(e.id for e in old))
-        | {" ".join(_WORDS.findall(str(term_of(q)).lower())) for q in _term_questions(view)}
-    )
+    skip = never_asked(cfg) | known_names(view, frozenset(e.id for e in old)) | raised_terms(view)
     ops: list[dict[str, Any]] = []
     for entry in old:
         term = str(entry.data["term"])

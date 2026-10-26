@@ -4084,16 +4084,27 @@ DECLINED_REASON = "You kept it as it was."
 def decline_held(store: Store, changeset_id: str, index: int, *, now: datetime | None = None) -> None:
     """Keep things as they are for a held op: it is not applied, it leaves the person's list, and one `held_declined`
     signal records the choice for the assistant to learn from. Undo is `undecline_held`."""
+    decline_held_many(store, changeset_id, [index], now=now)
+
+
+def decline_held_many(store: Store, changeset_id: str, indices: list[int], *, now: datetime | None = None) -> None:
+    """Keep things as they are for several held ops of one changeset at once, in one write: none is applied, they leave
+    the person's list, and each has its own `held_declined` signal. Nothing changes when any of them isn't waiting."""
     now = now or datetime.now(UTC)
     cs = store.read().get("changeset", changeset_id)
     if cs is None:
         raise StoreError(f"there is no changeset {changeset_id}")
     outcomes = cs.data["ops"]
-    if not 0 <= index < len(outcomes) or outcomes[index]["status"] != "held":
-        raise StoreError("that item isn't waiting for you")
-    outcome = outcomes[index]
-    target = outcome["op"].get("id") or outcome["op"].get("question") or ""
-    outcome.update(status="undone", held_reason=outcome.get("reason"), reason=DECLINED_REASON)
+    chosen = list(dict.fromkeys(indices))
+    for index in chosen:
+        if not 0 <= index < len(outcomes) or outcomes[index]["status"] != "held":
+            raise StoreError("that item isn't waiting for you")
+    declined = []
+    for index in chosen:
+        outcome = outcomes[index]
+        target = outcome["op"].get("id") or outcome["op"].get("question") or ""
+        outcome.update(status="undone", held_reason=outcome.get("reason"), reason=DECLINED_REASON)
+        declined.append((outcome, target))
     still = "held" if any(o["status"] == "held" for o in outcomes) else "applied"
     with store.transaction() as tx:
         tx.update(
@@ -4103,20 +4114,21 @@ def decline_held(store: Store, changeset_id: str, index: int, *, now: datetime |
             WriteContext(actor="pm", trust="trusted", op="changeset.decline"),
             read_version=cs.version,
         )
-        learn.record(
-            tx,
-            store.plugins.cfg,
-            {
-                "kind": "held_declined",
-                "refs": [changeset_id, *([target] if target else [])],
-                "changeset": changeset_id,
-                "run": cs.data.get("run"),
-                "note": f"{outcome['op'].get('op')}: {outcome.get('label') or ''}".strip(),
-                "at": now.isoformat(),
-            },
-            WriteContext(actor="pm", trust="trusted", op="held_declined"),
-            now,
-        )
+        for outcome, target in declined:
+            learn.record(
+                tx,
+                store.plugins.cfg,
+                {
+                    "kind": "held_declined",
+                    "refs": [changeset_id, *([target] if target else [])],
+                    "changeset": changeset_id,
+                    "run": cs.data.get("run"),
+                    "note": f"{outcome['op'].get('op')}: {outcome.get('label') or ''}".strip(),
+                    "at": now.isoformat(),
+                },
+                WriteContext(actor="pm", trust="trusted", op="held_declined"),
+                now,
+            )
 
 
 def undecline_held(store: Store, changeset_id: str, index: int) -> None:

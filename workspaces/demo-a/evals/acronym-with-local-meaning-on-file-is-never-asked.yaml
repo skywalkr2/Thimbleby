@@ -1,0 +1,29 @@
+id: acronym-with-local-meaning-on-file-is-never-asked
+title: A short acronym that already has its local meaning in the glossary is never asked about
+skills: [use-term]
+received: '2026-10-14'
+given:
+- kind: glossary_entry
+  id: GLOSS-90
+  fields:
+    text: 'PA: the person who books the rooms'
+    term: PA
+    meaning: the person who books the rooms
+    confidence: confirmed
+    origin: person
+    status: active
+    kept_by: PER-1
+    kept_at: '2026-10-01T09:00:00+00:00'
+    learned_at: '2026-10-01T09:00:00+00:00'
+pasted: |-
+  From: Kofi Mensah-Hale
+
+  Please ask the PA to book the meeting room for Thursday afternoon.
+forbid:
+- term_question: PA
+- op: glossary.add
+allow:
+- fact
+stub_answer:
+  summary: A request to ask whoever books rooms; the word PA is already in the glossary.
+  ops: []

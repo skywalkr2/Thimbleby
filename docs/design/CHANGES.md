@@ -1027,6 +1027,33 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 217. Fewer questions about words, one line for them, and a pack's records after a project ends (2026-10-26; P60, P61)
+
+- **Design 6.8, 6.22 and 7.7 (F33):** the scan for new terms asks at most `dispatch.knowledge.new_terms_per_day` (default 3,
+  live, 0 turns it off) in a day, over every input, beside the per-input limit; the day is the person's own, kept on the
+  question (`resolves.day`). The open term questions are one Review line, "Answer 3 questions about words" (`terms`),
+  that opens them together in the inspector; none is a line of its own, and none ranks among the top priorities. A
+  dropped term question is a term never raised again, whatever the input or the day (`new_terms.raised_terms` counts
+  every status). The shipped list `engine/defaults/known_terms.yaml` holds only countries, time zones, mail folder names
+  and well-known services: the two-letter state, region and country codes, units, month and day abbreviations and role,
+  document and business acronyms are gone, so "PA" in a note is asked unless the glossary has it. Two negative evaluation
+  cases in both fictional workspaces (`common-words-raise-no-term-question`,
+  `acronym-with-local-meaning-on-file-is-never-asked`) are scored by a new `forbid: [{term_question: ...}]` entry.
+  **Built:** `tests/test_term_questions.py`, `tests/test_learn_input.py`, `web/src/components/TodayTerms.test.tsx`.
+- **Design 6.7 and 7.7 (F35, until the plugin API release):** a pack's Today lines about a record of a project that has
+  ended are left out (`PluginHost.today`, which Today, the plugin-today route and the notices all read), so nothing of it is
+  chased or counted; a line naming no record stays. A project ending read from an input is one Decide line
+  (`project_ending`) whose detail lists every open item with a box: ticking items and pressing "End X, keeping 2 items"
+  keeps them (each declined, a `held_declined` signal, in one write) and ends the project with the rest, with one Undo;
+  "Keep the project as it is" declines the ending and every drop together. The records of running packs that refer to the
+  project are listed as "left open: the add-on that made these closes them": the core can't tell whether a pack counts one as
+  open, so there is no "Close these too", and none is called resolved. New routes `GET` and `POST
+  /api/changesets/{id}/ops/{index}/project-ending`. **Built:** `tests/test_pack_items_after_ending.py`,
+  `web/src/components/TodayTerms.test.tsx`.
+- **Not built:** the three outcomes for a term (known, assumed with its source, asked) and known terms as shipped
+  glossary records instead of settings (F33, later); `registrar.project_ending` and a "Close these too" that closes a
+  pack's records (F35, the plugin API release); a list of pack records on the toast of the person's own immediate ending,
+  which has no waiting proposal to carry it.
 ## 216. Handled for you by how each item was handled; kept for 30 days; nothing about it on Today (2026-10-26; P58, F34)
 
 - **Design 7.20, 7.1, 6.4, 6.32, 4.0:** the owner's yes (30 days; the closed lists move) and the functional designer's answer
