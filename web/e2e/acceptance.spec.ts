@@ -298,9 +298,11 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Cancel" }).click();
     await line.getByRole("button", { name: "Continue setup" }).click();
     await screens.getByRole("button", { name: /^People/ }).click();
-    await page.getByRole("button", { name: "Add people" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
-    await go(page, "Today");
+    // The People step holds the form to add someone, with the cursor in its first field.
+    await expect(page.getByRole("heading", { level: 2, name: "People", exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Their name" })).toBeFocused();
+    await page.getByRole("button", { name: "Finish later" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     await line.getByRole("button", { name: "More actions for setup" }).click();
     await page.getByRole("menuitem", { name: "Hide" }).click();
     await expect(line).toHaveCount(0);
@@ -1252,7 +1254,7 @@ test.describe.serial("acceptance scenario", () => {
     await go(page, "Add-ons");
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Available" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText(/No add-on catalog is connected/)).toBeVisible();
+    await expect(page.getByText(/No add-ons are listed because no catalog is set/)).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("tab", { name: "Installed" }).click();
     await expect(page.getByRole("tab", { name: "Installed" })).toHaveAttribute("aria-selected", "true");

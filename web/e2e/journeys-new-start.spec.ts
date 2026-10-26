@@ -108,34 +108,32 @@ test.describe.serial("journey: new start", () => {
     expect(existsSync(installed)).toBe(false);
     const before = await requests();
     expect(before.work).toBe(0);
-    await row.getByRole("button", { name: "Install and connect Example mail" }).click();
-    await expect(row).toHaveAttribute("data-state", "restart");
-    // It went into the throwaway place the app installs into, and nothing has restarted.
+    // The row says what is missing and what the one button does: add it, restart and open the sign-in.
+    await expect(row.locator("[data-needs-addon]")).toContainText("needs the Example mail add-on. One button adds it, restarts the app and opens the sign-in");
+    expect((await service()).authorizations).toBe(0);
+    const appAddress = page.url();
+    // One click installs, turns on, restarts the app and then opens the service's sign-in in its own window; the setup
+    // screen stays where it is. The window is waited for before the click, since it opens after the restart.
+    const popupOpened = page.waitForEvent("popup", { timeout: 120_000 });
+    await row.getByRole("button", { name: /^Add Example mail and sign in/ }).click();
+    const popup = await popupOpened;
+    // It went into the throwaway place the app installs into, and the one restart happened on that click.
     expect(existsSync(installed)).toBe(true);
-    expect(restarts()).toBe(0);
-
-    // The one restart, which I press. The walkthrough is still at this screen when the app is back, and a page opened
-    // fresh after it resumes here too.
-    const restart = main.getByRole("button", { name: "Restart to finish connecting" });
-    await expect(restart).toBeVisible();
-    await visit(page);
-    await restart.click();
-    await expect(row).toHaveAttribute("data-state", "ready", { timeout: 90_000 });
     expect(restarts()).toBe(1);
+    // The sign-in is in its own window, and the app's window never left the walkthrough.
+    expect(page.url()).toBe(appAddress);
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    // The service sends that window back to the app, which tells this screen how it went and closes the window.
+    await popup.waitForEvent("close", { timeout: 60_000 }).catch(() => undefined);
+    await expect(row).toHaveAttribute("data-state", "ready", { timeout: 90_000 });
     await expect(main.getByText(/Restart to finish connecting/)).toHaveCount(0);
+    await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
+    // A page opened fresh after the restart resumes at this screen.
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
-    await expect(row).toHaveAttribute("data-state", "ready");
     await visit(page);
-
-    // Sign in on the service's own page, which sends me back to this screen. Nothing was asked of the assistant.
-    expect((await service()).authorizations).toBe(0);
-    await row.getByRole("button", { name: "Sign in to Example mail", exact: true }).click();
-    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
-    await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
-    // The row no longer says to sign in: it says who is signed in and what is read, and offers no Sign in.
+    // Signed in once, nothing was asked of the assistant.
     await expect(row).toHaveAttribute("data-signed-in", "");
     await expect(row).toContainText("Reading your mail and calendar.");
     await expect(row).not.toContainText("Sign in to start reading");

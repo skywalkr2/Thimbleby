@@ -84,7 +84,14 @@ test.describe.serial("journey: mail", () => {
     await visit(page);
     const before = await requests();
     expect(before.work).toBe(0);
-    await row.getByRole("button", { name: "Sign in to Example mail", exact: true }).click();
+    const appAddress = page.url();
+    const [popup] = await Promise.all([
+      page.waitForEvent("popup"),
+      row.getByRole("button", { name: "Sign in to Example mail", exact: true }).click(),
+    ]);
+    // The service's page opens in its own window; the app's window stays on the walkthrough.
+    expect(page.url()).toBe(appAddress);
+    await popup.waitForEvent("close", { timeout: 30_000 }).catch(() => undefined);
 
     // Signing in happens on the service's own page, which sends me back to the same screen. The service is asked once,
     // and the app proves the sign-in is its own. The answer's code and state are not left in the address.
@@ -133,7 +140,7 @@ test.describe.serial("journey: mail", () => {
     expect((await requests()).work).toBe(0);
 
     // Start: one request for each item taken in, each item once, and the offer gives way to what was found. The stand-in
-    // rules find no promise in these messages, so the screen says so plainly and offers "Missed one".
+    // rules find no promise in these messages, so the screen says so plainly and offers "Missed something?".
     await offer.getByRole("button", { name: "Start", exact: true }).click();
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
@@ -145,7 +152,7 @@ test.describe.serial("journey: mail", () => {
     for (const title of aside) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
     const none = main.locator('[data-first-promises="none"]');
     await expect(none).toContainText("No open promises found in the mail it looked over.", { timeout: 60_000 });
-    await expect(none.getByRole("button", { name: "Missed one" })).toBeVisible();
+    await expect(none.getByRole("button", { name: "Missed something?" })).toBeVisible();
     await visit(page);
 
     // Backups and People are left for later, and Done names what was skipped.

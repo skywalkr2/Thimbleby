@@ -43,6 +43,11 @@ test.describe.serial("journeys", () => {
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
     await main.getByLabel("Workspace name").fill("Offsite team");
     await main.getByLabel("Your full name").fill(info.people[0]);
+    // The assistant has a name of its own to change, "for you, or for you and a business?" is asked, and the time zone
+    // is one list that starts with this computer's.
+    await expect(main.getByLabel("Your assistant's name")).toHaveValue("Reginald");
+    await expect(main.getByText("Is this for you, or for you and a business?")).toBeVisible();
+    await expect(main.getByLabel("Your time zone")).toBeVisible();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
@@ -144,7 +149,7 @@ test.describe.serial("journeys", () => {
     await expect(review.first().or(showNew).first()).toBeVisible({ timeout: 20_000 });
     if (await showNew.count()) await showNew.click();
     await expect(review).toHaveCount(1);
-    await expect(review).toContainText(/Look over 3 things your assistant did/);
+    await expect(review).toContainText(/Look over 3 things Reginald did/);
     expect((await requests()).work).toBe(1);
     await visit(page);
 

@@ -31,8 +31,23 @@ def test_a_jobs_pass_that_exits_does_not_stop_the_next_pass(env):
     assert len(calls) == 2
 
 
-def test_each_loop_survives_a_pass_that_exits(env):
+def test_each_loop_survives_a_pass_that_exits(env, monkeypatch):
     worker = worker_of(env)
+
+    class NoWait:
+        """Stands in for the loop's timers: waiting returns at once, so each loop runs its passes back to back."""
+
+        def __init__(self, real):
+            self.real = real
+
+        def wait(self, timeout=None):
+            return self.real.is_set()
+
+        def __getattr__(self, name):
+            return getattr(self.real, name)
+
+    monkeypatch.setattr(worker, "_stop", NoWait(worker._stop))
+    monkeypatch.setattr(worker, "_wake", NoWait(worker._wake))
     for name, loop, step in (
         ("backups", worker._backup_loop, "backup_if_due"),
         ("requests", worker._loop, "run_pending"),

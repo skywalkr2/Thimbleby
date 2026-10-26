@@ -39,7 +39,7 @@ def test_the_agenda_lists_the_events_of_the_apps_day(tmp_path):
 
 
 def test_the_ai_accounts_warn_of_a_key_ending_by_the_apps_day(tmp_path):
-    soon = (LATER.date() + timedelta(days=3)).isoformat()
+    soon = (LATER.date() + timedelta(days=1)).isoformat()
     app, client = app_at(tmp_path, LATER)
     with client:
         fingerprint = client.get("/api/settings").json()["fingerprint"]

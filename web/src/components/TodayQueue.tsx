@@ -976,7 +976,7 @@ function QueueRow(props: {
         return {
           pill: t("queue.pill.clash"),
           tone: "warn",
-          meta: tn(line.state === "travel" ? "queue.clash.meta.travel" : "queue.clash.meta.overlap", line.minutes ?? 0),
+          meta: line.state === "travel" ? tn("queue.clash.meta.travel", line.minutes ?? 0) : tn("queue.clash.meta.overlap", line.minutes ?? 0),
           primary: { label: first.label, run: first.run },
           menu: rest,
         };
