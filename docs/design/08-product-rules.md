@@ -47,8 +47,8 @@ they apply to. Those guarded by an invariant or code still give the model their 
 | Quotes and attributions only from verbatim sources; a paraphrase is labeled as one | `source` op requires `verbatim: true/false` (not yet enforced): no `source` op or verbatim flag |
 | A meeting note line with no speaker stays unattributed | AI rules (not yet enforced) |
 | Spell names from a primary source; mark unverified spellings | people `verified` flag (not yet enforced): people have no `verified` flag |
-| Acronyms come from a glossary with sources; guesses are marked assumed and asked | glossary data, AI rules (not yet enforced): no glossary yet |
-| One identifier is not three: check the glossary before splitting a compound id | glossary patterns (not yet enforced): no glossary yet |
+| Acronyms come from a glossary with sources; guesses are marked assumed and asked | glossary records (built, design 6.8); term questions with a daily cap and one Review line (built, P60); "assumed" terms not yet built (F33 later) |
+| One identifier is not three: check the glossary before splitting a compound id | glossary patterns (not yet enforced; the glossary itself is built, design 6.8) |
 | Restricted content appears only on destinations whose audience its source allows, under that destination's banner | `audiences` and `restrictions`, audiences invariant (not yet enforced): data levels route AI work today; audiences and restrictions are not built |
 | Locale spelling everywhere except verbatim quotes | language config (partly enforced: the project's language reaches plugin packets; the core's notes packet carries no language instruction and nothing checks it) |
 | The model's name never appears in user-visible text | language config, applier and UI tests |

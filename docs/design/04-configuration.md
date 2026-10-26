@@ -604,7 +604,7 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `handled_rows_shown` (25): how many rows a group on Handled for you draws before "Show more" (7.20). Advanced.
 - `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add
   (7, Help); the app keeps five times that many app errors in the workspace's private folder (`problems.jsonl`).
-- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only), `schedule_days` (3; 1 to 7): how many days the schedule screen shows at once (7.7), and
+- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (6: today and the six days after; 0 is today only), `schedule_days` (3; 1 to 7): how many days the schedule screen shows at once (7.7), and
   `stale_after_days` (21; 0 is off): the person's own undated to-do nothing has changed for this long is stale, and Today has one
   line for them (6.9); `top_priorities_lines` (5): the most lines Top priorities lists on Today, the rest counted; and
   `top_priorities_ahead_days` (14; 0 leaves it out): the days ahead whose dated to-dos follow its lines (7.7).
