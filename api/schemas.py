@@ -2356,7 +2356,8 @@ class MadeBy(BaseModel):
 
 class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `stuck`
-    is background work that stopped checking in (`waiting_since`, when it last did; the screen offers Restart now). `restart`
+    is background work that stopped checking in (`waiting_since`, when it last did; the screen offers Restart
+    now). `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
     POST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`
     waiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account

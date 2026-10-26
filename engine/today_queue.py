@@ -84,9 +84,9 @@ class Line:
     `days` how far back its mail was read, none for a source with no mail), intake_review (what was found in a newly
     added `source`: `count` items with something to look over and their results counted in `outcome`, which replace
     the lines each would have had until the person opens the list), refused, restart (work held until the person
-    restarts the app: `count` is how many requests wait), stuck (background work that stopped checking in: `waiting_since`
-    is when it last did; the person restarts the app), handover (the synced folder can't be used until the person
-    settles it: `state` is diverged, chosen or elsewhere and `text` the other computer), failed,
+    restarts the app: `count` is how many requests wait), stuck (background work that stopped checking in:
+    `waiting_since` is when it last did; the person restarts the app), handover (the synced folder can't be used until
+    the person settles it: `state` is diverged, chosen or elsewhere and `text` the other computer), failed,
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), borrow (a
     question: every account a kind of work can use is paused, so may another kind of work's free `account` (with its
     `model`) take that work, the `tier`'s, until `until`, when the paused account `text` resets? `count` waiting items
@@ -344,8 +344,8 @@ def queue(
 ) -> list[Line]:
     """Every line that needs the person now, in rank order, with the suggestions the attention rules hold back left out.
     `handover`: what stops the synced folder from being used, as the worker reports it (state and the other computer's
-    name), which is a line of its own. `stuck`: when background work that has stopped checking in last did, as the worker
-    reports it, which is a line of its own."""
+    name), which is a line of its own. `stuck`: when background work that stopped checking in last did,
+    as the worker reports it, which is a line of its own."""
     return queue_split(ws, store, cfg, now, handover, stuck).shown
 
 
