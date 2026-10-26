@@ -79,7 +79,7 @@ def _manifest():
     return manifest
 
 
-def make(tmp_path, connector="p18/inbox", account=None):
+def make(tmp_path, connector="p18/inbox", account=None, now=NOW):
     ws, cfg, store = workspace(tmp_path, FIXTURE)
     store.close()
     (ws.root / "plugins" / "p18" / "plugin.yaml").write_text(yaml.safe_dump(_manifest()))
@@ -89,8 +89,8 @@ def make(tmp_path, connector="p18/inbox", account=None):
         "connector": connector,
         "label": "Inbox",
         "settings": {
-            "items": [mail(f"m{d}", d) for d in (1, 2, 3)],
-            "older": [mail(f"o{d}", d) for d in (20, 21, 22)],
+            "items": [mail(f"m{d}", d, now=now) for d in (1, 2, 3)],
+            "older": [mail(f"o{d}", d, now=now) for d in (20, 21, 22)],
             "log": str(log),
         },
         **({"account": account} if account else {}),
@@ -192,7 +192,8 @@ def test_a_connector_that_fails_asking_for_older_items_is_contained(tmp_path):
 
 
 def test_the_source_list_offers_the_choices_only_for_a_source_that_can_be_asked(tmp_path):
-    ws, cfg, store, _ = make(tmp_path)
+    # The routes read the clock, so the mail is dated from it (a run with the date moved ahead included).
+    ws, cfg, store, _ = make(tmp_path, now=datetime.now(UTC))
     store.close()
     from api.app import create_app
 
