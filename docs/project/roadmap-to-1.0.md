@@ -1198,23 +1198,26 @@ as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't cl
   **Built:** `tests/test_walkthrough.py::test_todays_setup_count_equals_the_walkthroughs`, `web/src/components/Walkthrough.test.tsx` ("progress reads 1 of 7 through 7 of 7, in the one order").
 - [x] [U3] A step is ticked only when its thing happened. Otherwise it reads "Skipped".
   **Built:** `tests/test_walkthrough.py::test_skipping_mail_makes_your_promises_skipped_with_the_needs_mail_reason`.
-- [ ] [U4] "Just me": no screen shows Work, Project, Stage, Organization, Owner or Template.
-  **Built so far:** `web/e2e/just-me.spec.ts` (16 main screens, the capitalized words). **Left:** lowercase "project" in setting
-  descriptions, which the Settings cut (F8) rewrites; Done's "Work" step label, for the reviewer's second pass.
+- [x] [U4] "Just me": no screen shows Work, Project, Stage, Organization, Owner or Template.
+  **Built:** `web/e2e/just-me.spec.ts` (the main screens, setup and Done, the add forms, row menus, Knowledge, Quality, Ask and
+  the record pages, lowercase "project" and "workspace" too), `tests/test_settings_cut.py::test_a_hint_never_says_work_project_stage_organization_owner_or_template`.
 - [x] [U5] No sorting rule sets aside mail for being personal.
   **Built:** `tests/test_handled.py::test_a_personal_message_from_a_friend_is_not_on_the_set_aside_tab_and_is_filed_under_personal`.
 - [x] [U6] "My own business" asks the business's name, what it works on (paste allowed) and, per mailbox, which side it
   belongs to.
   **Built:** `tests/test_walkthrough.py::test_a_job_and_two_businesses_make_three_sides_in_order_with_their_kinds`, `::test_what_a_business_works_on_becomes_projects_under_it_through_the_project_route`, `::test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_nothing_else_places`.
-- [ ] [U7] People on the personal side: a relation box that starts empty, suggestions from mail, and paste a list.
-- [ ] [U8] The first result reads sent mail by default. An empty result says what was read and offers "Hand something in".
+- [x] [U7] People on the personal side: a relation box that starts empty, suggestions from mail, and paste a list.
+  **Built:** `tests/test_people_suggestions.py`, `web/src/components/People.test.tsx`.
+- [x] [U8] The first result reads sent mail by default. An empty result says what was read and offers "Hand something in".
+  **Built:** `tests/test_sent_folder.py`, `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`.
 - [x] [U9] The assistant is introduced by name before anything refers to it. The workspace never shows as "Workspace".
   **Built:** `tests/test_walkthrough.py::test_saving_the_persons_name_names_a_default_named_workspace_after_them_and_leaves_a_renamed_one_alone`, `web/src/components/Walkthrough.test.tsx` ("You says what the assistant is called, and Rename...").
 - [x] [U10] Today shows each item once (C57), with at most three rail cards.
   **Built:** `tests/test_today_queue.py::test_no_line_key_repeats_on_today_after_each_kind_of_input`, `web/src/components/TodayRail.test.tsx` ("the rail has at most three cards...").
 - [x] [U11] At 390px, setup's first field is above the fold, and the step list is one line.
   **Built:** `web/e2e/shell.spec.ts` ("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold").
-- [ ] [U12] Settings: at most 26 basic fields, at most 30 advanced, and no ids or key names (see `settings.md`).
+- [x] [U12] Settings: at most 26 basic fields, at most 30 advanced, and no ids or key names (see `settings.md`).
+  **Built:** `tests/test_settings_cut.py::test_the_settings_walk_counts_at_most_26_basic_and_30_advanced`, `::test_a_hint_names_no_code_like_id_and_no_word_of_the_files`, `web/e2e/settings-walk.spec.ts`.
 - [x] [C57] An item appears once on Today.
   **Built:** `tests/test_today_queue.py::test_an_item_that_would_fall_in_two_groups_stays_in_the_higher_one_only`, `::test_no_line_key_repeats_with_overdue_to_dos_setup_open_and_mail_not_connected`.
 
