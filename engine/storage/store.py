@@ -107,6 +107,9 @@ class Store:
         self.path = path
         self.clock = clock
         self._lock = threading.RLock()
+        # The list of open connections has its own lock, so a thread opening its first connection while another holds
+        # a transaction (a plugin's validator reading during an apply) never waits on that transaction.
+        self._conns_lock = threading.Lock()
         self._local = threading.local()
         self._all: list[sqlite3.Connection] = []
         self._closed = False
@@ -131,17 +134,18 @@ class Store:
                 raise StoreError("the store is closed")
             conn = connect(self.path)
             self._local.conn = conn
-            with self._lock:
+            with self._conns_lock:
                 self._all.append(conn)
         return conn
 
     def close(self) -> None:
         with self._lock:
             self.plugins.close()
-            self._closed = True
-            for conn in self._all:
-                conn.close()
-            self._all.clear()
+            with self._conns_lock:
+                self._closed = True
+                for conn in self._all:
+                    conn.close()
+                self._all.clear()
 
     @contextmanager
     def transaction(self, *, notify: bool = True) -> Iterator[Tx]:

@@ -102,3 +102,18 @@ def test_id_cannot_change(store):
         p = person(tx)
         with pytest.raises(StoreError, match="id can't change"):
             tx.update("person", p.id, {"id": "PER-9"}, PM, read_version=1)
+
+
+def test_a_thread_reading_for_the_first_time_during_a_transaction_does_not_wait_for_it(store):
+    # A plugin's validator runs on its own thread while the applier holds the changeset's transaction; its first read
+    # opens a connection, which must not wait on that transaction (it would never end).
+    import threading
+
+    with store.transaction() as tx:
+        made = person(tx, "Robin Sample")
+        seen: list[object] = []
+        reader = threading.Thread(target=lambda: seen.append(store.read().get("person", "PER-0")))
+        reader.start()
+        reader.join(timeout=5)
+        assert not reader.is_alive()
+    assert seen == [None] and made.id.startswith("PER-")
