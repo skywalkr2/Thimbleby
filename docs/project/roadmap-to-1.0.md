@@ -1250,6 +1250,31 @@ The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the des
 - [ ] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
   address (the reviewer's answer 10; owner, 2026-10-28).
 
+### Before AI hardening: the audit of 2026-10-28 (path to 1.0, the reviewer's and the designer's notes)
+
+Two read-only audits checked every roadmap item, the reviewer's notes (F1 to F27, G1 to G23, the 13 answers, the
+re-reviews, C1 to C57) and the designer's answers and notes (F1 to F46, lessons, future notes, the day's input) against the
+code. Nearly all is built or planned. What is left, in two batches:
+- [ ] [A1] Bookkeeping: tick the boxes built and never ticked (phase U's second pass, B-6a, B-6b, B-8, B-11c part 2),
+  CHANGES 234 complete and marked built, "Where things stand" brought up to date, built work no longer marked "designed"
+  in the design, stale open-promise rows refreshed and cells capped, and two decisions written down that were taken in
+  building: the handled-for-you count on Today supersedes the designer's F34 and P58 ("nothing about handled mail on
+  Today"), and removing the Top priorities card keeps F15, F16 and F24's chase rules without their display.
+- [ ] [A2] The second pass's leftovers: notes stored before today re-titled once (no raw headers anywhere); U20; the
+  "From an email" note at a link to open and a payment; "Stale" and "On hold" replaced everywhere (G21); no "Outside" tag
+  on meeting-prep lines (G14); U15 with a job and a business (two sides).
+- [ ] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
+  lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
+  thresholds paragraph matched to the draft once the owner says yes.
+- [ ] [A4] The checklist's partials (C13, C15, C16, C23, C24, C29, C35, C36, C41, C43, C45) built or re-marked, with C21
+  and C22 re-marked.
+- [ ] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
+  lists moved into shipped data (full-read point 5); the Monday message asking once who it is for; "Drop it and draft the
+  note"; P40 point 8 reproduced; B-11b's tiers with a cost per day; S4's "setup tick boxes for common areas" settled
+  against design 7.8.
+- Held, not dropped: `includes:` (P62, P39) with the next plugin API release; calendar create, move and cancel and the
+  add-on channels with the add-on builders.
+
 ## Phase I: installers for Windows and macOS (after phase S)
 
 - [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches
