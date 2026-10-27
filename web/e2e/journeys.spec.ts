@@ -150,8 +150,9 @@ test.describe.serial("journeys", () => {
 
     // Today shows one line asking for my go, with a count and what it would cost. Nothing has been sent to the service.
     await page.getByRole("link", { name: /^Today/ }).first().click();
+    // The line comes once the server has taken the hand-in in, which on a busy machine can take more than a moment.
     const go = page.locator('[data-queue-line="first_go"]');
-    await expect(go).toHaveCount(1);
+    await expect(go).toHaveCount(1, { timeout: 20_000 });
     await expect(go).toContainText(/Start the assistant: 1 item, (about \$\d+\.\d\d|less than a cent)/);
     await expect(go).toContainText("Nothing is spent until you press Start.");
     await visit(page);
