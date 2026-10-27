@@ -164,6 +164,12 @@ export function OutgoingDetail(props: {
           {act.template && <li>{t("outgoing.template_line", { template: act.template })}</li>}
           <li>{t("outgoing.via", { channel: act.channel_label })}</li>
         </ul>
+        {/* An address taken from an email is said so where it is about to be used. */}
+        {(act.recipients ?? []).some((r) => (r.reasons ?? []).includes("untrusted")) && (
+          <p className="hint" data-outside-step="">
+            {t("outside.step.send")}
+          </p>
+        )}
       </section>
 
       {offered && !mustLook && called.length > 0 && (

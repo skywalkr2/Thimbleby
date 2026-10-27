@@ -11,10 +11,8 @@ then:
 - at: '2026-10-22T07:20'
   news: {action: ACT-91, by: PER-2, text: Two of the three drawings are attached}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'nudge:PER-2'}
   changed:
   - {kind: news, text: Send the first two drawings, person: PER-2, detail: Two of the three drawings are attached}
-  risk:
-  - {kind: owed_late, text: Send the third drawing, person: PER-2, day: '2026-10-21', days: 1}
-  'yes':
-  - {kind: 'yes', change: nudge, person: PER-2, ready: true}
 left: [meeting_dependency]

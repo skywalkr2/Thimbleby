@@ -400,6 +400,9 @@ function useChangeSub(item: S["ChangeItem"]): string {
 function stateWord(item: S["ChangeItem"], gated: boolean): string {
   if (item.dismissed) return "changes.state.dismissed";
   if (gated) return "changes.state.cost_go";
+  // What needed no look was filed quietly; what did was checked once the person said it looks good.
+  if (item.review === "filed") return "changes.history.filed";
+  if (item.review === "checked") return "changes.history.checked";
   return item.state === "review" ? "changes.history.review" : `changes.state.${item.state}`;
 }
 
@@ -934,7 +937,7 @@ export function SourcePanel(props: { id: string; quote: string }) {
   );
 }
 
-function SendBackForm(props: { cs: string; onDone: () => void }) {
+export function SendBackForm(props: { cs: string; onDone: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const [note, setNote] = useState("");

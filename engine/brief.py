@@ -5,10 +5,11 @@ queue, what changed since yesterday, this week's days, the clash finder, what an
 repeat their logic. Every line is data: a kind and its values for the screen to word from the wording sheet, with the
 record or Today line it opens. No line reports status or progress.
 
-**The morning brief** has three sections, in this order: *changed* overnight (what someone else did to the person's own
-things, and what changed in an invitation), *risk* today (the person's own to-dos due today or late, what others owe
-them that is late, and meetings that overlap), and *yes* (what waits for the person's yes, each one Today's own line).
-An empty section is left out and a quiet day is one line.
+**The morning brief** summarises and never repeats Today. Its sections, in this order: *today* (counts that link to
+the lines Today already has: "2 things need you", "1 thing is late", "1 clash today"), *changed* overnight (what
+someone else did to the person's own things, and what changed in an invitation), *risk* (what Today has no line for:
+the person's own to-dos due today, the day's squeeze), and *yes* (a reminder offered, and what the attention rules
+saved for the brief). An empty section is left out and a quiet day is one line.
 
 **The evening wrap-up** has *done* today (credited to whoever did it), *moved* (a date moved ahead today, and what is
 due today and still open) and *waiting* (what others owe the person, and the questions sent that nobody has answered).
@@ -137,11 +138,12 @@ def _clock(text: str) -> time:
     return time(int(hour), int(minute))
 
 
-def available(cfg: Any, now: datetime, goals_confirmed: bool = False) -> list[str]:
+def available(cfg: Any, now: datetime, goals_confirmed: bool = False, offer_dismissed: bool = False) -> list[str]:
     """The forms that can show at `now`, the one to open with first: the evening wrap-up from its time on; before it,
-    the Monday briefing on its day and then the morning brief, or the morning brief with the Monday briefing beside it
-    on a later working day of the week while the week's goals aren't confirmed (it hasn't been used yet), or only the
-    morning brief; none before the morning time."""
+    the Monday briefing on its day and then the morning brief, or the morning brief with the weekly form beside it on
+    any later working day of the week until the week's goals are confirmed (it is offered on the first day the app is
+    opened that week, whichever day that is) or the person dismisses the offer; or only the morning brief; none before
+    the morning time."""
     rule = cfg.steward.brief
     if not rule.enabled:
         return []
@@ -153,11 +155,12 @@ def available(cfg: Any, now: datetime, goals_confirmed: bool = False) -> list[st
         return []
     weekly = WEEKDAYS.index(rule.weekly_day)
     if local.weekday() == weekly:
-        return ["monday", "morning"]
+        return ["morning"] if offer_dismissed else ["monday", "morning"]
     first = WEEKDAYS.index(cfg.steward.reminders.working_first_day)
     last = WEEKDAYS.index(cfg.steward.reminders.working_last_day)
     since = (local.weekday() - weekly) % 7
-    return ["morning", "monday"] if 0 < since <= (last - first) % 7 and not goals_confirmed else ["morning"]
+    settled = goals_confirmed or offer_dismissed
+    return ["morning", "monday"] if 0 < since <= (last - first) % 7 and not settled else ["morning"]
 
 
 def overnight_start(cfg: Any, now: datetime) -> datetime:
@@ -589,12 +592,57 @@ def _offers(c: _Day) -> list[Line]:
     return [line for _, _, line in sorted(found, key=lambda t: (t[0], t[1], t[2].key))]
 
 
+def _on_today_counts(c: _Day, risk: list[Line], yes: list[Line]) -> tuple[list[Line], list[Line], list[Line]]:
+    """What Today already has a line for is counted and never listed again: the lines of `risk` and `yes` whose own
+    line is on Today now leave them, and come back as one count for each kind that links to the first of those lines
+    ("2 things need you", "1 thing is late", "1 clash today"). What Today has no line for (a to-do due today, a
+    reminder offered, what the attention rules saved for the brief) stays listed. Returns the counts and the two
+    sections without them."""
+    shown = {q.key: q for q in c.queue}
+    overdue = {a for q in c.queue if q.kind == "overdue" for a in q.actions}
+    # What needs the person is counted by Today's lines, so a late promise whose line is one of them is that line once.
+    needing = {line.queue for line in yes if line.kind == "yes" and line.change in YES_KINDS and line.queue in shown}
+
+    def bucket(line: Line) -> tuple[str, str, str] | None:
+        """Which count a line goes in, the Today line it links to and what is counted (a line, a to-do)."""
+        if line.kind == "yes" and line.change in YES_KINDS and line.queue in shown:
+            return "need", line.queue, line.queue
+        if line.kind == "owed_late" and line.queue in shown:
+            return ("need", line.queue, line.queue) if line.queue in needing else ("late", line.queue, line.link[1])
+        if line.kind == "own_due" and line.state == "overdue" and line.link and line.link[1] in overdue:
+            return "late", "overdue", line.link[1]
+        if line.kind == "clash" and line.key in shown:
+            return "clash", line.key, line.key
+        return None
+
+    counted: dict[str, tuple[set[str], str]] = {}
+    keep: tuple[list[Line], list[Line]] = ([], [])
+    for into, lines in zip(keep, (risk, yes), strict=True):
+        for line in lines:
+            found = bucket(line)
+            if found is None:
+                into.append(line)
+                continue
+            kind, key, unit = found
+            units, first = counted.get(kind, (set(), key))
+            units.add(unit)
+            counted[kind] = (units, first)
+    counts = [
+        Line(f"today:{kind}", "on_today", change=kind, count=len(counted[kind][0]), queue=counted[kind][1])
+        for kind in ("need", "late", "clash")
+        if kind in counted
+    ]
+    return counts, keep[0], keep[1]
+
+
 def _morning(c: _Day) -> Brief:
     rule = c.cfg.steward.brief
+    counts, risk, yes = _on_today_counts(c, _risk(c), _yes(c))
     sections = [
+        _cap(counts, "today", rule),
         _cap(_changed(c), "changed", rule),
-        _cap(_risk(c), "risk", rule),
-        _cap(_yes(c) + _offers(c) + _digest(c), "yes", rule),
+        _cap(risk, "risk", rule),
+        _cap(yes + _offers(c) + _digest(c), "yes", rule),
     ]
     sections = [s for s in sections if s.lines]
     brief = Brief("morning", c.today, sections=sections, quiet=not sections)
@@ -858,7 +906,12 @@ def _monday(c: _Day) -> Brief:
 def build(ws: Any, store: Any, cfg: Any, now: datetime, form: str | None = None) -> Brief:
     """A form of the brief as of `now`: the one due now when none is named, or the one asked for. Reads only."""
     c = _Day(ws, store, cfg, now)
-    forms = available(cfg, now, bool(week_plan.goals_of(c.view, c.pm, c.first)))
+    forms = available(
+        cfg,
+        now,
+        bool(week_plan.goals_of(c.view, c.pm, c.first)),
+        week_plan.offer_dismissed(c.view, c.pm, c.first),
+    )
     chosen = form if form is not None else (forms[0] if forms else None)
     if chosen is None:
         return Brief(None, c.today, forms=forms)

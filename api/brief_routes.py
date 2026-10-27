@@ -79,6 +79,21 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         events.changed()
         return BriefGoalsKept(previous=previous)
 
+    @r.post("/brief/weekly/dismiss")
+    def dismiss_weekly() -> Ok:
+        """Dismiss the offer of this week's briefing: the morning brief stops offering it for the week. Undo is
+        POST /api/brief/weekly/undismiss."""
+        week_plan.set_offer_dismissed(store, cfg, worker.now(), True)
+        events.changed()
+        return Ok(ok="dismissed")
+
+    @r.post("/brief/weekly/undismiss")
+    def undismiss_weekly() -> Ok:
+        """Take back the dismissal: the week's briefing is offered again."""
+        week_plan.set_offer_dismissed(store, cfg, worker.now(), False)
+        events.changed()
+        return Ok(ok="offered")
+
     @r.post("/brief/message")
     def ask_for_message(body: BriefMessageAsk) -> HandedOver:
         """Ask the assistant to draft this week's message to whoever the person reports to."""

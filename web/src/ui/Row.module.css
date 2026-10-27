@@ -23,12 +23,14 @@
 .extra { grid-column: 2 / -1; margin-top: var(--space-2); min-width: 0; }
 .extra:empty { display: none; }
 
-/* A row's action is tonal by day and filled by night (tokens.css). The selected line's action is the one filled button of
-   its list by day; the page's own main action (Hand something in) is not in a row. */
+/* A row's action is tonal in both themes (tokens.css). The chosen line's action, the one with the cursor or open in the pane,
+   is the one filled button of its list; the page's own main action (Hand something in) is not in a row. */
 .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
 .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-hover); border-color: var(--row-action-border); }
 .selected .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
 .selected .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
+.row:focus-within .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
+.row:focus-within .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
 
 /* Phone: the pill sits above the title, and the actions stay at the right edge. */
 :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
@@ -36,3 +38,12 @@
 :global([data-narrow]) .main { grid-column: 1; }
 :global([data-narrow]) .actions { grid-column: 2; }
 :global([data-narrow]) .extra { grid-column: 1 / -1; }
+
+/* A narrow phone (below 640px): the actions sit under the title at full width, so the title keeps the whole line. Written with
+   the phone layout's own selectors above, so it wins over them whether or not the window has been marked narrow. */
+@media (max-width: 639.98px) {
+  .row, :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr); }
+  .main, :global([data-narrow]) .main { grid-column: 1; }
+  .actions, :global([data-narrow]) .actions { grid-column: 1; justify-content: flex-end; flex-wrap: wrap; }
+  .actions > :global([data-variant="primary"]), .actions > :global([data-variant="secondary"]) { flex: 1 1 auto; }
+}

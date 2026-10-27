@@ -168,21 +168,18 @@ test.describe.serial("journeys", () => {
     await expect(review.first().or(showNew).first()).toBeVisible({ timeout: 20_000 });
     if (await showNew.count()) await showNew.click();
     await expect(review).toHaveCount(1);
-    await expect(review).toContainText(/Look over 3 things Reginald did/);
+    await expect(review.getByRole("button", { name: "Look over", exact: true })).toBeVisible();
     expect((await requests()).work).toBe(1);
     await visit(page);
 
-    // Opened, the review lists what the assistant did, with my name on the action it filed from my own words, and the
-    // hand-in did not stop anywhere.
-    await review.getByRole("button", { name: /More actions for/ }).click();
-    await page.getByRole("menuitem", { name: "Look closer" }).click();
-    await expect(review.getByText("Added a to-do").first()).toBeVisible();
-    // My name and the due day show on the item's own line, and again in the line that says why it is here (each part editable there).
-    // A new workspace files what it can't place under Personal, so the line ends with that side's name.
-    await expect(review.getByText(new RegExp(`^${info.people[0]} · due [^·]+ · Personal$`))).toBeVisible();
-    await expect(review.locator("[data-promise-line]").first()).toContainText(new RegExp(`${info.people[0]} · due`));
-    // On the Personal side a to-do that names nobody is my own, so nothing asks who owns it.
-    await expect(review.getByText("Who owns this?")).toHaveCount(0);
+    // Look over opens what needs a look in the details, on Today: the address stays, nothing is marked seen, and each thing
+    // the assistant did is one line with Not right. My own words filed the action, and nothing asks who owns it.
+    await review.getByRole("button", { name: "Look over", exact: true }).click();
+    await expect(page).toHaveURL(/#today$/);
+    await expect(review.getByText(/Send the venue list/).first()).toBeVisible();
+    await expect(review.getByRole("button", { name: /^Not right/ }).first()).toBeVisible();
+    await expect(review.getByRole("button", { name: "All looks good" })).toBeVisible();
+    await expect(page.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
     // My action from my own words is in To-dos and questions; the due day is on its line, not repeated in the title.
@@ -286,7 +283,7 @@ test.describe.serial("journeys", () => {
       // What changed is newest first and titles a change as Today does, so the change just handed in is the top line.
       // Choosing the line shows the whole change in the detail pane beside the list, which is what the steps read.
       const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
-      await expect(line.locator(".kind").first()).toHaveText(/not yet checked/i, { timeout: 30_000 });
+      await expect(line.locator(".kind").first()).toHaveText(/not yet checked|filed/i, { timeout: 30_000 });
       const expander = line.locator(".expander").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
       const detail = page.locator("aside[data-detail-pane] li.line.in-pane");

@@ -192,17 +192,66 @@ def test_a_day_with_nothing_to_say_is_quiet_and_has_no_sections(tmp_path):
         store.close()
 
 
-def test_the_sections_come_changed_then_risk_then_yes_and_an_empty_one_is_left_out(env):
+def test_the_sections_come_today_changed_risk_then_yes_and_an_empty_one_is_left_out(env):
     ws, cfg, store, _ = env
-    # What the fixtures hold waits for the person's yes (the decision), so a day with only an at-risk line has two.
+    # What the fixtures hold waits for the person's yes, and Today has its line, so the brief counts it; a to-do due
+    # today has no line on Today, so it is listed.
     own(store, cfg, "Send the estimate", due=day(0))
     found = built(env, "morning")
-    assert [s.key for s in found.sections] == ["risk", "yes"] and not found.quiet
+    assert [s.key for s in found.sections] == ["today", "risk"] and not found.quiet
     assert all(s.lines for s in found.sections)
-    assert "decision" in {line.change for line in lines_of(found, "yes")}
+    assert "need" in {line.change for line in lines_of(found, "today")}
 
 
-def test_the_persons_own_to_do_due_today_or_late_is_at_risk_and_says_which_and_when(env):
+def test_the_brief_never_repeats_a_line_Today_has_and_counts_it_with_a_link_to_the_line(env):
+    """What is on Today is counted ("2 things need you, 1 clash today") and links to its first line; the lines
+    themselves are not listed again, whichever section they would have been in."""
+    from engine.today_queue import queue
+
+    ws, cfg, store, _ = env
+    for title, start, end in (("Call with the printer", "10:00", "11:00"), ("Dentist", "10:30", "11:30")):
+        make(
+            store,
+            "event",
+            trust="trusted",
+            title=title,
+            start=f"{day(0)}T{start}:00+00:00",
+            end=f"{day(0)}T{end}:00+00:00",
+        )
+    found = built(env, "morning")
+    on_today = {q.key: q for q in queue(ws, store, cfg, NOW)}
+    counts = {line.change: line for line in lines_of(found, "today")}
+    needing = [q for q in on_today.values() if q.kind in brief.YES_KINDS]
+    assert counts["need"].count == len(needing) and counts["need"].queue in on_today
+    assert on_today[counts["need"].queue].kind in brief.YES_KINDS
+    assert counts["clash"].count == 1 and on_today[counts["clash"].queue].kind == "clash"
+    # Nothing a count stands for is listed: no yes line, no clash line, whose Today line is shown.
+    listed = {line.queue for s in found.sections for line in s.lines if line.kind != "on_today" and line.queue}
+    assert not listed & set(on_today), "a line of Today is never in the brief as well"
+    assert not [line for s in found.sections for line in s.lines if line.kind in ("clash", "owed_late")]
+    assert all(line.change != "decision" for line in lines_of(found, "yes"))
+
+
+def test_a_late_promise_whose_line_is_one_that_needs_the_person_is_counted_once(env):
+    ws, cfg, store, _ = env
+    owner = someone(store, "Dev Fictional")
+    make(store, "action", text="Send the measurements", owners=[{"person": owner}], due=day(-1), promised_to=[me(cfg)])
+    counts = {line.change: line for line in lines_of(built(env, "morning"), "today")}
+    assert "late" not in counts or counts["late"].queue != counts["need"].queue
+
+
+def test_a_to_do_that_is_late_and_has_its_line_on_today_is_counted_as_late_not_listed(env):
+    ws, cfg, store, _ = env
+    late = own(store, cfg, "Return the signed form", due=day(-3))
+    found = built(env, "morning")
+    counts = {line.change: line for line in lines_of(found, "today")}
+    assert counts["late"].queue == "overdue" and counts["late"].count >= 1
+    assert late not in {line.link[1] for line in lines_of(found, "risk") if line.link}
+
+
+def test_the_persons_own_to_do_due_today_is_at_risk_and_says_which_and_when(env):
+    from engine.today_queue import queue
+
     ws, cfg, store, _ = env
     to = someone(store)
     today_id = own(store, cfg, "Send the estimate", due=day(0), promised_to=[to])
@@ -214,13 +263,14 @@ def test_the_persons_own_to_do_due_today_or_late_is_at_risk_and_says_which_and_w
     found = built(env, "morning")
     made = {today_id, late_id, later_id, done_id, held_id}
     mine = {line.link[1]: line for line in lines_of(found, "risk") if line.kind == "own_due" and line.link[1] in made}
-    assert set(mine) == {today_id, late_id}
+    # The late one has its line on Today (the overdue line), so the brief counts it and lists the one due today.
+    assert set(mine) == {today_id}
     assert later_id not in mine and done_id not in mine and held_id not in mine
     assert (mine[today_id].state, mine[today_id].day, mine[today_id].person) == ("today", day(0), to)
-    assert (mine[late_id].state, mine[late_id].days) == ("overdue", 3)
-    # The late one is listed first.
-    ordered = [line.link[1] for line in lines_of(found, "risk") if line.kind == "own_due" and line.link[1] in made]
-    assert ordered == [late_id, today_id]
+    late = next(line for line in lines_of(found, "today") if line.change == "late")
+    assert (
+        late.queue == "overdue" and late_id in next(q for q in queue(ws, store, cfg, NOW) if q.key == "overdue").actions
+    )
 
 
 def test_the_time_of_the_meeting_a_promise_is_due_at_says_when_it_bites(env):
@@ -231,19 +281,19 @@ def test_the_time_of_the_meeting_a_promise_is_due_at_says_when_it_bites(env):
     assert line.at == "12:00"
 
 
-def test_what_someone_owes_the_person_and_is_late_is_at_risk_with_who_and_how_late(env):
+def test_what_someone_owes_the_person_and_is_late_is_counted_under_the_line_Today_has_for_it(env):
     ws, cfg, store, _ = env
     owner = someone(store, "Dev Fictional")
-    action = make(
-        store, "action", text="Send the measurements", owners=[{"person": owner}], due=day(-1), promised_to=[me(cfg)]
-    )
+    make(store, "action", text="Send the measurements", owners=[{"person": owner}], due=day(-1), promised_to=[me(cfg)])
     found = built(env, "morning")
-    line = next(x for x in lines_of(found, "risk") if x.kind == "owed_late" and x.link == ("action", action))
-    assert (line.person, line.person_name, line.days, line.day) == (owner, "Dev Fictional", 1, day(-1))
-    assert line.queue is not None and line.queue.split(":")[0] in ("promise", "nudge", "escalate")
+    assert not [x for x in lines_of(found, "risk") if x.kind == "owed_late"], "its Today line is not repeated"
+    counted = [
+        x for x in lines_of(found, "today") if x.queue and x.queue.split(":")[0] in ("promise", "nudge", "escalate")
+    ]
+    assert counted, "it is counted and links to that line"
 
 
-def test_meetings_that_overlap_today_are_an_at_risk_line_with_by_how_much(env):
+def test_meetings_that_overlap_today_are_one_clash_counted_with_a_link_to_its_line(env):
     ws, cfg, store, _ = env
     first = make(
         store,
@@ -269,28 +319,23 @@ def test_meetings_that_overlap_today_are_an_at_risk_line_with_by_how_much(env):
         start=f"{day(1)}T10:30:00+00:00",
         end=f"{day(1)}T11:30:00+00:00",
     )
-    clashes = [x for x in lines_of(built(env, "morning"), "risk") if x.kind == "clash"]
-    assert len(clashes) == 1
-    (clash,) = clashes
-    assert {clash.text, clash.other} == {"Call with the printer", "Dentist"}
-    assert (clash.minutes, clash.day, clash.at) == (30, day(0), "10:30")
+    found = built(env, "morning")
+    (clash,) = [x for x in lines_of(found, "today") if x.change == "clash"]
+    assert clash.count == 1 and clash.queue.startswith("clash:")
+    assert not [x for x in lines_of(found, "risk") if x.kind == "clash"], "the clash is on Today, so it is not listed"
     assert first and second and other_day
 
 
-def test_what_waits_for_the_persons_yes_is_one_line_each_that_opens_the_line_on_today(env):
+def test_what_waits_for_the_persons_yes_is_one_count_that_opens_the_first_of_its_lines_on_today(env):
     ws, cfg, store, _ = env
     from engine.today_queue import queue
 
     wanted = {q.key: q for q in queue(ws, store, cfg, NOW) if q.kind in brief.YES_KINDS}
     assert wanted, "the fixtures hold a decision for the person"
     found = built(env, "morning")
-    yes = lines_of(found, "yes")
-    assert {x.queue for x in yes} <= set(wanted)
-    assert len(yes) + section(found, "yes").more == len(wanted)  # what doesn't fit is counted, never dropped silently
-    assert all(x.kind == "yes" and x.change == wanted[x.queue].kind for x in yes)
-    # A message the assistant wrote is "ready"; a decision is not.
-    for x in yes:
-        assert x.ready is (x.change in brief.READY_KINDS or (x.change == "reply" and bool(wanted[x.queue].reply)))
+    (need,) = [x for x in lines_of(found, "today") if x.change == "need"]
+    assert need.kind == "on_today" and need.count == len(wanted) and need.queue in wanted
+    assert not [x for x in lines_of(found, "yes") if x.change in brief.YES_KINDS], "none of them is listed again"
 
 
 def test_a_section_shows_at_most_the_configured_lines_and_says_how_many_more(tmp_path):
@@ -322,6 +367,7 @@ def test_no_line_of_any_form_reports_status_or_progress(env):
         "own_due",
         "owed_late",
         "clash",
+        "on_today",
         "yes",
         "done",
         "carried",
@@ -395,7 +441,7 @@ def test_what_someone_else_did_to_the_persons_things_overnight_is_listed_newest_
         "The first copy would not open",
     )
     assert moved.link == ("action", MINE["id"]) and news.link == ("action", THEIRS["id"])
-    assert found.sections[0].key == "changed"
+    assert [s.key for s in found.sections if s.key in ("today", "changed")][-1] == "changed"
 
 
 def test_what_the_person_did_themselves_is_not_a_change(la_env):
@@ -755,13 +801,46 @@ def test_the_scoring_is_exact_a_missing_extra_or_changed_line_and_a_wrong_order_
     case = next(c for c in load_cases(DEMO_B) if c["sample"] == 2)
     good = run_case(DEMO_B, case, tmp_path).made
     assert score(good, case) == []
-    short = {**case, "expect": {**case["expect"], "risk": []}}
-    assert any("risk: 1 lines where 0" in p for p in score(good, short))
-    more = {**case, "expect": {**case["expect"], "risk": [*case["expect"]["risk"], *case["expect"]["risk"]]}}
-    assert any("risk: 1 lines where 2" in p for p in score(good, more))
-    changed = {**case, "expect": {**case["expect"], "yes": [{**case["expect"]["yes"][0], "ready": False}]}}
-    assert any("ready is True, expected False" in p for p in score(good, changed))
+    short = {**case, "expect": {**case["expect"], "changed": []}}
+    assert any("changed: 1 lines where 0" in p for p in score(good, short))
+    more = {**case, "expect": {**case["expect"], "changed": [*case["expect"]["changed"], *case["expect"]["changed"]]}}
+    assert any("changed: 1 lines where 2" in p for p in score(good, more))
+    changed = {**case, "expect": {**case["expect"], "today": [{**case["expect"]["today"][0], "count": 5}]}}
+    assert any("count is 1, expected 5" in p for p in score(good, changed))
     order = {**case, "expect": dict(reversed(list(case["expect"].items())))}
     assert any(p.startswith("sections") for p in score(good, order))
     quiet = {"id": "q", "quiet": True}
     assert score(good, quiet)  # a brief with lines is not a quiet day
+
+
+def test_the_weekly_form_is_offered_from_the_first_day_it_is_opened_until_done_or_dismissed(env):
+    """Offered whichever day of the week the app is first opened, so a Tuesday start doesn't skip the week's plan; a
+    dismissal ends the offer for that week only and Undo gives it back."""
+    from engine import week_plan
+
+    ws, cfg, store, _ = env
+    for offset in (1, 2, 4):  # Tuesday, Wednesday, Friday
+        assert brief.available(cfg, at_clock(offset, "09:00")) == ["morning", "monday"]
+    week_plan.set_offer_dismissed(store, cfg, at_clock(1, "09:00"), True)
+    assert built(env, now=at_clock(2, "09:00")).forms == ["morning"]
+    assert built(env, now=at_clock(0, "09:00")).forms == ["morning"], "dismissed on its own day too"
+    assert built(env, now=at_clock(7, "09:00")).forms == ["monday", "morning"], "the next week's is offered again"
+    week_plan.set_offer_dismissed(store, cfg, at_clock(1, "09:00"), False)
+    assert built(env, now=at_clock(2, "09:00")).forms == ["morning", "monday"]
+
+
+def test_dismissing_the_offer_over_the_routes_changes_only_what_is_offered(env):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    ws, cfg, store, _ = env
+    store.close()
+    cfg = ws.config(env=ZONE_UTC, flags={"server.base_path": "/", "storage.backups.automatic": False})
+    app = create_app(ws, cfg, "brief-token", ui_dist=ws.root / "no-ui")
+    with TestClient(app, headers={"Authorization": "Bearer brief-token"}) as client:
+        assert client.post("/api/brief/weekly/dismiss").json() == {"ok": "dismissed"}
+        weeks = [w for w in app.state.store.read().list("week_plan")]
+        assert len(weeks) == 1 and weeks[0].data["offer_dismissed_at"] and weeks[0].data["goals"] == []
+        assert client.post("/api/brief/weekly/undismiss").json() == {"ok": "offered"}
+        assert app.state.store.read().list("week_plan")[0].data["offer_dismissed_at"] is None

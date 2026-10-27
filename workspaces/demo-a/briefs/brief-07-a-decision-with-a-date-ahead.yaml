@@ -8,7 +8,8 @@ given:
 - {kind: action, id: ACT-91, fields: {text: Decide on the studio renewal, owners: [{person: PER-1}], due: '2026-10-30'}}
 - {kind: question, id: Q-91, fields: {to: PER-1, title: 'Renew the studio for another year?', kind: decision, options: [Renew, Cancel]}}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'question:Q-91'}
   'yes':
-  - {kind: 'yes', change: decision, ready: false, queue: 'question:Q-91'}
   - {kind: 'yes', change: reminder_offer, text: Decide on the studio renewal, day: '2026-10-29', at: '09:00', link: [action, ACT-91]}
 left: [document_dates, deadline]

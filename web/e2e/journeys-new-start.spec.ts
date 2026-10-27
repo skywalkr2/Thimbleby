@@ -319,20 +319,16 @@ test.describe.serial("journey: new start", () => {
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     await visit(page);
 
-    // Opening each list marks it seen; after both, what still needs a look is on Today line by line, one for each item.
+    // Look over opens each list on Today without leaving it, and All looks good reviews it: the lines leave and nothing is
+    // added to Today in their place.
     for (const label of ["Your inbox", "Your calendar", "Your sent mail"]) {
-      await page.getByRole("link", { name: /^Today/ }).first().click();
       await found.filter({ hasText: label }).getByRole("button", { name: "Look over", exact: true }).click();
+      await expect(page).toHaveURL(/#today$/);
+      await found.filter({ hasText: label }).getByRole("button", { name: "All looks good" }).click();
     }
-    await page.getByRole("link", { name: /^Today/ }).first().click();
     await expect(found).toHaveCount(0);
-    // The results wait behind "N new · Show" while the cursor is in the queue, so the list doesn't move under it.
-    const reviews = page.locator('[data-queue-line="review"]');
-    const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
-    await expect(reviews.first().or(showNew).first()).toBeVisible({ timeout: 30_000 });
-    if (await showNew.count()) await showNew.click();
-    await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
-    for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);
+    await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Show \d+ new items?$/ })).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
 

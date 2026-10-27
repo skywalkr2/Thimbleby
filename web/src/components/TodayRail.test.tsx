@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { TodayRail } from "./TodayRail";
+import { ThisWeekInspector } from "./ThisWeek";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
@@ -103,7 +104,7 @@ test("the rail has at most three cards: Schedule and Came in here, and no Top pr
   expect(screen.queryByRole("heading", { name: "What changed" })).toBeNull();
 });
 
-test("the Schedule card shows the agenda and the week together, and a meeting is listed once whichever of them has it", async () => {
+test("the Schedule card is today's view: the agenda's days only, and none of the week's list", async () => {
   const person = "Dev Sample";
   open({
     "GET today/week": () => ({
@@ -117,11 +118,12 @@ test("the Schedule card shows the agenda and the week together, and a meeting is
   const col = await column("Schedule");
   expect(await within(col).findByText("Standup")).toBeInTheDocument();
   expect(within(col).getByRole("heading", { name: "Today" })).toBeInTheDocument();
-  expect(await within(col).findByText("Send the estimate")).toBeInTheDocument();
-  expect(within(col).getByText(new RegExp(person))).toBeInTheDocument();
-  // The agenda has Standup, so the week adds only the meeting beyond the agenda's days.
+  // What is due, who waits and the meetings beyond the agenda's days are the week's, which the inspector shows.
+  expect(within(col).queryByText("Send the estimate")).toBeNull();
+  expect(within(col).queryByText(new RegExp(person))).toBeNull();
+  expect(within(col).queryByText("Offsite")).toBeNull();
+  expect(within(col).queryByText(/^Through /)).toBeNull();
   expect(within(col).getAllByText("Standup")).toHaveLength(1);
-  expect(within(col).getAllByText("Offsite")).toHaveLength(1);
   expect(screen.getAllByRole("region", { name: "Schedule" })).toHaveLength(1);
 });
 
@@ -549,9 +551,9 @@ test("Check now says which source couldn't be read and why, in place of only a c
   ).toBeInTheDocument();
 });
 
-test("a card shows no count of zero: a Schedule drawn for the week's due items alone has no event count", async () => {
+test("the week's due items alone draw no Schedule card, and no count of zero is shown", async () => {
   open({
-    "GET watch": () => [watched("a")],
+    "GET watch": () => [watched("a", { reads: ["calendar"] })],
     "GET today/agenda": () => [],
     "GET today/week": () => ({
       first: "2026-10-05",
@@ -561,11 +563,10 @@ test("a card shows no count of zero: a Schedule drawn for the week's due items a
       meetings: [],
     }),
   });
-  const col = await column("Schedule");
-  expect(await within(col).findByText("Send the estimate")).toBeInTheDocument();
+  await screen.findByRole("group", { name: "Briefing, schedule and mail" });
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull());
   expect(document.body).not.toHaveTextContent(/\b0 (events|things|messages)/);
-  expect(within(col).queryByText("0")).toBeNull();
-  expect(within(col).queryByText(/^Nothing on your calendar from/)).toBeNull();
+  expect(screen.queryByText("Send the estimate")).toBeNull();
 });
 
 // A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add to agenda".
@@ -701,7 +702,7 @@ test("handled mail alone is enough to draw Came in, since the count is there to 
 });
 
 test("the week's list writes a date in a to-do's words as elsewhere, and drops the phrase the row's own day already says", async () => {
-  open({
+  fakeApi({
     "GET today/week": () => ({
       first: "2026-10-05",
       last: "2026-10-16",
@@ -713,8 +714,8 @@ test("the week's list writes a date in a to-do's words as elsewhere, and drops t
       meetings: [],
     }),
   });
-  const col = await column("Schedule");
-  expect(await within(col).findByText("Send the venue list.")).toBeInTheDocument();
-  expect(within(col).getByText(`Plan the move, done on ${day(LATER)}`)).toBeInTheDocument();
-  expect(col.textContent).not.toMatch(/2026-10-1[24]/);
+  const { container } = renderApp(<ThisWeekInspector />);
+  expect(await screen.findByText("Send the venue list.")).toBeInTheDocument();
+  expect(screen.getByText(`Plan the move, done on ${day(LATER)}`)).toBeInTheDocument();
+  expect(container.textContent).not.toMatch(/2026-10-1[24]/);
 });

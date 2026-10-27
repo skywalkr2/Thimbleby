@@ -15,6 +15,8 @@ from tests.test_pipeline import NOW, answers, env, outcomes, run  # noqa: F401  
 
 _TEST = WriteContext(actor="engine", trust="trusted", op="test.setup")
 APPLYING = {"ops": [{"op": "note", "text": "Something to keep."}]}
+# A question needs a look, so it has a line on Today; a note is filed quietly and has none.
+LOOKED_AT = {"ops": [{"op": "question.add", "to": "me", "title": "Which paper?"}]}
 # A different kind of op, since an answer made of the same ops as the one sent back is refused as a repeat.
 APPLYING_OTHER = {"ops": [{"op": "question.add", "to": "me", "title": "Which finish?"}]}
 
@@ -68,7 +70,7 @@ def test_a_try_again_on_the_same_request_that_applies_leaves_no_line_or_cause_fo
     handed, cs_id = run(env, "Anything.")
     assert cs_id is None
     assert [line.kind for line in lines_of(env, {handed.request})] == ["refused"]
-    set_responder(lambda task: json.dumps(APPLYING))
+    set_responder(lambda task: json.dumps(LOOKED_AT))
     retry(store, handed.request)
     assert process_again(env, handed.request) is not None
     request = store.read().get("request", handed.request).data
@@ -89,8 +91,8 @@ def test_a_sent_back_attempt_with_a_held_item_is_retired_when_the_next_one_appli
     # Its only item waits for the person, so Today shows that decision alone, not a review line as well (one decision is
     # one line).
     assert {line.kind for line in lines_of(env, {first.request})} == {"who_is"}
-    second = send_back(store, first_cs, "Make it a note instead.")
-    answers(APPLYING)
+    second = send_back(store, first_cs, "Ask it as a question instead.")
+    answers(LOOKED_AT)
     assert process_again(env, second) is not None
 
     request = store.read().get("request", first.request).data

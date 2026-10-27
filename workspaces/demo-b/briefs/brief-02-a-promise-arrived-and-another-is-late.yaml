@@ -11,9 +11,7 @@ then:
 - at: '2026-10-20T07:10'
   news: {action: ACT-91, by: PER-2, text: The signed agreement is attached}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'nudge:PER-3'}
   changed:
   - {kind: news, text: Return the signed agreement, person: PER-2, detail: The signed agreement is attached, link: [action, ACT-91]}
-  risk:
-  - {kind: owed_late, text: Send the measurements, person: PER-3, day: '2026-10-19', days: 1, link: [action, ACT-92]}
-  'yes':
-  - {kind: 'yes', change: nudge, person: PER-3, ready: true, queue: 'nudge:PER-3'}

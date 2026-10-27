@@ -214,34 +214,33 @@ test.describe.serial("journey: mail", () => {
     await visit(page);
     expect((await requests()).work).toBe(handedIn);
 
-    // Opening a list shows the changes narrowed to that source and marks it seen; after both, what still needs a look is on
-    // Today line by line, one for each item.
+    // Look over opens a list's items in the details, on Today: the address stays, nothing is marked seen and nothing splits
+    // into lines of its own. All looks good reviews the list and the line leaves.
     await inbox.getByRole("button", { name: "Look over", exact: true }).click();
-    await openView(page, "Today");
+    await expect(page).toHaveURL(/#today$/);
+    await expect(inbox.getByRole("button", { name: /^Not right/ }).first()).toBeVisible();
+    await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
+    await expect(found).toHaveCount(2);
+    await inbox.getByRole("button", { name: "All looks good" }).click();
+    await expect(found).toHaveCount(1);
     await page.locator('[data-queue-line="intake_review"]').filter({ hasText: "Your calendar" }).getByRole("button", { name: "Look over", exact: true }).click();
-    await openView(page, "Today");
+    await page.locator('[data-queue-line="intake_review"]').filter({ hasText: "Your calendar" }).getByRole("button", { name: "All looks good" }).click();
     await expect(found).toHaveCount(0);
-    // The assistant's results are on Today for review, one line for each item. They wait behind "N new · Show" while the
-    // cursor is in the queue, so the list doesn't move under it.
-    const reviews = page.locator('[data-queue-line="review"]');
-    const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
-    await expect(reviews.first().or(showNew).first()).toBeVisible({ timeout: 30_000 });
-    if (await showNew.count()) await showNew.click();
-    await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
-    for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);
-    // My own words filed my action; a to-do is listed in To-dos and questions, not on Today.
+    // Reviewing added nothing to Today: no line of its own for any item, and no "N new" waiting.
+    await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Show \d+ new items?$/ })).toHaveCount(0);
+    // My own words filed my action; a to-do is listed in To-dos and questions, not on Today. Filed under Personal, a to-do
+    // that names nobody is my own, so nothing asks who owns it.
     await openView(page, "To-dos and questions");
     await expect(page.getByText("Send the venue list.").first()).toBeVisible();
     await openView(page, "Today");
-    const catering = reviews.filter({ hasText: mail.find((title) => /quote/i.test(title)) ?? "" });
-    await catering.getByRole("button", { name: /More actions for/ }).click();
-    await page.getByRole("menuitem", { name: "Look closer" }).click();
-    // Filed under Personal, a to-do that names nobody is my own, so nothing asks who owns it.
-    await expect(catering.getByText("Added a to-do").first()).toBeVisible();
-    await expect(catering.getByText("Who owns this?")).toHaveCount(0);
+    await expect(page.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
     expect((await requests()).work).toBe(handedIn);
+    // What changed says what was checked.
+    await openView(page, "What changed");
+    await expect(page.getByText("Checked").first()).toBeVisible();
 
     // Handled for you lists both messages, grouped and collapsed, each with why it was set aside.
     const social = aside.find((t) => /neighbors/i.test(t)) ?? "";

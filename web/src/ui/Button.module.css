@@ -17,8 +17,8 @@
 .primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 .primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .secondary { background: var(--surface); }
-/* A primary button marked tonal is quiet by day (the soft accent fill) and unchanged by night: only the screen's one main
-   action, or the selected line's, is filled by day. */
+/* A primary button marked tonal is quiet in both themes (the soft accent fill by day, the deep brand fill by night): only the
+   screen's one main action, or the chosen line's, is filled. */
 .primary[data-tonal]:not(:disabled) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
 .primary[data-tonal]:not(:disabled):hover { background: var(--row-action-hover); border-color: var(--row-action-border); }
 .ghost { border-color: transparent; background: transparent; color: var(--text-muted); }

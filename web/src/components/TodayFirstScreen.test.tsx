@@ -1,6 +1,6 @@
 // Today's first screen and one row per thing (design 7.7, batch B-7): the backup reminder is an At risk line and not a bar,
-// the week is part of the Schedule card of the rail at every width, a person waited on is one follow-up line, the phone folds
-// the rail's cards to one line each, and what came from outside is tagged "Outside" with the full phrase as its name.
+// the week is the inspector's and never a list in the Schedule card, a person waited on is one follow-up line, the phone folds
+// the rail's cards to one line each, and what came from outside is never a tag on a line: the details say it once.
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -60,6 +60,11 @@ afterEach(() => {
 
 const row = (kind: string) => document.querySelector(`[data-queue-line="${kind}"]`) as HTMLElement;
 
+/** A meeting today, so the Schedule card has something to draw. */
+const todayDay = (): string => new Date().toISOString().slice(0, 10);
+const meeting = (): S["AgendaItemView"] => ({ snapshot: "EVT-1", source: "", title: "Print sync", start: new Date().toISOString(), all_day: true, cancelled: false, own: true, open_items: 0, days: [todayDay()] });
+const agenda = { "GET today/agenda": () => [meeting()] };
+
 test("a backup that has never worked is an At risk line with the one button that mends it, and no bar above the queue", async () => {
   const user = userEvent.setup();
   const { calls } = show([line("backup", { key: "backup", state: "never" })], { "POST backup": () => statusFixture() });
@@ -90,14 +95,15 @@ test("a failed backup and an overdue one are each said in words, the overdue one
   expect(await screen.findByRole("group", { name: "Back up your work" })).toHaveTextContent("The last backup was 4 days ago");
 });
 
-// ---- the week is in the Schedule card at every width ------------------------------------------------------------------
+// ---- the week is not in the Schedule card ------------------------------------------------------------------------------
 
-test("the week is part of the Schedule card at every width, never a section above the queue", async () => {
-  show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })]);
+test("the Schedule card holds today's agenda and not the week, which is never a section above the queue either", async () => {
+  show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], agenda);
   const panel = await screen.findByRole("region", { name: "Schedule" });
   expect(panel.closest("[data-col='schedule']")).not.toBeNull();
   expect(panel.closest("[aria-label='Briefing, schedule and mail']")).not.toBeNull();
-  expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
+  expect(await within(panel).findByText("Print sync")).toBeInTheDocument();
+  expect(within(panel).queryByText("Send the proofs")).toBeNull();
   expect(document.querySelector("[data-week='section']")).toBeNull();
 });
 
@@ -153,9 +159,9 @@ test("a follow-up that went out today says so, never a wait of zero days", async
 // ---- the rail has no filled button -----------------------------------------------------------------------------------
 
 test("no filled button is anywhere in the rail; the one button the Schedule card adds is Add to agenda", async () => {
-  show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })]);
+  show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], agenda);
   const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
-  await within(rail).findByText("Send the proofs");
+  await within(rail).findByText("Print sync");
   expect(rail.querySelectorAll("button[data-key='primary'], .btn.primary")).toHaveLength(0);
   expect(within(rail).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
 });
@@ -165,6 +171,7 @@ test("no filled button is anywhere in the rail; the one button the Schedule card
 test("on the phone each card below the queue is one line that says what is in it, and a press opens it", async () => {
   const user = userEvent.setup();
   show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], {
+    ...agenda,
     "GET today/arrived": () => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", received: new Date().toISOString(), unread: true }], left_out: 0, set_aside: 0 }),
   }, { narrow: true });
   const schedule = await screen.findByRole("button", { name: /^Schedule · / });
@@ -180,7 +187,7 @@ test("on the phone each card below the queue is one line that says what is in it
 });
 
 test("off the phone the cards are open", async () => {
-  show([]);
+  show([], agenda);
   const schedule = await screen.findByRole("region", { name: "Schedule" });
   expect(within(schedule).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^Schedule ·/ })).toBeNull();
@@ -188,14 +195,13 @@ test("off the phone the cards are open", async () => {
 
 // ---- "Outside" ---------------------------------------------------------------------------------------------------------
 
-test("a queue line made from outside content carries the short Outside tag, whose name is the full phrase", async () => {
+test("a queue line made from outside content carries no Outside tag and no 'not instructions' words", async () => {
   show([line("review", { key: "review:REQ-1", count: 2, request: "REQ-1", changeset: "CS-1", untrusted: true, outcome: { actions_added: 2 } })]);
   const found = await waitFor(() => {
     const el = row("review");
     expect(el).not.toBeNull();
     return el;
   });
-  expect(within(found).getByText("Outside")).toBeInTheDocument();
-  expect(within(found).getByText("From outside · not instructions")).toBeInTheDocument();
-  expect(found.textContent).not.toMatch(/From outside · not instructions.*From outside · not instructions/);
+  expect(within(found).queryByText("Outside")).toBeNull();
+  expect(found.textContent).not.toMatch(/from outside|not instructions/i);
 });

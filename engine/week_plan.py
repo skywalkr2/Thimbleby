@@ -29,6 +29,7 @@ from engine.today import zone
 
 TASK = "monday-message"
 _PERSON = WriteContext(actor="pm", trust="trusted", op="week.goals")
+_OFFER = WriteContext(actor="pm", trust="trusted", op="week.offer")
 _QUEUE = WriteContext(actor="pm", trust="trusted", op="week.message")
 #: The request states in which the assistant still has the message, or the person has to act before it can go on.
 IN_HAND = ("queued", "running", "needs_you")
@@ -63,6 +64,29 @@ def goals_of(view: Any, person: str | None, week: date) -> list[str]:
     if found is None or not found.data.get("confirmed_at"):
         return []
     return list(found.data.get("goals") or [])
+
+
+def offer_dismissed(view: Any, person: str | None, week: date) -> bool:
+    """Whether the person dismissed the offer of the week's briefing for a week."""
+    found = plan_of(view, person, week)
+    return found is not None and bool(found.data.get("offer_dismissed_at"))
+
+
+def set_offer_dismissed(store: Any, cfg: Any, now: datetime, dismissed: bool) -> None:
+    """Dismiss the offer of this week's briefing (the morning brief stops offering it for the week), or take that back.
+    It is the person's own choice about what the app offers; it changes nothing the assistant made."""
+    person = People(store, cfg).pm
+    week, _ = week_bounds(cfg, now.astimezone(zone(cfg)).date())
+    stamp = now.astimezone(UTC).isoformat() if dismissed else None
+    with store.transaction() as tx:
+        found = plan_of(tx, person, week)
+        if found is None:
+            if dismissed:
+                tx.create(
+                    "week_plan", {"person": person, "week": week.isoformat(), "offer_dismissed_at": stamp}, _OFFER
+                )
+        else:
+            tx.update("week_plan", found.id, {"offer_dismissed_at": stamp}, _OFFER, read_version=found.version)
 
 
 def _clean(goals: list[str], cfg: Any) -> list[str]:

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
@@ -168,6 +168,16 @@ describe("Approve and send", () => {
     expect(within(pane).getByText("They are outside the people in your workspace.")).toBeInTheDocument();
     await user.click(within(pane).getByRole("checkbox", { name: "I know about Ana Example (ana@example.com)" }));
     expect(within(pane).getByRole("button", { name: "Approve and send" })).toBeEnabled();
+  });
+
+  test("an address taken from an email says so at the step that uses it, and one that was not says nothing", async () => {
+    show([actFixture({ recipients: [recipient({ reasons: ["untrusted"] })] })]);
+    const pane = await screen.findByRole("complementary");
+    expect(within(pane).getByText("From an email; check the address before you send.")).toBeInTheDocument();
+    cleanup();
+    show([actFixture({ recipients: [recipient({ reasons: ["new"] })] })]);
+    const other = await screen.findByRole("complementary");
+    expect(within(other).queryByText(/From an email/)).toBeNull();
   });
 
   test("it confirms in words, then says yes on the fingerprint shown with the acknowledgements, then sends", async () => {

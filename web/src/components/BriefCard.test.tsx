@@ -125,6 +125,62 @@ test("Open on a yes line opens Today's own line; on another it opens its record"
   window.removeEventListener("reveal-row", revealed);
 });
 
+const COUNTED: Brief = {
+  ...MORNING,
+  sections: [
+    {
+      key: "today",
+      more: 0,
+      lines: [
+        line({ key: "today:need", kind: "on_today", change: "need", count: 2, queue: "nudge:PER-2" }),
+        line({ key: "today:late", kind: "on_today", change: "late", count: 1, queue: "overdue" }),
+        line({ key: "today:clash", kind: "on_today", change: "clash", count: 1, queue: "clash:EVT-1:EVT-2:2026-10-20" }),
+      ],
+    },
+    ...MORNING.sections.filter((section) => section.key === "changed"),
+  ],
+};
+
+test("what Today already has is counted, never listed: '2 things need you, 1 clash today', each linking to its first line", async () => {
+  const user = userEvent.setup();
+  const revealed = vi.fn((event: Event) => event.preventDefault());
+  window.addEventListener("reveal-row", revealed);
+  show(COUNTED);
+  expect(await screen.findByRole("heading", { level: 3, name: "On Today" })).toBeInTheDocument();
+  expect(screen.getByText("2 things need you")).toBeInTheDocument();
+  expect(screen.getByText("1 thing is late")).toBeInTheDocument();
+  expect(screen.getByText("1 clash today")).toBeInTheDocument();
+  // No line of Today is written out again.
+  expect(screen.queryByText(/Follow up with|overlap by|a day late/)).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Show: 1 clash today" }));
+  expect((revealed.mock.calls[0][0] as CustomEvent).detail).toEqual({ type: "line", id: "clash:EVT-1:EVT-2:2026-10-20" });
+  window.removeEventListener("reveal-row", revealed);
+});
+
+test("the week's briefing is offered by a name that fits any day, and Not this week dismisses it with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET brief": () => ({ ...MORNING, forms: ["morning", "monday"] }),
+    "GET today/queue": () => [NUDGE],
+    "POST brief/weekly/dismiss": () => ({ ok: "dismissed" }),
+    "POST brief/weekly/undismiss": () => ({ ok: "offered" }),
+  });
+  renderApp(<BriefCard workspace="ws" onOpenRecord={() => undefined} />);
+  expect(await screen.findByRole("button", { name: "Show this week's briefing" })).toBeInTheDocument();
+  expect(screen.queryByText(/Monday/)).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Not this week" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST brief/weekly/dismiss")).toBe(true));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST brief/weekly/undismiss")).toBe(true));
+});
+
+test("no offer of the week's briefing when it is not among the forms due", async () => {
+  show(MORNING);
+  await screen.findByRole("heading", { level: 2, name: "Morning brief" });
+  expect(screen.queryByRole("button", { name: "Not this week" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Show this week's briefing" })).toBeNull();
+});
+
 test("a quiet day is one line and no section", async () => {
   show(QUIET);
   expect(await screen.findByText("Nothing needs you this morning.")).toBeInTheDocument();
@@ -182,23 +238,23 @@ test("on a quiet day the card has no buttons for the other forms, and on a day w
   cleanup();
   show({ ...MORNING, forms });
   expect(await screen.findByRole("button", { name: "Show the evening wrap-up" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Show the Monday briefing" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show this week's briefing" })).toBeInTheDocument();
 });
 
 test("another form that is due can be shown from the card", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({ "GET brief": () => MONDAY, "GET brief?form=morning": () => ({ ...MORNING, forms: ["monday", "morning"] }), "GET today/queue": () => [NUDGE] });
   renderApp(<BriefCard workspace="ws" onOpenRecord={() => undefined} />);
-  expect(await screen.findByRole("heading", { level: 2, name: "Monday briefing" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 2, name: "This week's briefing" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Show the morning brief" }));
   expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET brief?form=morning")).toBe(true);
-  expect(screen.getByRole("button", { name: "Show the Monday briefing" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show this week's briefing" })).toBeInTheDocument();
 });
 
 test("the Monday briefing lists the week by who owns it, says how much Today already holds and repeats none of it", async () => {
   show(MONDAY);
-  expect(await screen.findByRole("heading", { level: 2, name: "Monday briefing" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 2, name: "This week's briefing" })).toBeInTheDocument();
   expect(headings()).toEqual(["Your promises this week", "Promised to you", "Questions to send"]);
   expect(screen.getByText("Draft the proposal, due Wed, Oct 21")).toBeInTheDocument();
   expect(screen.getByText("to Mira Example")).toBeInTheDocument();
@@ -260,7 +316,7 @@ test("a week with no goals to propose offers to set them, and confirmed goals sa
 
 test("a morning brief shows no goals form, and the Monday message is only there when the person reports to someone", async () => {
   show({ ...MONDAY, message: null });
-  await screen.findByRole("heading", { level: 2, name: "Monday briefing" });
+  await screen.findByRole("heading", { level: 2, name: "This week's briefing" });
   expect(screen.queryByRole("heading", { name: /^Message to/ })).toBeNull();
   cleanup();
   show(MORNING);

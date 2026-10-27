@@ -1031,14 +1031,16 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| Today (7.7) | Look over sent the batch to What changed and split it into lines | A review on Today: only what needs a look, in the details pane, Not right per item, All looks good with Undo; no action adds lines |
+| Today (7.7) | Look over sent the batch to What changed and split it into lines | **Built** (`tests/test_review_batches.py`, `tests/test_today_adds_no_lines.py`, `web/src/components/Today.test.tsx`, `WhatChanged.test.tsx`, `web/e2e/today-review.spec.ts`): a review on Today: only what needs a look (a draft, a question, a decision, a new to-do, what is held or refused), in the details pane, Not right per item, All looks good with Undo and one `confirmed` signal for each request; no action adds lines; batches left unopened fold into "3 batches to look over" (`ui.today.fold_batches_after_days`); What changed reads "Filed" and "Checked" |
 | Filing (6.32) | Unsure items Unfiled | Filed under Personal, one grouped Move question per side per day; a rule only after a repeated move |
-| Brief (6.32) | Listed Today's lines | Counts that link to the lines; the weekly form on the week's first open day |
+| Brief (6.32) | Listed Today's lines | **Built** (`tests/test_brief.py`, `web/src/components/BriefCard.test.tsx`): counts that link to the lines ("2 things need you, 1 clash today"); the weekly form offered from the week's first open day until done or dismissed, named "this week's briefing" |
 | Facts and notes (6.32, 6.7) | Raw header titles; claims without who said them | Subject and sender titles set by the core; `said_by` on a claim; a lint on "decided" |
-| Outside marker (7.7, 12.8) | On every list line | Once in the details pane, and at any outward step |
+| Outside marker (7.7, 12.8) | On every list line | **Built** (`web/src/components/Today.test.tsx`, `TodayFirstScreen.test.tsx`, `Unfiled.test.tsx`, `TodayReplies.test.tsx`, `WaitingToGoOut.test.tsx`): once in the details pane, and at the outward steps a reply and a message waiting to go out; the lists of what was learned keep their words |
 | People (6.32) | Role and Organization columns with a business | "Who they are", every relation, Personal first; typed relations allowed |
 | File links (6.2) | Kept by path | Kept by content, so a move to Archive or a rename keeps them |
 | Notices (7.19) | "A chat app" or "A push notification topic" | The apps by name from a shipped list, each with its message shape and where to find its address; "Something else (plain text)" |
+| Phone and night (7.12, check U17, U18) | A line's actions beside its title below 640px (titles of one or two words); night's row actions filled | **Built** (`web/src/theme/dayMode.test.ts`, `web/e2e/today-review.spec.ts`): below 640px the actions sit under the title at full width (every title shows 25 characters at 390px); tonal row actions in both themes, the deep brand fill with the light brand text by night, and only the chosen line's filled |
+| Schedule card (7.7, G22) | The agenda and the week's list merged | **Built** (`web/src/components/TodayRail.test.tsx`, `Today.test.tsx`): today's view only; the week is the inspector's |
 
 ## 233. The rest of the review, built before the reviewer's second pass (2026-10-27; phase U; designed; the rows marked Built have a named test)
 

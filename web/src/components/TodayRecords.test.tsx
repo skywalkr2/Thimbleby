@@ -373,13 +373,11 @@ test("no line of Today shows an id of the app's own: a held line, a review line 
   expect(text.match(/\b[A-Z]{2,5}-\d+\b/)?.[0] ?? null, "an id of the app's own").toBeNull();
 });
 
-test("a line that came from outside carries the Outside tag in the pill column, not in its meta, and its meta is one line", async () => {
+test("a line that came from outside has no Outside tag, and its meta is one line", async () => {
   show([held({ ask: "close", item: "Send two spine options", quote: "both spines are in the shared folder", told: [] }, { untrusted: true })]);
   const row = await rowOf("Close 'Send two spine options'?");
-  const outside = within(row).getByText("Outside");
-  const pillColumn = within(row).getByText("Waiting for you").closest("div") as HTMLElement;
-  expect(pillColumn).toContainElement(outside);
+  expect(within(row).queryByText("Outside")).toBeNull();
   const meta = row.querySelector("p[class*='meta']") as HTMLElement;
-  expect(meta).not.toContainElement(outside);
+  expect(meta.textContent).not.toMatch(/from outside|not instructions/i);
   expect(meta.className).toMatch(/oneLine/);
 });

@@ -114,7 +114,7 @@ export default defineConfig({
     }),
     { name: "layout", testMatch: /(layout|handled)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
     { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
-    { name: "capacity", testMatch: /today-capacity\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
+    { name: "capacity", testMatch: /today-(capacity|review)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
     { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },
     { name: "acts", testMatch: /acts-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${acts.port}/` } },
     { name: "meetings", testMatch: /meetings-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${meetings.port}/` } },

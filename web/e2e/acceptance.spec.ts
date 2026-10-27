@@ -103,6 +103,7 @@ async function handIn(page: Page, c: Case) {
   const count = lines.filter((line) => ["review", "who_is", "held"].includes(line.kind)).length;
   await expect(made).toHaveCount(count, { timeout: 20_000 });
   const before = await made.allInnerTexts();
+  const known: unknown[] = await (await page.request.get("api/changes")).json();
   await page.getByRole("button", { name: "Hand something in" }).first().click();
   const box = page.getByLabel("Paste or type it here");
   if (c.pasted) {
@@ -114,14 +115,23 @@ async function handIn(page: Page, c: Case) {
     await box.fill(c.note ?? "");
   }
   await page.getByRole("button", { name: "Hand in", exact: true }).click();
+  // A hand-in whose result needs no look (a note, a fact) is filed quietly and has no line, so the change itself says the
+  // assistant has finished.
   await expect
-    .poll(async () => (await made.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 20_000 })
+    .poll(
+      async () => {
+        if ((await made.allInnerTexts()).some((line) => !before.includes(line))) return true;
+        const now: Array<{ changeset: unknown }> = await (await page.request.get("api/changes")).json();
+        return now.length > known.length && !!now[0]?.changeset;
+      },
+      { timeout: 20_000 },
+    )
     .toBe(true);
   await go(page, "What changed");
   // What changed is newest first and titles a change as Today does, so the change just handed in is the top line. Choosing
   // the line shows the whole change in the detail pane beside the list, which is what the steps read.
   const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
-  await expect(line.locator(".kind").first()).toHaveText(/Review|not yet checked/i, { timeout: 20_000 });
+  await expect(line.locator(".kind").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
   const expander = line.locator(".expander").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
   const detail = page.locator("aside[data-detail-pane] li.line.in-pane");

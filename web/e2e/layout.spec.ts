@@ -156,15 +156,15 @@ test.describe("no screen is wider than the window", () => {
           await page.evaluate(() => document.querySelectorAll<HTMLElement>("body *").forEach((e) => (e.style.letterSpacing = "")));
         }
       }
-      // The details pane: the review line opened to look closer, beside the queue or in place of its row.
+      // The details pane: the review line looked over, beside the queue or in place of its row.
       await page.evaluate(() => {
         window.location.hash = "today";
       });
       const review = page.locator('[data-queue-line="review"]').first();
       await expect(review).toBeVisible(LOADED);
-      await review.getByRole("button", { name: /^More actions for/ }).click();
-      await page.getByRole("menuitem", { name: "Look closer" }).click();
-      await expect(page.getByText(strings["web-02"].slice(0, 12)).first()).toBeVisible(LOADED);
+      await review.getByRole("button", { name: "Look over", exact: true }).click();
+      await expect(page.locator("[data-batch-detail]").first()).toBeVisible(LOADED);
+      await expect(page.locator("[data-batch-detail]").first().getByRole("button", { name: /^Not right/ }).first()).toBeVisible(LOADED);
       const found = await overflow(page);
       if (tooWide(found)) wide.push(`Details at ${size.width}: ${JSON.stringify(found)}`);
     }

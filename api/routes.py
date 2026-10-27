@@ -45,6 +45,10 @@ from api.schemas import (
     AssistantStatus,
     AuthorSpan,
     BackupStatus,
+    BatchConfirmed,
+    BatchConfirmIn,
+    BatchUnconfirmed,
+    BatchUnconfirmIn,
     BlockerView,
     ChangeItem,
     ChangesetView,
@@ -182,7 +186,17 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import answer_groups, catch_up, endings, held_ask, learned, new_terms, repeats, source_intake
+from engine import (
+    answer_groups,
+    catch_up,
+    endings,
+    held_ask,
+    learned,
+    new_terms,
+    repeats,
+    review_batches,
+    source_intake,
+)
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -730,30 +744,34 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         projects = {p.id: p.data["name"] for p in view.list("project")}
         parents = {p.id: projects.get(p.data.get("parent") or "") for p in view.list("project")}
         here = zone(cfg)
-        out = []
-        for line in queue(
-            ws, store, cfg, worker.now(), handover=worker.handover_state(), stuck=worker.stuck_since_text()
-        ):
-            data = {k: v for k, v in vars(line).items() if k not in ("title", "since")}
+
+        def shown(line: Any) -> QueueLineView:
+            data = {k: v for k, v in vars(line).items() if k not in ("title", "since", "items", "parts")}
             if line.until:
                 # A time of the person's own clock, so the screen shows it as they would say it.
                 data["until"] = datetime.fromisoformat(line.until).astimezone(here)
             if line.waiting_since:
                 data["waiting_since"] = datetime.fromisoformat(line.waiting_since).astimezone(here)
             about = view.get("action", line.actions[0]) if len(line.actions) == 1 else None
-            out.append(
-                QueueLineView(
-                    **data,
-                    title=_title_view(line.title, people),
-                    person_name=people.name(line.person) if line.person else None,
-                    project_name=projects.get(line.project or ""),
-                    parent_name=parents.get(line.project or ""),
-                    notes=(about.data.get("notes") or None) if about is not None else None,
-                    side=sides.side_of_line(view, cfg, line),
-                    made_by=line_maker.of_line(view, line, here),
-                )
+            return QueueLineView(
+                **data,
+                items=[shown(item) for item in line.items],
+                parts=[shown(part) for part in line.parts],
+                title=_title_view(line.title, people),
+                person_name=people.name(line.person) if line.person else None,
+                project_name=projects.get(line.project or ""),
+                parent_name=parents.get(line.project or ""),
+                notes=(about.data.get("notes") or None) if about is not None else None,
+                side=sides.side_of_line(view, cfg, line),
+                made_by=line_maker.of_line(view, line, here),
             )
-        return out
+
+        return [
+            shown(line)
+            for line in queue(
+                ws, store, cfg, worker.now(), handover=worker.handover_state(), stuck=worker.stuck_since_text()
+            )
+        ]
 
     @r.get("/plugin-today")
     def plugin_today() -> list[TodayLineView]:
@@ -1537,6 +1555,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     follows_summary=_summary_of(d.get("follows")),
                     redoes=learned.request_changeset(store.read(), d.get("previous")),
                     changeset=view,
+                    review=review_batches.review_of(cs.data)
+                    if cs is not None and d["state"] in ("review", "done")
+                    else None,
                     mail_item=mail.get((watched.get("source"), watched.get("key"))) if watched else None,
                     intake=d.get("intake"),
                     project=request_project(store.read(), req, cs.data if cs is not None else {}),
@@ -1564,6 +1585,25 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         guard(lambda: looks_good(store, cs_id))
         changed()
         return Ok(ok=cs_id)
+
+    @r.post("/changesets/confirm")
+    def confirm_batch(body: BatchConfirmIn) -> BatchConfirmed:
+        """The person's "All looks good" for a batch on Today: each changeset is marked reviewed and one `confirmed`
+        signal is recorded for its request. Undo is POST /api/changesets/unconfirm."""
+        for cs_id in body.changesets:
+            need("changeset", cs_id)
+        found = guard(lambda: review_batches.confirm(store, body.changesets, worker.now()))
+        changed()
+        return BatchConfirmed(changesets=found.changesets, signals=found.signals)
+
+    @r.post("/changesets/unconfirm")
+    def unconfirm_batch(body: BatchUnconfirmIn) -> BatchUnconfirmed:
+        """Undo a batch's "All looks good": its changesets are to be looked over again."""
+        for cs_id in body.changesets:
+            need("changeset", cs_id)
+        count = guard(lambda: review_batches.unconfirm(store, body.changesets, body.signals))
+        changed()
+        return BatchUnconfirmed(reopened=count)
 
     @r.post("/changesets/{cs_id}/reopen")
     def reopen(cs_id: str) -> Ok:

@@ -11,8 +11,8 @@ then:
 - at: '2026-10-28T21:00'
   update: {kind: event, id: EVT-91, rule: calendar, fields: {cancelled: true}}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'send:PER-4'}
   changed:
   - {kind: invitation, change: cancelled, text: Planning workshop, person_name: Maya Okafor, day: '2026-10-30', link: [event, EVT-91]}
-  'yes':
-  - {kind: 'yes', change: send, person: PER-4, ready: true}
 left: [booking]

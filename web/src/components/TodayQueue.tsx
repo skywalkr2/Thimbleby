@@ -20,7 +20,7 @@ import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
 import { useHeldAnswers } from "../lib/held-answers";
 import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/queue-words";
-import { revealOrKeep, showRow } from "../lib/reveal";
+import { showRow } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { useActToday } from "../lib/acts";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
@@ -31,7 +31,6 @@ import { useQuietChoices } from "./QuietLine";
 import { Button } from "../ui/Button";
 import { Panel } from "../ui/Panel";
 import { Pill, type PillTone } from "../ui/Pill";
-import { OutsideTag } from "../ui/OutsideTag";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { Parts } from "./Coverage";
@@ -120,7 +119,10 @@ export function TodayQueue(props: {
   // Where the cursor is, read as the data changes and before the page does.
   const working = useRef<{ held: boolean; row: number; keys: string[] }>({ held: false, row: -1, keys: [] });
   const rows = pane.current ? Array.from(pane.current.querySelectorAll<HTMLElement>("[data-row]")) : [];
-  const focused = document.activeElement instanceof HTMLElement ? document.activeElement.closest<HTMLElement>("[data-row]") : null;
+  // The cursor in the inspector is on the line the inspector shows, so settling that line moves the cursor on like any other.
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const shownByInspector = active?.closest("[data-queue-inspector]") ? props.selected?.key : undefined;
+  const focused = active?.closest<HTMLElement>("[data-row]") ?? (shownByInspector ? (rows.find((row) => row.dataset.lineKey === shownByInspector) ?? null) : null);
   working.current = { held: heldNow(), row: focused ? rows.indexOf(focused) : -1, keys: rows.map((row) => row.dataset.lineKey ?? "") };
   const focusKey = useRef<{ key: string; tries: number } | null>(null);
 
@@ -621,6 +623,8 @@ export function useLineTitle(): (line: QueueLine) => string {
       }
       case "intake_review":
         return tn("queue.intake_review.title", line.count, { source: line.subject ?? line.source ?? "" });
+      case "batches":
+        return tn("queue.batches.title", line.count);
       case "send": {
         const q = (line.questions ?? []).length;
         const a = (line.actions ?? []).length;
@@ -772,7 +776,7 @@ function QueueRow(props: {
   const what = titleWords(line.title);
   const title = lineTitle(line);
   // The line's words, on one line (it is cut with an ellipsis, and the inspector has the rest). What came from outside is
-  // tagged "Outside" in the pill column instead (below); its full phrase is the tag's name.
+  // said once in the inspector, never on a line.
   const meta = (...parts: Array<string | null | undefined | false>): ReactNode => parts.filter(Boolean).join(" · ");
   const d: Described = (() => {
     switch (line.kind) {
@@ -932,41 +936,34 @@ function QueueRow(props: {
             : [];
         // A line that holds one item is titled by it, so the counted sentence moves to the words under the title.
         const single = title !== reviewCount(line);
+        // Look over opens the batch in the details pane, where each item has "Not right" and "All looks good" is at the end:
+        // nothing leaves Today until the person says so there.
         return {
           pill: t("queue.pill.review"),
           tone: "neutral",
           meta: meta(single && reviewCount(line), what, held > 0 && tn("queue.review.waits", held), deciding.length > 0 && tn("queue.review.waits_decide", deciding.length)),
-          primary: {
-            label: t("queue.act.all_good"),
-            run: () => void act(() => api.looksGood(line.changeset ?? ""), () => ({ message: t("toast.looks_good"), many: (n) => tn("toast.looks_good_many", n), undo: () => api.reopen(line.changeset ?? "") })),
-          },
-          menu: [show, ...goToDeciding, { id: "send-back", label: t("changes.send_back"), run: () => select(true, true) }],
+          primary: { label: t("queue.act.look_over") },
+          menu: [...goToDeciding, { id: "send-back", label: t("changes.send_back"), run: () => select(true, true) }],
         };
       }
-      case "intake_review": {
-        // Opening the list is what clears the line (Undo puts it back); the list narrows to what the source's intake found.
-        const source = line.source ?? "";
-        const label = line.subject ?? source;
-        const seen = () =>
-          act(
-            () => api.intakeSeen(source),
-            (done) => ({ message: t("queue.intake_review.seen_done", { source: label }), undo: () => api.intakeUnseen(source, done.requests) }),
-          );
+      case "intake_review":
+        // What a new source's first read found: one line for the source, opened in the details pane like any batch.
         return {
           pill: t("queue.pill.review"),
           tone: "neutral",
           meta: meta(intakeWords(line)),
-          primary: {
-            label: t("queue.intake_review.open"),
-            run: () => {
-              props.handlers.onOpenView?.("work/changed");
-              revealOrKeep("intake", source);
-              void seen();
-            },
-          },
-          menu: [{ id: "seen", label: t("queue.intake_review.seen"), run: () => void seen() }],
+          primary: { label: t("queue.act.look_over") },
+          menu: [],
         };
-      }
+      case "batches":
+        // Batches left unopened, as one line, oldest first.
+        return {
+          pill: t("queue.pill.review"),
+          tone: "neutral",
+          meta: meta(line.at && t("queue.batches.oldest", { date: day(line.at.slice(0, 10)) })),
+          primary: { label: t("queue.act.look_over") },
+          menu: [],
+        };
       case "send": {
         const q = (line.questions ?? []).length;
         const a = (line.actions ?? []).length;
@@ -1266,7 +1263,6 @@ function QueueRow(props: {
       aria-describedby={line.notes ? `${detailId}-notes` : undefined}
       role="group"
       pill={d.pill ? <Pill tone={d.tone}>{d.pill}</Pill> : undefined}
-      tag={line.untrusted ? <OutsideTag /> : undefined}
       title={
         <>
           <span id={`${detailId}-title`} title={line.notes ?? undefined}>

@@ -97,10 +97,6 @@ export const api = {
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
   /** The go for a newly added source's intake: every item held for it starts. */
   intakeGo: (source: string) => call<S["IntakeStarted"]>("POST", `watch/${id(source)}/intake/go`),
-  /** Opening what a newly added source's intake found: its results show on Today one by one again. */
-  intakeSeen: (source: string) => call<S["IntakeSeen"]>("POST", `watch/${id(source)}/intake/seen`),
-  intakeUnseen: (source: string, requests: string[]) =>
-    call<S["IntakeUnseen"]>("POST", `watch/${id(source)}/intake/unseen`, { requests }),
   /** What looking further back would take in and cost, before anything is read. */
   lookBackPreview: (source: string, days: number) =>
     call<S["LookBackView"]>("GET", `watch/${id(source)}/look-back?days=${days}`),
@@ -227,6 +223,9 @@ export const api = {
   keepArea: (word: string, name?: string) => call<S["AreaKept"]>("POST", "areas/keep", { word, name: name || null }),
   looksGood: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/looks-good`),
   reopen: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/reopen`),
+  /** "All looks good" for a batch on Today: every changeset of it marked reviewed, one signal for each request. */
+  confirmBatch: (changesets: string[]) => call<S["BatchConfirmed"]>("POST", "changesets/confirm", { changesets }),
+  unconfirmBatch: (done: S["BatchConfirmed"]) => call<S["BatchUnconfirmed"]>("POST", "changesets/unconfirm", done),
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),
   sendBack: (cs: string, note: string, undoFirst = true) =>
     call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, undoFirst ? { note } : { note, undo_first: false }),
@@ -413,6 +412,9 @@ export const api = {
   /** The form of the brief that is due now, or the one named: the morning brief, the evening wrap-up or the Monday briefing. */
   brief: (form?: string) => call<S["BriefView"]>("GET", form ? `brief?form=${id(form)}` : "brief"),
   /** Confirm the goals for this week as the person's own; the answer holds what they replaced, which is Undo. */
+  /** Dismiss the offer of this week's briefing, or take that back. */
+  dismissWeekly: () => call<S["Ok"]>("POST", "brief/weekly/dismiss"),
+  undismissWeekly: () => call<S["Ok"]>("POST", "brief/weekly/undismiss"),
   putGoals: (body: S["BriefGoalsIn"]) => call<S["BriefGoalsKept"]>("PUT", "brief/goals", body),
   /** Ask the assistant to draft this week's message to whoever the person reports to. */
   askBriefMessage: (body: S["BriefMessageAsk"]) => call<S["HandedOver"]>("POST", "brief/message", body),

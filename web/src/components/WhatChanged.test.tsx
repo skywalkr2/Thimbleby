@@ -667,6 +667,21 @@ describe("the history: rows are past tense, have no button, and keep their choic
     expect(within(row).getByText(/Recorded 1 thing/)).toBeInTheDocument();
   });
 
+  test("what needed no look reads Filed, and a batch the person said looks good reads Checked", async () => {
+    fakeApi({
+      "GET changes": () => [
+        change("REQ-1", { review: "filed", source_title: "Email from the printer" }),
+        change("REQ-2", { review: "checked", state: "done", source_title: "Email from the framer" }),
+      ],
+    });
+    renderApp(<WhatChanged />);
+    const filed = await screen.findByRole("listitem", { name: "Email from the printer" });
+    expect(within(filed).getByText("Filed")).toBeInTheDocument();
+    expect(within(filed).queryByText("Not yet checked")).toBeNull();
+    const checked = await screen.findByRole("listitem", { name: "Email from the framer" });
+    expect(within(checked).getByText("Checked")).toBeInTheDocument();
+  });
+
   test("a correction the menu makes still records its signal: Send back goes through the same route with its note", async () => {
     const user = userEvent.setup();
     const calls = fakeApi({ "GET changes": () => [change("REQ-1")], "POST changesets/CS-REQ-1/send-back": () => ({ request: "REQ-2" }) });

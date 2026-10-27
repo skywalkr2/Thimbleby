@@ -13,11 +13,11 @@ then:
 - at: '2026-10-25T20:00'
   create: {kind: event, id: EVT-91, rule: calendar, fields: {title: Client review, start: '2026-10-26T15:00:00-05:00', end: '2026-10-26T16:00:00-05:00', invitation: true, organizer: {address: organizer@example.com, name: Kofi Mensah-Hale}, trust: untrusted, source: SRC-0, key: review-1}}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'send:PER-3'}
   changed:
   - {kind: invitation, change: new, text: Client review, person_name: Kofi Mensah-Hale, day: '2026-10-26', at: '15:00', link: [event, EVT-91]}
   risk:
   - {kind: capacity, minutes: 100, needed_minutes: 150, count: 1, queue: capacity}
   - {kind: own_due, state: today, text: Send the proposal, person: PER-3, day: '2026-10-26', days: 0, link: [action, ACT-91]}
   - {kind: own_due, state: today, text: Sort the receipts, day: '2026-10-26', days: 0, link: [action, ACT-92]}
-  'yes':
-  - {kind: 'yes', change: send, person: PER-3, ready: true}

@@ -11,8 +11,8 @@ then:
 - at: '2026-10-28T07:30'
   news: {action: ACT-91, by: PER-3, text: Replied but did not say whether the quote includes travel}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'nudge:PER-3'}
   changed:
   - {kind: news, text: Send the quote, person: PER-3, detail: Replied but did not say whether the quote includes travel}
-  'yes':
-  - {kind: 'yes', change: nudge, person: PER-3, ready: true}
 left: [meeting_dependency]

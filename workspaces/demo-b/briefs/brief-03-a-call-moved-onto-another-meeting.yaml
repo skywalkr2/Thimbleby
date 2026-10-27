@@ -12,10 +12,9 @@ then:
 - at: '2026-10-20T20:00'
   update: {kind: event, id: EVT-91, rule: calendar, fields: {start: '2026-10-21T10:00:00-04:00', end: '2026-10-21T11:00:00-04:00'}}
 expect:
+  today:
+  - {kind: on_today, change: need, count: 1, queue: 'send:PER-4'}
+  - {kind: on_today, change: clash, count: 1, queue: 'clash:EVT-91:EVT-92:2026-10-21'}
   changed:
   - {kind: invitation, change: moved, text: Call about the schedule, person_name: Sam Rivera, day: '2026-10-21', at: '10:00', from_day: '2026-10-21', from_at: '14:00', link: [event, EVT-91]}
-  risk:
-  - {kind: clash, text: Call about the schedule, other: Dentist appointment, minutes: 30, day: '2026-10-21', at: '10:30'}
-  'yes':
-  - {kind: 'yes', change: send, person: PER-4, ready: true, queue: 'send:PER-4'}
 left: [meeting_dependency]

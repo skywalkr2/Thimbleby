@@ -14,13 +14,14 @@ import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
 import { ReassignForm } from "./ReassignAction";
 import { SideChoose } from "./SideChoose";
+import { BatchDetail } from "./BatchDetail";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
 import { ProjectEndingDetail } from "./ProjectEndingDetail";
 import { ChangeRow, OpRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "send", "nudge", "escalate", "promise"]);
+const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "intake_review", "batches", "send", "nudge", "escalate", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
   // The line that asks which side items belong to opens the list of sides to pick from.
@@ -37,6 +38,7 @@ export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenG
           {props.line.notes}
         </p>
       )}
+      <OutsideNote line={props.line} />
       <MadeBy line={props.line} />
       <LineItems {...props} />
     </>
@@ -71,9 +73,29 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
       return <SideChoose />;
     case "promise":
       return <PromiseWhy action={(line.actions ?? [])[0] ?? ""} />;
+    case "review":
+    case "intake_review":
+    case "batches":
+      return <BatchDetail line={line} sendBack={props.sendBack} />;
     default:
       return <ChangeDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} />;
   }
+}
+
+/** What came in from outside is said once, here, and not on every line of a list: the assistant reads it as information and
+ * never as instructions (the packet keeps the marking, and links show their real domain). */
+function OutsideNote(props: { line: QueueLine }) {
+  const { t } = useWords();
+  const { line } = props;
+  const parts = line.kind === "batches" ? (line.parts ?? []) : [line];
+  const outside = parts.some((part) => part.untrusted || (part.items ?? []).some((item) => item.untrusted));
+  if (!outside) return null;
+  const kind = (parts.find((part) => part.untrusted)?.title ?? (parts[0]?.items ?? [])[0]?.title ?? line.title)?.kind;
+  return (
+    <p className="hint" data-outside-note="">
+      {kind === "email" ? t("queue.detail.outside.email") : kind === "calendar" ? t("queue.detail.outside.calendar") : t("queue.detail.outside.other")}
+    </p>
+  );
 }
 
 function Gone() {

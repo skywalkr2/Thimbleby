@@ -2398,6 +2398,13 @@ class TodaySettings(ConfigModel):
         description="One of the person's own to-dos with no date that nothing has changed for this many days is stale, "
         "and Today asks whether to keep it. Zero turns the line off.",
     )
+    fold_batches_after_days: int = Field(
+        3,
+        ge=0,
+        le=365,
+        description="Batches of the assistant's work to look over that have waited this many days fold into one line, "
+        '"3 batches to look over", oldest first, once there are two or more. Zero never folds them.',
+    )
     top_priorities_lines: int = Field(
         5,
         ge=1,

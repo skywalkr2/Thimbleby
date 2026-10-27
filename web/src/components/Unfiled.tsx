@@ -84,9 +84,7 @@ export function Unfiled() {
                 <SafeText text={item.text} />
               </label>
             }
-            meta={[item.created_at ? t("unfiled.filed_on", { when: whenText(item.created_at) }) : "", item.trust === "untrusted" ? t("setup.note_outside") : ""]
-              .filter(Boolean)
-              .join(" · ")}
+            meta={item.created_at ? t("unfiled.filed_on", { when: whenText(item.created_at) }) : ""}
             primary={
               <Button size="sm" variant="primary" aria-expanded={filing === key(item)} onClick={() => setFiling(filing === key(item) ? null : key(item))}>
                 {t("unfiled.file_under")}

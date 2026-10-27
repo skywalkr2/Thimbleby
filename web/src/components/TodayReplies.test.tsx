@@ -83,6 +83,12 @@ test("a reply owed is one line with who it is to, the message's subject and the 
   expect(within(row).getByRole("button", { name: "Copy reply" })).toBeInTheDocument();
 });
 
+test("a reply draft says where it came from at the step that copies or sends it", async () => {
+  show([reply()]);
+  const row = await rowOf();
+  expect(within(row).getByText("From an email; check the address before you send.")).toBeInTheDocument();
+});
+
 test("a reply to someone who is nobody known is to the sender as the message writes it", async () => {
   show([reply({ person: null, person_name: null, sender: "Zed Alder" })]);
   expect(await rowOf("Reply to Zed Alder: Interior proofs")).toBeInTheDocument();

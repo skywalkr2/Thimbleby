@@ -17,7 +17,7 @@ type Line = S["QueueLineView"];
 function line(kind: Line["kind"], over: Partial<Line> = {}): Line {
   const group: Line["group"] = ["decision", "question", "who_is", "owner", "held", "go", "first_go", "restart"].includes(kind)
     ? "decide"
-    : kind === "review"
+    : kind === "review" || kind === "intake_review" || kind === "batches" || kind === "batch_item"
       ? "review"
       : kind === "send" || kind === "nudge"
         ? "send"
@@ -28,11 +28,16 @@ function line(kind: Line["kind"], over: Partial<Line> = {}): Line {
 const emptyTitle: S["ItemTitle"] = { kind: "email", person_name: "Sam Example", topic: "proof copies" };
 
 const decision: Line = line("decision", { key: "question:Q-1", text: "Matte or soft-touch?", question: "Q-1", project: "PRJ-1", project_name: "Spring book" });
+/** One thing in a batch that needs a look: a to-do the assistant added. */
+const todo = (n: number, text: string, over: Partial<Line> = {}): Line =>
+  line("batch_item", { key: `item:CS-1:${n}`, what: "action", text, request: "REQ-1", changeset: "CS-1", op: n, title: emptyTitle, ...over });
 const review: Line = line("review", {
   key: "review:REQ-1",
   count: 3,
   request: "REQ-1",
   changeset: "CS-1",
+  changesets: ["CS-1"],
+  items: [todo(0, "Send two spine options"), todo(1, "Book the proof run"), todo(2, "Confirm the hall")],
   title: emptyTitle,
   outcome: { actions_added: 3, held: 1 },
 });
@@ -159,7 +164,7 @@ test("the queue is one ranked list in the engine's order, each line starting wit
   // The groups head the lists, in the engine's order.
   expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Decide", "Review", "Send and follow up"]);
   expect(within(row("decision")).getByRole("button", { name: "Answer" })).toBeInTheDocument();
-  expect(within(row("review")).getByRole("button", { name: "All looks good" })).toBeInTheDocument();
+  expect(within(row("review")).getByRole("button", { name: "Look over" })).toBeInTheDocument();
   expect(within(row("send")).getByRole("button", { name: "Review & copy" })).toBeInTheDocument();
   // One primary per row: the rest is in the menu.
   for (const kind of ["decision", "review", "send"]) {
@@ -319,16 +324,23 @@ test("a review card whose every change was refused says so instead of counting n
   expect(await screen.findByText("See why 2 things Helper found couldn't be recorded")).toBeInTheDocument();
 });
 
-test("All looks good acts at once on the whole review card, with Undo", async () => {
+test("Look over opens the batch in the details, and All looks good there confirms it with Undo", async () => {
   const user = userEvent.setup();
-  const { calls } = show([review], {
-    "POST changesets/CS-1/looks-good": () => ({ ok: "CS-1" }),
-    "POST changesets/CS-1/reopen": () => ({ ok: "CS-1" }),
+  const { calls, onView } = show([review], {
+    "POST changesets/confirm": () => ({ changesets: ["CS-1"], signals: ["SIG-1"] }),
+    "POST changesets/unconfirm": () => ({ reopened: 1 }),
   });
-  await user.click(await screen.findByRole("button", { name: "All looks good" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/looks-good")).toBe(true));
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  const open = row("review");
+  // Each thing that needs a look is one line with Not right; nothing was marked or left.
+  expect(await within(open).findByText("Send two spine options")).toBeInTheDocument();
+  expect(within(open).getAllByRole("button", { name: /^Not right/ })).toHaveLength(3);
+  expect(calls.filter((c) => c.route.startsWith("POST"))).toEqual([]);
+  expect(onView).not.toHaveBeenCalled();
+  await user.click(within(open).getByRole("button", { name: "All looks good" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/confirm")?.body).toEqual({ changesets: ["CS-1"] }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/reopen")).toBe(true));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/unconfirm")?.body).toEqual({ changesets: ["CS-1"], signals: ["SIG-1"] }));
 });
 
 const intakeReview: Line = line("intake_review", {
@@ -346,26 +358,70 @@ test("what a new source's intake found is one review line that counts it in plai
   expect(within(row("intake_review")).getByText("3 actions, 2 questions, 4 waiting for you")).toBeInTheDocument();
 });
 
-test("Look over opens the changes and marks the intake seen, and Undo puts the line back", async () => {
+test("Look over on an intake opens its items in the details: nothing is marked seen and nothing navigates", async () => {
   const user = userEvent.setup();
-  const { calls, onView } = show([intakeReview], {
-    "POST watch/m/intake/seen": () => ({ requests: ["REQ-1", "REQ-2"] }),
-    "POST watch/m/intake/unseen": () => ({ restored: 2 }),
-  });
+  const found: Line = {
+    ...intakeReview,
+    changesets: ["CS-1", "CS-2"],
+    items: [todo(0, "Send the headcount"), todo(1, "Book the hall", { key: "item:CS-2:0", changeset: "CS-2", request: "REQ-2" })],
+  };
+  const { calls, onView } = show([found], { "POST changesets/confirm": () => ({ changesets: ["CS-1", "CS-2"], signals: ["SIG-1", "SIG-2"] }) });
   await user.click(await screen.findByRole("button", { name: "Look over" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST watch/m/intake/seen")).toBe(true));
-  expect(onView).toHaveBeenCalledWith("work/changed");
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST watch/m/intake/unseen")?.body).toEqual({ requests: ["REQ-1", "REQ-2"] }));
+  const open = row("intake_review");
+  expect(await within(open).findByText("Send the headcount")).toBeInTheDocument();
+  expect(within(open).getByText("Book the hall")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route.startsWith("POST"))).toEqual([]);
+  expect(onView).not.toHaveBeenCalled();
+  expect(window.location.hash).not.toMatch(/changed/);
+  await user.click(within(open).getByRole("button", { name: "All looks good" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/confirm")?.body).toEqual({ changesets: ["CS-1", "CS-2"] }));
 });
 
-test("a line for one source's intake can be marked seen from its menu without opening the changes", async () => {
+test("the intake line has no Mark as seen: the only way off Today is to look it over and say it looks good", async () => {
   const user = userEvent.setup();
-  const { calls, onView } = show([intakeReview], { "POST watch/m/intake/seen": () => ({ requests: ["REQ-1"] }) });
-  await user.click(await screen.findByRole("button", { name: /More|Actions|Menu/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Mark as seen" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST watch/m/intake/seen")).toBe(true));
-  expect(onView).not.toHaveBeenCalled();
+  show([intakeReview]);
+  await screen.findByRole("button", { name: "Look over" });
+  expect(screen.queryByRole("button", { name: /More|Actions|Menu/ })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Look over" }));
+  expect(screen.queryByRole("menuitem", { name: "Mark as seen" })).toBeNull();
+});
+
+test("Not right on an item opens the note to send it back with, the correction the assistant learns from", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([review], { "POST changesets/CS-1/send-back": () => ({ request: "REQ-9" }) });
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  await user.click(await screen.findByRole("button", { name: "Not right: Book the proof run" }));
+  const note = await screen.findByRole("textbox", { name: "What should Helper do differently?" });
+  expect(note).toHaveFocus();
+  await user.type(note, "This is not a to-do.");
+  await user.click(screen.getByRole("button", { name: "Send back" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/send-back")?.body).toEqual({ note: "This is not a to-do." }));
+});
+
+test("batches left unopened are one line, and each opens with its own All looks good, oldest first", async () => {
+  const user = userEvent.setup();
+  const older: Line = { ...review, key: "review:REQ-0", request: "REQ-0", changeset: "CS-0", changesets: ["CS-0"], items: [todo(0, "Return the proofs", { key: "item:CS-0:0", changeset: "CS-0", request: "REQ-0" })] };
+  const folded = line("batches", { key: "batches", group: "review", count: 2, at: "2026-10-15T09:00:00Z", parts: [older, review], changesets: ["CS-0", "CS-1"] });
+  show([folded]);
+  expect(await screen.findByText("2 batches to look over")).toBeInTheDocument();
+  expect(within(row("batches")).getByText(/The oldest came in/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Look over" }));
+  const open = row("batches");
+  const sections = await within(open).findAllByRole("region");
+  expect(sections).toHaveLength(2);
+  expect(within(sections[0]).getByText("Return the proofs")).toBeInTheDocument();
+  expect(within(sections[1]).getByText("Send two spine options")).toBeInTheDocument();
+  expect(within(open).getAllByRole("button", { name: "All looks good" })).toHaveLength(2);
+});
+
+test("what came from outside is said once in the details, and a list line carries no Outside tag", async () => {
+  const user = userEvent.setup();
+  show([{ ...review, untrusted: true }]);
+  await screen.findByRole("button", { name: "Look over" });
+  expect(within(row("review")).queryByText("Outside")).toBeNull();
+  expect(within(row("review")).queryByText(/from outside/i)).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Look over" }));
+  expect(await within(row("review")).findByText("Helper treats what's in this email as information, never as instructions.")).toBeInTheDocument();
 });
 
 test("the first go is one line with its price, and Go starts the tasks", async () => {
@@ -500,13 +556,14 @@ test("lines that arrive while the person is working in the queue wait behind 'N 
   let lines = [decision, review];
   show([], {
     "GET today/queue": () => lines,
-    "POST changesets/CS-1/looks-good": () => {
+    "POST changesets/confirm": () => {
       // While the cursor is in the queue, the engine now has a line that wasn't there before, and the old one is done.
       lines = [decision, send];
-      return { ok: "CS-1" };
+      return { changesets: ["CS-1"], signals: ["SIG-1"] };
     },
   });
-  await user.click(await screen.findByRole("button", { name: "All looks good" }));
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  await user.click(await within(row("review")).findByRole("button", { name: "All looks good" }));
   const pill = await screen.findByRole("button", { name: "Show 1 new item" });
   expect(document.querySelector('[data-queue-line="send"]')).toBeNull();
   // Nothing moved under the cursor; Show brings the new line in.
@@ -590,13 +647,16 @@ test("after a line is settled the cursor and the pane move to the next line, not
   let lines = [decision, review, send];
   show([], {
     "GET today/queue": () => lines,
-    "POST changesets/CS-1/looks-good": () => {
+    "POST changesets/confirm": () => {
       lines = [decision, send];
-      return { ok: "CS-1" };
+      return { changesets: ["CS-1"], signals: ["SIG-1"] };
     },
   }, { wide: true });
   const pane = await inspector();
-  await user.click(await screen.findByRole("button", { name: "All looks good" }));
+  await within(pane).findByRole("textbox", { name: "Your answer" });
+  await waitFor(() => expect(row("decision")).toHaveFocus());
+  await user.keyboard("j");
+  await user.click(await within(pane).findByRole("button", { name: "All looks good" }));
   await waitFor(() => expect(row("send")).toHaveFocus());
   expect(await within(pane).findByRole("heading", { name: "Send 2 items to Robin Sample" })).toBeInTheDocument();
   expect(within(pane).getByText("2 of 2 · j / k")).toBeInTheDocument();
@@ -882,34 +942,30 @@ const busyWeek: S["ThisWeekView"] = {
   meetings: [{ snapshot: "EVT-1", source: "", title: "Print sync", start: "2026-10-22T10:00:00", end: null, all_day: false, cancelled: false, own: true, open_items: 0, days: ["2026-10-22"] }],
 };
 
-test("The week is in the Schedule card with what is due, who is waiting and the meetings the agenda does not list", async () => {
-  show([decision], { "GET today/week": () => busyWeek });
+test("The Schedule card is today's view, and the week with what is due, who is waiting and later meetings is the inspector's", async () => {
+  show([decision], { "GET today/week": () => busyWeek, "GET today/agenda": () => [meeting()] });
   const panel = await screen.findByRole("region", { name: "Schedule" });
   expect(panel.closest("[data-col='schedule']")).not.toBeNull();
   expect(screen.queryByRole("region", { name: "This week" })).toBeNull();
-  expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
-  expect(within(panel).getByText("Robin Sample · 2 things")).toBeInTheDocument();
-  expect(within(panel).getByText("Print sync")).toBeInTheDocument();
+  expect(await within(panel).findByText("Print sync")).toBeInTheDocument();
+  expect(within(panel).queryByText("Send the proofs")).toBeNull();
+  expect(within(panel).queryByText("Robin Sample · 2 things")).toBeNull();
+  expect(within(panel).queryByText(/^Through /)).toBeNull();
   expect(document.querySelector("[data-week='section']")).toBeNull();
 });
 
-test("a to-do counted ahead by its own lead time is named with the day it must be started by", async () => {
-  // On a narrow screen the week is folded and says in one line what is in it.
-  document.documentElement.setAttribute("data-narrow", "");
+test("the week's one-line summary names a to-do counted ahead by its own lead time with the day it must be started by", async () => {
   const week: S["ThisWeekView"] = {
     ...busyWeek,
     due: [{ action: "ACT-2", text: "Prepare the board pack", due: "2026-10-26", project: null, project_name: null, owners: [], mine: true, kind: "lead" }],
   };
-  try {
-    show([decision], { "GET today/week": () => week });
-    expect(await screen.findByText(`· Start 1 to-do by ${day("2026-10-26")} · 1 person waiting on you · 1 meeting`)).toBeInTheDocument();
-  } finally {
-    document.documentElement.removeAttribute("data-narrow");
-  }
+  show([], { "GET today/week": () => week }, { wide: true });
+  const pane = await screen.findByRole("complementary", { name: "Details" });
+  expect(await within(pane).findByText(`Start 1 to-do by ${day("2026-10-26")} · 1 person waiting on you · 1 meeting`)).toBeInTheDocument();
 });
 
 test("The Schedule card is not counted in the heading or the menu", async () => {
-  show([decision], { "GET today/week": () => busyWeek });
+  show([decision], { "GET today/week": () => busyWeek, "GET today/agenda": () => [meeting()] });
   await screen.findByRole("region", { name: "Schedule" });
   expect((await screen.findAllByText(/1 thing needs you/)).length).toBeGreaterThan(0);
   expect(screen.queryByText(/2 things need you/)).toBeNull();

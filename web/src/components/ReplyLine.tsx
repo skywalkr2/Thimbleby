@@ -123,6 +123,10 @@ export function ReplyDraft(props: { line: Line }) {
         <>
           <span className="hint">{t(props.line.reply_reviewed ? "queue.reply.reviewed" : "queue.reply.draft")}</span>
           <p className="reply-text">{draft}</p>
+          {/* A reply answers an email, so the address it goes to came from one: said where the person copies or sends it. */}
+          <span className="hint" data-outside-step="">
+            {t("outside.step.send")}
+          </span>
         </>
       ) : (
         <span className="hint">{t("queue.reply.no_draft")}</span>

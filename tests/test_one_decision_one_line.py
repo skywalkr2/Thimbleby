@@ -16,9 +16,9 @@ from engine.storage import Store
 from engine.today_queue import queue
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B
-from tests.test_corrections import NOW, other_of
+from tests.test_corrections import NOW, other_of, pm_of
 from tests.test_held_ask import held_drop
-from tests.test_hold_drop_fold import _TEST, OPEN, RAW, an_action, drop_op, hold_op
+from tests.test_hold_drop_fold import _TEST, OPEN, RAW, drop_op
 
 
 @pytest.fixture
@@ -54,6 +54,16 @@ def ran(env, ops):
     return process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
 
 
+def add_op(cfg, text="Send the proof to the printer"):
+    """A new to-do the assistant adds: what needs a look, where a note or a hold is filed quietly."""
+    return {
+        "op": "action.add",
+        "text": text,
+        "owners": [pm_of(cfg)],
+        "evidence": {"quote": "The printer is waiting on the proof"},
+    }
+
+
 def lines_of(env, kind):
     ws, cfg, store = env
     return [line for line in queue(ws, store, cfg, NOW) if line.kind == kind]
@@ -69,14 +79,13 @@ def test_a_change_holding_only_a_held_op_has_no_review_line_and_one_decide_line(
 def test_a_review_line_leaves_out_the_held_op_and_says_how_many_wait_under_decide(env):
     _, cfg, store = env
     action = told_about(env)
-    note = {"op": "note", "text": "The printer is waiting on the proof."}
-    cs_id = ran(env, [drop_op(action), note])
+    cs_id = ran(env, [drop_op(action), add_op(cfg)])
     statuses = [o["status"] for o in store.read().get("changeset", cs_id).data["ops"]]
     assert statuses == ["held", "applied"]
     (review,) = [line for line in lines_of(env, "review") if line.changeset == cs_id]
     (held,) = [line for line in lines_of(env, "held") if line.changeset == cs_id]
-    assert review.count == 1, "the line counts what was done, not what waits"
-    assert review.outcome.get("held", 0) == 0 and review.outcome == {"notes": 1}
+    assert review.count == 1, "the line counts what needs a look, not what waits"
+    assert review.outcome.get("held", 0) == 0 and review.outcome == {"actions_added": 1}
     assert review.deciding == [held.key], "it links to the line the held op is asked on"
     assert review.subject and "printer" in review.subject.lower()
 
@@ -86,7 +95,7 @@ def test_no_item_is_on_two_lines(env):
     (the applied ones). No op is on two lines, and a review line's own ops are never the ones another line asks."""
     ws, cfg, store = env
     action = told_about(env)
-    ran(env, [drop_op(action), {"op": "note", "text": "The printer is waiting on the proof."}])
+    ran(env, [drop_op(action), add_op(cfg)])
     on_a_line: dict[tuple[str, int], str] = {}
     lines = queue(ws, store, cfg, NOW)
     for line in lines:
@@ -103,9 +112,9 @@ def test_no_item_is_on_two_lines(env):
 
 
 def test_looks_good_never_settles_a_held_op(env):
-    ws, cfg, store = env
+    _, cfg, store = env
     action = told_about(env)
-    cs_id = ran(env, [drop_op(action), {"op": "note", "text": "The printer is waiting on the proof."}])
+    cs_id = ran(env, [drop_op(action), add_op(cfg)])
     looks_good(store, cs_id)
     outcomes = store.read().get("changeset", cs_id).data["ops"]
     assert [o["status"] for o in outcomes] == ["held", "applied"]
@@ -127,17 +136,13 @@ def test_a_held_line_carries_the_reason_it_waits_in_todays_words_and_where_it_ca
 
 def test_a_review_line_for_one_thing_says_what_was_done_and_to_what(env):
     _, cfg, store = env
-    action = an_action(cfg, mine=False)
-    cs_id = ran(env, [hold_op(action)])
+    cs_id = ran(env, [add_op(cfg)])
     assert [o["status"] for o in store.read().get("changeset", cs_id).data["ops"]] == ["applied"]
     (review,) = [line for line in lines_of(env, "review") if line.changeset == cs_id]
-    item = " ".join(store.read().get("action", action).data["text"].split())
-    assert review.did == {"op": "action.hold", "item": item}
+    assert review.did == {"op": "action.add", "item": "Send the proof to the printer"}
     assert review.deciding == []
     # More than one thing: no single account of what was done.
-    both = ran(
-        env, [hold_op(action, waiting="the proof"), {"op": "note", "text": "The printer is waiting on the proof."}]
-    )
+    both = ran(env, [add_op(cfg), add_op(cfg, "Tell the shop the proof dates")])
     (many,) = [line for line in lines_of(env, "review") if line.changeset == both]
     assert many.did is None and many.count == 2
 

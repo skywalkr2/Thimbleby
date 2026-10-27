@@ -1703,6 +1703,8 @@ def send_back(
                 "waiting": "With the assistant, next in line",
                 "created_at": now.isoformat(),
                 "previous": old.id,
+                # Redone work stays in the batch it was part of, so a correction never adds a line to Today.
+                "intake": old.data.get("intake"),
             },
             _PM,
         ).id

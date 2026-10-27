@@ -218,6 +218,7 @@ FILES_ONLY = (
     "ui.today.agenda_days_ahead",
     "ui.today.schedule_days",
     "ui.today.stale_after_days",
+    "ui.today.fold_batches_after_days",
     "ui.today.top_priorities_lines",
     "ui.today.top_priorities_ahead_days",
     "ui.followups.action_due_within_days",

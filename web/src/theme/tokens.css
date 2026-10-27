@@ -117,8 +117,9 @@
   --row-py: var(--space-3); --row-px: var(--space-4); --row-gap: var(--space-3);
   --pill-h: 22px; --pill-px: 8px;
   --card-p: var(--space-4);
-  /* Where day and night differ in shape, not only in color: a row's action is tonal by day and filled by night, a pane's
-     edge is a soft shadow by day and a hairline by night, group headers lose their band by day, titles are lighter by day. */
+  /* Where day and night differ in shape, not only in color: a pane's edge is a soft shadow by day and a hairline by night,
+     group headers lose their band by day, titles are lighter by day. A row's action is tonal in both themes (night: the
+     deep brand fill with the light brand text), and the chosen line's is the one filled button of its list in both. */
   --row-action-bg: var(--accent-soft); --row-action-hover: var(--accent-soft); --row-action-text: var(--accent-text);
   --row-action-border: transparent;
   --row-action-strong-bg: var(--accent); --row-action-strong-hover: var(--accent-hover); --row-action-strong-text: var(--text-on-accent);
@@ -160,8 +161,9 @@
     --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
     --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
     --btn-border: var(--border-strong);
-    --row-action-bg: var(--accent); --row-action-hover: var(--accent-hover); --row-action-text: var(--text-on-accent);
-    --row-action-border: var(--accent);
+    --row-action-bg: var(--brand-900); --row-action-hover: var(--brand-900); --row-action-text: var(--brand-200);
+    --row-action-border: transparent;
+    --row-action-strong-bg: var(--accent); --row-action-strong-hover: var(--accent-hover); --row-action-strong-text: var(--text-on-accent);
     --pane-border: var(--border); --pane-edge: none;
     --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
     --row-title-weight: var(--weight-semibold);
@@ -198,8 +200,9 @@
   --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
   --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
   --btn-border: var(--border-strong);
-  --row-action-bg: var(--accent); --row-action-hover: var(--accent-hover); --row-action-text: var(--text-on-accent);
-  --row-action-border: var(--accent);
+  --row-action-bg: var(--brand-900); --row-action-hover: var(--brand-900); --row-action-text: var(--brand-200);
+  --row-action-border: transparent;
+  --row-action-strong-bg: var(--accent); --row-action-strong-hover: var(--accent-hover); --row-action-strong-text: var(--text-on-accent);
   --pane-border: var(--border); --pane-edge: none;
   --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
   --row-title-weight: var(--weight-semibold);

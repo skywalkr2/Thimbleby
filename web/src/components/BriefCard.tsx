@@ -64,6 +64,8 @@ const clock = (at: string | null | undefined) => (at ? wallTime(`T${at}`) : "");
 
 function heading(key: string, t: T): string {
   switch (key) {
+    case "today":
+      return t("brief.section.today");
     case "changed":
       return t("brief.section.changed");
     case "risk":
@@ -183,6 +185,11 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       return t("brief.line.chase_answer", { name, text });
     case "decision":
       return t("brief.line.decision", { text });
+    case "on_today": {
+      // What Today already has a line for is counted here, never listed again.
+      const n = line.count ?? 0;
+      return line.change === "late" ? tn("brief.line.on_today.late", n) : line.change === "clash" ? tn("brief.line.on_today.clash", n) : tn("brief.line.on_today.need", n);
+    }
     default:
       return text;
   }
@@ -226,8 +233,8 @@ function LineRow(props: { line: Line; queue: QueueLine | undefined; onOpenRecord
         </Button>
       )}
       {opens && (
-        <Button size="sm" className={styles.open} onClick={open}>
-          {t("brief.open")}
+        <Button size="sm" className={styles.open} onClick={open} aria-label={line.kind === "on_today" ? `${t("brief.show_lines")}: ${words(line, props.queue)}` : undefined}>
+          {line.kind === "on_today" ? t("brief.show_lines") : t("brief.open")}
         </Button>
       )}
     </li>
@@ -425,6 +432,7 @@ export function BriefCard(props: {
   onClosed?: () => void;
 }) {
   const { t, tn } = useWords();
+  const act = useAct();
   const [asked, setAsked] = useState<Form | null>(null);
   const [, shut] = useState(0);
   // On the phone the card is folded to its title until it is opened.
@@ -473,6 +481,20 @@ export function BriefCard(props: {
                 {showWords(f)}
               </Button>
             ))}
+          {/* The week's briefing is offered until it is used or dismissed; dismissing ends the offer for this week only. */}
+          {(form === "monday" || (!data.quiet && others.includes("monday"))) && (
+            <Button
+              variant="ghost"
+              onClick={() =>
+                void act(
+                  () => api.dismissWeekly(),
+                  () => ({ message: t("brief.weekly.dismissed"), undo: () => api.undismissWeekly() }),
+                ).then(() => setAsked(null))
+              }
+            >
+              {t("brief.weekly.dismiss")}
+            </Button>
+          )}
           <Button
             onClick={() => {
               closeFor(props.workspace, form, data.day);

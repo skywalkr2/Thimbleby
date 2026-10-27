@@ -20,6 +20,25 @@ aren't technical).
 **Impact:** Design 7.19 and 4.x (the notices settings); CLAUDE.md's boundary holds, since the names are data, not code.
 Change log: section 234.
 
+## 2026-10-28: The second pass's Today part: details settled while building it
+
+**Decided:** A batch is what one read of a source took in, or one hand-in; only a draft, a question, a decision, a new
+to-do and what is held or refused needs a look, and the rest is filed quietly (What changed reads "Filed"). "All looks good"
+records one `confirmed` signal for each request, a measure that Undo marks as taken back and that never teaches. Unopened
+batches fold after `ui.today.fold_batches_after_days` (3; files only). A send-back of an intake's item keeps the redo in the
+same batch, so a correction adds no line. The morning brief counts what Today already has instead of listing it, and its
+weekly form is offered until done or dismissed for the week, under a name that fits any day. The Schedule card is today's
+view and no longer carries the week's list (G22; the inspector keeps the week). Row actions are tonal in both themes; the
+line with the cursor or open in the pane has the filled one.
+
+**Decided by:** the main session, from the reviewer's findings G2, G9, G11, G12, G14 and G22 and the designer's answers F39,
+F42 and F43.
+
+**Why:** each is the smallest reading of the finding that holds the rule "no action on Today adds lines".
+
+**Impact:** Design 7.7, 6.32; the Schedule card is no longer "Agenda and This week merged" (U10). New core pieces: the
+`confirmed` signal kind, `week_plan.offer_dismissed_at` and the setting above. Change log: section 234.
+
 ## 2026-10-28: Every finding of the reviewer's second pass is built, with the designer's answers F39 to F46
 
 **Decided:** All of G1 to G23 of the second pass (`reviews/ui-ux-2026-10/review-f973493/`) and checks U13 to U18 are

@@ -44,7 +44,7 @@
 .todayText { margin: 0; overflow-wrap: anywhere; }
 .todaySub { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
 .todayActs { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }
-/* The line's action is tonal by day, like a row's (tokens.css). */
+/* The line's action is tonal, like a row's (tokens.css). */
 .todayActs :global([data-variant="primary"]:not(:disabled)) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
 .todayActs :global([data-variant="primary"]:not(:disabled):hover) { background: var(--row-action-hover); border-color: var(--row-action-border); }
 

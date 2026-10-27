@@ -25,7 +25,7 @@ from engine.storage import Store, WriteContext
 from engine.today_queue import queue
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
-from tests.test_corrections import NOW
+from tests.test_corrections import NOW, pm_of
 from tests.test_held_ask import held_drop
 from tests.test_hold_drop_fold import DROPPING, OPEN, RAW, drop_op, hold_op
 from tests.test_knowledge_records import apply, reasons, source
@@ -112,23 +112,35 @@ def test_an_op_whose_record_has_no_title_names_its_kind_in_words_never_its_id(en
     assert not ID.search(made(drop_op(gone)).describe() or "")
 
 
-def review_line(env):
-    """A run's hold of an action nobody was told about: it applies at once and waits for a look."""
+ADDED = "Send the proof to the printer"
+
+
+def add_op(cfg):
+    return {
+        "op": "action.add",
+        "text": ADDED,
+        "owners": [pm_of(cfg)],
+        "evidence": {"quote": "The printer is waiting on the proof"},
+    }
+
+
+def review_line(env, *, also_hold: bool = False):
+    """A run's new to-do, which applies at once and waits for a look (with `also_hold`, after a hold of an action nobody
+    was told about, which is filed quietly)."""
     ws, cfg, store = env
     action = next(a["id"] for a in OPEN if not a.get("told"))
-    set_responder(lambda task: json.dumps({"summary": "Held.", "ops": [hold_op(action)]}))
+    ops = [hold_op(action), add_op(cfg)] if also_hold else [add_op(cfg)]
+    set_responder(lambda task: json.dumps({"summary": "Done.", "ops": ops}))
     handed = hand_in(ws, store, pasted=RAW, now=NOW)
     cs_id = process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
-    (outcome,) = store.read().get("changeset", cs_id).data["ops"]
-    assert outcome["status"] == "applied", outcome
+    assert all(o["status"] == "applied" for o in store.read().get("changeset", cs_id).data["ops"])
     return action, next(line for line in queue(ws, store, cfg, NOW) if line.kind == "review")
 
 
-def test_a_review_line_and_a_held_line_are_titled_by_the_item_and_hold_no_id(env):
+def test_a_review_line_is_titled_by_the_item_and_holds_no_id(env):
     ws, cfg, store = env
-    action, line = review_line(env)
-    title = words(store.read().get("action", action).data)
-    assert line.subject and f"'{title}'" in line.subject and not ID.search(line.subject)
+    _, line = review_line(env)
+    assert line.subject == ADDED and not ID.search(line.subject)
     set_responder(None)
 
 
@@ -224,7 +236,7 @@ def old_label_row(store, action: str, cs_id: str) -> None:
 
 def test_the_sweep_rewords_an_old_label_from_the_record(env):
     ws, cfg, store = env
-    action, line = review_line(env)
+    action, line = review_line(env, also_hold=True)
     cs_id = line.changeset
     old_label_row(store, action, cs_id)
     assert queue(ws, store, cfg, NOW)  # the old label is what Today would show
@@ -234,7 +246,7 @@ def test_the_sweep_rewords_an_old_label_from_the_record(env):
     assert f"'{title}'" in label and not ID.search(label)
     assert outward.sweep_ids(store, cfg) == 0  # nothing left to do
     line = next(line for line in queue(ws, store, cfg, NOW) if line.kind == "review")
-    assert f"'{title}'" in line.subject and not ID.search(line.subject)
+    assert line.subject == ADDED and not ID.search(line.subject)
 
 
 def test_the_sweep_never_touches_a_title_that_holds_an_id(env):

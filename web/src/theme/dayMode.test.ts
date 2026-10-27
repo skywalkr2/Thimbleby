@@ -85,15 +85,15 @@ test("the day values are the reviewed ones, and decorative edges stay quiet", ()
   expect(contrast(light("--border"), light("--surface"))).toBeLessThan(1.3);
 });
 
-test("night mode keeps its values and its filled, bordered, banded look", () => {
+test("night mode keeps its values and its bordered, banded look, with its row actions tonal like the day's", () => {
   expect(dark["--canvas"]).toBe("var(--gray-950)");
   expect(dark["--text"]).toBe("#e8ebf1");
   expect(dark["--text-muted"]).toBe("#a7afbd");
   expect(dark["--surface-sunk"]).toBe("#1d2129");
   expect(dark["--border"]).toBe("var(--gray-800)");
   expect(dark["--btn-border"]).toBe("var(--border-strong)");
-  expect(dark["--row-action-bg"]).toBe("var(--accent)");
-  expect(dark["--row-action-text"]).toBe("var(--text-on-accent)");
+  expect(dark["--row-action-bg"]).toBe("var(--brand-900)");
+  expect(dark["--row-action-text"]).toBe("var(--brand-200)");
   expect(dark["--pane-border"]).toBe("var(--border)");
   expect(dark["--pane-edge"]).toBe("none");
   expect(dark["--band-bg"]).toBe("var(--canvas)");
@@ -155,4 +155,36 @@ test("links in the rail have no underline until the pointer or the keyboard is o
   expect(css).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\):is\(:hover, :focus-visible\) \{ text-decoration-line: underline; \}/);
   // A link inside a paragraph is running text.
   expect(css).toMatch(/\.rail p :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: underline; \}/);
+});
+
+test("night's row actions are tonal too: the deep brand fill with the light brand text, readable, and the chosen line's is the one filled button", () => {
+  expect(dark["--row-action-bg"]).toBe("var(--brand-900)");
+  expect(dark["--row-action-hover"]).toBe("var(--brand-900)");
+  expect(dark["--row-action-text"]).toBe("var(--brand-200)");
+  expect(dark["--row-action-border"]).toBe("transparent");
+  // A tonal action reads on its fill and the fill stands out from the surface it sits on.
+  expect(contrast(color("--row-action-text", dark), color("--row-action-bg", dark))).toBeGreaterThanOrEqual(AA);
+  expect(contrast(color("--row-action-bg", dark), color("--surface", dark))).toBeGreaterThan(1.1);
+  // The filled one, for the chosen line, is the accent with its own text, the same words by day and by night.
+  expect(dark["--row-action-strong-bg"]).toBe("var(--accent)");
+  expect(dark["--row-action-strong-text"]).toBe("var(--text-on-accent)");
+  expect(contrast(color("--row-action-strong-text", dark), color("--accent", dark))).toBeGreaterThanOrEqual(AA);
+  // The media block for the system theme says the same, so the choice of theme and the system's agree.
+  const media = tokens.slice(tokens.indexOf("@media (prefers-color-scheme: dark)"), tokens.indexOf(':root[data-theme="dark"] {'));
+  for (const name of ["--row-action-bg", "--row-action-hover", "--row-action-text", "--row-action-border", "--row-action-strong-bg"]) {
+    expect(media).toContain(`${name}: ${dark[name]}`);
+  }
+  // The shared styles draw the tonal one by default and the filled one for the chosen line, whichever theme's tokens they read.
+  const css = read("ui/Row.module.css");
+  expect(css).toMatch(/\.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-bg\)/);
+  expect(css).toMatch(/\.row:focus-within \.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-strong-bg\)/);
+  expect(read("styles.css")).toMatch(/\.line:focus-within > \.row > \.acts > \.btn\.primary:not\(:disabled\) \{[^}]*background: var\(--row-action-strong-bg\)/);
+});
+
+test("below 640px a row's actions sit under its title at full width", () => {
+  const css = read("ui/Row.module.css");
+  const phone = css.slice(css.indexOf("@media (max-width: 639.98px)"));
+  expect(phone).toMatch(/\.row, :global\(\[data-narrow\]\) \.row \{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
+  expect(phone).toMatch(/\.actions, :global\(\[data-narrow\]\) \.actions \{[^}]*grid-column: 1;[^}]*justify-content: flex-end/);
+  expect(phone).toMatch(/\[data-variant="primary"\][^{]*\{[^}]*flex: 1 1 auto/);
 });

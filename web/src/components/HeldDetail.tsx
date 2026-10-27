@@ -16,7 +16,10 @@ import styles from "./HeldDetail.module.css";
 import { ProjectProposalRow } from "./NextSteps";
 import { OpRow, SourcePanel } from "./WhatChanged";
 
-export function HeldDetail(props: { line: QueueLine }) {
+/** The parts of a line the decision reads: a held line on Today, or a held row inside a batch. */
+export type HeldLine = Pick<QueueLine, "changeset" | "op" | "held" | "request" | "title" | "waiting">;
+
+export function HeldDetail(props: { line: HeldLine }) {
   const { line } = props;
   const { t, has } = useWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });

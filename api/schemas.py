@@ -823,6 +823,12 @@ class ChangeItem(BaseModel):
         "from the send-back shows on this row too.",
     )
     changeset: ChangesetView | None
+    review: Literal["filed", "checked", "unchecked"] | None = Field(
+        None,
+        description="How the assistant's finished work reads in What changed: filed (nothing in it needed a look: "
+        "facts, sources and notes are filed quietly), checked (the person confirmed what did) or unchecked (still to "
+        "look over on Today); none while it is running, stopped or undone.",
+    )
     title: ItemTitle | None = Field(None, description="The item's title, by the title rule.")
     mail_item: str | None = Field(
         None, description="For work on a mail message the app is holding: its id, for 'Set aside' on the row."
@@ -838,6 +844,24 @@ class ChangeItem(BaseModel):
         "about, else its source's only one, else the one its changes name); none when it is about none or several, so "
         "the side filter shows it under every choice.",
     )
+
+
+class BatchConfirmIn(BaseModel):
+    changesets: list[str] = Field(min_length=1, description="The changesets of the batch the person looked over.")
+
+
+class BatchConfirmed(BaseModel):
+    changesets: list[str] = Field(description="The changesets marked reviewed, to send back to undo it.")
+    signals: list[str] = Field(description="The `confirmed` signals recorded, one for each request, to send back.")
+
+
+class BatchUnconfirmIn(BaseModel):
+    changesets: list[str]
+    signals: list[str] = Field(default_factory=list)
+
+
+class BatchUnconfirmed(BaseModel):
+    reopened: int
 
 
 class UndoReport(BaseModel):
@@ -2681,8 +2705,10 @@ class QueueLineView(BaseModel):
     label) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how
     far back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);
     `intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with
-    something to look over, `outcome` their results counted), one line in place of a line for each until the list is
-    opened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on
+    something to look over, `outcome` their results counted, `items` what needs a look), one line in place of a line
+    for each; the list opens on Today and "All looks good" confirms it (POST /api/changesets/confirm); `batches` is
+    the batches left unopened for `ui.today.fold_batches_after_days`, folded into one line (`count` of them, each in
+    `parts`, oldest first); `credential` is a key or sign-in that stops working on
     `due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and
     `places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model
     whose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`
@@ -2786,6 +2812,8 @@ class QueueLineView(BaseModel):
         "catch_up_go",
         "intake_go",
         "intake_review",
+        "batches",
+        "batch_item",
         "refused",
         "restart",
         "stuck",
@@ -2935,8 +2963,8 @@ class QueueLineView(BaseModel):
     questions: list[str] = Field(default_factory=list)
     outcome: dict[str, int] = Field(
         default_factory=dict,
-        description="What the assistant did, counted: actions_added, actions_closed, questions, notes, recorded, "
-        "people, projects, drafts, other; and held, refused.",
+        description="What needs a look, counted: actions_added, questions, drafts; and held, refused. Facts, sources "
+        "and notes are filed quietly and never counted.",
     )
     did: ReviewDid | None = Field(
         None,
@@ -2947,6 +2975,24 @@ class QueueLineView(BaseModel):
         default_factory=list,
         description="For a review line: the keys of the lines under Decide that ask about its own held ops, which the "
         "line leaves out of its count and the screen links to.",
+    )
+    what: Literal["action", "question", "draft"] | None = Field(
+        None, description="For a `batch_item`: whether it is a to-do, a question or a draft the assistant made."
+    )
+    items: list[QueueLineView] = Field(
+        default_factory=list,
+        description="For a batch to look over (review, intake_review): what in it needs a look, one `batch_item` line "
+        "for each (its `what` says which kind; `request`, `changeset` and `op` say where it came from) "
+        "and a `held` line for each thing that waits for the person's yes, answered where it is.",
+    )
+    parts: list[QueueLineView] = Field(
+        default_factory=list,
+        description="For `batches`: the review and intake_review lines folded into it, oldest first.",
+    )
+    changesets: list[str] = Field(
+        default_factory=list,
+        description='For a batch to look over, and `batches`: the changesets "All looks good" confirms '
+        "(POST /api/changesets/confirm, undone by POST /api/changesets/unconfirm).",
     )
     untrusted: bool = Field(False, description="Built from outside content.")
     estimate_usd: float | None = Field(
@@ -6690,7 +6736,9 @@ class BriefLineView(BaseModel):
     """One thing in a section of the morning brief, the evening wrap-up or the Monday briefing (design 6.32). The screen
     words it from its `kind`, with `change` or `state` when the kind has variants. `queue` is the key of the Today line
     the person opens (the lines that wait for their yes), `link` the record it opens. `ready` says a message is already
-    drafted for it, and `you` that the person themselves owns it or did it."""
+    drafted for it, and `you` that the person themselves owns it or did it. An `on_today` line is a count of what Today
+    already has lines for (`change` need, late or clash; `count` of them) that opens the first of those lines (`queue`):
+    the brief never lists a line Today has."""
 
     key: str
     kind: str

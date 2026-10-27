@@ -30,6 +30,7 @@ from engine import (
     release_hours,
     reminder_lines,
     reply_lines,
+    review_batches,
     running,
     sent_version,
     sides,
@@ -50,28 +51,6 @@ from engine.today import zone
 
 GROUPS = TODAY_GROUPS
 
-# What a changeset's ops did, by the outcome word the screen uses.
-_OUTCOME = {
-    "action.add": "actions_added",
-    "action.close": "actions_closed",
-    "question.add": "questions",
-    "note": "notes",
-    "fact": "recorded",
-    "event.add": "recorded",
-    "event.set": "recorded",
-    "series.add": "recorded",
-    "series.link": "recorded",
-    "agenda.add": "recorded",
-    "record.set": "recorded",
-    "record.log": "recorded",
-    "person.add": "people",
-    "project.add": "projects",
-    "project.role": "recorded",
-    "text.draft": "drafts",
-    "report.draft": "drafts",
-    "text.propose": "drafts",
-}
-
 
 @dataclass
 class Line:
@@ -84,7 +63,9 @@ class Line:
     quietly: its `count` items held together for one go, their total `estimate_usd`, `unpriced` how many have none and
     `days` how far back its mail was read, none for a source with no mail), intake_review (what was found in a newly
     added `source`: `count` items with something to look over and their results counted in `outcome`, which replace
-    the lines each would have had until the person opens the list), refused, restart (work held until the person
+    the lines each would have had; the list opens in the details pane, and "All looks good" there reviews it),
+    batches (batches left unopened for `ui.today.fold_batches_after_days`, folded into one line: `count` of them,
+    each a `review` or `intake_review` line in `parts`, oldest first), refused, restart (work held until the person
     restarts the app: `count` is how many requests wait), stuck (background work that stopped checking in:
     `waiting_since` is when it last did; the person restarts the app), handover (the synced folder can't be used until
     the person settles it: `state` is diverged, chosen or elsewhere and `text` the other computer), failed,
@@ -206,6 +187,13 @@ class Line:
     outcome: dict[str, int] = field(default_factory=dict)
     did: dict[str, str] | None = None
     deciding: list[str] = field(default_factory=list)
+    #: For a batch to look over (`review`, `intake_review`): what needs a look, one `batch_item` line for each (its
+    #: `what` is action, question or draft; a `held` line for what waits for the person's yes), and the changesets
+    #: "All looks good" confirms. For `batches`, the batch lines folded into it, oldest first, in `parts`.
+    what: str | None = None
+    items: list[Line] = field(default_factory=list)
+    parts: list[Line] = field(default_factory=list)
+    changesets: list[str] = field(default_factory=list)
     untrusted: bool = False
     estimate_usd: float | None = None
     unpriced: int = 0
@@ -379,7 +367,16 @@ def _everything(
     kinds = watched_kinds(reader)
     skip = list(cfg.language.title_skip)
 
+    titled: dict[tuple[int, int | None], Title] = {}
+
     def title(request: dict[str, Any], cs: dict[str, Any] | None) -> Title:
+        # A request's title is read once for all the lines and rows that name it.
+        key = (id(request), id(cs) if cs is not None else None)
+        if key not in titled:
+            titled[key] = _title(request, cs)
+        return titled[key]
+
+    def _title(request: dict[str, Any], cs: dict[str, Any] | None) -> Title:
         source = sources.get(request.get("source") or "")
         watched = (source or {}).get("watched") or {}
         head = head_of(ws.sources_dir, (source or {}).get("content_hash"))
@@ -394,6 +391,55 @@ def _everything(
             watched_kind=kinds.get((watched.get("source"), watched.get("key"))),
             subject=subject_of(reader, request) if source is None and request.get("origin") != "pm" else "",
         )
+
+    def held_line(req: Any, cs_id: str, cs: dict[str, Any], outcome: dict[str, Any]) -> Line:
+        """A held op as the question the person is asked: its line under Decide, and its row in a batch."""
+        return Line(
+            key=f"held:{cs_id}:{outcome['index']}",
+            group="decide",
+            kind="held",
+            text=outcome.get("label") or _op_text(outcome.get("op") or {}),
+            title=title(req.data, cs),
+            request=req.id,
+            changeset=cs_id,
+            op=outcome["index"],
+            waiting=held_ask.reason_of(outcome),
+            held=held_ask.describe(
+                reader,
+                people,
+                outcome.get("op") or {},
+                reporter=outcome.get("reporter"),
+                choice=any(p.get("check") == endings.CHOICE_CHECK for p in outcome.get("problems") or []),
+            ),
+            untrusted=cs.get("trust") == "untrusted",
+            since=str(req.data.get("created_at") or ""),
+        )
+
+    def batch_items(req: Any, cs_id: str, cs: dict[str, Any], shown: list[dict[str, Any]]) -> list[Line]:
+        """What needs a look in one request's changeset, as the rows of a batch: a to-do, a question or a draft the
+        assistant made, and what waits for the person's yes, which is answered in the batch."""
+        found: list[Line] = []
+        named = title(req.data, cs)
+        for outcome in shown:
+            if outcome.get("status") == "held":
+                found.append(held_line(req, cs_id, cs, outcome))
+                continue
+            found.append(
+                Line(
+                    key=f"item:{cs_id}:{outcome['index']}",
+                    group="review",
+                    kind="batch_item",
+                    what=review_batches.item_kind(outcome),
+                    text=outcome.get("label") or _op_text(outcome.get("op") or {}),
+                    title=named,
+                    request=req.id,
+                    changeset=cs_id,
+                    op=outcome["index"],
+                    untrusted=cs.get("trust") == "untrusted",
+                    since=str(req.data.get("created_at") or ""),
+                )
+            )
+        return found
 
     lines: list[Line] = []
     # A source failing for longer than its usual gap is one line of its own, which stands in for the question the
@@ -485,28 +531,7 @@ def _everything(
         for outcome in cs.get("ops", []):
             if outcome.get("status") != "held" or outcome.get("question") or outcome["index"] in folded:
                 continue
-            lines.append(
-                Line(
-                    key=f"held:{cs_id}:{outcome['index']}",
-                    group="decide",
-                    kind="held",
-                    text=outcome.get("label") or _op_text(outcome.get("op") or {}),
-                    title=title(req.data, cs),
-                    request=req.id,
-                    changeset=cs_id,
-                    op=outcome["index"],
-                    waiting=held_ask.reason_of(outcome),
-                    held=held_ask.describe(
-                        reader,
-                        people,
-                        outcome.get("op") or {},
-                        reporter=outcome.get("reporter"),
-                        choice=any(p.get("check") == endings.CHOICE_CHECK for p in outcome.get("problems") or []),
-                    ),
-                    untrusted=cs.get("trust") == "untrusted",
-                    since=str(req.data.get("created_at") or ""),
-                )
-            )
+            lines.append(held_line(req, cs_id, cs, outcome))
     from engine import catch_up
     from engine.dispatcher import FIRST_GO, waits_on_first_go
 
@@ -1191,6 +1216,8 @@ def _everything(
                 group="review",
                 kind="review",
                 count=counted,
+                items=batch_items(req, d["changeset"], cs, shown),
+                changesets=[d["changeset"]] if any(o.get("status") == "applied" for o in shown) else [],
                 title=title(d, cs),
                 subject=(shown[0].get("label") or _op_text(shown[0].get("op") or {}) or None)
                 if len(shown) == 1
@@ -1230,19 +1257,25 @@ def _everything(
             )
         )
 
-    # Review: what a newly added source's intake found, as one line for the source once all of its work is finished.
+    # Review: what a newly added source's intake found, as one line for the source once all of its work is finished. A
+    # request that redoes one the person sent back (it carries `previous`) joins the line when it is done and never
+    # holds it back.
     for source_id, found in sorted(intake_unseen.items()):
-        if any(source_intake.unfinished(r.data) for r in found):
+        if any(source_intake.unfinished(r.data) for r in found if not r.data.get("previous")):
             continue
         total: dict[str, int] = {}
         items = 0
-        for req in found:
+        rows: list[Line] = []
+        to_confirm: list[str] = []
+        for req in sorted(found, key=lambda r: (str(r.data.get("created_at") or ""), r.id)):
             cs = changesets.get(req.data.get("changeset") or "")
             if not cs or req.data.get("set_aside") or req.data.get("folded_into"):
                 continue
             outcome, shown = _outcome_of(cs)
             if cs.get("reviewed"):
+                # Reviewed work has nothing more to look at but what still waits for the person's yes.
                 outcome = {"held": outcome["held"]} if outcome.get("held") else {}
+                shown = [o for o in shown if o.get("status") == "held"]
             elif not shown and not outcome.get("refused"):
                 continue
             if not outcome:
@@ -1250,6 +1283,9 @@ def _everything(
             items += 1
             for word, n in outcome.items():
                 total[word] = total.get(word, 0) + n
+            rows += batch_items(req, req.data["changeset"], cs, shown)
+            if not cs.get("reviewed") and any(o.get("status") == "applied" for o in shown):
+                to_confirm.append(req.data["changeset"])
         if items:
             lines.append(
                 Line(
@@ -1260,6 +1296,8 @@ def _everything(
                     source=source_id,
                     subject=next((s.label or s.id for s in cfg.watch.sources if s.id == source_id), source_id),
                     outcome=total,
+                    items=rows,
+                    changesets=to_confirm,
                     since=min(str(r.data.get("created_at") or "") for r in found),
                 )
             )
@@ -1454,7 +1492,8 @@ def _everything(
         # What the assistant or a rule added on its own waits for the person's hours; what waited arrives under one row.
         caused = release_hours.causes(lines, reader, requests, by_changeset, sources)
         lines = release_hours.keep_hours(lines, caused, cfg, now, Line)
-    return sorted(once_each(lines), key=_rank)
+    lines = review_batches.fold(once_each(lines), now, cfg.ui.today.fold_batches_after_days, Line)
+    return sorted(lines, key=_rank)
 
 
 def once_each(lines: list[Line]) -> list[Line]:
@@ -1679,6 +1718,7 @@ _KIND_ORDER = {
     "extractor": 1,
     "review": 0,
     "intake_review": 0,
+    "batches": 0,
     "rule_review": 1,
     "learned": 2,
     "catch_up": 3,
@@ -1700,27 +1740,26 @@ _KIND_ORDER = {
 def _outcome_of(
     cs: dict[str, Any], leave_out: set[int] | frozenset[int] = frozenset()
 ) -> tuple[dict[str, int], list[dict[str, Any]]]:
-    """What a changeset did, counted by the outcome word the screen uses (held and refused ops counted as such), and
-    the ops that were applied or are held. The ops whose index is in `leave_out` (those asked on a line of their own)
-    are counted nowhere, and neither is an answer, which changed nothing: reading it is enough (design 6.25)."""
+    """What in a changeset needs a look (`engine/review_batches.py`), counted by the word the screen uses (a held or a
+    refused op counted as such), and the ops that are shown: those applied that need a look and those held. The ops
+    whose index is in `leave_out` (those asked on a line of their own) are counted nowhere. What is filed quietly (a
+    fact, a source, a note) and an answer, which changed nothing, are not here."""
     outcome: dict[str, int] = {}
+    shown: list[dict[str, Any]] = []
     for o in cs.get("ops", []):
-        if o.get("index") in leave_out or (o.get("op") or {}).get("op") == "answer":
+        word = review_batches.look_word(o)
+        if o.get("index") in leave_out or word is None:
             continue
-        status = o.get("status")
-        if status in ("held", "refused"):
-            outcome[status] = outcome.get(status, 0) + 1
-        if status != "applied" and status != "held":
-            continue
-        word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
         outcome[word] = outcome.get(word, 0) + 1
-    return outcome, [
-        o
-        for o in cs.get("ops", [])
-        if o.get("status") in ("applied", "held")
-        and o.get("index") not in leave_out
-        and (o.get("op") or {}).get("op") != "answer"
-    ]
+        if word == "refused":
+            continue
+        if word == "held":
+            # A held op is also counted as the kind of thing it would add, when it is one.
+            kind = review_batches.LOOK_AT.get((o.get("op") or {}).get("op", ""))
+            if kind is not None:
+                outcome[kind[0]] = outcome.get(kind[0], 0) + 1
+        shown.append(o)
+    return outcome, shown
 
 
 #: The kinds of record an op's `id` names, by the op's name before the dot.

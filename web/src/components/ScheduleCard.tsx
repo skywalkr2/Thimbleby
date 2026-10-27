@@ -1,6 +1,7 @@
 // The Schedule card of Today's rail (design 7.7): the first days of the schedule (the connected calendars' events and the
-// app's own entries, day by day) with what the week holds beside them (what is due and who is waiting on the person), and a
-// link to the full schedule. A card with nothing in it is not drawn.
+// app's own entries, day by day), today first, and a link to the full schedule. It is today's view: the week (what is due,
+// who is waiting, the meetings further on) is the inspector's when no line is chosen, never a list in this card. A card with
+// nothing in it is not drawn.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -18,7 +19,6 @@ import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSources";
-import { useThisWeek, WeekBody, weekSummary } from "./ThisWeek";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -67,16 +67,15 @@ function whenText(event: Event, date: string, t: T): string {
     : wallTime(event.start);
 }
 
-/** The Schedule card and whether to draw it. It is drawn when the calendars have events from today on, the week has
- * something due or someone waiting, a calendar couldn't be read, or there is a calendar to connect (`onAddSource` is
- * given only once setup is finished); `settled` is true once everything it asks has answered. */
+/** The Schedule card and whether to draw it. It is drawn when the calendars have events from today on, a calendar couldn't
+ * be read, or there is a calendar to connect (`onAddSource` is given only once setup is finished); `settled` is true once
+ * everything it asks has answered. */
 export function useScheduleCard(onAddSource?: () => void): { settled: boolean; drawn: boolean; card: ReactNode } {
   const { t, tn } = useWords();
   const sourceState = useSourceState(onAddSource, t("today.agenda.connect"), "calendar");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
   const span = useQuery({ queryKey: ["today", "agenda-span"], queryFn: api.agendaSpan });
-  const week = useThisWeek();
   const now = useNow();
   const today = localDate(now);
   const tomorrow = addDays(today, 1);
@@ -84,14 +83,10 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   const groups = groupByDay(events, today);
   const count = events.filter((e) => !e.cancelled && e.days.includes(today)).length;
-  // A meeting the agenda lists is listed once: the week adds only what the agenda's days don't reach.
-  const listed = new Set(events.map((e) => e.snapshot));
-  const weekHas = !!week.data && (week.data.due.length > 0 || week.data.waiting.length > 0 || week.data.meetings.some((m) => !listed.has(m.snapshot)));
-  const settled = !agenda.isPending && !week.isPending && !watch.isPending;
-  const drawn = agenda.isError || week.isError || groups.length > 0 || weekHas || sourceState.problems.length > 0 || !!sourceState.button;
+  const settled = !agenda.isPending && !watch.isPending;
+  const drawn = agenda.isError || groups.length > 0 || sourceState.problems.length > 0 || !!sourceState.button;
   const dayLabel = (date: string) => (date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date));
-  const weekWords = week.data ? weekSummary(week.data, tn, listed) : "";
-  const summary = [count > 0 ? tn("today.agenda.count", count) : "", weekWords].filter(Boolean).join(" · ");
+  const summary = count > 0 ? tn("today.agenda.count", count) : "";
 
   const card = (
     <RailPanel
@@ -99,7 +94,7 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
       title={t("today.schedule.title")}
       count={agenda.data ? count : null}
       countText={tn("today.agenda.count", count)}
-      summary={agenda.data && week.data ? summary || (sourceState.problems.length > 0 ? t("today.rail.not_read") : t("today.agenda.none_today")) : ""}
+      summary={agenda.data ? summary || (sourceState.problems.length > 0 ? t("today.rail.not_read") : t("today.agenda.none_today")) : ""}
       footer={
         <div className="row-end">
           <AddMeeting today={today} />
@@ -161,7 +156,6 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
           );
         })
       )}
-      {week.isError ? <Failed text={t("today.week.load_failed")} retry={() => void week.refetch()} /> : weekHas && week.data ? <WeekBody week={week.data} listed={listed} /> : null}
     </RailPanel>
   );
   return { settled, drawn, card };
