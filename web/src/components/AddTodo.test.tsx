@@ -115,7 +115,8 @@ test("a repeat that doesn't fall on the day says which day it does", async () =>
   await screen.findByText(/^Due Fri, Nov 6/);
   await user.type(screen.getByRole("textbox", { name: "Repeats" }), "every Tuesday");
   expect(await screen.findByText(/isn't one of those days/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  // The form's button may still be settling (a check of the date or the repeat in flight), so it is waited for.
+  expect(await screen.findByRole("button", { name: "Add" })).toBeDisabled();
 });
 
 test("the toast's Undo takes back every change, last first", async () => {
@@ -125,7 +126,7 @@ test("the toast's Undo takes back every change, last first", async () => {
   await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
   await user.type(await screen.findByRole("textbox", { name: "What to do" }), "Send the weekly update");
   await waitFor(() => expect(screen.getByRole("combobox", { name: "Who does it" })).toHaveValue("P-1"));
-  await user.click(screen.getByRole("button", { name: "Add" }));
+  await user.click(await screen.findByRole("button", { name: "Add" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.filter((c) => c.route.includes("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-2/undo", "POST changesets/CS-1/undo"]));
 });
