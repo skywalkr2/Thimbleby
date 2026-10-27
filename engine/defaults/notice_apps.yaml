@@ -1,0 +1,39 @@
+# The apps a notice can go to, offered by name on the Notices settings (design 7.19, "Named apps"). Each entry:
+#   id:    what a setting names it by (`ui.notifications.webhook_app`).
+#   name:  what the screen shows.
+#   shape: the message the app's address takes, as JSON with the notice's words where {text} stands; left out, the words
+#          alone go as plain text.
+#   where: one line on where to find the address in that app. No address or link is written here.
+# The core's code and wording never name an app: they read this file, and a workspace adds entries of its own
+# (`ui.notifications.apps_extra`; an entry with a shipped id replaces it). "Something else" stays last.
+apps:
+  - id: slack
+    name: Slack
+    shape: {text: "{text}"}
+    where: In Slack, add an incoming webhook to a channel in the app directory's settings, then copy the address it shows.
+  - id: discord
+    name: Discord
+    shape: {content: "{text}"}
+    where: In Discord, open a channel's settings, choose Integrations, then Webhooks, make one and copy its address.
+  - id: google-chat
+    name: Google Chat
+    shape: {text: "{text}"}
+    where: In a Google Chat space, open the space's menu, choose Apps and integrations, add a webhook and copy its address.
+  - id: teams
+    name: Microsoft Teams
+    shape: {text: "{text}"}
+    where: In a Teams channel, open its menu, choose Workflows or Connectors, add an incoming webhook and copy its address.
+  - id: mattermost
+    name: Mattermost
+    shape: {text: "{text}"}
+    where: In Mattermost, open the main menu, choose Integrations, then Incoming Webhooks, add one and copy its address.
+  - id: ntfy
+    name: ntfy
+    where: In the ntfy app, subscribe to a topic of your own, then use the topic's address; anyone who knows the topic's name can read it.
+  - id: generic-chat
+    name: Another chat app (a text message)
+    shape: {text: "{text}", content: "{text}"}
+    where: Look for incoming webhooks or a webhook address in the chat app's integration settings.
+  - id: plain
+    name: Something else (plain text)
+    where: Use an address that takes the words alone as a plain text message.

@@ -208,14 +208,18 @@ test("Answer on Today asks Today to open that question's line, and takes the per
   }
 });
 
-test("the person's own to-dos are links to To-dos and questions, where Mark done is, and carry no button or menu here", async () => {
+test("the person's own to-dos are one line that opens To-dos and questions, never a list of them under You", async () => {
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
-  const row = (await screen.findByText("Approve the proof")).closest("li") as HTMLElement;
-  expect(within(row).getByRole("link", { name: "Open in To-dos and questions" })).toHaveAttribute("href", expect.stringMatching(/#work\/open$/));
-  expect(within(row).queryByRole("button", { name: "Mark done" })).toBeNull();
-  expect(within(row).queryByRole("button", { name: /More actions/ })).toBeNull();
+  const pane = await findPane();
+  const line = pane.querySelector("[data-own-todos]") as HTMLElement;
+  expect(line).toHaveTextContent("1 to-do of yours · Open");
+  expect(within(line).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringMatching(/#work\/open$/));
+  // Follow-ups is about other people: the to-do itself is not listed here, with no button or menu either.
+  expect(screen.queryByText("Approve the proof")).toBeNull();
+  expect(screen.queryByRole("link", { name: "Open in To-dos and questions" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
 });
 
 test("what waits to go out is the first row chosen even when the messages are here before it", async () => {

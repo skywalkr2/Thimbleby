@@ -13,3 +13,13 @@ booking.kind.event: Event
 booking.kind.restaurant: Table
 booking.kind.rental_car: Rental car
 booking.kind.train: Train
+
+# What the change that moves unsure items says, and the standing rule proposed after the same sender's items are moved a
+# second time: {side} is the side's name, {sender} the address the mail came from.
+filing.move_summary: "Moved to {side} on screen"
+filing.rule_text: "Mail from {sender} goes to {side}."
+filing.rule_source: "You moved this sender's items to the same place twice."
+
+# The title of a note made from a mail: its subject, then who sent it; with no subject, the first words of the body.
+note.title_from: "{subject} · from {sender}"
+note.title_from_unknown: "{subject}"

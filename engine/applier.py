@@ -48,6 +48,7 @@ from engine.intake import is_reported, source_text
 from engine.learning import request_learns
 from engine.names import People
 from engine.new_refs import NewRefs, WithMade, created_in
+from engine.note_titles import note_text
 from engine.ops import (
     ACT_OPS,
     ACT_PUBLISHER_OPS,
@@ -266,6 +267,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _due_move_missed(cs, ctx)
     problems += _project_start_as_fact(cs, ctx)
     problems += _decision_from_list(cs, ctx)
+    problems += _decided_as_fact(cs, ctx)
     problems += _claim_asked_of_the_person(cs, ctx)
     view = WithMade(ctx.store.read(), made) if made else ctx.store.read()
     plugins = ctx.store.plugins
@@ -2793,7 +2795,7 @@ def _project_start_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 def _decision_from_list(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     """A fact whose evidence is a line a document lists as decided ("- Decided: the cover stays blue"), worded as a
     choice stated as true, goes back once: a decision is a choice someone made, and nothing in a listed line says who
-    chose. What a document lists is a fact that says the document lists it ("The notes list the cover as decided").
+    chose. What a document lists is a fact that says the document lists it ("The notes list that the cover stays blue").
     A rule on the words with no AI: a line from outside content headed by one of the shipped decision labels and a
     colon, and a fact whose words don't say a document lists it. Left alone: a line that names who chose ("Decided by
     Kit: ..."), the person's own words and changes, and a quote that isn't in the outside content."""
@@ -2821,9 +2823,44 @@ def _decision_from_list(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 level,
                 i,
                 f"the words {line!r} are what a document lists as decided: nothing in them says who chose, so this "
-                "is not a decision. Record a fact that says the document lists it (for example 'The notes list the "
-                "cover as decided'), quoting these words, or quote a sentence that names who made the choice",
+                "is not a decision. Record a fact that says the document lists it (for example 'The notes list that "
+                "the cover stays blue'), quoting these words, or quote a sentence that names who made the choice",
                 line,
+            )
+        )
+    return problems
+
+
+def _decided_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A fact whose words say "decided" goes back once unless the words it rests on show a choice someone made: a fact
+    states the world ("The offsite is on a Friday"), and a decision is a choice a person made, so the word is never
+    written in on the assistant's own say-so (a document's list line makes no one the chooser). A rule on the shipped
+    choice words with no AI. Left alone: the person's own words and changes, a quote that is a sentence holding the
+    word ("Kit decided to move the launch"), and words the input itself quotes."""
+    name = "decided-as-fact"
+    lints = ctx.cfg.checks.lints
+    if lints.get(name, "off") == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    words = decision_lines.shipped(ctx.cfg.workspace.language)
+    own = normalize(ctx.inputs.note or "")
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if not isinstance(op, FactOp) or not words.says_choice(words_of(op.text, _quotes_in(op, ctx))):
+            continue
+        level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or lints.get(name, "off")
+        quote = op.evidence.quote
+        chose = words.says_choice(quote) and words.list_line(quote) is None
+        if level == "off" or chose or (own and normalize(quote) in own):
+            continue
+        problems.append(
+            Problem(
+                name,
+                level,
+                i,
+                "the fact says it was decided, but nothing in the words it rests on shows someone made a choice: state "
+                'the world plainly ("The offsite is on a Friday"), and when it is one person\'s word keep who said '
+                'it (basis said, said_by); never write "decided" in on your own',
+                quote,
             )
         )
     return problems
@@ -3468,7 +3505,7 @@ def _apply_op(
             tx.create(
                 "note",
                 {
-                    "text": op.text,
+                    "text": note_text(op.text, ctx.cfg, ctx.people, ctx.inputs.raw_input),
                     "project": op.project,
                     "question": op.question,
                     "source": source,

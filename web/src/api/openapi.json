@@ -8579,6 +8579,18 @@
             "title": "Key",
             "type": "boolean"
           },
+          "said_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who said it, by name, when it is one person's claim; the line keeps whose word it is.",
+            "title": "Said By"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -9214,6 +9226,153 @@
           "version"
         ],
         "title": "FiledView",
+        "type": "object"
+      },
+      "FilingItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "note",
+              "action",
+              "question",
+              "fact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "description": "The item in one line.",
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "version",
+          "text"
+        ],
+        "title": "FilingItem",
+        "type": "object"
+      },
+      "FilingKept": {
+        "properties": {
+          "signal": {
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal"
+        ],
+        "title": "FilingKept",
+        "type": "object"
+      },
+      "FilingMove": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnfiledRef"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "side": {
+            "description": "The side's top project, from GET /api/filing/questions.",
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "items"
+        ],
+        "title": "FilingMove",
+        "type": "object"
+      },
+      "FilingMoved": {
+        "description": "What a move did: `changeset` is what Undo takes, `count` how many items moved and `rule` the standing rule it\nproposed (for Keep on Today's learned line), when the same sender's items were moved a second time.",
+        "properties": {
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "changeset",
+          "count"
+        ],
+        "title": "FilingMoved",
+        "type": "object"
+      },
+      "FilingQuestion": {
+        "description": "The question for one side (design 6.32): the items that wait under Personal and could be this side's.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FilingItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "description": "The side's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "side": {
+            "description": "The id of the side's top project.",
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "name",
+          "items"
+        ],
+        "title": "FilingQuestion",
+        "type": "object"
+      },
+      "FilingQuestions": {
+        "description": "The grouped questions of which side unsure items belong to, one for each side, at most once a day.",
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/FilingQuestion"
+            },
+            "title": "Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "questions"
+        ],
+        "title": "FilingQuestions",
         "type": "object"
       },
       "FingerprintIn": {
@@ -14232,9 +14391,47 @@
         "title": "Noted",
         "type": "object"
       },
+      "NoticeAppView": {
+        "description": "An app a notice can go to, for the pick list: its name and where to find its address.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "where": {
+            "description": "One line on where to find the address in that app.",
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "where"
+        ],
+        "title": "NoticeAppView",
+        "type": "object"
+      },
       "NotificationsView": {
         "description": "What the notices (design 7.19) are set to, and what each way of getting them can do now.",
         "properties": {
+          "app": {
+            "description": "The id of the app notices go to: the one picked, else the one the older format means.",
+            "title": "App",
+            "type": "string"
+          },
+          "apps": {
+            "description": "The apps to pick from, by name; \"Something else\" is last.",
+            "items": {
+              "$ref": "#/components/schemas/NoticeAppView"
+            },
+            "title": "Apps",
+            "type": "array"
+          },
           "browser": {
             "description": "The browser target is on (it also needs the browser's own permission).",
             "title": "Browser",
@@ -14275,10 +14472,32 @@
           "enabled",
           "browser",
           "webhook",
+          "app",
+          "apps",
           "quiet_now",
           "mail_ready"
         ],
         "title": "NotificationsView",
+        "type": "object"
+      },
+      "NotifyAppIn": {
+        "additionalProperties": false,
+        "properties": {
+          "app": {
+            "description": "The id of an app from GET /api/notifications.",
+            "title": "App",
+            "type": "string"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app",
+          "fingerprint"
+        ],
+        "title": "NotifyAppIn",
         "type": "object"
       },
       "NotifyTestIn": {
@@ -34220,6 +34439,103 @@
         "summary": "File Used By"
       }
     },
+    "/api/filing/keep": {
+      "post": {
+        "description": "Keep unsure items under Personal: they are not asked about again, and nothing about them changes.",
+        "operationId": "filing_keep_api_filing_keep_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilingMove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingKept"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Filing Keep"
+      }
+    },
+    "/api/filing/move": {
+      "post": {
+        "description": "Move unsure items from Personal to a side, as the person's own change with Undo; each is a correction. A\nsecond move of the same sender's items proposes a rule for it, held for Keep.",
+        "operationId": "filing_move_api_filing_move_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilingMove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingMoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Filing Move"
+      }
+    },
+    "/api/filing/questions": {
+      "get": {
+        "description": "The questions of which side unsure items belong to: for each side, the items waiting under Personal that\ncould be its own (none when the person answered that side's question today).",
+        "operationId": "filing_questions_api_filing_questions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingQuestions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Filing Questions"
+      }
+    },
     "/api/followups": {
       "get": {
         "operationId": "followups_api_followups_get",
@@ -36463,6 +36779,45 @@
           }
         },
         "summary": "Notifications View"
+      }
+    },
+    "/api/notifications/app": {
+      "post": {
+        "description": "Pick the app notices go to, by name, with Undo. The app decides the message the address is sent.",
+        "operationId": "notify_app_api_notifications_app_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyAppIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notify App"
       }
     },
     "/api/notifications/test": {

@@ -183,9 +183,18 @@ def facts_about(view: Any, kind: str, record_id: str) -> list[dict[str, Any]]:
             "text": f.data["text"],
             "as_of": str(f.data["as_of"]) if f.data.get("as_of") else None,
             "key": bool(f.data.get("key")),
+            "said_by": _said_by(view, f.data),
         }
         for f in mine
     ]
+
+
+def _said_by(view: Any, data: dict[str, Any]) -> str | None:
+    """The name of who said a fact when it is one person's claim (`basis` said), so the line keeps whose word it is."""
+    if data.get("basis") != "said" or not data.get("said_by"):
+        return None
+    person = view.get("person", data["said_by"], include_deleted=True)
+    return str(person.data["full_name"]) if person is not None else None
 
 
 def _agenda(view: Any, record: Any, today: date | None, here: ZoneInfo | None) -> list[dict[str, Any]]:

@@ -26,6 +26,7 @@ _MARKERS = r"[\s>*•·▪‣|\-–—]*(?:\d+[.)]\s*)?(?:\[[ xX]?\]\s*)?[\s|]*"
 class DecisionWords:
     labels: tuple[str, ...]
     listing: tuple[str, ...]
+    choice: tuple[str, ...] = ()
 
     def list_line(self, text: str) -> str | None:
         """The first line of `text` that is a list line headed by one of the labels and a colon ("- Decided: the cover
@@ -41,6 +42,10 @@ class DecisionWords:
         end = text.find("\n", found.start())
         return text[found.start() : end if end != -1 else len(text)].strip()
 
+    def says_choice(self, text: str) -> bool:
+        """Whether the words write "decided" (or another of the choice words) into them."""
+        return any(re.search(rf"(?<!\w){re.escape(w)}(?!\w)", text, re.IGNORECASE) for w in self.choice)
+
     def says_where_from(self, text: str) -> bool:
         """Whether a fact's words say a document lists it, by one of the listing words."""
         return any(re.search(rf"(?<!\w){re.escape(w)}(?!\w)", text, re.IGNORECASE) for w in self.listing)
@@ -53,6 +58,7 @@ def _shipped() -> dict[str, DecisionWords]:
         str(tag): DecisionWords(
             tuple(str(w) for w in (words or {}).get("labels") or ()),
             tuple(str(w) for w in (words or {}).get("listing") or ()),
+            tuple(str(w) for w in (words or {}).get("choice") or ()),
         )
         for tag, words in data.items()
     }

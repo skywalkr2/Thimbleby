@@ -120,7 +120,9 @@ def test_the_page_route_lists_the_facts(env, tmp_path):
     application = create_app(ws, cfg, "t", ui_dist=tmp_path / "no-ui", start_worker=False)
     with TestClient(application, headers={"Authorization": "Bearer t"}) as client:
         found = client.get(f"/api/record-pages/{todo}", params={"kind": "action"}).json()
-        assert found["facts"] == [{"id": found["facts"][0]["id"], "text": QUOTE, "as_of": "2026-10-10", "key": False}]
+        assert found["facts"] == [
+            {"id": found["facts"][0]["id"], "text": QUOTE, "as_of": "2026-10-10", "key": False, "said_by": None}
+        ]
 
 
 def test_a_run_working_on_a_record_reads_the_facts_about_it_and_no_others(env):

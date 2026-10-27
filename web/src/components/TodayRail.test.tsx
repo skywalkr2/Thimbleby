@@ -569,7 +569,7 @@ test("the week's due items alone draw no Schedule card, and no count of zero is 
   expect(screen.queryByText("Send the estimate")).toBeNull();
 });
 
-// A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add to agenda".
+// A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add to schedule".
 
 const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: "CS-9", merged: false }): Routes => ({
   "POST calendar/meetings": () => answer,
@@ -578,7 +578,7 @@ const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: 
 
 /** Opens the drawer from the agenda's button and returns the drawer. */
 const addLine = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(await within(await column("Schedule")).findByRole("button", { name: "Add to agenda" }));
+  await user.click(await within(await column("Schedule")).findByRole("button", { name: "Add to schedule" }));
   return screen.findByRole("dialog", { name: "Add a meeting" });
 };
 

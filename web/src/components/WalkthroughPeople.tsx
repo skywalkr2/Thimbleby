@@ -1,7 +1,7 @@
 // The people step of the walkthrough (design 7.8): the people in the person's life, each with how they relate ("my
 // sister", "our neighbor"; the box starts empty, so nobody is filed under a relation nobody chose), and, once a side of
 // work is named, each side's people under its own name with their part (manager or colleague at a job; customer,
-// supplier, staff or client in a business). The people the person's mail shows most are suggested, each with an Add,
+// supplier or staff in a business). The people the person's mail shows most are suggested, each with an Add,
 // and a list can be pasted, one name per line. It adds people through the same records the People screen shows, on
 // the side they are listed under; no organizations, teams or ids are asked.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,8 +27,8 @@ const RELATIONS = [
 ] as const;
 /** The parts people have at each kind of side, a list to pick from. */
 const ROLES = {
-  job: ["manager", "colleague", "client", "other"],
-  business: ["customer", "supplier", "staff", "client", "other"],
+  job: ["manager", "colleague", "customer", "other"],
+  business: ["customer", "supplier", "staff", "other"],
 } as const;
 const OTHER = "other";
 /** The empty choice of a list that starts with nothing chosen. */
@@ -81,9 +81,13 @@ function RelationSet(props: { person: S["PersonView"] }) {
   );
 }
 
-/** The people the person's mail shows most, each with an Add. They are added with no relation, which the list above
- * then offers to set. Nothing is shown while the server has none to suggest. */
-function Suggestions(props: { whose: Whose; sided: boolean }) {
+/** Where a suggested person can be added: Personal and each side of work, each by name. */
+type Place = { name: string; whose: Whose };
+
+/** The people the person's mail shows most, each with an Add: with a side of work, one Add for each place they could go (Add
+ * to Personal, Add to <the business>), so a suggestion is never added to the wrong side by default. They are added with no
+ * relation, which the list above then offers to set. Nothing is shown while the server has none to suggest. */
+function Suggestions(props: { places: Place[]; sided: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
   const found = useQuery({ queryKey: ["people-suggestions"], queryFn: api.peopleSuggestions });
@@ -91,11 +95,11 @@ function Suggestions(props: { whose: Whose; sided: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const list = found.data?.people ?? [];
   if (list.length === 0) return null;
-  const add = async (name: string, address: string) => {
+  const add = async (name: string, address: string, whose: Whose) => {
     setBusy(address);
     setProblem("");
     try {
-      await api.addSetupPerson({ full_name: name, aliases: [], address, ...placement(props.whose, props.sided) });
+      await api.addSetupPerson({ full_name: name, aliases: [], address, ...placement(whose, props.sided) });
       await client.invalidateQueries({ queryKey: ["people"] });
       await client.invalidateQueries({ queryKey: ["people-suggestions"] });
       await client.invalidateQueries({ queryKey: ["setup"] });
@@ -114,9 +118,24 @@ function Suggestions(props: { whose: Whose; sided: boolean }) {
           <li key={p.address}>
             <span className="title">{p.name}</span>
             <span className="meta">{tn("walkthrough.people.suggest.mails", p.count)}</span>
-            <Button size="sm" loading={busy === p.address} disabled={busy !== null} onClick={() => void add(p.name, p.address)}>
-              {t("walkthrough.people.suggest.add", { name: p.name })}
-            </Button>
+            {props.sided ? (
+              props.places.map((place) => (
+                <Button
+                  key={place.whose.id ?? place.name}
+                  size="sm"
+                  loading={busy === p.address}
+                  disabled={busy !== null}
+                  aria-label={t("walkthrough.people.suggest.add_to_named", { name: p.name, side: place.name })}
+                  onClick={() => void add(p.name, p.address, place.whose)}
+                >
+                  {t("walkthrough.people.suggest.add_to", { side: place.name })}
+                </Button>
+              ))
+            ) : (
+              <Button size="sm" loading={busy === p.address} disabled={busy !== null} onClick={() => void add(p.name, p.address, props.places[0].whose)}>
+                {t("walkthrough.people.suggest.add", { name: p.name })}
+              </Button>
+            )}
           </li>
         ))}
       </ul>
@@ -240,7 +259,6 @@ function Section(props: { whose: Whose; title: string; people: S["PersonView"][]
           ))}
         </ul>
       )}
-      {personal && <Suggestions whose={props.whose} sided={props.sided} />}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -299,8 +317,10 @@ export function WalkthroughPeople() {
   const mine = sided
     ? others.filter((p) => (personal ? onSide(p, personal) : false) || !onAnySide(p))
     : others.filter((p) => p.side !== "business");
+  const places: Place[] = [{ name: t("nav.personal"), whose: { kind: "personal", id: personal } }, ...listed.map((side): Place => ({ name: side.name, whose: { kind: side.kind, id: side.project } }))];
   return (
     <>
+      <Suggestions places={places} sided={sided} />
       <Section whose={{ kind: "personal", id: personal }} title={t("walkthrough.people.personal")} people={mine} sided={sided} />
       {listed.map((side) => (
         <Section

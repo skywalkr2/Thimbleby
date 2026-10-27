@@ -4,6 +4,7 @@
 import { Fragment, useId } from "react";
 import { fromDraft, isChanged, labelOf, type Draft, type Item } from "../lib/settings";
 import { useWords } from "../lib/wording";
+import { ClampedHint } from "../ui/ClampedHint";
 
 /** The part of a key that names the setting inside its group, which a row's pattern refers to as `{name}`. */
 const slotOf = (key: string) => key.slice(key.lastIndexOf(".") + 1);
@@ -86,9 +87,7 @@ export function MergedRow(props: {
         {locked && <p className="hint">{t(locked.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
       </div>
       <div className="setting-help" data-help>
-        <p className="hint" id={`${base}-hint`}>
-          {t(`settings.row.${props.id}.hint`)}
-        </p>
+        <ClampedHint id={`${base}-hint`} text={t(`settings.row.${props.id}.hint`)} />
       </div>
     </div>
   );

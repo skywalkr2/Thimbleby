@@ -13,6 +13,7 @@ import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { FactSource } from "./FactSource";
+import { useFactLine } from "../lib/fact-line";
 import { OriginLink } from "./Origin";
 
 /** The ways an input arrives that the sheet has a word for; any other is "another input". */
@@ -76,13 +77,14 @@ function Sources(props: { rows: S["KnowsSource"][]; plain: boolean }) {
 
 function Facts(props: { rows: S["KnowsFact"][]; plain: boolean }) {
   const { t } = useWords();
+  const line = useFactLine();
   return (
     <Part id="knows-facts" title={t("knows.facts")} empty={t(props.plain ? "knows.facts.empty.plain" : "knows.facts.empty")} count={props.rows.length}>
       {props.rows.map((f) => (
         <Row
           key={f.id}
           pill={f.key ? <Pill tone="neutral">{t("knows.key")}</Pill> : undefined}
-          title={<a href={viewHref(recordView("fact", f.id))}>{f.text}</a>}
+          title={<a href={viewHref(recordView("fact", f.id))}>{line(f.text, f.source.basis === "said" ? f.source.by : null)}</a>}
           meta={<FactSource inline short source={f.source} fact={f.id} version={f.version} />}
         />
       ))}

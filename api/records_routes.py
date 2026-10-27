@@ -9,13 +9,19 @@ from api.schemas import (
     Applied,
     AreaKeep,
     AreaKept,
+    FilingItem,
+    FilingKept,
+    FilingMove,
+    FilingMoved,
+    FilingQuestion,
+    FilingQuestions,
     ProjectKnowsView,
     SeriesPageView,
     UnfiledFile,
     UnfiledItem,
     UnfiledView,
 )
-from engine import areas, project_knows, series_page
+from engine import areas, filing, project_knows, series_page
 from engine import unfiled as unfiled_module
 from engine.applier import apply_as_person
 from engine.config import Config
@@ -58,6 +64,50 @@ def build_records_router(cfg: Config, store: Store, events: Events, worker: Work
             raise HTTPException(status_code=409, detail=str(err)) from None
         events.changed()
         return Applied(changeset=cs_id)
+
+    @r.get("/filing/questions")
+    def filing_questions() -> FilingQuestions:
+        """The questions of which side unsure items belong to: for each side, the items waiting under Personal that
+        could be its own (none when the person answered that side's question today)."""
+        asked = filing.questions(store.read(), cfg, worker.now())
+        return FilingQuestions(
+            questions=[
+                FilingQuestion(
+                    side=q.side,
+                    name=q.name,
+                    items=[
+                        FilingItem(kind=i.kind, id=i.id, version=i.version, text=i.text)  # type: ignore[arg-type]
+                        for i in q.items
+                    ],
+                )
+                for q in asked
+            ]
+        )
+
+    @r.post("/filing/move")
+    def filing_move(body: FilingMove) -> FilingMoved:
+        """Move unsure items from Personal to a side, as the person's own change with Undo; each is a correction. A
+        second move of the same sender's items proposes a rule for it, held for Keep."""
+        try:
+            done = filing.move(
+                store, cfg, body.side, [(i.kind, i.id, i.read_version) for i in body.items], worker.now()
+            )
+        except (StoreError, ValueError) as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return FilingMoved(changeset=done.changeset, count=done.count, rule=done.rule)
+
+    @r.post("/filing/keep")
+    def filing_keep(body: FilingMove) -> FilingKept:
+        """Keep unsure items under Personal: they are not asked about again, and nothing about them changes."""
+        try:
+            made = filing.keep(
+                store, cfg, body.side, [(i.kind, i.id, i.read_version) for i in body.items], worker.now()
+            )
+        except (StoreError, ValueError) as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return FilingKept(signal=made)
 
     @r.post("/areas/keep")
     def keep_area(body: AreaKeep) -> AreaKept:

@@ -10,14 +10,17 @@ differ only by an id stay apart.
 
 The person's own choices (design 6.2) are read from the settings: files said to be one document join their families
 (`same_document`), a file said not to belong to its name's family stands alone (`not_same`), and a copy said to be the
-current one is (`current`). Nothing here writes or reads a file: it works on the keys (paths) and modified times a read
-gave.
+current one is (`current`). Each choice names a file by its content (the hash of its text), so it survives the older
+copy moving into an archive folder and the current copy being renamed; an entry written as a path (an earlier version
+of the app, or a file no longer listed) still names the file at that path. Nothing here writes or reads a file: it
+works on the keys (paths), hashes and modified times a read gave.
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
-from collections.abc import Collection, Iterable
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import PurePosixPath
@@ -31,16 +34,35 @@ _VERSION = re.compile(r"(?<![a-z0-9])v(\d+(?:[._]\d+)*)(?![a-z0-9])", re.IGNOREC
 _SEPARATORS = re.compile(r"[\s_\-.]+")
 
 
+def digest_of(text: str) -> str:
+    """The hash a file's text is known by: the one the watcher keeps on its snapshot (`content_hash`)."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class Listed:
+    """A file a read found, for the families: its key (path), when it changed and the hash of its text."""
+
+    key: str
+    changed_at: str | None
+    digest: str
+
+
 @dataclass(frozen=True)
 class Copy:
-    """One file: its key (path inside the watched folder), family, rank marks (version, date, modified time) and whether
-    it sits in an archive."""
+    """One file: its key (path inside the watched folder), family, rank marks (version, date, modified time), whether
+    it sits in an archive, and the hash of its text (empty when not known)."""
 
     key: str
     title: str
     family: tuple[str, str]
     archived: bool
     rank: tuple[tuple[int, ...], str, str]
+    digest: str = ""
+
+    def named_in(self, names: Collection[str]) -> bool:
+        """Whether a choice names this file: by its content, or (an older entry) by its path."""
+        return self.key in names or bool(self.digest and self.digest in names)
 
 
 def _valid_date(match: re.Match[str]) -> str | None:
@@ -75,7 +97,7 @@ def marks_of(stem: str, ignore: Iterable[str] = ()) -> tuple[str, str, tuple[int
     return name, found_date, max(versions, default=())
 
 
-def copy_of(key: str, modified: str | None, ignore: Iterable[str], archives: Iterable[str]) -> Copy:
+def copy_of(key: str, modified: str | None, ignore: Iterable[str], archives: Iterable[str], digest: str = "") -> Copy:
     """Read a file's key into its family and rank."""
     path = PurePosixPath(key)
     archive_names = {a.casefold() for a in archives}
@@ -84,7 +106,7 @@ def copy_of(key: str, modified: str | None, ignore: Iterable[str], archives: Ite
     kept = [p for p in folders if p.casefold() not in archive_names]
     name, stamp, version = marks_of(path.stem, ignore)
     top = kept[0].casefold() if kept else ""
-    return Copy(key, path.name, (top, name or path.stem.casefold()), archived, (version, stamp, modified or ""))
+    return Copy(key, path.name, (top, name or path.stem.casefold()), archived, (version, stamp, modified or ""), digest)
 
 
 @dataclass(frozen=True)
@@ -104,7 +126,7 @@ def decide(copies: Iterable[Copy], pinned: Collection[str] = (), by_time: bool =
     live = [c for c in copies if not c.archived]
     if not live:
         return Decision(None)
-    named = [c for c in live if c.key in pinned]
+    named = [c for c in live if c.named_in(pinned)]
     if named:
         return Decision(max(named, key=lambda c: (c.rank, c.key)))
     if len(live) == 1:
@@ -164,21 +186,28 @@ class Choices:
     current: frozenset[str] = frozenset()
 
 
-def choices_of(settings: Any, source: str | None) -> Choices:
-    """The person's choices for one watched folder, from `watch.versions`."""
+def choices_of(settings: Any, source: str | None, followed: Mapping[str, str] | None = None) -> Choices:
+    """The person's choices for one watched folder, from `watch.versions`. `followed` maps the hash a choice names to
+    the hash the file has now, for a file edited in place since the choice was made, so the choice still names it."""
     if source is None:
         return Choices()
+    now = followed or {}
     return Choices(
-        same=tuple(tuple(link.files) for link in settings.same_document if link.source == source and link.files),
-        apart=frozenset(settings.not_same.get(source, ())),
-        current=frozenset(settings.current.get(source, ())),
+        same=tuple(
+            tuple(now.get(f, f) for f in link.files)
+            for link in settings.same_document
+            if link.source == source and link.files
+        ),
+        apart=frozenset(now.get(f, f) for f in settings.not_same.get(source, ())),
+        current=frozenset(now.get(f, f) for f in settings.current.get(source, ())),
     )
 
 
 class Families:
     """The files a read found, grouped into families. `source` names the watched folder, so the person's choices for
     it apply; `give_up` holds the families whose question the person set aside, which fall back to the modified time;
-    with `ask` false there is nobody to ask, so every unclear family does."""
+    with `ask` false there is nobody to ask, so every unclear family does. Each item has a `key`, a `changed_at` and,
+    when known, a `digest` (the hash of its text); `followed` maps the hash a choice names to the file's hash now."""
 
     def __init__(
         self,
@@ -188,13 +217,19 @@ class Families:
         *,
         give_up: Collection[str] = (),
         ask: bool = True,
+        followed: Mapping[str, str] | None = None,
     ) -> None:
         self._settings = settings
-        self.choices = choices_of(settings, source)
-        self._joined = self._join()
-        self.copies = [
-            self._place(copy_of(i.key, i.changed_at, settings.ignore_words, settings.archive_folders)) for i in items
+        self.choices = choices_of(settings, source, followed)
+        raw = [
+            copy_of(
+                i.key, i.changed_at, settings.ignore_words, settings.archive_folders, getattr(i, "digest", "") or ""
+            )
+            for i in items
         ]
+        self._named = {n: c for c in raw for n in (c.key, c.digest) if n}
+        self._joined = self._join()
+        self.copies = [self._place(c) for c in raw]
         self.by_key = {c.key: c for c in self.copies}
         self._give_up = frozenset(give_up)
         self._ask = ask
@@ -210,23 +245,30 @@ class Families:
             return x
 
         for group in self.choices.same:
-            names = [
-                self._node(k, copy_of(k, None, self._settings.ignore_words, self._settings.archive_folders).family)
-                for k in group
-            ]
+            names = [self._node(c) for c in (self._named_copy(k) for k in group) if c is not None]
             for other in names[1:]:
                 a, b = find(names[0]), find(other)
                 if a != b:
                     parent[max(a, b)] = min(a, b)
         return {x: find(x) for x in list(parent)}
 
-    def _node(self, key: str, family: tuple[str, str]) -> tuple[str, str]:
+    def _named_copy(self, name: str) -> Copy | None:
+        """The file a choice's entry names: the one with that hash or path in this read; an entry that is a path no file
+        has now still names the family its path would have; a hash no file has now names none."""
+        found = self._named.get(name)
+        if found is not None:
+            return found
+        if re.fullmatch(r"[0-9a-f]{64}", name):
+            return None
+        return copy_of(name, None, self._settings.ignore_words, self._settings.archive_folders)
+
+    def _node(self, copy: Copy) -> tuple[str, str]:
         """What a file joins others as: the family its name puts it in, or, for a file the person split off, itself."""
-        return ("", "apart " + key) if key in self.choices.apart else family
+        return ("", "apart " + (copy.digest or copy.key)) if copy.named_in(self.choices.apart) else copy.family
 
     def _place(self, copy: Copy) -> Copy:
         """The copy in the family the person's choices put it in."""
-        node = self._node(copy.key, copy.family)
+        node = self._node(copy)
         return replace(copy, family=self._joined.get(node, node))
 
     def _copy(self, key: str, modified: str | None = None) -> Copy:

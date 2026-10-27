@@ -74,7 +74,7 @@ ADVANCED: dict[str, str] = {
     "steward.attention.daily_cap": "notices",
     "steward.reminders.allowed_data": "notices",
     "ui.notifications.webhook": "notices",
-    "ui.notifications.webhook_format": "notices",
+    "ui.notifications.webhook_app": "notices",
     "watch.automated_mail.set_aside": "mail",
     "watch.mail_kinds.enabled": "mail",
     "watch.sorting": "mail",
@@ -127,6 +127,10 @@ MERGED_ROWS: dict[str, tuple[str, ...]] = {
     "steward.reminders.where": (
         "steward.reminders.where",
         "steward.reminders.where_account",
+    ),
+    "steward.reminders.quiet_start": (
+        "steward.reminders.quiet_start",
+        "steward.reminders.quiet_end",
     ),
 }
 
@@ -274,6 +278,10 @@ FILES_ONLY = (
     "watch.handled_keep_days",
     # Merged into the one notices switch, which stands for showing a notice in this browser too.
     "ui.notifications.browser",
+    # The older choice between a chat app's message and plain text, read when no app is picked by name; the person's own
+    # apps are entries of a file.
+    "ui.notifications.webhook_format",
+    "ui.notifications.apps_extra",
 )
 
 #: Fronts of dotted keys (a front matches a key equal to it or starting with it plus a dot) kept only in files.

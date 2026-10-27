@@ -550,7 +550,7 @@ def test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_not
         placed = sides.file_by_people(
             [new_op(text="Call about it")], store.read(), now, People(store, now), None, None, source=source
         )
-        assert placed[0].project is None
+        assert placed[0].filed_by is None and placed[0].project == ws.config(env={}).workspace.project.personal
         none = [{**stored[0], "sides": []}]
         fingerprint = c.get("/api/settings").json()["fingerprint"]
         assert (

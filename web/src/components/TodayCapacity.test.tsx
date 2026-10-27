@@ -167,7 +167,7 @@ test("a travel clash says how little time is between the meetings, how much is n
       other_ends: "2026-10-27T12:00:00+00:00",
     }),
   ]);
-  expect(await screen.findByText("Only 0 minutes between them; you need about 30 to get from Room 4 to Room 2")).toBeInTheDocument();
+  expect(await screen.findByText("No time between them; you need about 30 to get from Room 4 to Room 2")).toBeInTheDocument();
 });
 
 test("a suggestion has Not now in its menu, which puts it off with Undo; what is due has none", async () => {

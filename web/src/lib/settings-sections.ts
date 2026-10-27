@@ -23,6 +23,7 @@ const OWN_PART = [
   "storage.backups.encrypt",
   "workspace.plugins.secrets",
   "ui.notifications.webhook",
+  "ui.notifications.webhook_app",
   "ui.links",
   // Where reminders reach you away from the app is one choice with its own yes, not two rows.
   "steward.reminders.where",
@@ -91,6 +92,7 @@ export const MERGED_ROWS: Record<string, string[]> = {
     "steward.reminders.working_end",
   ],
   brief_times: ["steward.brief.morning_from", "steward.brief.evening_from", "steward.brief.weekly_day"],
+  quiet_hours: ["steward.reminders.quiet_start", "steward.reminders.quiet_end"],
 };
 
 /** What a list of settings shows, in order: a setting as a row of its own, or a merged row. A row is merged only when every

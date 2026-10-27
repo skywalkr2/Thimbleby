@@ -28,7 +28,7 @@ async function edit(user: ReturnType<typeof userEvent.setup>, name: string) {
   return screen.findByRole("dialog", { name: "Edit person" });
 }
 
-test("people are a table with role, organization by name, open items and last contact; the name links to the person's page", async () => {
+test("people are a table with who they are, open items and last contact; the name links to the person's page, and the organization is in the details", async () => {
   api([
     person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, open_items: 4, last_contact: "2026-10-08", how_to_reach: { email: "ana@example.com" } }),
     person("P-2", "Ben Person"),
@@ -37,7 +37,7 @@ test("people are a table with role, organization by name, open items and last co
   const tr = await row("Ana Person");
   expect(within(tr).getByRole("link", { name: "Ana Person" }).getAttribute("href")).toMatch(/#records\/person\/P-1$/);
   expect(tr).toHaveTextContent("Editor");
-  expect(tr).toHaveTextContent("Org one");
+  expect(tr).not.toHaveTextContent("Org one");
   expect(tr).not.toHaveTextContent(firstOrg.id);
   expect(tr).toHaveTextContent("email: ana@example.com");
   expect(within(tr).getByText("4")).toBeInTheDocument();
@@ -285,7 +285,7 @@ const justMe = {
   "GET projects": () => [project("PRJ-personal", "Personal")],
 };
 
-test("with no side besides Personal people have Name, Who they are to you and How to reach, with no Role, Organization or Organizations", async () => {
+test("with no side besides Personal people have Name, Who they are and How to reach, with no Role, Organization or Organizations", async () => {
   api(
     [person("P-1", "Ana Person", { relation: "my sister", role: "Editor", org: firstOrg.id, org_name: firstOrg.name, how_to_reach: { email: "ana@example.com" } }), person("P-2", "Ben Person")],
     justMe,
@@ -293,7 +293,7 @@ test("with no side besides Personal people have Name, Who they are to you and Ho
   renderApp(<People />);
   const tr = await row("Ana Person");
   await waitFor(() => expect(screen.queryByRole("columnheader", { name: "Role" })).toBeNull());
-  expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(expect.arrayContaining(["Name", "Who they are to you", "How to reach"]));
+  expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(expect.arrayContaining(["Name", "Who they are", "How to reach"]));
   expect(screen.queryByRole("columnheader", { name: "Organization" })).toBeNull();
   expect(tr).toHaveTextContent("my sister");
   expect(tr).toHaveTextContent("email: ana@example.com");
@@ -335,34 +335,50 @@ const withSide = {
   "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", "Shop")],
 };
 
-test("with a side of work, a person on the personal side shows who they are to you in place of a role, and a person at work keeps role and organization", async () => {
+test("with a side of work one column says who they are: how they relate to you first, then their part on each side", async () => {
   const user = userEvent.setup();
   api(
     [
       person("P-1", "Ana Person", { side: "personal", sides: ["PRJ-personal"], relation: "my sister", role: "Editor", org: firstOrg.id, org_name: firstOrg.name }),
-      person("P-2", "Ben Person", { side: "business", sides: ["PRJ-shop"], role: "Supplier", org: firstOrg.id, org_name: firstOrg.name, relation: "my cousin" }),
+      person("P-2", "Ben Person", { side: "business", sides: ["PRJ-shop"], role: "supplier", org: firstOrg.id, org_name: firstOrg.name, relation: "my cousin" }),
+      person("P-3", "Cal Person", { side: "both", sides: ["PRJ-personal", "PRJ-shop"], relation: "sister", role: "supplier" }),
     ],
     withSide,
   );
   renderApp(<People />);
   const personal = await row("Ana Person");
   const work = await row("Ben Person");
-  expect(screen.getByRole("columnheader", { name: "Role, or who they are to you" })).toBeInTheDocument();
+  const both = await row("Cal Person");
+  expect(screen.getByRole("columnheader", { name: "Who they are" })).toBeInTheDocument();
+  expect(screen.queryByRole("columnheader", { name: "Role" })).toBeNull();
+  // Someone on the personal side: how they relate to you, and no role or organization in the row.
   expect(personal).toHaveTextContent("my sister");
   expect(personal).not.toHaveTextContent("Editor");
   expect(personal).not.toHaveTextContent(firstOrg.name);
-  expect(work).toHaveTextContent("Supplier");
-  expect(work).toHaveTextContent(firstOrg.name);
+  // Someone at work: their part at the business; the relation to you is not said for a person who isn't on the personal side.
+  expect(work).toHaveTextContent("supplier at Shop");
   expect(work).not.toHaveTextContent("my cousin");
-  // The detail says the same: the personal side's person has their relation, the work side's person a role and organization.
-  await user.click(within(personal).getByRole("link", { name: "Ana Person" }));
-  const detail = await screen.findByText("Who they are to you");
-  expect(detail.closest("div")).toHaveTextContent("my sister");
+  expect(work).not.toHaveTextContent(firstOrg.name);
+  // Someone on both sides: every relation, Personal first, comma separated.
+  expect(within(both).getByText("sister, supplier at Shop")).toBeInTheDocument();
+  // Organization and role stay in the details.
+  await user.click(within(work).getByText("supplier at Shop"));
+  const pane = await screen.findByRole("dialog", { name: "Ben Person" });
+  expect(within(pane).getByText("Organization").closest("div")).toHaveTextContent(firstOrg.name);
+  expect(within(pane).getByText("Role").closest("div")).toHaveTextContent("supplier");
 });
 
-test("with a side of work and nobody on the personal side the column is still called Role", async () => {
-  api([person("P-2", "Ben Person", { side: "business", sides: ["PRJ-shop"], role: "Supplier" })], withSide);
+test("a person with a side but no part is said by the side's name, and one with no side known by their relation or their part", async () => {
+  api(
+    [
+      person("P-2", "Ben Person", { side: "business", sides: ["PRJ-shop"] }),
+      person("P-3", "Cal Person", { relation: "my neighbor" }),
+      person("P-4", "Dee Person", { role: "Printer" }),
+    ],
+    withSide,
+  );
   renderApp(<People />);
-  await row("Ben Person");
-  expect(screen.getByRole("columnheader", { name: "Role" })).toBeInTheDocument();
+  expect(await row("Ben Person")).toHaveTextContent("Shop");
+  expect(await row("Cal Person")).toHaveTextContent("my neighbor");
+  expect(await row("Dee Person")).toHaveTextContent("Printer");
 });

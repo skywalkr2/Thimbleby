@@ -281,6 +281,11 @@ How to answer:
   recorded marked as one; a close, a changed date or owner, or a routing that rests only on it waits for the user, who
   confirms it with one click, so propose it anyway when it is the likely step. Never mark a fact inferred when the
   quoted words state it.
+- A fact states the world, as a plain statement: "The offsite is on a Friday", never "The input lists the offsite as
+  decided" or "The message says ...". Write it so it reads true on its own. When it is one person's claim and that person
+  is named in the input, record it with "basis": "said" and "said_by", so the record keeps who said it ("Pat says the
+  offsite is on a Friday" is shown from it); the fact's own words still state the world. Never write "decided" into a
+  fact unless the quoted words show someone made a choice and who.
 - A fact about a project that is true of every project inside it too (a fact about a series that holds for each of its
   books) gets "reaches_children": true, on the project it is about. Leave it out for everything else.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.

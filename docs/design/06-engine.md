@@ -98,7 +98,12 @@ plugins see, which waits for the plugin API release. So each choice is a change 
 what it was and what it became, and Undo puts it back), read by the families on the next read of the folder, and kept in the
 workspace's own configuration like any other. They are not shown on the Settings screen. Each entry names a file by its
 content (its hash), not its path, so a link and the current answer survive the older copy moving into an Archive folder and
-the current copy being renamed (the designer's input of 2026-10-28; change log 234; *designed, phase U*). Signals: `edited` for a link or a
+the current copy being renamed (the designer's input of 2026-10-28; change log 234; **built:** `tests/test_version_choices.py`,
+the tests under "a choice names a file by its content"). A file edited in place keeps its choices: the read that finds its
+new hash writes it into the settings in place of the old (`follow_edits`); an entry an earlier version wrote as a path is
+turned into the file's hash once at start (`migrate_to_hashes`, one settings change with Undo), and a path no file has
+stays a path. Two files with the same text share a hash, so a choice about one names both; a file both renamed and
+edited at once loses its choice (the person says it again). Signals: `edited` for a link or a
 split from a file's page, `pulled_back` for a split from the older-version row, `answered_assistant` for the answer to the
 question. Built: `tests/test_versions.py`, `tests/test_version_choices.py`, `tests/test_version_choices_api.py`,
 `web/src/components/SameDocument.test.tsx`.
@@ -1116,12 +1121,13 @@ is marked *designed*, with the phase.
   `decision-from-list`, `engine/decision_lines.py`, `engine/defaults/decision_lines.yaml`, `engine/playbook/guidance/notes.md`).
   A line a document lists under "Decided:", "Decision:" or "Agreed:" (a bullet, a numbered line, a table row; the shipped
   labels, one list for each language) names no one who chose. A fact whose evidence is such a line, from outside content,
-  worded as a choice stated as true goes back once to say that the document lists it ("The notes list the cover as decided"),
-  quoting the line; a fact that already says so (one of the shipped listing words: list, says, notes, minutes ...) passes.
+  worded as a choice stated as true goes back once to say that the document lists it ("The notes list that the cover stays blue"),
+  quoting the line, without the word "decided" (`decided-as-fact` returns a fact that writes it in, 4.x); a fact that already says
+  so (one of the shipped listing words: list, says, notes, minutes ...) passes.
   Left alone: a line that names who chose ("Decided by Kit: ...", "Kit decided that ..."), the person's own note (its
   "Decided: ..." is their choice, as `decision-already-made` shows), their own changes, and a quote that isn't in the
   outside content. The notes guidance says the same in words for the model, and the stand-in AI now records a document's
-  "Decided:" line as "The input lists ... as decided" while the person's own note stays their choice. Golden case
+  "Decided:" line as "The notes list that ..." while the person's own note stays their choice. Golden case
   `listed-as-decided-is-a-fact` (both fictional workspaces). Built: `tests/test_decision_from_list.py`.
 - A question to the person about something the input says another person stated ("Jun told me it arrives on the
   10th, but the quote says the 30th") goes back once to ask whoever made the claim (`claim-asked-of-the-person`,
@@ -4231,7 +4237,7 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
 **Built:** `tests/test_facts_about.py`.
 
 **Filing, the brief and facts after the reviewer's second pass** (designer's answers F40 to F46, 2026-10-28; change log
-234; *designed, phase U*):
+234; *filing, notes, titles, facts and People are built; see "As built" below*):
 - **Filing when unsure.** When the ranks can't decide between Personal and a side, the item is filed under Personal (the
   more private level). One grouped question per side per day at most asks "These 4 items look like Hale Upholstery's.
   Move them there?". Move says what it changes ("These 4 items will be visible with Hale Upholstery's work"), is the
@@ -4259,6 +4265,36 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
 - **Private material and the AI account.** Personal mail stays private. The AI step's Allow names what it covers ("may read
   your mail, notes and calendar, including private ones"), with "Only what could be public" and "Not my private mail" one
   click away. A new or fallback account reads nothing private until the person says yes for that account (F25).
+
+**As built** (change log 234; the brief and the AI step's wording are other changes):
+- **Filing** (`engine/filing.py`, `engine/sides.py::file_by_people`, `api/records_routes.py`; `tests/test_filing_unsure.py`,
+  `tests/test_filing_api.py`, `web/src/components/TodaySides.test.tsx`): an item no rank decides is filed under the personal
+  project with no reason kept (`filed_by` empty: no core record gained a field, since the plugin API is on hold); it stays
+  unfiled only when there is no personal project. It counts as waiting on a guess while it sits directly under Personal,
+  the assistant made it after the side existed, it has no `filed_by` and the person hasn't kept it. `GET
+  /api/filing/questions` gives one question for each side with items that could be its own (the sides its source serves,
+  else every other side); a side the person answered today (a `suggestion_chosen` or `suggestion_dismissed` signal whose note
+  names the side) is not asked again that day. `POST /api/filing/move` is `record.edit` of each item's project through
+  `apply_as_person` (one changeset, so one Undo; each edit is an `edited` correction) and moves the notes kept from the same
+  inputs along with the items; `POST /api/filing/keep` leaves the items, and they are never asked about again. Moving the
+  same sender's items a second time (a move that was undone doesn't count; the sender is the address on the watched mail's
+  snapshot) proposes a standing rule, "Mail from <address> goes to <side>.", as a `proposed` rule record (origin assistant,
+  workspace-wide), held for Keep like other learning and never applied until kept; a rule that says the same is not made
+  twice. The Today line is one line (`engine.filing.summary`: the count, the side's name when only one is asked about,
+  the oldest item) that plugs into the review group beside the unfiled line and opens `SideChoose`.
+- **Notes from mail** are never in Unfiled (`engine/unfiled.py::from_input`) or in the question, and move with a to-do made
+  from the same input.
+- **Titles and facts** (`engine/note_titles.py`, `tests/test_plain_titles.py`): when a note's words only repeat the message's
+  header lines the applier keeps it with its title ("Thanks · from Maya Okafor", `note.title_from`); a note in the
+  assistant's own words is left as written, since a note has no title field. `said_by` already existed on a fact (`basis`
+  said); the record page's facts carry the name (`FactLine.said_by`) and the screens write "Maya says …" (a plain first word
+  is lower-cased from the wording sheet's list, so a name is never changed); dates in any title the person reads are written
+  as words (`web/src/lib/title-dates.ts`) in Unfiled, the facts, the completed list and Activity. The lint is
+  `decided-as-fact`; the notes prompt and guidance say to state the world, the stand-in writes "The notes list that …", and
+  a listed line is recorded without the word "decided".
+- **Who they are** (`web/src/lib/people-who.ts`, `People.test.tsx`, `Walkthrough.test.tsx`): the personal relation first,
+  then "<role> at <side>" for each side of work the person is on; with no side known, the relation or the part. Each mail
+  suggestion offers "Add to Personal" and "Add to <business>".
 
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 

@@ -256,9 +256,9 @@ def test_filing_by_people_picks_the_side_a_person_is_on_among_three_sides(env):
     # A person on the older word alone still files under the side that word means.
     assert stamp(file_ops(env, [new_op(owners=[name_of(BUSINESS_PEOPLE[0])])])[0]) == (BUSINESS_ID, "people", None)
     # Two people on different sides decide nothing; a person on two sides abstains.
-    assert stamp(file_ops(env, [new_op(owners=[name_of(a), name_of(b)])])[0])[0] is None
+    assert stamp(file_ops(env, [new_op(owners=[name_of(a), name_of(b)])])[0])[0] == PERSONAL_ID
     put(env, a["id"], sides=[second, third])
-    assert stamp(file_ops(env, [new_op(owners=[name_of(a)])])[0])[0] is None
+    assert stamp(file_ops(env, [new_op(owners=[name_of(a)])])[0])[0] == PERSONAL_ID
     assert stamp(file_ops(env, [new_op(owners=[name_of(a), name_of(b)])])[0]) == (third, "people", None)
 
 
@@ -266,7 +266,7 @@ def test_the_business_side_words_apply_only_while_there_is_exactly_one_other_sid
     word = SIDE_WORDS["business"][0]
     assert stamp(file_ops(env, [new_op(text=f"About {word}")])[0]) == (BUSINESS_ID, "word", word)
     add_side(env, OTHER_BUSINESS_NAME)
-    assert stamp(file_ops(env, [new_op(text=f"About {word}")])[0])[0] is None
+    assert stamp(file_ops(env, [new_op(text=f"About {word}")])[0])[0] == PERSONAL_ID
     personal_word = SIDE_WORDS["personal"][0]
     assert stamp(file_ops(env, [new_op(text=f"About {personal_word}")])[0]) == (PERSONAL_ID, "word", personal_word)
 
@@ -305,12 +305,12 @@ def test_a_source_serving_one_side_files_its_unplaced_mail_there_and_says_so(env
     got = file_ops(env, [new_op(text="Call about it")], source=source)
     assert stamp(got[0]) == (second, "source", label)
     # Without the source it is unplaced; the people still come first.
-    assert stamp(file_ops(env, [new_op(text="Call about it")])[0])[0] is None
+    assert stamp(file_ops(env, [new_op(text="Call about it")])[0])[0] == PERSONAL_ID
     owner = PERSONAL_PEOPLE[0]
     assert stamp(file_ops(env, [new_op(owners=[name_of(owner)])], source=source)[0]) == (PERSONAL_ID, "people", None)
     # A source that names no side that exists says nothing.
     serve(env, "PRJ-999")
-    assert stamp(file_ops(env, [new_op(text="Call about it")], source=source)[0])[0] is None
+    assert stamp(file_ops(env, [new_op(text="Call about it")], source=source)[0])[0] == PERSONAL_ID
 
 
 def test_a_source_serving_two_sides_narrows_the_ranks_after_it_to_them(env):
@@ -325,11 +325,11 @@ def test_a_source_serving_two_sides_narrows_the_ranks_after_it_to_them(env):
     source = a_watched_source(env, serve(env, second, third))
     both = "qzx-two and qzx-per"
     # Two aliases of two sides decide nothing without the source; with it, only the sides it serves count.
-    assert stamp(file_ops(env, [new_op(text=both)])[0])[0] is None
+    assert stamp(file_ops(env, [new_op(text=both)])[0])[0] == PERSONAL_ID
     assert stamp(file_ops(env, [new_op(text=both)], source=source)[0]) == (in_second, "alias", "qzx-two")
-    assert stamp(file_ops(env, [new_op(text="qzx-two and qzx-three")], source=source)[0])[0] is None
-    # What names only a side the source doesn't serve is left unplaced.
-    assert stamp(file_ops(env, [new_op(text="Only qzx-per here")], source=source)[0])[0] is None
+    assert stamp(file_ops(env, [new_op(text="qzx-two and qzx-three")], source=source)[0])[0] == PERSONAL_ID
+    # What names only a side the source doesn't serve waits under Personal, unplaced.
+    assert stamp(file_ops(env, [new_op(text="Only qzx-per here")], source=source)[0])[0] == PERSONAL_ID
     assert stamp(file_ops(env, [new_op(text="Only qzx-per here")])[0])[:2] == (in_personal, "alias")
 
 
@@ -499,13 +499,16 @@ def test_each_line_and_row_carries_the_id_of_its_side_with_two_sides_and_the_fil
     assert {name: rows[qid] for name, (_, qid) in ids.items()} == homes
     state = client.get("/api/setup/business").json()
     assert state["personal"] == personal and [s["project"] for s in state["sides"]] == [first, second]
-    # The line that asks which side something belongs to names no one side while there are two.
+    # What the assistant filed under Personal because it couldn't tell the side is asked about in one line, which names
+    # no one side while there are two.
     with store.transaction() as tx:
         tx.create(
-            "note", {"text": "A loose note."}, WriteContext(actor="assistant", trust="untrusted", op="test.sides")
+            "action",
+            {"text": "Order the fabric samples.", "project": personal, "owners": [{"person": me}]},
+            WriteContext(actor="assistant", trust="untrusted", op="test.sides"),
         )
-    unfiled = [line for line in client.get("/api/today/queue").json() if line["kind"] == "unfiled"]
-    assert unfiled and unfiled[0]["state"] == "which_side" and unfiled[0]["subject"] is None
+    asked = [line for line in client.get("/api/today/queue").json() if line["key"] == "filing"]
+    assert asked and asked[0]["state"] == "which_side" and asked[0]["subject"] is None
 
 
 def test_a_line_about_records_on_two_sides_is_on_neither(env):

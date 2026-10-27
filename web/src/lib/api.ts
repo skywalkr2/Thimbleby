@@ -333,6 +333,12 @@ export const api = {
   notes: () => call<S["NoteView"][]>("GET", "notes"),
   unfiled: () => call<S["UnfiledView"]>("GET", "unfiled"),
   fileUnfiled: (body: S["UnfiledFile"]) => call<S["Applied"]>("POST", "unfiled/file", body),
+  /** The grouped questions of which side unsure items belong to: one for each side, at most once a day. */
+  filingQuestions: () => call<S["FilingQuestions"]>("GET", "filing/questions"),
+  /** Moves unsure items from Personal to a side as the person's own change, with Undo. */
+  filingMove: (body: S["FilingMove"]) => call<S["FilingMoved"]>("POST", "filing/move", body),
+  /** Keeps unsure items under Personal: they are not asked about again. */
+  filingKeep: (body: S["FilingMove"]) => call<S["FilingKept"]>("POST", "filing/keep", body),
   projectKnows: (project: string) => call<S["ProjectKnowsView"]>("GET", `projects/${id(project)}/knows`),
   seriesPage: (series: string) => call<S["SeriesPageView"]>("GET", `series/${id(series)}/page`),
   recordPage: (kind: string, record: string) => call<S["RecordPageView"]>("GET", `record-pages/${id(record)}?kind=${id(kind)}`),
@@ -530,6 +536,8 @@ export const api = {
   notificationsWaiting: () => call<S["NotifyWaiting"]>("GET", "notifications/waiting"),
   /** Gives the person's own address for notices, typed (kept on this computer) or as where it is kept. */
   setNotifyWebhook: (body: S["NotifyWebhookIn"]) => call<S["SettingsSaved"]>("POST", "notifications/webhook", body),
+  /** Picks the app notices go to, by its id from the list the notices view carries. */
+  setNotifyApp: (body: S["NotifyAppIn"]) => call<S["SettingsSaved"]>("POST", "notifications/app", body),
   /** "Send me a test": the webhook gets the test note; for the browser the answer carries the words to show. */
   testNotify: (target: S["NotifyTestIn"]["target"]) => call<S["NotifyTestResult"]>("POST", "notifications/test", { target } satisfies S["NotifyTestIn"]),
   /** Installs (or updates) an add-on from the release its catalog entry names. It isn't turned on, and it is used after a restart. */

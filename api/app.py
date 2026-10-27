@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import os
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -168,6 +169,13 @@ def create_app(
         sweep_ids(store, cfg)
     except Exception as err:  # never stops the app from starting
         log.warning("Couldn't re-word titles that hold an id: %s", err)
+    try:
+        # Hand-made file links an earlier version wrote as paths name their file by its content instead, once.
+        from engine.version_choices import migrate_to_hashes
+
+        migrate_to_hashes(ws, cfg, store, dict(os.environ))
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't turn file links into links by content: %s", err)
     try:
         # Names older settings and rules hold for a project or person become their ids, so a rename can't detach them.
         from engine.references import join_stored_names

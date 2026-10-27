@@ -33,7 +33,6 @@ from engine import (
     review_batches,
     running,
     sent_version,
-    sides,
     since_yesterday,
     source_intake,
     suggestions,
@@ -1363,21 +1362,29 @@ def _everything(
         )
 
     # Review: what the assistant filed under no project, as one line while there is any.
+    from engine import filing
     from engine.unfiled import unfiled
 
+    # Review: what the assistant filed under Personal because it couldn't tell the side, as one grouped question that
+    # opens the questions together (at most one per side a day).
+    asked = filing.summary(reader, cfg, now)
+    if asked is not None:
+        lines.append(
+            Line(
+                key="filing",
+                group="review",
+                kind="unfiled",
+                state="which_side",
+                subject=asked.subject,
+                count=asked.count,
+                since=asked.since,
+            )
+        )
     loose = unfiled(reader)
-    other_sides = sides.side_list(reader, cfg)
     if loose:
         lines.append(
             Line(
-                key="unfiled",
-                group="review",
-                kind="unfiled",
-                # With another side set, the one thing to settle is which side the items belong to.
-                state="which_side" if other_sides else None,
-                subject=other_sides[0].name if len(other_sides) == 1 else None,
-                count=len(loose),
-                since=min(i.created_at for i in loose),
+                key="unfiled", group="review", kind="unfiled", count=len(loose), since=min(i.created_at for i in loose)
             )
         )
 

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from engine.config import load_config
 from engine.watch import VERSION_RULE
-from tests.test_version_choices import current, questions, read, saved_of, signals, start
+from tests.test_version_choices import current, digest, questions, read, saved_of, signals, start
 from tests.test_versions import folder, save  # noqa: F401
 from tests.test_watch import NOW
 
@@ -26,7 +26,9 @@ def test_a_file_offers_the_others_of_its_folder_and_a_link_can_be_undone(folder)
     assert [o["key"] for o in view["others"]] == ["Cost sheet v2.md", "First.md"] and not view["can_split"]
     made = client.post(f"{api}/versions/{saved}/same", json={"other": "Cost sheet v2.md"})
     assert made.status_code == 200 and made.json()["changes"][0]["key"] == "watch.versions.same_document"
-    assert current(ws).watch.versions.same_document[0].files == ["Budget plan.md", "Cost sheet v2.md"]
+    assert current(ws).watch.versions.same_document[0].files == sorted(
+        [digest(store, "Budget plan.md"), digest(store, "Cost sheet v2.md")]
+    )
     assert client.get(f"{api}/versions/{saved}").json()["can_split"] is True
     undone = client.post(f"{api}/versions/undo", json={"changes": made.json()["changes"]})
     assert undone.status_code == 200 and current(ws).watch.versions.same_document == []
@@ -72,7 +74,9 @@ def test_not_the_same_document_on_an_older_version_row_hands_it_in_and_undo_clos
     assert made.status_code == 200
     after = store.read().get("request", row.id).data
     assert after["state"] == "queued" and after["auto_closed"] is None
-    assert signals(store, "pulled_back") and current(ws).watch.versions.not_same == {"s": ["Agenda 2030-03-01.md"]}
+    assert signals(store, "pulled_back") and current(ws).watch.versions.not_same == {
+        "s": [digest(store, "Agenda 2030-03-01.md")]
+    }
     undone = client.post(f"{api}/versions/undo", json={"changes": made.json()["changes"], "request": row.id})
     assert undone.status_code == 200
     assert store.read().get("request", row.id).data["auto_closed"]["rule"] == VERSION_RULE

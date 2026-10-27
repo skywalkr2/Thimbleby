@@ -9,6 +9,7 @@ import { zoneChoices } from "../lib/time-zones";
 import { dateFormatChoices } from "../lib/date-formats";
 import { languageChoices } from "../lib/languages";
 import { useWords } from "../lib/wording";
+import { ClampedHint } from "../ui/ClampedHint";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { TimeZoneSelect } from "./TimeZoneSelect";
 import { restoreFocus } from "./ModalPanel";
@@ -338,11 +339,7 @@ export function SettingRow(props: {
         )}
       </div>
       <div className="setting-help" data-help>
-        {hint && (
-          <p className="hint" id={`${id}-hint`}>
-            {hint}
-          </p>
-        )}
+        {hint && <ClampedHint id={`${id}-hint`} text={hint} />}
         {showDefault && (
           <p className="hint" id={`${id}-default`}>
             {t("settings.default", { value: valueWords(item.default) })}

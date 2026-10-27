@@ -21,13 +21,13 @@ forbid:
 - op: question.add
 - op: action.add
 stub_answer:
-  summary: The notes list two things as decided.
+  summary: The notes list two choices.
   ops:
   - op: fact
-    text: The notes list the cover staying blue as decided
+    text: The notes list that the cover stays blue
     evidence:
       quote: 'Decided: the cover stays blue'
   - op: fact
-    text: The notes list printing the first run in two weeks as decided
+    text: The notes list that the first run is printed in two weeks
     evidence:
       quote: 'Decision: print the first run in two weeks'

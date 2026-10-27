@@ -428,11 +428,11 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; p
           </ul>
         )}
         {actions.length > 0 && (
-          <ul className="children">
-            {actions.map((a) => (
-              <OwnActionRow key={a.id} action={a} />
-            ))}
-          </ul>
+          // Follow-ups is about other people: the person's own to-dos are one line that opens them where they are kept.
+          <p className="hint" data-own-todos="">
+            {tn("followups.your_actions", actions.length)} ·{" "}
+            <a href={viewHref("work/open")}>{t("followups.open_your_todos")}</a>
+          </p>
         )}
       </div>
     </li>
@@ -547,31 +547,6 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
 
 /** One of the person's own to-dos, as Follow-ups lists it: its words, due date and project, and a link to To-dos and questions,
  * where it is marked done and changed. */
-function OwnActionRow(props: { action: S["FollowupAction"] }) {
-  const { t } = useWords();
-  const a = props.action;
-  const titleId = `your-a-${a.id}`;
-  return (
-    <li className="child" data-row tabIndex={-1}>
-      <div>
-        <div className="title" id={titleId}>
-          <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
-          <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} />
-        </div>
-        <div className="meta">
-          <ActionMeta a={a} rest={dueWords(a, t)} />
-        </div>
-        <OriginLink origin={a.origin} />
-      </div>
-      <div className="acts">
-        <a className="link-button" href={viewHref("work/open")} aria-describedby={titleId}>
-          {t("followups.open_todos")}
-        </a>
-      </div>
-    </li>
-  );
-}
-
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Tn = (key: string, n: number, vars?: Record<string, string | number>) => string;
 

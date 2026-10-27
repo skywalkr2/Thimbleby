@@ -21,6 +21,7 @@ from datetime import datetime, time, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
+from engine import notice_apps
 from engine.connectors import ConnectorError
 from engine.net import LOCAL, WebClient
 from engine.reminders import QuietHours, in_quiet_hours
@@ -136,12 +137,11 @@ def _post(cfg: Any, address: str, text: str, *, env: Any = None) -> Sent:
         return Sent(False, _PROBLEMS["no_access"])
     if cfg.server.mode != "local" and host in LOCAL:
         return Sent(False, _PROBLEMS["no_access"])
-    plain = cfg.ui.notifications.webhook_format == "plain"
-    if plain:
-        content, kind = text.encode("utf-8"), "text/plain; charset=utf-8"
+    message = notice_apps.fill(notice_apps.chosen(cfg), text)
+    if isinstance(message, str):
+        content, kind = message.encode("utf-8"), "text/plain; charset=utf-8"
     else:
-        # The text under the names chat apps read it from.
-        content, kind = json.dumps({"text": text, "content": text}).encode("utf-8"), "application/json"
+        content, kind = json.dumps(message).encode("utf-8"), "application/json"
     try:
         response = WebClient([host]).request("POST", address, content=content, headers={"Content-Type": kind})
     except ConnectorError as err:

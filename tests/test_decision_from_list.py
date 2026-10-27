@@ -155,9 +155,7 @@ def test_the_stand_in_says_the_document_lists_it_and_the_persons_note_is_their_c
     document = f'<untrusted source="notes.md">\n- {LISTED}\n</untrusted>'
     own = f"<note>\n{LISTED}\n</note>"
     (listed,) = [op for op in read(document)["ops"] if op["op"] == "fact"]
-    assert (
-        listed["text"] == "The input lists the cover stays blue as decided." and listed["evidence"]["quote"] == LISTED
-    )
+    assert listed["text"] == "The notes list that the cover stays blue." and listed["evidence"]["quote"] == LISTED
     (chosen,) = [op for op in read(own)["ops"] if op["op"] == "fact"]
     assert chosen["text"] == "The cover stays blue."
     assert found(env, [listed]) == []

@@ -140,7 +140,7 @@ test("picking Personal hides the business lines and keeps the app's own lines an
   await waitFor(() => expect(screen.queryByText("Approve the invoice run", { selector: "li *" })).toBeNull());
   expect(screen.getByText("Pick the family photo", { selector: "li *" })).toBeInTheDocument();
   expect(lineKeys().sort()).toEqual(["decision", "restart", "unfiled"]);
-  expect(screen.getByText(`Sort 3 items: Personal or ${BUSINESS}?`)).toBeInTheDocument();
+  expect(screen.getByText(`These 3 items look like ${BUSINESS}'s. Move them there?`)).toBeInTheDocument();
   // The heading counts what shows: the personal line, the restart and the Sort line.
   expect(screen.getAllByText(/3 things need you/).length).toBeGreaterThan(0);
   await user.click(screen.getByRole("radio", { name: BUSINESS }));

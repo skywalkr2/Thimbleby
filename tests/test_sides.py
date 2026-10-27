@@ -352,17 +352,18 @@ def test_the_sender_counts_with_the_people_named_and_decides_alone_when_nobody_i
     assert filed(env, [new_op(owners=[name_of(a)])], sender=a["id"]) == [PERSONAL_ID]
 
 
-def test_people_who_disagree_leave_it_unfiled_and_people_on_both_sides_or_not_known_decide_nothing(env):
+def test_people_who_disagree_leave_it_under_personal_and_people_on_both_sides_or_not_known_decide_nothing(env):
     a, _ = PERSONAL_PEOPLE
     x, _ = BUSINESS_PEOPLE
     mixed = new_op(owners=[name_of(a), name_of(x)])
     from_other_side = new_op(owners=[name_of(a)])
-    assert filed(env, [mixed]) == [None]
-    assert filed(env, [from_other_side], sender=x["id"]) == [None]
-    assert filed(env, [new_op(owners=[name_of(BOTH_PERSON)])]) == [None]
-    assert filed(env, [new_op(owners=[name_of(NO_SIDE_PERSON)])]) == [None]
-    assert filed(env, [new_op(owners=["Somebody Nobody Knows"])]) == [None]
-    assert filed(env, [new_op("fact")], sender=ME) == [None]  # the person's own record has no side
+    # Nothing decides: the item waits under Personal, the more private level, with no reason kept.
+    assert filed(env, [mixed]) == [PERSONAL_ID]
+    assert filed(env, [from_other_side], sender=x["id"]) == [PERSONAL_ID]
+    assert filed(env, [new_op(owners=[name_of(BOTH_PERSON)])]) == [PERSONAL_ID]
+    assert filed(env, [new_op(owners=[name_of(NO_SIDE_PERSON)])]) == [PERSONAL_ID]
+    assert filed(env, [new_op(owners=["Somebody Nobody Knows"])]) == [PERSONAL_ID]
+    assert filed(env, [new_op("fact")], sender=ME) == [PERSONAL_ID]  # the person's own record has no side
     # People who don't decide don't veto the ones who do.
     decided = new_op(owners=[name_of(a), name_of(BOTH_PERSON), name_of(NO_SIDE_PERSON), "Somebody Nobody Knows"])
     assert filed(env, [decided]) == [PERSONAL_ID]
@@ -393,7 +394,7 @@ def test_the_words_of_one_side_file_an_item_there_whatever_their_case_and_only_a
     assert filed(env, ops) == [BUSINESS_ID, PERSONAL_ID, BUSINESS_ID, BUSINESS_ID, PERSONAL_ID]
     business_word = SIDE_WORDS["business"][0]
     inside = [new_op(text=f"Check on x{business_word}y"), new_op(text=f"Check on {business_word}s")]
-    assert filed(env, inside) == [None, None]
+    assert filed(env, inside) == [PERSONAL_ID, PERSONAL_ID]
 
 
 def test_the_words_of_both_sides_in_one_rank_or_of_neither_place_nothing(env):
@@ -404,7 +405,7 @@ def test_the_words_of_both_sides_in_one_rank_or_of_neither_place_nothing(env):
     make_project(store, personal_two, PERSONAL_ID)
     both_by_names = new_op(text=f"Compare {business_two} with {personal_two}")
     neither = new_op(text="Call about it")
-    assert filed(env, [both_side_words, both_by_names, neither]) == [None, None, None]
+    assert filed(env, [both_side_words, both_by_names, neither]) == [PERSONAL_ID] * 3
     # A project's name outranks the configured words, so a name of one side decides before the other side's words.
     name_then_word = new_op(text=f"Compare {BUSINESS_PROJECT_NAME} with {SIDE_WORDS['personal'][0]}")
     assert filed(env, [name_then_word]) == [BUSINESS_ID]
@@ -554,23 +555,27 @@ def test_the_week_has_the_mix_the_tests_rest_on():
 
 
 def test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks_which_side_once(env):
+    from engine import filing
+
+    _, cfg, store = env
     projects, lines, before = run_week(env)
-    home = {"business": BUSINESS_ID, "personal": PERSONAL_ID, "unclear": None}
+    home = {"business": BUSINESS_ID, "personal": PERSONAL_ID, "unclear": PERSONAL_ID}
     week = representative_week()
-    assert projects == {m["id"]: home[m["side"]] for m in week}
+    # what the people can't place waits under Personal, the more private level, instead of landing in Unfiled
+    assert projects == {m["id"]: home[m["side"]] for m in week} | {"mail-by-words": BUSINESS_ID}
     from_both_sides = {m["from"] for m in week if m["side"] == "unclear"}
-    by_words = [m["id"] for m in week if m["from"] in from_both_sides and projects[m["id"]] is not None]
+    by_words = [m["id"] for m in week if m["from"] in from_both_sides and projects[m["id"]] != PERSONAL_ID]
     assert by_words == ["mail-by-words"]  # its people sit on both sides, so its words placed it under the business
-    asks = [line for line in lines if line.kind == "unfiled"]
     unclear = sum(m["side"] == "unclear" for m in week)
-    assert (
-        unclear == 5 and len(asks) == 1 and asks[0].state == "which_side"
-    )  # one batched question, never one line per message
-    assert asks[0].count == before + unclear
-    assert asks[0].subject == fixture_records(DEMO_B, "project")[0]["name"]  # the business, named from its record
+    assert unclear == 5 and before == 0 and unfiled(store.read()) == []
+    asked = filing.summary(store.read(), cfg, NOW)  # one batched question, never one line per message
+    assert asked is not None and asked.count == unclear
+    assert asked.subject == fixture_records(DEMO_B, "project")[0]["name"]  # the business, named from its record
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" in sheet["queue.sides.one"] and "{business}" in sheet["queue.sides.other"]
-    assert "{n}" in sheet["queue.sides.other"]  # the line reads "Sort 5 items: Personal or <business>?"
+    assert (
+        "{n}" in sheet["queue.sides.other"]
+    )  # the line reads "These 5 items look like <business>'s. Move them there?"
 
 
 def test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_nothing(env):

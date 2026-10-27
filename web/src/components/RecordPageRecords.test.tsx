@@ -420,3 +420,67 @@ test("a page with no facts about it has no Facts section", async () => {
   await screen.findByRole("heading", { name: "Prepare the board pack" });
   expect(screen.queryByRole("region", { name: "Facts" })).toBeNull();
 });
+
+test("a page opens with what is open, then the conversation, then what finished, the facts and the history", async () => {
+  api(
+    "project",
+    "PRJ-1",
+    { name: "Harbor" },
+    page({
+      open_actions: [{ id: "ACT-1", text: "Send the proof", due: null, owners: [], project: "PRJ-1", project_name: "Harbor", origin: null }],
+      completed_actions: [{ id: "ACT-2", text: "Book the printer", project: "PRJ-1", project_name: "Harbor", done_by: [], done_on: "2026-10-12" }],
+      activity: [{ at: "2026-10-12T09:00:00Z", kind: "action", id: "ACT-2", name: "Book the printer", op: "action.add#0", field: null, actor: "assistant", by_assistant: true }],
+    }),
+    { "GET records/project/PRJ-1/conversation": () => ({ kind: "project", id: "PRJ-1", turns: [] }) },
+  );
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const open = await screen.findByRole("region", { name: "Open with Harbor" });
+  const talk = await screen.findByRole("region", { name: /^Talk to/ });
+  const done = await screen.findByRole("region", { name: "Completed" });
+  const activity = await screen.findByRole("region", { name: "Activity" });
+  const before = (a: Element, b: Element) => expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  before(open, talk);
+  before(talk, done);
+  before(done, activity);
+});
+
+test("a fact that is one person's word keeps who said it, and a plain statement of the world is left as it is", async () => {
+  api(
+    "action",
+    "ACT-1",
+    { text: "Prepare the board pack" },
+    page({
+      kind: "action",
+      id: "ACT-1",
+      name: "Prepare the board pack",
+      facts: [
+        { id: "FACT-1", text: "The offsite is on a Friday.", as_of: "2026-10-27", key: false, said_by: "Pat Marsh" },
+        { id: "FACT-2", text: "Harbor ships on the 9th", as_of: null, key: false, said_by: "Lee Kin" },
+        { id: "FACT-3", text: "The pack goes out on Friday", as_of: null, key: false },
+      ],
+    }),
+  );
+  renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
+  const facts = await screen.findByRole("region", { name: "Facts" });
+  // A plain first word is lower-cased after the name; a name at the start of the fact is never changed.
+  expect(within(facts).getByRole("link", { name: "Pat Marsh says the offsite is on a Friday" })).toBeInTheDocument();
+  expect(within(facts).getByRole("link", { name: "Lee Kin says Harbor ships on the 9th" })).toBeInTheDocument();
+  expect(within(facts).getByRole("link", { name: "The pack goes out on Friday" })).toBeInTheDocument();
+});
+
+test("a date written as year-month-day in a title is shown as a day wherever the page lists it, the activity included", async () => {
+  api(
+    "project",
+    "PRJ-1",
+    { name: "Harbor" },
+    page({
+      completed_actions: [{ id: "ACT-2", text: "Send the headcount by 2026-11-04.", project: "PRJ-1", project_name: "Harbor", done_by: [], done_on: "2026-10-12" }],
+      activity: [{ at: "2026-10-27T09:00:00Z", kind: "action", id: "ACT-3", name: "Send the headcount by 2026-11-04.", op: "action.add#0", field: null, actor: "assistant", by_assistant: true }],
+    }),
+    { "GET records/project/PRJ-1/conversation": () => ({ kind: "project", id: "PRJ-1", turns: [] }) },
+  );
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const activity = await screen.findByRole("region", { name: "Activity" });
+  expect(activity).toHaveTextContent(/Send the headcount by .*Nov 4/);
+  expect(screen.queryByText(/2026-11-04/)).toBeNull();
+});

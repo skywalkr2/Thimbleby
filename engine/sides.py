@@ -13,7 +13,9 @@ narrow every later rank to them), the sender's mail domain when the sender is no
 names of projects that count by themselves (two or more words, or one that is no everyday word), then the configured
 `project.side_words` (the personal words, and the business words while there is exactly one other side); the item's text
 and quote are matched as whole words whatever their case. Whatever files an item is kept on it (`filed_by`) so the item
-can say why. Reads only, except `make_personal` and `set_business`, which write the project each side needs.
+can say why. An item no rank decides waits under Personal, the more private level, with no reason kept (`engine.filing`
+asks once a side a day whether to move it). Reads only, except `make_personal` and `set_business`, which write the
+project each side needs.
 """
 
 from __future__ import annotations
@@ -506,9 +508,10 @@ def file_by_people(
        (`file_by_words`): under the one project they name, else the side's top project.
     With no other side an unplaced item goes to the personal project when that is the only top-level project (a
     workspace tracking other work without naming a side keeps its unfiled items for the person to place); with one,
-    an item no signal places stays unfiled for the person to place. A changeset that also proposes a new project is left
-    as it is: adding that project files what the same input made with no project under it. Whatever the assistant
-    wrote in `filed_by` is cleared: only this function sets it. The same ops always give the same result."""
+    an item no signal places is filed under Personal (the more private level) and stays there until the person moves
+    it (`engine.filing`; unfiled only when there is no personal project). A changeset that also proposes a new project
+    is left as it is: adding that project files what the same input made with no project under it. Whatever the
+    assistant wrote in `filed_by` is cleared: only this function sets it. The same ops always give the same result."""
     ops = without_filed_by(ops)
     personal, others = personal_project(view, cfg), side_list(view, cfg)
     if personal is None and not others:
@@ -555,7 +558,12 @@ def file_by_people(
                 filing = Filing(by_domain, "domain", domain)
             else:
                 filing = file_by_words(op, view, cfg, words, allowed)
-        out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}) if filing else op)
+        if filing is not None:
+            out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}))
+        else:
+            # Unsure between Personal and a side: the item waits under Personal, the more private level, and the
+            # grouped question of `engine.filing` offers moving it. No reason is kept: no signal decided.
+            out.append(op.model_copy(update={"project": personal}) if personal else op)
     return out
 
 

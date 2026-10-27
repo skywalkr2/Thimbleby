@@ -37,7 +37,7 @@ def test_lines_become_actions_needs_and_decisions_with_their_words():
     assert ops[3]["text"] == "Confirm the print slot."
     assert ops[4] == {
         "op": "fact",
-        "text": "The input lists the cover stays blue as decided.",
+        "text": "The notes list that the cover stays blue.",
         "evidence": {"quote": "Decided: the cover stays blue."},
     }
     assert ops[5] == {"op": "note", "text": "We talked about the weather."}

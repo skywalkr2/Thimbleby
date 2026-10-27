@@ -673,8 +673,11 @@ week" runs through, holidays, and per-team non-working days).
 - `enabled` (false): notices are opt-in;
 - `browser` (true): the open screen shows the notice as the browser's own notification, once the browser allows them;
 - `webhook` (none): the person's own address for notices as a secret reference, kept like a key (`POST
-  /api/notifications/webhook`; typed on a local app, or named as `env:`/`file:`); `webhook_format` (`json`, a small message
-  with the text under `text` and `content`; or `plain`, the text alone as the body, for push topics);
+  /api/notifications/webhook`; typed on a local app, or named as `env:`/`file:`); `webhook_app` (none; the app the address belongs to, picked by name from the shipped
+  list `engine/defaults/notice_apps.yaml` and `apps_extra`, which decides the message sent; Advanced › Notices, `POST
+  /api/notifications/app`), `apps_extra` (empty; the person's own entries, each `{id, name, shape, where}`, an entry with a
+  shipped id replacing it; files-only) and `webhook_format` (`json`, a small message with the text under `text` and `content`;
+  or `plain`, the text alone as the body; read when no app is picked, and files-only now);
 - `quiet_hours` (`{start: "21:00", end: "07:00"}`, on the person's clock): nothing is sent in them, and what came up goes
   out once when they end;
 - `retry_minutes` (10): the wait before a note that could not be delivered is tried again;
@@ -880,6 +883,11 @@ most 1) is how much of a routing entry's topic an unowned action must hold for t
 workspaces show all three. `tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`,
 `tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`,
 `tests/test_corrections.py::test_the_suggestion_follows_the_configured_share_of_the_topic_and_skips_what_does_not_apply`.
+
+**Built (F44, `tests/test_plain_titles.py`):** `decided-as-fact` (default `return`; per project like any lint), a fact whose
+words say "decided" (`engine/defaults/decision_lines.yaml`, `choice`) goes back once unless the words it rests on show a
+choice someone made (a sentence holding the word; a list line makes no one the chooser) or the person wrote it; a fact states
+the world, and a claim keeps who said it.
 
 **Built (lesson 7):** `decision-from-list` (default `return`; per project like any lint), a fact whose evidence is a line a
 document lists as decided ("- Decided: ..."), worded as a choice stated as true, goes back once to say that the document lists

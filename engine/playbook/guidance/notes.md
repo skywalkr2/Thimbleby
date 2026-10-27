@@ -9,10 +9,13 @@ Practice for reading notes, minutes and messages (core playbook):
 - When the input says an open action is done, close it with the words that say so, rather than adding a note.
 - A fact is something the input states as true (a date, a number, a choice someone is said to have made). A note is
   anything else worth keeping.
+- Write a fact about the world, not about the input: "The offsite is on a Friday", never "The input lists the offsite as
+  decided". When it is one person's word, keep who said it (`said_by`) and the fact is shown with their name; two
+  people's words that disagree are two facts, each with its speaker, never one of them silently preferred.
 - A decision is a choice someone made, and the record says who made it. A line a document lists under "Decided",
   "Decision" or "Agreed" (a bullet, a numbered line or a table row, with nobody choosing in the words) is what the
-  document lists, not a choice anyone made: record a fact that says the document lists it ("The notes list the cover as
-  decided"), quoting the line. Never state it as true, as the user's decision or as a decision to ask about. A sentence
+  document lists, not a choice anyone made: record a fact that says the document lists it ("The notes list that the cover
+  stays blue"), quoting the line, and never write "decided" into it. Never state it as true, as the user's decision or as a decision to ask about. A sentence
   that names who chose ("Kit decided to move the launch") is a choice: say who made it. The user's own note saying
   "Decided: ..." is the user's choice.
 - Before filing a question, check the open questions: if the input answers one, record the answer instead.

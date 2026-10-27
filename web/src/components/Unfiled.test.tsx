@@ -17,6 +17,13 @@ const items = [
   unfiledItem("fact", "F-1", "The trim size is 6 by 9 inches.", { trust: "untrusted" }),
 ];
 
+/** The line "3 items need a place · Sort them", opened: the section that holds the rows. */
+async function opened(user = userEvent.setup()) {
+  const section = (await screen.findByText(/need a place|needs a place/)).closest("section")!;
+  await user.click(within(section).getByRole("button", { name: "Sort them" }));
+  return section;
+}
+
 function api(extra: Routes = {}, shown = items) {
   return fakeApi({
     "GET unfiled": () => unfiledView(...shown),
@@ -30,11 +37,15 @@ function api(extra: Routes = {}, shown = items) {
   });
 }
 
-test("what the assistant filed under no project is one group, a row each with what it is and a File under… button", async () => {
+test("what the assistant filed under no project is one line, and Sort them opens a row each with what it is and a File under… button", async () => {
   api();
   renderApp(<Unfiled />);
-  const group = (await screen.findByRole("heading", { name: "Unfiled" })).closest("section")!;
-  expect(group).toHaveTextContent("3 items");
+  const section = (await screen.findByText("3 items need a place")).closest("section")!;
+  // Closed, it is the one line: no row is shown until the person chooses to sort them.
+  expect(within(section).queryAllByRole("listitem")).toHaveLength(0);
+  expect(within(section).getByRole("button", { name: "Sort them" })).toHaveAttribute("aria-expanded", "false");
+  const group = await opened();
+  expect(within(group).getByRole("button", { name: "Hide them" })).toHaveAttribute("aria-expanded", "true");
   const rows = within(group).getAllByRole("listitem");
   expect(rows).toHaveLength(3);
   expect(rows[0]).toHaveTextContent("Note");
@@ -46,12 +57,20 @@ test("what the assistant filed under no project is one group, a row each with wh
   for (const r of rows) expect(within(r).getByRole("button", { name: "File under…" })).toBeInTheDocument();
 });
 
+test("a date written as year-month-day in an item's words is shown as a day", async () => {
+  api({}, [unfiledItem("action", "A-3", "Send the headcount by 2026-11-04.")]);
+  renderApp(<Unfiled />);
+  const group = await opened();
+  expect(within(group).getByText(/Send the headcount by .*Nov 4/)).toBeInTheDocument();
+  expect(group).not.toHaveTextContent("2026-11-04");
+});
+
 test("with nothing unfiled the group isn't there, so no zero is ever shown", async () => {
   const calls = api({}, []);
   renderApp(<Unfiled />);
   await waitFor(() => expect(calls.some((c) => c.route === "GET unfiled")).toBe(true));
   await new Promise((resolve) => setTimeout(resolve, 20));
-  expect(screen.queryByRole("heading", { name: "Unfiled" })).toBeNull();
+  expect(screen.queryByText(/need a place|needs a place/)).toBeNull();
   expect(screen.queryByText(/0 items/)).toBeNull();
 });
 
@@ -59,7 +78,7 @@ test("File under… offers the projects and ends with Add a project…; choosing
   const user = userEvent.setup();
   const calls = api();
   renderApp(<Unfiled />);
-  const rows = within((await screen.findByRole("heading", { name: "Unfiled" })).closest("section")!).getAllByRole("listitem");
+  const rows = within(await opened(user)).getAllByRole("listitem");
   await user.click(within(rows[1]).getByRole("button", { name: "File under…" }));
   const picker = within(rows[1]).getByRole("combobox", { name: /File under: Send the proof/ });
   await waitFor(() => expect(picker).toHaveFocus());
@@ -75,7 +94,7 @@ test("several are filed at once: select them, choose one project, and they go in
   const user = userEvent.setup();
   const calls = api();
   renderApp(<Unfiled />);
-  const group = (await screen.findByRole("heading", { name: "Unfiled" })).closest("section")!;
+  const group = await opened(user);
   await user.click(within(group).getByRole("checkbox", { name: "Select: Printer prefers PDF/X files." }));
   await user.click(within(group).getByRole("checkbox", { name: "Select: The trim size is 6 by 9 inches." }));
   const picker = await within(group).findByRole("combobox", { name: "File the 2 selected items under…" });
@@ -104,7 +123,7 @@ test("Add a project… opens the form in place, and the project it adds is the o
     },
   });
   renderApp(<Unfiled />);
-  const rows = within((await screen.findByRole("heading", { name: "Unfiled" })).closest("section")!).getAllByRole("listitem");
+  const rows = within(await opened(user)).getAllByRole("listitem");
   await user.click(within(rows[0]).getByRole("button", { name: "File under…" }));
   await user.selectOptions(within(rows[0]).getByRole("combobox"), "Add a project…");
   const dialog = await screen.findByRole("dialog", { name: "Add a project" });
@@ -119,6 +138,7 @@ test("Add a project… opens the form in place, and the project it adds is the o
 test("a text from outside is shown as text with its real domain, never as raw HTML", async () => {
   api({}, [unfiledItem("note", "N-7", `Read <b>this</b> ${WEB}example.com/page`, { trust: "untrusted" })]);
   renderApp(<Unfiled />);
+  await opened();
   const row = (await screen.findByText(/Read <b>this<\/b>/)).closest("li")!;
   expect(row.querySelector("b")).toBeNull();
 });

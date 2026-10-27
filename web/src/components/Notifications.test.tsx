@@ -19,6 +19,12 @@ const view = (over: Partial<S["NotificationsView"]> = {}): S["NotificationsView"
   enabled: true,
   browser: true,
   webhook: { where: "none", name: null },
+  app: "generic-chat",
+  apps: [
+    { id: "slack-like", name: "A named chat app", where: "Look in its integration settings." },
+    { id: "generic-chat", name: "Another chat app (a text message)", where: "Look for incoming webhooks." },
+    { id: "plain", name: "Something else (plain text)", where: "Use an address that takes plain text." },
+  ],
   quiet_now: false,
   mail_ready: false,
   problem: null,
@@ -50,15 +56,39 @@ const post = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c
 const card = async (name: string) => (await screen.findByRole("heading", { level: 4, name })).closest("li") as HTMLElement;
 
 describe("the ways of getting a notice", () => {
-  test("are three cards; mail to yourself says it comes with mail sending and has no button", async () => {
+  test("are two cards; mail to yourself isn't listed until something can send it", async () => {
     stubNotification("granted");
     fakeApi(routes());
     renderApp(<Notifications />);
-    const mail = await card("Mail to yourself");
-    expect(within(mail).getByText(/Comes with mail sending/)).toBeInTheDocument();
-    expect(within(mail).queryByRole("button")).toBeNull();
     expect(await card("This browser")).toBeInTheDocument();
     expect(await card("A chat app or a push topic")).toBeInTheDocument();
+    expect(screen.queryByText("Mail to yourself")).toBeNull();
+    expect(screen.queryByText(/Comes with mail sending/)).toBeNull();
+  });
+
+  test("the app the address belongs to is picked by name from a list, with one line on where to find the address", async () => {
+    const user = userEvent.setup();
+    stubNotification("granted");
+    let app = "generic-chat";
+    const calls = fakeApi(
+      routes({
+        "GET notifications": () => view({ app }),
+        "POST notifications/app": () => {
+          app = "plain";
+          return SAVED;
+        },
+      }),
+    );
+    renderApp(<Notifications />);
+    const hook = await card("A chat app or a push topic");
+    const pick = await within(hook).findByRole("combobox", { name: "Which app is the address for?" });
+    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["A named chat app", "Another chat app (a text message)", "Something else (plain text)"]);
+    expect(pick).toHaveValue("generic-chat");
+    expect(within(hook).getByText("Where to find the address: Look for incoming webhooks.")).toBeInTheDocument();
+    await user.selectOptions(pick, "plain");
+    await waitFor(() => expect(post(calls, "POST notifications/app")).toEqual({ app: "plain", fingerprint: "fp-1" }));
+    expect(await screen.findByText("Notices now go to the app you picked.")).toBeInTheDocument();
+    expect(await within(hook).findByText("Where to find the address: Use an address that takes plain text.")).toBeInTheDocument();
   });
 
   test("say when notices are off, and still let each way be set up and tried first", async () => {
@@ -164,7 +194,7 @@ describe("Settings", () => {
       }),
     );
     renderApp(<Settings section="today" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-    expect(await screen.findByRole("region", { name: "Tell me when something needs me" })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Ways to get a notice" })).toBeInTheDocument();
     expect(screen.queryByLabelText("The address.")).toBeNull();
   });
 });

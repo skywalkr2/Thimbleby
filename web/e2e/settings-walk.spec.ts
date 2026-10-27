@@ -83,14 +83,14 @@ const MOST_LABEL = 60;
 // A hint never carries a code-like id ("ai: ...", "env:NAME") or a word a person with no work tool never sees.
 const CODE_ID = /\b[A-Za-z_]+:(?!\/\/)/;
 const JUST_ME_WORDS = /\b(work|project|stage|organization|owner|template)s?\b/i;
-// What a fresh workspace counts on its pages: the working hours and the one notices switch make room for Your name. Where
-// reminders go is one row, drawn by a part of its own that is no `.setting`.
-const BASIC_ROWS = 19;
-// Behind Advanced the chat or phone app's address is a box of its own beside its format row, so it is one row more than
-// the `.setting` rows.
+// What a fresh workspace counts on its pages: the working hours, the quiet hours and the one notices switch make room for
+// Your name. Where reminders go is one row, drawn by a part of its own that is no `.setting`.
+const BASIC_ROWS = 18;
+// Behind Advanced the chat or phone app's address and the pick list of the app it belongs to are two parts of one card,
+// neither a `.setting`, so they are two rows more than the `.setting` rows less the one the older format used to be.
 const ADVANCED_ROWS = 26;
 
-test("the settings walk counts 19 basic and 26 advanced rows, each labelled in plain words, with a hint in plain words", async ({ page }) => {
+test("the settings walk counts 18 basic and 26 advanced rows, each labelled in plain words, with a hint in plain words", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/you");
@@ -136,7 +136,7 @@ test("the settings walk counts 19 basic and 26 advanced rows, each labelled in p
     if ((await toggles.nth(n).getAttribute("aria-expanded")) !== "true") await toggles.nth(n).click();
   }
   await expect(page.locator(".settings-topic .notice-targets")).toHaveCount(1, LOADED);
-  expect((await page.locator(".settings-topic .setting").count()) + 1).toBe(ADVANCED_ROWS);
+  expect((await page.locator(".settings-topic .setting").count()) + 2).toBe(ADVANCED_ROWS);
   await expect(page.getByRole("group", { name: "When the brief shows" })).toHaveCount(1);
   hints.push(...(await page.locator(".settings-topic .setting .setting-help .hint:not([id$='-default'])").allTextContents()));
   labels.push(...(await page.locator(".settings-topic .setting .setting-label").allTextContents()));

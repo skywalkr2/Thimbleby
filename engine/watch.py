@@ -384,17 +384,25 @@ def _compare(
     plain = entry_rules.Plain(store.read(), cfg, source.id)
     folder = source.connector in versions.FOLDER_CONNECTORS and cfg.watch.versions.enabled
     asking = People(store, cfg).pm if folder else None
-    families = (
-        versions.Families(
-            poll.items,
+    families = None
+    if folder:
+        # A choice names a file by the hash of its text: one edited in place since keeps its choices, for this read
+        # and, written back, for the next.
+        found = [versions.Listed(i.key, i.changed_at, versions.digest_of(i.text)) for i in poll.items]
+        followed = {
+            seen[i.key].data["content_hash"]: i.digest
+            for i in found
+            if i.key in seen and seen[i.key].data["content_hash"] != i.digest
+        }
+        version_choices.follow_edits(ws, cfg, store, source.id, followed)
+        families = versions.Families(
+            found,
             cfg.watch.versions,
             source.id,
             give_up=version_choices.given_up(store.read(), source.id),
             ask=asking is not None,
+            followed=followed,
         )
-        if folder
-        else None
-    )
     for polled in poll.items:
         listed.add(polled.key)
         # Files an item carries are read as text first, so the item is compared and handed in with their words.

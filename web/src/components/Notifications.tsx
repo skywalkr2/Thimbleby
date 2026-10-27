@@ -1,6 +1,7 @@
 // Notices that something needs the person (design 7.19): the ways of getting one, each with "Send me a test". The browser
 // needs its own permission, asked for only from a button here. A chat app or push topic is the person's own address, kept
-// on this computer like a key. Mail to themselves is listed as coming with mail sending, since nothing sends mail yet.
+// on this computer like a key, and the app it belongs to is picked by name from a list (the app's own, and the person's) with
+// one line on where to find the address in it. Mail to themselves isn't listed until something can send it.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -85,10 +86,39 @@ function WebhookTarget(props: { local: boolean }) {
   const test = useTest("webhook");
   const base = useId();
   const held = view.data ? heldOf(view.data.webhook) : null;
+  const apps = view.data?.apps ?? [];
+  const chosen = apps.find((a) => a.id === view.data?.app);
   return (
     <li className={styles.target} aria-labelledby={`${base}-name`}>
       <h4 id={`${base}-name`}>{t("notices.webhook.title")}</h4>
       <p>{t("notices.webhook.hint")}</p>
+      {apps.length > 0 && (
+        <div className="field">
+          <label htmlFor={`${base}-app`}>{t("notices.app.label")}</label>
+          <select
+            id={`${base}-app`}
+            value={chosen?.id ?? ""}
+            aria-describedby={chosen ? `${base}-app-where` : undefined}
+            onChange={(e) =>
+              void (async () => {
+                const saved = await api.setNotifyApp({ app: e.target.value, fingerprint: await fingerprint() });
+                await afterSave(saved, { message: t("notices.app.saved") });
+              })()
+            }
+          >
+            {apps.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          {chosen && (
+            <p className="hint" id={`${base}-app-where`}>
+              {t("notices.app.where", { where: chosen.where })}
+            </p>
+          )}
+        </div>
+      )}
       <KeptSecretRow
         id={`${base}-address`}
         label={t("notices.webhook.label")}
@@ -149,12 +179,6 @@ export function Notifications(props: { part?: "browser" | "webhook" }) {
                 <WebhookTarget local={setup.data?.local ?? true} />
               </ul>
             </details>
-          </li>
-        )}
-        {!view.data?.mail_ready && (
-          <li className={styles.target} aria-labelledby={`${base}-mail`}>
-            <h4 id={`${base}-mail`}>{t("notices.mail.title")}</h4>
-            <p>{t("notices.mail.later")}</p>
           </li>
         )}
       </ul>

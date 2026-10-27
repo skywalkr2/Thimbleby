@@ -1231,6 +1231,30 @@ describe("each screen", () => {
       expect(screen.getByRole("button", { name: "Add Lee Kin" })).toBeInTheDocument();
     });
 
+    test("with a business each suggestion is added to Personal or to the business, by the button the person presses", async () => {
+      const user = userEvent.setup();
+      const calls = fakeApi(
+        routes(
+          {
+            "GET setup/business": () => stateWith([side("PRJ-3", "business", SHOP)]),
+            "GET setup/people-suggestions": () => SUGGESTED,
+            "POST setup/people-add": () => ({ id: "PER-9" }),
+          },
+          CORE.map((id) => step(id)),
+          { step: "people" },
+        ),
+      );
+      open();
+      const list = await screen.findByRole("region", { name: "People you write to most" });
+      // The suggestions are listed once, with a place for each, not under Personal alone.
+      const first = within(list).getAllByRole("listitem")[0];
+      expect(within(first).getAllByRole("button").map((b) => b.textContent)).toEqual(["Add to Personal", `Add to ${SHOP}`]);
+      expect(within(list).queryByRole("button", { name: "Add Casey Kin" })).toBeNull();
+      await user.click(within(first).getByRole("button", { name: `Add Casey Kin to ${SHOP}` }));
+      await waitFor(() => expect(calls.some((c) => c.route === "POST setup/people-add")).toBe(true));
+      expect(calls.find((c) => c.route === "POST setup/people-add")!.body).toEqual({ full_name: "Casey Kin", aliases: [], address: "casey@example.com", sides: ["PRJ-3"] });
+    });
+
     test("with no one to suggest, nothing is said about suggestions", async () => {
       personalOnly();
       open();
@@ -1283,13 +1307,16 @@ describe("each screen", () => {
     const business = screen.getByRole("region", { name: `The people at ${SHOP}` });
     const options = (el: HTMLElement) => within(within(el).getByLabelText("Their part")).getAllByRole("option").map((o) => o.textContent);
     expect(options(job)).toEqual(expect.arrayContaining(["manager", "colleague"]));
-    expect(options(business)).toEqual(expect.arrayContaining(["customer", "supplier", "staff", "client"]));
+    expect(options(business)).toEqual(expect.arrayContaining(["customer", "supplier", "staff"]));
+    // "customer" stays and "client" is gone: two words for one part left people choosing between them.
+    expect(options(business)).not.toContain("client");
+    expect(options(job)).not.toContain("client");
     expect(options(business)).not.toContain("manager");
     await user.type(within(business).getByLabelText("Their name"), "Sam Kin");
-    await user.selectOptions(within(business).getByLabelText("Their part"), "client");
+    await user.selectOptions(within(business).getByLabelText("Their part"), "customer");
     await user.click(within(business).getByRole("button", { name: "Add" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
-    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Sam Kin", aliases: [], sides: ["PRJ-3"], role: "client" });
+    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Sam Kin", aliases: [], sides: ["PRJ-3"], role: "customer" });
   });
 
   test("People: with no side of work, only the people in the person's life are asked, saved on the personal side", async () => {

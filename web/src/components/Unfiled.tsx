@@ -1,12 +1,14 @@
-// Unfiled work (design 7.14, open promise P14): what the assistant filed under no project, gathered in one place. Each row
+// Unfiled work (design 7.14, open promise P14): what the assistant filed under no project, gathered in one place. It is one
+// line ("3 items need a place · Sort them"), below the projects, never a block above them; Sort them opens the rows. Each row
 // says what it is and has "File under…", a project picker that ends with "Add a project…"; choosing a project files it at
 // once with Undo, and so does choosing one for several rows at a time. Every filing is a correction the assistant learns
-// from (the server records it). With nothing unfiled the group isn't there, so it never shows a zero.
+// from (the server records it). With nothing unfiled the line isn't there, so it never shows a zero.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText } from "../lib/dates";
+import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
@@ -45,6 +47,7 @@ export function Unfiled() {
   const file = useFile();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [filing, setFiling] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const items = unfiled.data?.items ?? [];
   if (items.length === 0) return null;
   const chosen = items.filter((i) => picked.has(key(i)));
@@ -55,13 +58,15 @@ export function Unfiled() {
       return next;
     });
   return (
-    <section className="unfiled" aria-labelledby="unfiled-title" data-unfiled="">
-      <div className="heading">
-        <h2 id="unfiled-title">{t("unfiled.title")}</h2>
-        <span className="hint">{tn("unfiled.count", items.length)}</span>
-      </div>
-      <p className="hint">{t("unfiled.why")}</p>
-      {chosen.length > 0 && (
+    <section className="unfiled" aria-label={t("unfiled.title")} data-unfiled="">
+      <p className="unfiled-line">
+        <span id="unfiled-title">{tn("unfiled.line", items.length)}</span> ·{" "}
+        <button type="button" className="link-button" aria-expanded={open} aria-controls="unfiled-list" onClick={() => setOpen(!open)}>
+          {t(open ? "unfiled.hide" : "unfiled.sort_them")}
+        </button>
+      </p>
+      {open && <p className="hint">{t("unfiled.why")}</p>}
+      {open && chosen.length > 0 && (
         <div className="bar" role="group" aria-label={t("unfiled.selected_label")}>
           <ProjectPicker
             id="unfiled-selected"
@@ -73,15 +78,15 @@ export function Unfiled() {
           />
         </div>
       )}
-      <ul className="queue">
-        {items.map((item) => (
+      <ul className="queue" id="unfiled-list" hidden={!open}>
+        {open && items.map((item) => (
           <Row
             key={key(item)}
             pill={<Pill tone="neutral">{t(`unfiled.kind.${item.kind}`)}</Pill>}
             title={
               <label className="check-line">
                 <input type="checkbox" checked={picked.has(key(item))} onChange={() => toggle(item)} aria-label={t("unfiled.select", { text: item.text })} />
-                <SafeText text={item.text} />
+                <SafeText text={plainTitle(item.text)} />
               </label>
             }
             meta={item.created_at ? t("unfiled.filed_on", { when: whenText(item.created_at) }) : ""}

@@ -5,6 +5,9 @@
 #   blue"), written for the core by hand. A line headed by one says what the document lists; nothing in it says who chose.
 # listing: words that make a recorded fact say where it comes from ("The notes list the cover as decided"), so it is
 #   what a document lists and not a choice stated as true.
+# choice: words that write "decided" into a fact. A fact states the world; it never says a choice was made unless the words
+#   it rests on show who made one (the `decided-as-fact` check).
 en:
   labels: [decided, decision, decisions, agreed, agreement, resolved, resolution, approved, concluded]
   listing: [list, lists, listed, listing, says, say, notes, minutes, document, page, agenda, table, record, records]
+  choice: [decided, decision]

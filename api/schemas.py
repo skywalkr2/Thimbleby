@@ -1323,6 +1323,45 @@ class UnfiledFile(BaseModel):
     items: list[UnfiledRef] = Field(min_length=1)
 
 
+class FilingItem(BaseModel):
+    kind: Literal["note", "action", "question", "fact"]
+    id: str
+    version: int
+    text: str = Field(description="The item in one line.")
+
+
+class FilingQuestion(BaseModel):
+    """The question for one side (design 6.32): the items that wait under Personal and could be this side's."""
+
+    side: str = Field(description="The id of the side's top project.")
+    name: str = Field(description="The side's name.")
+    items: list[FilingItem]
+
+
+class FilingQuestions(BaseModel):
+    """The grouped questions of which side unsure items belong to, one for each side, at most once a day."""
+
+    questions: list[FilingQuestion]
+
+
+class FilingMove(BaseModel):
+    side: str = Field(description="The side's top project, from GET /api/filing/questions.")
+    items: list[UnfiledRef] = Field(min_length=1)
+
+
+class FilingMoved(BaseModel):
+    """What a move did: `changeset` is what Undo takes, `count` how many items moved and `rule` the standing rule it
+    proposed (for Keep on Today's learned line), when the same sender's items were moved a second time."""
+
+    changeset: str
+    count: int
+    rule: str | None = None
+
+
+class FilingKept(BaseModel):
+    signal: str
+
+
 class ProjectIn(BaseModel):
     name: str = Field(min_length=1)
     aliases: list[str] = Field(default_factory=list, description="Other forms it is called by.")
@@ -1557,6 +1596,9 @@ class FactLine(BaseModel):
     text: str
     as_of: str | None = Field(None, description="The day it was true as of, YYYY-MM-DD.")
     key: bool = False
+    said_by: str | None = Field(
+        None, description="Who said it, by name, when it is one person's claim; the line keeps whose word it is."
+    )
 
 
 class FactSource(BaseModel):
@@ -5383,12 +5425,24 @@ class NotifyWebhookView(BaseModel):
     name: str | None = Field(None, description="The variable's name, or the file's path; empty otherwise.")
 
 
+class NoticeAppView(BaseModel):
+    """An app a notice can go to, for the pick list: its name and where to find its address."""
+
+    id: str
+    name: str
+    where: str = Field(description="One line on where to find the address in that app.")
+
+
 class NotificationsView(BaseModel):
     """What the notices (design 7.19) are set to, and what each way of getting them can do now."""
 
     enabled: bool = Field(description="Notices are on. They are off until the person turns them on.")
     browser: bool = Field(description="The browser target is on (it also needs the browser's own permission).")
     webhook: NotifyWebhookView
+    app: str = Field(
+        description="The id of the app notices go to: the one picked, else the one the older format means."
+    )
+    apps: list[NoticeAppView] = Field(description='The apps to pick from, by name; "Something else" is last.')
     quiet_now: bool = Field(description="The person's clock is inside quiet hours: nothing is sent until they end.")
     mail_ready: bool = Field(
         description="Mail to the person themselves can be used. False until the app can send mail: the screen says "
@@ -5419,6 +5473,13 @@ class NotifyWebhookIn(BaseModel):
         "it is kept; a hosted app refuses it. Never stored in the settings or sent back.",
     )
     reference: str | None = Field(None, description="Where the address is kept instead: env:NAME or file:/path.")
+    fingerprint: str
+
+
+class NotifyAppIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    app: str = Field(description="The id of an app from GET /api/notifications.")
     fingerprint: str
 
 

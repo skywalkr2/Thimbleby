@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { person, project, unfiledView } from "../lib/records-fixtures";
+import { person, project, unfiledItem, unfiledView } from "../lib/records-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { groupProjects, Projects } from "./Projects";
 
@@ -331,12 +331,25 @@ test("an empty workspace says so and offers to add a project", async () => {
   expect(screen.getAllByRole("button", { name: "Add a project" })).toHaveLength(2);
 });
 
-test("unfiled work is gathered above the table, and the group isn't there when nothing is unfiled", async () => {
+test("unfiled work is one line below the projects, never a block above them, and the line isn't there when nothing is unfiled", async () => {
   api([first]);
   renderApp(<Projects />);
   await row("First project");
-  expect(screen.queryByRole("heading", { name: "Unfiled" })).toBeNull();
+  expect(screen.queryByText(/need a place|needs a place/)).toBeNull();
   expect(screen.queryByText("0 items")).toBeNull();
+});
+
+test("with items that need a place the line sits after the project list and shows no row until Sort them is pressed", async () => {
+  const user = userEvent.setup();
+  api([first], { "GET unfiled": () => unfiledView(unfiledItem("note", "N-1", "A loose note"), unfiledItem("action", "A-1", "Send the proof"), unfiledItem("action", "A-2", "Book the room")) });
+  renderApp(<Projects />);
+  const table = await screen.findByRole("table");
+  const line = await screen.findByText("3 items need a place");
+  // After the table in the page, so no Unfiled row is ever above the project list.
+  expect(table.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByText("A loose note")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Sort them" }));
+  expect(await screen.findByText("A loose note")).toBeInTheDocument();
 });
 
 test("the owner list in the project form has Add a person…: a second drawer opens over the first and the new person is the owner picked", async () => {

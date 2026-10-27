@@ -13,6 +13,7 @@ import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { OriginLink, hasOrigin } from "./Origin";
 import { plainTitle } from "../lib/title-dates";
+import { useFactLine } from "../lib/fact-line";
 
 type Page = S["RecordPageView"];
 
@@ -41,9 +42,14 @@ const joined = (parts: ReactNode[]): ReactNode =>
     .flatMap((part, i) => (i === 0 ? [part] : [" · ", part]))
     .map((part, i) => <span key={i}>{part}</span>);
 
-export function RecordActivity(props: { page: Page }) {
+/** `part` shows only what is open with the record ("open") or only the rest ("rest": what finished, the facts, the history), so
+ * the page can put its own to-dos first, then the conversation, then the history; left out, all of it. */
+export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
   const { t, tn, has } = useWords();
+  const factLine = useFactLine();
   const { page } = props;
+  const showOpen = props.part !== "rest";
+  const showRest = props.part !== "open";
   const labelOf = useFieldLabel();
   // What the change was, in a word, from the op that made it; one the sheet has no word for is just a change.
   const verb = (op: string) => (has(`record.op.${op.split("#")[0]}`) ? t(`record.op.${op.split("#")[0]}`) : t("record.op.other"));
@@ -65,7 +71,7 @@ export function RecordActivity(props: { page: Page }) {
   const open = page.open_actions.length + page.open_questions.length;
   return (
     <div className="record-activity">
-      {open > 0 && (
+      {showOpen && open > 0 && (
         <Section id="record-open" title={t("record.open_with", { name: page.name })} count={open}>
           <ul className="queue">
             {page.open_actions.map((a) => (
@@ -97,7 +103,7 @@ export function RecordActivity(props: { page: Page }) {
           </ul>
         </Section>
       )}
-      {(page.repeat || earlier.length > 0) && (
+      {showRest && (page.repeat || earlier.length > 0) && (
         <Section id="record-repeat" title={t("repeat.section")}>
           {page.repeat && <p>{said(page.repeat)}</p>}
           {earlier.length > 0 && (
@@ -116,14 +122,14 @@ export function RecordActivity(props: { page: Page }) {
           )}
         </Section>
       )}
-      {completed.length > 0 && (
+      {showRest && completed.length > 0 && (
         <Section id="record-completed" title={t("record.completed")} count={completed.length}>
           <ul className="queue">
             {completed.map((c) => (
               <Row
                 key={c.id}
                 pill={<Pill tone="ok">{t("record.done")}</Pill>}
-                title={<a href={viewHref(recordView("action", c.id))}>{c.text}</a>}
+                title={<a href={viewHref(recordView("action", c.id))}>{plainTitle(c.text)}</a>}
                 meta={joined([
                   (c.done_by ?? []).length ? t("record.done_by", { names: (c.done_by ?? []).join(", ") }) : t("record.closed"),
                   c.reported_by && t("record.reported_by", { name: c.reported_by }),
@@ -135,35 +141,35 @@ export function RecordActivity(props: { page: Page }) {
           </ul>
         </Section>
       )}
-      {(page.facts ?? []).length > 0 && (
+      {showRest && (page.facts ?? []).length > 0 && (
         <Section id="record-facts" title={t("record.facts")} count={(page.facts ?? []).length}>
           <ul className="queue">
             {(page.facts ?? []).map((f) => (
               <Row
                 key={f.id}
-                title={<a href={viewHref(recordView("fact", f.id))}>{f.text}</a>}
+                title={<a href={viewHref(recordView("fact", f.id))}>{factLine(f.text, f.said_by)}</a>}
                 meta={f.as_of ? t("record.facts_as_of", { date: day(f.as_of) }) : undefined}
               />
             ))}
           </ul>
         </Section>
       )}
-      {page.activity.length > 0 && (
+      {showRest && page.activity.length > 0 && (
         <Section id="record-activity" title={t("record.activity")}>
           <ol className="timeline">
             {page.activity.map((e, i) => (
               <li key={`${e.at}-${e.id}-${e.op}-${i}`}>
                 <span className="when">{monthDay(e.at)}</span>{" "}
                 <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
-                <strong>{e.name}</strong>
+                <strong>{plainTitle(e.name)}</strong>
                 {movedAgain(e) && <span> · {movedAgain(e)}</span>}
               </li>
             ))}
           </ol>
         </Section>
       )}
-      {open === 0 && completed.length === 0 && !page.repeat && earlier.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}
-      <span className="sr">{tn("record.items_count", open)}</span>
+      {showRest && open === 0 && completed.length === 0 && !page.repeat && earlier.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}
+      {showOpen && <span className="sr">{tn("record.items_count", open)}</span>}
     </div>
   );
 }

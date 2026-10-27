@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
+import { whoTheyAre } from "../lib/people-who";
 import { onSides, useSideFilter, useSides } from "../lib/sides";
 import { viewHref, recordView } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -35,7 +36,7 @@ export function People() {
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   // With no side beside Personal a person is said by who they are to you: no role, organization or list of organizations.
-  const { justMe } = useSides();
+  const { justMe, personal, sides } = useSides();
   // With a side beside Personal the list can be narrowed to one side; a person on no known side shows under every choice.
   const side = useSideFilter();
   const [adding, setAdding] = useState(false);
@@ -47,8 +48,7 @@ export function People() {
     .sort((a, b) => (a.is_pm === b.is_pm ? a.name.localeCompare(b.name) : a.is_pm ? -1 : 1));
   const rows = all.filter((p) => org === ALL || (org === NONE ? !p.org : p.org === org));
   const selected = all.find((p) => p.id === chosen) ?? null;
-  const onPersonalSide = (p: S["PersonView"]) => p.side === "personal";
-  const listed = rows;
+  const who = (p: S["PersonView"]) => whoTheyAre(p, personal, sides, t);
 
   const menu = (p: S["PersonView"]): MenuAction[] => {
     const left = p.status === "left";
@@ -99,20 +99,9 @@ export function People() {
         </div>
       )),
   };
-  const leading: TableColumn<S["PersonView"]>[] = justMe
-    ? [{ id: "relation", header: t("people.col.relation"), rank: 1, core: true, cell: (p) => p.relation ?? "" }]
-    : [
-        // With sides of work, someone on the personal side shows who they are to the person in place of a role; a person on a
-        // side of work keeps role and organization.
-        {
-          id: "role",
-          header: t(listed.some(onPersonalSide) ? "people.col.role_or_relation" : "people.col.role"),
-          rank: 1,
-          core: true,
-          cell: (p) => (onPersonalSide(p) ? (p.relation ?? "") : (p.role ?? "")),
-        },
-        { id: "org", header: t("people.col.org"), rank: 2, core: true, cell: (p) => (onPersonalSide(p) ? "" : (p.org_name ?? "")) },
-      ];
+  // One column says who they are: how they relate to you, then their part on each side of your work. The organization and the
+  // role are in the details.
+  const leading: TableColumn<S["PersonView"]>[] = [{ id: "who", header: t("people.col.who"), rank: 1, core: true, cell: who }];
   const columns: TableColumn<S["PersonView"]>[] = [
     ...leading,
     reachColumn,
@@ -208,8 +197,9 @@ function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: R
     <>
       <div className="row-end">{props.tags}</div>
       <dl className="details-list">
-        {props.justMe || p.side === "personal" ? fact(t("people.col.relation"), p.relation) : fact(t("people.col.role"), p.role)}
-        {!props.justMe && p.side !== "personal" && fact(t("people.col.org"), p.org_name)}
+        {fact(t("people.col.relation"), p.relation)}
+        {!props.justMe && fact(t("people.col.role"), p.role)}
+        {!props.justMe && fact(t("people.col.org"), p.org_name)}
         {fact(t("setup.first_name"), p.first_name)}
         {fact(t("setup.aliases"), p.aliases.join(", "))}
         {fact(t("people.col.reach"), props.reach.length ? props.reach.map((line) => <div key={line}>{line}</div>) : null)}

@@ -567,7 +567,7 @@ test.describe.serial("acceptance scenario", () => {
     expect(change.changeset!.ops.map((o) => o.op)).toEqual(["note"]);
   });
 
-  test("a note handed in as the person's own is filed under its project and found there, and one with no project is in the Unfiled group", async ({ page }) => {
+  test("a note handed in as the person's own is filed under its project and found there, and one with no project is in the Unfiled line", async ({ page }) => {
     await signIn(page);
     const projects: Array<{ id: string; name: string }> = await (await page.request.get("api/projects")).json();
     const loose = await handIn(page, { id: "loose-note", note: "Keep this one for later" });
@@ -576,10 +576,13 @@ test.describe.serial("acceptance scenario", () => {
     const first = projects[0];
     await expect(row.locator("li.child", { hasText: `Filed a note under ${first.name}` })).toHaveCount(1);
     await go(page, "Projects");
-    // The note filed under no project is in the Unfiled group above the table, not lost.
-    const unfiled = page.getByRole("heading", { level: 2, name: "Unfiled" });
+    // The note filed under no project is one line below the table ("1 item needs a place · Sort them"), not lost; Sort them
+    // opens its rows.
+    const unfiled = page.locator("[data-unfiled]");
     await expect(unfiled).toBeVisible();
-    await expect(unfiled.locator("xpath=ancestor::section[1]").getByRole("button", { name: "File under…" }).first()).toBeVisible();
+    await expect(unfiled.getByText(/needs? a place/)).toBeVisible();
+    await unfiled.getByRole("button", { name: "Sort them" }).click();
+    await expect(unfiled.getByRole("button", { name: "File under…" }).first()).toBeVisible();
     // The one filed under its project is in that project's details.
     const project = page.getByRole("row", { name: new RegExp(first.name) });
     await project.locator("td").nth(1).click();
@@ -597,7 +600,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.locator('[data-queue-line="unfiled"]')).toContainText(`File ${before} item`);
     await page.locator('[data-queue-line="unfiled"]').getByRole("button", { name: "File them" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Projects", exact: true })).toBeVisible();
-    const group = page.getByRole("heading", { level: 2, name: "Unfiled" }).locator("xpath=ancestor::section[1]");
+    const group = page.locator("[data-unfiled]");
+    await group.getByRole("button", { name: "Sort them" }).click();
     const first = group.getByRole("listitem").first();
     await first.getByRole("button", { name: "File under…" }).click();
     const picker = first.getByRole("combobox");
@@ -863,7 +867,7 @@ test.describe.serial("acceptance scenario", () => {
       const rows = page.getByRole("main").locator("[data-row]");
       await expect(rows.first()).toBeVisible();
       // A click on the row's own text (not on a button in it) focuses the row; the mouse gets no ring.
-      await page.getByRole("main").locator("[data-row] > .row > .kind, [data-row] .meta, [data-row] [class*='_meta_']").first().click();
+      await page.getByRole("main").locator("[data-row] > .row > .kind, [data-row] .meta, [data-row] [class*='_meta_'], [data-row] .what, [data-row] .title").first().click();
       await expect(page.locator("[data-row]:focus")).toHaveCount(1);
       // The mouse gets no ring. (On Today a click also opens the line, which marks it as selected with a bar of its own.)
       expect(await page.evaluate(() => document.activeElement!.matches(":focus-visible"))).toBe(false);
@@ -1053,7 +1057,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
   });
 
-  test("an organization added from the person form is selected and shows by name on the person's row", async ({ page }) => {
+  test("an organization added from the person form is selected and shows by name in the person's details", async ({ page }) => {
     await signIn(page);
     await go(page, "People");
     await page.getByRole("button", { name: "Add a person" }).click();
@@ -1072,8 +1076,11 @@ test.describe.serial("acceptance scenario", () => {
     await expect(org.locator("option:checked")).toHaveText(name);
     await page.getByRole("dialog", { name: "Add a person" }).getByRole("button", { name: "Add a person" }).click();
     const row = page.getByRole("row", { name: /Org Person/ });
-    await expect(row).toContainText(name);
+    await expect(row).toBeVisible();
+    // The row says who they are; the organization is in the person's details, by name, never by its id.
     await expect(row).not.toContainText(/ORG-/);
+    await expect(page.locator("dl.details-list", { hasText: "Organization" })).toContainText(name);
+    await expect(page.locator("dl.details-list", { hasText: "Organization" })).not.toContainText(/ORG-/);
     const orgs = page.getByRole("region", { name: "Organizations" });
     // The organizations are a table: the person count is a number in the People column.
     await expect(orgs.getByRole("row", { name: new RegExp(name) }).getByRole("cell", { name: "1", exact: true })).toBeVisible();

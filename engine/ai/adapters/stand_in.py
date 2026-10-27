@@ -7,7 +7,7 @@ Reading an input, each line is looked at on its own:
 - "We need <something>", "Need to <do something>" or "To do: <something>" becomes an action with no owner, which waits
   for the PM to pick one.
 - "Decided: …", "Agreed: …" or "Decision: …" becomes a fact. In the user's own note it is their choice; in a document it
-  is what the document lists, so the fact says that ("The input lists … as decided") and names no one as having chosen.
+  is what the document lists, so the fact says that ("The notes list that …") and names no one as having chosen.
 Every one cites its line word for word. Whatever else the input says is kept as one note.
 
 Answering a question, it quotes the first passage of the user guide chosen for the question.
@@ -76,7 +76,7 @@ def read(request: str) -> dict[str, Any]:
         elif decided:
             what = decided.group("what")
             # The person's own note is a choice they made; a document's line only says what the document lists.
-            op = {"op": "fact", "text": _sentence(what if own else f"the input lists {what.rstrip('.!?')} as decided")}
+            op = {"op": "fact", "text": _sentence(what if own else f"the notes list that {what.rstrip('.!?')}")}
         else:
             rest.append(line)
             continue

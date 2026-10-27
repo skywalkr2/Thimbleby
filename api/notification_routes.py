@@ -8,8 +8,15 @@ import os
 
 from fastapi import APIRouter
 
-from api.schemas import NotificationsView, NotifyTestIn, NotifyTestResult, NotifyWaiting, NotifyWebhookView
-from engine import notifications, setup
+from api.schemas import (
+    NoticeAppView,
+    NotificationsView,
+    NotifyTestIn,
+    NotifyTestResult,
+    NotifyWaiting,
+    NotifyWebhookView,
+)
+from engine import notice_apps, notifications, setup
 from engine.config import Config, ConfigError, load_config
 from engine.storage import Store
 from engine.worker import Events, Worker
@@ -36,6 +43,8 @@ def build_notification_router(ws: Workspace, cfg: Config, store: Store, events: 
             enabled=n.enabled,
             browser=n.browser,
             webhook=NotifyWebhookView(where=where, name=name),
+            app=notice_apps.chosen(now).id,
+            apps=[NoticeAppView(id=a.id, name=a.name, where=a.where) for a in notice_apps.offered(now)],
             quiet_now=notifications.quiet_now(now, worker.now()),
             mail_ready=False,
             problem=notifications.last_problem(ws),

@@ -139,8 +139,9 @@ def test_a_bill_from_an_organization_on_the_work_side_is_filed_under_work(env):
 
 
 def test_the_same_words_in_a_note_or_in_other_mail_file_nothing_by_kind(env):
-    assert filed(env, "My own note: order confirmation").project is None
-    assert filed(env, raw("colleague@work.example.com", "Lunch is moved")).project is None
+    # Not a bill, an order or a delivery: no reason is kept (the item only waits under Personal on a guess).
+    assert filed(env, "My own note: order confirmation").filed_by is None
+    assert filed(env, raw("colleague@work.example.com", "Lunch is moved")).filed_by is None
 
 
 # ---- the set-aside row -------------------------------------------------------------------------------------------

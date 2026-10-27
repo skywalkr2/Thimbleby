@@ -315,6 +315,9 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .kind-choice { align-items: flex-start; padding: var(--space-1) 0; }
 .kind-choice input { margin-top: var(--space-1); }
 .hint.block { display: block; }
+.hint.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.hint-more { font-size: var(--text-xs); }
+.unfiled-line { margin: var(--space-3) 0 0; }
 .guide-test { display: grid; gap: var(--space-2); justify-items: start; }
 .test-results { list-style: none; padding-left: 0; }
 .result-ok { color: var(--ok); font-weight: var(--weight-semibold); }

@@ -111,7 +111,6 @@ export function Projects() {
           {t("setup.add_project")}
         </Button>
       </div>
-      <Unfiled />
       <ListDetail
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
@@ -151,6 +150,7 @@ export function Projects() {
           </>
         )}
       </ListDetail>
+      <Unfiled />
       {adding && <ProjectDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}
       {editing && <ProjectDrawer project={editing} onClose={() => setEditing(null)} />}
     </section>

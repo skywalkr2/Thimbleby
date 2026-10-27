@@ -1510,6 +1510,7 @@ def _default_lints() -> dict[str, Severity]:
         "owed-to-missing": "return",
         "project-start-as-fact": "return",
         "decision-from-list": "return",
+        "decided-as-fact": "return",
         "claim-asked-of-the-person": "return",
         "owner-mail-unanswered": "return",
         "promise-owed-to-reader": "return",
@@ -2557,6 +2558,19 @@ class NotificationQuietHours(ConfigModel):
         return self
 
 
+class NoticeApp(ConfigModel):
+    id: str = Field(
+        "", min_length=1, description="What a setting names the app by; an entry with a shipped app's id replaces it."
+    )
+    name: str = Field("", min_length=1, description="The app's name as the screen shows it.")
+    shape: dict[str, Any] | None = Field(
+        None,
+        description="The message its address takes, as JSON with the notice's words where {text} stands; left out, "
+        "the words alone are sent as plain text.",
+    )
+    where: str = Field("", description="One line on where to find the address in that app.")
+
+
 class NotificationsSettings(ConfigModel):
     enabled: bool = Field(
         False,
@@ -2579,9 +2593,20 @@ class NotificationsSettings(ConfigModel):
     )
     webhook_format: Literal["json", "plain"] = Field(
         "json",
-        description="What your address expects. Chat apps take a small message with the text in it; a push "
-        "notification topic takes the text alone.",
+        description="What your address expects, when no app is chosen below. A chat app takes a small message with "
+        "the text in it (json); a push notification topic takes the text alone (plain).",
         json_schema_extra={"enabled_by": "webhook", "advanced": True},
+    )
+    webhook_app: str | None = Field(
+        None,
+        description="The app your address belongs to, picked by name from the apps the app knows and your own "
+        "(apps_extra). It decides the message sent; with none chosen, webhook_format does.",
+        json_schema_extra={"enabled_by": "webhook", "advanced": True},
+    )
+    apps_extra: list[NoticeApp] = Field(
+        default_factory=list,
+        description="Apps of your own to pick from, each with its name, the message its address takes and where to "
+        "find the address. An entry with a shipped app's id replaces it.",
     )
     quiet_hours: NotificationQuietHours = Field(
         default_factory=NotificationQuietHours, description="When notices wait instead of going out."

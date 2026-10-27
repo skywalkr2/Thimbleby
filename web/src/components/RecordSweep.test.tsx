@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { org, person, project, unfiledItem, unfiledView } from "../lib/records-fixtures";
 import { sweep } from "../test-sweep";
@@ -142,7 +143,15 @@ test("the people, projects, open to-dos and unfiled lists say names, dates and w
     ["people", <People key="p" />, () => screen.findByRole("link", { name: "Ana Person" })],
     ["projects", <Projects key="r" />, () => screen.findByRole("link", { name: "Harbor" })],
     ["open to-dos", <OpenItems key="o" />, () => screen.findByRole("list", { name: "Open to-dos" })],
-    ["unfiled", <Unfiled key="u" />, () => screen.findByRole("heading", { name: "Unfiled" })],
+    [
+      "unfiled",
+      <Unfiled key="u" />,
+      async () => {
+        // The one line is opened, so its rows are what is swept.
+        const line = await screen.findByText("2 items need a place");
+        await userEvent.click(within(line.closest("section")!).getByRole("button", { name: "Sort them" }));
+      },
+    ],
   ] as const) {
     fakeApi(routes);
     const view = renderApp(ui);

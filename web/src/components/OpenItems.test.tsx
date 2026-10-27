@@ -355,7 +355,7 @@ test("with no side besides Personal the filters say Area, never Project, and the
   expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
   expect(within(screen.getByRole("combobox", { name: "Area" })).getByRole("option", { name: "All areas" })).toBeInTheDocument();
   const states = within(screen.getByRole("combobox", { name: "State" })).getAllByRole("option").map((o) => o.textContent);
-  expect(states).toEqual(expect.arrayContaining(["Overdue", "Stale", "On hold"]));
+  expect(states).toEqual(expect.arrayContaining(["Overdue", "Not touched in a while", "Paused"]));
   expect(states).not.toContain("No owner");
 });
 

@@ -246,6 +246,12 @@ const noticesView = (over: Partial<S["NotificationsView"]> = {}): S["Notificatio
   enabled: false,
   browser: true,
   webhook: { where: "none", name: null },
+  app: "generic-chat",
+  apps: [
+    { id: "slack-like", name: "A named chat app", where: "Look in its integration settings." },
+    { id: "generic-chat", name: "Another chat app (a text message)", where: "Look for incoming webhooks." },
+    { id: "plain", name: "Something else (plain text)", where: "Use an address that takes plain text." },
+  ],
   quiet_now: false,
   mail_ready: false,
   problem: null,

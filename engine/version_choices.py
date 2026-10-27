@@ -2,7 +2,10 @@
 as", "Not the same document" and the answer to "Which copy is the current one?".
 
 A choice is a change to the `watch.versions` settings (`same_document`, `not_same`, `current`), saved the way the
-Settings screen saves, so it is recorded with what it was and what it became, and Undo puts the old values back. The
+Settings screen saves, so it is recorded with what it was and what it became, and Undo puts the old values back. A file
+is named in a choice by the hash of its text, never its path, so the choice survives the older copy moving into an
+archive folder and the current copy being renamed; a file edited in place keeps its choices (`follow_edits`), and an
+entry an earlier version wrote as a path is turned into the hash of the file at that path (`migrate_to_hashes`). The
 families in `engine.versions` read those settings, so a choice takes effect the next time the folder is read and the
 older-version rule never undoes it. A choice is also a correction: it records a signal.
 
@@ -33,12 +36,14 @@ TEXT = "These copies can't be told apart by their version marks or the dates in 
 
 @dataclass
 class FileAt:
-    """A watched file the person's choice is about: its folder's id, its key (path) and its title."""
+    """A watched file the person's choice is about: its folder's id, its key (path), its title and the hash of its text
+    (what a choice names it by)."""
 
     source: str
     key: str
     title: str
     record: str
+    digest: str = ""
 
 
 @dataclass
@@ -71,7 +76,24 @@ def file_of(view: Any, record_id: str) -> FileAt | None:
     watched = (record.data.get("watched") if record is not None else None) or {}
     if record is None or record.data.get("kind") != "watched:folder" or not watched.get("key"):
         return None
-    return FileAt(watched["source"], watched["key"], PurePosixPath(watched["key"]).name, record.id)
+    now = _snapshots(view, watched["source"]).get(watched["key"])
+    digest = now["content_hash"] if now is not None else record.data.get("content_hash") or ""
+    return FileAt(watched["source"], watched["key"], PurePosixPath(watched["key"]).name, record.id, digest)
+
+
+def _snapshots(view: Any, source: str) -> dict[str, dict[str, Any]]:
+    """The files of a watched folder as it was last read, by key (path), not counting any that are gone or deleted."""
+    return {
+        s.data["key"]: s.data
+        for s in view.find("snapshot", {"source": source})
+        if not s.data.get("gone") and not s.data.get("deleted")
+    }
+
+
+def _canonical(names: list[str], snaps: dict[str, dict[str, Any]]) -> list[str]:
+    """A choice's entries with each path of a file in the folder written as that file's hash; any other entry (a hash,
+    or a path no file has now) as it was."""
+    return [snaps[n]["content_hash"] if n in snaps and snaps[n].get("content_hash") else n for n in names]
 
 
 def _top(key: str, archives: Any) -> str:
@@ -93,7 +115,9 @@ def offer(view: Any, cfg: Any, record_id: str) -> Offer:
         if not s.data.get("gone") and not s.data.get("deleted")
     ]
     families = versions.Families(
-        [_Item(s.data["key"], s.data.get("changed_at")) for s in snaps], settings, found.source
+        [_Item(s.data["key"], s.data.get("changed_at"), s.data.get("content_hash", "")) for s in snaps],
+        settings,
+        found.source,
     )
     top = _top(found.key, settings.archive_folders)
     family = {c.key for c in families.family(found.key)}
@@ -103,7 +127,10 @@ def offer(view: Any, cfg: Any, record_id: str) -> Offer:
         if s.data["key"] != found.key and _top(s.data["key"], settings.archive_folders) == top
     ]
     others.sort(key=lambda c: (c.title.casefold(), c.key))
-    grouped = len(family) > 1 or any(found.key in link.files for link in settings.same_document)
+    grouped = len(family) > 1 or any(
+        link.source == found.source and (found.key in link.files or found.digest in link.files)
+        for link in settings.same_document
+    )
     return Offer(found, others, grouped, sorted(k for k in family if k != found.key))
 
 
@@ -111,6 +138,7 @@ def offer(view: Any, cfg: Any, record_id: str) -> Offer:
 class _Item:
     key: str
     changed_at: str | None
+    digest: str = ""
 
 
 def _save(
@@ -147,20 +175,20 @@ def link(
 ) -> Changed:
     """Say the file a saved copy came from is the same document as `other` (another file of its folder): the two
     join, and so do the documents their names belong to, now and when later versions are saved."""
-    found = file_of(store.read(), record_id)
+    view = store.read()
+    found = file_of(view, record_id)
     if found is None:
         raise StoreError("That isn't a file in a watched folder.")
     if other == found.key:
         raise StoreError("Choose a different file.")
-    if not any(
-        s.data["key"] == other and not s.data.get("gone")
-        for s in store.read().find("snapshot", {"source": found.source})
-    ):
+    snaps = _snapshots(view, found.source)
+    if other not in snaps:
         raise StoreError("That file isn't in the folder any more.")
     entries, groups = _groups(cfg, found.source)
-    joined = {found.key, other}
+    joined = set(_canonical([found.key, other], snaps))
     rest = []
     for files in groups:
+        files = _canonical(files, snaps)
         if joined & set(files):
             joined |= set(files)
         else:
@@ -188,16 +216,22 @@ def split(
     """Say the file a saved copy came from is not the same document as the others its name puts it with: it stands on
     its own, and leaves any group the person made. `closed` is the change a rule closed as an older version: the
     correction is that change pulled back, and `reopen` hands it in after all."""
-    found = file_of(store.read(), record_id)
+    view = store.read()
+    found = file_of(view, record_id)
     if found is None:
         raise StoreError("That isn't a file in a watched folder.")
+    snaps = _snapshots(view, found.source)
     entries, _ = _groups(cfg, found.source)
+    mine = set(_canonical([found.key], snaps)) | {found.key, found.digest}
     new = []
     for entry in entries:
-        files = [f for f in entry["files"] if not (entry["source"] == found.source and f == found.key)]
+        files = _canonical(list(entry["files"]), snaps)
+        if entry["source"] == found.source:
+            files = [f for f in files if f not in mine]
         if len(files) > 1 or entry["source"] != found.source:
             new.append({"source": entry["source"], "files": files})
-    apart = sorted({*cfg.watch.versions.not_same.get(found.source, []), found.key})
+    held = _canonical(list(cfg.watch.versions.not_same.get(found.source, [])), snaps)
+    apart = sorted({*held, found.digest or found.key})
     changes = _save(ws, cfg, store, {SAME: new, NOT_SAME: {**cfg.watch.versions.not_same, found.source: apart}}, env)
     note = f"Not the same document: {found.key}"
     kind, refs = ("pulled_back", [closed]) if closed else ("edited", [record_id])
@@ -238,6 +272,72 @@ def _signal(store: Any, kind: str, record: str | list[str], note: str, now: date
     from engine.dispatcher import signal
 
     return signal(store, kind, [record] if isinstance(record, str) else record, note, now)
+
+
+# ---- keeping choices on their files --------------------------------------------------------------------------
+
+
+def _hashed(cfg: Any, snaps_of: Any) -> dict[str, Any]:
+    """The choices of the settings with every path of a file in its folder written as that file's hash: the new value of
+    each key that would change, else nothing for it."""
+    versions_cfg = cfg.watch.versions
+    same: list[dict[str, Any]] = []
+    for link in versions_cfg.same_document:
+        files = _canonical(list(link.files), snaps_of(link.source))
+        same.append({"source": link.source, "files": files})
+    out: dict[str, Any] = {}
+    if same != [link.model_dump(mode="json") for link in versions_cfg.same_document]:
+        out[SAME] = same
+    for key, held in ((NOT_SAME, versions_cfg.not_same), (CURRENT, versions_cfg.current)):
+        now = {source: sorted(set(_canonical(list(names), snaps_of(source)))) for source, names in held.items()}
+        if now != {source: sorted(set(names)) for source, names in held.items()}:
+            out[key] = now
+    return out
+
+
+def migrate_to_hashes(ws: Any, cfg: Any, store: Any, env: dict[str, str] | None = None) -> list[dict[str, Any]]:
+    """Turn the choices an earlier version wrote as paths into the hash of the file at each path, as one change of the
+    settings with Undo. A path no file has now stays as it was and still names the file at that path. Nothing changes
+    when there is nothing to turn."""
+    view = store.read()
+    cache: dict[str, dict[str, dict[str, Any]]] = {}
+
+    def snaps_of(source: str) -> dict[str, dict[str, Any]]:
+        return cache.setdefault(source, _snapshots(view, source))
+
+    changes = _hashed(cfg, snaps_of)
+    return _save(ws, cfg, store, changes, env) if changes else []
+
+
+def follow_edits(
+    ws: Any, cfg: Any, store: Any, source: str, followed: dict[str, str], env: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
+    """Keep the choices on a file edited in place: each hash a choice names that is now another hash (`followed`) is
+    replaced by it, so the choice still names the file. Best effort: when the settings changed meanwhile it waits for
+    the next read."""
+    if not followed:
+        return []
+    versions_cfg = cfg.watch.versions
+    change = lambda names: sorted({followed.get(n, n) for n in names})  # noqa: E731
+    changes: dict[str, Any] = {}
+    same = [
+        {
+            "source": link.source,
+            "files": [followed.get(f, f) for f in link.files] if link.source == source else link.files,
+        }
+        for link in versions_cfg.same_document
+    ]
+    if same != [link.model_dump(mode="json") for link in versions_cfg.same_document]:
+        changes[SAME] = same
+    for key, held in ((NOT_SAME, versions_cfg.not_same), (CURRENT, versions_cfg.current)):
+        if source in held and change(held[source]) != sorted(held[source]):
+            changes[key] = {**held, source: change(held[source])}
+    if not changes:
+        return []
+    try:
+        return _save(ws, cfg, store, changes, env)
+    except (config_screens.SettingsConflict, config_screens.SettingsError, StoreError):
+        return []
 
 
 # ---- asking which copy is current -----------------------------------------------------------------------------
@@ -291,8 +391,12 @@ def keep_answer(
     if key not in resolves["files"]:
         raise StoreError("Choose one of the copies listed.")
     source = resolves["source"]
+    snaps = _snapshots(store.read(), source)
     held = cfg.watch.versions.current
-    pins = sorted({*(k for k in held.get(source, []) if k not in resolves["files"]), key})
+    # The question names its copies by path; the choice names the one picked by its content, and the others leave it.
+    offered = {n for f in resolves["files"] for n in (f, snaps.get(f, {}).get("content_hash")) if n}
+    chosen = _canonical([key], snaps)[0]
+    pins = sorted({*(k for k in _canonical(list(held.get(source, [])), snaps) if k not in offered), chosen})
     changes = _save(ws, cfg, store, {CURRENT: {**held, source: pins}}, env)
     with store.transaction() as tx:
         cur = tx.get("question", question_id)

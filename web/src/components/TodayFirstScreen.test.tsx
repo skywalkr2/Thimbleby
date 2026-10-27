@@ -158,12 +158,12 @@ test("a follow-up that went out today says so, never a wait of zero days", async
 
 // ---- the rail has no filled button -----------------------------------------------------------------------------------
 
-test("no filled button is anywhere in the rail; the one button the Schedule card adds is Add to agenda", async () => {
+test("no filled button is anywhere in the rail; the one button the Schedule card adds is Add to schedule", async () => {
   show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], agenda);
   const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
   await within(rail).findByText("Print sync");
   expect(rail.querySelectorAll("button[data-key='primary'], .btn.primary")).toHaveLength(0);
-  expect(within(rail).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
+  expect(within(rail).getByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
 });
 
 // ---- the phone folds the rail's panels ---------------------------------------------------------------------------------
@@ -178,18 +178,18 @@ test("on the phone each card below the queue is one line that says what is in it
   expect(schedule).toHaveAttribute("aria-expanded", "false");
   const cameIn = await screen.findByRole("button", { name: "Came in · 1" });
   expect(screen.queryByText("Proof is ready")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Add to agenda" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add to schedule" })).toBeNull();
   await user.click(cameIn);
   expect(cameIn).toHaveAttribute("aria-expanded", "true");
   expect(await screen.findByText("Proof is ready")).toBeInTheDocument();
   await user.click(schedule);
-  expect(await screen.findByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
 });
 
 test("off the phone the cards are open", async () => {
   show([], agenda);
   const schedule = await screen.findByRole("region", { name: "Schedule" });
-  expect(within(schedule).getByRole("button", { name: "Add to agenda" })).toBeInTheDocument();
+  expect(within(schedule).getByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^Schedule ·/ })).toBeNull();
 });
 

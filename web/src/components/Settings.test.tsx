@@ -1311,3 +1311,37 @@ test("the setup guide link is on You only, and the intro is body text, not a gre
   expect(screen.queryByRole("button", { name: "Open the setup guide" })).toBeNull();
   expect(screen.getByText(/Each change is saved as you make it/)).not.toHaveClass("hint");
 });
+
+test("quiet hours are one compact row, '21:00 to 07:00', each end saved as its own setting", async () => {
+  const user = userEvent.setup();
+  const calls = api([
+    ...ITEMS,
+    item("steward.reminders.quiet_start", { group: "steward.reminders", type: "choice", options: TIMES, value: "17:00", default: "17:00", choices: "times_of_day" }),
+    item("steward.reminders.quiet_end", { group: "steward.reminders", type: "choice", options: TIMES, value: "08:00", default: "08:00", choices: "times_of_day" }),
+  ]);
+  openToday();
+  const row = await screen.findByRole("group", { name: "Quiet hours" });
+  expect(within(row).getAllByRole("combobox")).toHaveLength(2);
+  expect(row).toHaveTextContent(/to\s*$|to/);
+  // One row stands for the two: no full-width row of their own is left behind.
+  expect(screen.getAllByLabelText("Quiet hours start at")).toHaveLength(1);
+  await user.selectOptions(within(row).getByLabelText("Quiet hours end at"), "09:00");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "steward.reminders.quiet_end": "09:00" } });
+});
+
+test("a long hint is two lines with More for the rest, and a short one is whole with no button", async () => {
+  const user = userEvent.setup();
+  const long = "A long help text. ".repeat(20).trim();
+  api([...ITEMS, item("workspace.language", { description: long, type: "text", value: "", default: "" })]);
+  openToday();
+  const hint = await screen.findByText(long);
+  expect(hint).toHaveClass("clamped");
+  const more = screen.getByRole("button", { name: "More" });
+  expect(more).toHaveAttribute("aria-expanded", "false");
+  await user.click(more);
+  expect(hint).not.toHaveClass("clamped");
+  expect(screen.getByRole("button", { name: "Less" })).toHaveAttribute("aria-expanded", "true");
+  // The text is in the page whole either way, for a screen reader and for find-in-page.
+  expect(hint.textContent).toBe(long);
+});

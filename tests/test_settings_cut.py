@@ -51,15 +51,15 @@ def test_the_settings_walk_counts_at_most_26_basic_and_30_advanced():
     advanced = _rows(shown, "advanced")
     assert without_business <= 23 and with_business <= 26, (without_business, with_business)
     assert advanced <= 30, advanced
-    # The name, the working hours and the one notices switch make room: 19 rows (where reminders go is one), 22 with a
-    # business, 26 behind Advanced.
-    assert (without_business, with_business, advanced) == (19, 22, 26)
+    # The name, the working hours, the quiet hours and the one notices switch make room: 18 rows (where reminders go is
+    # one), 21 with a business, 26 behind Advanced.
+    assert (without_business, with_business, advanced) == (18, 21, 26)
     assert {s.topic for s in shown if s.page == "advanced"} == set(levels.TOPICS)
     assert all(s.topic is None for s in shown if s.page in PAGES)
     assert all(s.topic for s in shown if s.page == "advanced")
 
 
-def test_working_hours_the_brief_times_and_where_reminders_go_are_one_row_each_and_keep_their_keys():
+def test_working_hours_the_brief_times_quiet_hours_and_where_reminders_go_are_one_row_each_and_keep_their_keys():
     shown = {s.key: s for s in _shown()}
     assert levels.MERGED_ROWS == {
         "steward.reminders.working_first_day": (
@@ -74,6 +74,7 @@ def test_working_hours_the_brief_times_and_where_reminders_go_are_one_row_each_a
             "steward.brief.weekly_day",
         ),
         "steward.reminders.where": ("steward.reminders.where", "steward.reminders.where_account"),
+        "steward.reminders.quiet_start": ("steward.reminders.quiet_start", "steward.reminders.quiet_end"),
     }
     for first, row in levels.MERGED_ROWS.items():
         # The settings of a row sit together, in order, on one page or topic, and each is still a setting of its own.

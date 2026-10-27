@@ -20,13 +20,14 @@ from api.schemas import (
     BackupKeyIn,
     BackupKeySaved,
     BackupKeyView,
+    NotifyAppIn,
     NotifyWebhookIn,
     SettingChangeView,
     SettingsSaved,
 )
 from api.setup_routes import HOSTED_KEY, asked_reference
+from engine import notice_apps, setup
 from engine import settings as config_screens
-from engine import setup
 from engine.config import Config, ConfigError, load_config
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
@@ -177,6 +178,15 @@ def build_secret_router(ws: Workspace, cfg: Config, store: Store, events: Events
                 fresh.unlink(missing_ok=True)
             raise
         return _saved(done, worker)
+
+    @r.post("/notifications/app")
+    def notify_app(body: NotifyAppIn) -> SettingsSaved:
+        """Pick the app notices go to, by name, with Undo. The app decides the message the address is sent."""
+        if body.app not in {a.id for a in notice_apps.offered(current())}:
+            raise HTTPException(status_code=400, detail="That isn't one of the apps to pick from.")
+        return _saved(
+            save({"ui.notifications.webhook_app": body.app}, body.fingerprint, ("ui.notifications.",)), worker
+        )
 
     return r
 

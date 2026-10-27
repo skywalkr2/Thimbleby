@@ -36,8 +36,16 @@ def _projects(kind: str, data: dict[str, Any]) -> list[str]:
     return [value] if isinstance(value, str) and value else list(value or []) if isinstance(value, list) else []
 
 
+def from_input(view: Any, data: dict[str, Any]) -> bool:
+    """Whether a note was kept from something a watcher read (a mail, a calendar entry): reference material that needs
+    no project and takes its input's side, so it is never filing work."""
+    source = view.get("source", data["source"]) if data.get("source") else None
+    return source is not None and bool(source.data.get("watched"))
+
+
 def unfiled(view: Any) -> list[Unfiled]:
-    """Every open item the assistant filed that names no project that still exists, newest first."""
+    """Every open item the assistant filed that names no project that still exists, newest first. A note kept from a
+    watched input is left out: it needs no project."""
     live = {p.id for p in view.list("project")}
     replaced = {f.data["supersedes"] for f in view.list("fact") if f.data.get("supersedes")}
     found: list[Unfiled] = []
@@ -48,7 +56,7 @@ def unfiled(view: Any) -> list[Unfiled]:
             who, at = made.get(record.id, (PERSON, ""))
             if who == PERSON or (open_statuses and data.get("status") not in open_statuses):
                 continue
-            if kind == "fact" and record.id in replaced:
+            if (kind == "fact" and record.id in replaced) or (kind == "note" and from_input(view, data)):
                 continue
             if any(p in live for p in _projects(kind, data)):
                 continue

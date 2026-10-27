@@ -139,12 +139,12 @@ test.describe('"Just me" sees no work words', () => {
     await expect(page.getByRole("link", { name: seeded.area.name })).toBeVisible(LOADED);
   });
 
-  test("People shows who they are to you and how to reach them, with no Role, Organization or Organizations", async ({ page }) => {
+  test("People shows who they are and how to reach them, with no Role, Organization or Organizations", async ({ page }) => {
     await page.evaluate(() => {
       window.location.hash = "records/people";
     });
     await heading(page, "People");
-    await expect(page.getByRole("columnheader", { name: "Who they are to you" })).toBeVisible(LOADED);
+    await expect(page.getByRole("columnheader", { name: "Who they are" })).toBeVisible(LOADED);
     await expect(page.getByRole("columnheader", { name: "How to reach" })).toBeVisible(LOADED);
     await expect(page.getByRole("columnheader", { name: /^(Role|Organization)$/ })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /Organizations/ })).toHaveCount(0);

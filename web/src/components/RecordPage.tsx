@@ -171,8 +171,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {kind === "event" && <MeetingPrep entry={id} title={heading} />}
           {kind === "person" && <PersonMemory person={id} />}
+          {/* What is open comes first, then the conversation, then what finished and the history. */}
+          {page.data && <RecordActivity page={page.data} part="open" />}
           {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
-          {page.data && <RecordActivity page={page.data} />}
+          {page.data && <RecordActivity page={page.data} part="rest" />}
           {kind === "project" && <SideInside id={id} />}
           {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
           {data.long_text.map((field) => (

@@ -115,8 +115,8 @@ def test_each_rank_decides_when_the_ones_before_it_do_not(env):
     # 5. a configured word, when nothing else is.
     got = file_ops(env, [new_op(text=f"About {PERSONAL_WORD}")])
     assert by(got[0]) == (PERSONAL_ID, "word", PERSONAL_WORD)
-    # Nothing decides: it stays unfiled, with no reason.
-    assert by(file_ops(env, [new_op(text="Call about it")])[0]) == (None, None, None)
+    # Nothing decides: it waits under Personal, with no reason.
+    assert by(file_ops(env, [new_op(text="Call about it")])[0]) == (PERSONAL_ID, None, None)
 
 
 def test_every_kind_of_item_is_filed_and_says_why(env):
@@ -148,17 +148,17 @@ def test_a_rank_that_points_to_both_sides_decides_nothing_and_the_next_is_read(e
     assert by(got[0]) == (business_item, "name", "Business thing here")
     # Both names and both configured words too: nothing decides.
     both_all = f"{both_aliases} Business thing here Personal item {BUSINESS_WORD} {PERSONAL_WORD}"
-    assert by(file_ops(env, [new_op(text=both_all)])[0]) == (None, None, None)
+    assert by(file_ops(env, [new_op(text=both_all)])[0]) == (PERSONAL_ID, None, None)
     # The people of one organization on both sides: the domain decides nothing and the words are read.
     a, c = BUSINESS_PEOPLE[0], PERSONAL_PEOPLE[0]
     at_domain(env, a, BUSINESS_DOMAIN, ORG_ONE)
     at_domain(env, c, BUSINESS_DOMAIN, ORG_ONE)
     raw = mail_from(f"stranger@{BUSINESS_DOMAIN}")
     assert by(file_ops(env, [new_op(text=f"About {PERSONAL_WORD}")], raw)[0]) == (PERSONAL_ID, "word", PERSONAL_WORD)
-    assert by(file_ops(env, [new_op(text="Call about it")], raw)[0]) == (None, None, None)
+    assert by(file_ops(env, [new_op(text="Call about it")], raw)[0]) == (PERSONAL_ID, None, None)
     # People on both sides (a person who is on both) decide nothing either, so the alias is read.
     got = file_ops(env, [new_op(text=both_aliases, owners=[name_of(BOTH_PERSON)])])
-    assert got[0].project is None
+    assert got[0].project == PERSONAL_ID
 
 
 # ---- a one-word everyday name never files, an alias of it does -------------------------------------------------
@@ -179,7 +179,7 @@ def test_a_one_word_everyday_project_name_never_files_an_item_but_the_same_word_
     everyday = cfg.language.everyday_words[0]
     project = make_project(store, everyday.title(), BUSINESS_ID)
     text = f"Please sort out the {everyday} soon"
-    assert by(file_ops(env, [new_op(text=text)])[0]) == (None, None, None)
+    assert by(file_ops(env, [new_op(text=text)])[0]) == (PERSONAL_ID, None, None)
     # A name of two words counts, and so does one word that is no everyday word.
     two = make_project(store, f"{everyday.title()} plan", BUSINESS_ID)
     assert by(file_ops(env, [new_op(text=f"The {everyday} plan is late")])[0]) == (
@@ -209,10 +209,10 @@ def test_a_domain_shared_by_people_of_two_organizations_never_votes(env):
     at_domain(env, BUSINESS_PEOPLE[0], BUSINESS_DOMAIN, ORG_ONE)
     at_domain(env, BUSINESS_PEOPLE[1], BUSINESS_DOMAIN, ORG_TWO)
     raw = mail_from(f"stranger@{BUSINESS_DOMAIN}")
-    assert by(file_ops(env, [new_op(text="Call about it")], raw)[0]) == (None, None, None)
+    assert by(file_ops(env, [new_op(text="Call about it")], raw)[0]) == (PERSONAL_ID, None, None)
     # A person with no organization at the domain never votes either.
     at_domain(env, BUSINESS_PEOPLE[1], BUSINESS_DOMAIN, None)
-    assert by(file_ops(env, [new_op(text="Call about it")], raw)[0]) == (None, None, None)
+    assert by(file_ops(env, [new_op(text="Call about it")], raw)[0]) == (PERSONAL_ID, None, None)
 
 
 def test_a_public_mail_domain_a_domain_nobody_knows_and_a_known_sender_never_vote(env):
@@ -293,7 +293,7 @@ def test_what_the_assistant_writes_in_filed_by_is_cleared_and_an_item_it_filed_i
     placed = new_op(text="Call about it too", project=PERSONAL_ID, filed_by=stamp)
     view = apply_ops(env, [own, placed])
     found = {a.data["text"]: a.data for a in view.list("action")}
-    assert found["Call about it"]["filed_by"] is None and found["Call about it"]["project"] is None
+    assert found["Call about it"]["filed_by"] is None and found["Call about it"]["project"] == PERSONAL_ID
     assert found["Call about it too"]["filed_by"] is None and found["Call about it too"]["project"] == PERSONAL_ID
 
 
@@ -389,10 +389,11 @@ def test_a_question_moves_by_its_list_of_projects_and_that_is_a_correction_too(e
 
 
 def test_the_week_still_asks_which_side_once_and_what_words_filed_says_why(env):
+    from engine import filing
+
     projects, lines, before = run_week(env)
-    asks = [line for line in lines if line.kind == "unfiled"]
-    assert len(asks) == 1 and asks[0].state == "which_side"
-    _, _, store = env
+    _, cfg, store = env
+    assert len(filing.questions(store.read(), cfg, NOW)) == 1  # one question for the one other side
     by_words = [a for a in store.read().list("action") if (a.data.get("filed_by") or {}).get("by") == "alias"]
     assert len(by_words) == 1
     assert by_words[0].data["filed_by"]["project"] == BUSINESS_ID and by_words[0].data["filed_by"]["word"]
