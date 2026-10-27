@@ -45,7 +45,9 @@ export function useWords() {
     // A workspace's own wording for an entry wins over the sheet's variant for an unnamed assistant.
     const pick = (key: string) => (unnamed && !(key in overrides) && `${key}${UNNAMED}` in words ? `${key}${UNNAMED}` : key);
     const t = (key: string, vars: Vars = {}) => format(words, pick(key), { ...base, ...vars });
-    const tn = (key: string, n: number, vars: Vars = {}) => t(`${key}.${n === 1 ? "one" : "other"}`, { n, ...vars });
+    // An entry with a `.zero` form says nothing at all differently for none ("No time between them", never "Only 0 minutes").
+    const tn = (key: string, n: number, vars: Vars = {}) =>
+      t(`${key}.${n === 0 && `${key}.zero` in words ? "zero" : n === 1 ? "one" : "other"}`, { n, ...vars });
     const has = (key: string) => key in words;
     return { t, tn, has };
   }, [words, base, overrides, unnamed]);

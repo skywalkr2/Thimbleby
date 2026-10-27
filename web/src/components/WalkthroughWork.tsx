@@ -1,10 +1,11 @@
-// The question of setup that asks what it is for (design 7.8): "Just my own life", or, as well, two tick boxes: My life and
-// my job, and My life and my own business, either or both. A job asks the employer's name and shows the notice about reading
-// work mail; a business asks its name and
-// what it works on (jobs, clients or orders, typed or pasted, each becoming a project inside it), then one optional, closed
-// line, "Do some of these belong together?", which names a group and ticks what is in it (the group is a project inside the
-// business and the ticked ones are inside it; nothing is made without a name and a tick), and "Add another business"
-// repeats that. Each is a side of the person's work (design 6.32). Sides already saved are listed with their projects, each
+// The question of setup that asks what it is for (design 7.8): "Your own life is always included. Also keep track of:", then
+// two tick boxes, A job and My own business, either or both, or neither for the person's own life alone, in one plain
+// control with no frame. A job asks the employer's name and shows the notice about reading work mail; a business asks its
+// name and what it works on (jobs, clients or orders, typed or pasted, each becoming a project inside it), then one
+// optional, closed line, "Do some of these belong together?": a group name, and once it is named each job gets a tick box
+// "in <group>". The group is a project inside the business and the ticked jobs are inside it; a group named with nothing
+// ticked holds Continue back and says so, so a typed name is never lost without a word. "Add another business" repeats it.
+// Each is a side of the person's work (design 6.32). Sides already saved are listed with their projects and groups, each
 // with Rename (an edit of its project, never a second add) and Remove: in setup, while nothing is filed under it; on the
 // business page of Settings always, asking each time whether its projects and to-dos move to Personal or end with it. It
 // stays one counted step.
@@ -15,7 +16,7 @@ import { problemText } from "../lib/problem";
 import { useToasts } from "../lib/toasts";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
-import { workLines } from "../lib/work-lines";
+import { insideLines, workLines } from "../lib/work-lines";
 
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
@@ -60,8 +61,21 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
     (businessTicked && (named.length > 0 || savedBusinesses.some((s) => workLines(more[s.project] ?? "").length > 0)));
   // Nothing to save when the answer stands: Just me again, or nothing new under the sides there already are.
   const changed = alone ? saved.length === 0 && answered !== "me" : hasNew;
+  // A group named with none of its jobs ticked would make nothing: Continue waits until one is ticked or the name is cleared.
+  const emptyGroup = businessTicked
+    ? [
+        ...drafts.map((d) => ({ group: d.group, lines: workLines(d.lines) })),
+        ...savedBusinesses.map((s) => ({ group: moreGroup[s.project] ?? noGroup(), lines: workLines(more[s.project] ?? "") })),
+      ].find((x) => groupNeedsTick(x.group, x.lines))
+    : undefined;
   const missing =
-    (needJobName && jobName.trim() === "") || needBusinessName || (businessTicked && unnamedWithLines) ? t("walkthrough.work.why") : "";
+    needJobName && jobName.trim() === ""
+      ? t("walkthrough.work.why_job")
+      : needBusinessName || (businessTicked && unnamedWithLines)
+        ? t("walkthrough.work.why")
+        : emptyGroup
+          ? t("walkthrough.work.group.why", { group: emptyGroup.group.name.replace(/\s+/g, " ").trim() })
+          : "";
 
   const refresh = () =>
     Promise.all(["business", "setup", "projects"].map((key) => client.invalidateQueries({ queryKey: [key] })));
@@ -124,10 +138,6 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
 
   if (!state.data) return <p className="empty">{t(state.isError ? "welcome.failed" : "loading")}</p>;
 
-  const chooseJustMe = () => {
-    setJobOn(false);
-    setBusinessOn(false);
-  };
   const toggleBusiness = (on: boolean) => {
     setBusinessOn(on);
     if (on && drafts.length === 0 && savedBusinesses.length === 0) setDrafts([blank()]);
@@ -144,50 +154,36 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         if (changed && !missing) void save();
       }}
     >
-      <fieldset className="field">
-        <legend>{t("walkthrough.work.question")}</legend>
-        <div className="kinds kind-grid work-cards">
-          <label className="radio kind-choice kind-card" data-card="me">
-            <input
-              type="radio"
-              name="work-choice"
-              checked={alone}
-              disabled={saved.length > 0}
-              aria-labelledby="work-me-title"
-              aria-describedby="work-me-note"
-              onChange={chooseJustMe}
-            />
-            <span>
-              <strong id="work-me-title">{t("walkthrough.work.choice.me")}</strong>
-              <span className="hint block" id="work-me-note">
-                {t("walkthrough.work.choice.me_note")}
-              </span>
-            </span>
+      <div className="field work-question" role="group" aria-labelledby="work-question" aria-describedby="work-always">
+        <p className="what" id="work-question">
+          {t("walkthrough.work.question")}
+        </p>
+        <p className="aside" id="work-always">
+          {t("walkthrough.work.always")}
+        </p>
+        <div role="group" aria-labelledby="work-also-title" aria-describedby="work-also-note" data-also="">
+          <p className="what" id="work-also-title">
+            {t("walkthrough.work.also")}
+          </p>
+          <label className="check-line">
+            <input type="checkbox" checked={jobTicked} disabled={savedJobs.length > 0} onChange={(e) => setJobOn(e.target.checked)} />
+            <span>{t("walkthrough.work.choice.job")}</span>
           </label>
-          <div className="kind-card also-card" role="group" aria-labelledby="work-also-title" aria-describedby="work-also-note" data-also="" data-chosen={alone ? undefined : "true"}>
-            <span>
-              <strong id="work-also-title">{t("walkthrough.work.also")}</strong>
-              <span className="hint block" id="work-also-note">
-                {t("walkthrough.work.also_note")}
-              </span>
-            </span>
-            <label className="check-line">
-              <input type="checkbox" checked={jobTicked} disabled={savedJobs.length > 0} onChange={(e) => setJobOn(e.target.checked)} />
-              <span>{t("walkthrough.work.choice.job")}</span>
-            </label>
-            <label className="check-line">
-              <input
-                type="checkbox"
-                checked={businessTicked}
-                disabled={savedBusinesses.length > 0}
-                onChange={(e) => toggleBusiness(e.target.checked)}
-              />
-              <span>{t("walkthrough.work.choice.business")}</span>
-            </label>
-          </div>
+          <label className="check-line">
+            <input
+              type="checkbox"
+              checked={businessTicked}
+              disabled={savedBusinesses.length > 0}
+              onChange={(e) => toggleBusiness(e.target.checked)}
+            />
+            <span>{t("walkthrough.work.choice.business")}</span>
+          </label>
+          <p className="hint" id="work-also-note">
+            {t("walkthrough.work.also_note")}
+          </p>
         </div>
         {saved.length > 0 && <p className="hint">{t("walkthrough.work.stays")}</p>}
-      </fieldset>
+      </div>
 
       {saved.length > 0 && (
         <section aria-labelledby="work-added" data-added="">
@@ -198,7 +194,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                 key={side.project}
                 side={side}
                 position={position}
-                inside={(projects.data ?? []).filter((p) => p.parent === side.project).map((p) => p.name)}
+                inside={insideLines(projects.data ?? [], side.project, (name, jobs) => t("walkthrough.work.group_line", { name, jobs }))}
                 onChanged={refresh}
                 onProblem={sayProblem}
                 onClear={() => setProblem("")}
@@ -337,14 +333,23 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   );
 }
 
+/** Whether a group has a name but none of the typed jobs ticked in it: it would make nothing. */
+function groupNeedsTick(group: Group, lines: string[]): boolean {
+  if (group.name.trim() === "") return false;
+  const picked = new Set(group.picked.map((n) => n.toLowerCase()));
+  return !lines.some((name) => picked.has(name.toLowerCase()));
+}
+
 /** The optional line under what a business works on: "Do some of these belong together? Give the group a name". It is
- * closed until opened and skipped otherwise; a name and at least one tick make the group. */
+ * closed until opened and skipped otherwise; once the group is named, each job gets a tick box "in <group>", and a name
+ * with at least one tick makes the group. */
 function GroupThem(props: { id: string; business: string; lines: string[]; group: Group; onChange: (group: Group) => void }) {
   const { t } = useWords();
   const { group } = props;
-  const picked = new Set(group.picked.map((name) => name.toLowerCase()));
-  const toggle = (name: string, on: boolean) =>
-    props.onChange({ ...group, picked: on ? [...group.picked, name] : group.picked.filter((n) => n.toLowerCase() !== name.toLowerCase()) });
+  const name = group.name.replace(/\s+/g, " ").trim();
+  const picked = new Set(group.picked.map((n) => n.toLowerCase()));
+  const toggle = (job: string, on: boolean) =>
+    props.onChange({ ...group, picked: on ? [...group.picked, job] : group.picked.filter((n) => n.toLowerCase() !== job.toLowerCase()) });
   return (
     <details className="more-options group-them" data-group="">
       <summary>{t("walkthrough.work.group.open")}</summary>
@@ -362,20 +367,30 @@ function GroupThem(props: { id: string; business: string; lines: string[]; group
           {props.business ? t("walkthrough.work.group.name_hint_named", { name: props.business }) : t("walkthrough.work.group.name_hint")}
         </p>
       </div>
-      {props.lines.length === 0 ? (
-        <p className="hint">{t("walkthrough.work.group.none_listed")}</p>
-      ) : (
-        <fieldset className="field">
-          <legend>{t("walkthrough.work.group.pick")}</legend>
-          {props.lines.map((name) => (
-            <label key={name} className="check-line">
-              <input type="checkbox" checked={picked.has(name.toLowerCase())} onChange={(e) => toggle(name, e.target.checked)} />
-              <span>{name}</span>
-            </label>
-          ))}
-          <p className="hint">{t("walkthrough.work.group.pick_hint")}</p>
-        </fieldset>
-      )}
+      {name !== "" &&
+        (props.lines.length === 0 ? (
+          <p className="hint">{t("walkthrough.work.group.none_listed")}</p>
+        ) : (
+          <>
+            <ul className="plain-list group-picks" aria-label={t("walkthrough.work.group.pick", { group: name })}>
+              {props.lines.map((job) => (
+                <li key={job} className="group-pick">
+                  <span>{job}</span>
+                  <label className="check-line">
+                    <input
+                      type="checkbox"
+                      aria-label={t("walkthrough.work.group.in_named", { name: job, group: name })}
+                      checked={picked.has(job.toLowerCase())}
+                      onChange={(e) => toggle(job, e.target.checked)}
+                    />
+                    <span>{t("walkthrough.work.group.in", { group: name })}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <p className="hint">{t("walkthrough.work.group.pick_hint", { group: name })}</p>
+          </>
+        ))}
     </details>
   );
 }

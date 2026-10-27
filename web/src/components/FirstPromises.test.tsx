@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
-import { fakeApi, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
+import { fakeApi, Refuse, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
 import { FirstPromises } from "./FirstPromises";
 import { MissedOneProvider } from "./MissedOne";
 import { Walkthrough } from "./Walkthrough";
@@ -47,13 +47,12 @@ function show(
   first: S["FirstPromisesView"],
   routes: Parameters<typeof fakeApi>[0] = {},
   go: (screen: S["WalkthroughView"]["step"]) => void = noop,
-  openSources: () => void = noop,
   handIn: () => void = noop,
 ) {
   const calls = fakeApi({ "GET setup/first-promises": () => first, ...routes });
   renderApp(
     <MissedOneProvider>
-      <FirstPromises go={go} onOpenSources={openSources} onHandIn={handIn} />
+      <FirstPromises go={go} onHandIn={handIn} />
     </MissedOneProvider>,
   );
   return calls;
@@ -116,7 +115,7 @@ describe("before the offer", () => {
     const user = userEvent.setup();
     const go = vi.fn();
     const handIn = vi.fn();
-    show(view({ stage: "no_mail" }), {}, go, noop, handIn);
+    show(view({ stage: "no_mail" }), {}, go, handIn);
     expect(await screen.findByText(/hand it something to read/)).toBeInTheDocument();
     expect(screen.queryByText(/Connect your mail first/)).toBeNull();
     const main = screen.getByRole("button", { name: "Hand something in to see what it does" });
@@ -212,7 +211,7 @@ describe("what was found", () => {
   test("with none found it offers Hand something in, which opens the hand-in box, and says what it is for", async () => {
     const user = userEvent.setup();
     const handIn = vi.fn();
-    show(view({ messages_read: 7, coverage: [place([folder("Inbox")])] }), {}, noop, noop, handIn);
+    show(view({ messages_read: 7, coverage: [place([folder("Inbox")])] }), {}, noop, handIn);
     await user.click(await screen.findByRole("button", { name: "Hand something in to see what it does" }));
     expect(handIn).toHaveBeenCalledTimes(1);
   });
@@ -267,12 +266,75 @@ describe("what it reads", () => {
   });
 
   test("where no sent folder could be found, the line says what can't be found and offers choosing it", async () => {
-    const user = userEvent.setup();
-    const open = vi.fn();
-    show(missingSent, {}, noop, open);
+    show(missingSent);
     expect(await screen.findByText("The mail you sent from work@example.com isn't being read, so promises you made in it can't be found until you add its Sent folder.")).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
-    expect(open).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("button", { name: "Choose the Sent folder" })).toBeInTheDocument();
+  });
+
+  describe("choosing the Sent folder opens the picker in place, with the likeliest folder first, and the screen stays where it is", () => {
+    const folders = (over: Partial<S["MailFoldersView"]>): S["MailFoldersView"] => ({ folders: [], sent: null, taken: ["INBOX"], listed: true, ...over });
+
+    test("a mailbox lists its own folders: the one the server marks, then those named for sent mail, first", async () => {
+      const user = userEvent.setup();
+      const calls = show(missingSent, {
+        "GET watch/inbox/folders": () => folders({ folders: ["Archive", "INBOX", "Notes", "Sent Items"], sent: "Sent Items" }),
+        "GET settings": () => ({ items: [], fingerprint: "f1" }),
+        "POST watch/inbox/sent-folder": () => ({ changes: [], fingerprint: "f2", needs_restart: false }),
+      });
+      await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
+      const pick = await screen.findByRole("combobox", { name: "Folder of the mail you sent" });
+      expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sent Items", "Archive", "Notes"]);
+      expect(pick).toHaveValue("Sent Items");
+      await user.click(screen.getByRole("button", { name: "Read it too" }));
+      await waitFor(() => expect(calls.some((c) => c.route === "POST watch/inbox/sent-folder")).toBe(true));
+      expect(calls.find((c) => c.route === "POST watch/inbox/sent-folder")!.body).toEqual({ folder: "Sent Items", label: "Inbox, sent", fingerprint: "f1" });
+      // No message is raised and nothing navigates: the picker closes and the screen is where it was.
+      await waitFor(() => expect(screen.queryByRole("combobox", { name: "Folder of the mail you sent" })).toBeNull());
+      expect(screen.queryByRole("region", { name: "Notifications" })?.textContent ?? "").not.toMatch(/Saved/);
+    });
+
+    test("an add-on's mail can't be asked for its folders: the usual names come first and another can be typed", async () => {
+      const user = userEvent.setup();
+      const calls = show(missingSent, {
+        "GET watch/inbox/folders": () => folders({ folders: ["Sent", "Sent Items", "Sent Mail"], sent: "Sent", listed: false }),
+        "GET settings": () => ({ items: [], fingerprint: "f1" }),
+        "POST watch/inbox/sent-folder": () => ({ changes: [], fingerprint: "f2", needs_restart: false }),
+      });
+      await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
+      const box = await screen.findByRole("combobox", { name: "Folder of the mail you sent" });
+      expect(box).toHaveValue("Sent");
+      expect(box.getAttribute("list")).toBeTruthy();
+      expect(Array.from(document.getElementById(box.getAttribute("list")!)!.querySelectorAll("option")).map((o) => o.getAttribute("value"))).toEqual(["Sent", "Sent Items", "Sent Mail"]);
+      await user.clear(box);
+      expect(screen.getByRole("button", { name: "Read it too" })).toBeDisabled();
+      await user.type(box, "Outbox");
+      await user.click(screen.getByRole("button", { name: "Read it too" }));
+      await waitFor(() => expect(calls.find((c) => c.route === "POST watch/inbox/sent-folder")?.body).toMatchObject({ folder: "Outbox" }));
+    });
+
+    test("a refusal is said in words beside the picker, which stays open", async () => {
+      const user = userEvent.setup();
+      show(missingSent, {
+        "GET watch/inbox/folders": () => folders({ folders: ["Sent"], sent: "Sent", listed: false }),
+        "GET settings": () => ({ items: [], fingerprint: "f1" }),
+        "POST watch/inbox/sent-folder": () => new Refuse(400, "Choose a folder that isn't read yet."),
+      });
+      await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
+      await screen.findByRole("combobox", { name: "Folder of the mail you sent" });
+      await user.click(screen.getByRole("button", { name: "Read it too" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Choose a folder that isn't read yet.");
+      expect(screen.getByRole("combobox", { name: "Folder of the mail you sent" })).toBeInTheDocument();
+    });
+
+    test("Cancel closes the picker and the button is back", async () => {
+      const user = userEvent.setup();
+      show(missingSent, { "GET watch/inbox/folders": () => folders({ folders: ["Sent"], sent: "Sent" }) });
+      await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
+      await screen.findByRole("combobox", { name: "Folder of the mail you sent" });
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("combobox", { name: "Folder of the mail you sent" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Choose the Sent folder" })).toBeInTheDocument();
+    });
   });
 
   test("where the sent folder is read there is no button to choose it", async () => {
@@ -356,7 +418,7 @@ describe("in the walkthrough", () => {
     });
     renderApp(
       <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
-        <Walkthrough at={null} onOpenPeople={noop} onOpenAddons={noop} onHandIn={noop} onChooseSource={noop} onOpenSources={noop} onFinishLater={noop} onDone={noop} />
+        <Walkthrough at={null} onOpenPeople={noop} onOpenAddons={noop} onHandIn={noop} onChooseSource={noop} onFinishLater={noop} onDone={noop} />
       </RestartProvider>,
     );
     return calls;

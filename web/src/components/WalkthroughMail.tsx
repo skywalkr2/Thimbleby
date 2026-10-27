@@ -101,7 +101,8 @@ function SortingSwitch() {
     setProblem("");
     try {
       const saved = await api.saveSettings({ changes: { [SORTING]: next ? "ai" : "rules" }, reset: [], fingerprint: await fresh() });
-      await afterSave(saved);
+      // The tick itself shows the choice: a setup step raises no message for each one.
+      await afterSave(saved, { quiet: true });
     } catch (err) {
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
     }
@@ -125,8 +126,9 @@ function SortingSwitch() {
 const SOURCES = "watch.sources";
 
 /** Which sides of the person's life a mailbox or calendar serves, as tick boxes: Personal and each side. Each tick is saved at
- * once as the source's `sides`, through the settings save (the whole list of sources, read fresh), so the toast reads it
- * back with Undo. Nothing ticked is allowed: it means not said. */
+ * once as the source's `sides`, through the settings save (the whole list of sources, read fresh). The step raises no
+ * message for a tick: the boxes and the line under them say how it stands, and a tick is undone by unticking it. Nothing
+ * ticked is allowed: it means not said. */
 function SourceSides(props: { source: Source; personal: string | null; sides: S["SideView"][] }) {
   const { t } = useWords();
   const client = useQueryClient();
@@ -155,7 +157,7 @@ function SourceSides(props: { source: Source; personal: string | null; sides: S[
       const next = [...options.map((o) => o.id).filter((id) => mine.has(id)), ...[...mine].filter((id) => !options.some((o) => o.id === id))];
       const changes = { [SOURCES]: list.map((s) => (s.id === props.source.id ? { ...s, sides: next } : s)) };
       const saved = await api.saveSettings({ changes, reset: [], fingerprint: current.fingerprint });
-      await afterSave(saved);
+      await afterSave(saved, { quiet: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
@@ -165,6 +167,7 @@ function SourceSides(props: { source: Source; personal: string | null; sides: S[
   };
 
   const id = `source-sides-${props.source.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+  const serving = options.filter((o) => held.has(o.id)).map((o) => o.name);
   return (
     <fieldset className="field" data-source-sides={props.source.id} aria-describedby={`${id}-hint`}>
       <legend>{t("walkthrough.mail.sides.legend", { label: props.source.label })}</legend>
@@ -182,6 +185,14 @@ function SourceSides(props: { source: Source; personal: string | null; sides: S[
       <p className="hint" id={`${id}-hint`}>
         {t("walkthrough.mail.sides.hint")}
       </p>
+      {serving.length > 0 && (
+        <p className="sub" role="status" data-sides-state="">
+          {t("walkthrough.mail.sides.state", {
+            label: props.source.label,
+            sides: new Intl.ListFormat(undefined, { style: "long", type: "conjunction" }).format(serving),
+          })}
+        </p>
+      )}
       {problem && (
         <p className="problem-note" role="alert">
           {problem}
@@ -356,8 +367,8 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   };
 
   const reads = service.reads.map((kind) => t(`walkthrough.mail.reads.${kind}`)).join(t("walkthrough.mail.reads_join"));
-  // Who it signs in to, as the add-on names it; the add-on's own name when it names none.
-  const signsInTo = service.what.reaches.sign_ins[0] ?? service.name;
+  // Who it signs in to is the service as the person knows it: the add-on's display name, never a sign-in's id.
+  const signsInTo = service.name;
   // The publisher and what it reaches are under "What it can access", with the number of keys it needs.
   const reaches = [...(service.publisher ? [t("walkthrough.mail.publisher", { publisher: service.publisher })] : []), ...serviceReachLines(service.what.reaches, t, tn)];
   const oneLine = (state === "not_installed" && service.installable) || state === "off";

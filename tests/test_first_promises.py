@@ -134,11 +134,15 @@ def test_the_go_starts_everything_the_offer_counted_once(env):
     assert (working.stage, working.count, working.finished) == ("working", 2, 0)
 
 
-def test_your_promises_is_done_only_once_the_look_back_started(env):
+def test_your_promises_is_done_only_once_the_look_back_started_and_its_screen_was_reached(env):
     ws, cfg, store = env
     read(env)
     assert not next(s for s in setup.steps(ws, cfg, store) if s.id == "promises").done  # offered, not run
     first_promises.go(ws, store, cfg)
+    # The look back ran, but the walkthrough hasn't shown the first result yet: no tick before its step.
+    setup.keep_walkthrough(ws, step="mail")
+    assert not next(s for s in setup.steps(ws, cfg, store) if s.id == "promises").done
+    setup.keep_walkthrough(ws, step="promises")
     assert next(s for s in setup.steps(ws, cfg, store) if s.id == "promises").done
 
 

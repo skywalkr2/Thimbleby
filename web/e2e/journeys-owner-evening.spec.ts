@@ -70,16 +70,15 @@ test.describe.serial("journey: the owner's first evening", () => {
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
 
-    // 1b. What it's for, on its own screen: Just my own life first, then two tick boxes. A job shows the notice about work
-    // mail; the evening is Just me.
+    // 1b. What it's for, on its own screen: your own life is always included, then two tick boxes. A job shows the notice
+    // about work mail; leaving both unticked is just me, which the evening is.
     await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
-    await expect(main.getByRole("radio")).toHaveCount(1);
+    await expect(main.getByRole("radio")).toHaveCount(0);
     await expect(main.getByRole("checkbox")).toHaveCount(2);
-    await expect(main.getByRole("radio", { name: "Just my own life" })).toBeChecked();
-    await main.getByRole("checkbox", { name: "My life and my job" }).check();
+    await expect(main.getByText("Your own life is always included.")).toBeVisible();
+    await main.getByRole("checkbox", { name: "A job" }).check();
     await expect(main.getByRole("note")).toContainText("may need your employer's permission");
-    await main.getByRole("radio", { name: "Just my own life" }).check();
-    await expect(main.getByRole("checkbox", { name: "My life and my job" })).not.toBeChecked();
+    await main.getByRole("checkbox", { name: "A job" }).uncheck();
     await expect(main.getByRole("note")).toHaveCount(0);
     await main.getByRole("button", { name: "Continue" }).click();
 
@@ -145,6 +144,11 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect.poll(async () => (await requests()).work, { timeout: 90_000 }).toBeGreaterThan(0);
     // An add-on's mail has no sent folder taken by itself (that is for the plain mailbox): the screen says so and offers it.
     await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toBeVisible();
+    // The choice opens right there with the usual name first (an add-on's mail can't list its folders), and Cancel leaves it.
+    await main.getByRole("button", { name: "Choose the Sent folder" }).click();
+    await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent");
+    await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
+    await main.getByRole("button", { name: "Cancel" }).click();
     await main.getByRole("button", { name: "Continue" }).click();
     // Backups, then People.
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();

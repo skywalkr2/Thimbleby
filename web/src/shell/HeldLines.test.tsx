@@ -648,9 +648,9 @@ const workAccess = (over: Partial<S["QueueLineView"]> = {}) => line("work_access
 test("an account the person said Not now about is a line that starts with Let, names it and has one button, Allow", async () => {
   show([workAccess()]);
   const row = await screen.findByRole("region", { name: "Access" });
-  expect(row).toHaveTextContent("Let second read your work mail and notes");
+  expect(row).toHaveTextContent("Let second read your mail, notes and calendar, including private ones");
   expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Allow"]);
-  expect(within(row).getByRole("button", { name: "Allow second to read your work mail and notes" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "Allow second to read your mail, notes and calendar, including private ones" })).toBeInTheDocument();
 });
 
 test("Allow gives the yes with the current settings, says so, the line goes and Undo puts the answer back", async () => {
@@ -673,9 +673,9 @@ test("Allow gives the yes with the current settings, says so, the line goes and 
     },
   });
   const row = await screen.findByRole("region", { name: "Access" });
-  await user.click(within(row).getByRole("button", { name: "Allow second to read your work mail and notes" }));
+  await user.click(within(row).getByRole("button", { name: "Allow second to read your mail, notes and calendar, including private ones" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/second/allow-work")?.body).toEqual({ fingerprint: "fp-1" }));
-  expect(await screen.findByText("second can now read your work mail and notes.")).toBeInTheDocument();
+  expect(await screen.findByText("second can now read your mail, notes and calendar, including private ones.")).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("region", { name: "Access" })).toBeNull());
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() =>

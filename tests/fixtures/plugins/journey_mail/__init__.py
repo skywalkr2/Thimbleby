@@ -14,8 +14,10 @@ from engine.plugin_api import ConnectorError, EventDetails, MessageDetails, Poll
 
 SERVICE = os.environ.get("JOURNEY_SERVICE_ADDRESS", "https://127.0.0.1:1").rstrip("/")
 SIGN_IN = "journey-mail/account"
-#: Whether the sign-in also names the account's sent mail (the journey that finds a promise only there turns it on).
-SENT_MAIL = os.environ.get("JOURNEY_SENT_MAIL") == "1"
+#: Whether the sign-in also names the account's sent mail, as a real mail service's add-on does: it is named unless the
+#: process that runs the app says not (a journey about a service that names no sent folder). Whether the made-up service
+#: has a message there is the service's own switch, so the two can never disagree about whether setup reads it.
+SENT_MAIL = os.environ.get("JOURNEY_SENT_MAIL", "1") != "0"
 #: The app registration this add-on ships, as the made-up service knows it.
 DEFAULT_CLIENT_ID = "journey-mail-app"
 

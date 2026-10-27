@@ -412,10 +412,12 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .kind-card { border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: var(--space-3); background: var(--surface); cursor: pointer; }
 .kind-grid .kind-card { min-height: 64px; }
 .kind-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-/* The work question's two cards: Just me, and Also track with its tick boxes inside the card. */
-.work-cards { align-items: stretch; }
-.also-card { display: grid; align-content: start; gap: var(--space-2); min-width: 0; cursor: default; }
-.also-card .check-line { min-height: var(--btn-h-sm); }
+/* The work question: one plain control, a line, then the two tick boxes, no frame. A group's jobs are rows, each with its tick. */
+.work-question { display: grid; gap: var(--space-2); min-width: 0; }
+.work-question [data-also] { display: grid; gap: var(--space-1); }
+.group-picks { display: grid; gap: var(--space-1); }
+.group-pick { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); min-width: 0; }
+.group-pick > span { min-width: 0; overflow-wrap: anywhere; }
 .found-local { border: 2px solid var(--accent); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-3); background: var(--accent-soft); display: grid; gap: var(--space-2); }
 .found-local p { margin: 0; font-weight: var(--weight-semibold); }
 .more-options { margin: var(--space-1) 0 var(--space-3); }

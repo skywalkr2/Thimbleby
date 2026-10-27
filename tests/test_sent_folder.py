@@ -93,6 +93,7 @@ def test_a_mailbox_source_offers_its_folders_with_the_sent_one_marked_and_what_i
         "folders": ["INBOX", "Sent Items", "Drafts", 'Team "A"'],
         "sent": "Sent Items",
         "taken": ["INBOX"],
+        "listed": True,
     }
     assert c.get(f"{api}/watch/nope/folders").status_code == 404
     assert c.get(f"{api}/watch/{sources(ws)[0].id}/folders").status_code in (

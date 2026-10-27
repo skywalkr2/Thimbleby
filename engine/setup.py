@@ -164,10 +164,12 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         "template": bool(state.get("template")) or _template_in_use(ws, cfg),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
         "mail": mail_signed or mail_read,
-        "promises": _looked_back(requests) or _handed_in(requests),
+        # The first result is ticked when something was handed in, or when the look back ran and the person has been
+        # shown it (their walkthrough reached its screen), never while they are still on an earlier step.
+        "promises": _handed_in(view, requests) or (_looked_back(requests) and _first_result_reached(state)),
         "backup": backup_state(ws, cfg).last_success is not None,  # a backup was made, not only a folder chosen
         "people": len(people) >= 2,
-        "first_note": _handed_in(requests),
+        "first_note": _handed_in(view, requests),
         # Done only once the person chose about the add-ons they installed: with nothing installed it isn't offered.
         "addons": bool(state.get("addons_decided")) and not set(addons_off(ws, cfg)) - set(state["addons_decided"]),
     }
@@ -184,7 +186,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             (step in skipped or passed.get(step, False)) and not done[step],
             group=CORE_GROUPS.get(step, "done"),
             counted=step in COUNTED_STEPS,
-            applies=step != "addons" or done[step] or bool(addons_off(ws, cfg)),
+            applies=_applies(step, done, ws, cfg, view),
             reason=None if done[step] else reasons.get(step),
         )
         for step in CORE_STEPS
@@ -222,9 +224,51 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     return found
 
 
-def _handed_in(requests: list[Any]) -> bool:
-    """Whether the person handed something in themselves (a pasted message or a typed note)."""
-    return any(r.data.get("origin") == "pm" for r in requests)
+def _handed_in(view: Any, requests: list[Any]) -> bool:
+    """Whether the person handed something in themselves (a pasted message or a typed note). A change they made on a
+    screen leaves a request of theirs too, with no material and a change no run made; a note on one record is about that
+    record, not a first note. So a hand-in is their own request that holds material, or one a run read, or one still
+    waiting to be read."""
+    for r in requests:
+        data = r.data
+        if data.get("origin") != "pm" or data.get("about"):
+            continue
+        if data.get("source"):
+            return True
+        changeset = view.get("changeset", data["changeset"]) if data.get("changeset") else None
+        if changeset is not None:
+            if changeset.data.get("run"):
+                return True
+        elif data.get("state") != "done" and data.get("note"):
+            return True
+    return False
+
+
+def _first_result_reached(state: dict[str, Any]) -> bool:
+    """Whether the walkthrough has shown the first result: the person is on its screen or past it."""
+    mine = _walkthrough_state(state)
+    kept = mine.get("step")
+    after = kept in WALKTHROUGH_STEPS and WALKTHROUGH_STEPS.index(kept) >= WALKTHROUGH_STEPS.index("promises")
+    return bool(mine.get("promises_done")) or after
+
+
+def _applies(step: str, done: dict[str, bool], ws: Any, cfg: Any, view: Any) -> bool:
+    """Whether there is anything for the person to do at an optional step. The add-ons step is for connecting mail and a
+    calendar, so it goes once mail is connected and is offered only while an installed add-on is off; the starting
+    templates are for a workspace that was given no jobs in setup."""
+    if step == "addons":
+        return not done["mail"] and bool(addons_off(ws, cfg))
+    if step == "template":
+        return not _jobs_given(view, cfg)
+    return True
+
+
+def _jobs_given(view: Any, cfg: Any) -> bool:
+    """Whether anything was listed under a side (what a business works on): a project inside one of the sides."""
+    from engine import sides
+
+    held = {s.project for s in sides.side_list(view, cfg)}
+    return any(p.data.get("parent") in held for p in view.list("project"))
 
 
 def _looked_back(requests: list[Any]) -> bool:

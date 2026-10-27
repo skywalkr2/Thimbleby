@@ -959,7 +959,7 @@ test("a count that is zero is never said: a read that found nothing has no item 
 // ---- the sent folder, offered as a second source (design 6.33) ----------------------------------------------------
 
 const mailbox = (extra: Partial<Source> = {}) => source("work-mail", { connector: "mailbox", connector_label: "A mail folder (IMAP)", reads: ["mail"], ...extra });
-const folders = (extra: Partial<S["MailFoldersView"]> = {}): S["MailFoldersView"] => ({ folders: ["INBOX", "Sent Items", "Drafts"], sent: "Sent Items", taken: ["INBOX"], ...extra });
+const folders = (extra: Partial<S["MailFoldersView"]> = {}): S["MailFoldersView"] => ({ folders: ["INBOX", "Sent Items", "Drafts"], sent: "Sent Items", taken: ["INBOX"], listed: true, ...extra });
 
 test("a mailbox offers the folder its server marks as sent, picked already, with one button to read it too", async () => {
   const user = userEvent.setup();

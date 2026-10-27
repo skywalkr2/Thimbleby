@@ -2,6 +2,8 @@
 settings key, a manifest field or a command. The checker's own cases, the response fields typed as screen text, the
 refusal of an error message that fails the check, and the web wording sheet's matching list of commands."""
 
+import ast
+import json
 import re
 from pathlib import Path
 
@@ -10,7 +12,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError
 
-from api.screen_text import SWITCH, ScreenText, command_names, problems, settings_keys
+from api.screen_text import SWITCH, ScreenText, command_names, leaks, problems, settings_keys
 from engine.config import load_config
 from engine.config.schema import FILES
 from engine.secrets import SecretHint
@@ -273,3 +275,73 @@ def test_the_web_wording_test_lists_the_command_lines_own_subcommands():
     assert set(re.findall(r'"([a-z-]+)"', listed.group(1))) == set(command_names())
     files = re.search(r"const SETTINGS_FILES = \[(.*?)\];", source, re.S)
     assert files and set(re.findall(r'"([a-z]+)"', files.group(1))) == set(FILES)
+
+
+# ---- no data on screen: JSON, record ids and raw mail headers (the reviewer's G1, check U13) -------------------
+
+API = Path(__file__).parent.parent / "api"
+WORDING = Path(__file__).parent.parent / "web" / "src" / "wording" / "en.json"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        'Saved. The places the assistant keeps reading: {"id":"your-inbox","sides":["x"]}',
+        "Filed under PRJ-12",
+        "Reply to PER-3 about it",
+        "Moved ACT-104 to Friday",
+        "Filed a note: New in Your inbox: Thanks From: A. Sender <sender@example.com> Received: Tue, Oct 27",
+        "Message-ID: <abc@example.com>",
+        "Reply-To: sender@example.com",
+    ],
+)
+def test_data_an_id_and_a_raw_mail_header_are_caught(text):
+    assert leaks(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Saved: Your inbox is for Personal and Hale Upholstery.",
+        "Thanks · from A. Sender",
+        "Write the plan for {full_name} first.",
+        "UTF-8 text and WCAG 2.2 pages",
+        "Subject to approval, the price is fixed",
+        'Ask "Is the index final?" before Friday',
+    ],
+)
+def test_ordinary_words_hold_no_data_id_or_header(text):
+    assert leaks(text) == []
+
+
+def _detail_texts() -> list[tuple[str, str]]:
+    """The literal words of every error the API raises with a message: each string in a `detail=` of an HTTPException,
+    the literal parts of an f-string with a space where a value goes."""
+    found = []
+    for path in sorted(API.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            for keyword in node.keywords:
+                if keyword.arg != "detail":
+                    continue
+                value = keyword.value
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    found.append((f"{path.name}:{node.lineno}", value.value))
+                elif isinstance(value, ast.JoinedStr):
+                    parts = [p.value if isinstance(p, ast.Constant) else " " for p in value.values]
+                    found.append((f"{path.name}:{node.lineno}", "".join(str(p) for p in parts)))
+    return found
+
+
+def test_no_message_toast_title_or_label_shows_json_a_record_id_or_a_raw_mail_header():
+    """The screens' words come from the wording sheet (messages, toasts, titles, labels), from the settings' labels and
+    descriptions, and from the errors the API returns; none of them carries data."""
+    words = json.loads(WORDING.read_text(encoding="utf-8"))
+    flagged = {f"wording {k}": leaks(v) for k, v in words.items() if isinstance(v, str) and leaks(v)}
+    cfg = load_config(DEMO_B / "config", env={})
+    flagged |= {
+        f"setting {s.key}": leaks(s.description) for s in describe(cfg) if s.description and leaks(s.description)
+    }
+    flagged |= {f"error {where}": leaks(text) for where, text in _detail_texts() if leaks(text)}
+    assert flagged == {}

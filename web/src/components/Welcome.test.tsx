@@ -538,7 +538,7 @@ test("the setup list asks the work question as its own step, with a Save of its 
   });
   open();
   expect(await screen.findByRole("heading", { name: "Say what you'll use it for" })).toBeInTheDocument();
-  await user.click(await screen.findByRole("checkbox", { name: "My life and my job" }));
+  await user.click(await screen.findByRole("checkbox", { name: "A job" }));
   expect(screen.getByRole("note")).toHaveTextContent("employer's permission");
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   await user.type(screen.getByLabelText("What is your employer called?"), employer);

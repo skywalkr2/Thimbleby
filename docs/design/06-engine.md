@@ -2096,15 +2096,15 @@ refused, no credit, can't be reached, asked to wait, not signed in), worded for 
 to check its internet connection, never to "start it if it runs on this computer" (`where_of` tells an address on this
 computer or network from a hosted one; `TRANSPORT_HINTS`, `LIST_PROBLEMS`). It also says which sign-in the account runs
 as when it can be found (the signed-in user of an agent), and says in plain words when it can't (a key). **A new account reads
-only open material until the person says so** (decision F25): the step asks once, per account, "Allow <account>, signed in
-as <identity>, to read your work mail and notes?" with nothing chosen; Allow lets it read open and internal material, Not now
-leaves it at open, and the three levels stay under Advanced. A drawer in Settings starts a new account at open material too.
+only open material until the person says so** (decisions F25 and F46): the step asks once, per account, "{assistant}'s AI
+service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." with nothing
+chosen; Allow lets it read every level, the private one included, Not my private mail leaves it at open, and the three levels
+stay under Advanced. A new account, and a backup in a chain, reads nothing private until that account has its own yes. A drawer in Settings starts a new account at open material too.
 **The yes is never skipped silently** (the UI/UX re-review of B-7, conditions on F25; B-8): it is asked in the step itself, right after
-the key check passes, and Continue stays disabled with its reason ("Choose Allow or Not now above.") until it is answered. Not now is
+the key check passes, and Continue stays disabled with its reason ("Choose Allow or Not my private mail above.") until it is answered. Not my private mail is
 kept with the account (`ai.providers.<name>.work_data: not_now`, sent by the step as `work_data`), and an account in that state with
-no level above open has a Today line, **"Let <account> read your work mail and notes"**, with one button, Allow (`work_access`
-in the queue; 7.7). Allow is `POST /api/ai/accounts/{name}/allow-work`: one settings change that adds the internal level (keeping any
-higher one) and clears the answer, with the read-back and Undo every settings change has. Allow changes what the account may read, not
+no level above open has a Today line, **"Let <account> read your mail, notes and calendar, including private ones"**, with one button, Allow (`work_access`
+in the queue; 7.7). Allow is `POST /api/ai/accounts/{name}/allow-work`: one settings change that gives every level, the private one included (the yes the step asks), and clears the answer, with the read-back and Undo every settings change has. Allow changes what the account may read, not
 the assistant's work, so it records no signal; the line goes the moment the account may see the internal level, however that
 came about. The browser tests' server can start with such an account (`tests/e2e_server.py --standin-account`, the `access` project) so
 the line and the yes can be captured. **Built:** `tests/test_work_access.py`, `web/src/components/WelcomeAi.test.tsx` (the question, its

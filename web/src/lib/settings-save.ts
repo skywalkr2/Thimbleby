@@ -4,6 +4,7 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, type S } from "./api";
 import { useRestart } from "./restart";
+import { leaksInternals } from "./raw-data";
 import { formatValue, labelForKey, undoBody } from "./settings";
 import { useToasts } from "./toasts";
 import { useWords } from "./wording";
@@ -26,7 +27,7 @@ export function useAfterSave() {
   const { t, tn, has } = useWords();
   const restart = useRestart();
   return useCallback(
-    (saved: S["SettingsSaved"], opts: { message?: string } = {}): Promise<void> => {
+    (saved: S["SettingsSaved"], opts: { message?: string; quiet?: boolean } = {}): Promise<void> => {
       rememberFingerprint(client, saved.fingerprint);
       if (saved.needs_restart) restart.offer();
       const refreshed = client.invalidateQueries();
@@ -35,16 +36,21 @@ export function useAfterSave() {
       const minutes = saved.kept_secrets_undo_minutes ?? 0;
       const secrets = going === 0 ? "" : minutes > 0 ? tn("kept_secrets.going", going, { minutes }) : tn("kept_secrets.gone", going);
       const said = (message: string) => (secrets ? `${message} ${secrets}` : message);
+      // A setup step shows what it saved in its own controls: it asks for no message for each tick.
+      if (opts.quiet) return refreshed;
       if (!saved.changes.length) {
         push({ message: said(opts.message ?? t("settings.nothing_changed")) });
         return refreshed;
       }
       const known = client.getQueryData<S["SettingsView"]>(["settings"])?.items ?? [];
       const label = (key: string) => labelForKey(key, known, t, has);
-      const line = (c: S["SettingChangeView"]) =>
-        c.is_default
-          ? t("settings.saved_default", { label: label(c.key), value: formatValue(c.after, t) })
-          : t("settings.saved_line", { label: label(c.key), value: formatValue(c.after, t) });
+      // A value that is an id of the app's own (a setting that holds a person or a project) is never shown as one: the line
+      // says the setting changed.
+      const line = (c: S["SettingChangeView"]) => {
+        const value = formatValue(c.after, t);
+        if (leaksInternals(value)) return t("settings.saved_changed", { label: label(c.key) });
+        return c.is_default ? t("settings.saved_default", { label: label(c.key), value }) : t("settings.saved_line", { label: label(c.key), value });
+      };
       const lines = saved.changes.slice(0, SHOWN).map(line);
       if (saved.changes.length > SHOWN) lines.push(t("settings.saved_more", { n: saved.changes.length - SHOWN }));
       push({

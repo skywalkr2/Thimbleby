@@ -8,15 +8,13 @@ import styles from "./Walkthrough.module.css";
 
 /** The app's own daily AI limit, read from the setting that holds it: nothing here names an amount. */
 const DAY = "ai.budgets.per_day_usd";
-/** Days in a month, for "about this much a month" at the daily limit. */
-const MONTH_DAYS = 30;
-
 export function WalkthroughWelcome() {
   const { t } = useWords();
   const amount = useAmount();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const perDay = Number(settings.data?.items.find((i) => i.key === DAY)?.value ?? 0);
-  const ai = perDay > 0 ? t("walkthrough.welcome.need.ai", { amount: amount(Math.round(perDay * MONTH_DAYS)) }) : t("walkthrough.welcome.need.ai_plain");
+  // The line says what the app never spends in a day, not what a month will cost: the limit is a ceiling, not a bill.
+  const ai = perDay > 0 ? t("walkthrough.welcome.need.ai", { amount: amount(perDay) }) : t("walkthrough.welcome.need.ai_plain");
   return (
     <>
       <p className={styles.lead}>{t("walkthrough.welcome.line")}</p>

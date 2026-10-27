@@ -38,8 +38,6 @@ export function Walkthrough(
   props: Handlers & {
     /** Open at this screen, when a line elsewhere sent the person to a step; `n` tells one request from the next. */
     at?: { screen: Screen; n: number } | null;
-    /** The first result asks to add a source (the sent folder): open Connections. */
-    onOpenSources: () => void;
     /** Finish later was chosen, and kept. */
     onFinishLater: () => void;
     /** The last button was pressed, and kept. */
@@ -153,17 +151,21 @@ export function Walkthrough(
     if (current) shownScreen.current = current;
   }, [current, dismissAll]);
 
-  // A toast that appears over the screen's own buttons moves them clear of it; buttons that are off the screen stay put.
+  // A toast that appears over the screen's own buttons, or over the group of controls the person is working in, moves them
+  // clear of it: the page has made room under its last row (the stack's height), and it scrolls by what is covered. Controls
+  // that are off the screen stay put.
   useEffect(() => {
     if (!shownToasts) return;
     // After the page has made room for them.
     const frame = window.requestAnimationFrame(() => {
-      const buttons = foot.current?.getBoundingClientRect();
       const toasts = document.querySelector("[data-toast-region]")?.getBoundingClientRect();
-      if (!buttons || !toasts) return;
-      if (buttons.top < window.innerHeight && buttons.bottom > toasts.top) {
-        window.scrollBy?.({ top: buttons.bottom - toasts.top + 8 });
-      }
+      if (!toasts) return;
+      const active = document.activeElement instanceof HTMLElement ? document.activeElement.closest("fieldset, .field, form") : null;
+      const covered = [foot.current, active]
+        .map((el) => el?.getBoundingClientRect())
+        .filter((box): box is DOMRect => !!box && box.top < window.innerHeight && box.bottom > toasts.top);
+      if (covered.length === 0) return;
+      window.scrollBy?.({ top: Math.max(...covered.map((box) => box.bottom - toasts.top + 8)) });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [shownToasts]);
@@ -313,7 +315,7 @@ export function Walkthrough(
               {hasMailSteps && <StepList include={(s) => s.group === "mail" && !!s.plugin && !s.sign_in} {...handlers} />}
             </>
           )}
-          {current === "promises" && <FirstPromises go={go} onOpenSources={props.onOpenSources} onHandIn={props.onHandIn} />}
+          {current === "promises" && <FirstPromises go={go} onHandIn={props.onHandIn} />}
           {current === "backup" && <WelcomeBackup local={data.local} />}
           {current === "people" && <WalkthroughPeople />}
           {current === "done" && <DoneScreen go={go} {...handlers} />}

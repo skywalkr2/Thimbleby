@@ -136,7 +136,7 @@ def test_a_mailbox_with_a_sent_folder_lists_the_persons_own_message_only_there(s
         return {m["subject"] for m in got}
 
     inbox = subjects()
-    assert subjects(folder=fake_services.SENT_FOLDER) == inbox  # without a sent folder the name changes nothing
+    assert subjects(folder=fake_services.SENT_FOLDER) == set()  # a mailbox with no sent mail has an empty sent folder
     state.sent_mail = True
     assert subjects(folder=fake_services.SENT_FOLDER) == {fake_services.SENT_SUBJECT}
     assert subjects(folder="inbox") == inbox and fake_services.SENT_SUBJECT not in inbox
@@ -263,3 +263,40 @@ def test_a_scripted_answer_goes_to_the_next_request_holding_its_words_once_and_n
     assert ask("<note>\nHas a marked line in it.\n</note>") == scripted
     assert ask("<note>\nHas a marked line in it.\n</note>") != scripted
     assert state.scripted == []
+
+
+class _Recorder:
+    """What the mail add-on registers, kept for a test to read: the sign-in's declared sources."""
+
+    def __init__(self):
+        self.sources: list[dict] = []
+
+    def connector(self, *args, **kwargs):
+        return None
+
+    def sign_in(self, name, **kwargs):
+        self.sources = list(kwargs["sources"])
+
+
+@pytest.mark.parametrize(("switch", "named"), [(None, True), ("1", True), ("0", False)])
+def test_the_journey_mail_add_on_names_the_sent_mail_unless_the_app_is_told_it_does_not(monkeypatch, switch, named):
+    """Setup reads the sent mail of a service that has some by itself: the add-on names it by default, so a walk by hand
+    needs no second switch beside the fake service's own `--sent-mail` (the reviewer's G4)."""
+    import importlib
+
+    from tests.fixtures.plugins import journey_mail
+
+    if switch is None:
+        monkeypatch.delenv("JOURNEY_SENT_MAIL", raising=False)
+    else:
+        monkeypatch.setenv("JOURNEY_SENT_MAIL", switch)
+    importlib.reload(journey_mail)
+    try:
+        recorder = _Recorder()
+        journey_mail.register(recorder)
+        labels = [s["label"] for s in recorder.sources]
+        sent = [s for s in recorder.sources if s.get("sent")]
+        assert ("Your sent mail" in labels) is named and bool(sent) is named
+    finally:
+        monkeypatch.delenv("JOURNEY_SENT_MAIL", raising=False)
+        importlib.reload(journey_mail)

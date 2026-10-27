@@ -4664,13 +4664,19 @@ class WatchSourceView(BaseModel):
 
 
 class MailFoldersView(BaseModel):
-    """The folders of a mailbox source to pick from (design 6.33): every folder that can be read, `sent` the one the
-    mail server marks as the sent mail (none when it marks none, so the person picks), and `taken` the folders already
-    read by a source of the same mailbox, the source's own included."""
+    """The folders of a mail source to pick from (design 6.33): every folder that can be read, `sent` the one the mail
+    server marks as the sent mail (none when it marks none, so the person picks), and `taken` the folders already read
+    by a source of the same mailbox, the source's own included."""
 
     folders: list[str]
     sent: str | None = None
     taken: list[str] = Field(default_factory=list)
+    listed: bool = Field(
+        True,
+        description="Whether `folders` is the mailbox's own list. False for an add-on's mail, which can't be asked for "
+        "its folders: `folders` is then the usual names for sent mail, the likeliest first, and the person may name "
+        "another.",
+    )
 
 
 class SentFolderIn(BaseModel):

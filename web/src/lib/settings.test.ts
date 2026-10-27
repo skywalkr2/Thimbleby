@@ -60,6 +60,14 @@ test("values are shown in plain words", () => {
   expect(formatValue(3, t)).toBe("3");
 });
 
+test("a record is shown by its name and never as its fields", () => {
+  expect(formatValue({ id: "PRJ-1", label: "Your inbox", sides: ["PRJ-2"] }, t)).toBe("Your inbox");
+  expect(formatValue([{ id: "a", label: "Your inbox" }, { id: "b", name: "Your calendar" }], t)).toBe("Your inbox, Your calendar");
+  expect(formatValue({ id: "ACT-1", level: 3 }, t)).toBe('settings.value.entry{}');
+  expect(formatValue([{ id: "ACT-1" }, { id: "ACT-2" }], t)).toBe('settings.value.entries.other{"n":2}');
+  expect(formatValue([{ id: "ACT-1" }], t)).toBe('settings.value.entries.one{"n":1}');
+});
+
 test("a label comes from the wording sheet when there is one, otherwise it is the description", () => {
   const i = item({ key: "a.b" });
   expect(labelOf(i, t, none)).toBe("About a.b");

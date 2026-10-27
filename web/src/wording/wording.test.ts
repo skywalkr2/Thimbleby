@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import sheet from "./en.json";
 import schema from "../api/openapi.json";
-import { holdsRawData } from "../lib/raw-data";
+import { holdsRawData, leaksInternals } from "../lib/raw-data";
 
 const words = sheet as Record<string, string>;
 const root = join(__dirname, "..");
@@ -217,6 +217,12 @@ test("a variant keeps the placeholders of the line it stands in for", () => {
 test("no entry of the sheet shows raw data: no braces around a quoted key and no data structure in a line", () => {
   const raw = Object.entries(words).filter(([, text]) => holdsRawData(text));
   expect(raw.map(([key]) => key)).toEqual([]);
+});
+
+// Check U13: no message, title or label shows JSON, an id of the app's own or a raw mail header.
+test("no entry of the sheet carries a record id or a raw mail header", () => {
+  const leaking = Object.entries(words).filter(([, text]) => leaksInternals(text));
+  expect(leaking.map(([key]) => key)).toEqual([]);
 });
 
 // The setup path (the first-run review's N5): what a person with no IT background reads while setting the app up. No time

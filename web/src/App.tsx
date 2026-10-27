@@ -336,7 +336,6 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             setFromSetup(true);
             openAddSource(plugin);
           }}
-          onOpenSources={leaveSetup(() => setView(settingsView("connections")))}
           onFinishLater={() => setView("today")}
           onDone={() => {
             setView("today");

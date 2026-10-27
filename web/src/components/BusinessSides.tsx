@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
+import { insideLines } from "../lib/work-lines";
 import { useWords } from "../lib/wording";
 import { SavedSide } from "./WalkthroughWork";
 
@@ -27,7 +28,7 @@ export function BusinessSides() {
             key={side.project}
             side={side}
             position={position}
-            inside={(projects.data ?? []).filter((p) => p.parent === side.project).map((p) => p.name)}
+            inside={insideLines(projects.data ?? [], side.project, (name, jobs) => t("walkthrough.work.group_line", { name, jobs }))}
             onChanged={refresh}
             onProblem={(err) => setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t))}
             onClear={() => setProblem("")}

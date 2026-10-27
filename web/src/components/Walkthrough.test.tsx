@@ -262,11 +262,11 @@ describe("opening", () => {
     expect(screen.getByText("About 10–20 minutes. You can stop and come back.")).toBeInTheDocument();
     expect(await screenTitle()).toHaveTextContent("Welcome");
     expect(screen.getByText(/reads your mail and calendar and keeps track of what you've promised and what you're owed/)).toBeInTheDocument();
-    // What the person will need: three things, the cost from the app's own daily limit ($2 a day is about $60 a month).
+    // What the person will need: three things; the cost line names the app's own daily ceiling, never an expected bill.
     const need = screen.getByRole("region", { name: "What you'll need" });
     const items = within(need).getAllByRole("listitem");
     expect(items).toHaveLength(3);
-    expect(items[0]).toHaveTextContent("An AI account. It costs about $60 a month at the daily limit you set.");
+    expect(items[0]).toHaveTextContent("An AI account. Usually a few dollars a month. It never spends more than $2 a day unless you change it.");
     expect(items[1]).toHaveTextContent("optional");
     expect(items[2]).toHaveTextContent("backups");
     // Welcome is no step: no list of steps, no place, no Back, one Start; the cursor is on the heading, as there is no field.
@@ -702,7 +702,7 @@ describe("each screen", () => {
     expect(calls.some((c) => c.route === "POST setup/business" || c.route === "POST setup/work")).toBe(false);
   });
 
-  test("Work: Just my own life first, then two tick boxes; Continue keeps Just my own life and goes on to the AI account", async () => {
+  test("Work: your own life is always included, two tick boxes sit under it in one plain control, and leaving both empty is just me", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
@@ -713,18 +713,17 @@ describe("each screen", () => {
     );
     open();
     expect(await screenTitle()).toHaveTextContent("What it's for");
-    const just = await screen.findByRole("radio", { name: "Just my own life" });
-    expect(just).toBeChecked();
-    expect(just).toHaveFocus();
-    // Two large cards, each with its one-line description, as on the AI step; no bordered box with a legend in the border.
-    expect(just).toHaveAccessibleDescription("Your own to-dos, people and mail, nothing else.");
-    expect(just.closest("label")).toHaveClass("kind-card");
-    const also = screen.getByRole("group", { name: "Or your life and" });
-    expect(also).toHaveClass("kind-card");
-    expect(also).toHaveAccessibleDescription("A job or a business that you keep apart: tick one or both.");
-    expect(also.tagName).not.toBe("FIELDSET");
+    const first = await screen.findByRole("checkbox", { name: "A job" });
+    expect(first).toHaveFocus();
+    // One control: a line, then two tick boxes. No radio beside a box of tick boxes, no bordered frame with a legend.
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    const control = screen.getByRole("group", { name: "What will you use it for?" });
+    expect(control.tagName).not.toBe("FIELDSET");
+    expect(control).toHaveAccessibleDescription("Your own life is always included.");
+    const also = within(control).getByRole("group", { name: "Also keep track of:" });
+    expect(also).toHaveAccessibleDescription("Leave both empty to use it for your own life only.");
     const boxes = within(also).getAllByRole("checkbox");
-    expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["My life and my job", "My life and my own business"]);
+    expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["A job", "My own business"]);
     expect(boxes.every((b) => !(b as HTMLInputElement).checked)).toBe(true);
     expect(screen.queryByText(/employer's permission/)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -732,7 +731,7 @@ describe("each screen", () => {
     expect(calls.find((c) => c.route === "POST setup/work")!.body).toEqual({ choice: "me" });
   });
 
-  test("Work: My job asks the employer's name and shows the notice about work mail; My own business never shows it", async () => {
+  test("Work: A job asks the employer's name and shows the notice about work mail; My own business never shows it", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
@@ -742,18 +741,17 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my job" }));
-    expect(screen.getByRole("radio", { name: "Just my own life" })).not.toBeChecked();
+    await user.click(await screen.findByRole("checkbox", { name: "A job" }));
     expect(screen.getByRole("note")).toHaveTextContent("Reading work mail may need your employer's permission. Check your workplace's rules before you connect a work mailbox.");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
-    expect(screen.getByText("Say what your work is called to go on.")).toBeInTheDocument();
+    expect(screen.getByText("Give your employer a name to go on.")).toBeInTheDocument();
     await user.type(screen.getByLabelText("What is your employer called?"), EMPLOYER);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: EMPLOYER, kind: "job" }]);
     // The notice belongs to the job path alone: ticking only the business shows none.
     await user.click(screen.getByRole("button", { name: "Back" }));
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     expect(screen.queryByRole("note")).toBeNull();
   });
 
@@ -770,7 +768,7 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     expect(screen.queryByRole("note")).toBeNull();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
@@ -797,7 +795,7 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
     await user.paste(WORKS_ON.join("\n"));
@@ -809,7 +807,7 @@ describe("each screen", () => {
     expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
   });
 
-  test("Work: a named group becomes a project inside the business with the ticked ones inside it, and a name with nothing ticked makes nothing", async () => {
+  test("Work: once a group is named each job gets a tick box 'in <group>', and the group is made with the ticked jobs inside it", async () => {
     const user = userEvent.setup();
     const GROUP = "Trade customers";
     const calls = fakeApi(
@@ -823,15 +821,17 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
     await user.paste(WORKS_ON.join("\n"));
     await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    // No tick boxes before the group has a name.
+    expect(screen.queryAllByRole("checkbox", { name: new RegExp(`, in ${GROUP}$`) })).toHaveLength(0);
     await user.type(screen.getByLabelText("Group name"), GROUP);
-    // A name with nothing ticked groups nothing: Continue is still allowed, and makes only the projects.
-    const ticks = screen.getAllByRole("checkbox").filter((box) => WORKS_ON.includes(box.closest("label")?.textContent ?? ""));
+    const ticks = WORKS_ON.map((name) => screen.getByRole("checkbox", { name: `${name}, in ${GROUP}` }));
     expect(ticks).toHaveLength(WORKS_ON.length);
+    expect(screen.getAllByText(`in ${GROUP}`)).toHaveLength(WORKS_ON.length);
     await user.click(ticks[0]);
     await user.click(ticks[1]);
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -844,7 +844,7 @@ describe("each screen", () => {
     ]);
   });
 
-  test("Work: a group name with nothing ticked in it makes no group", async () => {
+  test("Work: a group named with none of its jobs ticked holds Continue back and says so, so a typed name is never lost without a word", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
@@ -857,15 +857,41 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
     await user.paste(WORKS_ON.join("\n"));
     await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
     await user.type(screen.getByLabelText("Group name"), "Trade customers");
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByText("Tick the jobs that are in Trade customers, or clear its name.")).toBeInTheDocument();
+    // Clearing the name lets it go on, and makes only the projects.
+    await user.clear(screen.getByLabelText("Group name"));
+    expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: a saved group is listed with the jobs inside it", async () => {
+    fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith([side("PRJ-3", "business", SHOP, true)]),
+          "GET projects": () => [
+            { id: "PRJ-5", name: "Trade customers", parent: "PRJ-3" },
+            { id: "PRJ-6", name: WORKS_ON[0], parent: "PRJ-5" },
+            { id: "PRJ-7", name: WORKS_ON[1], parent: "PRJ-5" },
+            { id: "PRJ-8", name: WORKS_ON[2], parent: "PRJ-3" },
+          ],
+        },
+        CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
+        { step: "work" },
+      ),
+    );
+    open();
+    const added = await screen.findByRole("region", { name: "Added so far" });
+    expect(within(added).getByText(`Projects: Trade customers (${WORKS_ON[0]}, ${WORKS_ON[1]}), ${WORKS_ON[2]}`)).toBeInTheDocument();
   });
 
   test("Work: Add another business repeats the name and what it works on, and a job and two businesses are saved in order", async () => {
@@ -885,8 +911,8 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My life and my job" }));
-    await user.click(screen.getByRole("checkbox", { name: "My life and my own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "A job" }));
+    await user.click(screen.getByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your employer called?"), EMPLOYER);
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(screen.getByRole("button", { name: "Add another business" }));
@@ -924,9 +950,10 @@ describe("each screen", () => {
     expect(rows.map((r) => r.getAttribute("data-kind"))).toEqual(["job", "business"]);
     expect(rows[1]).toHaveTextContent(`Projects: ${WORKS_ON[0]}, ${WORKS_ON[1]}`);
     expect(rows[0]).toHaveTextContent("Nothing under it yet.");
-    expect(screen.getByRole("radio", { name: "Just my own life" })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "My life and my job" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "My life and my own business" })).toBeChecked();
+    // A side that is saved keeps its box ticked, and can't be unticked (which would be going back to just me).
+    expect(screen.getByRole("checkbox", { name: "A job" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "A job" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "My own business" })).toBeChecked();
     // Remove is offered only for a side the server says can still be taken back out.
     expect(within(rows[0]).queryByRole("button", { name: /^Remove/ })).toBeNull();
     expect(within(rows[1]).getByRole("button", { name: `Remove ${SHOP}` })).toBeInTheDocument();
@@ -1008,7 +1035,9 @@ describe("each screen", () => {
     await user.click(await screen.findByRole("button", { name: `Remove ${SHOP}` }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/sides/PRJ-3/remove")).toBe(true));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Added so far" })).toBeNull());
-    expect(screen.getByRole("radio", { name: "Just my own life" })).toBeChecked();
+    // Neither box is ticked any more: just me.
+    expect(screen.getByRole("checkbox", { name: "A job" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "My own business" })).not.toBeChecked();
   });
 
   test("Your AI account: spending is one sentence with its starting amounts, and Continue saves a change to them", async () => {
@@ -1361,7 +1390,8 @@ describe("Mail and calendar", () => {
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
     const mine = await row();
     expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
-    expect(within(mine).getByText("You'll sign in on account's own page. The app restarts for a few seconds first.")).toBeInTheDocument();
+    // The service is named as the person knows it (the add-on's display name), never by the id of its sign-in.
+    expect(within(mine).getByText("You'll sign in on Service mail-addon's own page. The app restarts for a few seconds first.")).toBeInTheDocument();
     expect(within(mine).getAllByRole("button").map((b) => b.textContent)).toEqual(["Connect Service mail-addon"]);
     for (const plumbing of [/Not on this computer/, /add-on/, /Made by/, /password/, /key/i]) expect(within(mine).queryByText(plumbing, { ignore: "details *" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
@@ -1615,8 +1645,8 @@ describe("Mail and calendar", () => {
       },
     });
     open();
-    const inbox = await screen.findByRole("group", { name: "Which does Your inbox serve?" });
-    const calendar = screen.getByRole("group", { name: "Which does Your calendar serve?" });
+    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    const calendar = screen.getByRole("group", { name: "Who is Your calendar for?" });
     expect(within(inbox).getAllByRole("checkbox").map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
     // Nothing ticked is allowed; what a source already serves is shown ticked.
     expect(within(inbox).getAllByRole("checkbox").every((b) => !(b as HTMLInputElement).checked)).toBe(true);
@@ -1633,6 +1663,9 @@ describe("Mail and calendar", () => {
     await waitFor(() => expect(saves).toHaveLength(2));
     expect((saves[1] as { changes: { "watch.sources": Array<{ sides: string[] }> } }).changes["watch.sources"][0].sides).toEqual([PERSONAL, "PRJ-2"]);
     expect(mail.filter((c) => c.route === "POST settings")).toHaveLength(2);
+    // A tick raises no message (nothing to cover the next box), and the line under the boxes says how it stands.
+    expect(document.querySelector("[data-toast]")).toBeNull();
+    expect(await within(inbox).findByRole("status")).toHaveTextContent(`Your inbox is for Personal and ${EMPLOYER}.`);
   });
 
   test("with no side of work, the mailboxes are not asked which they serve", async () => {

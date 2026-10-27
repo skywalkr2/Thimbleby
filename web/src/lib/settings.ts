@@ -45,11 +45,29 @@ export function fromDraft(item: Item, draft: Draft): Parsed {
 }
 
 /** A value in plain words, for a default, a read-only value and the read-back after a save. */
+/** The fields a record is named by, first one that holds words. */
+const NAME_FIELDS = ["label", "name", "title"];
+
+/** What a record is called, or nothing when it has no name of its own. */
+const nameOf = (record: object): string | undefined => {
+  const found = NAME_FIELDS.map((field) => (record as Record<string, unknown>)[field]).find((v) => typeof v === "string" && v.trim() !== "");
+  return typeof found === "string" ? found.trim() : undefined;
+};
+
+/** A value in plain words. A record is shown by its name and a list of records by their names, or by how many there are
+ * when none has a name: never as its fields, which are data (check U13). */
 export function formatValue(value: unknown, t: T): string {
   if (value === null || value === undefined || value === "") return t("settings.empty");
   if (typeof value === "boolean") return t(value ? "settings.yes" : "settings.no");
-  if (Array.isArray(value)) return value.length ? value.map((v) => formatValue(v, t)).join(", ") : t("settings.empty");
-  if (typeof value === "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return t("settings.empty");
+    const records = value.filter((v): v is object => typeof v === "object" && v !== null && !Array.isArray(v));
+    if (records.length === value.length && records.some((r) => nameOf(r) === undefined)) {
+      return t(value.length === 1 ? "settings.value.entries.one" : "settings.value.entries.other", { n: value.length });
+    }
+    return value.map((v) => formatValue(v, t)).join(", ");
+  }
+  if (typeof value === "object") return nameOf(value) ?? t("settings.value.entry");
   return String(value);
 }
 

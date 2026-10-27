@@ -17,3 +17,17 @@ export function workLines(text: string): string[] {
   }
   return names;
 }
+
+/** The projects a side holds, one line each, as the screens that list a side show them: a group is its name with the jobs
+ * inside it in brackets (`group` words that), a job under the side is its name. Only the two levels setup makes. */
+export function insideLines(
+  projects: Array<{ id: string; name: string; parent?: string | null }>,
+  side: string,
+  group: (name: string, jobs: string) => string,
+): string[] {
+  const under = (id: string) => projects.filter((p) => p.parent === id);
+  return under(side).map((p) => {
+    const jobs = under(p.id).map((j) => j.name);
+    return jobs.length > 0 ? group(p.name, jobs.join(", ")) : p.name;
+  });
+}

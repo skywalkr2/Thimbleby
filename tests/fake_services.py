@@ -559,8 +559,9 @@ def mail_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["mail_reads"] += 1
-        if state.sent_mail and request.query_params.get("folder") == SENT_FOLDER:
-            return JSONResponse({"messages": sent_messages(state.moment)})
+        if request.query_params.get("folder") == SENT_FOLDER:
+            # A mailbox with no sent mail has an empty sent folder, never the inbox's mail under another name.
+            return JSONResponse({"messages": sent_messages(state.moment) if state.sent_mail else []})
         return JSONResponse({"messages": messages(state.moment, state.later_mail, state.evening)})
 
     return [Route("/messages", listed)]
@@ -806,7 +807,12 @@ def main() -> None:
     parser.add_argument(
         "--evening", action="store_true", help="add the evening journey's mail, event and retired model"
     )
-    parser.add_argument("--sent-mail", action="store_true", help="give the mailbox a sent folder with one message")
+    parser.add_argument(
+        "--sent-mail",
+        action="store_true",
+        help="put one message in the mailbox's sent folder (the mail add-on names that folder by default, so a walk by "
+        "hand reads it with no other switch; tests/e2e_fresh_server.py --no-sent-mail turns that off)",
+    )
     args = parser.parse_args()
     state = State(args.state)
     state.evening = args.evening

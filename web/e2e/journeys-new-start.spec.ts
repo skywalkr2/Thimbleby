@@ -222,6 +222,8 @@ test.describe.serial("journey: new start", () => {
     await expect(offer).toContainText(
       new RegExp(`${handedIn} items to look over\\. (About \\$\\d+\\.\\d\\d|Less than a cent) in all\\. Nothing is read by the assistant until you press Start\\.`),
     );
+    // The sent mail is in the plan with the inbox and the calendar, by itself: nobody chose a folder.
+    await expect(offer.getByRole("list", { name: "What it will read" })).toContainText("Your sent mail");
     // Nothing that asks about projects, areas, packs or more accounts is on this screen.
     await expect(main.getByText("Optional extras")).toHaveCount(0);
     await visit(page);

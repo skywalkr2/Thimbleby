@@ -60,12 +60,12 @@
 .skip { color: var(--accent-text); text-decoration: underline; }
 .skip:hover { color: var(--accent-hover); }
 .foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); }
-/* While toasts show, the screen leaves room under its buttons for them (they sit at the bottom of the window), so the
-   buttons can be scrolled to just above them. */
-:global(html[data-toasts]) { --toast-room: calc(var(--toasts) * 5rem + var(--space-4)); }
+/* While toasts show, the screen leaves room under its buttons for them (they sit at the bottom of the window), the stack's
+   measured height, so every control can be scrolled to just above them and none is out of reach beneath one. */
+:global(html[data-toasts]) { --toast-room: calc(var(--toast-h, calc(var(--toasts) * 5rem)) + var(--space-4)); }
 :global(html[data-toasts]) .root { padding-bottom: var(--toast-room); }
 :global(html[data-toasts]) .foot { scroll-margin-bottom: var(--toast-room); }
-:global(html[data-toasts][data-narrow]) { --toast-room: calc(var(--toasts) * 5rem + var(--space-4) + var(--bottombar-h)); }
+:global(html[data-toasts][data-narrow]) { --toast-room: calc(var(--toast-h, calc(var(--toasts) * 5rem)) + var(--space-4) + var(--bottombar-h)); }
 .grow { flex: 1 1 auto; }
 /* What was set up: one compact row per step (the step, how it stands, Set up), hairlines between, the whole width. */
 .recap { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }

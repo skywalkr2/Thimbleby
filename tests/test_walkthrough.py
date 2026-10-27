@@ -598,3 +598,81 @@ def test_undoing_the_removal_of_the_last_side_brings_back_the_work_answer(tmp_pa
     state = c.post(f"/api/setup/sides/{only}/restore", json={"kind": "job", "position": 0}).json()
     assert state["chosen"] == "work" and [s["kind"] for s in state["sides"]] == ["job"]
     assert _steps(c)["work"]["done"] is True
+
+
+# ---- ticks come from records (the reviewer's G8, check U16) ---------------------------------------------------------
+
+
+def _screen_request(c) -> None:
+    """What any change the person makes on a screen leaves behind: a request of theirs that holds no hand-in."""
+    with c.app.state.store.transaction() as tx:
+        tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "pm",
+                "state": "done",
+                "note": "Changed a to-do",
+                "created_at": "2026-10-20T09:00:00",
+            },
+            _PM,
+        )
+
+
+def test_a_first_note_is_ticked_only_when_something_was_handed_in_not_for_any_change_made_on_a_screen(tmp_path):
+    _, c = _fresh(tmp_path)
+    _screen_request(c)
+    assert not _steps(c)["first_note"]["done"] and not _steps(c)["promises"]["done"]
+    assert c.post("/api/handin", json={"note": "Remember to call the plumber on Friday"}).status_code == 200
+    assert _steps(c)["first_note"]["done"] and _steps(c)["promises"]["done"]
+
+
+def test_your_promises_is_not_ticked_before_its_screen_was_reached_even_when_the_look_back_ran(tmp_path, monkeypatch):
+    _, c = _fresh(tmp_path)
+    monkeypatch.setattr(setup, "_looked_back", lambda requests: True)
+    c.post("/api/setup/walkthrough", json={"step": "mail"})
+    assert not _steps(c)["promises"]["done"], "the look back ran while the person was still on the mail step"
+    c.post("/api/setup/walkthrough", json={"step": "promises"})
+    assert _steps(c)["promises"]["done"], "the first result is on the screen, so its own thing happened"
+
+
+def test_the_add_ons_step_is_dropped_once_mail_is_connected_and_offered_only_while_something_is_off(
+    tmp_path, monkeypatch
+):
+    ws, c = _fresh(tmp_path)
+    monkeypatch.setattr(setup, "addons_off", lambda ws_, cfg: ["some-addon"])
+    assert _steps(c)["addons"]["applies"] is True
+    path = ws.config_dir / "watch.yaml"
+    config = yaml.safe_load(path.read_text()) or {}
+    config["sources"] = [
+        {
+            "id": "mine",
+            "label": "My mail",
+            "connector": "mailbox",
+            "settings": {"host": "mail.example.com", "user": "me@example.com", "password": "env:MAIL_PASSWORD"},
+        }
+    ]
+    path.write_text(yaml.safe_dump(config))
+    assert _steps(_open(ws))["mail"]["done"]
+    assert _steps(_open(ws))["addons"]["applies"] is False
+
+
+def test_the_work_templates_are_offered_only_when_no_jobs_were_given_in_setup(tmp_path):
+    _, c = _fresh(tmp_path)
+    business = _add_side(c, FIRST_BUSINESS, "business")
+    assert _steps(c)["template"]["applies"] is True, "a business with nothing under it has given no jobs"
+    assert c.post("/api/projects", json={"name": WORKS_ON[0], "parent": business}).status_code == 200
+    assert _steps(c)["template"]["applies"] is False
+
+
+def test_every_counted_tick_is_computed_from_its_own_record_and_no_screen_state_ticks_one(tmp_path):
+    """Moving through the screens, skipping or finishing the walkthrough ticks nothing: each step's `done` follows a
+    record of its own thing (a name, an account, a connection, a hand-in or the first result, a backup, people)."""
+    ws, c = _fresh(tmp_path)
+    for screen in setup.WALKTHROUGH_STEPS:
+        c.post("/api/setup/walkthrough", json={"step": screen})
+    c.post("/api/setup/walkthrough", json={"finished": True})
+    _screen_request(c)
+    ticked = [s for s, v in _steps(c).items() if v["counted"] and v["done"]]
+    assert ticked == [], f"ticked with no record behind it: {ticked}"
+    assert not _steps(c)["first_note"]["done"]

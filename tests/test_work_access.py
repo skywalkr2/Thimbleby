@@ -86,10 +86,10 @@ def test_the_today_route_carries_the_line_and_allow_gives_the_yes_with_undo(api)
     assert done.status_code == 200, done.text
     changes = {c["key"]: c for c in done.json()["changes"]}
     allowed = changes["ai.providers.standin.allowed_data"]
-    assert allowed["before"] == ["open"] and allowed["after"] == ["open", "internal"]
+    assert allowed["before"] == ["open"] and allowed["after"] == ["open", "internal", "restricted"]
     assert changes["ai.providers.standin.work_data"]["after"] in ("", None)
     on_disk = yaml.safe_load((ws.config_dir / "ai.yaml").read_text())["providers"]["standin"]
-    assert on_disk["allowed_data"] == ["open", "internal"] and not on_disk.get("work_data")
+    assert on_disk["allowed_data"] == ["open", "internal", "restricted"] and not on_disk.get("work_data")
     assert [x for x in client.get("/api/today/queue").json() if x["kind"] == "work_access"] == []
 
     # Undo posts the values from before, through the settings save every other change uses.
@@ -112,6 +112,38 @@ def test_allow_keeps_a_higher_level_the_account_already_had(api):
     assert done.status_code == 200, done.text
     on_disk = yaml.safe_load((ws.config_dir / "ai.yaml").read_text())["providers"]["wide"]
     assert on_disk["allowed_data"] == ["open", "internal", "restricted"]
+
+
+def _put_in_the_chain(ws, *names: str) -> None:
+    """The accounts as backups of the everyday tier, as a switch of service leaves them."""
+    path = ws.config_dir / "ai.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data["tiers"]["routine"]["fallback"] = [f"{name}/default" for name in names]
+    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+
+def _may_read(ws, level: str) -> set[str]:
+    from engine.ai.router import accounts
+
+    return {ref.split("/", 1)[0] for ref in accounts(ws.config(env={}), level)}
+
+
+def test_a_new_or_fallback_account_reads_nothing_private_until_the_person_says_yes_for_that_account(api):
+    """F25: an account added as a new one or as a backup starts at open material; the yes is for that one account, and
+    it covers the private level said so (a switch of service never carries private mail along without it)."""
+    ws, client = api
+    add_account(ws, "backup", work_data="not_now")
+    _put_in_the_chain(ws, "standin", "backup")
+    for level in ("internal", "restricted"):
+        assert not {"standin", "backup"} & _may_read(ws, level), f"a new account reads {level} material before a yes"
+    assert {"standin", "backup"} <= _may_read(ws, "open")
+
+    fingerprint = client.get("/api/settings").json()["fingerprint"]
+    assert client.post("/api/ai/accounts/standin/allow-work", json={"fingerprint": fingerprint}).status_code == 200
+    for level in ("open", "internal", "restricted"):
+        assert "standin" in _may_read(ws, level)
+    # Nobody else's yes was given: the other backup still reads open material only.
+    assert "backup" not in _may_read(ws, "internal") and "backup" not in _may_read(ws, "restricted")
 
 
 def test_allow_refuses_an_account_that_is_not_there(api):

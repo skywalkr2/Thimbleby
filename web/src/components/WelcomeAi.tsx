@@ -1298,11 +1298,14 @@ export function WelcomeAi(props: {
               )}
               {guide && verdict.state === "works" && (
                 <fieldset className="details allow-question" data-allow-question="">
-                  <legend>
+                  {/* Exactly what Allow covers, said plainly: mail, notes and the calendar, private ones too. */}
+                  <legend>{t("welcome.ai.allow.title")}</legend>
+                  <p className="hint">{t("welcome.ai.allow.private")}</p>
+                  <p className="hint">
                     {verdict.identity
-                      ? t("welcome.ai.allow.title", { account: shownLabel, identity: verdict.identity })
-                      : t("welcome.ai.allow.title_unknown", { account: shownLabel })}
-                  </legend>
+                      ? t("welcome.ai.allow.account", { account: shownLabel, identity: verdict.identity })
+                      : t("welcome.ai.allow.account_unknown", { account: shownLabel })}
+                  </p>
                   {!verdict.identity && verdict.unknown && <p className="hint">{t("welcome.ai.allow.unknown", { reason: verdict.unknown })}</p>}
                   {(["allow", "not_now"] as const).map((answer) => (
                     <label key={answer} className="radio kind-choice">

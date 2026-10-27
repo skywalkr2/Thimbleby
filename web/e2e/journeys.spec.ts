@@ -58,12 +58,12 @@ test.describe.serial("journeys", () => {
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
     await visit(page);
 
-    // What it's for: Just my own life, or a job and an own business; the job brings the notice about work mail, and Just
-    // me carries on.
+    // What it's for: your own life is always included, and a job and an own business are ticked beside it; the job brings
+    // the notice about work mail, and leaving both unticked is just me, which carries on.
     await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
-    await main.getByRole("checkbox", { name: "My life and my job" }).check();
+    await main.getByRole("checkbox", { name: "A job" }).check();
     await expect(main.getByRole("note")).toContainText("may need your employer's permission");
-    await main.getByRole("radio", { name: "Just my own life" }).check();
+    await main.getByRole("checkbox", { name: "A job" }).uncheck();
     await main.getByRole("button", { name: "Continue" }).click();
 
     // Your AI account: a service of my own that speaks the common chat format, at the address the fake service

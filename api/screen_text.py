@@ -66,6 +66,34 @@ _SETUP_TERMS = (
 )
 
 
+#: A raw mail header: a header's name and colon followed by an address in angle brackets or a bare address, or the
+#: name of a header only mail carries (`Received:`, `Message-ID:`).
+_MAIL_HEADER = re.compile(
+    r"\b(?:From|To|Cc|Bcc|Reply-To|Return-Path|Delivered-To):[ \t]*(?:[^<\n]{0,60}<[^>\s]+@[^>\s]+>|\S+@\S+)"
+    r"|\b(?:Message-ID|Received|In-Reply-To|References|X-[A-Za-z-]+):[ \t]*\S"
+)
+
+
+@lru_cache(maxsize=1)
+def _record_id() -> re.Pattern[str]:
+    """The pattern of the app's own record ids (`PRJ-12`), from the prefixes the record types declare."""
+    from engine.records import REGISTRY
+
+    prefixes = sorted({cls.prefix for cls in REGISTRY.values()}, key=len, reverse=True)
+    return re.compile(r"\b(?:" + "|".join(re.escape(p) for p in prefixes) + r")-\d+\b")
+
+
+def leaks(text: str) -> list[str]:
+    """What in text meant for the screen is data and not words (check U13): raw data (braces, quoted keys), a record id
+    of the app's own, or a raw mail header. A title, a message or a label shows none of them, whoever wrote the text. A
+    separate check from `problems`: it reads titles and messages the app builds from an input or a record, which the
+    settings-language check never sees."""
+    found = [f"shows raw data: {text[m.start() : m.start() + 24]!r}" for m in _RAW_DATA.finditer(text)]
+    found += [f"shows an internal id: {m.group()!r}" for m in _record_id().finditer(text)]
+    found += [f"shows a raw mail header: {m.group()[:24]!r}" for m in _MAIL_HEADER.finditer(text)]
+    return found
+
+
 def enabled() -> bool:
     """Whether the developer switch is on."""
     return os.environ.get(SWITCH) == "1"
@@ -180,4 +208,4 @@ def refusal(text: str) -> str | None:
     return f"error text for the screen {'; '.join(found)}: {text}" if found else None
 
 
-__all__ = ["SWITCH", "ScreenText", "command_names", "enabled", "problems", "refusal", "settings_keys"]
+__all__ = ["SWITCH", "ScreenText", "command_names", "enabled", "leaks", "problems", "refusal", "settings_keys"]

@@ -903,16 +903,53 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             }
         )
 
+    def source_now(source_id: str) -> dict[str, Any]:
+        found = next((s for s in sources_now() if s["id"] == source_id), None)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
+        return found
+
+    def folder_setting(connector: str) -> tuple[str, bool] | None:
+        """The setting of a plugin's kind of source that names the folder of mail it reads (by the kind's own settings),
+        and whether it holds a list of folders, when the kind has one."""
+        kind = source_kinds().get(connector)
+        if kind is None or "/" not in connector:
+            return None
+        for name, field in kind.settings.model_fields.items():
+            if "folder" in name.lower():
+                return name, "list" in str(field.annotation).lower()
+        return None
+
+    def folder_taken(found: dict[str, Any], name: str) -> list[str]:
+        """The folders sources of this kind and account already read, for a plugin's kind of source."""
+        kind = source_kinds()[found["connector"]]
+        held: set[str] = set()
+        for other in sources_now():
+            if other["connector"] != found["connector"] or other.get("account") != found.get("account"):
+                continue
+            value = getattr(kind.settings.model_validate(other["settings"]), name, None)
+            held.update(str(v) for v in (value if isinstance(value, list) else [value]) if v)
+        return sorted(held)
+
     @r.get("/watch/{source_id}/folders")
     def watch_folders(source_id: str) -> MailFoldersView:
         """The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a
-        source of its own. Reads the mailbox; nothing there changes."""
+        source of its own. Reads the mailbox; nothing there changes. An add-on's mail can't be asked for its folders:
+        it gets the usual names for sent mail, the likeliest first, and the person may name another."""
         from engine.connectors.mailbox import find_sent
 
+        found = source_now(source_id)
+        if found["connector"] != "mailbox":
+            setting = folder_setting(found["connector"])
+            if setting is None:
+                raise HTTPException(status_code=409, detail="That source has no folder to choose.")
+            taken = folder_taken(found, setting[0])
+            usual = [n for n in current().watch.sent_folder_names if n not in taken]
+            return MailFoldersView(folders=usual, sent=usual[0] if usual else None, taken=taken, listed=False)
         _, settings = mailbox_of(source_id)
-        found = read_folders(settings)
-        sent = find_sent(found, current().watch.sent_folder_names)
-        return MailFoldersView(folders=list(found.names), sent=sent, taken=taken_folders(settings))
+        listed = read_folders(settings)
+        sent = find_sent(listed, current().watch.sent_folder_names)
+        return MailFoldersView(folders=list(listed.names), sent=sent, taken=taken_folders(settings))
 
     def sent_source(found: dict[str, Any], folder: str, label: str) -> dict[str, Any]:
         """The source that reads a mailbox's sent folder: the same mailbox and sign-in, the folder as given, and the
@@ -926,13 +963,41 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             "settings": {**found["settings"], "folder": folder},
         }
 
+    def add_sent_of_plugin(found: dict[str, Any], body: SentFolderIn) -> SettingsSaved:
+        """A plugin's mail source's sent folder as a source of its own: the same kind and account, the setting that
+        names the folder set to the one the person chose, and the person as its author."""
+        setting = folder_setting(found["connector"])
+        if setting is None:
+            raise HTTPException(status_code=409, detail="That source has no folder to choose.")
+        name, is_list = setting
+        folder = (body.folder or "").strip()
+        if not folder or folder in folder_taken(found, name):
+            raise HTTPException(status_code=400, detail="Choose a folder that isn't read yet.")
+        person = current().workspace.user.person
+        return add_source(
+            WatchSourceIn(
+                connector=found["connector"],
+                label=(body.label or f"{found['label']} ({folder})").strip(),
+                every_minutes=found["every_minutes"],
+                author=person,
+                account=found.get("account"),
+                settings={**found["settings"], name: [folder] if is_list else folder},
+                fingerprint=body.fingerprint,
+            ),
+            with_sent=False,
+        )
+
     @r.post("/watch/{source_id}/sent-folder")
     def watch_sent_folder(source_id: str, body: SentFolderIn) -> SettingsSaved:
         """Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the
         folder picked from its list (else the one the server marks, else one of the usual names), and the person as its
-        author, since what is in it is their own mail. It is taken in quietly like any new source."""
+        author, since what is in it is their own mail. An add-on's mail takes the folder the person names, set in the
+        kind's own folder setting. It is taken in quietly like any new source."""
         from engine.connectors.mailbox import find_sent
 
+        found = source_now(source_id)
+        if found["connector"] != "mailbox":
+            return add_sent_of_plugin(found, body)
         found, settings = mailbox_of(source_id)
         listed = read_folders(settings)
         folder = body.folder if body.folder is not None else find_sent(listed, current().watch.sent_folder_names)
@@ -1858,15 +1923,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/ai/accounts/{name}/allow-work")
     def ai_account_allow_work(name: str, body: FingerprintIn) -> SettingsSaved:
-        """The person's yes to an account reading their work mail and notes: it may see the internal level (and
-        keeps any level above it), and Today stops asking. One settings change, so Undo puts the answer back."""
+        """The person's yes to an account reading their mail, notes and calendar, the private ones too (the same yes the
+        AI step asks, said the same way): it may see every level, and Today stops asking. One settings change, so Undo
+        puts the answer back."""
         from engine.ai.router import LEVELS
 
         provider = current().ai.providers.get(name)
         if provider is None:
             raise HTTPException(status_code=404, detail="There is no such account.")
         have = set(provider.allowed_data)
-        allowed = [lv for lv in LEVELS if lv in have or LEVELS.index(lv) <= LEVELS.index("internal")]
+        allowed = list(LEVELS)
         changes: dict[str, Any] = {}
         reset: list[str] = []
         if allowed != sorted(have, key=LEVELS.index):

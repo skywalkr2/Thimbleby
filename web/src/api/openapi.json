@@ -13456,7 +13456,7 @@
         "type": "object"
       },
       "MailFoldersView": {
-        "description": "The folders of a mailbox source to pick from (design 6.33): every folder that can be read, `sent` the one the\nmail server marks as the sent mail (none when it marks none, so the person picks), and `taken` the folders already\nread by a source of the same mailbox, the source's own included.",
+        "description": "The folders of a mail source to pick from (design 6.33): every folder that can be read, `sent` the one the mail\nserver marks as the sent mail (none when it marks none, so the person picks), and `taken` the folders already read\nby a source of the same mailbox, the source's own included.",
         "properties": {
           "folders": {
             "items": {
@@ -13464,6 +13464,12 @@
             },
             "title": "Folders",
             "type": "array"
+          },
+          "listed": {
+            "default": true,
+            "description": "Whether `folders` is the mailbox's own list. False for an add-on's mail, which can't be asked for its folders: `folders` is then the usual names for sent mail, the likeliest first, and the person may name another.",
+            "title": "Listed",
+            "type": "boolean"
           },
           "sent": {
             "anyOf": [
@@ -30824,7 +30830,7 @@
     },
     "/api/ai/accounts/{name}/allow-work": {
       "post": {
-        "description": "The person's yes to an account reading their work mail and notes: it may see the internal level (and\nkeeps any level above it), and Today stops asking. One settings change, so Undo puts the answer back.",
+        "description": "The person's yes to an account reading their mail, notes and calendar, the private ones too (the same yes the\nAI step asks, said the same way): it may see every level, and Today stops asking. One settings change, so Undo\nputs the answer back.",
         "operationId": "ai_account_allow_work_api_ai_accounts__name__allow_work_post",
         "parameters": [
           {
@@ -43028,7 +43034,7 @@
     },
     "/api/watch/{source_id}/folders": {
       "get": {
-        "description": "The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a\nsource of its own. Reads the mailbox; nothing there changes.",
+        "description": "The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a\nsource of its own. Reads the mailbox; nothing there changes. An add-on's mail can't be asked for its folders:\nit gets the usual names for sent mail, the likeliest first, and the person may name another.",
         "operationId": "watch_folders_api_watch__source_id__folders_get",
         "parameters": [
           {
@@ -43374,7 +43380,7 @@
     },
     "/api/watch/{source_id}/sent-folder": {
       "post": {
-        "description": "Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the\nfolder picked from its list (else the one the server marks, else one of the usual names), and the person as its\nauthor, since what is in it is their own mail. It is taken in quietly like any new source.",
+        "description": "Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the\nfolder picked from its list (else the one the server marks, else one of the usual names), and the person as its\nauthor, since what is in it is their own mail. An add-on's mail takes the folder the person names, set in the\nkind's own folder setting. It is taken in quietly like any new source.",
         "operationId": "watch_sent_folder_api_watch__source_id__sent_folder_post",
         "parameters": [
           {
