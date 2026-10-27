@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 243. Add-ons in their own folder; People can be passed (2026-10-28; owner's first evening; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Installing an add-on (4.13, 3.11) | Into the app's Python environment, which a rebuild cleared | **Built** (`tests/test_addons_folder.py`): into `server.addons_dir` (default: the app's data place), loaded from there at start; old installs moved once |
+| Setup's People (7.8) | Done only with a second person, so moving on left Today's setup line asking | **Built** (`tests/test_walkthrough.py`): moving on with nobody added reads "No one added" and counts as passed |
+
 ## 242. A side is a group, never a project (2026-10-28; owner; designed, being built)
 
 | Where | Before | Now |

@@ -735,6 +735,11 @@ Built keys (local mode):
   (`<base_path>/api`), cookies and every link the app makes use it; nothing in code assumes the root.
 - `open_browser` (false): open the app in this computer's browser when it starts (local mode only). `cockpit serve --open`
   and `--no-open` set it for one run; `cockpit demo` opens by default.
+- `addons_dir` (empty): the folder where add-ons installed from the Add-ons screen are kept, outside the app's program
+  files so updating or rebuilding the app never removes them. Empty means the app's data place for this computer's
+  system (`~/.local/share/cockpit/addons`, `~/Library/Application Support/cockpit/addons`,
+  `%LOCALAPPDATA%\cockpit\data\addons`). It is put on the import path at start; an add-on installed the old way, into
+  the app's environment, is moved here once.
 
 These keys are changed in the file or with a flag, never from the Settings screens (a wrong value could stop the app from
 being reached), and a change needs a restart. They are per computer: the synced folder does not carry them (5.0).

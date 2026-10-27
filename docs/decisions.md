@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Add-ons live in their own folder, and moving on from People passes it
+
+**Decided:** Add-ons installed from the Add-ons screen go into a folder of their own in the app's data place for this
+computer (`server.addons_dir`, empty by default), outside the app's program files and Python environment, and are put
+on the import path at start; one installed the old way is moved there once. Separately, moving on from setup's People
+screen with nobody added passes the step ("No one added"), so Today's setup line stops asking.
+
+**Decided by:** the owner ("did you also fix the bug that erases the plugins if you type the wrong command line
+command?"; "if you dont want to add anyone to the people list the wizard wont go away. not everyone will have people
+to add").
+
+**Why:** rebuilding the environment (`uv sync`) removed the Google add-on, and setup counted People done only once a
+second person existed.
+
+**Impact:** Design 4.13 (the new setting) and 7.8 (People); P75 done. Change log: section 243.
+
 ## 2026-10-28: A calendar page with day, work week, week and month views
 
 **Decided:** The schedule gets a calendar page like a desktop mail program's: Day, Work week, Week and Month views, a
