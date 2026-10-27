@@ -231,7 +231,7 @@ test.describe.serial("journey: mail", () => {
     for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);
     // My own words filed my action; a to-do is listed in To-dos and questions, not on Today.
     await openView(page, "To-dos and questions");
-    await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible();
+    await expect(page.getByText("Send the venue list.").first()).toBeVisible();
     await openView(page, "Today");
     const catering = reviews.filter({ hasText: mail.find((title) => /quote/i.test(title)) ?? "" });
     await catering.getByRole("button", { name: /More actions for/ }).click();

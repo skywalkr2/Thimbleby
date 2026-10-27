@@ -154,6 +154,6 @@ def test_a_suggested_setting_that_holds_text_is_refused_for_a_mapping_and_a_list
     host = SimpleNamespace(path=ws.root / "cockpit.db")
     name = setting_problem(host, code_of(cfg, "workspace.name"), MAPPING)
     assert name and "has to be text" in name and PUT_IN_QUOTES in name
-    several = setting_problem(host, code_of(cfg, "workspace.our_accounts"), ["Casey Example", MAPPING])
+    several = setting_problem(host, code_of(cfg, "workspace.project.side_words.personal"), ["Casey Example", MAPPING])
     assert several and PUT_IN_QUOTES in several
     assert setting_problem(host, code_of(cfg, "workspace.name"), "Team wireless: release on top") is None

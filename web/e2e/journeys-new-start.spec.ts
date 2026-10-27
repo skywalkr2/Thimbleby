@@ -100,7 +100,8 @@ test.describe.serial("journey: new start", () => {
     const row = main.locator('[data-service="journey-mail"]');
     await expect(row).toHaveAttribute("data-state", "not_installed");
     await expect(row).toContainText("Reads your mail and calendar");
-    await expect(row).toContainText("Not on this computer yet");
+    await expect(row.getByRole("button", { name: /^Connect Example mail/ })).toBeVisible();
+    await expect(row).not.toContainText("Not on this computer");
     // What it reaches is behind a disclosure, in plain words, and none of the settings jargon is on the row.
     await expect(row.getByText("What it can access")).toBeVisible();
     expect(await row.innerText()).not.toMatch(/Signs in to|Websites:|Access keys you provide/);
@@ -111,14 +112,14 @@ test.describe.serial("journey: new start", () => {
     expect(existsSync(installed)).toBe(false);
     const before = await requests();
     expect(before.work).toBe(0);
-    // The row says what is missing and what the one button does: add it, restart and open the sign-in.
-    await expect(row.locator("[data-needs-addon]")).toContainText("needs the Example mail add-on. One button adds it, restarts the app and opens the sign-in");
+    // The row is one line and one button: it says the app restarts first, and the button adds it, restarts and opens the sign-in.
+    await expect(row.locator("[data-needs-addon]")).toContainText("The app restarts for a few seconds first");
     expect((await service()).authorizations).toBe(0);
     const appAddress = page.url();
     // One click installs, turns on, restarts the app and then opens the service's sign-in in its own window; the setup
     // screen stays where it is. The window is waited for before the click, since it opens after the restart.
     const popupOpened = page.waitForEvent("popup", { timeout: 120_000 });
-    await row.getByRole("button", { name: /^Add Example mail and sign in/ }).click();
+    await row.getByRole("button", { name: /^Connect Example mail/ }).click();
     const popup = await popupOpened;
     // It went into the throwaway place the app installs into, and the one restart happened on that click.
     expect(existsSync(installed)).toBe(true);

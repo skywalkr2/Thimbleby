@@ -321,9 +321,11 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Cancel" }).click();
     await line.getByRole("button", { name: "Continue setup" }).click();
     await screens.getByRole("button", { name: /^People/ }).click();
-    // The People step holds the form to add someone, with the cursor in its first field.
+    // The People step lists the people already there, each with an empty relation to pick, above the form to add someone;
+    // the cursor is in the first of its fields, the first person's relation.
     await expect(page.getByRole("heading", { level: 2, name: "People", exact: true })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Their name" })).toBeFocused();
+    await expect(page.getByRole("combobox", { name: /relates to you/ }).first()).toBeFocused();
+    await expect(page.getByRole("textbox", { name: "Their name" })).toBeVisible();
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     await line.getByRole("button", { name: "More actions for setup" }).click();

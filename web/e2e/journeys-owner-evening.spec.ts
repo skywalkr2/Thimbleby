@@ -103,12 +103,12 @@ test.describe.serial("journey: the owner's first evening", () => {
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
 
-    // 3. Mail and calendar: the add-on is named as missing; one click adds it, restarts once and opens the sign-in in a
+    // 3. Mail and calendar: the row is one line and one Connect button; one click adds the add-on, restarts once and opens the sign-in in a
     // popup; the app's window never goes to the service.
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     const row = main.locator('[data-service="journey-mail"]');
     await expect(row).toHaveAttribute("data-state", "not_installed");
-    await expect(row.locator("[data-needs-addon]")).toContainText("needs the Example mail add-on. One button adds it, restarts the app and opens the sign-in");
+    await expect(row.locator("[data-needs-addon]")).toContainText("The app restarts for a few seconds first");
     expect(restarts()).toBe(0);
     // No setup step is wider than the window, the mail step with the add-on line shown included.
     const wide = await widerThanWindow(page, "Mail and calendar");
@@ -126,7 +126,7 @@ test.describe.serial("journey: the owner's first evening", () => {
       }),
     });
     const popupOpened = page.waitForEvent("popup", { timeout: 120_000 });
-    await row.getByRole("button", { name: /^Add Example mail and sign in/ }).click();
+    await row.getByRole("button", { name: /^Connect Example mail/ }).click();
     const popup = await popupOpened;
     expect(restarts()).toBe(1);
     expect(page.url()).toBe(appAddress);

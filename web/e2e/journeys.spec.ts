@@ -183,9 +183,9 @@ test.describe.serial("journeys", () => {
     await expect(review.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
-    // My action from my own words is in To-dos and questions.
+    // My action from my own words is in To-dos and questions; the due day is on its line, not repeated in the title.
     await openView(page, "To-dos and questions");
-    await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible();
+    await expect(page.getByText("Send the venue list.").first()).toBeVisible();
   });
 
   test("J3. A folder I add on screen is read, a new file in it is handed in, and the assistant's result is on Today", async ({
@@ -234,7 +234,7 @@ test.describe.serial("journeys", () => {
       .poll(async () => JSON.stringify(await (await page.request.get("api/open-items")).json()), { timeout: 20_000 })
       .toContain("Book the venue by 2026-11-05.");
     await openView(page, "To-dos and questions");
-    await expect(page.getByText("Book the venue by 2026-11-05.").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/^Book the venue\b/).first()).toBeVisible({ timeout: 20_000 });
     // The item that arrived is on What changed, named for the file.
     await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^What changed/ }).click();
     await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
