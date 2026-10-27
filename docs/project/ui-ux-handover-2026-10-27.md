@@ -101,6 +101,11 @@ Everything you asked for in your review (`reviews/ui-ux-2026-10/review-45f7102/`
 - A failed action's toast offers "Try again".
 - Toasts that carry an Undo stay until dismissed or replaced.
 
+**Also built, on the owner's calls**
+- **Removing a business** after setup asks whether its projects and to-dos move to Personal or end with it, with Undo.
+- **Backups:** a backup is made before loading a copy from the synced folder, before an add-on install or update, an import, Release all, and a removal or project ending that touches many records.
+- **What changed's history pill** for work nobody has checked reads "Not yet checked". A pill in a row's pill column wraps inside its column rather than running over the title.
+
 ## Where it differs from what you wrote, and why
 
 - **Answer 7.** The step is "What it's for", asking "What will you use it for?". The owner decided earlier that a job and a business can both be chosen, and several businesses, so the answers are "Just my own life", or "My life and my job" and/or "My life and my own business" as tick boxes, not three either-or choices.

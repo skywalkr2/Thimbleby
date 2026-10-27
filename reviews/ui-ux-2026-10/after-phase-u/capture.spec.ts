@@ -56,8 +56,13 @@ for (const mode of MODES) {
           failed.push(`${name}-${mode}-${size.w}: ${String(e).split("\n")[0]}`);
         }
       };
-      for (const [name, hash] of SCREENS) await attempt(name, async () => { await open(page, demo, hash, TOKEN, mode); await shot(page, name, mode, size.w); });
+      const setupOnly = !!process.env.CAP_SETUP_ONLY;
+      // CAP_SCREENS names screens to shoot again alongside the setup steps.
+      const again = (process.env.CAP_SCREENS ?? "").split(",").filter(Boolean);
+      for (const [name, hash] of SCREENS.filter(([n]) => again.includes(n))) await attempt(name, async () => { await open(page, demo, hash, TOKEN, mode); await shot(page, name, mode, size.w); });
+      if (!setupOnly) for (const [name, hash] of SCREENS) await attempt(name, async () => { await open(page, demo, hash, TOKEN, mode); await shot(page, name, mode, size.w); });
 
+      if (!setupOnly) {
       // A project page (the first Personal one if there is one, else the first), and one business project, and a person.
       const rec = async (path: string) => (await (await page.request.get(`${demo}api/${path}`, { headers: { Authorization: `Bearer ${TOKEN}`, "X-Cockpit-Token": TOKEN } })).json()) as { id: string; name?: string; role?: string }[];
       await attempt("records", async () => {
@@ -84,13 +89,7 @@ for (const mode of MODES) {
         await page.getByRole("button", { name: /^App status: / }).first().click();
         await shot(page, "status-popover", mode, size.w);
       });
-      await attempt("set-aside", async () => {
-        await open(page, demo, "today", TOKEN, mode);
-        await page.getByRole("button", { name: /\d+ set aside/ }).first().click({ timeout: 5_000 });
-        await page.locator("#set-aside").scrollIntoViewIfNeeded();
-        await shot(page, "set-aside", mode, size.w);
-      });
-
+      }
       // Setup steps on the fresh workspace, each before filling in.
       const token = (await (await fetch(`http://127.0.0.1:${process.env.CAP_FAKE}/__e2e/info`)).json()).token as string;
       await attempt("project-personal", async () => {
@@ -103,8 +102,16 @@ for (const mode of MODES) {
       });
       for (const step of STEPS) {
         await attempt(`setup-${step}`, async () => {
-          await open(page, process.env.CAP_FRESH!, "setup", token, mode);
-          await page.locator(`button[data-screen="${step}"]`).first().click();
+          await open(page, process.env.CAP_FRESH!, step === "welcome" ? "welcome" : "setup", token, mode);
+          // A fresh workspace opens on Welcome; the other steps are reached from its Start and then the step list, which a
+          // phone keeps behind Steps. Every click has a time limit, so a missing button is a logged failure, not a hang.
+          if (step !== "welcome") {
+            const welcome = page.locator('main[data-screen="welcome"]');
+            if (await welcome.isVisible()) await page.getByRole("button", { name: "Start", exact: true }).first().click({ timeout: 15_000 });
+            const button = page.locator(`button[data-screen="${step}"]`).first();
+            if (!(await button.isVisible())) await page.getByRole("button", { name: "Steps", exact: true }).first().click({ timeout: 15_000 });
+            await button.click({ timeout: 15_000 });
+          }
           await page.waitForTimeout(800);
           await shot(page, `setup-${step}`, mode, size.w);
         });

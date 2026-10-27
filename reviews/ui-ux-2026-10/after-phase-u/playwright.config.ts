@@ -15,7 +15,7 @@ process.env.CAP_FAKE = String(8794 + o);
 export default defineConfig({
   testDir: __dirname,
   testMatch: /capture\.spec\.ts/,
-  timeout: 600_000,
+  timeout: 1_800_000,
   workers: 1,
   reporter: [["list"]],
   use: { ...devices["Desktop Chrome"], launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined } },
