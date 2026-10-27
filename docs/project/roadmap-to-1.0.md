@@ -769,6 +769,17 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     left owed to nobody (11; 07 and 20 also name the owner by a bare first name); (3) a lesson that contradicts a
     built rule (03: "list the project team as owners", where the rule leaves "we" unowned); (4) a lesson kept for the
     wrong kind of work after a drop (19: follow-on, not notes).
+    *Checked on a low-cost model with the exact packets (2026-10-28, one answer per step, a return round where a rule
+    sends one back):* the seven failing cases pass (first-name-in-thread after the instruction that the person's own
+    message hands a recipient their to-do; they-finished-note on its send-back, then first time); the learning pairs 03,
+    07, 11, 19, 20, 23, 24, 25, `rejected-ask`, `other-project`, `over-application` and `another-teams-rows-naming-ours`
+    pass end to end after: a drop's note that says why such work ends teaches; a declined ending teaches what ends a
+    promise, not routing; a proposed stance the person already has is refused; the guidance for "mark it closed" matches
+    the instructions; a forwarded promise stays an action between the two; a request of the person by name is their
+    to-do; their own team's work is theirs in another team's row; a new day asked of someone outside an action's owners
+    is a new action; `other-project` expects the owners left empty, as the built rule says; pair 19's words widened
+    with a comment. Each instruction is pinned by `tests/test_learning_run_b7.py`, `tests/test_learn_correction.py` or
+    `tests/test_stance_lines.py`. Done when the owner's next re-run passes them.
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;
