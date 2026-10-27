@@ -42,7 +42,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
      re-run (B-10; P30 and P31 are the owner's captures and the learning-pair groups).
   2. **The owner's checks and the gate week with its pass bar** (P65: agreed by the owner 2026-10-28, `docs/project/gate-pass-bar-draft-2026-10-28.md`
      and design 6.32; the week counts what the app sees, and more is expected from the testers after phase I): the laptop and phone
-     exit checks (B-6a, B-6b), an add-on installed from a real release host (B-5), the app-password check (P67), the real-mail
+     exit checks (B-6a, B-6b), an add-on installed from a real release host (B-5), the app-password check (P67: offered on the owner's Gmail, 2026-10-28; the guided step is next), the real-mail
      re-run (P46). The gate's instruments already count the pass bar's rows for lost promises, the 50-message sample, sources not read and review time (change log 235).
   3. **Phase S's leftovers**, the gate week showing which matter; those that need an add-on (calendar acts, the add-ons' channels,
      Move to, older mail) go to the add-on builders.
