@@ -11,6 +11,7 @@ import { useWords } from "../lib/wording";
 import { NoteBox, useNoted } from "./NoteBox";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
+import { plainTitle } from "../lib/title-dates";
 
 type Line = S["QueueLineView"];
 type Choice = S["SnoozeChoiceView"];
@@ -22,7 +23,7 @@ export const dateAndTime = (iso: string) => `${day(iso)}, ${wallTime(iso)}`;
 /** The words of a reminder line, `{task} · due now`. A late one says when it was due: that it came due while the computer was
  * away only when the app knows that (`asleep`), otherwise only that it is overdue. */
 export function reminderTitle(line: Line, t: T): string {
-  const task = line.text ?? "";
+  const task = plainTitle(line.text ?? "");
   if (!line.late) return t("queue.reminder.due", { task });
   return t(line.asleep ? "queue.reminder.late" : "queue.reminder.overdue", { task, due_time: line.at ? wallTime(line.at) : "" });
 }
@@ -31,7 +32,7 @@ export function reminderTitle(line: Line, t: T): string {
 export const digestTitle = (line: Line, t: T): string => t(line.late ? (line.asleep ? "queue.reminder.missed" : "queue.reminder.missed_overdue") : "queue.reminder.digest");
 
 /** One item of that list. */
-export const digestLine = (item: S["ReminderItemView"], t: T): string => t("queue.reminder.digest_line", { task: item.text, due_date_and_time: dateAndTime(item.at) });
+export const digestLine = (item: S["ReminderItemView"], t: T): string => t("queue.reminder.digest_line", { task: plainTitle(item.text), due_date_and_time: dateAndTime(item.at) });
 
 /** A snooze choice as the menu words it, with the time it resolves to. */
 export function snoozeLabel(choice: Choice, t: T): string {

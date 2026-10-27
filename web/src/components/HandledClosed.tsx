@@ -12,7 +12,7 @@ import { Skeleton } from "../ui/Skeleton";
 type SilentClose = S["SilentCloseView"];
 
 export function AssistantCloses() {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const found = useQuery({ queryKey: ["silent-closes"], queryFn: api.silentCloses });
   const mine = found.data?.closes.filter((c) => c.kind === "assistant") ?? [];
   return (
@@ -36,10 +36,9 @@ export function AssistantCloses() {
             <p className="hint" data-testid="silent-measure">
               {found.data.measure.silent === 0
                 ? t("sources.silent.measure_none", { days: found.data.measure.days })
-                : t("sources.silent.measure", {
+                : tn("sources.silent.measure", found.data.measure.silent, {
                     silent: found.data.measure.silent,
                     total: found.data.measure.total,
-                    days: found.data.measure.days,
                   })}
             </p>
           ) : null}

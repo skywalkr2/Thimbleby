@@ -117,7 +117,7 @@ test("another item is chosen by its line, and its details replace the first's", 
   expect(rowButton("First thing")).toHaveAttribute("aria-expanded", "false");
 });
 
-test("a row that holds a question for the person is the one chosen first, whichever place it has", async () => {
+test("the first row is the one chosen, even when a later row holds a question: that is answered on Today, not here", async () => {
   const asking = change("B", "Second thing", { state: "done" });
   asking.changeset!.ops[0] = {
     ...asking.changeset!.ops[0],
@@ -127,8 +127,10 @@ test("a row that holds a question for the person is the one chosen first, whiche
   };
   show([change("A", "First thing"), asking]);
   renderApp(<WhatChanged />);
-  expect(await screen.findByRole("combobox", { name: "Who is “Robin”?" })).toBeInTheDocument();
-  expect(rowButton("Second thing")).toHaveAttribute("aria-expanded", "true");
+  expect(await screen.findByText("Send First thing")).toBeInTheDocument();
+  expect(rowButton("First thing")).toHaveAttribute("aria-expanded", "true");
+  expect(rowButton("Second thing")).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("combobox", { name: "Who is “Robin”?" })).toBeNull();
 });
 
 test("a to-do's owner, promise and day are one meta line, each part a button, with no stacked Change links", async () => {

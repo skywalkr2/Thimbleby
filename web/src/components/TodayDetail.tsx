@@ -17,7 +17,7 @@ import { SideChoose } from "./SideChoose";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
 import { ProjectEndingDetail } from "./ProjectEndingDetail";
-import { ChangeRow } from "./WhatChanged";
+import { ChangeRow, OpRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
 const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "send", "nudge", "escalate", "promise"]);
@@ -100,12 +100,31 @@ function QuestionDetail(props: { line: QueueLine; onOpenGuide?: (step: string) =
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   if (followups.isPending) return <Skeleton />;
   const question = followups.data?.find((s) => s.is_pm)?.questions.find((q) => q.id === props.line.question);
-  if (!question) return props.line.request ? <ChangeDetail line={props.line} onOpenGuide={props.onOpenGuide} /> : <Gone />;
+  if (!question) return props.line.request ? <ChangeDetail line={props.line} onOpenGuide={props.onOpenGuide} /> : <AskedItem question={props.line.question ?? ""} />;
   return (
     <ul className="children">
       <DecisionRow question={question} reveal={0} check={props.line.after_move?.check} move={props.line.after_move} />
     </ul>
   );
+}
+
+/** A question about an item the assistant made (who owns it) is not among Follow-ups' questions: it is answered here, on the
+ * item's own row with the choice of who, as What changed shows only a link to this line. */
+function AskedItem(props: { question: string }) {
+  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
+  if (changes.isPending) return <Skeleton />;
+  for (const item of changes.data ?? []) {
+    const cs = item.changeset;
+    const op = cs?.ops.find((o) => o.ask?.id === props.question);
+    if (cs && op) {
+      return (
+        <ul className="children">
+          <OpRow op={op} cs={cs} source={item.source} />
+        </ul>
+      );
+    }
+  }
+  return <Gone />;
 }
 
 /** Notes that the group of a move's questions is on screen with this many, so the toast for the last one can say it is settled. */

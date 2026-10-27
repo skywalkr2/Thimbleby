@@ -50,7 +50,7 @@ test("key families built at run time are complete", () => {
     ...states.map((x) => `changes.state.${x}`),
     ...opStatuses.map((x) => `op.status.${x}`),
     "op.status.owner",
-    ...["attention", "done", "all"].map((x) => `changes.filter.${x}`),
+    ...["done", "all"].map((x) => `changes.filter.${x}`),
     ...["connecting", "live", "offline"].filter((x) => x !== "live").map((x) => `live.${x}`),
     ...["next", "previous", "primary", "send_back", "copy", "edit", "move", "undo", "hand_in", "ask", "show_new", "help"].map((x) => `help.${x}`),
     ...["notes", "other"].map((x) => `task.${x}`),

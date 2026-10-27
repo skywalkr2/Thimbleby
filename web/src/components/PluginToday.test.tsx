@@ -179,7 +179,7 @@ test("review of a record's own draft opens the record's page", async () => {
   expect(open).toHaveBeenCalledWith(about.kind, about.id);
 });
 
-test("review of the assistant's answer opens that answer's review in What changed, whatever its filter", async () => {
+test("review of the assistant's answer opens that answer's review in What changed", async () => {
   const user = userEvent.setup();
   besidePane();
   const open = vi.fn();
@@ -204,8 +204,8 @@ test("review of the assistant's answer opens that answer's review in What change
       <PluginToday onOpenRecord={open} />
     </>,
   );
-  // Finished work is not in the default list.
-  await screen.findByText("Nothing needs your attention.");
+  // The list opens on everything, so finished work is in it; the review still chooses the line and gives it the cursor.
+  await screen.findByRole("listitem", { name: "Email from the printer" });
   await user.click(await screen.findByRole("button", { name: "Review" }));
   // The line is chosen and has the cursor, and its detail stands beside the list.
   const row = await screen.findByRole("listitem", { name: "Email from the printer" });

@@ -612,7 +612,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "failed":
         return t("queue.failed", { what });
       case "overdue":
-        return line.count === 1 && line.subject ? line.subject : tn("queue.overdue", line.count);
+        return line.count === 1 && line.subject ? plainTitle(line.subject) : tn("queue.overdue", line.count);
       case "review": {
         if (!(line.count === 1 && line.subject && !reviewParts(line).refusedOnly)) return reviewCount(line);
         // What the assistant did is said as done, never as an order: "<name> dropped 'X'". Under Decide it stays a question.
@@ -631,13 +631,13 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "backup":
         return t("queue.backup");
       case "escalate":
-        return t("queue.escalate", { text: (line.text ?? "").replace(/[?.!\s]+$/, "") });
+        return t("queue.escalate", { text: plainTitle(line.text ?? "").replace(/[?.!\s]+$/, "") });
       case "answer":
         return t("queue.answer", { text: line.text ?? "" });
       case "stale":
-        return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: line.subject }) : tn("queue.stale", line.count);
+        return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: plainTitle(line.subject) }) : tn("queue.stale", line.count);
       case "pattern": {
-        const vars = { text: line.text ?? "", name };
+        const vars = { text: plainTitle(line.text ?? ""), name };
         return tn(`queue.pattern.${line.state ?? "moved"}`, line.count, vars);
       }
       case "capacity": {
@@ -660,7 +660,7 @@ export function useLineTitle(): (line: QueueLine) => string {
         });
       }
       case "promise": {
-        const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
+        const vars = { name, text: plainTitle(line.text ?? "", line.due).replace(/[.!?\s]+$/, ""), date: line.due ? day(line.due) : "" };
         if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
         // Someone the person reports to is waited on, never chased (design 6.34).
         const waiting = line.stance === "report_to";
@@ -694,7 +694,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "meeting_capture":
         return t("queue.meeting_capture", { title: line.text ?? "" });
       case "quiet_promise":
-        return t("queue.quiet_promise", { name, text: line.text ?? "" });
+        return t("queue.quiet_promise", { name, text: plainTitle(line.text ?? "") });
       case "away":
         return tn("queue.away", line.count);
       default:

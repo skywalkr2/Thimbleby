@@ -4,6 +4,7 @@
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { useWords } from "../lib/wording";
+import { plainTitle } from "../lib/title-dates";
 
 export function NudgeLeftOut(props: { items: S["LeftOutView"][] | undefined }) {
   const { t } = useWords();
@@ -11,7 +12,7 @@ export function NudgeLeftOut(props: { items: S["LeftOutView"][] | undefined }) {
     <>
       {(props.items ?? []).map((item) => (
         <li key={`${item.kind}:${item.id}`} data-left-out="">
-          <span className="title">{item.text}</span>
+          <span className="title">{plainTitle(item.text)}</span>
           <span className="meta">{t(item.kind === "question" ? "followups.nudge.left_out_answered" : "followups.nudge.left_out_done", { date: day(item.on) })}</span>
         </li>
       ))}

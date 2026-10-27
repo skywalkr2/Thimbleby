@@ -144,7 +144,7 @@ def test_a_change_a_rule_closed_is_a_row_with_its_rule_its_reason_and_its_kind_o
     assert group["key"] == group["label"] == row["reason"] and group["count"] == 1
     assert view["counts"] == {"set_aside": 1, "read": 0}
     assert view["kinds"] == [{"item": "other", "count": 1}]
-    assert client.get(f"{api}/handled/counts").json() == view["counts"]
+    assert client.get(f"{api}/handled/counts").json() == {**view["counts"], "today": 0}
 
 
 @pytest.mark.parametrize(

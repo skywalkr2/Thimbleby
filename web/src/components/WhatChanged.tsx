@@ -1,11 +1,11 @@
-// What changed (design 7.3): one row per thing handed in, with what the assistant did nested inside it.
+// What changed (design 7.3, 7.7): the history, one row per thing handed in, with what the assistant did nested inside it.
+// Nothing here is answered: what waits for the person is a line on Today, and a held item links to it.
 import { useReviewTime } from "../lib/review-time";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
-import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { useFieldLabel } from "../lib/records";
 import { useHeldAnswers } from "../lib/held-answers";
@@ -17,6 +17,8 @@ import { recordView, viewHref } from "../lib/views";
 import { useEstimate, useSpent } from "../lib/money";
 import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
+import { useQueue, useTodayCount } from "../lib/today";
+import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { ListDetail } from "../ui/ListDetail";
@@ -24,18 +26,18 @@ import { AskChooser } from "./AskChooser";
 import { ProjectProposalRow } from "./NextSteps";
 import { Because } from "./Because";
 import { LearnedLines } from "./Learned";
-import { FirstGoRow } from "./FirstGoRow";
+import { AnswerOnToday } from "./AnswerOnToday";
 import { useChangeThis, type ChangeKind } from "./ChangeThis";
 import { PromiseWhy } from "./PromiseWhy";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
-import { StageTodayRows, useStageToday } from "./StageToday";
+import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
 
 /** The width the list needs beside the pane: a state, a title with one line under it, the primary and the menu. */
 const CHANGES_FIT = 480;
 
-type Filter = "attention" | "done" | "all";
+type Filter = "done" | "all";
 const ATTENTION = new Set(["queued", "running", "review", "needs_you"]);
 
 /** Still in progress, waiting for review, or holding something until the PM answers. */
@@ -55,7 +57,9 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const handledCount = handled.data ? handled.data.set_aside + handled.data.read : 0;
   const own = useOwnRequests();
   const stageToday = useStageToday();
-  const [filter, setFilter] = useState<Filter>("attention");
+  // What waits for the person is on Today; this screen says how much, once, and links there.
+  const waitingOnToday = useTodayCount();
+  const [filter, setFilter] = useState<Filter>("all");
   const [shown, setShown] = useState<Set<string> | null>(null);
   const [announce, setAnnounce] = useState("");
   // A Today line asking for an answer to be looked at: the row (by request) opens, whatever the filter.
@@ -119,32 +123,27 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
     if (waiting.length) setAnnounce(tn("changes.new_arrived", waiting.length));
   }, [waiting.length, tn]);
 
-  // A stage task waiting for the go has its own row below; its plain request row would only offer a retry.
-  // Runs waiting for the first go are one line together while the list shows what needs attention.
+  // A run waiting for a go (a stage's, or the first one) is a line on Today, not history: it is counted in the line at the
+  // top, and its plain request row would only offer a retry.
   const waitingGo = new Set(stageToday.waiting.map((w) => w.request.id));
-  const sorting = useFirstGoSorting(firstGoOf(changes.data).count > 0);
-  const first = firstGoOf(changes.data, sorting);
-  const firstLine = filter === "attention" && first.count > 0;
   const rows = (changes.data ?? []).filter(
     (c) =>
       (intake !== null ? c.intake === intake : shown?.has(c.id)) &&
       !waitingGo.has(c.id) &&
-      !(firstLine && c.first_go) &&
-      (filter === "all" || (filter === "attention") === needsAttention(c)),
+      !(c.first_go && !c.dismissed && c.state === "needs_you") &&
+      (filter === "all" || (filter === "done") === !needsAttention(c)),
   );
-  const stageRows = (filter === "attention" ? stageToday.count : 0) + (firstLine ? 1 : 0);
-  const filters: Filter[] = ["attention", "done", "all"];
+  const filters: Filter[] = ["all", "done"];
   // A list with nothing in it has nothing to hold still: what arrives shows at once, so the first results after a first go are
   // one list, never "5 new · Show" over an empty one.
   useEffect(() => {
-    if (changes.data && waiting.length > 0 && rows.length === 0 && stageRows === 0) setShown(new Set(changes.data.map((c) => c.id)));
-  }, [changes.data, waiting.length, rows.length, stageRows]);
+    if (changes.data && waiting.length > 0 && rows.length === 0) setShown(new Set(changes.data.map((c) => c.id)));
+  }, [changes.data, waiting.length, rows.length]);
 
-  // The list | detail choice (design 7.13): beside the list the first change is chosen as the list opens, or the first one
-  // holding a question for the person; below 1024px the detail is a drawer that opens when a change is chosen.
+  // The list | detail choice (design 7.13): beside the list the newest change is chosen as the list opens; below 1024px the
+  // detail is a drawer that opens when a change is chosen.
   const beside = useMediaQuery("(min-width: 1024px)") && !props.compact;
-  const asking = rows.find((c) => !!c.changeset?.ops.some((o) => o.ask?.status === "open"));
-  const choice = useListChoice({ keys: rows.map((c) => c.id), beside, first: asking?.id ?? null, reset: `${filter}|${intake ?? ""}` });
+  const choice = useListChoice({ keys: rows.map((c) => c.id), beside, first: null, reset: `${filter}|${intake ?? ""}` });
   useEffect(() => {
     if (picked) choice.choose(picked.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,6 +176,11 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       <p className="sr" aria-live="polite">
         {announce}
       </p>
+      {waitingOnToday !== null && waitingOnToday > 0 && (
+        <p className="hint" data-waiting-on-today="">
+          {tn("changes.waiting_on_today", waitingOnToday)} · <a href={viewHref("today")}>{t("changes.open_today")}</a>
+        </p>
+      )}
       {handledCount > 0 && (
         <p className="hint" data-handled-count="">
           <a href={viewHref("work/handled")}>{t("changes.handled", { n: handledCount })}</a>
@@ -208,8 +212,8 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
             {t("action.try_again")}
           </button>
         </p>
-      ) : rows.length === 0 && stageRows === 0 ? (
-        <p className="empty">{t(filter === "attention" ? "changes.empty_attention" : "changes.empty")}</p>
+      ) : rows.length === 0 ? (
+        <p className="empty">{t("changes.empty")}</p>
       ) : (
         <ListDetail
           title={selected ? changeTitle(selected, t, has) : ""}
@@ -233,8 +237,6 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           }
         >
           <ol className="queue">
-            {firstLine && <FirstGoRow first={first} />}
-            {filter === "attention" && <StageTodayRows today={stageToday} />}
             {rows.map((item) => (
               <ChangeListRow
                 key={item.id}
@@ -287,7 +289,7 @@ export function waitsForGo(c: S["ChangeItem"]): boolean {
  * person typed, their words are shown as their note and never as the title; until then (waiting, or stopped) they are all that
  * says what the change is. */
 export function changeTitle(item: S["ChangeItem"], t: T, has: (key: string) => boolean): string {
-  return titleWords(item.title, t, has) || item.source_title || (item.changeset ? "" : firstLine(item.note)) || t("changes.untitled");
+  return plainTitle(titleWords(item.title, t, has) || item.source_title || (item.changeset ? "" : firstLine(item.note)) || t("changes.untitled"));
 }
 
 /** What a change asks the screen to open in its detail: the note to send it back with, or the choice of another account. */
@@ -557,19 +559,19 @@ export function ChangeRow(props: {
           )}
           {cs && <Because cs={cs} />}
           {cs && cs.ops.length === 0 && <p className="hint">{t("changes.nothing_done")}</p>}
-          {cs && cs.ops.filter((o) => o.status === "held").length > 1 && <ReleaseAll cs={cs} />}
+          {cs && !props.history && cs.ops.filter((o) => o.status === "held").length > 1 && <ReleaseAll cs={cs} />}
           {cs && cs.ops.length > 0 && (
             <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>
               {(cs.groups ?? []).map((group) => (
-                <GroupRow key={`g-${group.id}`} group={group} cs={cs} />
+                <GroupRow key={`g-${group.id}`} group={group} cs={cs} history={props.history} />
               ))}
               {cs.ops
                 .filter((op) => !op.answer_group)
                 .map((op) =>
-                  op.op === "project.add" && op.status === "held" ? (
+                  op.op === "project.add" && op.status === "held" && !props.history ? (
                     <ProjectProposalRow key={op.index} op={op} changeset={cs.id} />
                   ) : (
-                    <OpRow key={op.index} op={op} cs={cs} source={item.source} />
+                    <OpRow key={op.index} op={op} cs={cs} source={item.source} history={props.history} />
                   ),
                 )}
             </ul>
@@ -675,10 +677,28 @@ const CHANGEABLE: ChangeKind[] = ["action", "question", "decision", "event", "fa
 /** The ops about a promise: the row shows why it exists and how it ended, beside the words the op rests on. */
 const PROMISE_OPS = new Set(["action.add", "action.close", "action.drop", "action.move", "action.part", "action.news"]);
 
-export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string | null }) {
+/** What changed's one link for a held item: the item is answered on its line on Today, so here it is information and this
+ * opens that line. A held item with no line on Today (its change was dismissed) has no link. */
+function HeldOnToday(props: { changeset: string; op: number; question?: string }) {
+  const queue = useQueue();
+  const all = queue.data ?? [];
+  const lines = all.filter((l) => l.changeset === props.changeset);
+  // A question about an item (who owns it) is a line of its own, found by the question; a hold, by the change and its op.
+  const line = (props.question ? all.find((l) => l.question === props.question) : undefined) ?? lines.find((l) => l.op === props.op) ?? lines.find((l) => l.kind === "project_ending");
+  if (!line) return null;
+  return (
+    <div className="full">
+      <AnswerOnToday line={line.key} />
+    </div>
+  );
+}
+
+/** One thing the assistant did. In the history (`history`) a held item has no button: it is shown as information with a
+ * link to its line on Today, and Undo is in the row's menu. */
+export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string | null; history?: boolean }) {
   const { t, tn, has } = useWords();
   const act = useAct();
-  const { op, cs } = props;
+  const { op, cs, history } = props;
   const ref = useRef<HTMLLIElement>(null);
   const [showSource, setShowSource] = useState(false);
   const ask = op.ask && op.ask.status === "open" ? op.ask : null;
@@ -709,8 +729,8 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
   if (op.evidence && props.source)
     menu.push({ id: "source", label: t(showSource ? "op.hide_source" : "op.show_source"), run: () => setShowSource((v) => !v) });
 
-  if (heldWords) for (const extra of heldWords.menu) menu.push(extra);
-  useRowKeys(ref, { primary: op.status === "held" && !ask ? (heldWords ? heldWords.primary.run : () => void release()) : undefined });
+  if (heldWords && !history) for (const extra of heldWords.menu) menu.push(extra);
+  useRowKeys(ref, { primary: op.status === "held" && !ask && !history ? (heldWords ? heldWords.primary.run : () => void release()) : undefined });
 
   const labelOf = useFieldLabel();
   const meta = metaLine(op, t, labelOf);
@@ -726,12 +746,12 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
           {opLabel(op, t, has)}
           {pill && <span className={`pill ${pill}`}>{t(`op.status.${pillKey}`)}</span>}
         </div>
-        <div className="title">{op.title}</div>
+        <div className="title">{plainTitle(op.title, op.meta.due)}</div>
         {meta && <div className="meta">{meta}</div>}
         {op.reason && op.status !== "applied" && <div className="reason">{op.reason}</div>}
       </div>
       <div className="acts">
-        {heldWords ? (
+        {history ? null : heldWords ? (
           <>
             {heldWords.other && (
               <button type="button" className="btn" onClick={heldWords.other.run}>
@@ -750,7 +770,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
             </button>
           )
         )}
-        <RowMenu label={op.title} actions={menu} />
+        <RowMenu label={plainTitle(op.title, op.meta.due)} actions={menu} />
       </div>
       {op.evidence && (
         <div className="because">
@@ -769,7 +789,8 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         </div>
       )}
       {changeKind && change.form}
-      {ask && (
+      {history && (op.status === "held" || ask) && <HeldOnToday changeset={cs.id} op={op.index} question={ask?.id} />}
+      {ask && !history && (
         <div className="full">
           <AskChooser ask={ask} fold={{ changeset: cs.id, index: op.index }} />
         </div>
@@ -788,7 +809,7 @@ function leftMessage(done: S["AnswerGroupDone"], done_key: string, t: T, tn: TN)
 
 /** One row for a group of an answer the task kind grouped: what it is, how its ops stand, Keep for all of them (while some
  * wait) and Drop for all of them in the menu. */
-function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"] }) {
+function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"]; history?: boolean }) {
   const { t, tn } = useWords();
   const act = useAct();
   const { group, cs } = props;
@@ -814,7 +835,8 @@ function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"] }
     );
   const menu: MenuAction[] = [];
   if (group.applied || group.held) menu.push({ id: "drop", label: t("changes.group.drop"), run: () => void drop() });
-  useRowKeys(ref, { primary: group.held ? () => void keep() : undefined });
+  useRowKeys(ref, { primary: group.held && !props.history ? () => void keep() : undefined });
+  const firstHeld = props.history && group.held ? cs.ops.find((o) => o.answer_group === group.label && o.status === "held") : undefined;
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
@@ -822,13 +844,14 @@ function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"] }
         <div className="meta">{counts.join(" · ")}</div>
       </div>
       <div className="acts">
-        {group.held > 0 && (
+        {group.held > 0 && !props.history && (
           <button type="button" className="btn primary" onClick={() => void keep()}>
             {t("changes.group.keep")}
           </button>
         )}
         <RowMenu label={group.label} actions={menu} />
       </div>
+      {firstHeld && <HeldOnToday changeset={cs.id} op={firstHeld.index} />}
     </li>
   );
 }

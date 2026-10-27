@@ -1,5 +1,5 @@
 // What changed as list | detail (design 7.13): one line per change; the chosen change in full beside the list, as a drawer
-// below 1024px; the first change (or the one asking a question) is chosen as the list opens; Up and Down move the choice,
+// below 1024px; the first change is chosen as the list opens; Up and Down move the choice,
 // Enter moves the cursor into the detail and Escape closes it and puts the cursor back on the line.
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -182,7 +182,7 @@ describe("beside the list", () => {
     await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-B/send-back")?.body).toEqual({ note: "Change the dates" }));
   });
 
-  test("the detail has the source with its highlighted words, and a question for the person is answered there", async () => {
+  test("the detail has the source with its highlighted words, and a question for the person is a link to Today, not a form", async () => {
     const user = userEvent.setup();
     const held = change("A", "First thing");
     held.source = "SRC-1";
@@ -190,19 +190,21 @@ describe("beside the list", () => {
     const calls = fakeApi(
       routes(() => [change("Z", "Quiet thing"), held], {
         "GET sources/SRC-1": () => ({ id: "SRC-1", title: "Email", kind: "pasted", trust: "untrusted", received_at: "2026-10-09T14:00:00Z", url: null, text: "Proof copies ship on November 5 by courier." }),
-        "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: null }],
-        "POST questions/Q-1/answer": () => ({ ok: "Q-1" }),
+        "GET today/queue": () => [{ key: "question:Q-1", group: "decide", kind: "who_is", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, changeset: "CS-A", op: 0, question: "Q-1" }],
       }),
     );
     renderApp(<WhatChanged />);
-    // The change asking a question is chosen first, though it is not the first in the list.
+    // The first change in the list is chosen as it opens; the one holding a question is chosen by its line.
+    await screen.findByRole("complementary", { name: "Quiet thing" });
+    expect(chosenId()).toBe("Z");
+    await user.click(await line("First thing"));
     const pane = await screen.findByRole("complementary", { name: "First thing" });
     expect(chosenId()).toBe("A");
     await user.click(within(pane).getByRole("button", { name: "Show source" }));
     expect((await within(pane).findByText((_, el) => el?.tagName === "MARK")).textContent).toContain("ship on November 5");
-    await user.selectOptions(within(pane).getByRole("combobox", { name: "Who is “Robin”?" }), "PER-2");
-    await user.click(within(pane).getByRole("button", { name: "Use this person" }));
-    await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/answer")?.body).toEqual({ person: "PER-2" }));
+    expect(within(pane).queryByRole("combobox")).toBeNull();
+    expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
+    expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
   });
 });
 

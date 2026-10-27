@@ -276,6 +276,20 @@ test("a title leaves out the due day its meta line already shows, and writes any
   expect(screen.queryByText(/2026-11/)).toBeNull();
 });
 
+test("an owner question's line opens the question itself, with the choice of who, since What changed only links to it", async () => {
+  const user = userEvent.setup();
+  const item = change("REQ-1");
+  item.changeset!.ops[0] = { ...item.changeset!.ops[0], op: "action.add", title: "Print the agenda.", meta: { owners: [], action_status: "held" }, ask: { id: "Q-9", status: "open", about: "owner", name: null, options: [] } };
+  const calls = show([line("owner", { key: "question:Q-9", text: "Print the agenda.", question: "Q-9" })], { "GET changes": () => [item], "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: null }], "POST questions/Q-9/answer": () => ({ ok: "Q-9" }) }).calls;
+  await user.click(await screen.findByRole("button", { name: "Pick an owner" }));
+  const picker = await screen.findByRole("combobox", { name: "Who owns this?" });
+  await screen.findByRole("option", { name: "Robin Sample" });
+  await user.selectOptions(picker, "Robin Sample");
+  await user.click(screen.getByRole("button", { name: "Add the to-do" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-9/answer")?.body).toEqual({ person: "PER-2" }));
+  expect(screen.queryByText("Already dealt with.")).toBeNull();
+});
+
 test("a row names its project only when the screen holds more than one", async () => {
   const other = line("owner", { key: "question:Q-9", text: "Plan the launch", project: "PRJ-2", project_name: "Autumn book", question: "Q-9" });
   show([decision, other]);
@@ -361,6 +375,27 @@ test("the first go is one line with its price, and Go starts the tasks", async (
   expect(screen.getByText("Nothing is spent until you press Start.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST runs/first-go")).toBe(true));
+});
+
+test.each([
+  ["no price: the count and the plan's allowance", { count: 2, estimate_usd: null, unpriced: 2 }, "Start the assistant: 2 items. They use your plan's allowance."],
+  ["one item, under a cent", { count: 1, estimate_usd: 0.004, unpriced: 0 }, "Start the assistant: 1 item, less than a cent"],
+  ["a price and some of the plan's allowance", { count: 2, estimate_usd: 0.2, unpriced: 1 }, "Start the assistant: 2 items, about $0.20 plus some of your plan's allowance"],
+])("the first go's line says %s", async (_name, over, words) => {
+  show([line("first_go", { key: "first_go", ...over })]);
+  expect(await screen.findByText(words)).toBeInTheDocument();
+});
+
+test("a to-do's words in a line's title never show a raw date: the line's own day drops the phrase, else it is written as elsewhere", async () => {
+  show([
+    line("promise", { key: "promise:ACT-1", group: "send", text: "Send the venue list by 2026-11-02.", due: "2026-11-02", actions: ["ACT-1"] }),
+    line("overdue", { key: "overdue", count: 1, actions: ["ACT-2"], due: "2026-10-08", subject: "Plan the move, done on 2026-11-04" }),
+    line("quiet_promise", { key: "quiet_promise:ACT-3", group: "send", person_name: "Robin Sample", text: "Print by 2026-11-06" }),
+  ]);
+  expect(await screen.findByText(new RegExp(`^Send the venue list, due ${day("2026-11-02").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`))).toBeInTheDocument();
+  expect(await screen.findByText(`Plan the move, done on ${day("2026-11-04")}`)).toBeInTheDocument();
+  expect(await screen.findByText(`Follow up with Robin Sample: Print by ${day("2026-11-06")} has gone quiet`)).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/2026-11-0\d/);
 });
 
 test("a line that has items opens them under itself below 1680px, and the primary says it is open", async () => {

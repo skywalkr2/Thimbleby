@@ -100,9 +100,10 @@ test("night mode keeps its values and its filled, bordered, banded look", () => 
   expect(dark["--band-bottom"]).toBe("1px solid var(--border)");
   expect(dark["--row-title-weight"]).toBe("var(--weight-semibold)");
   expect(dark["--pill-neutral-bg"]).toBe("var(--surface-sunk)");
+  expect(dark["--rail-link-line"]).toBe("underline");
   // The media block for the system theme sets the same values as the in-app choice.
   const media = tokens.slice(tokens.indexOf("@media (prefers-color-scheme: dark)"), tokens.indexOf(':root[data-theme="dark"] {'));
-  for (const name of ["--btn-border", "--row-action-bg", "--pane-border", "--pane-edge", "--band-bg", "--band-bottom", "--row-title-weight", "--pill-neutral-bg", "--pill-neutral-edge"]) {
+  for (const name of ["--btn-border", "--row-action-bg", "--pane-border", "--pane-edge", "--band-bg", "--band-bottom", "--row-title-weight", "--pill-neutral-bg", "--pill-neutral-edge", "--rail-link-line"]) {
     expect(media).toContain(`${name}: ${dark[name]}`);
   }
 });
@@ -142,4 +143,16 @@ test("the day look reaches the other Today actions: held and learned lines, Cont
   expect(read("ui/Button.module.css")).toMatch(/\.primary\[data-tonal\]:not\(:disabled\) \{[^}]*var\(--row-action-bg\)/);
   expect(read("components/TodayEmpty.tsx")).toMatch(/variant="primary" data-tonal=""/);
   expect(read("components/TodayQueue.tsx")).toMatch(/variant="primary" data-tonal="" aria-keyshortcuts="Shift\+N"/);
+});
+
+test("links in the rail have no underline until the pointer or the keyboard is on them by day; running text and night keep it", () => {
+  const light = tokens.slice(0, tokens.indexOf("/* ---------- Dark"));
+  expect(light).toMatch(/--rail-link-line: none/);
+  const css = read("components/Today.module.css");
+  // Links and link-like buttons in the rail take the token; a button-styled link does not.
+  expect(css).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: var\(--rail-link-line\); \}/);
+  // Hover and keyboard focus bring it back, so a link is never found by color alone.
+  expect(css).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\):is\(:hover, :focus-visible\) \{ text-decoration-line: underline; \}/);
+  // A link inside a paragraph is running text.
+  expect(css).toMatch(/\.rail p :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: underline; \}/);
 });

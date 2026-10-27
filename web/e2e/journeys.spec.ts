@@ -6,7 +6,7 @@
 // that same workspace afterwards, so they start from Today with the walkthrough finished, as a person's later days do.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { collectProblems, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
@@ -267,6 +267,8 @@ test.describe.serial("journeys", () => {
     };
     // I hand in someone else's words; the result is a line on Today, and its card is read on What changed.
     const handIn = async (text: string) => {
+      // Leaving Today first, so a line answered there (it stays until the person moves on) is gone when Today opens again.
+      await page.getByRole("link", { name: /^What changed/ }).first().click();
       await page.getByRole("link", { name: /^Today/ }).first().click();
       // A hand-in shows as a review line, or, when all of it waits for the person, as its decisions alone.
       const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"], [data-queue-line="held"]');
@@ -289,6 +291,33 @@ test.describe.serial("journeys", () => {
       await expect(detail).toBeVisible();
       return detail;
     };
+    // What changed is the history: a held item is information there, with one link that opens its line on Today, which is where
+    // it is answered. This follows the link (from the change's detail, or from the one item of it that has `hasText`) and
+    // returns what Today shows, where the item's answers are.
+    const onToday = async (scope: Locator, hasText?: string) => {
+      const item = hasText ? scope.locator("li.child", { hasText }) : scope;
+      await expect(item.getByRole("button", { name: /^(Add|Keep it|Drop it|Do it anyway|Use this person)/ })).toHaveCount(0);
+      await item.getByRole("link", { name: "Answer on Today" }).first().click();
+      await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+      return page.getByRole("main");
+    };
+    // A line that comes back after Undo is not selected on Today, so its link on What changed is followed again. The change
+    // that holds it is the first of the newest changes whose details have the link (an answer made since is newer).
+    const backToToday = async (hasText?: string) => {
+      await openView(page, "What changed");
+      const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
+      await expect(detail).toBeVisible();
+      const holder = (hasText ? detail.locator("li.child", { hasText }) : detail).getByRole("link", { name: "Answer on Today" });
+      const rows = page.getByRole("main").locator("li.line:not(.in-pane)");
+      for (let i = 0; i < Math.min(await rows.count(), 5); i++) {
+        await rows.nth(i).locator(".expander").first().click();
+        if (await holder.first().isVisible({ timeout: 3000 }).catch(() => false)) break;
+        // The link is drawn once the queue has loaded; try again before moving to the next change.
+        await page.waitForTimeout(1500);
+        if (await holder.first().isVisible().catch(() => false)) break;
+      }
+      return onToday(detail, hasText);
+    };
     type Person = { id: string; name: string };
     const people = async () => (await json<Person[]>("api/people")).map((p) => p.name);
     const actionsOf = async () =>
@@ -307,6 +336,7 @@ test.describe.serial("journeys", () => {
     const addNewcomer = async (name: string, keep: boolean) => {
       const sentence = `${name} will confirm the catering menu by 2026-11-20.`;
       row = await handIn(sentence);
+      row = await onToday(row);
       await expect(row.getByRole("combobox", { name: `Who is “${name}”?` })).toBeVisible();
       // The last choice in the list opens the form in a drawer over the screen; nobody leaves it to add someone.
       await row.getByRole("combobox", { name: `Who is “${name}”?` }).selectOption({ label: "Add a person…" });
@@ -337,6 +367,7 @@ test.describe.serial("journeys", () => {
       { op: "person.contact", person: added.id, kind: "phone", value: reach, evidence: { quote: `my direct line is ${reach}` } },
     ]);
     row = await handIn(direct);
+    row = await onToday(row);
     const reached = async () => JSON.stringify((await json<{ details: object }>(`api/record-pages/${added.id}?kind=person`)).details);
     expect(await reached()).not.toContain(reach);
     await row.getByRole("button", { name: "Do it anyway" }).click();
@@ -354,21 +385,26 @@ test.describe.serial("journeys", () => {
       { op: "project.add", name: retreat, evidence: { quote: `the ${retreat} need plans` } },
       { op: "project.add", name: festival, evidence: { quote: `The ${festival}` } },
     ]);
-    row = await handIn(plans);
+    await handIn(plans);
     const projectNamed = async (name: string) => (await json<{ id: string; name: string }[]>("api/projects")).find((p) => p.name === name);
     const filed = async () => ({
       note: (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The plans are due soon.")?.project_name || null,
       action: (await actionsOf()).find((a) => a.text.startsWith("Review each plan"))?.project_name || null,
     });
     expect(await filed()).toEqual({ note: null, action: null });
-    const proposal = (name: string) => row.locator("li.child", { hasText: `Add a project “${name}”?` });
-    await proposal(retreat).getByRole("button", { name: "Add", exact: true }).click();
+    const proposal = (name: string) => page.getByRole("main").locator("li.child", { hasText: `Add a project “${name}”?` });
+    // Each proposal is its own line on Today, reached from its own link in the change's details on What changed.
+    const toProposal = async (name: string) => {
+      await backToToday(name);
+      return proposal(name);
+    };
+    await (await toProposal(retreat)).getByRole("button", { name: "Add", exact: true }).click();
     await expect(toasts).toContainText(`Added the project ${retreat}.`);
     expect(await filed()).toEqual({ note: retreat, action: retreat });
     await undo();
     await expect.poll(async () => await projectNamed(retreat)).toBeUndefined();
     expect(await filed()).toEqual({ note: null, action: null });
-    await proposal(festival).getByRole("button", { name: "Add", exact: true }).click();
+    await (await toProposal(festival)).getByRole("button", { name: "Add", exact: true }).click();
     await expect(toasts).toContainText(`Added the project ${festival}.`);
     expect(await filed()).toEqual({ note: festival, action: festival });
     await visit(page);
@@ -381,6 +417,7 @@ test.describe.serial("journeys", () => {
       { op: "project.add", name: party, evidence: { quote: `Plans for the ${party}` } },
     ]);
     row = await handIn(meeting);
+    row = await onToday(row, party);
     const partyNote = async () =>
       (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The party plans are due Friday.")?.project_name || null;
     for (const keep of [false, true]) {
@@ -394,6 +431,7 @@ test.describe.serial("journeys", () => {
       if (keep) break;
       await undo();
       await expect.poll(partyNote).toBeNull();
+      row = await backToToday(party);
       await expect(row.locator("li.child", { hasText: `Add a project “${party}”?` })).toBeVisible();
     }
 
@@ -404,7 +442,8 @@ test.describe.serial("journeys", () => {
       { op: "project.add", name: tour, evidence: { quote: `looking forward to the ${tour}` } },
     ]);
     row = await handIn(trip);
-    const tourProposal = row.locator("li.child", { hasText: `Add a project “${tour}”?` });
+    row = await onToday(row, tour);
+    let tourProposal = row.locator("li.child", { hasText: `Add a project “${tour}”?` });
     for (const keep of [false, true]) {
       await tourProposal.getByRole("button", { name: `More actions for ${tour}` }).click();
       await page.getByRole("menuitem", { name: "Not a project" }).click();
@@ -412,6 +451,7 @@ test.describe.serial("journeys", () => {
       expect(await projectNamed(tour)).toBeUndefined();
       if (keep) break;
       await undo();
+      tourProposal = await toProposal(tour);
       await expect(tourProposal).toBeVisible();
     }
 
@@ -436,11 +476,14 @@ test.describe.serial("journeys", () => {
     const again = "Somebody should print the agenda.";
     await script("Somebody should print", [{ op: "action.add", text: "Print the agenda.", owners: [], evidence: { quote: again } }]);
     row = await handIn(again);
+    row = await onToday(row);
     await expect(row.getByText("Who owns this?")).toBeVisible();
     await row.getByRole("button", { name: "Add to “Print the agenda.”" }).click();
     await expect(toasts).toContainText("Added to Print the agenda.");
     expect((await actionsOf()).filter((a) => a.text === "Print the agenda.")).toHaveLength(1);
     await undo();
+    // The question is a line on Today again (not opened, as the one answered a moment ago was).
+    await row.getByRole("button", { name: "Pick an owner" }).first().click();
     await expect(row.getByText("Who owns this?")).toBeVisible();
     await visit(page);
   });

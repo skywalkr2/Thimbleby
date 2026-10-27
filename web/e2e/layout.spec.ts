@@ -63,7 +63,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   },
   { name: "Add-ons", hash: "settings/addons", ready: (page) => heading(page, "Add-ons") },
   { name: "Settings", hash: "settings", ready: (page) => heading(page, "Settings") },
-  { name: "Quality", hash: "quality", ready: (page) => heading(page, "Quality") },
+  { name: "Quality", hash: "quality", ready: (page) => expect(page.getByRole("heading", { level: 1, name: /^How .+ is doing$/ })).toBeVisible(LOADED) },
   // Each section of Settings, with its help beside the settings or under them.
   {
     name: "Settings: AI accounts",

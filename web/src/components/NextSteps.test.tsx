@@ -6,7 +6,8 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { AskChooser } from "./AskChooser";
-import { WhatChanged } from "./WhatChanged";
+import { ChangeRow, WhatChanged } from "./WhatChanged";
+import { HeldDetail } from "./HeldDetail";
 
 // The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
 beforeEach(() => besidePane());
@@ -205,10 +206,19 @@ const projectRoutes = {
   "POST changesets/CS-7/undo": () => ({ restored: [0], skipped: [] }),
 };
 
+/** The change as Today's review line opens it: the row with its buttons, where the project is answered. */
+function renderRow(item: S["ChangeItem"] = projectChange()) {
+  renderApp(
+    <ol>
+      <ChangeRow item={item} reveal={0} open />
+    </ol>,
+  );
+}
+
 test("a project the assistant found asks Add, with the other two choices in its menu", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(projectRoutes);
-  renderApp(<WhatChanged />);
+  renderRow();
   expect(await screen.findByText("Add a project “Harvest Fair”?")).toBeInTheDocument();
   expect(screen.getByText("The Harvest Fair needs a plan")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Do it anyway" })).toBeNull();
@@ -222,7 +232,7 @@ test("a project the assistant found asks Add, with the other two choices in its 
 test("It's part of picks a project from the list with the cursor in it, files the work there and offers Undo", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(projectRoutes);
-  renderApp(<WhatChanged />);
+  renderRow();
   await user.click(await screen.findByRole("button", { name: "More actions for Harvest Fair" }));
   await user.click(await screen.findByRole("menuitem", { name: "It's part of…" }));
   const list = await screen.findByRole("combobox", { name: "“Harvest Fair” is part of" });
@@ -241,8 +251,8 @@ test("It's part of picks a project from the list with the cursor in it, files th
 test("a project added from a link nothing can open says it was not read, in its row", async () => {
   const change = projectChange();
   change.changeset!.ops[1].meta = { owners: [], name: "Harvest Fair", note: "Not read: nothing set up can open this link" };
-  fakeApi({ ...projectRoutes, "GET changes": () => [change] });
-  renderApp(<WhatChanged />);
+  fakeApi(projectRoutes);
+  renderRow(change);
   expect(await screen.findByText("Not read: nothing set up can open this link")).toBeInTheDocument();
 });
 
@@ -256,7 +266,7 @@ test("a project whose name shares a word with the held one is offered by name in
     ],
     "POST changesets/CS-5/ops/1/part-of": () => ({ changeset: "CS-6" }),
   });
-  renderApp(<WhatChanged />);
+  renderRow();
   await user.click(await screen.findByRole("button", { name: "More actions for Harvest Fair" }));
   expect(screen.queryByRole("menuitem", { name: "It's part of Sample Series" })).toBeNull();
   await user.click(await screen.findByRole("menuitem", { name: "It's part of Sample Series › Harvest Planning" }));
@@ -267,11 +277,38 @@ test("a project whose name shares a word with the held one is offered by name in
 test("Not a project sets it aside at once, says the words are kept, and offers Undo", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(projectRoutes);
-  renderApp(<WhatChanged />);
+  renderRow();
   await user.click(await screen.findByRole("button", { name: "More actions for Harvest Fair" }));
   await user.click(await screen.findByRole("menuitem", { name: "Not a project" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-5/ops/1/not-a-project"));
   expect(await screen.findByText("“Harvest Fair” is kept as not a project.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-7/undo"));
+});
+
+test("Today's line for a project the assistant found has its three choices, so What changed can leave them out", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(projectRoutes);
+  const line = { key: "held:CS-5:1", group: "decide", kind: "held", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, request: "REQ-5", changeset: "CS-5", op: 1 } as S["QueueLineView"];
+  renderApp(<HeldDetail line={line} />);
+  expect(await screen.findByText("Add a project “Harvest Fair”?")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "More actions for Harvest Fair" }));
+  expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["It's part of…", "Not a project"]);
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-5/ops/1/release"));
+  expect(screen.queryByRole("button", { name: "Do it anyway" })).toBeNull();
+});
+
+test("What changed shows a project the assistant found as information with a link to Today, and no Add", async () => {
+  besidePane();
+  const line = { key: "held:CS-5:1", group: "decide", kind: "held", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, request: "REQ-5", changeset: "CS-5", op: 1 } as S["QueueLineView"];
+  fakeApi({ ...projectRoutes, "GET today/queue": () => [line] });
+  renderApp(<WhatChanged />);
+  const pane = await screen.findByRole("complementary");
+  expect(await within(pane).findByText("Would add a project")).toBeInTheDocument();
+  expect(within(pane).getByText("Waiting for you")).toBeInTheDocument();
+  expect(within(pane).getByText("The Harvest Fair needs a plan")).toBeInTheDocument();
+  expect(within(pane).queryByRole("button", { name: "Add" })).toBeNull();
+  expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
 });

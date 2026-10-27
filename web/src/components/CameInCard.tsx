@@ -1,6 +1,7 @@
-// The Came in card of Today's rail (design 7.7): the mail that arrived, with a button that reads every source now. A card
-// with nothing in it is not drawn; it is drawn when mail arrived, a mailbox couldn't be read, or there is a mailbox to
-// connect (given only once setup is finished).
+// The Came in card of Today's rail (design 7.7): the mail that arrived, with a button that reads every source now, and one
+// quiet line counting the mail handled without the person today. A card with nothing in it is not drawn; it is drawn when
+// mail arrived, a mailbox couldn't be read, a source is connected (so "Check now" is there even when nothing came in), mail
+// was handled today, or there is a mailbox to connect (given only once setup is finished).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -8,6 +9,7 @@ import { useAct } from "../lib/act";
 import { localDate, wallTime, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
 import { anyReading } from "../lib/sources";
+import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
@@ -30,7 +32,7 @@ function checkedText(result: S["InboxCheckView"], t: T, tn: ReturnType<typeof us
 }
 
 /** The button that reads every source now and shows what arrived; it never replaces the sources' own schedule. */
-function CheckNow() {
+function CheckNow(props: { quiet?: boolean }) {
   const { t, tn } = useWords();
   const act = useAct();
   const client = useQueryClient();
@@ -63,7 +65,7 @@ function CheckNow() {
     setChecking(false);
   };
   return (
-    <button ref={button} type="button" className="btn small" disabled={checking} aria-busy={checking} onClick={() => void run()}>
+    <button ref={button} type="button" className={props.quiet ? "btn quiet small" : "btn small"} disabled={checking} aria-busy={checking} onClick={() => void run()}>
       {t(checking ? "today.arrived.checking" : "today.arrived.check")}
     </button>
   );
@@ -75,6 +77,8 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const sourceState = useSourceState(onAddSource, t("today.arrived.connect"), "mail");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const arrived = useQuery({ queryKey: ["today", "arrived"], queryFn: api.arrived });
+  const handled = useQuery({ queryKey: ["handled", "counts"], queryFn: api.handledCounts });
+  const handledToday = handled.data?.today ?? 0;
   const now = useNow();
   const today = localDate(now);
   const items = arrived.data?.items ?? [];
@@ -82,7 +86,9 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const sourceName = useSourceNames(items.map((m) => m.source));
   const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
   const settled = !arrived.isPending && !watch.isPending;
-  const drawn = arrived.isError || items.length > 0 || sourceState.problems.length > 0 || !!sourceState.button;
+  // A source that reads mail is connected: the card is there to read it now, even when nothing came in.
+  const connected = !!watch.data && watch.data.some((s) => s.enabled && (s.reads ?? ["mail"]).includes("mail"));
+  const drawn = arrived.isError || items.length > 0 || sourceState.problems.length > 0 || !!sourceState.button || connected || handledToday > 0;
 
   const card = (
     <RailPanel
@@ -99,7 +105,14 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
               : t("today.rail.nothing")
           : ""
       }
-      action={watch.data && anyReading(watch.data) ? <CheckNow /> : undefined}
+      action={watch.data && anyReading(watch.data) ? <CheckNow quiet={items.length === 0} /> : undefined}
+      footer={
+        handledToday > 0 ? (
+          <a href={viewHref("work/handled")} data-handled-today="">
+            {t("today.handled", { n: handledToday })}
+          </a>
+        ) : undefined
+      }
     >
       {arrived.isPending ? (
         <Skeleton />

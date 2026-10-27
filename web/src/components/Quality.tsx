@@ -144,7 +144,7 @@ export function Quality(props: { onBack: () => void }) {
   return (
     <section className="panel-section" aria-labelledby="quality-title">
       <div className="heading">
-        <h1 id="quality-title">{t("quality.title")}</h1>
+        <h1 id="quality-title">{t("quality.open")}</h1>
       </div>
       <p className="hint">
         <Button size="sm" variant="ghost" onClick={props.onBack}>

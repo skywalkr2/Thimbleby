@@ -73,6 +73,11 @@
 .rail > * { min-width: 0; }
 .railBody { padding: var(--space-2) var(--space-3); display: grid; align-content: start; gap: var(--space-3); }
 .railFoot { border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); }
+/* Links in the rail take the accent without an underline until the pointer or the keyboard is on them (day mode); links in
+   running text keep theirs. Night mode keeps every underline. */
+.rail :is(a, :global(.link-button)):not(:global(.btn)) { text-decoration-line: var(--rail-link-line); }
+.rail :is(a, :global(.link-button)):not(:global(.btn)):is(:hover, :focus-visible) { text-decoration-line: underline; }
+.rail p :is(a, :global(.link-button)):not(:global(.btn)) { text-decoration-line: underline; }
 
 /* A rail panel folded to one line on the phone, and the week's own pieces. */
 .fold { min-width: 0; border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-md); background: var(--surface); }

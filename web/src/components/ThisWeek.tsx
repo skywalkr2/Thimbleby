@@ -8,6 +8,7 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed } from "./RailPanel";
 import styles from "./Today.module.css";
+import { plainTitle } from "../lib/title-dates";
 
 type Week = S["ThisWeekView"];
 type T = ReturnType<typeof useWords>["t"];
@@ -58,7 +59,7 @@ export function WeekBody(props: { week: Week; listed?: ReadonlySet<string> }) {
               <li key={item.action} className="tb-row">
                 <span className="tb-when">{day(item.due)}</span>
                 <div className="tb-what">
-                  <div className="tb-title">{item.text}</div>
+                  <div className="tb-title">{plainTitle(item.text, item.due)}</div>
                   <div className="tb-meta">
                     {[item.kind === "hold" ? t("today.week.hold") : null, item.project_name, item.mine ? t("today.priorities.yours") : (item.owners ?? []).map((o) => o.name).join(", ")].filter(Boolean).join(" · ")}
                   </div>

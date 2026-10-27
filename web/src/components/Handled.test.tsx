@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
@@ -428,7 +428,7 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   await user.click(screen.getByRole("button", { name: "Read, nothing to do · 2" }));
   const heading = await screen.findByRole("heading", { name: "Closed without you seeing" });
   const section = heading.closest("section") as HTMLElement;
-  expect(within(section).getByText("2 of 4 closes in the last 14 days weren't seen by you.")).toBeInTheDocument();
+  expect(within(section).getByText("2 of 4 closed without you seeing them")).toBeInTheDocument();
   const rows = within(section).getAllByRole("listitem");
   expect(rows).toHaveLength(1);
   expect(rows[0]).toHaveTextContent("Question");
@@ -438,6 +438,23 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   await user.click(screen.getByRole("button", { name: "Set aside before reading · 6" }));
   await screen.findByRole("button", { name: "Sales and promotions · 2" });
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
+});
+
+test("one close that was not seen reads 1 of 3 closed without you seeing it, and none reads that everything was seen", async () => {
+  const user = userEvent.setup();
+  const closes = (silent: number): S["SilentClosesView"] => ({
+    ...NO_CLOSES,
+    count: silent,
+    closes: silent ? [{ ref: "changeset:CS-1:0", kind: "assistant", how: "dropped", title: "Ask about the venue", when: "2026-10-11T09:30:00+00:00", why: "no longer needed", item: "question" }] : [],
+    measure: { ...NO_CLOSES.measure, total: 3, silent, rate: silent / 3 },
+  });
+  open({ "GET silent-closes": () => closes(1) });
+  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  expect(await screen.findByText("1 of 3 closed without you seeing it")).toBeInTheDocument();
+  cleanup();
+  open({ "GET silent-closes": () => closes(0) });
+  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  expect(await screen.findByText("You saw everything closed in the last 14 days.")).toBeInTheDocument();
 });
 
 test("a kind filter narrows the list to one kind of item and asks the server for it", async () => {

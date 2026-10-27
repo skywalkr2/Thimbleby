@@ -355,3 +355,20 @@ def test_there_is_no_keep_set_aside_choice_anywhere(app):
     ):
         assert client.post(f"{base}/{path}", json={}).status_code in (404, 405), path
     assert item["id"] in ids(get(client, base, tab="set_aside")), "leaving a mail where it is changes nothing"
+
+
+def test_the_count_for_today_is_the_handled_mail_that_came_in_on_the_persons_day(app):
+    from datetime import timedelta
+
+    from engine import handled
+
+    ws, cfg, store, client, base = app
+    both = [r for tab in handled.TABS for r in handled.rows(ws, store, cfg, tab, NOW)]
+    newest = max(datetime.fromisoformat(r["received"]) for r in both)
+    day_of_it = handled.counts(ws, store, cfg, newest)
+    assert 1 <= day_of_it["today"] <= day_of_it["set_aside"] + day_of_it["read"]
+    # A few days on, the same mail is still listed but none of it came in today.
+    later = handled.counts(ws, store, cfg, newest + timedelta(days=3))
+    assert later["today"] == 0 and later["set_aside"] == day_of_it["set_aside"] and later["read"] == day_of_it["read"]
+    shown = client.get(f"{base}/handled/counts").json()
+    assert set(shown) == {"set_aside", "read", "today"}

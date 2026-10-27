@@ -1,6 +1,7 @@
+import { day } from "../lib/dates";
 import { settingsView } from "../lib/views";
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
@@ -309,7 +310,8 @@ test("the connect lines come back once setup is finished", async () => {
 });
 
 test("the empty line is said only when the queue is empty too", async () => {
-  const { calls } = open({ "GET today/agenda": () => [], "GET today/arrived": () => ({ items: [], left_out: 0 }), "GET watch": () => [watched("a")] }, vi.fn(), vi.fn(), false);
+  // A calendar source is on and nothing is in it: no card is drawn, and the line waits for the queue to be empty as well.
+  const { calls } = open({ "GET today/agenda": () => [], "GET today/arrived": () => ({ items: [], left_out: 0 }), "GET watch": () => [watched("a", { reads: ["calendar"] })] }, vi.fn(), vi.fn(), false);
   const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
   // Every card has answered once the rail has drawn nothing and the queue is the only thing that could have been empty.
   await waitFor(() => expect(calls.some((c) => c.route === "GET watch")).toBe(true));
@@ -357,13 +359,13 @@ test("when every source is off, the cards still offer Connect", async () => {
   expect(screen.queryByText(/^Checked /)).toBeNull();
 });
 
-test("with sources reading and nothing in them, no card is drawn, and nothing says checked or offers to connect", async () => {
+test("with calendar sources reading and nothing in them, no card is drawn, and nothing says checked or offers to connect", async () => {
   open(
     {
       ...EMPTY,
       "GET watch": () => [
-        watched("a", { last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 8, 5) }),
-        watched("c", { last: null, read_at: null }),
+        watched("a", { reads: ["calendar"], last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 8, 5) }),
+        watched("c", { reads: ["calendar"], last: null, read_at: null }),
       ],
     },
     vi.fn(),
@@ -509,8 +511,10 @@ test("an empty calendar card says the calendar couldn't be read, with why and wh
   expect(within(col).getByRole("alert")).toHaveTextContent("the service refused the sign-in. Sign in to it again");
   expect(within(col).queryByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeNull();
   expect(within(col).queryByText(/^Checked /)).toBeNull();
-  // The mail card has no unread source of its own and nothing in it, so it is not drawn.
-  expect(screen.queryByRole("region", { name: "Came in" })).toBeNull();
+  // The mail source reads fine and nothing came in, so Came in is drawn for Check now, not as a problem.
+  const mail = await column("Came in");
+  expect(within(mail).getByText("No mail has come in lately.")).toBeInTheDocument();
+  expect(within(mail).queryByRole("alert")).toBeNull();
 });
 
 test("an empty mail card says the mailbox wasn't read when there was no network, and the calendar card is unaffected", async () => {
@@ -642,4 +646,75 @@ test("on the phone a panel folded to one line says its source couldn't be read, 
   expect(await screen.findByRole("button", { name: "Came in · couldn't be read" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Schedule · nothing today" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Came in · nothing" })).toBeNull();
+});
+
+// ---- Check now when a source is on and nothing came in; the count of what was handled -------------------------------------
+
+const NOTHING_CAME = { "GET today/arrived": () => ({ items: [], left_out: 0 }), "GET today/agenda": () => [] };
+
+test("with a mailbox connected and nothing come in, Came in is drawn with a quiet Check now text button, and Check now works", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const calls = fakeApi(
+    routes({
+      ...NOTHING_CAME,
+      "GET watch": () => [watched("a", { reads: ["mail"] })],
+      "POST today/arrived/check": () => ({ items: [], left_out: 0, set_aside: 0, new_items: 0, sources_read: 1, sources_failed: 0, sources_busy: 0, problems: [] }),
+    }),
+  );
+  renderApp(<TodayRail onView={vi.fn()} />);
+  const col = await column("Came in");
+  expect(within(col).getByText("No mail has come in lately.")).toBeInTheDocument();
+  const check = within(col).getByRole("button", { name: "Check now" });
+  // A quiet text button: not the filled or tonal kind.
+  expect(check.className).toMatch(/\bquiet\b/);
+  expect(check.className).not.toMatch(/primary/);
+  await user.click(check);
+  await waitFor(() => expect(calls.some((c) => c.route === "POST today/arrived/check")).toBe(true));
+  expect(await screen.findByText("Nothing new")).toBeInTheDocument();
+});
+
+test("Check now keeps its usual look when mail came in, and is not drawn when no source is connected", async () => {
+  open({ "GET watch": () => [watched("a")] });
+  const col = await column("Came in");
+  expect((await within(col).findByRole("button", { name: "Check now" })).className).not.toMatch(/\bquiet\b/);
+  cleanup();
+  open({ ...NOTHING_CAME, "GET watch": () => [] });
+  expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
+});
+
+test("one quiet line counts what was handled for the person today and opens Handled for you; with none it is left out", async () => {
+  open({ "GET handled/counts": () => ({ set_aside: 9, read: 3, today: 12 }) });
+  const col = await column("Came in");
+  const link = await within(col).findByRole("link", { name: "12 handled for you today" });
+  expect(link.getAttribute("href")).toMatch(/#work\/handled$/);
+  cleanup();
+  open({ "GET handled/counts": () => ({ set_aside: 9, read: 3, today: 0 }) });
+  await within(await column("Came in")).findByText("2 messages");
+  expect(screen.queryByRole("link", { name: /handled for you/ })).toBeNull();
+});
+
+test("handled mail alone is enough to draw Came in, since the count is there to read", async () => {
+  open({ ...NOTHING_CAME, "GET watch": () => [], "GET handled/counts": () => ({ set_aside: 4, read: 0, today: 4 }) }, vi.fn(), undefined, true);
+  expect(await screen.findByRole("link", { name: "4 handled for you today" })).toBeInTheDocument();
+  expect(screen.queryByText("Nothing else needs you today")).toBeNull();
+});
+
+test("the week's list writes a date in a to-do's words as elsewhere, and drops the phrase the row's own day already says", async () => {
+  open({
+    "GET today/week": () => ({
+      first: "2026-10-05",
+      last: "2026-10-16",
+      due: [
+        { action: "ACT-5", text: `Send the venue list by ${TOMORROW}.`, due: TOMORROW, project: null, owners: [], mine: true, kind: "due" },
+        { action: "ACT-6", text: `Plan the move, done on ${LATER}`, due: TOMORROW, project: null, owners: [], mine: true, kind: "due" },
+      ],
+      waiting: [],
+      meetings: [],
+    }),
+  });
+  const col = await column("Schedule");
+  expect(await within(col).findByText("Send the venue list.")).toBeInTheDocument();
+  expect(within(col).getByText(`Plan the move, done on ${day(LATER)}`)).toBeInTheDocument();
+  expect(col.textContent).not.toMatch(/2026-10-1[24]/);
 });

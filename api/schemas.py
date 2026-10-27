@@ -4877,6 +4877,12 @@ class HandledCounts(BaseModel):
     read: int = Field(description="Mail read with nothing to do, whatever the search.")
 
 
+class HandledCountsToday(HandledCounts):
+    """The counts of both lists with how many of their mail came in on the person's own day, for a line that counts."""
+
+    today: int = Field(description="How many of the mail in either list came in on the person's own day.")
+
+
 class HandledKindCount(BaseModel):
     item: ItemKind
     count: int = Field(description="Rows of this kind in the chosen list, whatever the search.")
@@ -6626,7 +6632,13 @@ class BriefLineView(BaseModel):
     days: int | None = None
     minutes: int | None = None
     needed_minutes: int | None = Field(
-        None, description="For the capacity line: the effort, in minutes, of the to-dos due today or late."
+        None,
+        description="For the capacity line: the effort, in minutes, of the to-dos due today or late. For a clash with "
+        "too little travel time: the minutes the travel between the two meetings needs.",
+    )
+    place: str | None = Field(None, description="For a clash with too little travel time: where the first meeting is.")
+    other_place: str | None = Field(
+        None, description="For a clash with too little travel time: where the second meeting is."
     )
     when: datetime | None = Field(
         None, description="For a reminder offer: the moment the reminder would be set for, on the person's own clock."

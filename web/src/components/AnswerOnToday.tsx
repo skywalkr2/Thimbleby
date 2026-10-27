@@ -10,8 +10,14 @@ export function openOnToday(question: string): void {
   if (!revealOrKeep("question", question)) window.location.hash = toHash("today");
 }
 
-/** The link to a question's line on Today. A modified click (a new tab) keeps the link's own address. */
-export function AnswerOnToday(props: { question: string; describedBy?: string }) {
+/** Opens a line of Today's queue by its key, in the same way. */
+export function openLineOnToday(key: string): void {
+  if (!revealOrKeep("line", key)) window.location.hash = toHash("today");
+}
+
+/** The link to a line on Today: a question's, or any line by its key. A modified click (a new tab) keeps the link's own
+ * address. */
+export function AnswerOnToday(props: { question?: string; line?: string; describedBy?: string }) {
   const { t } = useWords();
   return (
     <a
@@ -21,7 +27,8 @@ export function AnswerOnToday(props: { question: string; describedBy?: string })
       onClick={(event) => {
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
-        openOnToday(props.question);
+        if (props.line) openLineOnToday(props.line);
+        else if (props.question) openOnToday(props.question);
       }}
     >
       {t("followups.answer_on_today")}

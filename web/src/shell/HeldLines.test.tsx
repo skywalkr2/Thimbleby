@@ -93,7 +93,7 @@ test("Restart now calls the restart route, and only the click does", async () =>
 test("when the app can't restart itself the line says to close and start it, with no button", async () => {
   show([line("restart", { count: 2 })], {}, false);
   const row = await screen.findByRole("region", { name: "Restart needed" });
-  await waitFor(() => expect(row).toHaveTextContent("Close and reopen the app to resume work."));
+  await waitFor(() => expect(row).toHaveTextContent("The app needs to restart for this change. Close it and open it again; the assistant waits until you do."));
   expect(within(row).queryByRole("button")).toBeNull();
 });
 

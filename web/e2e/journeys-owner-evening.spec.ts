@@ -189,7 +189,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(page.locator('[data-queue-line="clash"]').filter({ hasText: HALL })).toHaveCount(0);
     await visit(page);
 
-    // The one-time code is set aside under notices, and is not under Needs attention.
+    // The one-time code is set aside under notices, and is not in What changed, which is the history of the work.
     // It is on Handled for you, in the group of its reason, which is collapsed until it is opened.
     await openView(page, "Handled for you");
     const handled = page.locator("[data-handled]");
@@ -198,7 +198,6 @@ test.describe.serial("journey: the owner's first evening", () => {
     for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();
     await expect(handled.getByText("Your verification code")).toBeVisible();
     await openView(page, "What changed");
-    await page.getByRole("button", { name: /^Needs attention/ }).click();
     await expect(page.getByText("Your verification code")).toHaveCount(0);
 
     // The bill is a to-do with its amount and due day, under Personal.

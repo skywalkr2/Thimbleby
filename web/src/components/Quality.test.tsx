@@ -84,7 +84,9 @@ const section = (id: string) => document.querySelector<HTMLElement>(`[data-quali
 
 test("the screen has a section for each measure and shows the window's dates", async () => {
   show(FULL);
-  expect(screen.getByRole("heading", { level: 1, name: "Quality" })).toBeInTheDocument();
+  // The page is headed as the person's menu entry is, with the assistant's name.
+  expect(screen.getByRole("heading", { level: 1, name: "How Helper is doing" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1, name: "Quality" })).toBeNull();
   expect(await screen.findByText("Counting from Sep 21 to Oct 19.")).toBeInTheDocument();
   const titles = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
   expect(titles).toEqual([
@@ -267,4 +269,10 @@ test("a load that fails says so with Try again, and Back goes back", async () =>
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Back to Today" }));
   expect(back).toHaveBeenCalledTimes(1);
+});
+
+test("the heading says your assistant when it has no name", async () => {
+  fakeApi({ "GET quality": () => FULL });
+  renderApp(<Quality onBack={() => undefined} />, {}, { unnamed: true });
+  expect(screen.getByRole("heading", { level: 1, name: "How your assistant is doing" })).toBeInTheDocument();
 });

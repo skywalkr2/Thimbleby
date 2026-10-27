@@ -61,7 +61,9 @@ INVITATION_NEWS = (
 class Line:
     """One thing in a section: its `kind` (and `change`, `state` or `on` when the kind has variants), the words it
     names (`text`, `person_name`, `other`, `detail`), the days and times it is about (`day`, `at`, and for a move
-    `from_day` and `from_at`), how many days (`days`) or minutes (`minutes`) or things (`count`), the Today line it
+    `from_day` and `from_at`), how many days (`days`) or minutes (`minutes`) or things (`count`), for a clash with too
+    little travel time the minutes the travel needs (`needed_minutes`) and where each meeting is (`place`,
+    `other_place`), the Today line it
     opens (`queue`) or the record it opens (`link`), `ready` when a message is already drafted for it and `you` when it
     is the person themselves who owns it or did it."""
 
@@ -81,6 +83,8 @@ class Line:
     days: int | None = None
     minutes: int | None = None
     needed_minutes: int | None = None
+    place: str | None = None
+    other_place: str | None = None
     when: str | None = None
     count: int | None = None
     queue: str | None = None
@@ -411,6 +415,9 @@ def _clashes(c: _Day) -> list[Line]:
                 other=clash.second.item.title,
                 state=clash.state,
                 minutes=clash.minutes,
+                needed_minutes=clash.travel if clash.state == "travel" else None,
+                place=clash.first.item.where if clash.state == "travel" else None,
+                other_place=clash.second.item.where if clash.state == "travel" else None,
                 day=clash.day.isoformat(),
                 at=clash.at.strftime("%H:%M"),
                 link=link,

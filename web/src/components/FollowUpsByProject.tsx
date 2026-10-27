@@ -8,6 +8,7 @@ import { useListChoice, type ListChoice } from "../lib/list-choice";
 import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
+import { plainTitle } from "../lib/title-dates";
 
 type Section = S["FollowupSection"];
 
@@ -118,7 +119,7 @@ function ProjectItems(props: { group: Group; onOpenPerson: (person: string) => v
         <li key={item.id} className="child" data-row tabIndex={-1}>
           <div>
             <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
-            <div className="title">{item.title}</div>
+            <div className="title">{plainTitle(item.title)}</div>
             <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].filter(Boolean).join(" · ")}</div>
             <OriginLink origin={item.origin} />
           </div>

@@ -3,6 +3,7 @@
 // other answer is as specific, so nobody has to read the title again to know what they are agreeing to.
 import type { S } from "./api";
 import { day, wallWhen } from "./dates";
+import { plainTitle } from "./title-dates";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Tn = (key: string, n: number, vars?: Record<string, string | number>) => string;
@@ -34,7 +35,7 @@ function effortTime(held: S["HeldAsk"], t: T): string {
 
 /** A held line's title: the item as a question, named in quotes (design 7.6). */
 export function heldTitle(held: S["HeldAsk"], t: T): string {
-  const item = held.item;
+  const item = plainTitle(held.item);
   switch (held.ask) {
     case "ending":
       return t("queue.held.e.ending", { who: endingWho(held, t), item });

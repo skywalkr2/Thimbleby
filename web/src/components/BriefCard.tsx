@@ -18,6 +18,7 @@ import { reveal } from "../lib/reveal";
 import { useDraftAct, useSendOptions } from "../lib/acts";
 import { useToasts } from "../lib/toasts";
 import { useQueue, type QueueLine } from "../lib/today";
+import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { useLineTitle } from "./TodayQueue";
@@ -89,7 +90,7 @@ function heading(key: string, t: T): string {
 }
 
 function invitation(line: Line, t: T): string {
-  const vars = { name: line.person_name ?? "", text: line.text ?? "", date: day(line.day), time: clock(line.at), from: [day(line.from_day), clock(line.from_at)].filter(Boolean).join(" "), place: line.detail ?? "" };
+  const vars = { name: line.person_name ?? "", text: plainTitle(line.text ?? ""), date: day(line.day), time: clock(line.at), from: [day(line.from_day), clock(line.from_at)].filter(Boolean).join(" "), place: line.detail ?? "" };
   switch (line.change) {
     case "new":
       return line.person_name ? t(line.at ? "brief.line.invitation.new_at" : "brief.line.invitation.new", vars) : t(line.at ? "brief.line.invitation.new_unnamed_at" : "brief.line.invitation.new_unnamed", vars);
@@ -125,7 +126,7 @@ function useLineWords(): (line: Line, queue: QueueLine | undefined) => string {
 
 function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title: (q: QueueLine) => string): string {
   const name = line.person_name ?? "";
-  const text = line.text ?? "";
+  const text = plainTitle(line.text ?? "");
   const date = day(line.day);
   switch (line.kind) {
     case "closed":
@@ -146,8 +147,14 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
     case "owed_late":
       return tn("brief.line.owed_late", line.days ?? 0, { name, text });
     case "clash":     {
-      const vars = { text, other: line.other ?? "", date, time: clock(line.at) };
-      return line.state === "travel" ? tn("brief.line.clash.travel", line.minutes ?? 0, vars) : tn("brief.line.clash", line.minutes ?? 0, vars);
+      const vars = { text, other: plainTitle(line.other ?? ""), date, time: clock(line.at) };
+      if (line.state !== "travel") return tn("brief.line.clash", line.minutes ?? 0, vars);
+      // The time between the meetings is what the travel asked for less what falls short.
+      const need = line.needed_minutes ?? 0;
+      const between = Math.max(0, need - (line.minutes ?? 0));
+      return line.place && line.other_place
+        ? tn("brief.line.clash.travel", between, { ...vars, need, from: line.place, to: line.other_place })
+        : tn("brief.line.clash.travel_apart", between, { ...vars, need });
     }
     case "capacity":
       return t("brief.line.capacity", { needed: durationWords(line.needed_minutes ?? 0, tn), free: durationWords(line.minutes ?? 0, tn) });
@@ -459,11 +466,13 @@ export function BriefCard(props: {
           )}
         </h2>
         <div className={styles.headActions}>
-          {others.map((f) => (
-            <Button key={f} onClick={() => setAsked(f)}>
-              {showWords(f)}
-            </Button>
-          ))}
+          {/* A day with nothing in it has no other forms to ask for: the brief shows by itself at its time. */}
+          {!data.quiet &&
+            others.map((f) => (
+              <Button key={f} onClick={() => setAsked(f)}>
+                {showWords(f)}
+              </Button>
+            ))}
           <Button
             onClick={() => {
               closeFor(props.workspace, form, data.day);

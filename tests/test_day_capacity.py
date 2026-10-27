@@ -280,6 +280,14 @@ def test_clashes_after_today_include_too_little_travel_time_and_stop_at_the_days
     assert next(x for x in lines if x.state == "overlap").travel_minutes is None
     in_brief = [x for s in brief.build(ws, store, cfg, NOW, "morning").sections for x in s.lines if x.kind == "clash"]
     assert [(x.state, x.minutes, x.day) for x in in_brief] == [("overlap", 15, day(1)), ("travel", travel - 10, day(2))]
+    # The brief says what the travel needs and where each meeting is, so its line can name the gap and the places.
+    in_brief_travel = next(x for x in in_brief if x.state == "travel")
+    assert (in_brief_travel.needed_minutes, in_brief_travel.place, in_brief_travel.other_place) == (
+        travel,
+        "North office",
+        "South office",
+    )
+    assert (next(x for x in in_brief if x.state == "overlap").needed_minutes) is None
 
 
 def test_a_clash_line_names_both_calendars_and_times_and_its_fine_mark_hides_only_that_clash(env):

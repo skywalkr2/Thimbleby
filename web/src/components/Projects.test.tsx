@@ -234,7 +234,7 @@ test("the form's Your role list changes the part the person has, with Undo", asy
   renderApp(<Projects />);
   const dialog = await edit(user, "Watched one");
   const role = within(dialog).getByRole("combobox", { name: /Your role/ });
-  expect(within(role).getAllByRole("option").map((o) => o.textContent)).toEqual(["Run it", "Design for it", "Only watch it"]);
+  expect(within(role).getAllByRole("option").map((o) => o.textContent)).toEqual(["Start", "Design for it", "Only watch it"]);
   expect(role).toHaveValue("watch");
   await user.selectOptions(role, "run");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));

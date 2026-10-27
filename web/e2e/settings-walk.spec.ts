@@ -169,12 +169,12 @@ test("Add-ons holds the catalog settings in a closed section named For developer
   await notWider(page, "Knowledge");
 });
 
-test("How the assistant is doing is in the person's menu, and opens Quality without the Settings side bar", async ({ page }) => {
+test("How the assistant is doing is in the person's menu, and opens the page headed the same without the Settings side bar", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("?token=e2e-token");
   await page.getByRole("button", { name: /^Change appearance, / }).click();
   await page.getByRole("menuitem", { name: /^How .+ is doing$/ }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Quality", exact: true })).toBeVisible(LOADED);
+  await expect(page.getByRole("heading", { level: 1, name: /^How .+ is doing$/ })).toBeVisible(LOADED);
   expect(new URL(page.url()).hash).toBe("#quality");
   await expect(bar(page)).toHaveCount(0);
 });

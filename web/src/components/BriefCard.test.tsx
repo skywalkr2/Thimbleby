@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
+import { day } from "../lib/dates";
 import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
 import { BriefCard } from "./BriefCard";
 
@@ -169,6 +170,19 @@ test("closing the card for the day hides it, is remembered for that day only, an
   cleanup();
   show({ ...EVENING });
   expect(await screen.findByRole("heading", { level: 2, name: "Evening wrap-up" })).toBeInTheDocument();
+});
+
+test("on a quiet day the card has no buttons for the other forms, and on a day with something in it it has them", async () => {
+  const forms: Brief["forms"] = ["morning", "evening", "monday"];
+  show({ ...QUIET, forms, message: { state: "none", to: [{ person: "PER-9", name: "Lena Example" }] } });
+  expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^Show the/ })).toBeNull();
+  // Closing for the day is still there.
+  expect(screen.getByRole("button", { name: "Close for today" })).toBeInTheDocument();
+  cleanup();
+  show({ ...MORNING, forms });
+  expect(await screen.findByRole("button", { name: "Show the evening wrap-up" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show the Monday briefing" })).toBeInTheDocument();
 });
 
 test("another form that is due can be shown from the card", async () => {
@@ -352,7 +366,7 @@ const MORE: Brief = {
       more: 0,
       lines: [
         line({ key: "capacity", kind: "capacity", minutes: 30, needed_minutes: 180, count: 2, queue: "capacity" }),
-        line({ key: "clash:a:b:2026-10-22", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", minutes: 20, day: "2026-10-22", at: "11:10" }),
+        line({ key: "clash:a:b:2026-10-22", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", minutes: 20, needed_minutes: 30, place: "Room 4", other_place: "Room 2", day: "2026-10-22", at: "11:10" }),
       ],
     },
     {
@@ -370,7 +384,21 @@ test("the capacity line says what the to-dos need and what the calendar has, and
   show(MORE);
   await screen.findByRole("heading", { level: 2, name: "Morning brief" });
   expect(screen.getByText("Your to-dos need about 3 hours; your calendar has about 30 minutes free")).toBeInTheDocument();
-  expect(screen.getByText("Site visit and Supplier call leave 20 minutes too little to travel between them on Thu, Oct 22 from 11:10 AM")).toBeInTheDocument();
+  // The travel line says how many minutes are between the meetings, how many the travel needs, and where each one is.
+  expect(screen.getByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 10 minutes between them; you need about 30 to get from Room 4 to Room 2")).toBeInTheDocument();
+  expect(screen.queryByText(/too little to travel/)).toBeNull();
+});
+
+test("a travel clash whose meetings have no places says it for getting from one to the other, and a minute reads as one", async () => {
+  const travel = (over: Partial<Line>) => line({ key: "clash:x", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", day: "2026-10-22", at: "11:10", ...over });
+  show({ ...MORE, sections: [{ key: "risk", more: 0, lines: [travel({ minutes: 29, needed_minutes: 30 })] }] });
+  expect(await screen.findByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 1 minute between them; you need about 30 to get from one to the other")).toBeInTheDocument();
+});
+
+test("a title with a raw date in it never shows it in the brief: the date is written as elsewhere", async () => {
+  show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [line({ key: "own:ACT-9", kind: "own_due", text: "Send the venue list by 2026-11-02", state: "today", day: "2026-10-20", days: 0 })] }] });
+  expect(await screen.findByText(`Send the venue list by ${day("2026-11-02")} is due today`)).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/2026-11-02/);
 });
 
 test("a reminder offer says when and Remind me sets it at that moment, with Undo", async () => {

@@ -14,7 +14,7 @@ from api.schemas import (
     CloseKindCountView,
     CloseMeasureView,
     Created,
-    HandledCounts,
+    HandledCountsToday,
     HandledDone,
     HandledView,
     IntakeSeen,
@@ -501,9 +501,9 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return HandledView.model_validate(found)
 
     @r.get("/handled/counts")
-    def handled_counts() -> HandledCounts:
+    def handled_counts() -> HandledCountsToday:
         """How many each of the two lists holds, for a line that only counts."""
-        return HandledCounts.model_validate(handled.counts(ws, store, current(), worker.now()))
+        return HandledCountsToday.model_validate(handled.counts(ws, store, current(), worker.now()))
 
     def handled_done(snapshot_id: str, request: str | None = None) -> HandledDone:
         snap = store.read().get("snapshot", snapshot_id)

@@ -127,6 +127,7 @@
   --band-bg: transparent; --band-text: var(--text-muted); --band-bottom: 0 solid transparent;
   --row-title-weight: var(--weight-medium);
   --pill-neutral-bg: transparent; --pill-neutral-edge: inset 0 0 0 1px var(--border);
+  --rail-link-line: none;
   color-scheme: light;
 }
 
@@ -165,6 +166,7 @@
     --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
     --row-title-weight: var(--weight-semibold);
     --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
+    --rail-link-line: underline;
     color-scheme: dark;
   }
 }
@@ -202,6 +204,7 @@
   --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
   --row-title-weight: var(--weight-semibold);
   --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
+  --rail-link-line: underline;
   color-scheme: dark;
 }
 

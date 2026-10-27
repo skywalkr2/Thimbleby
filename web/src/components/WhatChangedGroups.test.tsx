@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
-import { WhatChanged } from "./WhatChanged";
+import { ChangeRow, WhatChanged } from "./WhatChanged";
 
 // The window is wide, so a change's detail stands beside the list (design 7.13).
 beforeEach(() => besidePane());
@@ -22,6 +22,9 @@ const op = (index: number, status: S["OpView"]["status"], answerGroup: string | 
   record: null,
   ask: null,
 });
+
+/** A line of Today's queue that asks one held change. */
+const todayLine = (key: string, index: number): S["QueueLineView"] => ({ key, group: "decide", kind: "held", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, changeset: "CS-1", op: index });
 
 /** An answer the task kind grouped: two notes that stand, a group with one change waiting, and a plain one. */
 function grouped(ops: S["OpView"][], groups: S["AnswerGroupView"][]): S["ChangeItem"] {
@@ -49,7 +52,7 @@ const GROUPS: S["AnswerGroupView"][] = [
 const OPS = [op(0, "applied", "Asides", "First aside"), op(1, "applied", "Asides", "Second aside"), op(2, "applied", "Structure", "A shelf"), op(3, "held", "Structure", "Closing chapter"), op(4, "applied", null, "Looked at everything")];
 
 test("an answer the task kind grouped is one row for each group, and the ops in a group are not listed again", async () => {
-  fakeApi({ "GET changes": () => [grouped(OPS, GROUPS)] });
+  fakeApi({ "GET changes": () => [grouped(OPS, GROUPS)], "GET today/queue": () => [todayLine("held:CS-1:3", 3)] });
   renderApp(<WhatChanged />);
   const asides = (await screen.findByText("Asides")).closest("li")!;
   expect(within(asides).getByText("2 done")).toBeInTheDocument();
@@ -58,24 +61,10 @@ test("an answer the task kind grouped is one row for each group, and the ops in 
   expect(screen.getByText("Looked at everything")).toBeInTheDocument(); // an op with no group keeps its own row
   expect(screen.queryByText("First aside")).toBeNull();
   expect(screen.queryByText("Closing chapter")).toBeNull();
-  // Keep is offered only where something waits.
-  expect(within(asides).queryByRole("button", { name: "Keep" })).toBeNull();
-  expect(within(structure).getByRole("button", { name: "Keep" })).toBeInTheDocument();
-});
-
-test("Keep releases a group's held changes at once and offers Undo for what it released", async () => {
-  const user = userEvent.setup();
-  const calls = fakeApi({
-    "GET changes": () => [grouped(OPS, GROUPS)],
-    "POST changesets/CS-1/groups/1/keep": () => ({ released: [3], restored: [], declined: [], skipped: [] }),
-    "POST changesets/CS-1/undo": () => ({ restored: [3], skipped: [] }),
-  });
-  renderApp(<WhatChanged />);
-  const structure = (await screen.findByText("Structure")).closest("li")!;
-  await user.click(within(structure).getByRole("button", { name: "Keep" }));
-  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-1/groups/1/keep"));
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [3] }));
+  // The history has no Keep: where something waits, its row links to the line on Today that asks it.
+  expect(within(asides).queryByRole("link", { name: "Answer on Today" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Keep" })).toBeNull();
+  expect(await within(structure).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
 });
 
 test("Drop is in the group's menu, drops the whole group, and says what it left", async () => {
@@ -91,24 +80,35 @@ test("Drop is in the group's menu, drops the whole group, and says what it left"
   expect(await screen.findByText("Done, except 1 item, which need a look.")).toBeInTheDocument();
 });
 
-test("Release all is offered when more than one change waits, with one Undo", async () => {
-  const user = userEvent.setup();
+test("the history has no Release all, however many changes wait: each is answered on its line on Today", async () => {
   const waiting = [op(0, "held", null, "First waiting"), op(1, "held", null, "Second waiting")];
-  const calls = fakeApi({
-    "GET changes": () => [grouped(waiting, [])],
-    "POST changesets/CS-1/release-all": () => ({ released: [0, 1], restored: [], declined: [], skipped: [] }),
-    "POST changesets/CS-1/undo": () => ({ restored: [0, 1], skipped: [] }),
-  });
+  fakeApi({ "GET changes": () => [grouped(waiting, [])], "GET today/queue": () => [todayLine("held:CS-1:0", 0), todayLine("held:CS-1:1", 1)] });
   renderApp(<WhatChanged />);
-  await user.click(await screen.findByRole("button", { name: "Release all" }));
-  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-1/release-all"));
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [0, 1] }));
+  expect(await screen.findByText("First waiting")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Release all" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Do it anyway" })).toBeNull();
+  expect(await screen.findAllByRole("link", { name: "Answer on Today" })).toHaveLength(2);
 });
 
-test("one change waiting has no Release all", async () => {
-  fakeApi({ "GET changes": () => [grouped([op(0, "held", null, "Only waiting")], [])] });
-  renderApp(<WhatChanged />);
-  expect(await screen.findByText("Only waiting")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Release all" })).toBeNull();
+// The same change opened from Today's review line keeps its buttons: that is where it is answered.
+test("on Today's review line a group has Keep and the answer has Release all, each with one Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "POST changesets/CS-1/groups/1/keep": () => ({ released: [3], restored: [], declined: [], skipped: [] }),
+    "POST changesets/CS-1/release-all": () => ({ released: [3, 5], restored: [], declined: [], skipped: [] }),
+    "POST changesets/CS-1/undo": () => ({ restored: [3], skipped: [] }),
+  });
+  const ops = [...OPS, op(5, "held", null, "Another waiting")];
+  renderApp(
+    <ol>
+      <ChangeRow item={grouped(ops, GROUPS)} reveal={0} open />
+    </ol>,
+  );
+  const structure = (await screen.findByText("Structure")).closest("li")!;
+  await user.click(within(structure).getByRole("button", { name: "Keep" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-1/groups/1/keep"));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [3] }));
+  await user.click(await screen.findByRole("button", { name: "Release all" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-1/release-all"));
 });

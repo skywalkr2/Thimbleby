@@ -14,6 +14,22 @@ afterEach(() => vi.unstubAllGlobals());
 /** The detail pane beside the list: the chosen change in full. */
 const findPane = () => screen.findByRole("complementary");
 
+/** A line of Today's queue for a held item, as the queue serves it. */
+function todayLine(over: Partial<S["QueueLineView"]>): S["QueueLineView"] {
+  return { key: "x", group: "decide", kind: "held", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...over };
+}
+
+/** Records the lines the screen asks Today to open, in place of Today being on screen. */
+function watchReveals() {
+  const seen: Array<{ type: string; id: string }> = [];
+  const on = (event: Event) => {
+    seen.push((event as CustomEvent).detail);
+    event.preventDefault();
+  };
+  window.addEventListener("reveal-row", on);
+  return { seen, stop: () => window.removeEventListener("reveal-row", on) };
+}
+
 /** What changed is the history: a row has no button, so each choice is the first entry of its menu or one of the others. */
 async function choose(user: ReturnType<typeof userEvent.setup>, name: string, row?: HTMLElement) {
   const scope = row ? within(row) : screen;
@@ -133,7 +149,7 @@ test("send back needs a note", async () => {
   await waitFor(() => expect(calls.find((c) => c.route.endsWith("send-back"))?.body).toEqual({ note: "That date is the courier's, not the printer's" }));
 });
 
-test("a who-is question offers the likely people first", async () => {
+test("a who-is question is information in the history, with one link that opens its line on Today", async () => {
   const user = userEvent.setup();
   const held = change("REQ-3");
   held.changeset!.ops[0] = {
@@ -146,18 +162,25 @@ test("a who-is question offers the likely people first", async () => {
   };
   const calls = fakeApi({
     "GET changes": () => [held],
-    "GET people": () => [
-      { id: "PER-2", name: "Robin Sample", role: "Editor" },
-      { id: "PER-5", name: "Robin Other", role: "Designer" },
-      { id: "PER-9", name: "Lee Third", role: null },
-    ],
-    "POST questions/Q-7/answer": () => ({ ok: "Q-7" }),
+    "GET today/queue": () => [todayLine({ key: "question:Q-7", kind: "who_is", changeset: "CS-REQ-3", op: 0, question: "Q-7" })],
   });
-  renderApp(<WhatChanged />);
-  const picker = await screen.findByRole("combobox", { name: "Who is “Robin”?" });
-  await user.selectOptions(picker, "PER-5");
-  await user.click(screen.getByRole("button", { name: "Use this person" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-7/answer")?.body).toEqual({ person: "PER-5" }));
+  const reveals = watchReveals();
+  try {
+    renderApp(<WhatChanged />);
+    const pane = await findPane();
+    // It is said as a fact, in the pane's full width, and nothing in it answers the question.
+    expect(await within(pane).findByText("Waiting for you")).toBeInTheDocument();
+    expect(within(pane).getByText("Send spine options")).toBeInTheDocument();
+    expect(within(pane).getByText("proof copies will ship on November 5", { exact: false })).toBeInTheDocument();
+    expect(within(pane).queryByRole("combobox")).toBeNull();
+    expect(within(pane).queryByRole("button", { name: "Use this person" })).toBeNull();
+    const link = await within(pane).findByRole("link", { name: "Answer on Today" });
+    await user.click(link);
+    expect(reveals.seen).toEqual([{ type: "line", id: "question:Q-7" }]);
+    expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
+  } finally {
+    reveals.stop();
+  }
 });
 
 test("when nothing was recorded, the row says so and never shows the assistant's summary", async () => {
@@ -250,7 +273,7 @@ test("a stopped hand-in has Try again first in its menu, with Dismiss, and Dismi
   );
 });
 
-test("a review row has no Dismiss, and a dismissed hand-in leaves Needs attention and is labeled in Done", async () => {
+test("a review row has no Dismiss, a dismissed hand-in is labeled in the list, and Done leaves out what still waits", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET changes": () => [
@@ -259,19 +282,21 @@ test("a review row has no Dismiss, and a dismissed hand-in leaves Needs attentio
     ],
   });
   renderApp(<WhatChanged />);
-  await screen.findByText("Email from the printer");
-  expect(screen.queryByText("Dismissed")).toBeNull();
+  // The list opens on everything, newest first: the review and the dismissed hand-in are both there.
+  await screen.findByRole("listitem", { name: "Email from the printer" });
+  expect(screen.getByRole("listitem", { name: "File the printer's dates" })).toBeInTheDocument();
+  expect(screen.getAllByText("Dismissed").length).toBeGreaterThan(0);
+  expect(screen.queryByRole("button", { name: /^Needs attention/ })).toBeNull();
   await user.click(screen.getAllByRole("button", { name: /More actions for/ })[0]);
   expect(await screen.findByRole("menuitem", { name: "Send back with a note" })).toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Dismiss" })).toBeNull();
   await user.keyboard("{Escape}");
   await user.click(screen.getByRole("button", { name: "Done" }));
-  // The dismissed hand-in is the first in Done, so its detail stands beside the list as well.
-  expect((await screen.findAllByText("Dismissed")).length).toBeGreaterThan(0);
+  // The dismissed hand-in is finished, so it stays; the change nobody has checked yet is not.
+  expect(await screen.findByRole("listitem", { name: "File the printer's dates" })).toBeInTheDocument();
   expect(screen.getAllByText(/you dismissed it/).length).toBeGreaterThan(0);
-  expect(screen.queryByText("Email from the printer")).toBeNull();
+  expect(screen.queryByRole("listitem", { name: "Email from the printer" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "All" }));
-  expect(screen.getAllByText("Dismissed").length).toBeGreaterThan(0);
   expect(screen.getByRole("listitem", { name: "Email from the printer" })).toBeInTheDocument();
 });
 
@@ -526,7 +551,7 @@ test("a Today line for a new source's intake narrows the list to what that intak
 // ---- the first results are one clear list ----------------------------------------------------------------------------
 
 function asking(id: string, who: string): S["ChangeItem"] {
-  const item = change(id, { state: "done" });
+  const item = change(id, { state: "done", source_title: `Question from ${who}` });
   item.changeset!.ops[0] = {
     ...item.changeset!.ops[0],
     op: "action.add",
@@ -542,7 +567,7 @@ test("rows that arrive while the list shows nothing appear at once, never as N n
   let rows: S["ChangeItem"][] = [];
   fakeApi({ "GET changes": () => rows, "GET people": () => [] });
   const { client } = renderApp(<WhatChanged />);
-  expect(await screen.findByText(/Nothing needs/i)).toBeInTheDocument();
+  expect(await screen.findByText(/Nothing here yet/i)).toBeInTheDocument();
   rows = [change("REQ-1"), change("REQ-2"), change("REQ-3")];
   await client.invalidateQueries();
   // Three rows at once (the first open, the others one line each), never "3 new" over nothing.
@@ -561,18 +586,20 @@ test("rows that arrive while the list shows others still wait behind N new", asy
   expect(screen.getAllByText("Proof copies ship Nov 5")).toHaveLength(1);
 });
 
-test("a change that holds a question for the person is the one chosen first, and every such change shows it in its detail", async () => {
+test("the newest change is the one chosen first, and a change that holds a question shows it as information with a link to Today", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET changes": () => [change("REQ-0", { source_title: "Nothing asked here" }), asking("REQ-1", "Robin"), asking("REQ-2", "Sam")],
-    "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: "Editor" }],
+    "GET today/queue": () => [todayLine({ key: "question:Q-REQ-1", kind: "who_is", changeset: "CS-REQ-1", op: 0, question: "Q-REQ-1" })],
   });
   renderApp(<WhatChanged />);
-  // The first change is not chosen, because the second holds a question.
-  expect(await within(await findPane()).findByRole("combobox", { name: "Who is “Robin”?" })).toBeInTheDocument();
-  expect(document.querySelector("[aria-current]")?.getAttribute("data-choice")).toBe("REQ-1");
-  await user.click(screen.getByRole("listitem", { name: "Nothing asked here" }));
-  expect(within(await findPane()).queryByRole("combobox")).toBeNull();
+  // The first change in the list is chosen, whether or not a later one holds a question.
+  await within(await findPane()).findByRole("heading", { name: "Nothing asked here" });
+  expect(document.querySelector("[aria-current]")?.getAttribute("data-choice")).toBe("REQ-0");
+  await user.click(screen.getByRole("listitem", { name: "Question from Robin" }));
+  const pane = await findPane();
+  expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
+  expect(within(pane).queryByRole("combobox")).toBeNull();
 });
 
 // What changed is the history (design 7.3, 7.7): the review is on Today's review line, so a phone has no one-at-a-time review here.
@@ -673,40 +700,56 @@ function heldDrop(): S["ChangeItem"] {
   return item;
 }
 
-test("a held drop on the change's card has the line's two buttons, and who was told leads it", async () => {
+test("a held drop in the history is information with who was told, the quote and one link, and no button", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
     "GET changes": () => [heldDrop()],
-    "POST changesets/CS-REQ-5/ops/0/release": () => ({ ok: "CS-REQ-5" }),
-    "POST changesets/CS-REQ-5/ops/0/decline": () => ({ ok: "CS-REQ-5" }),
-    "POST changesets/CS-REQ-5/ops/0/undecline": () => ({ ok: "CS-REQ-5" }),
+    "GET today/queue": () => [todayLine({ key: "held:CS-REQ-5:0", kind: "held", changeset: "CS-REQ-5", op: 0 })],
+    "GET sources/SRC-1": () => ({ id: "SRC-1", title: "Email from the printer", kind: "pasted", trust: "untrusted", received_at: "2026-10-09T14:00:00Z", url: null, text: "Note: the seating plan is no longer needed." }),
   });
-  renderApp(<WhatChanged />);
-  const op = (await screen.findByText("Confirm the seating plan")).closest("li") as HTMLElement;
-  // The same two answers as the line, in the same words; never "Do it anyway".
-  expect(within(op).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
-  expect(within(op).getByRole("button", { name: "Keep it" })).toBeInTheDocument();
-  expect(within(op).queryByRole("button", { name: "Do it anyway" })).toBeNull();
-  // Who was told is the reason it is held, so it comes first.
-  const told = within(op).getByText(`Casey Moor, Robin Sample were told on ${day("2026-10-10")}`);
-  expect(told.tagName).toBe("STRONG");
-  expect(op.firstElementChild!.firstElementChild).toContainElement(told);
-  await user.click(within(op).getByRole("button", { name: "Keep it" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-5/ops/0/decline")).toBe(true));
-  expect(calls.some((c) => c.route.includes("/release"))).toBe(false);
-  await user.click(within(op).getByRole("button", { name: "Drop it" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-5/ops/0/release")).toBe(true));
+  const reveals = watchReveals();
+  try {
+    renderApp(<WhatChanged />);
+    const pane = await findPane();
+    const op = (await within(pane).findByText("Confirm the seating plan")).closest("li") as HTMLElement;
+    expect(within(op).getByText("Would drop a to-do")).toBeInTheDocument();
+    expect(within(op).getByText("Waiting for you")).toBeInTheDocument();
+    // None of the line's answers is here: the choice is made on Today.
+    for (const name of ["Drop it", "Keep it", "Do it anyway", "Release all", "Keep"]) expect(within(pane).queryByRole("button", { name }), name).toBeNull();
+    // Who was told is the reason it is held, so it comes first.
+    const told = within(op).getByText(`Casey Moor, Robin Sample were told on ${day("2026-10-10")}`);
+    expect(told.tagName).toBe("STRONG");
+    expect(op.firstElementChild!.firstElementChild).toContainElement(told);
+    expect(within(op).getByText("the seating plan is no longer needed")).toBeInTheDocument();
+    expect(within(op).getByRole("button", { name: "Show source" })).toBeInTheDocument();
+    // Exactly one way on: the link, which opens the held line.
+    await user.click(await within(op).findByRole("link", { name: "Answer on Today" }));
+    expect(reveals.seen).toEqual([{ type: "line", id: "held:CS-REQ-5:0" }]);
+    expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
+  } finally {
+    reveals.stop();
+  }
 });
 
-test("a held change the engine doesn't ask as a question keeps its one button and its reason", async () => {
+test("a held change the engine doesn't ask as a question shows its reason and the link, never Do it anyway", async () => {
   const item = heldDrop();
   item.changeset!.ops[0].held = null;
   item.changeset!.ops[0].reason = "A way to reach someone waits for your confirmation.";
-  fakeApi({ "GET changes": () => [item] });
+  fakeApi({ "GET changes": () => [item], "GET today/queue": () => [todayLine({ key: "held:CS-REQ-5:0", changeset: "CS-REQ-5", op: 0 })] });
   renderApp(<WhatChanged />);
   const op = (await screen.findByText("Confirm the seating plan")).closest("li") as HTMLElement;
-  expect(within(op).getByRole("button", { name: "Do it anyway" })).toBeInTheDocument();
+  expect(within(op).queryByRole("button", { name: "Do it anyway" })).toBeNull();
   expect(within(op).getByText("A way to reach someone waits for your confirmation.")).toBeInTheDocument();
+  expect(await within(op).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
+});
+
+test("a held item with no line on Today (its change was dismissed) is information only, with no link", async () => {
+  const item = heldDrop();
+  fakeApi({ "GET changes": () => [item], "GET today/queue": () => [] });
+  renderApp(<WhatChanged />);
+  const op = (await screen.findByText("Confirm the seating plan")).closest("li") as HTMLElement;
+  expect(within(op).getByText("Waiting for you")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("link", { name: "Answer on Today" })).toBeNull());
 });
 
 test("a change made from what the person typed is titled Your note, with their words under it", async () => {
@@ -747,4 +790,98 @@ test("a quiet count of what was handled for the person links to Handled for you,
   renderApp(<WhatChanged />);
   await screen.findByText(/Nothing/);
   expect(screen.queryByRole("link", { name: /handled for you/ })).not.toBeInTheDocument();
+});
+
+// ---- the history opens on everything, and what waits is counted once, with a link to Today --------------------------------
+
+const QUIET: Record<string, () => unknown> = {
+  "GET plugin-today": () => [],
+  "GET stages/requests": () => [],
+  "GET stages/records": () => [],
+  "GET stages/ready": () => [],
+  "GET acts": () => ({ acts: [] }),
+};
+
+test("the list opens on All with the newest first, and Needs attention is not a choice", async () => {
+  fakeApi({
+    "GET changes": () => [change("REQ-2", { source_title: "Newest thing", created_at: "2026-10-10T09:00:00Z" }), change("REQ-1", { state: "done", source_title: "Older thing" })],
+    ...QUIET,
+  });
+  renderApp(<WhatChanged />);
+  await screen.findByRole("listitem", { name: "Newest thing" });
+  expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "false");
+  expect(screen.queryByRole("button", { name: /Needs attention/ })).toBeNull();
+  const titles = screen.getAllByRole("listitem").filter((li) => li.hasAttribute("data-choice")).map((li) => li.getAttribute("aria-labelledby"));
+  expect(titles).toEqual(["t-REQ-2", "t-REQ-1"]);
+});
+
+test("one line at the top counts what waits on Today and opens it, and is left out when nothing waits", async () => {
+  const lines = [todayLine({ key: "held:CS-1:0" }), todayLine({ key: "review:REQ-1", group: "review", kind: "review" })];
+  fakeApi({ "GET changes": () => [change("REQ-1")], "GET today/queue": () => lines, ...QUIET });
+  const view = renderApp(<WhatChanged />);
+  const line = await screen.findByText(/2 things wait for you on Today/);
+  expect(line.closest("p")).toHaveTextContent("2 things wait for you on Today · Open Today");
+  expect(within(line.closest("p") as HTMLElement).getByRole("link", { name: "Open Today" }).getAttribute("href")).toMatch(/#today$/);
+  view.unmount();
+  fakeApi({ "GET changes": () => [change("REQ-1")], "GET today/queue": () => [lines[0]], ...QUIET });
+  const one = renderApp(<WhatChanged />);
+  expect(await screen.findByText(/1 thing waits for you on Today/)).toBeInTheDocument();
+  one.unmount();
+  fakeApi({ "GET changes": () => [change("REQ-1")], "GET today/queue": () => [], ...QUIET });
+  renderApp(<WhatChanged />);
+  await screen.findByRole("listitem", { name: "Email from the printer" });
+  expect(screen.queryByText(/wait for you on Today|waits for you on Today/)).toBeNull();
+});
+
+test("the first go and a stage's go are not rows of the history: runs waiting for them are counted in the line, not listed", async () => {
+  fakeApi({
+    "GET changes": () => [
+      change("REQ-1"),
+      stopped({ id: "REQ-8", first_go: true, approval: "required", estimate_usd: 0.3, source_title: "Waiting for the first go", waiting: "About $0.30" }),
+    ],
+    "GET today/queue": () => [todayLine({ key: "first_go", kind: "first_go" })],
+    ...QUIET,
+  });
+  renderApp(<WhatChanged />);
+  await screen.findByRole("listitem", { name: "Email from the printer" });
+  expect(screen.queryByText(/Start the assistant/)).toBeNull();
+  expect(screen.queryByRole("listitem", { name: "Waiting for the first go" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Give the go|^Start$/ })).toBeNull();
+  expect(await screen.findByText(/1 thing waits for you on Today/)).toBeInTheDocument();
+});
+
+test("a to-do's title in the history never shows a raw date, and drops the phrase its meta line already says", async () => {
+  const item = change("REQ-1");
+  item.changeset!.ops = [
+    { ...item.changeset!.ops[0], op: "action.add", title: "Send the venue list by 2026-11-02.", meta: { owners: [], due: "2026-11-02" }, evidence: null },
+    { ...item.changeset!.ops[0], index: 1, op: "action.add", title: "Plan the move, done on 2026-11-04", meta: { owners: [] }, evidence: null },
+  ];
+  fakeApi({ "GET changes": () => [item], ...QUIET });
+  renderApp(<WhatChanged />);
+  const pane = await findPane();
+  expect(await within(pane).findByText("Send the venue list.")).toBeInTheDocument();
+  expect(within(pane).getByText(`Plan the move, done on ${day("2026-11-04")}`)).toBeInTheDocument();
+  expect(pane.textContent).not.toMatch(/2026-11/);
+});
+
+test("an item the assistant added that waits only for an owner is information with the link to its question on Today", async () => {
+  const item = change("REQ-4");
+  item.changeset!.ops[0] = {
+    ...item.changeset!.ops[0],
+    op: "action.add",
+    status: "applied",
+    title: "Print the agenda.",
+    meta: { owners: [], action_status: "held" },
+    ask: { id: "Q-9", status: "open", about: "owner", name: null, options: [] },
+  };
+  fakeApi({
+    "GET changes": () => [item],
+    "GET today/queue": () => [todayLine({ key: "question:Q-9", kind: "owner", question: "Q-9" })],
+  });
+  renderApp(<WhatChanged />);
+  const pane = await findPane();
+  expect(await within(pane).findByText("Needs an owner")).toBeInTheDocument();
+  expect(within(pane).queryByRole("combobox")).toBeNull();
+  expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
 });

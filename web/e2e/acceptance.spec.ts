@@ -478,15 +478,19 @@ test.describe.serial("acceptance scenario", () => {
     const sharedCase = byId("shared-first-name");
     const guestList = String(sharedCase.stub_answer!.ops[0].text);
     const shared = await handIn(page, sharedCase);
-    const picker = shared.getByRole("combobox", { name: /Who is/ });
+    // What changed is the history: the question is information there, answered on its line on Today, which the link opens.
+    await expect(shared.getByRole("combobox", { name: /Who is/ })).toHaveCount(0);
+    await shared.getByRole("link", { name: "Answer on Today" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    const picker = page.getByRole("main").getByRole("combobox", { name: /Who is/ });
     await expect(picker).toHaveCount(1);
     await expect(picker.locator("optgroup").first().locator("option")).toHaveCount(2);
     const before = await getJson<Section[]>(page, "api/followups");
     expect(before.flatMap((s) => s.actions).filter((a) => a.text === guestList)).toEqual([]);
     const choice = await picker.locator("optgroup").first().locator("option").first().getAttribute("value");
     await picker.selectOption(choice!);
-    await shared.getByRole("button", { name: "Use this person" }).click();
-    await expect(shared.locator("li.child .pill")).toHaveCount(0);
+    await page.getByRole("main").getByRole("button", { name: "Use this person" }).click();
+    await expect(picker).toHaveCount(0);
     const after = await getJson<Section[]>(page, "api/followups");
     expect(after.filter((s) => s.actions.some((a) => a.text === guestList)).map((s) => s.person)).toEqual([choice]);
   });

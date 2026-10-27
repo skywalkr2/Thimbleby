@@ -174,7 +174,7 @@ A2. **The person's path, fixed where the review found it broken.**
   ("Reading your last day of mail: about $0.30"). The new defaults act on their own, so the first impression is a result
   the person expected to pay for (design 7.8). Built as one Go for all of the first runs: `tests/test_first_go.py`
   (e.g. `test_three_held_requests_make_one_today_line_with_the_summed_estimate`,
-  `test_go_starts_them_all_and_nothing_waits_for_it_again`) and `FirstGoRow.test.tsx`.
+  `test_go_starts_them_all_and_nothing_waits_for_it_again`) and `web/src/components/Today.test.tsx` (the first go's line).
 - [x] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now. Built: "Check
   now" on Came in, with a lock so a source is never read twice at once.
   `test_check_now_reads_every_source_and_one_that_fails_never_stops_the_rest` (`tests/test_today_dashboard.py`),
@@ -844,7 +844,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [x] **The first go's estimate includes the sorting run** (the coordinator, 2026-10-13): the go also makes the
   sorting run for mail handed in unsorted, so the Today line and the screen's line add its price. Built:
   `tests/test_mail_sorting.py::test_the_first_go_estimate_includes_the_sorting_run_so_the_person_approves_the_whole_spend`,
-  `web/src/components/FirstGoRow.test.tsx` ("the sorting run the go also makes is in the total, so the total is the whole spend").
+  `web/src/components/Today.test.tsx` ("the first go's line says a price and some of the plan's allowance"; the Today line is the only first-go line since What changed became the history).
 - [x] **A lost network while the assistant works** (found by the waking-up journey; decided 2026-10-13): a call that can
   make no connection is the error kind `offline`, not `provider_down`; the request waits for the network without counting
   a try, says why and since when, is looked at again after `dispatch.offline_check_seconds`, and after

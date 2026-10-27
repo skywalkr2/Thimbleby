@@ -364,8 +364,21 @@ def listing(
 
 
 def counts(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> dict[str, int]:
-    """How many each of the two lists holds, for a line that only counts."""
-    return {t: len(rows(ws, store, cfg, t, now)) for t in TABS}
+    """How many each of the two lists holds, and how many of the mail in both came in on the person's day (`today`),
+    for a line that only counts."""
+    from engine.today import zone
+
+    now = now or datetime.now(UTC)
+    here = zone(cfg)
+    day = now.astimezone(here).date()
+    found = {t: rows(ws, store, cfg, t, now) for t in TABS}
+    came_today = sum(
+        1
+        for listed in found.values()
+        for row in listed
+        if row["item"] == "mail" and _moment(row["received"]).astimezone(here).date() == day
+    )
+    return {**{t: len(listed) for t, listed in found.items()}, "today": came_today}
 
 
 def read_row(ws: Any, store: Any, cfg: Any, snapshot_id: str) -> dict[str, Any] | None:

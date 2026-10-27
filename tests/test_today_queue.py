@@ -381,3 +381,82 @@ def test_the_overdue_summary_line_counts_the_to_dos_the_list_shows_as_overdue(ap
     assert lines[0]["count"] == len(shown) >= 2
     assert set(lines[0]["actions"]) == shown
     assert others[0].id not in lines[0]["actions"]
+
+
+def _held_ops(store) -> list[tuple[str, int]]:
+    return [
+        (cs.id, o["index"]) for cs in store.read().list("changeset") for o in cs.data["ops"] if o["status"] == "held"
+    ]
+
+
+def _has_a_line(lines: list[dict], changeset: str, index: int) -> bool:
+    """Whether Today asks about this held op: its own line, or the one line of the project ending that holds it."""
+    return any(
+        line["changeset"] == changeset
+        and (line["kind"] == "project_ending" or (line["kind"] in ("held", "who_is") and line["op"] == index))
+        for line in lines
+    )
+
+
+def test_every_held_op_has_a_line_on_today_whatever_holds_it(api):
+    """What changed shows a held item as information with a link to Today, so each held op, in a group of an answer
+    or a project the assistant found included, has its own line there."""
+    from engine.storage import WriteContext
+
+    client, base, worker = api
+    store = client.app_store
+    hand_in(client, base, worker, "no-owner")
+    hand_in(client, base, worker, "shared-first-name")
+    person = fixture_records(DEMO_B, "person")[2]
+    raw = "The Harvest " + "Fair needs a plan. Call me on 555 0100."
+    ops = [
+        {"op": "project.add", "name": "Harvest " + "Fair"},
+        {
+            "op": "person.contact",
+            "person": person["id"],
+            "kind": "phone",
+            "value": "555 0100",
+            "evidence": {"quote": "Call me on 555 0100"},
+        },
+    ]
+    set_responder(lambda task: json.dumps({"summary": "Done.", "ops": ops}))
+    client.post(f"{base}/handin", json={"note": "", "pasted": raw})
+    assert worker.run_pending() == 1
+
+    held = _held_ops(store)
+    kinds = {o["op"]["op"] for cs in store.read().list("changeset") for o in cs.data["ops"] if o["status"] == "held"}
+    assert {"project.add", "person.contact"} <= kinds and len(held) >= 3
+    lines = client.get(f"{base}/today/queue").json()
+    assert [h for h in held if not _has_a_line(lines, *h)] == []
+
+    # The same ops, labeled as one group of an answer, are asked the same way.
+    for cs in store.read().list("changeset"):
+        ops = [{**o, "answer_group": "A group"} if o["status"] == "held" else o for o in cs.data["ops"]]
+        found = store.read().get("changeset", cs.id)
+        with store.transaction() as tx:
+            tx.update(
+                "changeset",
+                cs.id,
+                {"ops": ops},
+                WriteContext(actor="engine", trust="trusted", op="test.queue"),
+                read_version=found.version,
+            )
+    lines = client.get(f"{base}/today/queue").json()
+    assert [h for h in held if not _has_a_line(lines, *h)] == []
+    keys = [line["key"] for line in lines]
+    assert len(keys) == len(set(keys))
+
+
+def test_no_line_key_repeats_when_mail_was_handled_and_its_count_is_not_a_line_of_the_queue(tmp_path):
+    """The count of what was handled for the person is a quiet line of the rail; the queue holds only what they do, so
+    handled mail adds no line and repeats no key."""
+    from tests.test_handled import SHOP_LIST, code_mail, promo, start
+
+    _, _, store, client, base = start(tmp_path, [code_mail(1), promo("sale-a", SHOP_LIST, 2)])
+    try:
+        counts = client.get(f"{base}/handled/counts").json()
+        assert counts["set_aside"] > 0 and counts["today"] >= 0
+        keys = _keys(client, base)
+        assert len(keys) == len(set(keys)) and not [k for k in keys if "handled" in k]
+    finally:
+        store.close()

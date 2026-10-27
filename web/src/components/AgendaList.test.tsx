@@ -127,3 +127,11 @@ test("a meeting's row in Today's agenda lists what is on its agenda as links", a
   const quiet = rows.find((row) => row.textContent?.includes("Quiet sync"))!;
   expect(within(quiet).queryByRole("list", { name: "Agenda" })).toBeNull();
 });
+
+test("an agenda item whose words hold a raw date shows the date as elsewhere, never as year-month-day", async () => {
+  meeting(page({ agenda: [line({ text: "Send the venue list by 2026-11-02" })] }));
+  renderApp(<RecordPage kind="event" id="EVT-1" onBack={() => {}} />);
+  const section = await screen.findByRole("region", { name: "Agenda" });
+  expect(within(section).getByRole("link", { name: `Send the venue list by ${day("2026-11-02")}` })).toBeInTheDocument();
+  expect(section.textContent).not.toMatch(/2026-11-02/);
+});

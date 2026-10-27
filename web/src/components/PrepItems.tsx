@@ -6,6 +6,7 @@ import { day } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
+import { plainTitle } from "../lib/title-dates";
 
 export type OpenItem = S["OpenItemView"];
 
@@ -21,7 +22,7 @@ export function PrepItems(props: { kind: OpenItem["kind"]; items: OpenItem[]; na
           <Row
             key={`${item.record}:${item.id}`}
             pill={item.quiet > 0 ? <Pill tone="neutral">{tn("meeting.items.quiet", item.quiet)}</Pill> : undefined}
-            title={item.text}
+            title={plainTitle(item.text, item.due)}
             meta={[item.due ? t("meeting.items.due", { date: day(item.due) }) : "", item.quote ? t("meeting.items.quote", { quote: item.quote }) : ""].filter(Boolean).join(" · ") || undefined}
           />
         ))}

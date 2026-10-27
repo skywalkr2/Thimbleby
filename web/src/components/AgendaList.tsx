@@ -7,6 +7,7 @@ import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
+import { plainTitle } from "../lib/title-dates";
 
 type Line = S["AgendaLine"];
 
@@ -24,7 +25,7 @@ export function AgendaSection(props: { items: Line[]; id: string }) {
           <Row
             key={`${item.kind}:${item.id}`}
             pill={<Pill tone="neutral">{t(`agenda.kind.${item.kind}`)}</Pill>}
-            title={<a href={viewHref(recordView(item.kind, item.id))}>{item.text}</a>}
+            title={<a href={viewHref(recordView(item.kind, item.id))}>{plainTitle(item.text)}</a>}
             meta={item.added_by_name ? t("agenda.put_by", { name: item.added_by_name, day: day(item.added_at) }) : t("agenda.put_by_assistant", { day: day(item.added_at) })}
           />
         ))}
@@ -41,7 +42,7 @@ export function AgendaItems(props: { items: Line[] }) {
     <ul className="tb-agenda" aria-label={t("agenda.heading")}>
       {props.items.map((item) => (
         <li key={`${item.kind}:${item.id}`}>
-          <a href={viewHref(recordView(item.kind, item.id))}>{item.text}</a>
+          <a href={viewHref(recordView(item.kind, item.id))}>{plainTitle(item.text)}</a>
         </li>
       ))}
     </ul>

@@ -11,6 +11,7 @@ import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./ProjectEndingDetail.module.css";
+import { plainTitle } from "../lib/title-dates";
 
 export function ProjectEndingDetail(props: { line: QueueLine }) {
   const { t, tn } = useWords();
@@ -62,7 +63,7 @@ export function ProjectEndingDetail(props: { line: QueueLine }) {
                 <li key={item.index} className={styles.item}>
                   <label className="check-line" htmlFor={id}>
                     <input id={id} type="checkbox" checked={kept.has(item.index)} onChange={(e) => toggle(item.index, e.target.checked)} />
-                    <span className={styles.text}>{item.text}</span>
+                    <span className={styles.text}>{plainTitle(item.text)}</span>
                   </label>
                   <Pill tone="neutral">{t(`project_ending.kind.${item.kind}`)}</Pill>
                 </li>

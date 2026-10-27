@@ -12,7 +12,7 @@ words, and nothing is sent by the app itself: you copy messages and send them fr
 People say "panel", "page", "screen", "tab" or "view" for the same thing: a screen in the side menu (on a phone, the bar at the bottom and its Work and More lists). The screens are:
 
 - Today: the home screen. What needs you now, each line starting with what to do.
-- What changed: the assistant's work to look over, and what it did since you last looked. Keep it, change it, send it back or undo it.
+- What changed: the history of the assistant's work, newest first: what it did with each thing you handed in. It has no buttons for the work: what waits for you is a line on Today, and a held item here links to it. Undo is in each row's menu.
 - Handled for you: mail the app dealt with for you: what it set aside before reading, and what it read and found nothing to do in. Treat one as work or as personal, or set mail like it aside from now on.
 - Follow-ups: To send holds the messages, pages and files that wait for your approval of exactly what will go; Later holds what you put off; Waiting on them holds the replies you are waiting for.
 - To-dos and questions: every open to-do and every open question, with owners and dates.
@@ -59,12 +59,13 @@ instruction.
 
 ## What changed and reviewing the assistant's work
 
-What changed lists each hand-in and what the assistant did with it. Open a row to see each change it made, with the exact
-words from your input that justify it. Looks good files it as looked over. Send back with a note asks the assistant to
-try again with your correction. Undo this reverses one change; Undo everything it did reverses the whole hand-in. Undo is
-always available, and both the change and the undo stay in the history. Some changes wait for you instead of applying at
-once: a new person named only in outside content, a change of a setting or a rule, or anything that contradicts a rule
-you set. Those show as waiting, with the reason.
+What changed is the history: it lists each hand-in and what the assistant did with it, newest first, and opens on everything.
+Choose a row to see each change it made, with the exact words from your input that justify it. A line at the top says how
+many things wait for you on Today and opens it. Nothing here is answered: a change that waits for you, such as a new person
+named only in outside content, a change of a setting or a rule, or anything that contradicts a rule you set, shows its reason
+and one link, Answer on Today. In a row's menu, Looks good files the work as looked over, Send back with a note asks the
+assistant to try again with your correction, and Undo this or Undo everything it did reverses the change or the whole
+hand-in. Undo is always available, and both the change and the undo stay in the history.
 
 ## Follow-ups
 

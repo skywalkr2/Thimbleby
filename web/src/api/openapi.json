@@ -5757,7 +5757,7 @@
                 "type": "null"
               }
             ],
-            "description": "For the capacity line: the effort, in minutes, of the to-dos due today or late.",
+            "description": "For the capacity line: the effort, in minutes, of the to-dos due today or late. For a clash with too little travel time: the minutes the travel between the two meetings needs.",
             "title": "Needed Minutes"
           },
           "other": {
@@ -5770,6 +5770,18 @@
               }
             ],
             "title": "Other"
+          },
+          "other_place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash with too little travel time: where the second meeting is.",
+            "title": "Other Place"
           },
           "person": {
             "anyOf": [
@@ -5792,6 +5804,18 @@
               }
             ],
             "title": "Person Name"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash with too little travel time: where the first meeting is.",
+            "title": "Place"
           },
           "queue": {
             "anyOf": [
@@ -10335,6 +10359,33 @@
           "read"
         ],
         "title": "HandledCounts",
+        "type": "object"
+      },
+      "HandledCountsToday": {
+        "description": "The counts of both lists with how many of their mail came in on the person's own day, for a line that counts.",
+        "properties": {
+          "read": {
+            "description": "Mail read with nothing to do, whatever the search.",
+            "title": "Read",
+            "type": "integer"
+          },
+          "set_aside": {
+            "description": "Mail set aside and changes a rule closed, both before they were read, whatever the search.",
+            "title": "Set Aside",
+            "type": "integer"
+          },
+          "today": {
+            "description": "How many of the mail in either list came in on the person's own day.",
+            "title": "Today",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "set_aside",
+          "read",
+          "today"
+        ],
+        "title": "HandledCountsToday",
         "type": "object"
       },
       "HandledDone": {
@@ -34389,7 +34440,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HandledCounts"
+                  "$ref": "#/components/schemas/HandledCountsToday"
                 }
               }
             },
