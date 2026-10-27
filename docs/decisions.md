@@ -4,6 +4,30 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-27: Everything the reviewer asked is built before their second pass; the clear items now, the rest after their answers
+
+**Decided:** Every request in the UI/UX review of 45f7102 is built before it goes back to the reviewer, including the
+points first left as they were (open promise P69). An audit of each request against the code sorted what was left: the
+items the reviewer's own words settle are built now; thirteen points that read two ways, meet an earlier decision or have
+no sentence of the reviewer's go to them as questions first (`docs/project/ui-ux-questions-2026-10-27.md`). Built now:
+"Your name" on You (the person record), Working hours as one row, one notifications switch, the brief's times as one row,
+Add-ons › For developers (the catalog fields), Follow-ups › Message style (greeting and closing), Knowledge › Glossary
+(`language.known_terms`), so those fields leave files-only; code words out of setting hints; toasts that carry an Undo
+stay until dismissed or replaced; rail links without an underline until hover in day mode; a handled-for-you count line on
+Today; no "Treat as work" or "Treat as personal" for "Just me"; a wider "Just me" check; "Hand something in" when mail was
+skipped on Your promises; raw dates out of every title; the travel-clash wording in the brief; the setup guide link on You
+only; and the open wording rows of the earlier re-reviews. The owner also decided: removing a business after setup asks
+each time whether its projects and to-dos move to Personal or end with it, with Undo; a backup is made before a restore,
+before an add-on is installed or updated, and before a bulk change; the workspace keeps the person's name.
+
+**Decided by:** the owner ("fix everything they previously said before going back to them"; build the clear items now;
+the three answers above). The sorting of requests into built, clear and questions is the main session's, from the audit.
+
+**Why:** The reviewer's second pass should judge the whole of what they asked for, not a part with some points set aside.
+
+**Impact:** Design 7.7, 7.8, 7.9, 7.12 and 5.0 (backups), edited by the change that builds each piece; roadmap U4, U7,
+U8, U12; open promise P69. Change log: section 233.
+
 ## 2026-10-26: The Settings cut follows the reviewer's field-by-field list
 
 **Decided:** The UI/UX reviewer's `settings.md` is built as written: about 23 basic fields on five pages (26 with a

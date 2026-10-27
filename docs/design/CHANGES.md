@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 233. The rest of the review, built before the reviewer's second pass (2026-10-27; phase U; designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Settings (7.9) | The person's name, the catalog fields, the greeting and closing and the glossary files-only; Working hours as four rows; two notification switches; code words in hints; the setup guide link on every page | "Your name" on You; Add-ons › For developers, Follow-ups › Message style and Knowledge › Glossary; Working hours, the brief's times and notifications each one row; hints in plain words; the setup guide link on You only |
+| Toasts (7.7) | Every toast closed after a few seconds | A toast with Undo or another action stays until dismissed or replaced |
+| "Just me" (7.8) | Handled for you offered "Treat as work" | No side words for "Just me"; with sides, the side's name |
+| Today (7.7) | No count of what was handled | One quiet line with the count, opening Handled for you |
+| Sides (6.32) | Removing a side only while setup was open | Removing a business asks whether its projects and to-dos move to Personal or end with it, with Undo |
+| Backups (5.0) | Daily only | Also before a restore, an add-on install or update, and a bulk change |
+
 ## 232. Day mode (2026-10-26; phase U, F7)
 
 | Where | Before | Now |
