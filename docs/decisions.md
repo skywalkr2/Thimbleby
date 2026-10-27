@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: A listed pack installs with no access key; the catalog keeps its package
+
+**Decided:** A pack whose own repository is private is still installed from the Add-ons screen and setup with no
+access key: when the host publishes it, the catalog repository keeps a copy of its release's package file (checked
+against the release's checksum) and the entry points at that copy. Only the package file is public; the pack's
+repository stays private. Read tokens stay for catalogs that keep no copy.
+
+**Decided by:** the owner ("I need the plugin to download without a key"; asked where, chose the catalog's releases
+over making the pack's repository public).
+
+**Why:** setup offered a "Connect" that failed asking for a token a person doesn't have.
+
+**Impact:** The plugin guide's "Publishing a pack" (from `engine/pack_check.py`), the catalog's PUBLISHING.md; setup's
+plain words when a key is still needed (P73). Change log: none.
+
 ## 2026-10-28: One way to drop a to-do that reached people: "Drop it and tell them"
 
 **Decided:** When people were told about a to-do, dropping it has one button, "Drop it and tell them", which drops it

@@ -9,10 +9,12 @@ Publishing a pack (the process every plugin repository follows; the catalog's PU
 2. **Write its catalog entry** as `catalog/pack.yaml` in that repository, in the catalog's format (the catalog
    repository's README): `provides` and `requires` copied exactly from `plugin.yaml`, its price, how to get it, and
    its typical AI jobs. Its `release` gives the address of the attached wheel and the wheel's SHA-256, which the
-   download must match. For a private repository the address is the release asset's API address (not the page address),
-   which is read with a read token: the person adds the token on the Add-ons screen, where it is kept on their
-   computer, and it is sent only to that address's host. Leave `release` out and the screen shows the entry's own
-   install text instead of an Install button.
+   download must match. For a private repository, give the release asset's API address (not the page address) in the
+   request; when the host publishes it, the catalog keeps a copy of that package file and the entry points at the copy,
+   so people install it with no access key while the repository stays private. A catalog that keeps no copy can still
+   point at a private address, read with a read token the person adds on the Add-ons screen, kept on their computer
+   and sent only to that address's host. Leave `release` out and the screen shows the entry's own install text instead
+   of an Install button.
 
    A pack that needs libraries besides the app's own lists them in `release.libraries`: every wheel it needs, its
    dependencies' and theirs, one entry for each build (`name`, `version`, `platform`: `any` or a wheel platform tag
