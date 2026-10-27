@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: A side is a group that holds projects, never a project
+
+**Decided:** Personal and each job or business are groups. They hold projects, people and items not in any project;
+they are never listed, picked, counted or edited as projects, and carry no project fields (target date, status,
+phase, priority, owner, role, budget, language, end). Choosing where something belongs is side, then project
+(optional). Setup keeps a business's description apart from its projects. The stored anchor record stays, so no data
+moves.
+
+**Decided by:** the owner ("it treats a business as a project. And its not, its just a group for which projects would
+be underneath it. Personal is the same"; chose this over storing sides as a record type of their own).
+
+**Why:** the owner's first evening showed a business opening "Edit project" with a target date, and their description
+of the business saved as a project.
+
+**Impact:** Design 6.32 ("A side is a group, never a project") and the screens that list, pick or show projects (7.x);
+the plugin guide (`view.sides` already exists). Change log: section 242.
+
 ## 2026-10-28: Setup's mail step leads with what was just connected
 
 **Decided:** After a service connects in setup, the step shows that result first, with one "who is it for" question

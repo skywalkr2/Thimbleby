@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 242. A side is a group, never a project (2026-10-28; owner; designed, being built)
+
+| Where | Before | Now |
+|---|---|---|
+| Sides (6.32) | A side's top project was listed, picked, counted and edited as a project | A group: never offered as a project; name, other names and description only; "in <side>, not in a project"; side then project (optional) when choosing where something belongs |
+| Setup's business step (7.8) | Every line of "what it works on" became a project, a description included | A description box kept on the side, apart from the list of project names |
+
 ## 241. Setup's mail step leads with what was just connected (2026-10-28; owner's run; built)
 
 | Where | Before | Now |

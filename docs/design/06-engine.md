@@ -3888,6 +3888,16 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   - **Filing (built, `tests/test_many_sides.py`):** each rank votes for a set of side ids and decides when it names one;
     the order is people, then the input's **source** (its `sides`; `filed_by.by: source`), then the sender's domain,
     aliases, project names and side words. The business side words apply only while there is exactly one other side.
+  - **A side is a group, never a project** (owner, 2026-10-28; P76). Its top record is only an anchor: stored data, ids,
+    filing, the ledger and the synced folder keep it, and no screen, list, picker, count, board, scope or project field
+    offers it as a project. A side has a name, other names (which help filing), a description and its projects; it has
+    no stage, status, phase, priority, target day, owner, role, budget, language or end, and an edit of any of those on
+    a side is refused (ending a side is removing it, in Settings). An item that belongs to a side but to no project is
+    "in <side>, not in a project". Wherever the person chooses where something belongs it is side, then project
+    (optional), the side's own first choice being "In <side>, not in a project". `GET /api/projects` marks each side
+    (`side`), every name lookup for items gives `side_name` apart from `project_name`, and the AI's packet lists the
+    sides apart from the projects ("use a side only when no project fits"). Setup's business step keeps a description
+    on the side (`summary`) apart from the list of its projects' names; a sentence never becomes a project.
   - **Setup's routes** (`POST /api/setup/work`, `/api/setup/business`, with an optional `kind`) add a side each time; a
     name an existing side already has returns that side. A side is renamed by editing its project, never by posting
     its name again.
