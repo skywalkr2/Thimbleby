@@ -443,7 +443,7 @@ class ActionHoldOp(OpModel):
     )
 
     def describe(self, view: Any = None) -> str | None:
-        return f"Put {named(view, 'action', self.id)} on hold"
+        return f"Pause {named(view, 'action', self.id)}"
 
 
 class ActionUnholdOp(OpModel):
@@ -462,7 +462,7 @@ class ActionUnholdOp(OpModel):
     )
 
     def describe(self, view: Any = None) -> str | None:
-        return f"Take {named(view, 'action', self.id)} off hold"
+        return f"Resume {named(view, 'action', self.id)}"
 
 
 class ActionDropOp(OpModel):

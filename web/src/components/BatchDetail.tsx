@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAct } from "../lib/act";
 import { api } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
+import { plainTitle } from "../lib/title-dates";
 import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -63,8 +64,8 @@ function Batch(props: { part: QueueLine; named: boolean }) {
             ) : (
               <li key={item.key} className={styles.item} data-batch-item={item.what ?? ""}>
                 <span className={styles.what}>{whatWord(item.what, t)}</span>
-                <span className={styles.text}>{item.text}</span>
-                <Button size="sm" aria-expanded={open === item.key} aria-label={t("queue.batch.not_right_named", { item: item.text ?? "" })} onClick={() => setOpen(open === item.key ? null : item.key)}>
+                <span className={styles.text}>{plainTitle(item.text ?? "")}</span>
+                <Button size="sm" aria-expanded={open === item.key} aria-label={t("queue.batch.not_right_named", { item: plainTitle(item.text ?? "") })} onClick={() => setOpen(open === item.key ? null : item.key)}>
                   {t("queue.batch.not_right")}
                 </Button>
                 {open === item.key && item.changeset && (

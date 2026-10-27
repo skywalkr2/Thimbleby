@@ -1018,6 +1018,31 @@ describe("each screen", () => {
     expect(await screen.findByRole("button", { name: `Rename ${SHOP}` })).toBeInTheDocument();
   });
 
+  test("Work: a removal that couldn't be saved says so and offers Try again, which removes it", async () => {
+    const user = userEvent.setup();
+    const sideA = side("PRJ-2", "job", EMPLOYER);
+    const sideB = side("PRJ-3", "business", SHOP, true);
+    let sides = [sideA, sideB];
+    let fail = true;
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith(sides, sides.length ? "work" : null),
+          "POST setup/sides/PRJ-3/remove": () => (fail ? new Refuse(500, "") : ((sides = [sideA]), stateWith(sides))),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("button", { name: `Remove ${SHOP}` }));
+    const problem = await screen.findByRole("alert");
+    fail = false;
+    await user.click(within(problem).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST setup/sides/PRJ-3/remove")).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByRole("button", { name: `Rename ${SHOP}` })).toBeNull());
+  });
+
   test("Work: Remove of the only side leaves Just me chosen", async () => {
     const user = userEvent.setup();
     let sides = [side("PRJ-3", "business", SHOP, true)];
@@ -1693,6 +1718,125 @@ describe("Mail and calendar", () => {
     // A tick raises no message (nothing to cover the next box), and the line under the boxes says how it stands.
     expect(document.querySelector("[data-toast]")).toBeNull();
     expect(await within(inbox).findByRole("status")).toHaveTextContent(`Your inbox is for Personal and ${EMPLOYER}.`);
+  });
+
+  /** The mail step with a job and a business beside Personal and two sources whose ticks save through `post`, as the settings route
+   * does; `held` is what the sources serve when the step opens. */
+  function ticks(post: (body: { changes: { "watch.sources": Array<Record<string, unknown>> } }) => unknown) {
+    service("on", { signed: true });
+    const sources: Array<Record<string, unknown>> = [
+      { id: "s1", connector: "x/y", label: "Your inbox", settings: {} },
+      { id: "s2", connector: "x/y", label: "Your calendar", settings: {} },
+    ];
+    const state = { sources };
+    const calls = fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { installed_version: "1.0.0", enabled: true })],
+        installed: [installedPack("mail-addon", { enabled: true, state: "enabled" })],
+      }),
+      "GET sign-ins": () => [signIn("mail-addon/account", { status: "signed_in", account: "me@example.com" })],
+      "GET watch": () => [source("s1", "Your inbox"), source("s2", "Your calendar", { reads: ["calendar"] })],
+      "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
+      "GET settings": () => ({
+        fingerprint: "fp-1",
+        items: [
+          ...SETTINGS,
+          { key: "watch.sources", file: "watch", group: "watch", description: "", type: "other", options: [], value: state.sources, default: [], source: "file", locked: false, basic: false, editable: false },
+        ],
+      }),
+      "POST settings": async (body) => {
+        const answer = await post(body as { changes: { "watch.sources": Array<Record<string, unknown>> } });
+        if (answer instanceof Refuse) return answer;
+        const before = state.sources;
+        const sent = (body as { changes: { "watch.sources"?: Array<Record<string, unknown>> } }).changes["watch.sources"];
+        if (sent) state.sources = sent;
+        return { changes: [{ key: "watch.sources", before, after: state.sources, was_default: false, is_default: false }], fingerprint: "fp-2", needs_restart: false };
+      },
+    });
+    return { calls, state };
+  }
+
+  test("a second tick made while a save runs is queued and saved after it, so neither is lost", async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const saved: string[][] = [];
+    let first = true;
+    ticks(async (body) => {
+      saved.push(body.changes["watch.sources"][0].sides as string[]);
+      if (first) {
+        first = false;
+        await gate;
+      }
+    });
+    open();
+    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    await user.click(within(inbox).getByRole("checkbox", { name: "Personal" }));
+    // The first save is still running: the other box is not greyed out and its tick is kept.
+    expect(within(inbox).getByRole("checkbox", { name: EMPLOYER })).toBeEnabled();
+    await user.click(within(inbox).getByRole("checkbox", { name: EMPLOYER }));
+    expect(within(inbox).getByRole("checkbox", { name: "Personal" })).toBeChecked();
+    expect(within(inbox).getByRole("checkbox", { name: EMPLOYER })).toBeChecked();
+    release();
+    await waitFor(() => expect(saved).toHaveLength(2));
+    expect(saved).toEqual([[PERSONAL], [PERSONAL, "PRJ-2"]]);
+    expect(await within(inbox).findByRole("status")).toHaveTextContent(`Your inbox is for Personal and ${EMPLOYER}.`);
+  });
+
+  test("ticking and unticking quickly ends with a message that matches the boxes", async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let first = true;
+    ticks(async () => {
+      if (first) {
+        first = false;
+        await gate;
+      }
+    });
+    open();
+    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    const personal = within(inbox).getByRole("checkbox", { name: "Personal" });
+    await user.click(personal);
+    await user.click(personal);
+    release();
+    await waitFor(() => expect(within(inbox).getByRole("status")).toHaveTextContent("Your inbox isn't marked for any of them."));
+    expect(within(inbox).getAllByRole("checkbox").every((b) => !(b as HTMLInputElement).checked)).toBe(true);
+    expect(within(inbox).getByRole("status")).not.toHaveTextContent(/ is for /);
+  });
+
+  test("a tick that couldn't be saved names its box and offers Try again, which saves it", async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const { state } = ticks(async () => (fail ? new Refuse(500, "") : undefined));
+    open();
+    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    await user.click(within(inbox).getByRole("checkbox", { name: EMPLOYER }));
+    const problem = await within(inbox).findByRole("alert");
+    expect(problem).toHaveTextContent(`Couldn't save ${EMPLOYER} for Your inbox.`);
+    expect(within(inbox).getByRole("checkbox", { name: EMPLOYER })).not.toBeChecked();
+    fail = false;
+    await user.click(within(problem).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(within(inbox).getByRole("checkbox", { name: EMPLOYER })).toBeChecked());
+    expect((state.sources[0] as { sides: string[] }).sides).toEqual(["PRJ-2"]);
+    expect(within(inbox).queryByRole("alert")).toBeNull();
+  });
+
+  test("the setting that sorts mail, saved at once, offers Try again when it couldn't be saved", async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const { calls } = ticks(async () => (fail ? new Refuse(500, "") : undefined));
+    open();
+    const sorting = await screen.findByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" });
+    await user.click(sorting);
+    const problem = await screen.findByRole("alert");
+    fail = false;
+    await user.click(within(problem).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST settings")).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   test("with no side of work, the mailboxes are not asked which they serve", async () => {

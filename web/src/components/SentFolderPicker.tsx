@@ -10,6 +10,7 @@ import { problemText } from "../lib/problem";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Skeleton } from "../ui/Skeleton";
 
 /** The folders to choose from, the likeliest first: the one the server marks, then any whose name says "sent", then the
  * rest in the order given; folders already read are left out. */
@@ -61,7 +62,7 @@ export function SentFolderPicker(props: { source: string; label: string; onClose
         {t("walkthrough.sent.title")}
       </p>
       {found.isPending ? (
-        <p className="hint">{t("loading")}</p>
+        <Skeleton rows={1} />
       ) : found.isError ? (
         <p className="problem-note" role="alert">
           {found.error instanceof ApiError && found.error.detail ? found.error.detail : problemText(found.error, t)}

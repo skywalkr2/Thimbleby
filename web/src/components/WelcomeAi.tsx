@@ -26,6 +26,7 @@ import { domainOf } from "./SafeText";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
+import { Pill } from "../ui/Pill";
 
 type Kind = S["EndpointView"];
 type ModelInfo = S["AiModelView"];
@@ -668,7 +669,7 @@ export function WelcomeAi(props: {
     <label key={e.id} className={`radio kind-choice kind-card${e.recommended && guide ? " recommended" : ""}`}>
       <input type="radio" name={group} value={e.id} checked={kindId === e.id && !usingFound} onChange={() => choose(e.id)} />
       <span>
-        {e.recommended && guide && <span className="pill tag-recommended">{t("welcome.ai.recommended")}</span>}
+        {e.recommended && guide && <Pill tone="ok" className="tag-recommended">{t("welcome.ai.recommended")}</Pill>}
         <strong>{e.name}</strong>
         {e.note && (
           <span className="hint block" title={e.note}>
@@ -692,10 +693,10 @@ export function WelcomeAi(props: {
             {t("welcome.ai.local_use")}
           </button>
           {chosen && (
-            <span className="pill">
-              <span aria-hidden="true">✓ </span>
+            <Pill tone="neutral" className="pill-gap">
+              <Icon name="check" size={14} />{" "}
               {t("welcome.ai.chosen")}
-            </span>
+            </Pill>
           )}
         </div>
       </div>
@@ -807,7 +808,7 @@ export function WelcomeAi(props: {
       {verdict.state === "checking" && <p className="hint">{t("welcome.ai.checking_key")}</p>}
       {verdict.state === "works" && (
         <p className="check-ok" data-works="">
-          <span aria-hidden="true">✓ </span>
+          <Icon name="check" size={14} />{" "}
           {t("welcome.ai.works")}
         </p>
       )}
@@ -838,7 +839,7 @@ export function WelcomeAi(props: {
     const domain = url ? domainOf(url) : null;
     return url && domain ? (
       <a className="btn" href={url} target="_blank" rel="noopener noreferrer">
-        {label} <span aria-hidden="true">↗</span>
+        {label} <Icon name="external" size={14} />
         <span className="sr"> {t("welcome.ai.step.opens", { domain })}</span>
       </a>
     ) : null;
@@ -1043,7 +1044,7 @@ export function WelcomeAi(props: {
               {builtin && kind.installed != null && (
                 <div className="check-row">
                   <p className="hint" id="ai-app-status" role="status">
-                    <span aria-hidden="true">{kind.installed ? "✓ " : "✗ "}</span>
+                    <Icon name={kind.installed ? "check" : "close"} size={14} />{" "}
                     {endpoints.isFetching ? t("welcome.ai.app_checking") : t(kind.installed ? "welcome.ai.app_installed" : "welcome.ai.app_missing")}
                   </p>
                   <button
@@ -1471,7 +1472,8 @@ export function WelcomeAi(props: {
                   {rows.map((r) => (
                     <li key={r.key} className={r.ok ? "result-ok" : "result-bad"}>
                       {r.text}
-                      <span aria-hidden="true">{r.ok ? " ✓" : " ✗"}</span>
+                      {" "}
+                      <Icon name={r.ok ? "check" : "close"} size={14} />
                     </li>
                   ))}
                 </ul>

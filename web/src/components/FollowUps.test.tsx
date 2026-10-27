@@ -515,11 +515,11 @@ test("a waiting pill says how long, and says follow up in words as well as color
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const pane = await findPane();
   const calm = within(pane).getByText("waiting 3 days");
-  expect(calm).toHaveClass("k-wait");
+  expect(calm).toHaveAttribute("data-tone", "need");
   const late = within(pane).getByText("waiting 6 days · follow up");
-  expect(late).toHaveClass("k-risk");
+  expect(late).toHaveAttribute("data-tone", "danger");
   // The person's line carries the longest wait.
-  expect(within(screen.getByRole("listitem", { name: "Robin Sample" })).getByText("waiting 6 days · follow up")).toHaveClass("k-risk");
+  expect(within(screen.getByRole("listitem", { name: "Robin Sample" })).getByText("waiting 6 days · follow up")).toHaveAttribute("data-tone", "danger");
 });
 
 test("one day of waiting is singular, in the pill and with follow up", async () => {
@@ -532,8 +532,8 @@ test("one day of waiting is singular, in the pill and with follow up", async () 
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const pane = await findPane();
-  expect(within(pane).getByText("waiting 1 day")).toHaveClass("k-wait");
-  expect(within(pane).getByText("waiting 1 day · follow up")).toHaveClass("k-risk");
+  expect(within(pane).getByText("waiting 1 day")).toHaveAttribute("data-tone", "need");
+  expect(within(pane).getByText("waiting 1 day · follow up")).toHaveAttribute("data-tone", "danger");
   expect(document.body).not.toHaveTextContent("1 days");
 });
 
@@ -546,15 +546,15 @@ test("an action on hold shows what it waits for with its old due date in the too
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = screen.getByText("Send the index").closest("li") as HTMLElement;
-  const pill = within(row).getByText("On hold: the printer's quote");
+  const pill = within(row).getByText("Paused: the printer's quote");
   expect(pill).toHaveAttribute("title", expect.stringMatching(/^Was due .*16/));
   expect(within(row).queryByText(/waiting 30d/)).toBeNull();
   expect(within(row).queryByRole("button", { name: "Followed up" })).toBeNull();
   await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
-  expect(await screen.findByRole("menuitem", { name: "Take off hold" })).toBeInTheDocument();
+  expect(await screen.findByRole("menuitem", { name: "Resume" })).toBeInTheDocument();
 });
 
-test("Put on hold asks what it waits for with the cursor in the field, acts at once and can be undone", async () => {
+test("Pause asks what it waits for with the cursor in the field, acts at once and can be undone", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
     "GET followups": () => waitingSections(),
@@ -566,14 +566,14 @@ test("Put on hold asks what it waits for with the cursor in the field, acts at o
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = screen.getByText("Send the index").closest("li") as HTMLElement;
   await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Put on hold" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Pause" }));
   const field = within(row).getByRole("textbox", { name: "What is it waiting for?" });
   expect(field).toHaveFocus();
-  expect(within(row).getByRole("button", { name: "Put on hold" })).toBeDisabled();
+  expect(within(row).getByRole("button", { name: "Pause" })).toBeDisabled();
   await user.type(field, "the printer's quote");
-  await user.click(within(row).getByRole("button", { name: "Put on hold" }));
+  await user.click(within(row).getByRole("button", { name: "Pause" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "the printer's quote" }));
-  expect(await screen.findByText("Put on hold, waiting for the printer's quote.")).toBeInTheDocument();
+  expect(await screen.findByText("Paused, waiting for the printer's quote.")).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: null }));
 });
@@ -615,7 +615,7 @@ test("Escape closes the Drop form and sends nothing", async () => {
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
 });
 
-test("Take off hold acts at once and Undo puts the old hold back", async () => {
+test("Resume acts at once and Undo puts the old hold back", async () => {
   const user = userEvent.setup();
   const held = waitingSections();
   held[0].actions[0].on_hold = "the printer's quote";
@@ -630,7 +630,7 @@ test("Take off hold acts at once and Undo puts the old hold back", async () => {
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = screen.getByText("Send the index").closest("li") as HTMLElement;
   await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Take off hold" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Resume" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-1/unhold")).toBe(true));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: previous }));
@@ -1297,4 +1297,22 @@ test("a person chosen while what waits to go out is still loading stays chosen w
   await act(async () => release({ acts: [] }));
   await waitFor(() => expect(screen.queryByRole("complementary", { name: "You" })).toBeNull());
   expect(screen.getByRole("complementary", { name: "Robin Sample" })).toBeInTheDocument();
+});
+
+// ---- a link that came from an email says so before it is opened (design 7.7) --------------------------------------------
+
+test("a question's link that came from an email says so beside the link, and one the person wrote does not", async () => {
+  const link = [{ label: "The portal", url: `${WEB}example.com/pay` }];
+  const question = (id: string, title: string, from_outside: boolean) => ({ id, title, text: "", links: link, kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [], from_outside });
+  const mine = { ...sections[0], questions: [question("Q-8", "Pay the printer?", true), question("Q-9", "Book the room?", false)] } as S["FollowupSection"];
+  fakeApi({ "GET followups": () => [mine, sections[1]] });
+  renderApp(<FollowUps />);
+  await userEvent.click(await screen.findByRole("button", { name: /^You/ }));
+  await screen.findByText("Pay the printer?");
+  const rows = screen.getAllByRole("listitem").filter((r) => r.classList.contains("child"));
+  const asked = rows.filter((r) => r.textContent?.includes("Pay the printer?"));
+  const own = rows.filter((r) => r.textContent?.includes("Book the room?"));
+  expect(asked.some((r) => within(r).queryByText("From an email; check the address before you open it."))).toBe(true);
+  expect(own.length).toBeGreaterThan(0);
+  expect(own.every((r) => within(r).queryByText("From an email; check the address before you open it.") === null)).toBe(true);
 });

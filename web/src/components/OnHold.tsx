@@ -1,4 +1,4 @@
-// An action on hold waits for something outside the person's control and is never due, overdue or chased. "Put on hold"
+// An action on hold waits for something outside the person's control and is never due, overdue or chased. "Pause"
 // asks what it waits for (the first field has the cursor) and acts at once with Undo; "Take off hold" does too.
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -9,6 +9,7 @@ import { revealOrKeep } from "../lib/reveal";
 import { toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
+import { Pill } from "../ui/Pill";
 
 type Blocker = NonNullable<S["TodoView"]["blocker"]>;
 
@@ -149,7 +150,7 @@ export function namedPerson(words: string, people: Array<{ id: string; name: str
   return null;
 }
 
-/** "On hold: what it waits for", with the date it was due before it went on hold in its tooltip. A person named in the
+/** "Paused: what it waits for", with the date it was due before it went on hold in its tooltip. A person named in the
  * words is a link to their group in Follow-ups, where what they owe is. */
 export function HoldPill(props: { what: string; due?: string | null }) {
   const { t } = useWords();
@@ -175,11 +176,11 @@ export function HoldPill(props: { what: string; due?: string | null }) {
   );
   const [before, after] = t("hold.pill", { what: "\u0001" }).split("\u0001");
   return (
-    <span className="pill k-held" title={props.due ? t("hold.was_due", { date: day(props.due) }) : undefined}>
+    <Pill tone="warn" className="pill-gap" title={props.due ? t("hold.was_due", { date: day(props.due) }) : undefined}>
       {before}
       {what}
       {after}
-    </span>
+    </Pill>
   );
 }
 
@@ -215,7 +216,7 @@ function around(line: string, mark: string, inner: ReactNode): ReactNode {
 
 /** What a to-do or a follow-up waits on, in the words the design gives it: "Blocked, waiting on <person or action>",
  * "Waits on: <question> (<who>, sent <date>)", then "Unblocked: <who> answered <date>" once it is over; a hold with only
- * words is "On hold: …". */
+ * words is "Paused: …". */
 export function HoldNote(props: { on_hold?: string | null; blocker?: Blocker | null; due?: string | null }) {
   const { t } = useWords();
   const { blocker } = props;
@@ -230,15 +231,15 @@ export function HoldNote(props: { on_hold?: string | null; blocker?: Blocker | n
           : "hold.waits_on_question_nobody";
       const line = t(key, { question: mark, who: blocker.who ?? "", date: blocker.sent ? day(blocker.sent) : "" });
       return (
-        <span className="pill k-held wraps" title={title}>
+        <Pill tone="warn" wraps className="pill-gap" title={title}>
           {around(line, mark, <BlockerName blocker={blocker} />)}
-        </span>
+        </Pill>
       );
     }
     return (
-      <span className="pill k-held wraps" title={title}>
+      <Pill tone="warn" wraps className="pill-gap" title={title}>
         {around(t("hold.blocked", { what: mark }), mark, <BlockerName blocker={blocker} />)}
-      </span>
+      </Pill>
     );
   }
   if (blocker) {
@@ -248,7 +249,11 @@ export function HoldNote(props: { on_hold?: string | null; blocker?: Blocker | n
           ? t("hold.unblocked_answered", { who: blocker.who ?? blocker.name, date: day(blocker.answered) })
           : t("hold.unblocked_answered_undated", { who: blocker.who ?? blocker.name })
         : t("hold.unblocked_done", { what: blocker.name });
-    return <span className="pill k-send wraps">{line}</span>;
+    return (
+      <Pill tone="need" wraps className="pill-gap">
+        {line}
+      </Pill>
+    );
   }
   return props.on_hold ? <HoldPill what={props.on_hold} due={props.due} /> : null;
 }

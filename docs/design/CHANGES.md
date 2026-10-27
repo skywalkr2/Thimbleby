@@ -1027,6 +1027,23 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 237. The second pass's leftovers, the reviewer's H1 to H8 and the checklist's partials (2026-10-28; phase U; roadmap A2, A2b, A4)
+
+| Where | Before | Now |
+|---|---|---|
+| Notes (6.32) | Notes stored before the title rule kept raw header titles | **Built** (`tests/test_note_title_migration.py`): re-titled once at start from their message or their own header lines; a second run changes nothing |
+| Today's rail (7.7, U20) | A card drawn again after loading folded itself on a phone | **Built** (`web/src/components/TodayRailFold.test.tsx`, `web/e2e/layout.spec.ts`): the fold is kept by the rail; the layout walk opens Came in plainly |
+| Outward steps (7.7, F43) | "From an email; check the address" at sending only | **Built** (`tests/test_outside_steps.py`, `web/src/components/TodayArrives.test.tsx`, `FollowUps.test.tsx`): also at a link a question holds and at a bill reminder from an email |
+| Words (7.7, G21, C45) | "Stale", "On hold", "Waiting for you" and "Needs you" | **Built** (`web/src/wording/wording.test.ts`): "Not touched in a while", "Paused" (Pause, Resume) and one state word, "Needs you" |
+| Meeting prep (7.14, G14) | An "Outside" tag on a line | **Built** (`web/src/components/MeetingPrep.test.tsx`): said once for the whole prep |
+| Filing (6.32, U15) | One side asked about | **Built** (`tests/test_filing_unsure.py`): a job and a business beside Personal get one question per side a day and one Today line that names neither |
+| Since yesterday (7.7, H1) | A second list of what a batch already holds | **Built** (`tests/test_since_yesterday.py`, `web/src/components/SinceYesterday.test.tsx`): to-dos in a batch left out of the line; dates as words |
+| The review (7.7, H2 to H6) | "Not looked at before" once per mailbox; raw dates in items; a claim without its speaker; a stray "·"; "look like" | **Built** (`web/src/components/LookBack.test.tsx`, `Today.test.tsx`, `FactSays.test.tsx`, `RecordPageRecords.test.tsx`, `tests/test_fact_says.py`, `TodaySides.test.tsx`, `wording.test.ts`) |
+| Setup ticks (7.8, H7, H8) | A second tick dropped; the last message could contradict the boxes | **Built** (`web/src/components/Walkthrough.test.tsx`): queued ticks, a line that matches the boxes, a failed tick named with Try again; Try again also on the sort-mail switch, a person's stance and the work step |
+| Shared parts (7.12, C35, C36, C41) | "Loading…" text, text glyphs, hand-made pills | **Built** (`web/src/ui/loading.test.ts`, `glyphs.test.ts`, `Pill.test.tsx`, `Handled.test.tsx`): skeletons, line icons, `ui/Pill`, the segmented control on Handled for you. *Left:* the `.kind` chips and three filter groups (To-dos and questions, What changed, Follow-ups) are still hand-made |
+| Keys (7.5, C13) | `[` and `]` configured, never wired | **Built** (`web/src/lib/keys.test.tsx`, `Today.test.tsx`): the pane keys walk the list, its details and the rail |
+| Layout (7.12, C15, C21, C22) | No test of nesting depth, of Send back in view or of the hand-in's steps | **Built** (`web/e2e/layout.spec.ts`, `today-review.spec.ts`, `panes.spec.ts`): at most two bordered levels on every main screen, Send back whole in the window with a box of at most 72 characters, three interactions to hand something in |
+
 ## 236. The `language.*` word lists moved into shipped data (2026-10-28; roadmap A5, the functional designer's full read, point 5)
 
 | Where | Before | Now |

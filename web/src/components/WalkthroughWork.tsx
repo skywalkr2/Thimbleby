@@ -17,6 +17,7 @@ import { useToasts } from "../lib/toasts";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { insideLines, workLines } from "../lib/work-lines";
+import { Skeleton } from "../ui/Skeleton";
 
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
@@ -79,8 +80,12 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
 
   const refresh = () =>
     Promise.all(["business", "setup", "projects"].map((key) => client.invalidateQueries({ queryKey: [key] })));
-  const sayProblem = (err: unknown) =>
+  // A change made at once that couldn't be saved names what went wrong and offers to run it again.
+  const [retry, setRetry] = useState<(() => void) | null>(null);
+  const sayProblem = (err: unknown, again?: () => void) => {
     setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    setRetry(again ? () => again : null);
+  };
 
   /** The lines become projects inside the side, each by the project route; one the side already holds is left alone. A
    * group with a name and something ticked is a project inside the side too, and what is ticked goes inside it. */
@@ -136,7 +141,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
 
   useContinue(hasSlot ? { run: async () => (changed ? save() : true), disabled: !!missing, why: missing } : null);
 
-  if (!state.data) return <p className="empty">{t(state.isError ? "welcome.failed" : "loading")}</p>;
+  if (!state.data) return state.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton rows={2} />;
 
   const toggleBusiness = (on: boolean) => {
     setBusinessOn(on);
@@ -197,7 +202,10 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                 inside={insideLines(projects.data ?? [], side.project, (name, jobs) => t("walkthrough.work.group_line", { name, jobs }))}
                 onChanged={refresh}
                 onProblem={sayProblem}
-                onClear={() => setProblem("")}
+                onClear={() => {
+                  setProblem("");
+                  setRetry(null);
+                }}
               />
             ))}
           </ul>
@@ -318,9 +326,14 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
       )}
 
       {problem && (
-        <p className="problem-note" role="alert">
-          {problem}
-        </p>
+        <div className="problem-note" role="alert">
+          <p>{problem}</p>
+          {retry && (
+            <button type="button" className="btn" onClick={retry}>
+              {t("action.try_again")}
+            </button>
+          )}
+        </div>
       )}
       {!hasSlot && (
         <div className="row-end">
@@ -402,7 +415,7 @@ export function SavedSide(props: {
   position: number;
   inside: string[];
   onChanged: () => Promise<unknown>;
-  onProblem: (err: unknown) => void;
+  onProblem: (err: unknown, again?: () => void) => void;
   onClear: () => void;
   /** "setup": Remove while nothing is filed under the side. "ask": Remove at any time, asking what happens to its projects
    * and to-dos. */
@@ -431,7 +444,7 @@ export function SavedSide(props: {
       setRenaming(false);
       await props.onChanged();
     } catch (err) {
-      props.onProblem(err);
+      props.onProblem(err, () => void rename());
     } finally {
       setBusy(false);
     }
@@ -451,7 +464,7 @@ export function SavedSide(props: {
         },
       });
     } catch (err) {
-      props.onProblem(err);
+      props.onProblem(err, () => void remove());
     } finally {
       setBusy(false);
     }
@@ -473,7 +486,7 @@ export function SavedSide(props: {
         },
       });
     } catch (err) {
-      props.onProblem(err);
+      props.onProblem(err, () => void removeWith(where));
     } finally {
       setBusy(false);
     }

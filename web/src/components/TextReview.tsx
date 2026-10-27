@@ -13,6 +13,8 @@ import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
+import { Icon } from "../ui/Icon";
+import { Pill } from "../ui/Pill";
 
 type Choice = "accept" | "reject";
 
@@ -270,10 +272,10 @@ function Change(props: {
       <legend>
         {t("text_review.change_n", { n: props.number, total: props.total })}
         {conflict && (
-          <span className="pill k-risk">
-            <span aria-hidden="true">⚠ </span>
+          <Pill tone="danger" className="pill-gap">
+            <Icon name="alert" size={14} />{" "}
             {t("text_review.conflict")}
-          </span>
+          </Pill>
         )}
       </legend>
       {conflict && <p className="hint">{t("text_review.conflict_hint")}</p>}

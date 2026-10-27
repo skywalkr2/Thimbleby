@@ -147,14 +147,14 @@ test("two tabs with their counts, each saying in one line what it holds, and the
   const user = userEvent.setup();
   const calls = open();
   expect(await screen.findByRole("heading", { level: 1, name: "Handled for you" })).toBeInTheDocument();
-  expect(await screen.findByRole("button", { name: "Set aside before reading · 6" })).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByRole("button", { name: "Read, nothing to do · 2" })).toHaveAttribute("aria-pressed", "false");
+  expect(await screen.findByRole("radio", { name: "Set aside before reading · 6" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "Read, nothing to do · 2" })).not.toBeChecked();
   expect(screen.queryByRole("button", { name: /Closed by a rule/ })).not.toBeInTheDocument();
-  expect(within(screen.getByRole("group", { name: "Which list" })).getAllByRole("button")).toHaveLength(2);
+  expect(within(screen.getByRole("radiogroup", { name: "Which list" })).getAllByRole("radio")).toHaveLength(2);
   expect(screen.getByText("Kept for 30 days, then it leaves this list. The originals stay where they came from.")).toBeInTheDocument();
   expect(screen.getByText("Sorted away before Helper read it: newsletters, sales, codes, alerts and older copies.")).toBeInTheDocument();
   expect(screen.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" })).toHaveFocus();
-  await user.click(screen.getByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
   expect(await screen.findByText("Mail Helper read and found nothing for you in.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET handled?tab=read&q=")).toBe(true);
   expect(screen.queryByText(/Sorted away before/)).not.toBeInTheDocument();
@@ -183,9 +183,9 @@ test("rows are grouped by kind with a count, collapsed, and a group opens to its
 test("the Kind, Reason and Sender buttons are shown, Kind first and pressed, and the group keys of one view are all different", async () => {
   open();
   await screen.findByRole("button", { name: "Sales and promotions · 2" });
-  const buttons = within(screen.getByRole("group", { name: "Group by" })).getAllByRole("button");
+  const buttons = within(screen.getByRole("radiogroup", { name: "Group by" })).getAllByRole("radio");
   expect(buttons.map((b) => b.textContent)).toEqual(["Kind", "Reason", "Sender"]);
-  expect(buttons[0]).toHaveAttribute("aria-pressed", "true");
+  expect(buttons[0]).toBeChecked();
   const keys = Array.from(document.querySelectorAll("[data-group]")).map((e) => e.getAttribute("data-group"));
   expect(keys).toEqual(["kind:sales", "kind:notices", "item:file", "item:page"]);
   expect(new Set(keys).size).toBe(keys.length);
@@ -194,7 +194,7 @@ test("the Kind, Reason and Sender buttons are shown, Kind first and pressed, and
 test("a row on the read list says it was read with nothing to do", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
   const bills = await open_(user, /^Bills and statements · 1$/);
   expect(within(bills).getByRole("listitem")).toHaveTextContent("Read: nothing for you to do.");
   expect(screen.getByRole("button", { name: "Other mail · 1" })).toBeInTheDocument();
@@ -209,15 +209,15 @@ test("the other groupings, by reason and by sender, are one click away and group
   };
   const calls = open({ "GET handled?tab=set_aside&q=&group=sender": () => bySender, "GET handled?tab=set_aside&q=&group=reason": () => BY_REASON });
   await screen.findByRole("button", { name: "Sales and promotions · 2" });
-  expect(screen.getByRole("button", { name: "Kind" })).toHaveAttribute("aria-pressed", "true");
-  await user.click(screen.getByRole("button", { name: "Reason" }));
+  expect(screen.getByRole("radio", { name: "Kind" })).toBeChecked();
+  await user.click(screen.getByRole("radio", { name: "Reason" }));
   expect(await screen.findByRole("button", { name: `${BULK} · 2` })).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByRole("button", { name: `${NOTICE} · 1` })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Reason" })).toHaveAttribute("aria-pressed", "true");
-  await user.click(screen.getByRole("button", { name: "Sender" }));
+  expect(screen.getByRole("radio", { name: "Reason" })).toBeChecked();
+  await user.click(screen.getByRole("radio", { name: "Sender" }));
   expect(await screen.findByRole("button", { name: "Sender · 2" })).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByRole("button", { name: "No known sender · 1" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Sender" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("radio", { name: "Sender" })).toBeChecked();
   expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&group=sender")).toBe(true);
   expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&group=reason")).toBe(true);
 });
@@ -245,7 +245,7 @@ test("each list says so when it is empty", async () => {
     "GET handled?tab=read&q=": () => ({ ...READ, groups: [], kinds: [], counts: { set_aside: 0, read: 0 } }),
   });
   expect(await screen.findByText("Nothing has been set aside.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Read, nothing to do · 0" }));
+  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 0" }));
   expect(await screen.findByText("Nothing has been read with nothing to do.")).toBeInTheDocument();
 });
 
@@ -267,7 +267,7 @@ test("a row offers Treat as work, and in its menu Treat as personal, Always set 
 test("a row of the read list has Take a closer look, and in its menu the other choices", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   expect(within(other).getByRole("button", { name: "Take a closer look at Lunch q" })).toBeInTheDocument();
   await user.click(within(other).getByRole("button", { name: "More actions for Lunch q" }));
@@ -316,7 +316,7 @@ test("Take a closer look on a mail read with nothing to do offers no sorting rul
     "POST handled/q/work": () => done("q", { section: "notices" }),
     "POST handled/q/undo": () => done("q", { section: "notices", request: null, version: 6 }),
   });
-  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   await user.click(within(other).getByRole("button", { name: "Take a closer look at Lunch q" }));
   await waitFor(() => expect(body(calls, "POST handled/q/work")).toEqual({ read_version: 3 }));
@@ -345,7 +345,7 @@ test("Treat as personal hands the message in for the Personal project, and Undo 
 test("Always set aside mail like this saves a rule for the sender in the row's section, kept as a correction, and reads it back", async () => {
   const user = userEvent.setup();
   const calls = open({ "POST watch/sorting": () => SAVED });
-  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   await user.click(within(other).getByRole("button", { name: "More actions for Lunch q" }));
   await user.click(await screen.findByRole("menuitem", { name: "Always set aside mail like this" }));
@@ -426,7 +426,7 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   });
   await screen.findByRole("button", { name: "Sales and promotions · 2" });
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
   const heading = await screen.findByRole("heading", { name: "Closed without you seeing" });
   const section = heading.closest("section") as HTMLElement;
   expect(within(section).getByText("2 of 4 closed without you seeing them")).toBeInTheDocument();
@@ -436,7 +436,7 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   expect(rows[0]).toHaveTextContent("Ask about the venue");
   await user.click(within(rows[0]).getByRole("button", { name: "Looks right: Ask about the venue" }));
   await waitFor(() => expect(body(calls, "POST silent-closes/seen")).toEqual({ ref: "changeset:CS-1:0" }));
-  await user.click(screen.getByRole("button", { name: "Set aside before reading · 6" }));
+  await user.click(screen.getByRole("radio", { name: "Set aside before reading · 6" }));
   await screen.findByRole("button", { name: "Sales and promotions · 2" });
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
 });
@@ -450,11 +450,11 @@ test("one close that was not seen reads 1 of 3 closed without you seeing it, and
     measure: { ...NO_CLOSES.measure, total: 3, silent, rate: silent / 3 },
   });
   open({ "GET silent-closes": () => closes(1) });
-  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
   expect(await screen.findByText("1 of 3 closed without you seeing it")).toBeInTheDocument();
   cleanup();
   open({ "GET silent-closes": () => closes(0) });
-  await user.click(await screen.findByRole("button", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
   expect(await screen.findByText("You saw everything closed in the last 14 days.")).toBeInTheDocument();
 });
 

@@ -17,6 +17,7 @@ import { useSignInWindow } from "../lib/sign-in-window";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { addonOfSignIn } from "./SignIns";
+import { Icon } from "../ui/Icon";
 
 type Pack = S["PackView"];
 type Installed = S["InstalledPackView"];
@@ -96,9 +97,12 @@ function SortingSwitch() {
   const fresh = useFreshFingerprint();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const [problem, setProblem] = useState("");
+  // The choice that was being saved, so Try again saves the same one.
+  const [again, setAgain] = useState(false);
   const on = settings.data?.items.find((i) => i.key === SORTING)?.value !== "rules";
   const change = async (next: boolean) => {
     setProblem("");
+    setAgain(next);
     try {
       const saved = await api.saveSettings({ changes: { [SORTING]: next ? "ai" : "rules" }, reset: [], fingerprint: await fresh() });
       // The tick itself shows the choice: a setup step raises no message for each one.
@@ -115,9 +119,12 @@ function SortingSwitch() {
       </label>
       <p className="hint">{t("walkthrough.mail.sorting_hint")}</p>
       {problem && (
-        <p className="problem-note" role="alert">
-          {problem}
-        </p>
+        <div className="problem-note" role="alert">
+          <p>{problem}</p>
+          <button type="button" className="btn" onClick={() => void change(again)}>
+            {t("action.try_again")}
+          </button>
+        </div>
       )}
     </div>
   );
@@ -126,77 +133,118 @@ function SortingSwitch() {
 const SOURCES = "watch.sources";
 
 /** Which sides of the person's life a mailbox or calendar serves, as tick boxes: Personal and each side. Each tick is saved at
- * once as the source's `sides`, through the settings save (the whole list of sources, read fresh). The step raises no
- * message for a tick: the boxes and the line under them say how it stands, and a tick is undone by unticking it. Nothing
- * ticked is allowed: it means not said. */
+ * once as the source's `sides`, through the settings save (the whole list of sources, read fresh). A tick made while an
+ * earlier one is still being saved is queued and saved after it, and the boxes and the line under them show the choices as made,
+ * so the last words always match the boxes. The step raises no message for a tick: a tick is undone by unticking it, and one
+ * that couldn't be saved names its box and offers Try again. Nothing ticked is allowed: it means not said. */
 function SourceSides(props: { source: Source; personal: string | null; sides: S["SideView"][] }) {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
-  const [problem, setProblem] = useState("");
-  const [busy, setBusy] = useState(false);
+  type Tick = { side: string; on: boolean };
+  // What the person ticked that isn't settled yet (shown as made), the ticks waiting their turn, and what couldn't be saved.
+  const [wanted, setWanted] = useState<Record<string, boolean>>({});
+  const [failed, setFailed] = useState<Array<Tick & { detail: string }>>([]);
+  const [touched, setTouched] = useState(false);
+  const waiting = useRef<Tick[]>([]);
+  const running = useRef(false);
   const options = [
     ...(props.personal ? [{ id: props.personal, name: t("sides.filter.personal") }] : []),
     ...props.sides.map((s) => ({ id: s.project, name: s.name })),
   ];
   const stored = (settings.data?.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<{ id: string; sides?: string[] }>;
   const held = new Set(stored.find((s) => s.id === props.source.id)?.sides ?? []);
+  const ticked = (side: string) => wanted[side] ?? held.has(side);
 
-  const change = async (side: string, on: boolean) => {
-    setBusy(true);
-    setProblem("");
+  const save = async ({ side, on }: Tick) => {
+    // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
+    const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+    const list = (current.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<Record<string, unknown> & { id: string; sides?: string[] }>;
+    const mine = new Set(list.find((s) => s.id === props.source.id)?.sides ?? []);
+    if (on) mine.add(side);
+    else mine.delete(side);
+    // In the order of the choices, then any side the source names that isn't offered, which a tick leaves as it was.
+    const next = [...options.map((o) => o.id).filter((id) => mine.has(id)), ...[...mine].filter((id) => !options.some((o) => o.id === id))];
+    const changes = { [SOURCES]: list.map((s) => (s.id === props.source.id ? { ...s, sides: next } : s)) };
+    const saved = await api.saveSettings({ changes, reset: [], fingerprint: current.fingerprint });
+    await afterSave(saved, { quiet: true });
+  };
+
+  // One save at a time, in the order the ticks were made.
+  const drain = async () => {
+    if (running.current) return;
+    running.current = true;
+    const missed: Array<Tick & { detail: string }> = [];
     try {
-      // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
-      const list = (current.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<Record<string, unknown> & { id: string; sides?: string[] }>;
-      const mine = new Set(list.find((s) => s.id === props.source.id)?.sides ?? []);
-      if (on) mine.add(side);
-      else mine.delete(side);
-      // In the order of the choices, then any side the source names that isn't offered, which a tick leaves as it was.
-      const next = [...options.map((o) => o.id).filter((id) => mine.has(id)), ...[...mine].filter((id) => !options.some((o) => o.id === id))];
-      const changes = { [SOURCES]: list.map((s) => (s.id === props.source.id ? { ...s, sides: next } : s)) };
-      const saved = await api.saveSettings({ changes, reset: [], fingerprint: current.fingerprint });
-      await afterSave(saved, { quiet: true });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
-      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      while (waiting.current.length > 0) {
+        const tick = waiting.current.shift() as Tick;
+        try {
+          await save(tick);
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+          missed.push({ ...tick, detail: err instanceof ApiError && err.detail && err.status < 500 ? err.detail : "" });
+          // The box goes back to what is stored.
+          setWanted((now) => Object.fromEntries(Object.entries(now).filter(([side]) => side !== tick.side)));
+        }
+      }
     } finally {
-      setBusy(false);
+      running.current = false;
     }
+    if (missed.length > 0) setFailed(missed);
+    // Every tick is saved now: the boxes read from the settings again, unless another tick has been made since.
+    await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 }).catch(() => undefined);
+    if (!running.current && waiting.current.length === 0) setWanted({});
+  };
+
+  const change = (side: string, on: boolean) => {
+    setFailed([]);
+    setTouched(true);
+    setWanted((now) => ({ ...now, [side]: on }));
+    waiting.current.push({ side, on });
+    void drain();
+  };
+  const retry = () => {
+    const again = failed;
+    setFailed([]);
+    setWanted((now) => ({ ...now, ...Object.fromEntries(again.map((x) => [x.side, x.on])) }));
+    waiting.current.push(...again.map(({ side, on }) => ({ side, on })));
+    void drain();
   };
 
   const id = `source-sides-${props.source.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
-  const serving = options.filter((o) => held.has(o.id)).map((o) => o.name);
+  const list = (names: string[]) => new Intl.ListFormat(undefined, { style: "long", type: "conjunction" }).format(names);
+  const serving = options.filter((o) => ticked(o.id)).map((o) => o.name);
+  const nameOf = (side: string) => options.find((o) => o.id === side)?.name ?? side;
   return (
     <fieldset className="field" data-source-sides={props.source.id} aria-describedby={`${id}-hint`}>
       <legend>{t("walkthrough.mail.sides.legend", { label: props.source.label })}</legend>
       {options.map((o) => (
         <label key={o.id} className="check-line">
-          <input
-            type="checkbox"
-            checked={held.has(o.id)}
-            disabled={busy || settings.isPending}
-            onChange={(e) => void change(o.id, e.target.checked)}
-          />
+          <input type="checkbox" checked={ticked(o.id)} disabled={settings.isPending} onChange={(e) => change(o.id, e.target.checked)} />
           <span>{o.name}</span>
         </label>
       ))}
       <p className="hint" id={`${id}-hint`}>
         {t("walkthrough.mail.sides.hint")}
       </p>
-      {serving.length > 0 && (
+      {(serving.length > 0 || touched) && (
         <p className="sub" role="status" data-sides-state="">
-          {t("walkthrough.mail.sides.state", {
-            label: props.source.label,
-            sides: new Intl.ListFormat(undefined, { style: "long", type: "conjunction" }).format(serving),
-          })}
+          {serving.length > 0
+            ? t("walkthrough.mail.sides.state", { label: props.source.label, sides: list(serving) })
+            : t(options.length === 2 ? "walkthrough.mail.sides.none_two" : "walkthrough.mail.sides.none", { label: props.source.label })}
         </p>
       )}
-      {problem && (
-        <p className="problem-note" role="alert">
-          {problem}
-        </p>
+      {failed.length > 0 && (
+        <div className="problem-note" role="alert">
+          <p>
+            {t("walkthrough.mail.sides.failed", { sides: list([...new Set(failed.map((x) => nameOf(x.side)))]), label: props.source.label })}
+            {failed[0].detail ? ` ${failed[0].detail}` : ""}
+          </p>
+          <button type="button" className="btn" onClick={retry}>
+            {t("action.try_again")}
+          </button>
+        </div>
       )}
     </fieldset>
   );
@@ -484,7 +532,7 @@ function ServiceSignIn(props: { item: SignIn; autostart?: boolean; onStarted?: (
     <div className="service-sign-in" data-sign-in={item.name}>
       {signedIn ? (
         <p className="sub">
-          <span aria-hidden="true">✓ </span>
+          <Icon name="check" size={14} />{" "}
           {item.account ? t("walkthrough.mail.signed_in_as", { account: item.account }) : t("walkthrough.mail.signed_in")}
         </p>
       ) : (

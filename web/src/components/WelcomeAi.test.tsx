@@ -704,7 +704,9 @@ test("Save adds the account with the model chosen, tests it, and lists one plain
   });
   await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/test")).toHaveLength(1));
   const results = (await screen.findAllByRole("listitem")).filter((r) => r.closest(".test-results"));
-  expect(results.map((r) => r.textContent)).toEqual(["Everyday work: service-a — answered ✓", "Harder work: service-a — answered ✓"]);
+  expect(results.map((r) => r.textContent?.trim())).toEqual(["Everyday work: service-a — answered", "Harder work: service-a — answered"]);
+  // The mark is a line icon beside the words, never a text glyph.
+  expect(results.every((r) => r.querySelector("[data-icon='check']"))).toBe(true);
   expect(document.body.textContent ?? "").not.toMatch(/temperature|max output|stub|routine|deep|restart/i);
 });
 
@@ -722,7 +724,8 @@ test("a test that fails after saving shows its reason with a word and a cross, a
   await ready(user);
   await user.click(save());
   const line = await screen.findByText(/didn't answer/);
-  expect(line).toHaveTextContent("Everyday work: service-a — didn't answer: The key was refused. ✗");
+  expect(line).toHaveTextContent("Everyday work: service-a — didn't answer: The key was refused.");
+  expect(line.querySelector("[data-icon='close']")).not.toBeNull();
   await user.click(save());
   await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/test")).toHaveLength(2));
   expect(calls.filter((c) => c.route === "POST ai/accounts")).toHaveLength(1);
@@ -1140,7 +1143,8 @@ test("after saving an app, a sign-in failure shows the hint from its test", asyn
   await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
   await user.click(save());
   const line = await screen.findByText(/didn't answer/);
-  expect(line).toHaveTextContent("Everyday work: app-a — didn't answer: Sign in once in a terminal. ✗");
+  expect(line).toHaveTextContent("Everyday work: app-a — didn't answer: Sign in once in a terminal.");
+  expect(line.querySelector("[data-icon='close']")).not.toBeNull();
 });
 
 test("an account whose sign-in the app can read is asked about by that sign-in", async () => {

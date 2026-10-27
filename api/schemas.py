@@ -633,6 +633,11 @@ class OpMeta(BaseModel):
         description="A line the person should read beside the op: for a project added from a link nothing set up can "
         "open, that it was not read.",
     )
+    said_by: str | None = Field(
+        None,
+        description="For a fact that is one person's word: their name, so the row reads 'Pat says …', not as settled.",
+    )
+    as_of: str | None = Field(None, description="For a fact that names who said it: the day it was true as of.")
 
 
 class OpView(BaseModel):
@@ -975,6 +980,11 @@ class FollowupQuestion(BaseModel):
     about: str | None
     options: list[Option]
     origin: Origin | None = Field(None, description="Where the question came from, for its link.")
+    from_outside: bool | None = Field(
+        None,
+        description="Whether it was made from an input that was not the person's own words, so a link it holds says "
+        "where it came from before it is opened.",
+    )
     side: str | None = Field(
         None,
         description="Which side the question is on, from its project: the id of that side's top project (the "

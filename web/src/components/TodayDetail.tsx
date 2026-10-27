@@ -17,6 +17,7 @@ import { SideChoose } from "./SideChoose";
 import { BatchDetail } from "./BatchDetail";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
+import { OutsideStep } from "./OutsideStep";
 import { ProjectEndingDetail } from "./ProjectEndingDetail";
 import { ChangeRow, OpRow } from "./WhatChanged";
 
@@ -25,8 +26,11 @@ const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "w
 
 export function opensItems(line: QueueLine): boolean {
   // The line that asks which side items belong to opens the list of sides to pick from.
-  return OPENS.has(line.kind) || (line.kind === "unfiled" && line.state === "which_side");
+  return OPENS.has(line.kind) || (line.kind === "unfiled" && line.state === "which_side") || paysFromOutside(line);
 }
+
+/** A reminder to pay a bill whose words came from outside content: the one step that spends money says where it came from. */
+const paysFromOutside = (line: QueueLine): boolean => line.kind === "date_reminder" && line.state === "bill" && line.untrusted;
 
 /** What a line opens, headed by its action's notes when it is about one: where there is no hover (the phone, and below the
  * inspector's width) this is where they are read. */
@@ -71,6 +75,8 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
       return <CapacityDetail />;
     case "unfiled":
       return <SideChoose />;
+    case "date_reminder":
+      return <OutsideStep word="outside.step.pay" />;
     case "promise":
       return <PromiseWhy action={(line.actions ?? [])[0] ?? ""} />;
     case "review":

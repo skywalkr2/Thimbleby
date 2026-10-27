@@ -15,6 +15,7 @@ import { useSideFilter, useSides } from "../lib/sides";
 import { recordView, toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Icon } from "../ui/Icon";
+import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Handled.module.css";
 import { AssistantCloses } from "./HandledClosed";
@@ -78,16 +79,15 @@ export function Handled() {
       <div className="heading">
         <h1 id={`${ids}-title`}>{t("handled.title")}</h1>
         <SideFilter />
-        <div className={`filters ${styles.tabs}`} role="group" aria-label={t("handled.tabs")}>
-          {TABS.map((name) => (
-            <button key={name} type="button" aria-pressed={tab === name} onClick={() => {
-                setTab(name);
-                setItem(null);
-              }}>
-              {t(`handled.tab.${name}`, { n: counts ? counts[name] : "…" })}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          label={t("handled.tabs")}
+          options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`, { n: counts ? counts[name] : "…" }) }))}
+          value={tab}
+          onChange={(name) => {
+            setTab(name);
+            setItem(null);
+          }}
+        />
       </div>
       <p className="hint">{t(`handled.explain.${tab}`)}</p>
       {list.data && <p className="hint">{tn("handled.kept", list.data.kept_days)}</p>}
@@ -96,13 +96,7 @@ export function Handled() {
           <label htmlFor={`${ids}-search`}>{t("handled.search")}</label>
           <input id={`${ids}-search`} ref={search} type="search" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
         </div>
-        <div className={`filters ${styles.tabs}`} role="group" aria-label={t("handled.group")}>
-          {GROUPS.map((name) => (
-            <button key={name} type="button" aria-pressed={shownGroup === name} onClick={() => setGroup(name)}>
-              {t(`handled.group.${name}`)}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />
       </div>
       {kinds.length > 1 || item ? (
         <div className={`filters ${styles.tabs}`} role="group" aria-label={t("handled.filter")}>

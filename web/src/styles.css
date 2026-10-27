@@ -72,10 +72,10 @@ main p { max-width: var(--measure); }
 .plain-list .title { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .plain-list .meta { display: block; color: var(--text-muted); font-size: var(--text-sm); }
 .name { margin: 0; font-size: var(--text-md); }
-.kind, .pill { font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--pill-px); min-height: var(--pill-h); display: inline-flex; align-items: center; white-space: nowrap; }
-.pill { margin-left: var(--space-2); }
-.pill.wraps { white-space: normal; overflow-wrap: anywhere; text-align: left; }
-.pill a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.kind { font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--pill-px); min-height: var(--pill-h); display: inline-flex; align-items: center; white-space: nowrap; }
+.pill-gap { margin-left: var(--space-2); }
+.pill-flush { margin: var(--space-1) 0 0; }
+[data-pill] a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .k-review { background: var(--surface-sunk); color: var(--text-muted); }
 .k-send { background: var(--accent-soft); color: var(--accent-text); }
 .k-held { background: var(--warn-soft); color: var(--warn); }
@@ -133,6 +133,7 @@ main p { max-width: var(--measure); }
 .in-pane .child { grid-template-columns: minmax(0, 1fr); }
 .in-pane .child .acts { justify-content: flex-end; }
 .origin { font-size: var(--text-sm); }
+.origin.inline { display: inline; }
 .name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .name p { margin: 0; }
 .problem-note { border-left: 3px solid var(--danger); padding-left: var(--space-3); color: var(--danger); font-size: var(--text-sm); min-width: 0; overflow-wrap: anywhere; }
@@ -181,14 +182,7 @@ input[type="checkbox"]:disabled:checked::after { border-color: var(--text-subtle
 .row-end { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
 .panel { background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); }
 .panel h2 { font-size: var(--text-lg); }
-.tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); background: var(--surface-sunk); padding: var(--space-1); border-radius: var(--radius-md); }
-.tabs button { border: 0; background: transparent; min-height: 24px; padding: 0 var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; }
-.tabs button[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--elev-1); }
 .setup-form { box-shadow: none; }
-
-/* Skeleton rows while loading (the older, in-list form) */
-.skeleton .kind { width: 64px; height: var(--space-5); background: var(--surface-sunk); }
-.skeleton .bar { display: block; height: var(--space-5); border-radius: var(--radius-sm); background: var(--surface-sunk); }
 
 /* The dialog's own contents and the shortcut keys */
 kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var(--lh-xs); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-sm); padding: 0 var(--space-1); background: var(--surface); color: var(--text-muted); }
@@ -216,8 +210,6 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .notice-text { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .steps li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; border-top: 1px dashed var(--border); padding: var(--space-2) 0; }
-.steps .pill { margin-left: 0; }
-.steps li[data-done="true"] .pill { background: var(--ok-soft); color: var(--ok); }
 [data-narrow] .steps li { grid-template-columns: minmax(0, 1fr); justify-items: start; }
 
 /* Notes under a project */
@@ -228,7 +220,6 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 
 /* Dialogs for adding a file and reviewing an action */
 .acts.wrap { flex-wrap: wrap; justify-content: flex-end; }
-.pill.untrusted { margin: var(--space-1) 0 0; }
 a.btn { text-decoration: none; }
 .dialog-panel form { display: grid; gap: 0; }
 .review-body { display: grid; gap: var(--space-4); }
@@ -303,10 +294,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .guide-step { scroll-margin-top: calc(var(--header-h) + var(--space-4)); }
 .guide-step .heading h3 { font-size: var(--text-lg); line-height: var(--lh-lg); margin: 0; }
 .guide-step .heading h3:focus { outline: none; }
-.guide-step .pill { margin-left: 0; }
-.guide-step[data-state="done"] .pill { background: var(--ok-soft); color: var(--ok); }
-.guide-step[data-state="skipped"] .pill { background: var(--surface-sunk); color: var(--text-muted); }
-.guide-step[data-state="todo"] .pill { background: var(--accent-soft); color: var(--accent-text); }
 .guide-body { display: grid; gap: var(--space-3); }
 .guide-body form { display: grid; gap: 0; }
 .inline-field { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
@@ -443,7 +430,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .level-list { flex-direction: column; }
 .level-hint { margin: 0 0 var(--space-2) var(--space-8); }
 /* The AI step for a first-timer: the recommended tag, the numbered steps, the check's line and the spending sentence. */
-.tag-recommended { margin: 0 0 var(--space-1); background: var(--ok-soft); color: var(--ok); }
+.tag-recommended { margin: 0 0 var(--space-1); }
 .else-list { display: grid; gap: var(--space-3); margin-top: var(--space-3); padding-left: var(--space-3); border-left: 2px solid var(--border); }
 /* The three lines under Something else: each a full-width button that opens its own short list. */
 .else-group { display: grid; gap: var(--space-2); min-width: 0; }
@@ -484,8 +471,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-row.stacked > .tb-what { grid-column: 1 / -1; grid-row: 2; }
 .tb-row.stacked > button { grid-column: 2; grid-row: 1; }
 .tb-row.stacked > :not(.tb-when):not(.tb-what):not(button) { grid-column: 1 / -1; }
-.tb-row .pill { margin: 0 var(--space-2) 0 0; }
-.tb-row .tb-title .pill { margin: 0 0 0 var(--space-2); }
 .tb-row .answer-form { flex: 1 0 100%; }
 .tb-row .struck { text-decoration: line-through; }
 /* A meeting added in one line, in the agenda's drawer: the fields share the row and wrap rather than widen it. */

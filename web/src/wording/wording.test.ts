@@ -343,3 +343,21 @@ test("the headings of Settings' pages and Advanced's topics are short and use no
     expect(words[`settings.topic.${topic}`], topic).toBeTruthy();
   }
 });
+
+test("no status or action reads Stale or On hold: a to-do not touched in a while says so, and a held one is Paused", () => {
+  const found = Object.entries(words).filter(([, value]) => /^stale\b/i.test(value) || /\bon hold\b|\btake off hold\b/i.test(value));
+  expect(found).toEqual([]);
+  expect(words["queue.pill.stale"]).toBe("Not touched in a while");
+  expect(words["value.status.held"]).toBe("Paused");
+});
+
+test("the setup step about work names no option that doesn't exist: leaving both empty keeps it to the person's own life", () => {
+  expect(words["walkthrough.why.work"]).toContain("Leave both empty to keep it to your own life");
+  expect(Object.values(words).filter((v) => /just my own life/i.test(v))).toEqual([]);
+});
+
+test("one word says that something waits on the person: a state or a pill says Needs you, and Waiting for you is left to sentences", () => {
+  const found = Object.entries(words).filter(([, value]) => /^waiting for you$/i.test(value.trim()));
+  expect(found).toEqual([]);
+  for (const key of ["op.status.held", "text.status.pending", "queue.pill.waiting", "conversation.op.held", "changes.state.needs_you"]) expect(words[key]).toBe("Needs you");
+});

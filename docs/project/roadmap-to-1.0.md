@@ -1239,14 +1239,16 @@ The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the des
 - [ ] [U13] No JSON, ids or raw headers in any message, title or label.
 - [x] [U14] A review happens on Today: the address stays and the count never rises; no Today action adds lines.
   **Built:** `tests/test_today_adds_no_lines.py`, `web/e2e/today-review.spec.ts`.
-- [ ] [U15] A business's first read leaves at most one filing question.
+- [x] [U15] A business's first read leaves at most one filing question. **Built:** `tests/test_filing_unsure.py` (also with a job
+  and a business beside Personal: one question per side a day, one Today line that names neither).
 - [ ] [U16] Setup's ticks come from records.
 - [x] [U17] At 390px, queue titles show at least 25 characters. **Built:** `web/e2e/today-review.spec.ts`.
 - [x] [U18] Row actions are tonal in both themes, only the selected line's filled. **Built:** `web/src/theme/dayMode.test.ts`,
   `web/e2e/today-review.spec.ts`.
 - [ ] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
-- [ ] [U20] A rail panel opened on a phone stays open when Today's data refreshes (the layout walk retries opening Came in;
-  trace whether the panel folds itself again and fix it if so).
+- [x] [U20] A rail panel opened on a phone stays open when Today's data refreshes. **Built:** `web/src/components/TodayRailFold.test.tsx`
+  (the cause: a card out of the page while what it asks is on its way lost its own fold; the rail keeps it now),
+  `web/e2e/layout.spec.ts` (the walk opens Came in plainly, no retry).
 - [ ] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
   address (the reviewer's answer 10; owner, 2026-10-28).
 
@@ -1260,15 +1262,22 @@ code. Nearly all is built or planned. What is left, in two batches:
   in the design, stale open-promise rows refreshed and cells capped, and two decisions written down that were taken in
   building: the handled-for-you count on Today supersedes the designer's F34 and P58 ("nothing about handled mail on
   Today"), and removing the Top priorities card keeps F15, F16 and F24's chase rules without their display.
-- [ ] [A2] The second pass's leftovers: notes stored before today re-titled once (no raw headers anywhere); U20; the
+- [x] [A2] The second pass's leftovers: notes stored before today re-titled once (no raw headers anywhere); U20; the
   "From an email" note at a link to open and a payment; "Stale" and "On hold" replaced everywhere (G21); no "Outside" tag
-  on meeting-prep lines (G14); U15 with a job and a business (two sides).
-- [ ] [A2b] The reviewer's check of the fixes (`reviews/ui-ux-2026-10/validate-82d24cc/`, 2026-10-28): G1 to G4 fixed,
+  on meeting-prep lines (G14); U15 with a job and a business (two sides). **Built:** `tests/test_note_title_migration.py`,
+  `web/src/components/TodayRailFold.test.tsx`, `tests/test_outside_steps.py`, `web/src/components/TodayArrives.test.tsx`,
+  `web/src/wording/wording.test.ts`, `web/src/components/MeetingPrep.test.tsx`, `tests/test_filing_unsure.py` (change log 235).
+- [x] [A2b] The reviewer's check of the fixes (`reviews/ui-ux-2026-10/validate-82d24cc/`, 2026-10-28): G1 to G4 fixed,
   both personas finish setup alone, no Today action raised the count; phase U can close. Backlog H1 to H8: the "since
   yesterday" line folded into the review lines (H1); "Not looked at before" said once (H2); "Leave both empty to keep it to
   your own life" (H3); no raw dates in the review's items and facts that say who said them (H4); no stray "·" on the
   Personal page (H5); "might be" Hale Upholstery's (H6); a quick second tick queued, not dropped, and a failed tick named
-  with Try again (H7); the last message matching the final state of the ticks (H8).
+  with Try again (H7); the last message matching the final state of the ticks (H8). **Built:** `tests/test_since_yesterday.py`
+  (H1), `web/src/components/LookBack.test.tsx` (H2), `web/src/wording/wording.test.ts` (H3, H6), `web/src/components/Today.test.tsx`,
+  `FactSays.test.tsx`, `tests/test_fact_says.py` (H4), `RecordPageRecords.test.tsx` (H5), `Walkthrough.test.tsx` (H7, H8). The fact the
+  reviewer saw, "The notes list that the offsite is on a Friday.", is the stand-in answer's shape for a "Decided:" line in
+  a document (`engine/ai/adapters/stand_in.py`): the line says no one chose, and the stand-in sets no speaker; a fact with
+  a known speaker now reads "Pat says …" with its day.
 - [ ] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
   lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
   thresholds paragraph matched to the draft once the owner says yes.
@@ -1277,7 +1286,10 @@ code. Nearly all is built or planned. What is left, in two batches:
   denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). *Left:* the thresholds
   paragraph of design 6.32, which waits for the owner's yes.
 - [ ] [A4] The checklist's partials (C13, C15, C16, C23, C24, C29, C35, C36, C41, C43, C45) built or re-marked, with C21
-  and C22 re-marked.
+  and C22 re-marked. Built with tests (`docs/project/ui-review-status-2026-10-20.md`): C13, C15, C21, C22, C25, C36, C41, C45.
+  Left, each re-marked with why: C16 (the rail's rows to `ui/Row`), C23 (two columns and inline validation in the forms),
+  C24 (a sweep of about 240 disabled controls), C29 (a currency setting), C35 (the `.kind` chips and three filter groups)
+  and C43 (queued clicks while offline).
 - [ ] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
   lists moved into shipped data (full-read point 5); the Monday message asking once who it is for; "Drop it and draft the
   note"; P40 point 8 reproduced; B-11b's tiers with a cost per day. (S4's setup tick boxes for common areas: dropped, owner 2026-10-28; areas

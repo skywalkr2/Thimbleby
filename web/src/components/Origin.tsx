@@ -11,6 +11,7 @@ import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { SafeLink } from "./SafeText";
 import { SourceLimit } from "./SourceLimit";
+import { Skeleton } from "../ui/Skeleton";
 
 /** Whether an origin has a link to show: a line that holds it must not leave a dot beside nothing when it has none. */
 export function hasOrigin(origin?: S["Origin"] | null): boolean {
@@ -27,28 +28,36 @@ function isOwnAddress(url: string): boolean {
   }
 }
 
-export function OriginLink(props: { origin?: S["Origin"] | null; /** The link's words, when they are more than "Where it came from". */ label?: string }) {
+export function OriginLink(props: {
+  origin?: S["Origin"] | null;
+  /** The link's words, when they are more than "Where it came from". */
+  label?: string;
+  /** Sits in a line of words after a separator, so it is a span and not a block that would strand the separator. */
+  inline?: boolean;
+}) {
   const { t } = useWords();
   const origin = props.origin;
   if (!origin) return null;
+  const Box = props.inline ? "span" : "div";
+  const kind = props.inline ? "origin inline" : "origin";
   // An address of this app itself is not an outside page: it opens the saved text like any input.
   if (origin.kind === "link" && origin.url && origin.source && isOwnAddress(origin.url)) {
-    return <SourceLink source={origin.source} label={props.label} />;
+    return <SourceLink source={origin.source} label={props.label} as={Box} className={kind} />;
   }
   if (origin.kind === "link" && origin.url) {
     return (
-      <div className="origin">
+      <Box className={kind}>
         <SafeLink label={props.label ?? t("origin.link")} url={origin.url} />
-      </div>
+      </Box>
     );
   }
-  if (origin.kind === "source" && origin.source) return <SourceLink source={origin.source} label={props.label} />;
-  if (origin.kind === "change" && origin.changeset) return <ChangeLink changeset={origin.changeset} label={props.label} />;
+  if (origin.kind === "source" && origin.source) return <SourceLink source={origin.source} label={props.label} as={Box} className={kind} />;
+  if (origin.kind === "change" && origin.changeset) return <ChangeLink changeset={origin.changeset} label={props.label} as={Box} className={kind} />;
   return null;
 }
 
 /** Opens the saved text of the input in a dialog. */
-function SourceLink(props: { source: string; label?: string }) {
+function SourceLink(props: { source: string; label?: string; as: "div" | "span"; className: string }) {
   const { t } = useWords();
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -56,13 +65,14 @@ function SourceLink(props: { source: string; label?: string }) {
     setOpen(false);
     restoreFocus(() => button.current);
   };
+  const Box = props.as;
   return (
-    <div className="origin">
+    <Box className={props.className}>
       <button ref={button} type="button" className="link-button" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         {props.label ?? t("origin.link")}
       </button>
       {open && <SourceDialog source={props.source} onClose={close} />}
-    </div>
+    </Box>
   );
 }
 
@@ -75,7 +85,7 @@ function SourceDialog(props: { source: string; onClose: () => void }) {
     <ModalPanel titleId={titleId} onClose={props.onClose} dismissable>
       <h2 id={titleId}>{t("origin.title")}</h2>
       {source.isPending ? (
-        <p>{t("loading")}</p>
+        <Skeleton rows={2} />
       ) : source.isError || !s ? (
         <p className="hint">{t("source.missing")}</p>
       ) : (
@@ -98,10 +108,11 @@ function SourceDialog(props: { source: string; onClose: () => void }) {
 }
 
 /** Opens the change in What changed: on this screen when the list is here, else on that screen. */
-function ChangeLink(props: { changeset: string; label?: string }) {
+function ChangeLink(props: { changeset: string; label?: string; as: "div" | "span"; className: string }) {
   const { t } = useWords();
+  const Box = props.as;
   return (
-    <div className="origin">
+    <Box className={props.className}>
       <button
         type="button"
         className="link-button"
@@ -111,6 +122,6 @@ function ChangeLink(props: { changeset: string; label?: string }) {
       >
         {props.label ?? t("origin.link")}
       </button>
-    </div>
+    </Box>
   );
 }

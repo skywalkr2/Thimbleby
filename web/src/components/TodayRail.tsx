@@ -9,6 +9,7 @@ import { settingsView, type View } from "../lib/views";
 import { BriefCard, hasBrief, useBrief } from "./BriefCard";
 import { useCameInCard } from "./CameInCard";
 import { PluginPanels } from "./PluginPanels";
+import { RailFolds } from "./RailPanel";
 import { useScheduleCard } from "./ScheduleCard";
 import styles from "./Today.module.css";
 
@@ -35,10 +36,12 @@ export function TodayRail(props: {
   const settled = briefing.settled && schedule.settled && cameIn.settled;
   const nothing = settled && !briefing.drawn && !schedule.drawn && !cameIn.drawn;
   return (
-    <div className={styles.rail} role="group" aria-label={t("today.rail.label")}>
-      {briefing.drawn && props.workspace && <BriefCard workspace={props.workspace} onOpenRecord={open} onOpenView={props.onView} onClosed={() => closed((n) => n + 1)} />}
-      {schedule.drawn && schedule.card}
-      {cameIn.drawn && cameIn.card}
+    <div className={styles.rail} role="group" aria-label={t("today.rail.label")} data-region="">
+      <RailFolds>
+        {briefing.drawn && props.workspace && <BriefCard workspace={props.workspace} onOpenRecord={open} onOpenView={props.onView} onClosed={() => closed((n) => n + 1)} />}
+        {schedule.drawn && schedule.card}
+        {cameIn.drawn && cameIn.card}
+      </RailFolds>
       {nothing && props.queueEmpty && (
         <p className={styles.railNothing} data-rail-nothing="">
           {t("today.rail.nothing_else")}

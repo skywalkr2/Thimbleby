@@ -11,7 +11,7 @@ import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
 
 // The Today line that asks which side some items belong to, with one other side and with several (design 6.32, 7.7): what
-// the assistant couldn't place waits under Personal, and the line opens one question for each side ("These 3 items look like
+// the assistant couldn't place waits under Personal, and the line opens one question for each side ("These 3 items might be
 // <side>'s. Move them there?") with Move, which says what it changes and has Undo, and Keep under Personal. Items filed
 // under no project at all are still sorted by choosing a side.
 
@@ -104,9 +104,9 @@ test("choosing a side files everything the line stands for under that side's top
 test("with one other side the line still names it, and Move and Keep are what the question offers", async () => {
   const user = userEvent.setup();
   show(sortLine(3, FIRST.name), [FIRST], { "GET unfiled": () => unfiledView(), "GET filing/questions": () => ({ questions: [waiting(FIRST)] }) });
-  const line = await row(`These 3 items look like ${FIRST.name}'s. Move them there?`);
+  const line = await row(`These 3 items might be ${FIRST.name}'s. Move them there?`);
   await user.click(within(line).getByRole("button", { name: "Look" }));
-  const question = await screen.findByLabelText(`These 3 items look like ${FIRST.name}'s. Move them there?`, { selector: "section" });
+  const question = await screen.findByLabelText(`These 3 items might be ${FIRST.name}'s. Move them there?`, { selector: "section" });
   expect(within(question).getAllByRole("listitem").map((li) => li.textContent)).toEqual(items.map((i) => i.text));
   // Move says what it changes before it is pressed.
   expect(within(question).getByText(`These 3 items will be visible with ${FIRST.name}'s work.`)).toBeInTheDocument();
@@ -121,8 +121,8 @@ test("Move is the person's own change with Undo, and its toast says what it chan
     "POST filing/move": () => ({ changeset: "CS-2", count: 3, rule: null }),
     "POST changesets/CS-2/undo": () => ({ restored: [0], skipped: [] }),
   });
-  await user.click(within(await row(`These 3 items look like ${FIRST.name}'s. Move them there?`)).getByRole("button", { name: "Look" }));
-  const question = await screen.findByLabelText(`These 3 items look like ${FIRST.name}'s. Move them there?`, { selector: "section" });
+  await user.click(within(await row(`These 3 items might be ${FIRST.name}'s. Move them there?`)).getByRole("button", { name: "Look" }));
+  const question = await screen.findByLabelText(`These 3 items might be ${FIRST.name}'s. Move them there?`, { selector: "section" });
   await user.click(within(question).getByRole("button", { name: "Move" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST filing/move")?.body).toEqual({ side: FIRST.project, items: items.map((i) => ({ kind: i.kind, id: i.id, read_version: 1 })) }));
   expect(await screen.findByText(`Moved 3 items to ${FIRST.name}. They are now visible with ${FIRST.name}'s work.`)).toBeInTheDocument();
@@ -137,8 +137,8 @@ test("a rule proposed by a second move is said in the toast", async () => {
     "GET filing/questions": () => ({ questions: [waiting(FIRST)] }),
     "POST filing/move": () => ({ changeset: "CS-2", count: 3, rule: "RULE-1" }),
   });
-  await user.click(within(await row(`These 3 items look like ${FIRST.name}'s. Move them there?`)).getByRole("button", { name: "Look" }));
-  const question = await screen.findByLabelText(`These 3 items look like ${FIRST.name}'s. Move them there?`, { selector: "section" });
+  await user.click(within(await row(`These 3 items might be ${FIRST.name}'s. Move them there?`)).getByRole("button", { name: "Look" }));
+  const question = await screen.findByLabelText(`These 3 items might be ${FIRST.name}'s. Move them there?`, { selector: "section" });
   await user.click(within(question).getByRole("button", { name: "Move" }));
   expect(await screen.findByText(/a rule is waiting for you to keep or drop/)).toBeInTheDocument();
 });
@@ -151,8 +151,8 @@ test("Keep leaves the items under Personal and changes nothing", async () => {
     "POST filing/move": () => ({ changeset: "CS-2", count: 3, rule: "RULE-1" }),
     "POST filing/keep": () => ({ signal: "SIG-1" }),
   });
-  await user.click(within(await row(`These 3 items look like ${FIRST.name}'s. Move them there?`)).getByRole("button", { name: "Look" }));
-  const question = await screen.findByLabelText(`These 3 items look like ${FIRST.name}'s. Move them there?`, { selector: "section" });
+  await user.click(within(await row(`These 3 items might be ${FIRST.name}'s. Move them there?`)).getByRole("button", { name: "Look" }));
+  const question = await screen.findByLabelText(`These 3 items might be ${FIRST.name}'s. Move them there?`, { selector: "section" });
   await user.click(within(question).getByRole("button", { name: "Keep under Personal" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST filing/keep")?.body).toMatchObject({ side: FIRST.project }));
   expect(calls.some((c) => c.route === "POST filing/move")).toBe(false);

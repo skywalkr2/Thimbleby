@@ -18,6 +18,7 @@ import { useEstimate, useSpent } from "../lib/money";
 import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useQueue, useTodayCount } from "../lib/today";
+import { useFactLine } from "../lib/fact-line";
 import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -35,6 +36,8 @@ import { onSide, useSideFilter, useSideOf } from "../lib/sides";
 import { Highlighted } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
+import { Skeleton } from "../ui/Skeleton";
+import { Pill } from "../ui/Pill";
 
 /** The width the list needs beside the pane: a state, a title with one line under it, the primary and the menu. */
 const CHANGES_FIT = 480;
@@ -258,22 +261,6 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
         </ListDetail>
       )}
     </section>
-  );
-}
-
-function Skeleton() {
-  const { t } = useWords();
-  return (
-    <ol className="queue" aria-busy="true" aria-label={t("loading")}>
-      {[0, 1, 2].map((i) => (
-        <li key={i} className="line skeleton" aria-hidden="true">
-          <div className="row">
-            <span className="kind" />
-            <span className="bar" />
-          </div>
-        </li>
-      ))}
-    </ol>
   );
 }
 
@@ -674,11 +661,11 @@ function undoMessage(report: S["UndoReport"], t: T, tn: TN): string {
   return skipped ? t("toast.undo_partial", { skipped: tn("toast.skipped", skipped) }) : t("toast.undone_items");
 }
 
-const OP_PILL: Record<S["OpView"]["status"], string | null> = {
+const OP_PILL: Record<S["OpView"]["status"], "warn" | "danger" | "neutral" | null> = {
   applied: null,
-  held: "k-held",
-  refused: "k-risk",
-  undone: "k-done",
+  held: "warn",
+  refused: "danger",
+  undone: "neutral",
 };
 
 /** The kinds of item a review card's row can be changed as (the kinds the change route takes). */
@@ -714,7 +701,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
   const ask = op.ask && op.ask.status === "open" ? op.ask : null;
   const needsOwner = op.meta.action_status === "held";
   const pillKey = needsOwner && ask ? "owner" : op.status;
-  const pill = needsOwner && ask ? "k-held" : OP_PILL[op.status];
+  const pill = needsOwner && ask ? "warn" : OP_PILL[op.status];
 
   const release = () =>
     act(
@@ -743,6 +730,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
   useRowKeys(ref, { primary: op.status === "held" && !ask && !history ? (heldWords ? heldWords.primary.run : () => void release()) : undefined });
 
   const labelOf = useFieldLabel();
+  const factLine = useFactLine();
   const meta = metaLine(op, t, labelOf);
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
@@ -754,9 +742,13 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         )}
         <div className="what">
           {opLabel(op, t, has)}
-          {pill && <span className={`pill ${pill}`}>{t(`op.status.${pillKey}`)}</span>}
+          {pill && (
+            <Pill tone={pill} className="pill-gap">
+              {t(`op.status.${pillKey}`)}
+            </Pill>
+          )}
         </div>
-        <div className="title">{plainTitle(op.title, op.meta.due)}</div>
+        <div className="title">{op.op === "fact" ? factLine(op.title, op.meta.said_by) : plainTitle(op.title, op.meta.due)}</div>
         {meta && <div className="meta">{meta}</div>}
         {op.reason && op.status !== "applied" && <div className="reason">{op.reason}</div>}
       </div>
@@ -915,6 +907,7 @@ function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string): str
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
   if (m.project && op.op !== "note") bits.push(m.project);
   if (m.field) bits.push(t("op.meta.set", { field: labelOf(m.field), value: setValue(m.value) }));
+  if (m.said_by && m.as_of) bits.push(day(m.as_of));
   if (m.role) bits.push(t("op.meta.role", { role: t(`role.${m.role}`) }));
   if (m.stance) bits.push(t("op.meta.stance", { stance: t(`stance.${m.stance}`) }));
   return bits.join(" · ");
@@ -923,7 +916,7 @@ function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string): str
 export function SourcePanel(props: { id: string; quote: string }) {
   const { t } = useWords();
   const source = useQuery({ queryKey: ["source", props.id], queryFn: () => api.source(props.id) });
-  if (source.isPending) return <div className="source">{t("loading")}</div>;
+  if (source.isPending) return <Skeleton rows={1} />;
   if (source.isError || !source.data) return <div className="source">{t("source.missing")}</div>;
   const s = source.data;
   return (
@@ -1003,7 +996,7 @@ function AccountChooser(props: { request: string; onDone: () => void }) {
       <p className="hint" id={`ac-${props.request}`}>
         {t(ready && list.length === 0 ? "changes.no_accounts" : "changes.choose_account")}
       </p>
-      {accounts.isPending && <p className="hint">{t("loading")}</p>}
+      {accounts.isPending && <Skeleton rows={1} />}
       {accounts.isError && <p className="problem-note">{t("changes.accounts_failed")}</p>}
       {list.length > 0 && (
         <ul className="plain-list account-list">

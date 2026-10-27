@@ -2059,7 +2059,7 @@ class LanguageFile(FileModel):
     due_hold_words: list[str] | None = word_list(
         'The condition words that wait for something to happen ("once the keys arrive", "after the '
         'workshop", "until you publish it"). A promise whose due words hold one, and that the date reader can\'t read '
-        "as a date, is put on hold from the start, waiting for those words. Condition words not listed here only leave "
+        "as a date, is paused from the start, waiting for those words. Condition words not listed here only leave "
         "the date open. Case is ignored."
     )
     due_before_words: list[str] | None = word_list(
@@ -2276,7 +2276,7 @@ class FollowupsSettings(ConfigModel):
         le=365,
         description="Something sent to a person about an action is chased only when the action's own due date is this "
         "many days away or less, or already past; a promise someone owes you that has a date gets its Today line from "
-        "this many days before its date. An action on hold is never chased.",
+        "this many days before its date. A paused action is never chased.",
     )
     undated_after_days: int = Field(
         14,
@@ -3477,7 +3477,7 @@ class PeopleSettings(ConfigModel):
         le=365,
         description="A promise to someone, or from someone, with no news for this many days gets a line on Today: "
         "follow up with them. The days count from when it was made or from its latest news, and a promise already "
-        "on another line, on hold or waiting for your yes is left out. Zero turns the line off.",
+        "on another line, paused or waiting for your yes is left out. Zero turns the line off.",
     )
     max_facts: int = Field(
         5,
@@ -3580,7 +3580,7 @@ class PatternSettings(ConfigModel):
         ge=0,
         le=50,
         description="A promise you made whose day has been moved this many times gets one suggestion with choices: "
-        "drop it, put it on hold or leave it. Zero turns the suggestion off.",
+        "drop it, pause it or leave it. Zero turns the suggestion off.",
     )
     owed_replies: int = Field(
         2,

@@ -10259,6 +10259,18 @@
             "description": "The day the person was last chased about it (a date).",
             "title": "Followed Up"
           },
+          "from_outside": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it was made from an input that was not the person's own words, so a link it holds says where it came from before it is opened.",
+            "title": "From Outside"
+          },
           "held_for_name": {
             "anyOf": [
               {
@@ -15009,6 +15021,18 @@
             ],
             "title": "Action Status"
           },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a fact that names who said it: the day it was true as of.",
+            "title": "As Of"
+          },
           "due": {
             "anyOf": [
               {
@@ -15085,6 +15109,18 @@
             ],
             "description": "The part in a project that the op sets: run, design or watch.",
             "title": "Role"
+          },
+          "said_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a fact that is one person's word: their name, so the row reads 'Pat says \u2026', not as settled.",
+            "title": "Said By"
           },
           "stance": {
             "anyOf": [

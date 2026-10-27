@@ -23,8 +23,9 @@ function useParts(found: Coverage): Part[] {
     const today = localDate(new Date(found.last)) === localDate(now);
     parts.push({ kind: "read", key: "read", text: today ? tn("coverage.read", found.read.length, { when }) : tn("coverage.read_earlier", found.read.length, { when }) });
   }
-  for (const source of found.read) {
-    if (source.looked_back_to) parts.push({ kind: "looked", key: `looked:${source.id}`, text: t("coverage.not_looked_at", { date: day(source.looked_back_to) }) });
+  // Said once for each day, however many mailboxes were taken in from it.
+  for (const from of new Set(found.read.map((source) => source.looked_back_to).filter(Boolean))) {
+    parts.push({ kind: "looked", key: `looked:${from}`, text: t("coverage.not_looked_at", { date: day(from as string) }) });
   }
   for (const { source, kind } of found.unread) {
     const label = source.label;

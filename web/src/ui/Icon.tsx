@@ -59,6 +59,10 @@ const SHAPES = {
     </>
   ),
   chevron: <path d="M9 6l6 6-6 6" />,
+  minus: <path d="M5 12h14" />,
+  circle: <circle cx="12" cy="12" r="8" />,
+  "arrow-right": <path d="M4 12h16 M14 6l6 6-6 6" />,
+  external: <path d="M14 4h6v6 M20 4l-9 9 M18 14v6H4V6h6" />,
   "chevron-down": <path d="M6 9l6 6 6-6" />,
   chat: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />,
   close: <path d="M6 6l12 12 M18 6L6 18" />,

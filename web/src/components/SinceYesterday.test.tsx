@@ -107,6 +107,14 @@ test("each row says the act and its reason in the assistant's voice, with the qu
   expect(replied).toHaveTextContent("Closed “Tell the shop when the proofs ship”: you replied on");
 });
 
+test("a date in a row's words reads as a day, never in its raw form", async () => {
+  open([entry({ act: "added", title: "Send the revised budget by 2026-11-05.", quote: "I will send the revised budget", by_you: true })]);
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  const [added] = rows();
+  expect(added).toHaveTextContent(/Added “Send the revised budget by .*5\.”/);
+  expect(added.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+});
+
 test("a close the person has not seen says so in words, and what was seen or isn't a close does not", async () => {
   open([CLOSED, MOVED, ADDED, SORTED]);
   await screen.findByRole("list", { name: "What changed since yesterday" });

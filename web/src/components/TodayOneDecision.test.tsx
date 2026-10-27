@@ -144,7 +144,7 @@ test("a held line opens on only its decision: the question, the words and who sa
   const user = userEvent.setup();
   show([heldLine(), reviewLine()]);
   const row = await rowOf("Close 'Send two spine options'?");
-  await user.click(within(row).getByText("Waiting for you"));
+  await user.click(within(row).getByText("Needs you"));
   const detail = detailOf(row);
   expect(detail).toHaveTextContent("“both spines are in the shared folder” · Said by Robin Sample");
   expect(detail).toHaveTextContent("Where it came from");
@@ -163,7 +163,7 @@ test("a held line's details do not say the question again: it is in the line's t
   const user = userEvent.setup();
   show([heldLine(), reviewLine()]);
   const row = await rowOf("Close 'Send two spine options'?");
-  await user.click(within(row).getByText("Waiting for you"));
+  await user.click(within(row).getByText("Needs you"));
   const detail = detailOf(row);
   expect(await within(detail).findByText("Why it waits")).toBeInTheDocument();
   expect(within(detail).queryByText("Close 'Send two spine options'?")).toBeNull();
@@ -176,7 +176,7 @@ test("the answers in the details are the line's own answers, and the first one a
   const user = userEvent.setup();
   const calls = show([heldLine()], { "POST changesets/CS-1/ops/1/release": () => ({ ok: "CS-1" }) });
   const row = await rowOf("Close 'Send two spine options'?");
-  await user.click(within(row).getByText("Waiting for you"));
+  await user.click(within(row).getByText("Needs you"));
   await user.click(within(detailOf(row)).getByRole("button", { name: "Close it" }));
   await vi.waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/1/release")).toBe(true));
 });
@@ -187,7 +187,7 @@ test("a held op the engine doesn't shape as a question opens as its own row, lab
   item.changeset!.ops[1] = { ...item.changeset!.ops[1], op: "person.contact", held: null, title: "A way to reach Jordan", reason: "A way to reach someone waits for your confirmation." };
   show([heldLine({ held: null, text: "Add a way to reach Jordan", waiting: "A way to reach someone waits for your confirmation." }), reviewLine()], { "GET changes": () => [item] });
   const row = await rowOf("Review a waiting change");
-  await user.click(within(row).getByText("Waiting for you"));
+  await user.click(within(row).getByText("Needs you"));
   const detail = detailOf(row);
   expect(await within(detail).findByText("Would add a way to reach someone")).toBeInTheDocument();
   expect(within(detail).getByText("A way to reach Jordan")).toBeInTheDocument();

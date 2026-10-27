@@ -80,7 +80,7 @@ const rowOf = async (title: string) => (await screen.findByRole("group", { name:
 test("a held close is the action as a question, the words it rests on and who said them under it, and two answers that say what they do", async () => {
   show([held({ ask: "close", item: "Send two spine options", quote: "both spines are in the shared folder", reporter: "Robin Sample", told: [] })]);
   const row = await rowOf("Close 'Send two spine options'?");
-  expect(within(row).getByText("Waiting for you")).toBeInTheDocument();
+  expect(within(row).getByText("Needs you")).toBeInTheDocument();
   expect(row).toHaveTextContent("“both spines are in the shared folder” · Said by Robin Sample");
   // The reason it waits is in the inspector, not on the line, and the title never says "close it?" as a second question.
   expect(row).not.toHaveTextContent("This rests on something worked out");

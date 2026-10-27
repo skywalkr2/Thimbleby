@@ -307,7 +307,7 @@ test("What changed shows a project the assistant found as information with a lin
   renderApp(<WhatChanged />);
   const pane = await screen.findByRole("complementary");
   expect(await within(pane).findByText("Would add a project")).toBeInTheDocument();
-  expect(within(pane).getByText("Waiting for you")).toBeInTheDocument();
+  expect(within(pane).getByText("Needs you")).toBeInTheDocument();
   expect(within(pane).getByText("The Harvest Fair needs a plan")).toBeInTheDocument();
   expect(within(pane).queryByRole("button", { name: "Add" })).toBeNull();
   expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();

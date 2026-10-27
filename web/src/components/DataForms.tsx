@@ -366,7 +366,7 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
       </h5>
       <p className="hint">{t(project ? "dataform.saves_project" : "dataform.saves_workspace")}</p>
       {view.isPending ? (
-        <p className="hint">{t("loading")}</p>
+        <Skeleton rows={2} />
       ) : view.isError ? (
         <p className="problem-note">{t("dataform.load_failed")}</p>
       ) : (
@@ -415,7 +415,7 @@ function FormPreview(props: { form: Form; file: string; project: string; enabled
   const titleId = `${base}-preview`;
   let body;
   if (!enabled) body = <p className="hint">{t("dataform.preview_unsaved")}</p>;
-  else if (shown.isPending || shown.isFetching) body = <p className="hint">{t("loading")}</p>;
+  else if (shown.isPending || shown.isFetching) body = <Skeleton rows={1} />;
   else if (shown.isError) body = <p className="problem-note">{t("dataform.preview_failed", { reason: t("dataform.preview_no_reason") })}</p>;
   else if (shown.data.state !== "ok") {
     body = (

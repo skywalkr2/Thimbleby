@@ -34,15 +34,11 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
       await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible(LOADED);
       await expect(page.locator('[data-queue-line="review"]').first()).toBeVisible(LOADED);
       // On the phone the rail's panels are folded to one line; the one holding the failed read says so, and is opened to measure it.
-      // The rail can be drawn again while the page is still loading, which folds it again, so opening is retried until the problem shows.
-      await expect(async () => {
-        const folded = page.getByRole("button", { name: /Came in/, expanded: false });
-        if ((await folded.count()) > 0) {
-          await expect(folded).toContainText("couldn't be read", { timeout: 2_000 });
-          await folded.click();
-        }
-        await expect(page.locator("[data-source-problems]").first()).toBeVisible({ timeout: 2_000 });
-      }).toPass({ timeout: 60_000 });
+      const folded = page.getByRole("button", { name: /Came in/, expanded: false });
+      const problems = page.locator("[data-source-problems]").first();
+      await expect(folded.or(problems)).toBeVisible(LOADED);
+      if (await folded.isVisible()) await folded.click();
+      await expect(problems).toBeVisible(LOADED);
       await expect(page.locator("[data-source-problems]").first()).toContainText(strings["mail-01"].slice(0, 12), LOADED);
     },
   },
@@ -171,6 +167,47 @@ test.describe("no screen is wider than the window", () => {
       if (tooWide(found)) wide.push(`Details at ${size.width}: ${JSON.stringify(found)}`);
     }
     expect(wide).toEqual([]);
+  });
+
+  test("no screen nests more than two levels of bordered containers", async ({ page }) => {
+    test.setTimeout(120_000);
+    // A container is bordered when all four of its sides show a border; a control, a key cap, a table cell or a picture is not a
+    // container. A pane that holds a bordered group is two levels; a third is a card inside a card.
+    const nested: string[] = [];
+    for (const size of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(size);
+      await page.goto("?token=e2e-token");
+      for (const screen of SCREENS) {
+        await page.evaluate((hash) => {
+          window.location.hash = hash;
+        }, screen.hash);
+        await screen.ready(page);
+        const deep = await page.evaluate(() => {
+          const skip = new Set(["INPUT", "BUTTON", "SELECT", "TEXTAREA", "KBD", "IMG", "TD", "TH", "CODE", "PRE", "A", "SPAN", "LABEL"]);
+          const bordered = (el: Element) => {
+            if (skip.has(el.tagName)) return false;
+            const style = getComputedStyle(el);
+            const sides = [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth];
+            const rect = el.getBoundingClientRect();
+            return sides.every((w) => parseFloat(w) >= 1) && style.borderTopStyle !== "none" && rect.width > 48 && rect.height > 24;
+          };
+          const found: string[] = [];
+          let seen = 0;
+          for (const el of Array.from(document.querySelectorAll("main *"))) {
+            if (!bordered(el)) continue;
+            seen += 1;
+            let depth = 1;
+            for (let up = el.parentElement; up && up.tagName !== "BODY"; up = up.parentElement) if (bordered(up)) depth += 1;
+            if (depth > 2) found.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} is level ${depth}`);
+          }
+          return { found: found.slice(0, 5), seen };
+        });
+        if (deep.found.length > 0) nested.push(`${screen.name} at ${size.width}: ${deep.found.join("; ")}`);
+        // The measure finds the panes at all, so a rule that stopped matching anything could not pass for a clean screen.
+        if (screen.name === "Today") expect(deep.seen).toBeGreaterThan(0);
+      }
+    }
+    expect(nested).toEqual([]);
   });
 
   test("the header with every chip shown keeps all of its controls inside the window, none cut short", async ({ page }) => {

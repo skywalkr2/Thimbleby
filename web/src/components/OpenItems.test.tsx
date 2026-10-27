@@ -101,7 +101,7 @@ test("every open to-do is a row with its owners, due date, project and the proje
   expect(within(first).getByText("Overdue")).toBeInTheDocument();
   expect(all[2]).toHaveTextContent("Not touched for 30 days");
   expect(all[3]).toHaveTextContent("Nobody yet");
-  expect(all[4]).toHaveTextContent("On hold: the printer's quote");
+  expect(all[4]).toHaveTextContent("Paused: the printer's quote");
 });
 
 test("a row whose date is to be checked says so beside the date and is not shown as overdue", async () => {
@@ -412,7 +412,7 @@ test("what is being learned from a change asked for on a to-do shows on that row
   expect(await within(row).findByRole("status")).toHaveTextContent("Learning from this…");
 });
 
-test("a to-do whose blocker is over says who answered and when, and Take off hold clears it", async () => {
+test("a to-do whose blocker is over says who answered and when, and Resume clears it", async () => {
   const user = userEvent.setup();
   const answered = action("A-6", "Ship the proofs", {
     blocker: { kind: "question", id: "Q-4", name: "Can proof copies ship by Nov 3?", who: "Morgan Sample", state: "answered", answered: "2026-10-09" },
@@ -421,7 +421,7 @@ test("a to-do whose blocker is over says who answered and when, and Take off hol
   renderApp(<OpenItems />);
   expect(await screen.findByText(/^Unblocked: Morgan Sample answered .*9$/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "More actions for Ship the proofs" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Take off hold" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Resume" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST actions/A-6/unhold")).toBe(true));
 });
 

@@ -345,6 +345,26 @@ def test_nothing_unseen_means_no_line_and_a_day_of_changes_is_one_line_with_coun
     assert line.outcome == {"added": 1, "closed": 1, "moved": 1}
 
 
+def test_a_to_do_the_review_lines_already_hold_is_not_counted_again_and_the_line_goes_when_that_was_all(env):
+    """What a batch on Today holds to look over is not repeated in a second list (the reviewer's H1): while the batch
+    waits, its new to-dos are left out of the line's count; once the person confirms it, the line counts them again."""
+    ws, cfg, store = env
+    changeset = apply_at(env, [add_op()], ADDED_AT, quote_in=f"Hello. {FLOOR_QUOTE}. Thanks.", key="added")
+    request = store.read().get("changeset", changeset).data["request"]
+    with store.transaction() as tx:
+        waiting = tx.get("request", request)
+        tx.update("request", request, {"state": "review", "changeset": changeset}, _TEST, read_version=waiting.version)
+    lines = queue(ws, store, cfg, NOW)
+    assert any(x.kind == "review" for x in lines)  # the review line holds the to-do
+    assert line_of(env) is None  # so no second line repeats it
+    # With something else done, the line counts only what the review lines don't hold.
+    apply_at(
+        env, [close_op()], CLOSED_AT, quote_in=f"Sent {CLOSE_QUOTE}.", author=ME["full_name"], by_you=True, key="c"
+    )
+    line = line_of(env)
+    assert (line.count, line.outcome) == (1, {"closed": 1})
+
+
 def test_the_line_ranks_in_the_risk_group_below_promises(env):
     ws, cfg, store = env
     a_day(env)

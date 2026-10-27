@@ -517,7 +517,9 @@ test.describe.serial("acceptance scenario", () => {
     await expect(recorded).toHaveCount(1);
     await expect(row.locator("li.child", { hasText: "Asked a question" })).toHaveCount(0);
     // The screen shows the fact and the words it rests on, and the source highlights those words.
-    await expect(recorded.locator(".title")).toHaveText(String(fact.text));
+    // A fact that is one person's word keeps who said it ("<name> says …", and no closing full stop); one stated as settled keeps its words.
+    const words = String(fact.text).replace(/[.!?]+$/, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    await expect(recorded.locator(".title")).toHaveText(new RegExp(`^(.+ says )?${words}[.!?]?$`));
     await expect(recorded.locator(".because q")).toHaveText(quote);
     await recorded.getByRole("button", { name: "Show source" }).click();
     await expect(row.locator("mark").first()).toContainText(quote);
@@ -557,7 +559,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row.locator("li.child", { hasText: "Filed a note" })).toHaveCount(1);
     // Nothing else came of it: no person, action, question, or anything held for a yes.
     await expect(row.locator("li.child")).toHaveCount(1);
-    await expect(row.locator("li.child .pill")).toHaveCount(0);
+    await expect(row.locator("li.child [data-pill]")).toHaveCount(0);
     expect((await getJson<Person[]>(page, "api/people")).length).toBe(before.people);
     // The rules and settings are as they were: same rule count, same settings files, same settings, none proposed.
     expect(await helperJson(page, "standing")).toEqual(before.standing);
@@ -779,7 +781,7 @@ test.describe.serial("acceptance scenario", () => {
     const row = page.locator(`li.line.in-pane[data-changeset="${changeset}"]`);
     await row.getByRole("button", { name: /More actions for/ }).first().click();
     await page.getByRole("menuitem", { name: "Undo everything it did" }).click();
-    await expect(row.locator("li.child .pill")).toHaveText(/Undone/i);
+    await expect(row.locator("li.child [data-pill]")).toHaveText(/Undone/i);
 
     // The fact is gone: no screen lists facts yet, so the record route a record's page reads from no longer finds it.
     expect((await page.request.get(`api/record?kind=fact&id=${factId}`)).status()).toBe(404);

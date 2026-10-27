@@ -13,6 +13,7 @@ import { FolderPicker } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { Button } from "../ui/Button";
+import { Pill } from "../ui/Pill";
 
 /** The choice that is not one of the drives found: a folder of the person's own. */
 const OTHER = "\u0001other";
@@ -92,7 +93,7 @@ export function WelcomeBackup(props: { local: boolean }) {
     }
   };
 
-  const missing = looking ? t("welcome.backup.looking") : ownFolder && !path.trim() ? t("welcome.backup.why_path") : !settings.data ? t("loading") : "";
+  const missing = looking ? t("welcome.backup.looking") : ownFolder && !path.trim() ? t("welcome.backup.why_path") : !settings.data ? t("welcome.backup.getting_ready") : "";
   useContinue(hasSlot ? { run: save, label: t("welcome.backup.go"), disabled: !!missing, why: missing } : null);
 
   return (
@@ -134,7 +135,7 @@ export function WelcomeBackup(props: { local: boolean }) {
                 <span>
                   <strong>{drive.name}</strong>
                   <span className="hint block">{drives.data?.shown}</span>
-                  {drive.recommended && <span className="pill tag-recommended">{t("welcome.ai.recommended")}</span>}
+                  {drive.recommended && <Pill tone="ok" className="tag-recommended">{t("welcome.ai.recommended")}</Pill>}
                 </span>
               </label>
             ))}

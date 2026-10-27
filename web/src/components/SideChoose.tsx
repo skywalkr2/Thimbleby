@@ -1,5 +1,5 @@
 // What the line that asks which side some items belong to opens (design 6.32, 7.7): for each side, the items the assistant
-// couldn't place and left under Personal, with one question ("These 4 items look like Hale Upholstery's. Move them there?")
+// couldn't place and left under Personal, with one question ("These 4 items might be Hale Upholstery's. Move them there?")
 // and two choices. Move says what it changes first (the items will be visible with that side's work), is the person's own
 // change and has Undo; Keep leaves them under Personal and they are not asked about again. Items filed under no project at
 // all (a workspace with no Personal) are still sorted by choosing a side, one change with Undo. The person can also sort

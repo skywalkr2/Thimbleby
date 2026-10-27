@@ -16,6 +16,7 @@ import { Empty, Failed, RailPanel } from "./RailPanel";
 import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSources";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
+import { Pill } from "../ui/Pill";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -135,7 +136,7 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
               <li key={`${message.snapshot}:${i}`} className={message.unread ? "tb-row unread" : "tb-row"}>
                 <div className="tb-what">
                   <div className="tb-title">
-                    {message.unread && <span className="pill k-wait">{t("today.arrived.new")}</span>}
+                    {message.unread && <Pill tone="need" className="pill-gap">{t("today.arrived.new")}</Pill>}
                     <span>{message.link ? <SafeLink label={message.title} url={message.link} /> : message.title}</span>
                   </div>
                   {meta && (

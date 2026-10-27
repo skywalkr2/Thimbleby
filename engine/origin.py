@@ -66,3 +66,12 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
         else:
             out[record_id] = None
     return out
+
+
+def from_outside(view: Any, record: Any, kind: str | None = None) -> bool:
+    """Whether a record was made from an input that was not the person's own words (a mail, a page): what it holds, an
+    address to open or a sum to pay, is outside content, and the step that acts on it says so. A record with no input is
+    not from outside."""
+    source_id = _source_id(kind or record.kind, record.data)
+    source = view.get("source", source_id) if source_id else None
+    return source is not None and source.data.get("trust") != "trusted"

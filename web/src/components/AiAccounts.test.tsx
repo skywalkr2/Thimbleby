@@ -74,7 +74,8 @@ test("a heading with the count, the account that does the work, the one that sta
   open();
   expect(await screen.findByRole("heading", { name: /AI accounts/ })).toHaveTextContent("AI accounts3");
   const summary = screen.getByRole("group", { name: "Who does the work" });
-  expect(summary).toHaveTextContent("Main account does Helper's work → if it can't answer, Second account takes over.");
+  expect(summary).toHaveTextContent("Main account does Helper's work if it can't answer, Second account takes over.");
+  expect(summary.querySelector("[data-icon='arrow-right']")).not.toBeNull();
   expect(summary).toHaveTextContent("Every kind of work has a backup");
   expect(within(summary).getByText("Main account", { selector: "strong" })).toBeInTheDocument();
 });
@@ -319,7 +320,7 @@ test("Test calls the account's own test and shows its one result line", async ()
   await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/main/test")).toBe(true));
   expect(calls.some((c) => c.route === "POST ai/test")).toBe(false);
   expect(await within(await row("Main account")).findByText("Answered")).toBeInTheDocument();
-  expect(await row("Main account")).toHaveTextContent("Answered ✓");
+  expect(await row("Main account")).toHaveTextContent("Answered");
 });
 
 test("See why runs the check again and shows what went wrong", async () => {
@@ -331,7 +332,7 @@ test("See why runs the check again and shows what went wrong", async () => {
   open();
   await user.click(within(await row("Broke")).getByRole("button", { name: "See why Broke's check failed" }));
   expect(await within(await row("Broke")).findByText(/Didn't answer: The key was refused\./)).toBeInTheDocument();
-  expect(await row("Broke")).toHaveTextContent("✗");
+  expect((await row("Broke")).querySelector("[data-icon='close']")).not.toBeNull();
 });
 
 test("Add its key opens the key form with the cursor in it, and the new key is sent once and not kept on screen", async () => {

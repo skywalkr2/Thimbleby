@@ -169,7 +169,7 @@ test("a who-is question is information in the history, with one link that opens 
     renderApp(<WhatChanged />);
     const pane = await findPane();
     // It is said as a fact, in the pane's full width, and nothing in it answers the question.
-    expect(await within(pane).findByText("Waiting for you")).toBeInTheDocument();
+    expect(await within(pane).findByText("Needs you")).toBeInTheDocument();
     expect(within(pane).getByText("Send spine options")).toBeInTheDocument();
     expect(within(pane).getByText("proof copies will ship on November 5", { exact: false })).toBeInTheDocument();
     expect(within(pane).queryByRole("combobox")).toBeNull();
@@ -728,7 +728,7 @@ test("a held drop in the history is information with who was told, the quote and
     const pane = await findPane();
     const op = (await within(pane).findByText("Confirm the seating plan")).closest("li") as HTMLElement;
     expect(within(op).getByText("Would drop a to-do")).toBeInTheDocument();
-    expect(within(op).getByText("Waiting for you")).toBeInTheDocument();
+    expect(within(op).getByText("Needs you")).toBeInTheDocument();
     // None of the line's answers is here: the choice is made on Today.
     for (const name of ["Drop it", "Keep it", "Do it anyway", "Release all", "Keep"]) expect(within(pane).queryByRole("button", { name }), name).toBeNull();
     // Who was told is the reason it is held, so it comes first.
@@ -763,7 +763,7 @@ test("a held item with no line on Today (its change was dismissed) is informatio
   fakeApi({ "GET changes": () => [item], "GET today/queue": () => [] });
   renderApp(<WhatChanged />);
   const op = (await screen.findByText("Confirm the seating plan")).closest("li") as HTMLElement;
-  expect(within(op).getByText("Waiting for you")).toBeInTheDocument();
+  expect(within(op).getByText("Needs you")).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("link", { name: "Answer on Today" })).toBeNull());
 });
 

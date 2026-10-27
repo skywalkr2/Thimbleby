@@ -112,10 +112,10 @@ test("each cell has the pass rate first, then cost per right answer, runs and ag
 test("the cheapest cell that passes is marked in each row, in words, and a lone passing cell says only one", async () => {
   api();
   renderApp(<AiCompare onBack={() => undefined} />);
-  expect(await cellOf("Pull actions from meeting notes", "Main account · everyday")).toHaveTextContent("✓ Cheapest that passes");
-  expect(await cellOf("Route a question to who decides", "Second account · everyday")).toHaveTextContent("✓ Cheapest that passes");
+  expect(await cellOf("Pull actions from meeting notes", "Main account · everyday")).toHaveTextContent("Cheapest that passes");
+  expect(await cellOf("Route a question to who decides", "Second account · everyday")).toHaveTextContent("Cheapest that passes");
   // "Use a known term": the cheapest overall is below the minimum, so the choice is the cheapest that passes.
-  expect(await cellOf("Use a known term", "Main account · everyday")).toHaveTextContent("✓ Cheapest that passes");
+  expect(await cellOf("Use a known term", "Main account · everyday")).toHaveTextContent("Cheapest that passes");
   expect(await cellOf("Use a known term", "Second account · everyday")).not.toHaveTextContent("Cheapest");
   // Only one passes: the other is old (counts as unknown) or not measured.
   expect(await cellOf("Write an update in your voice", "Main account · harder")).not.toHaveTextContent("Only one that passes");
@@ -138,7 +138,7 @@ test("an old measurement says so and counts as unknown; one never measured offer
   expect(old).toHaveTextContent("Result unknown");
   expect(old).not.toHaveTextContent("Cheapest");
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  expect(none).toHaveTextContent("— Not measured yet");
+  expect(none).toHaveTextContent("Not measured yet");
   expect(await within(none).findByRole("button", { name: "Measure Main account · everyday" })).toHaveTextContent("Measure (about $0.12)");
 });
 

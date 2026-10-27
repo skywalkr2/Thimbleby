@@ -102,7 +102,7 @@ function change(id: string): S["ChangeItem"] {
 
 /** The window's shortcut keys, as the app registers them. */
 function Keys() {
-  useShortcuts({ next: "j", previous: "k", primary: "a", show_new: "N" }, { undo: () => undefined, hand_in: () => undefined, ask: () => undefined, help: () => undefined, show_new: showNewLines });
+  useShortcuts({ next: "j", previous: "k", primary: "a", show_new: "N", next_pane: "]", previous_pane: "[" }, { undo: () => undefined, hand_in: () => undefined, ask: () => undefined, help: () => undefined, show_new: showNewLines });
   return null;
 }
 
@@ -343,6 +343,24 @@ test("Look over opens the batch in the details, and All looks good there confirm
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/unconfirm")?.body).toEqual({ changesets: ["CS-1"], signals: ["SIG-1"] }));
 });
 
+test("the open review's items carry no raw dates: a date in the words reads as a day", async () => {
+  const user = userEvent.setup();
+  const dated: Line = line("review", {
+    key: "review:REQ-2",
+    count: 1,
+    request: "REQ-2",
+    changeset: "CS-2",
+    changesets: ["CS-2"],
+    items: [todo(0, "Send the venue list by 2026-11-02.", { changeset: "CS-2", request: "REQ-2", key: "item:CS-2:0" })],
+  });
+  show([dated]);
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  const open = row("review");
+  expect(await within(open).findByText(/^Send the venue list by .*2\.$/)).toBeInTheDocument();
+  expect(open.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  expect(within(open).getByRole("button", { name: /^Not right/ }).getAttribute("aria-label")).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+});
+
 const intakeReview: Line = line("intake_review", {
   key: "intake_review:m",
   group: "review",
@@ -538,6 +556,22 @@ test("the cursor starts on the first line, and the arrows and Enter walk and ope
   expect(row("decision")).toHaveFocus();
   await user.keyboard("{Enter}");
   expect(await within(row("decision")).findByRole("textbox", { name: "Your answer" })).toBeInTheDocument();
+});
+
+test("the pane keys take the cursor from the queue into the details and the rail and back, so neither is reached only by the mouse", async () => {
+  const user = userEvent.setup();
+  show([decision, review, send], {}, { wide: true });
+  await screen.findByText("Matte or soft-touch?", { selector: "li *" });
+  await waitFor(() => expect(row("decision")).toHaveFocus());
+  const inspector = document.querySelector<HTMLElement>("[data-queue-inspector]")!;
+  await user.keyboard("]");
+  expect(inspector.contains(document.activeElement)).toBe(true);
+  await user.keyboard("]");
+  expect(document.querySelector("[role='group'][data-region]")?.contains(document.activeElement) ?? false).toBe(true);
+  await user.keyboard("]");
+  expect(document.querySelector("[data-queue-line]")?.closest("[data-region]")?.contains(document.activeElement)).toBe(true);
+  await user.keyboard("[[");
+  expect(document.querySelector("[role='group'][data-region]")?.contains(document.activeElement) ?? false).toBe(true);
 });
 
 test("the arrow keys and the shortcut letters never act while the cursor is in a field", async () => {

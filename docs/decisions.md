@@ -75,6 +75,34 @@ new review pane were not counted, and the independent reading had no instrument.
 `dispatch.knowledge.sample_consent`, `sample_size` and `language.messages.called_off_subject` with demo values in both
 workspaces; the plugin guide is regenerated (a core record). Change log: section 235.
 
+## 2026-10-28: The second pass's leftovers, the reviewer's H1 to H8 and the checklist's partials (roadmap A2, A2b, A4)
+
+**Decided:** (1) Notes stored before the title rule are re-titled once at start, through the core's title function, from
+their saved message (or from the header lines their own words repeat); a note in the assistant's own words is left, and a
+second run changes nothing. (2) A rail panel opened on a phone stays open: the fold is kept by the rail, not by the
+panel, which is out of the page while what it asks is on its way. (3) A link a question holds and a bill reminder that
+came from an email say "From an email; check the address before you open it / pay." where they are acted on. (4) "Stale"
+and "On hold" are "Not touched in a while" and "Paused" everywhere (the verb is "Pause", and taking it off is "Resume");
+the "Outside" tag leaves meeting prep, which says once that what came in is information. (5) The "since yesterday" line
+leaves out the new to-dos that a batch on Today already holds to look over, so no second list repeats them. (6) "Not looked
+at before" is said once for each day, not once for each mailbox; the filing question reads "might be", not "look like";
+a fact that is one person's word reads "Pat says …" with its day; no meta line ends with a separator. (7) A tick made while
+a save runs is queued after it, the boxes and the line under them show the ticks as made, and a tick that fails names its
+box and offers Try again. (8) One word says that something waits on the person: "Needs you" replaces "Waiting for you"
+as a state or pill word (the longer phrase stays in sentences). (9) The pane keys `[` and `]`, already in the shortcut
+list and never wired, walk the list, its details and the rail. (10) Skeletons replace "Loading…", line icons replace text
+glyphs, and `ui/Pill` replaces the hand-made `.pill`; Handled for you's lists use the segmented control.
+
+**Decided by:** the owner's roadmap (items A2, A2b, A4) from the reviewer's check of 2026-10-28 and the checklist; the
+details above were settled while building and are for review.
+
+**Why:** each is a leftover the reviewer or the checklist named; the facts that rest on a judgment are items 2, 5 and 8
+(where the fold lives, which items a second list repeats, and which word wins).
+
+**Impact:** Design 7.7 ("The second pass's rules"), 7.12, 7.14 and 6.32; the wording sheet; one optional field on a
+follow-up question (`from_outside`) and two on an op's meta (`said_by`, `as_of`), so the API schema is regenerated. No new
+setting, no change to scope. Change log: section 237.
+
 ## 2026-10-28: Notices name the apps they go to, from a shipped list
 
 **Decided:** Settings › Notices offers the common apps by name (for example a chat app, a team chat, a phone-push

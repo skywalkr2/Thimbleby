@@ -291,7 +291,7 @@ test.describe.serial("journey: mail", () => {
     // The earlier message is still in the list, so it is counted until the new one is read, then both are.
     await openView(page, "Handled for you");
     const handled = page.locator("[data-handled]");
-    await expect(handled.getByRole("button", { name: "Set aside before reading · 2" })).toBeVisible({ timeout: 30_000 });
+    await expect(handled.getByRole("radio", { name: "Set aside before reading · 2" })).toBeVisible({ timeout: 30_000 });
     await expect(handled.locator("[data-group]").first()).toBeVisible();
     const shut = handled.locator("[data-group] > h2 button[aria-expanded=false]");
     for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();

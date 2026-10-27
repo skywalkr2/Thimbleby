@@ -71,6 +71,34 @@ test("a reminder for a dated fact says what kind of day it is and opens the fact
   expect(onOpenRecord).toHaveBeenCalledWith("fact", "FACT-4");
 });
 
+const NOTE = "From an email; check the address before you pay.";
+
+test("a reminder to pay a bill that came from an email says where it came from, in its details", async () => {
+  const user = userEvent.setup();
+  show([line("date_reminder", { text: "The printer's invoice", due: "2026-12-15", state: "bill", fact: "FACT-5", untrusted: true, at: "2026-12-01T09:00:00+00:00" })]);
+  const found = await waitFor(() => {
+    const el = row("date_reminder");
+    expect(el).not.toBeNull();
+    return el;
+  });
+  expect(screen.queryByText(NOTE)).toBeNull();
+  await user.click(within(found).getByRole("button", { name: /More actions for/ }));
+  await user.click(screen.getByRole("menuitem", { name: "Look closer" }));
+  expect(await screen.findByText(NOTE)).toBeInTheDocument();
+});
+
+test("a bill the person wrote down, and a renewal from an email, carry no such note", async () => {
+  show([
+    line("date_reminder", { key: "own", text: "My rent", due: "2026-12-15", state: "bill", fact: "FACT-6", untrusted: false, at: "2026-12-01T09:00:00+00:00" }),
+    line("date_reminder", { key: "renewal", text: "The plan", due: "2026-12-15", state: "renewal", fact: "FACT-7", untrusted: true, at: "2026-12-01T09:00:00+00:00" }),
+  ]);
+  await screen.findByText(/My rent/);
+  for (const found of document.querySelectorAll<HTMLElement>('[data-queue-line="date_reminder"]')) {
+    expect(within(found).queryByRole("button", { name: /More actions for/ })).toBeNull();
+  }
+  expect(screen.queryByText(NOTE)).toBeNull();
+});
+
 const area = line("area", { text: "Dentist", subject: "dentist", count: 4, names: ["Book the dentist", "Ask about the crown", "Closed on Fridays"] });
 
 test("an area offered for items that share a word is started and filled with one press, and Undo takes both changes back", async () => {

@@ -131,7 +131,7 @@ test("the versions list marks each one waiting with Review, which opens the text
   renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
   const section = await screen.findByRole("region", { name: "Body text" });
   expect(await within(section).findByText("A tighter opening")).toBeInTheDocument();
-  expect(within(section).getByText(/Waiting for you · Draft · 9 words/)).toBeInTheDocument();
+  expect(within(section).getByText(/Needs you · Draft · 9 words/)).toBeInTheDocument();
   expect(within(section).getAllByRole("button", { name: /^Review version/ })).toHaveLength(1);
   await user.click(within(section).getByRole("button", { name: "Review version 2" }));
   expect(await screen.findByRole("dialog", { name: "Review the changes" })).toBeInTheDocument();

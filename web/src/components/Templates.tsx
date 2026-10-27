@@ -7,6 +7,7 @@ import { useAct } from "../lib/act";
 import { useRestart } from "../lib/restart";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
+import { Icon } from "../ui/Icon";
 
 export function TemplateList() {
   const { t } = useWords();
@@ -38,7 +39,7 @@ export function TemplateList() {
               <div className="acts">
                 {tpl.set_up ? (
                   <span className="template-set-up">
-                    <span aria-hidden="true">✓ </span>
+                    <Icon name="check" size={14} />{" "}
                     {t("welcome.template.set_up")}
                   </span>
                 ) : (

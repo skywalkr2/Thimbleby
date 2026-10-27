@@ -296,6 +296,7 @@ export function TodayQueue(props: {
       <div
         ref={pane}
         className={styles.queue}
+        data-region=""
         onFocus={onFocus}
         onBlur={(event) => {
           if (!pane.current?.contains(event.relatedTarget as Node | null)) releaseIfFree();
@@ -425,7 +426,7 @@ function QueueInspector(props: {
       : t("queue.inspector.position", { ...props.position })
     : undefined;
   return (
-    <aside className={styles.inspector} aria-label={t("queue.inspector.title")} data-queue-inspector="">
+    <aside className={styles.inspector} aria-label={t("queue.inspector.title")} data-queue-inspector="" data-region="">
       <Panel title={line ? props.title : props.empty ? t("queue.inspector.nothing") : t("queue.inspector.title")} count={where}>
         {line ? (
           <div className={styles.detail}>
@@ -1136,7 +1137,7 @@ function QueueRow(props: {
           tone: "warn",
           meta: meta(t("queue.date_reminder.on", { date: day(line.due) })),
           primary: line.fact ? { label: t("queue.act.open_fact"), run: () => props.handlers.onOpenRecord?.("fact", line.fact ?? "") } : null,
-          menu: [],
+          menu: opens ? [show] : [],
         };
       case "area":
         return {

@@ -36,6 +36,32 @@ test.describe("Hand something in", () => {
     await expect(page.getByRole("button", { name: "Hand something in" }).first()).toBeFocused();
   });
 
+  test("handing something in takes three interactions, and the box is at most 72 characters wide", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page);
+    let handed = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.url().endsWith("/api/handin")) handed += 1;
+    });
+    // One: open it. Two: put the words in. Three: hand it in. Nothing else is asked before the request goes.
+    await page.getByRole("button", { name: "Hand something in" }).first().click();
+    const drawer = page.getByRole("dialog", { name: "Hand something in" });
+    const box = drawer.getByLabel("Paste or type it here");
+    await expect(box).toBeFocused();
+    const measured = await box.evaluate((area) => {
+      const probe = document.createElement("span");
+      probe.style.cssText = `position:absolute;visibility:hidden;width:72ch;font:${getComputedStyle(area).font}`;
+      area.parentElement!.append(probe);
+      const limit = probe.getBoundingClientRect().width;
+      probe.remove();
+      return { width: area.getBoundingClientRect().width, limit };
+    });
+    expect(measured.width).toBeLessThanOrEqual(measured.limit + 1);
+    await box.fill("Robin will send the index by Friday.");
+    await drawer.getByRole("button", { name: "Hand in", exact: true }).click();
+    await expect.poll(() => handed).toBe(1);
+  });
+
   test("with words in the box, closing asks first, and Keep editing keeps them", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);

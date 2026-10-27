@@ -32,6 +32,7 @@ import { NotesTitle } from "./ActionNotes";
 import { NoteBox, useNoted } from "./NoteBox";
 import { NudgeLeftOut } from "./NudgeLeftOut";
 import { OriginLink } from "./Origin";
+import { OutsideStep } from "./OutsideStep";
 import { ProjectTag } from "./ProjectTag";
 import { useReassign } from "./ReassignAction";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -51,6 +52,7 @@ import { FollowUpsByProject } from "./FollowUpsByProject";
 import { ReviewMode } from "./ReviewMode";
 import { CurrentCopy } from "./SameDocument";
 import { plainTitle } from "../lib/title-dates";
+import { Pill } from "../ui/Pill";
 
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
@@ -463,6 +465,7 @@ function YourQuestionRow(props: { question: S["FollowupQuestion"] }) {
             <SafeLink label={l.label} url={l.url} />
           </div>
         ))}
+        {q.from_outside && q.links.length > 0 && <OutsideStep word="outside.step.open" />}
         <OriginLink origin={q.origin} />
       </div>
       <div className="acts">
@@ -503,6 +506,7 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
             <SafeLink label={l.label} url={l.url} />
           </div>
         ))}
+        {q.from_outside && q.links.length > 0 && <OutsideStep word="outside.step.open" />}
         <OriginLink origin={q.origin} />
       </div>
       <div className="acts">
@@ -1062,9 +1066,9 @@ function WaitingPill(props: { days: number | null; chase: boolean }) {
   const { tn } = useWords();
   if (props.days === null || (props.days === 0 && !props.chase)) return null;
   return (
-    <span className={props.chase ? "pill k-risk" : "pill k-wait"}>
+    <Pill tone={props.chase ? "danger" : "need"} className="pill-gap">
       {props.chase ? tn("followups.waiting_pill.chase", props.days) : tn("followups.waiting_pill", props.days)}
-    </span>
+    </Pill>
   );
 }
 

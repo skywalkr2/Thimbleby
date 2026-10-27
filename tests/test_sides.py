@@ -573,9 +573,7 @@ def test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks
     assert asked.subject == fixture_records(DEMO_B, "project")[0]["name"]  # the business, named from its record
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" in sheet["queue.sides.one"] and "{business}" in sheet["queue.sides.other"]
-    assert (
-        "{n}" in sheet["queue.sides.other"]
-    )  # the line reads "These 5 items look like <business>'s. Move them there?"
+    assert "{n}" in sheet["queue.sides.other"]  # the line reads "These 5 items might be <business>'s. Move them there?"
 
 
 def test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_nothing(env):

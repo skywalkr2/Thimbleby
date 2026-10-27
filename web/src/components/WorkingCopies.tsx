@@ -8,6 +8,8 @@ import { day } from "../lib/dates";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
+import { Icon } from "../ui/Icon";
+import { Pill } from "../ui/Pill";
 
 export function WorkingCopies(props: {
   kind: string;
@@ -109,10 +111,10 @@ function CopyRow(props: { copy: S["WorkingCopyView"]; onReview: (version: string
             </a>
           </span>
           {copy.stale && (
-            <span className="pill k-held">
-              <span aria-hidden="true">⚠ </span>
+            <Pill tone="warn" className="pill-gap">
+              <Icon name="alert" size={14} />{" "}
               {t("copies.stale")}
-            </span>
+            </Pill>
           )}
         </div>
         {out && (

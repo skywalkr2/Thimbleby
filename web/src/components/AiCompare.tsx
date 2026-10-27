@@ -153,7 +153,7 @@ export function AiCompare(props: { onBack: () => void }) {
         <div className={styles.cell}>
           {state === "none" ? (
             <p className={styles.value} data-state="none">
-              <span aria-hidden="true">— </span>
+              <Icon name="minus" size={16} />{" "}
               {t("ai_compare.not_measured")}
             </p>
           ) : (
@@ -171,7 +171,7 @@ export function AiCompare(props: { onBack: () => void }) {
           )}
           {best && (
             <p className={styles.mark}>
-              <span aria-hidden="true">✓ </span>
+              <Icon name="check" size={16} />{" "}
               {t(only ? "ai_compare.only" : "ai_compare.cheapest")}
             </p>
           )}

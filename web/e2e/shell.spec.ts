@@ -944,7 +944,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await expect(page.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", /#settings$/);
       const table = page.getByRole("table");
       await expect(table.getByRole("columnheader")).toHaveText(["Kind of work", "Main account · everyday", "Main account · harder", "Second account · everyday"]);
-      await expect(table).toContainText("✓ Cheapest that passes");
+      await expect(table).toContainText("Cheapest that passes");
       await expect(table).toContainText("Below 80%");
       await expect(table).toContainText("(old)");
       await expect(table.getByRole("button", { name: "Measure Main account · everyday" })).toContainText("Measure (about $0.12)");

@@ -4259,7 +4259,7 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
 **Filing, the brief and facts after the reviewer's second pass** (designer's answers F40 to F46, 2026-10-28; change log
 234; *filing, notes, titles, facts and People are built; see "As built" below*):
 - **Filing when unsure.** When the ranks can't decide between Personal and a side, the item is filed under Personal (the
-  more private level). One grouped question per side per day at most asks "These 4 items look like Hale Upholstery's.
+  more private level). One grouped question per side per day at most asks "These 4 items might be Hale Upholstery's.
   Move them there?". Move says what it changes ("These 4 items will be visible with Hale Upholstery's work"), is the
   person's own changeset with Undo, and a move to a less private level always needs the person's click, never a rule's.
   A filing rule is proposed only after the person moves the same sender's items a second time, stating its reach ("mail

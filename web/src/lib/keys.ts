@@ -1,6 +1,7 @@
 // Keyboard shortcuts for the review loop. Keys come from config/ui.yaml; they never fire while typing.
 //
-// Rows are elements marked data-row. The current row is the one holding focus; j/k move it. Other keys are sent to
+// Rows are elements marked data-row. The current row is the one holding focus; j/k move it. Regions marked data-region (a list,
+// the details beside it, the rail) are walked with the pane keys, "]" and "[". Other keys are sent to
 // the current row as a "rowkey" event, which the row (or the row around it) handles.
 import { useEffect } from "react";
 
@@ -27,6 +28,28 @@ function move(step: number): void {
   const here = currentRow();
   const index = here ? all.indexOf(here) : -1;
   const target = all[Math.max(0, Math.min(all.length - 1, index + step))];
+  target.focus();
+}
+
+/** What can take the cursor in a pane: a row first, then anything a person can press or type in. */
+const ENTRY = '[data-row], a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+
+/** The regions of a screen the cursor can move between (marked `data-region`): a list, the details beside it, the rail. A region
+ * that isn't shown is not one. */
+function panes(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>("[data-region]")).filter((pane) => !pane.closest("[hidden]") && getComputedStyle(pane).display !== "none");
+}
+
+/** Moves the cursor into the next (or previous) pane, wrapping round: onto the pane's first row, or its first control. From no
+ * pane it enters the first one (or the last, going back). */
+function movePane(step: 1 | -1): void {
+  const all = panes();
+  if (!all.length) return;
+  const active = document.activeElement;
+  const here = active instanceof HTMLElement ? all.findIndex((pane) => pane.contains(active)) : -1;
+  const to = here === -1 ? (step === 1 ? 0 : all.length - 1) : (here + step + all.length) % all.length;
+  const target = all[to].querySelector<HTMLElement>(ENTRY) ?? all[to];
+  if (!target.hasAttribute("tabindex") && target === all[to]) target.tabIndex = -1;
   target.focus();
 }
 
@@ -81,6 +104,12 @@ export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandl
           break;
         case "previous":
           move(-1);
+          break;
+        case "next_pane":
+          movePane(1);
+          break;
+        case "previous_pane":
+          movePane(-1);
           break;
         case "primary":
         case "send_back":

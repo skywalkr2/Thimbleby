@@ -70,3 +70,58 @@ def note_text(text: str, cfg: Any, people: Any, raw_input: str | None) -> str:
     if not repeats_headers(text):
         return text
     return title_of(cfg, people, raw_input) or text
+
+
+#: The parts of a message's header lines as they read once a note's words were run together on one line.
+_FLAT_FROM = re.compile(r"\bFrom:\s*(?P<sender>.+?)(?=\s+(?:To|Cc|Date|Received|Subject):|\s*$)")
+_FLAT_SUBJECT = re.compile(r"^(?:New|Changed) in [^:\n]*:\s*(?P<subject>.*?)\s+From:\s")
+
+
+def _headers_from_words(text: str) -> str | None:
+    """The message a note's own words repeat, rebuilt as header lines, when the message itself wasn't kept."""
+    sender = _FLAT_FROM.search(text)
+    subject = _FLAT_SUBJECT.match(" ".join(text.split()))
+    if sender is None or subject is None:
+        return None
+    return f"From: {sender.group('sender')}\nSubject: {subject.group('subject')}\n\n"
+
+
+def _retitled(text: str, cfg: Any, people: Any, raw: str | None) -> str:
+    fresh = note_text(text, cfg, people, raw)
+    if fresh == text and repeats_headers(text):
+        fresh = note_text(text, cfg, people, _headers_from_words(text))
+    return fresh
+
+
+def retitle_stored(ws: Any, store: Any, cfg: Any) -> int:
+    """Give each note stored before the title rule the title the rule gives now, once: its message's subject and
+    sender, taken from the saved message, or from the header lines its own words repeat when the message wasn't kept.
+    A note in the assistant's own words is left as written, so a second run finds nothing to change. Stored changes
+    are never rewritten: What changed shows a note as its record stands. Returns how many notes were re-titled."""
+    from engine.intake import source_text
+    from engine.names import People
+    from engine.storage import WriteContext
+
+    view = store.read()
+    people = People(store, cfg)
+    raws: dict[str | None, str] = {}
+
+    def raw_of(source: str | None) -> str:
+        if source not in raws:
+            raws[source] = source_text(ws, store, source)
+        return raws[source]
+
+    notes = []
+    for note in view.list("note"):
+        text = note.data["text"]
+        if repeats_headers(text):
+            fresh = _retitled(text, cfg, people, raw_of(note.data.get("source")))
+            if fresh != text:
+                notes.append((note, fresh))
+    if not notes:
+        return 0
+    write = WriteContext(actor="engine", trust="trusted", op="migrate.note_titles")
+    with store.transaction() as tx:
+        for note, fresh in notes:
+            tx.update("note", note.id, {"text": fresh}, write, read_version=note.version)
+    return len(notes)

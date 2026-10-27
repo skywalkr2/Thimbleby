@@ -165,7 +165,7 @@ function Summary(props: { accounts: Account[]; kindOf: (a: Account) => Kind | un
         {found.mains.length > 0 && found.backups.length > 0 ? (
           <>
             {" "}
-            <span aria-hidden="true">→</span>{" "}
+            <Icon name="arrow-right" size={14} />{" "}
             {withNodes(tn("ai_accounts.summary.backup", found.backups.length, { names: "\u0001names\u0001" }), {
               names: found.backups.map((b, i) => (
                 <span key={b.name}>
@@ -974,7 +974,8 @@ function AccountRow(props: {
           {result && (
             <p className={result.ok ? styles.ok : styles.bad}>
               {resultText}
-              <span aria-hidden="true">{result.ok ? " ✓" : " ✗"}</span>
+              {" "}
+              <Icon name={result.ok ? "check" : "close"} size={14} />
             </p>
           )}
           {result && refusal === result && replaceOffer}

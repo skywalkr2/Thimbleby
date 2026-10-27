@@ -8,6 +8,7 @@ import { useRowKeys } from "../lib/keys";
 import { useEstimate } from "../lib/money";
 import { upperFirst, useGo, useTaskWords, type StageRequest, type StageView } from "../lib/stages";
 import { useWords } from "../lib/wording";
+import { Skeleton } from "../ui/Skeleton";
 
 export function WaitingLine(props: { request: StageRequest }) {
   const { t } = useWords();
@@ -47,7 +48,7 @@ export function History(props: { view: StageView }) {
   const label = (id: string | null) =>
     id === null ? t("stages.not_started") : (view.stages.find((s) => s.id === id)?.label ?? t("stages.unknown_stage"));
   const who = (op: string, actor: string) => t(op === "undo" ? "stages.by_undo" : actor === "rule" ? "stages.by_rule" : "stages.by_you");
-  if (entries.isPending) return <p className="hint">{t("loading")}</p>;
+  if (entries.isPending) return <Skeleton rows={1} />;
   if (entries.isError) return <p className="hint">{t("stages.load_failed")}</p>;
   if (entries.data.length === 0) return <p className="hint">{t("stages.history_empty")}</p>;
   return (

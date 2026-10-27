@@ -484,3 +484,26 @@ test("a date written as year-month-day in a title is shown as a day wherever the
   expect(activity).toHaveTextContent(/Send the headcount by .*Nov 4/);
   expect(screen.queryByText(/2026-11-04/)).toBeNull();
 });
+
+test("a meta line on a person's page never ends with a separator: the link to where it came from sits inline after the last one", async () => {
+  api(
+    "person",
+    "PER-1",
+    { full_name: "Robin Sample" },
+    page({
+      kind: "person",
+      id: "PER-1",
+      name: "Robin Sample",
+      open_actions: [{ id: "ACT-1", text: "Send the proof", due: "2026-10-20", owners: ["Robin Sample"], project: null, project_name: null, origin: { kind: "link", url: `${WEB}example.com/page`, source: "SRC-1" } }],
+      open_questions: [{ id: "Q-1", title: "Which trim size?", to: "PER-1", to_name: "Robin Sample", status: "open", kind: "question", origin: { kind: "source", source: "SRC-2" } }],
+    }),
+  );
+  renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
+  const open = await screen.findByRole("region", { name: "Open with Robin Sample" });
+  for (const meta of open.querySelectorAll("p")) {
+    expect(meta.textContent?.trim().endsWith("·")).toBe(false);
+    // A block inside the line would leave the separator at the end of the one before it.
+    expect(meta.querySelector("div")).toBeNull();
+  }
+  expect(open.querySelectorAll(".origin").length).toBe(2);
+});

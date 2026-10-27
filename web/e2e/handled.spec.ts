@@ -115,8 +115,8 @@ test("Handled for you stays inside the window at every width, on both tabs and a
     await expect(page.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" })).toBeFocused(LOADED);
     for (const tab of [/^Set aside before reading/, /^Read, nothing to do/]) {
       for (const group of ["Kind", "Reason", "Sender"]) {
-        await page.getByRole("button", { name: tab }).click();
-        await page.getByRole("button", { name: group, exact: true }).click();
+        await page.getByRole("radio", { name: tab }).click();
+        await page.getByRole("radio", { name: group, exact: true }).click();
         const collapsed = page.locator("[data-group] > h2 button[aria-expanded=false]");
         await expect(collapsed.first()).toBeVisible(LOADED);
         // Every group of a view has a key of its own.

@@ -12,6 +12,7 @@ import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
+import { Skeleton } from "../ui/Skeleton";
 
 const DEFAULT_KIND = "attachment";
 
@@ -71,9 +72,7 @@ export function AddFile(props: { onClose: () => void }) {
         {t("addfile.title")}
       </Heading>
       {kinds.isPending ? (
-        <p className="hint" role="status">
-          {t("loading")}
-        </p>
+        <Skeleton rows={1} />
       ) : kinds.isError || !kind ? (
         <p className="problem-note" role="alert">
           {t("addfile.kinds_failed")}{" "}

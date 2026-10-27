@@ -29,7 +29,7 @@ test("a person named in what a to-do waits for is a link to their group in Follo
   );
   const link = await screen.findByRole("link", { name: "Quinn Sample" });
   expect(link).toHaveAttribute("href", expect.stringMatching(/#work\/followups$/));
-  expect(screen.getByText(/On hold:/)).toHaveTextContent("On hold: Quinn Sample's answer");
+  expect(screen.getByText(/Paused:/)).toHaveTextContent("Paused: Quinn Sample's answer");
   await user.click(link);
   expect(seen).toHaveBeenCalledWith("P-1");
 });
@@ -43,7 +43,7 @@ test("words that name nobody, only a first name, or two people alike stay plain 
       <HoldPill what="Sam Twin to reply" />
     </>,
   );
-  await waitFor(() => expect(screen.getAllByText(/On hold:/)).toHaveLength(3));
+  await waitFor(() => expect(screen.getAllByText(/Paused:/)).toHaveLength(3));
   await new Promise((r) => setTimeout(r, 20));
   expect(screen.queryByRole("link")).toBeNull();
   expect(reveal("person", "P-1")).toBe(false);
@@ -76,7 +76,7 @@ test("a to-do blocked on an action names that action's words and links to its pa
   renderApp(<HoldNote on_hold="Send the index" blocker={blocker({ kind: "action", id: "ACT-7", name: "Send the index" })} />);
   const link = await screen.findByRole("link", { name: "Send the index" });
   expect(link).toHaveAttribute("href", expect.stringMatching(/#records\/action\/ACT-7$/));
-  expect(link.closest(".pill")).toHaveTextContent("Blocked, waiting on Send the index");
+  expect(link.closest("[data-pill]")).toHaveTextContent("Blocked, waiting on Send the index");
 });
 
 test("a to-do tied to a question says Waits on the question with who was asked and when it went out, linking to it", async () => {
@@ -85,10 +85,10 @@ test("a to-do tied to a question says Waits on the question with who was asked a
   const { unmount } = renderApp(<HoldNote on_hold="Can proof copies ship by Nov 3?" blocker={tied} />);
   const link = await screen.findByRole("link", { name: "Can proof copies ship by Nov 3?" });
   expect(link).toHaveAttribute("href", expect.stringMatching(/#records\/question\/Q-4$/));
-  expect(link.closest(".pill")).toHaveTextContent(/^Waits on: Can proof copies ship by Nov 3\? \(Morgan Sample, sent .*12\)$/);
+  expect(link.closest("[data-pill]")).toHaveTextContent(/^Waits on: Can proof copies ship by Nov 3\? \(Morgan Sample, sent .*12\)$/);
   unmount();
   renderApp(<HoldNote on_hold="x" blocker={{ ...tied, sent: null }} />);
-  expect((await screen.findByRole("link", { name: "Can proof copies ship by Nov 3?" })).closest(".pill")).toHaveTextContent(
+  expect((await screen.findByRole("link", { name: "Can proof copies ship by Nov 3?" })).closest("[data-pill]")).toHaveTextContent(
     "Waits on: Can proof copies ship by Nov 3? (Morgan Sample, not sent yet)",
   );
 });
@@ -104,17 +104,17 @@ test("once the question is answered the note reads Unblocked with who answered a
   expect(await screen.findByText("Unblocked: Send the index is done")).toBeInTheDocument();
 });
 
-test("a hold with only words still reads On hold, and no hold shows nothing", async () => {
+test("a hold with only words still reads Paused, and no hold shows nothing", async () => {
   fakeApi({ "GET people": () => people });
   const { container, unmount } = renderApp(<HoldNote on_hold="the legal review" blocker={null} />);
-  expect(await screen.findByText("On hold: the legal review")).toBeInTheDocument();
+  expect(await screen.findByText("Paused: the legal review")).toBeInTheDocument();
   unmount();
   const empty = renderApp(<HoldNote on_hold={null} blocker={null} />);
   expect(empty.container).toHaveTextContent("");
   expect(container).toBeTruthy();
 });
 
-// ---- the picker on Put on hold -----------------------------------------------------------------------------------------
+// ---- the picker on Pause -----------------------------------------------------------------------------------------
 
 function Harness(props: { id: string }) {
   const hold = useHold({ id: props.id });
@@ -142,11 +142,11 @@ const pickerRoutes = {
   ],
 };
 
-test("Put on hold offers people, the other to-dos and the open questions to pick from, never to type, and not the to-do itself", async () => {
+test("Pause offers people, the other to-dos and the open questions to pick from, never to type, and not the to-do itself", async () => {
   const user = userEvent.setup();
   fakeApi(pickerRoutes);
   renderApp(<Harness id="ACT-1" />);
-  await user.click(screen.getByRole("button", { name: "Put on hold" }));
+  await user.click(screen.getByRole("button", { name: "Pause" }));
   const field = screen.getByRole("textbox", { name: "What is it waiting for?" });
   expect(field).toHaveFocus();
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
@@ -165,8 +165,8 @@ test("picking a person puts the to-do on hold for them with no words typed, and 
     "POST actions/ACT-1/hold/restore": () => ({ ok: "ACT-1" }),
   });
   renderApp(<Harness id="ACT-1" />);
-  await user.click(screen.getByRole("button", { name: "Put on hold" }));
-  const submit = screen.getAllByRole("button", { name: "Put on hold" }).find((b) => (b as HTMLButtonElement).type === "submit")!;
+  await user.click(screen.getByRole("button", { name: "Pause" }));
+  const submit = screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!;
   expect(submit).toBeDisabled();
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
   await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(5));
@@ -174,7 +174,7 @@ test("picking a person puts the to-do on hold for them with no words typed, and 
   expect(submit).toBeEnabled();
   await user.click(submit);
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "", on: "P-1" }));
-  expect(await screen.findByText("Put on hold, waiting for Quinn Sample.")).toBeInTheDocument();
+  expect(await screen.findByText("Paused, waiting for Quinn Sample.")).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: null }));
 });
@@ -183,11 +183,11 @@ test("picking a to-do or a question sends its id with whatever words were typed"
   const user = userEvent.setup();
   const calls = fakeApi({ ...pickerRoutes, "POST actions/ACT-1/hold": () => ({ ok: "ACT-1", previous: null }) });
   renderApp(<Harness id="ACT-1" />);
-  await user.click(screen.getByRole("button", { name: "Put on hold" }));
+  await user.click(screen.getByRole("button", { name: "Pause" }));
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
   await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(5));
   await user.selectOptions(pick, "Q-4");
   await user.type(screen.getByRole("textbox", { name: "What is it waiting for?" }), "the printer");
-  await user.click(screen.getAllByRole("button", { name: "Put on hold" }).find((b) => (b as HTMLButtonElement).type === "submit")!);
+  await user.click(screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!);
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "the printer", on: "Q-4" }));
 });

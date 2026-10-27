@@ -9,13 +9,15 @@ import { projectChoices } from "../lib/project-choices";
 import { useRowKeys } from "../lib/keys";
 import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
+import { Skeleton } from "../ui/Skeleton";
+import { Pill } from "../ui/Pill";
 
 /** The form that answers a "Who is this?" question with a new person. It starts from the name as written and whatever the
  * input says about them, and the cursor is in its first field. */
 export function NewPersonForm(props: { question: string; onClose: () => void }) {
   const { t } = useWords();
   const form = useQuery({ queryKey: ["new-person", props.question], queryFn: () => api.newPersonForm(props.question) });
-  if (form.isPending) return <p className="hint">{t("loading")}</p>;
+  if (form.isPending) return <Skeleton rows={1} />;
   if (form.isError || !form.data) return <p className="hint">{t("newperson.load_failed")}</p>;
   return <NewPersonFields question={props.question} start={form.data} onClose={props.onClose} />;
 }
@@ -185,7 +187,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
       <div>
         <div className="what">
           {t("project_item.what")}
-          <span className="pill k-held">{t("op.status.held")}</span>
+          <Pill tone="warn" className="pill-gap">{t("op.status.held")}</Pill>
         </div>
         <div className="title">{t("project_item.ask", { name })}</div>
         {op.meta.note && <div className="hint">{op.meta.note}</div>}

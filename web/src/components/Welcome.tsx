@@ -23,6 +23,8 @@ import { RenameName } from "./RenameName";
 import { WelcomeBackup } from "./WelcomeBackup";
 import { WorkStep } from "./WalkthroughWork";
 import { Skeleton } from "../ui/Skeleton";
+import { Icon } from "../ui/Icon";
+import { Pill } from "../ui/Pill";
 
 type Step = S["SetupStepView"];
 
@@ -304,10 +306,10 @@ function StepSection(props: { step: Step; label: string; explanation: string; ch
         <h3 id={`${slug}-title`} tabIndex={-1}>
           {label}
         </h3>
-        <span className={`pill state-${state}`}>
-          <span aria-hidden="true">{state === "done" ? "✓ " : state === "skipped" ? "– " : "○ "}</span>
+        <Pill tone={state === "done" ? "ok" : state === "skipped" ? "neutral" : "need"}>
+          <Icon name={state === "done" ? "check" : state === "skipped" ? "minus" : "circle"} size={14} />{" "}
           {t(state === "done" ? "start.done" : state === "skipped" ? "welcome.state_skipped" : "start.not_done")}
-        </span>
+        </Pill>
       </div>
       {props.explanation && <p className="hint">{props.explanation}</p>}
       {props.children}
@@ -348,7 +350,7 @@ export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean }
   // The person's name lives on their person record only; the settings hold the time zone.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   if (!settings.data || !me.data) {
-    return <p className="empty">{t(settings.isError || me.isError ? "welcome.failed" : "loading")}</p>;
+    return settings.isError || me.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton rows={2} />;
   }
   return <WorkspaceForm {...props} settings={settings.data} me={me.data} />;
 }

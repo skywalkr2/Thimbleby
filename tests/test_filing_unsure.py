@@ -14,6 +14,7 @@ from engine.applier import undo
 from engine.records import Scope
 from engine.unfiled import unfiled
 from tests import test_sides as shared
+from tests.conftest import DEMO_B
 from tests.test_sides import (
     _PM,
     BUSINESS_ID,
@@ -263,3 +264,32 @@ def test_a_source_serving_two_sides_offers_only_those_sides(env):
     asked = filing.questions(store.read(), cfg, NOW)
     assert {q.side for q in asked} == {BUSINESS_ID, second}
     assert filing.summary(store.read(), cfg, NOW).subject is None  # two sides asked: the line names none
+
+
+def test_a_job_and_a_business_beside_personal_get_one_question_for_each_side_a_day_and_one_line_naming_neither(env):
+    """Two sides beside Personal (design 6.32, check U15): what no signal places could be either side's, so each side is
+    asked at most once a day, and Today says it in one line that names no single side while there are two."""
+    import json
+
+    from engine import today_queue
+    from tests.test_many_sides import add_side
+
+    ws, cfg, store = env
+    job = add_side(env, "Weekday job", kind="job")
+    run_week(env)
+    view = store.read()
+    asked = filing.questions(view, cfg, NOW)
+    assert [q.side for q in asked] == [BUSINESS_ID, job]  # one question for each side, in the person's order
+    both = {(i.kind, i.id) for i in asked[0].items}
+    assert both and both == {(i.kind, i.id) for i in asked[1].items} and unfiled(view) == []
+    # Today: one line for every question, counting each item once, naming neither side.
+    shown = [x for x in today_queue.queue(ws, store, cfg, NOW) if x.kind == "unfiled" and x.state == "which_side"]
+    assert len(shown) == 1 and shown[0].subject is None and shown[0].count == len(both)
+    sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
+    assert "{business}" not in sheet["queue.sides.many.other"] and "{business}" not in sheet["queue.sides.meta.many"]
+    # Moving one item answers the business's question for today; the job's question stays for the rest, still once.
+    first = asked[0].items[0]
+    filing.move(store, cfg, BUSINESS_ID, [(first.kind, first.id, first.version)], NOW)
+    after = filing.questions(store.read(), cfg, NOW)
+    assert [q.side for q in after] == [job] and len(after[0].items) == len(both) - 1
+    assert [q.side for q in filing.questions(store.read(), cfg, NOW + timedelta(days=1))] == [BUSINESS_ID, job]

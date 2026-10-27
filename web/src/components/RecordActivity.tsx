@@ -84,7 +84,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
                   a.due && t("op.meta.due", { date: day(a.due) }),
                   page.kind !== "project" && a.project_name,
                   a.series && a.series_title && <MeetingLabel key="m" series={a.series} title={a.series_title} on={a.meeting_on} />,
-                  hasOrigin(a.origin) && <OriginLink key="o" origin={a.origin} />,
+                  hasOrigin(a.origin) && <OriginLink key="o" origin={a.origin} inline />,
                 ])}
               />
             ))}
@@ -96,7 +96,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
                 meta={joined([
                   q.to_name && t("record.asked_of", { name: q.to_name }),
                   q.series && q.series_title && <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
-                  hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} />,
+                  hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} inline />,
                 ])}
               />
             ))}

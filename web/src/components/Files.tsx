@@ -20,6 +20,7 @@ import { AddFile } from "./AddFile";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SideFilter } from "./SideFilter";
+import { Pill } from "../ui/Pill";
 
 /** The width the list needs beside the pane before the pane would overlay it. */
 const FILES_FIT = 420;
@@ -137,7 +138,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; choice: ListCho
             {file.name}
           </button>
           <span className="sub">{facts.join(" · ")}</span>
-          {file.origin === "tool" && <span className="pill k-held untrusted">{t("files.untrusted")}</span>}
+          {file.origin === "tool" && <Pill tone="warn" className="pill-flush">{t("files.untrusted")}</Pill>}
         </div>
         <div className="acts">
           <a

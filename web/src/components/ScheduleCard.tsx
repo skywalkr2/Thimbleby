@@ -19,6 +19,7 @@ import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSources";
+import { Pill } from "../ui/Pill";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -263,7 +264,7 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
       <span className="tb-when">{props.when}</span>
       <div className="tb-what">
         <div className="tb-title">
-          {event.cancelled && <span className="pill k-risk">{t("today.agenda.called_off")}</span>}
+          {event.cancelled && <Pill tone="danger" className="pill-gap">{t("today.agenda.called_off")}</Pill>}
           <span className={event.cancelled ? "struck" : undefined}>
             {event.link ? (
               <SafeLink label={event.title} url={event.link} />

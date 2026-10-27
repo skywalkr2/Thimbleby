@@ -170,6 +170,13 @@ def create_app(
     except Exception as err:  # never stops the app from starting
         log.warning("Couldn't re-word titles that hold an id: %s", err)
     try:
+        # Notes stored before the title rule are re-titled by their message's subject and sender, once.
+        from engine.note_titles import retitle_stored
+
+        retitle_stored(ws, store, cfg)
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't re-title stored notes: %s", err)
+    try:
         # Hand-made file links an earlier version wrote as paths name their file by its content instead, once.
         from engine.version_choices import migrate_to_hashes
 

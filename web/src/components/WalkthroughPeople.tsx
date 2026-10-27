@@ -10,6 +10,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Skeleton } from "../ui/Skeleton";
 
 const RELATIONS = [
   "partner",
@@ -306,7 +307,7 @@ export function WalkthroughPeople() {
   const { t } = useWords();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const business = useQuery({ queryKey: ["business"], queryFn: api.business });
-  if (!people.data) return <p className="empty">{t(people.isError ? "welcome.failed" : "loading")}</p>;
+  if (!people.data) return people.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton rows={2} />;
   const others = people.data.filter((p) => !p.is_pm && p.status === "active");
   const listed = business.data?.sides ?? [];
   const personal = business.data?.personal ?? null;

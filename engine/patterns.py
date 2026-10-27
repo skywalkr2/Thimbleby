@@ -273,7 +273,7 @@ def plan(store: Any, cfg: Any, line: Any, choice: str, words: Words, now: dateti
         if not words.waiting.strip():
             raise StoreError("say what it waits for")
         ops = [{"op": "action.hold", "id": i, "waiting_for": words.waiting.strip()} for i in ids]
-        return Plan(ops, "Put a promise on hold from a suggestion")
+        return Plan(ops, "Paused a promise from a suggestion")
     if choice == "weekly":
         return Plan([_weekly(store, cfg, ids[0], words.weekly, now)], "Made a to-do weekly from a suggestion")
     raise StoreError("that isn't one of the choices")

@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 // Who a person is to the user (design 6.34): a list on the person's page, saved at once as the user's own edit.
@@ -74,6 +74,19 @@ test("picking one saves at once as the person's own edit with Undo, and Use my d
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
   await user.selectOptions(list, "Use my default (I work alongside them)");
   await waitFor(() => expect(calls.filter((c) => c.route === "POST records/edit").at(-1)?.body).toEqual({ kind: "person", id: "PER-2", fields: { stance: null }, read_version: 3 }));
+});
+
+test("a choice that couldn't be saved says so and offers Try again, which saves the same choice", async () => {
+  const user = userEvent.setup();
+  let fail = true;
+  const calls = open({ stance: "watch" }, { "POST records/edit": () => (fail ? new Refuse(500, "") : { changeset: "CS-9" }) });
+  renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Who they are to you" }), "I manage them");
+  const problem = await screen.findByRole("alert");
+  fail = false;
+  await user.click(within(problem).getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST records/edit")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST records/edit").at(-1)?.body).toEqual({ kind: "person", id: "PER-2", fields: { stance: "manage" }, read_version: 3 });
 });
 
 test("a page for anything but a person has no such list", async () => {

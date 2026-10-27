@@ -26,6 +26,7 @@ import { WalkthroughMail } from "./WalkthroughMail";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
 import styles from "./Walkthrough.module.css";
+import { Icon } from "../ui/Icon";
 
 export interface Handlers {
   onOpenPeople: () => void;
@@ -288,7 +289,7 @@ export function Walkthrough(
                       </span>
                       {(state === "done" || state === "skipped") && (
                         <span className={styles.mark}>
-                          <span aria-hidden="true">{state === "done" ? "✓ " : "– "}</span>
+                          <Icon name={state === "done" ? "check" : "minus"} size={14} />{" "}
                           {t(state === "skipped" && reason ? `walkthrough.state.skipped_${reason}` : `walkthrough.state.${state}`)}
                         </span>
                       )}
@@ -379,7 +380,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           return (
             <li key={step.id} data-step={step.id} data-state={state}>
               <span className={`what ${styles.what}`}>
-                <span aria-hidden="true">{state === "done" ? "✓ " : state === "skipped" ? "– " : "○ "}</span>
+                <Icon name={state === "done" ? "check" : state === "skipped" ? "minus" : "circle"} size={14} />{" "}
                 {label}
               </span>
               <span className={styles.state}>{t(said)}</span>

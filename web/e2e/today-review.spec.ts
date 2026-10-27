@@ -98,6 +98,39 @@ test.describe("A review happens on Today", () => {
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
+  for (const size of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+    test(`Not right opens its note with Send back fully in view at ${size.width}px, with the box at most 72 characters wide`, async ({ page }) => {
+      await serve(page, () => lines);
+      await page.setViewportSize(size);
+      await signIn(page);
+      const row = page.locator('[data-queue-line="review"]');
+      await row.getByRole("button", { name: "Look over", exact: true }).click();
+      await row.getByRole("button", { name: /^Not right/ }).first().click();
+      const note = row.getByRole("textbox").first();
+      await expect(note).toBeFocused();
+      await note.fill("Ask me before adding this one.");
+      const send = row.getByRole("button", { name: "Send back", exact: true });
+      await expect(send).toBeEnabled();
+      await send.scrollIntoViewIfNeeded();
+      // The button is inside the window, in both directions, whole.
+      const box = (await send.boundingBox())!;
+      const window_ = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(window_.width);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height).toBeLessThanOrEqual(window_.height);
+      const fit = await note.evaluate((area) => {
+        const probe = document.createElement("span");
+        probe.style.cssText = `position:absolute;visibility:hidden;width:72ch;font:${getComputedStyle(area).font}`;
+        area.parentElement!.append(probe);
+        const limit = probe.getBoundingClientRect().width;
+        probe.remove();
+        return { width: area.getBoundingClientRect().width, limit };
+      });
+      expect(fit.width).toBeLessThanOrEqual(fit.limit + 1);
+    });
+  }
+
   test("at 390px every queue title shows at least 25 characters, with the actions under it", async ({ page }) => {
     await serve(page, () => lines);
     await page.setViewportSize({ width: 390, height: 844 });

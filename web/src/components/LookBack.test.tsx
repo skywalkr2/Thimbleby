@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
@@ -88,6 +88,16 @@ test("a mail source taken in quietly says the day before which it was not looked
   expect(note.closest("[data-coverage-line]")).not.toBeNull();
   // Today's header only says it; the way to look further back is on the source's own page.
   expect(screen.queryByRole("button", { name: /Look further back/ })).toBeNull();
+});
+
+test("two mailboxes that were not looked at before the same day say it once, and ones with different days say each day once", async () => {
+  header([mail({ id: "a", label: "Work mail" }), mail({ id: "b", label: "Home mail" })]);
+  await screen.findByText(`Not looked at before ${day("2026-10-05")}`);
+  expect(screen.getAllByText(/Not looked at before/)).toHaveLength(1);
+  cleanup();
+  header([mail({ id: "a" }), mail({ id: "b", label: "Home mail", looked_back_to: "2026-10-12" })]);
+  await screen.findByText(`Not looked at before ${day("2026-10-12")}`);
+  expect(screen.getAllByText(/Not looked at before/)).toHaveLength(2);
 });
 
 test("a source with no look-back date says nothing about it and offers no way to look further back", async () => {

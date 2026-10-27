@@ -2571,6 +2571,10 @@ def _op_view(
     title = o.get("label") or op.get("text") or op.get("title") or op.get("answer") or op.get("full_name") or ""
     if op["op"] == "answer":
         title = op["text"]  # the whole answer is what the person reads, not its one-line label
+    if op["op"] == "note" and record is not None and record[0] == "note" and not o.get("label"):
+        # A note reads as it stands now (a note stored before the title rule was re-titled on its record, never in the
+        # change that made it).
+        title = record[1].data.get("text") or title
     meta: dict[str, Any] = {}
     if record:
         kind, rec = record
@@ -2586,6 +2590,12 @@ def _op_view(
             meta["to"] = people.name(d.get("to"))
         if kind == "note":
             meta["project"] = projects.get(d.get("project"))
+        if kind == "fact" and d.get("basis") == "said" and d.get("said_by"):
+            meta["said_by"] = people.name(d["said_by"])
+            meta["as_of"] = str(d["as_of"]) if d.get("as_of") else None
+    elif op["op"] == "fact" and op.get("basis") == "said" and op.get("said_by"):
+        meta["said_by"] = _named(people, op["said_by"])
+        meta["as_of"] = str(op["as_of"]) if op.get("as_of") else None
     elif op["op"] == "action.add":
         meta["owners"] = [_named(people, who) for who in op.get("owners", [])]
         meta["due"] = op.get("due")
@@ -2660,7 +2670,7 @@ def _section(
     nudge_held = None if s.is_pm or s.nudge is None else outgoing_problem(store.read(), cfg, {where: s.nudge.text})
 
     def question_views(rows: list[dict[str, Any]]) -> list[FollowupQuestion]:
-        return [_followup_question(q, people, question_origin) for q in rows]
+        return [_followup_question(q, people, question_origin, store.read()) for q in rows]
 
     questions = question_views(s.questions)
     later = question_views(s.later)
@@ -2714,9 +2724,15 @@ def _section(
     )
 
 
-def _followup_question(q: dict[str, Any], people: People, question_origin: dict[str, Any]) -> FollowupQuestion:
+def _followup_question(
+    q: dict[str, Any], people: People, question_origin: dict[str, Any], view: Any
+) -> FollowupQuestion:
+    from engine.origin import from_outside
+
     resolves = q.get("resolves") or {}
+    asked = view.get("question", q["id"])
     return FollowupQuestion(
+        from_outside=asked is not None and from_outside(view, asked),
         id=q["id"],
         title=q["title"],
         text=q["text"],

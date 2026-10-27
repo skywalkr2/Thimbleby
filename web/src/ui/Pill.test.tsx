@@ -32,3 +32,15 @@ test("the inferred tag is a dashed outline with an approximate sign, and a scree
   expect(screen.getByText("Inferred", { selector: "[aria-hidden=true]" })).toBeInTheDocument();
   expect(tag.className).toMatch(/inferred/);
 });
+
+test("a long pill can wrap onto more lines and carries a tooltip, and every pill is marked for the shared part", () => {
+  render(
+    <Pill tone="warn" wraps title="Was due Nov 2">
+      Paused: waiting on a long answer
+    </Pill>,
+  );
+  const pill = screen.getByText("Paused: waiting on a long answer");
+  expect(pill).toHaveAttribute("title", "Was due Nov 2");
+  expect(pill).toHaveAttribute("data-pill", "");
+  expect(pill.className).toMatch(/wraps/);
+});

@@ -19,6 +19,7 @@ import styles from "./AskPane.module.css";
 import { ModalPanel } from "./ModalPanel";
 import { OwnKindsOffer } from "./Templates";
 import { SafeText } from "./SafeText";
+import { Skeleton } from "../ui/Skeleton";
 
 type AskItem = S["AskView"];
 const SHOWN = 10;
@@ -110,9 +111,7 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
           {t("ask.recent")}
         </h3>
         {asks.isPending ? (
-          <p className="hint" role="status">
-            {t("loading")}
-          </p>
+          <Skeleton rows={1} />
         ) : asks.isError ? (
           <p className="hint">
             {t("ask.load_failed")}{" "}

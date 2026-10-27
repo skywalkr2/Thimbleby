@@ -26,6 +26,8 @@ export function StancePicker(props: {
   const { push } = useToasts();
   const id = useId();
   const [error, setError] = useState<string | null>(null);
+  // The choice that couldn't be saved, so Try again saves the same one.
+  const [last, setLast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const shipped = settings.data?.items.find((item) => item.key === "steward.default_stance")?.value;
@@ -53,6 +55,7 @@ export function StancePicker(props: {
       });
     } catch (err) {
       setError(problemText(err, t));
+      setLast(value);
       if (err instanceof ApiError && err.status === 409) await client.invalidateQueries();
     } finally {
       setSaving(false);
@@ -74,9 +77,14 @@ export function StancePicker(props: {
         {t("stance.hint")}
       </span>
       {error && (
-        <p className="problem-note" role="alert">
-          {error}
-        </p>
+        <div className="problem-note" role="alert">
+          <p>{error}</p>
+          {last !== null && (
+            <button type="button" className="btn" onClick={() => void save(last)}>
+              {t("action.try_again")}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

@@ -9,13 +9,12 @@ import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { OutsideTag } from "../ui/OutsideTag";
 import { CaptureForm } from "./CaptureForm";
 import { ITEM_KINDS, PrepItems } from "./PrepItems";
 
 type Person = S["PersonPrepView"];
 
-/** "Last in touch: mail from them on Oct 18", and the subject when it is mail, marked as from outside. */
+/** "Last in touch: mail from them on Oct 18", and the subject when it is mail. */
 export function TouchLine(props: { touch: NonNullable<Person["last_in_touch"]> }) {
   const { t } = useWords();
   const { touch } = props;
@@ -25,7 +24,7 @@ export function TouchLine(props: { touch: NonNullable<Person["last_in_touch"]> }
       {touch.subject && (
         <>
           {" · "}
-          <span>{touch.subject}</span> {touch.untrusted && <OutsideTag />}
+          <span>{touch.subject}</span>
         </>
       )}
     </p>
@@ -52,7 +51,7 @@ function PersonBlock(props: { person: Person }) {
       {person.left_open && person.left_open.items.length > 0 && (
         <div data-items="left_open">
           <h4>
-            {t("meeting.prep.left_open", { title: person.left_open.title, date: day(person.left_open.on) })} {person.left_open.untrusted && <OutsideTag />}
+            {t("meeting.prep.left_open", { title: person.left_open.title, date: day(person.left_open.on) })}
           </h4>
           <PrepItems kind="left_open" items={person.left_open.items} name={person.name} heading={false} />
         </div>
@@ -76,6 +75,9 @@ function PrepNote(props: { entry: string; note: S["PrepNoteView"] }) {
   return <p className="hint">{t(`meeting.note.${note.state}`)}</p>;
 }
 
+/** Whether any words the prep shows came from outside content; the prep says so once, not beside each line. */
+const fromOutside = (prep: S["MeetingPrepView"]): boolean => prep.people.some((p) => p.last_in_touch?.untrusted || p.left_open?.untrusted);
+
 export function MeetingPrep(props: { entry: string; title: string }) {
   const { t, tn } = useWords();
   const found = useQuery({ queryKey: ["meeting-prep", props.entry], queryFn: () => api.meetingPrep(props.entry) });
@@ -88,6 +90,11 @@ export function MeetingPrep(props: { entry: string; title: string }) {
       <div className="heading">
         <h3 id="meeting-prep">{t("meeting.prep.heading")}</h3>
       </div>
+      {fromOutside(prep) && (
+        <p className="hint" data-outside-note="">
+          {t("queue.detail.outside.other")}
+        </p>
+      )}
       {prep.coming.length === 0 && <p className="hint">{t("meeting.prep.alone")}</p>}
       {prep.people.map((p) => (
         <PersonBlock key={p.person} person={p} />

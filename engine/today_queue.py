@@ -43,6 +43,7 @@ from engine.firm_due import firm_due
 from engine.followups import ROUTING, sections
 from engine.language_words import language_words
 from engine.names import People
+from engine.origin import from_outside
 from engine.owners import suggest_owner
 from engine.plugin_api import TODAY_GROUPS
 from engine.scope import stance_of
@@ -996,6 +997,7 @@ def _everything(
                 state=fact.data.get("on_kind"),
                 at=datetime.fromisoformat(str(fact.data["remind_at"])).astimezone(here).isoformat(),
                 fact=fact.id,
+                untrusted=from_outside(reader, fact),
                 since=str(fact.data["remind_at"]),
             )
         )
@@ -1112,16 +1114,33 @@ def _everything(
 
     # What the assistant or a rule did since yesterday that the person hasn't looked over: one line, in the risk group
     # below promises, which goes when the list is opened and comes back with the next change.
+    # A new to-do that a batch on Today already holds to look over is left out of it: the review lines show it, so the
+    # list isn't a second place to read the same thing.
     done = since_yesterday.build(ws, reader, cfg, people, now)
-    if done.unseen:
+
+    def in_a_batch(entry: Any) -> bool:
+        waiting = by_changeset.get(entry.changeset) if entry.act == "added" and entry.changeset else None
+        return (
+            waiting is not None
+            and waiting.data.get("state") == "review"
+            and not waiting.data.get("dismissed")
+            and waiting.id not in hidden
+            and not (changesets.get(entry.changeset) or {}).get("reviewed")
+        )
+
+    unseen = [e for e in done.unseen if not in_a_batch(e)]
+    if unseen:
+        counts: dict[str, int] = {}
+        for entry in unseen:
+            counts[entry.act] = counts.get(entry.act, 0) + 1
         lines.append(
             Line(
                 key="since_yesterday",
                 group="risk",
                 kind="since_yesterday",
-                count=len(done.unseen),
-                outcome=done.counts(),
-                since=min(e.when for e in done.unseen),
+                count=len(unseen),
+                outcome={act: counts[act] for act in since_yesterday.ACTS if act in counts},
+                since=min(e.when for e in unseen),
             )
         )
 

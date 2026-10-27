@@ -7,12 +7,14 @@ export type PillTone = "neutral" | "need" | "warn" | "danger" | "ok";
 
 /** `inferred` is the tag for what the assistant worked out and nobody said: a dashed outline and a ≈ before the word. It is
  * kept for inferences alone, so the person learns one signal for them. `describedAs` is what a screen reader hears instead
- * of the word when the word alone is not enough. */
-export function Pill(props: { tone?: PillTone; children: ReactNode; className?: string; inferred?: boolean; describedAs?: string }) {
+ * of the word when the word alone is not enough. `wraps` lets a long pill (a hold with its reason) go onto more than one line. */
+export function Pill(props: { tone?: PillTone; children: ReactNode; className?: string; inferred?: boolean; describedAs?: string; title?: string; wraps?: boolean }) {
   const tone = props.tone ?? "neutral";
   return (
     <span
-      className={[styles.pill, styles[tone], props.inferred ? styles.inferred : "", props.className ?? ""].filter(Boolean).join(" ")}
+      className={[styles.pill, styles[tone], props.inferred ? styles.inferred : "", props.wraps ? styles.wraps : "", props.className ?? ""].filter(Boolean).join(" ")}
+      title={props.title}
+      data-pill=""
       data-tone={tone}
       data-inferred={props.inferred ? "" : undefined}
     >

@@ -626,7 +626,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           {props.kindsFailed ? (
             <p className="problem-note">{t("sources.kinds_failed")}</p>
           ) : props.kinds === undefined ? (
-            <p className="hint">{t("loading")}</p>
+            <Skeleton rows={1} />
           ) : available.length === 0 ? (
             <p className="hint">{t("sources.kinds_none")}</p>
           ) : (
@@ -787,7 +787,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               </p>
             </div>
           )}
-          {waitingForSettings && <p className="hint">{t("loading")}</p>}
+          {waitingForSettings && <Skeleton rows={1} />}
           {items.length > 0 && (
             <fieldset className="details">
               <legend>{t("sources.details")}</legend>

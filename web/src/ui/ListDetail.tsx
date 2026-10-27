@@ -47,7 +47,9 @@ export function ListDetail(props: { children: ReactNode; detail: ReactNode | nul
   return (
     <PaneContext.Provider value={state}>
       <div ref={split} data-split="" data-pane={mode} className={[styles.split, mode === "beside" ? styles.open : "", mode === "overlay" ? styles.overlay : ""].filter(Boolean).join(" ")}>
-        <div className={styles.main}>{props.children}</div>
+        <div className={styles.main} data-region="">
+          {props.children}
+        </div>
         {open &&
           (beside ? (
             <aside
@@ -55,6 +57,7 @@ export function ListDetail(props: { children: ReactNode; detail: ReactNode | nul
               className={styles.pane}
               aria-label={props.title}
               data-detail-pane=""
+              data-region=""
               onKeyDown={(event) => {
                 if (event.key === "Escape" && !event.defaultPrevented) {
                   event.stopPropagation();

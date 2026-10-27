@@ -104,3 +104,46 @@ test("the move key goes to the row that has the cursor, and only when it is conf
   await user.keyboard("m");
   expect(moved).not.toHaveBeenCalled();
 });
+
+test("the pane keys move the cursor between the list, the details and the rail, wrapping round, and never while typing", async () => {
+  const user = userEvent.setup();
+  function Panes() {
+    useShortcuts({ ...SHORTCUTS, next_pane: "]", previous_pane: "[" }, { undo: () => undefined, hand_in: () => undefined, ask: () => undefined, help: () => undefined });
+    return (
+      <>
+        <section data-region="" aria-label="list">
+          <div data-row="" tabIndex={-1} aria-label="first row" />
+        </section>
+        <aside data-region="" aria-label="details">
+          <button type="button">Open it</button>
+        </aside>
+        <div data-region="" aria-label="rail">
+          <button type="button">Came in</button>
+        </div>
+        <div data-region="" aria-label="hidden" style={{ display: "none" }}>
+          <button type="button">Never reached</button>
+        </div>
+        <input aria-label="field" />
+      </>
+    );
+  }
+  render(<Panes />);
+  // From nowhere the first pane is entered, on its first row.
+  await user.keyboard("]");
+  expect(screen.getByLabelText("first row")).toHaveFocus();
+  await user.keyboard("]");
+  expect(screen.getByRole("button", { name: "Open it" })).toHaveFocus();
+  await user.keyboard("]");
+  expect(screen.getByRole("button", { name: "Came in" })).toHaveFocus();
+  // After the last, it wraps to the first; the hidden pane is skipped.
+  await user.keyboard("]");
+  expect(screen.getByLabelText("first row")).toHaveFocus();
+  await user.keyboard("[[");
+  expect(screen.getByRole("button", { name: "Came in" })).toHaveFocus();
+  await user.keyboard("[[");
+  expect(screen.getByRole("button", { name: "Open it" })).toHaveFocus();
+  // In a field the keys are typed, not run.
+  await user.click(screen.getByLabelText("field"));
+  await user.keyboard("]");
+  expect(screen.getByLabelText("field")).toHaveFocus();
+});
