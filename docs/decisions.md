@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Notices name the apps they go to, from a shipped list
+
+**Decided:** Settings › Notices offers the common apps by name (for example a chat app, a team chat, a phone-push
+service), each with the message shape it needs and one line on where to find its webhook address, plus "Something else
+(plain text)". The names, shapes and hints live in a shipped data file beside the core, not in its code, so the core stays
+generic: the sender fills a shape from the data with the notice's text, and adding an app is a line in the list. A
+workspace can add its own entries like any shipped default. This is the reviewer's answer 10; no plugin API change.
+
+**Decided by:** the owner ("naming the apps those functions are built for is imperative"; setup must be easy for people who
+aren't technical).
+
+**Why:** a beginner knows the app they use, not whether it is "a chat app" or "a push notification topic".
+
+**Impact:** Design 7.19 and 4.x (the notices settings); CLAUDE.md's boundary holds, since the names are data, not code.
+Change log: section 234.
+
 ## 2026-10-28: Every finding of the reviewer's second pass is built, with the designer's answers F39 to F46
 
 **Decided:** All of G1 to G23 of the second pass (`reviews/ui-ux-2026-10/review-f973493/`) and checks U13 to U18 are

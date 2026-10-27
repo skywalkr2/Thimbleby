@@ -1239,6 +1239,8 @@ The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the des
 - [ ] [U17] At 390px, queue titles show at least 25 characters.
 - [ ] [U18] Row actions are tonal in both themes, only the selected line's filled.
 - [ ] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
+- [ ] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
+  address (the reviewer's answer 10; owner, 2026-10-28).
 
 ## Phase I: installers for Windows and macOS (after phase S)
 

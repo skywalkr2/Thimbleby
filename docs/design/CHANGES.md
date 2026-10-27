@@ -1038,6 +1038,7 @@ yet follow, that it is *designed*, with its phase.
 | Outside marker (7.7, 12.8) | On every list line | Once in the details pane, and at any outward step |
 | People (6.32) | Role and Organization columns with a business | "Who they are", every relation, Personal first; typed relations allowed |
 | File links (6.2) | Kept by path | Kept by content, so a move to Archive or a rename keeps them |
+| Notices (7.19) | "A chat app" or "A push notification topic" | The apps by name from a shipped list, each with its message shape and where to find its address; "Something else (plain text)" |
 
 ## 233. The rest of the review, built before the reviewer's second pass (2026-10-27; phase U; designed; the rows marked Built have a named test)
 
