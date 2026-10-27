@@ -4,8 +4,9 @@ Kept current by the build session; finished items leave the list.
 
 ## This morning (2026-10-28)
 
-1. **The reviewer's reply to the second pass**, when it comes: it is saved, unfixed, in
-   `docs/project/ui-ux-reply-2026-10-28.md` for you to read first. Nothing is built from it until you decide.
+1. **The reviewer's reply to the second pass is in**, saved unfixed in `docs/project/ui-ux-reply-2026-10-28.md`, with the
+   full review in `reviews/ui-ux-2026-10/review-f973493/`. Much better overall; four P0s (G1 to G4), ten P1s and nine P2s,
+   with a suggested order. Nothing is built from it until you decide.
 2. **Three calls for you** (open promise P69):
    - **Named notice apps** (the reviewer's answer 10) aren't built. The app sends notices only as plain JSON or plain text,
      app names can't sit in the core, and a plugin that supplies them needs a plugin API change while the hold applies.
