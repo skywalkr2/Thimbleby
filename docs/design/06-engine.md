@@ -3931,8 +3931,9 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
 - **Start flat; propose on a pattern.** Setup makes only Personal. When a number of items (a setting) share a theme, the
   assistant proposes one new area or project for them ("File these 4 under a new area 'Health'?"), a `project.add`
   that waits for the person's yes as every proposed project does; never a question per item. A move from Personal to an
-  area is an `edited` correction (6.20), so the next item like it is filed there. Setup offers common areas as tick
-  boxes, all unticked and skippable, from a list that is a setting.
+  area is an `edited` correction (6.20), so the next item like it is filed there. Setup asks nothing about areas (owner,
+  2026-10-28): they come only from the assistant's proposals, as each person's life differs; the common-areas list in
+  `docs/project/setup-inputs/areas.yaml` is material for those proposals, not a form.
 - **Privacy per area** with the project's content levels (3.3): an area such as health or money can be more private than
   the rest, and its material then reaches only the accounts allowed for that level; Personal itself follows the
   person's general setting. Personal and everything under it stay out of work reports and status pages.

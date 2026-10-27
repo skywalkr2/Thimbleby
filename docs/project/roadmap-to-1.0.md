@@ -1134,7 +1134,7 @@ S4. **What arrives, and where it may go:**
   computer, or that no account may read it; when `steward.areas.propose_after` items filed under Personal itself share a
   word, one Today suggestion offers an area for them and Start files them as the person's own edits (each a correction)
   with Undo (`engine/areas.py`, `tests/test_areas.py`, `web/src/components/TodayArrives.test.tsx`,
-  `web/src/components/ProjectKnows.test.tsx`). **Left:** setup's tick boxes for common areas, a per-area allowed-account
+  `web/src/components/ProjectKnows.test.tsx`). **Left:** a per-area allowed-account
   picker on the page (the levels are set where content levels are), the meeting-prep and people-memory drafts reading the
   same reach, and the filter "one Today across them, tagged by area".
 - [ ] [S4] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
@@ -1276,8 +1276,8 @@ code. Nearly all is built or planned. What is left, in two batches:
   and C22 re-marked.
 - [ ] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
   lists moved into shipped data (full-read point 5); the Monday message asking once who it is for; "Drop it and draft the
-  note"; P40 point 8 reproduced; B-11b's tiers with a cost per day; S4's "setup tick boxes for common areas" settled
-  against design 7.8.
+  note"; P40 point 8 reproduced; B-11b's tiers with a cost per day. (S4's setup tick boxes for common areas: dropped, owner 2026-10-28; areas
+  come only from the assistant's proposals, as design 7.8 says.)
 - Held, not dropped: `includes:` (P62, P39) with the next plugin API release; calendar create, move and cancel and the
   add-on channels with the add-on builders.
 

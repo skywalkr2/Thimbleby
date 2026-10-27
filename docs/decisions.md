@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Setup asks nothing about areas; they come from the assistant's proposals
+
+**Decided:** Setup offers no tick boxes for common Personal areas (Home, Health, Money and the like). Areas come only from
+the assistant's proposals once items under Personal share a theme ("File these 4 under a new area 'Health'?"), each a
+`project.add` the person says yes to, as built. The common-areas list stays as material for those proposals.
+
+**Decided by:** the owner ("the setup is less cluttered this way, and the AI will learn what it needs to do over time. Each
+user will be different"), choosing the screen design (7.8) over the roadmap's S4 "Left".
+
+**Why:** setup stays short for people who aren't technical, and areas appear only where a person has things for them.
+
+**Impact:** Design 6.32 (areas) corrected to match 7.8; roadmap S4's Left and A5 updated. Change log: none.
+
 ## 2026-10-28: Two choices made in building phase U, written down (the audit of 2026-10-28)
 
 **Decided:** (1) Today's Came in card carries one quiet "12 handled for you today" link to Handled for you. This
