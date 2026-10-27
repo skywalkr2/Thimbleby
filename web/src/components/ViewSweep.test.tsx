@@ -648,7 +648,7 @@ test("Handled for you, a rule's closes on the set-aside tab and the assistant's 
   await user.click(await screen.findByRole("button", { name: "only spacing changed · 1", expanded: false }));
   await screen.findByText("Spacing change in the style sheet");
   sweep(view.container);
-  await user.click(screen.getByRole("button", { name: "Read, nothing to do · 0" }));
+  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 0" }));
   await screen.findByText("Send the proof");
   sweep(view.container);
 });

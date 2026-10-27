@@ -4462,7 +4462,7 @@
   "quality.sample.too_many": "The assistant can't have missed more than you found.",
   "quality.sample.empty": "No sample has been drawn for these days.",
   "quality.total.title": "Missed out of present, all together",
-  "quality.total.hint": "Your daily counts and the messages you read from the sample, added: the figure the gate week is held to.",
+  "quality.total.hint": "Your daily counts and the messages you read from the sample, added together.",
   "quality.total.sum.one": "The assistant missed {missed} of the {n} promise you counted, over {days} days and {messages} messages.",
   "quality.total.sum.other": "The assistant missed {missed} of the {n} promises you counted, over {days} days and {messages} messages.",
   "quality.total.empty": "You haven't counted any promises in this window.",

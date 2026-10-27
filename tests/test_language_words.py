@@ -155,12 +155,14 @@ def test_an_unknown_list_is_an_error_not_an_empty_list(name):
 
 def test_mail_sorting_and_packets_still_read_the_playbook_once_its_guidance_folder_is_loaded_as_a_package():
     # Loading the folder as a package once replaced a function of the same name, so mail sorting failed by test order.
-    import importlib
-    from importlib import resources
+    # A fresh process loads the folder first, as a learning run can, and nothing here is reloaded.
+    import subprocess
+    import sys
 
-    resources.files("engine.playbook.guidance")
-    from engine import mail_sorting, packet, playbook
-
-    importlib.reload(mail_sorting)
-    importlib.reload(packet)
-    assert callable(playbook.practice) and callable(mail_sorting.practice) and callable(packet.practice)
+    code = (
+        "from importlib import resources; resources.files('engine.playbook.guidance');"
+        "from engine import mail_sorting, packet, playbook;"
+        "assert callable(playbook.practice) and callable(mail_sorting.practice) and callable(packet.practice)"
+    )
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stderr
