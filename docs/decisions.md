@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Two choices made in building phase U, written down (the audit of 2026-10-28)
+
+**Decided:** (1) Today's Came in card carries one quiet "12 handled for you today" link to Handled for you. This
+supersedes the designer's F34 and decision P58 ("nothing about handled mail on Today"): the reviewer asked for the count
+(their section 4 and P47), and it is a count, never the mail itself, and adds no line to the queue. (2) Removing the Top
+priorities card (one place to act, change log 229) keeps the designer's F15, F16 and F24 chase rules (what to chase, when,
+and that a blocker is named on its line) but drops the card that showed them; the blocker shows on the to-do's own line and
+in its details.
+
+**Decided by:** the main session in building phase U, confirmed by the audit of 2026-10-28 and recorded for the designer;
+the owner sent the reviewer's findings to be built.
+
+**Why:** both followed the reviewer's findings without saying which earlier answer they replaced.
+
+**Impact:** Design 7.7 already says both; the designer's answers F15, F16, F24 and F34 read with this entry. Change log:
+none.
+
 ## 2026-10-28: Notices name the apps they go to, from a shipped list
 
 **Decided:** Settings › Notices offers the common apps by name (for example a chat app, a team chat, a phone-push
