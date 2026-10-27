@@ -297,6 +297,40 @@ test.describe("screen use and the shell", () => {
     });
   }
 
+  // The pill's words are longer than the pill column ("Waiting for you to start it"): the pill stays inside its column and the
+  // row, so it never draws over the start of the title, whatever the window width or theme.
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the first-go line's pill stays in its column and clear of the title in ${scheme}, at every width`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.route("**/api/today/queue", async (route) => {
+        if (route.request().method() !== "GET") return route.fallback();
+        await route.fulfill({
+          json: [{ key: "first_go", group: "decide", kind: "first_go", count: 6, estimate_usd: 0.3, unpriced: 0, untrusted: false, actions: [], questions: [], outcome: {} }],
+        });
+      });
+      await signIn(page, "today");
+      const line = page.locator('[data-queue-line="first_go"]');
+      for (const width of [2000, 1440, 1280, 390]) {
+        await page.setViewportSize({ width, height: HEIGHT });
+        await expect(line).toBeVisible();
+        const m = await line.evaluate((row) => {
+          const pill = row.querySelector("[data-pill]")!.getBoundingClientRect();
+          const column = row.querySelector("[data-pill]")!.parentElement!.getBoundingClientRect();
+          const title = row.querySelector('[id$="-title"]')!.getBoundingClientRect();
+          const box = row.getBoundingClientRect();
+          return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, columnRight: column.right, columnW: column.width, titleLeft: title.left, titleTop: title.top, rowLeft: box.left, rowRight: box.right };
+        });
+        const note = `${scheme} ${width}: ${JSON.stringify(m)}`;
+        if (process.env.E2E_MEASURE) console.log(note);
+        // Beside the title, or (on a phone, where the row stacks) above it.
+        expect(m.pillRight <= m.titleLeft || m.pillBottom <= m.titleTop, note).toBe(true);
+        expect(m.pillRight, note).toBeLessThanOrEqual(m.columnRight + 0.5);
+        expect(m.pillLeft, note).toBeGreaterThanOrEqual(m.rowLeft);
+        expect(m.pillRight, note).toBeLessThanOrEqual(m.rowRight);
+      }
+    });
+  }
+
   // On a phone the step list is one line with a Steps button, so the first field of a step is above the fold (390×844).
   test("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold", async ({
     page,
