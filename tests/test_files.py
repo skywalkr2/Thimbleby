@@ -107,6 +107,26 @@ def test_upload_and_download_through_the_api(env):
     assert any(k["name"] == "attachment" for k in client.get(f"{api}/file-kinds").json())
 
 
+def test_a_file_says_what_refers_to_it(env):
+    from api.app import create_app
+
+    ws, cfg, store = env
+    store.close()
+    client = TestClient(create_app(ws, cfg, "test-token", start_worker=False))
+    client.headers["Authorization"] = "Bearer test-token"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    first = client.post(f"{api}/files?name=cover.png", content=PNG, headers={"Content-Type": "image/png"}).json()["id"]
+    assert client.get(f"{api}/files/{first}/used-by").json() == {"items": []}
+    newer = client.post(
+        f"{api}/files?name=cover-2.png&replaces={first}", content=PNG + b"\x01", headers={"Content-Type": "image/png"}
+    ).json()["id"]
+    used = client.get(f"{api}/files/{first}/used-by").json()["items"]
+    assert [(u["kind"], u["id"], u["label"]) for u in used] == [("file", newer, "cover-2.png")]
+    assert used[0]["kind_label"]
+    assert client.get(f"{api}/files/{newer}/used-by").json() == {"items": []}
+    assert client.get(f"{api}/files/FILE-404/used-by").status_code == 404
+
+
 def test_a_kind_never_widens_the_accepted_types(env):
     _, cfg, store = env
     store.plugins.file_kinds = lambda: {"narrow": FileKind("narrow", accept=("image/svg+xml", "image/png"))}

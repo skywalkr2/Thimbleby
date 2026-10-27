@@ -112,12 +112,20 @@ describe("before the offer", () => {
     expect(go).toHaveBeenCalledWith("ai");
   });
 
-  test("with no mail it points back to mail and calendar", async () => {
+  test("with no mail the main action is to hand something in, and the way back to mail is the quieter one", async () => {
     const user = userEvent.setup();
     const go = vi.fn();
-    show(view({ stage: "no_mail" }), {}, go);
-    expect(await screen.findByText(/Connect your mail first/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Go to mail and calendar" }));
+    const handIn = vi.fn();
+    show(view({ stage: "no_mail" }), {}, go, noop, handIn);
+    expect(await screen.findByText(/hand it something to read/)).toBeInTheDocument();
+    expect(screen.queryByText(/Connect your mail first/)).toBeNull();
+    const main = screen.getByRole("button", { name: "Hand something in to see what it does" });
+    const mail = screen.getByRole("button", { name: "Go to mail and calendar" });
+    expect(main.className).toMatch(/_primary/);
+    expect(mail.className).not.toMatch(/_primary/);
+    await user.click(main);
+    expect(handIn).toHaveBeenCalledTimes(1);
+    await user.click(mail);
     expect(go).toHaveBeenCalledWith("mail");
   });
 

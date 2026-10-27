@@ -34,6 +34,7 @@ from api.schemas import (
     SilentClosesView,
     SilentCloseView,
     SourceSecretView,
+    TreatAsIn,
     VersionAnswerIn,
     VersionApartIn,
     VersionChosen,
@@ -95,6 +96,15 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         items = [s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]]
         problem = watch.problem_text(store, source.id)
         back_to = source_intake.back_to_of(store.read(), source.id)
+        now_cfg = current()
+        level, level_from, level_sides = watch.data_level_source(now_cfg, source)
+        side_level = watch.side_data_level(now_cfg, source)
+        held = store.read()
+        names = [
+            str(found.data.get("name") or "")
+            for side in level_sides
+            if (found := held.get("project", side)) is not None
+        ]
         return WatchSourceView(
             id=source.id,
             label=source.label or source.id,
@@ -108,6 +118,11 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             account=source.account,
             color=source.color,
             items=len(items),
+            data_level=level,
+            data_level_from=level_from,
+            data_level_sides=[n for n in names if n],
+            data_level_own=source.data_level,
+            data_level_side_level=side_level[0] if side_level else None,
             last=WatchRunView(
                 **{
                     k: last.data.get(k)
@@ -429,20 +444,33 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         events.changed()
         return result
 
-    def hand_in_aside(snapshot_id: str, read_version: int, *, personal: bool) -> tuple[str | None, dict]:
-        """Take a set-aside mail out of the folder and hand it in (filed under the Personal project when `personal`).
-        Returns the request that is waiting and the mark it had."""
+    def home_of(personal: bool, side: str | None) -> str | None:
+        """The project a hand-in is filed under: the side the person named, else the Personal project when `personal`,
+        else none (where its people and words place it)."""
+        if side:
+            found = sides.resolve_side(store.read(), current(), side)
+            if found is None:
+                raise HTTPException(status_code=409, detail="That isn't one of your sides.")
+            return found
+        if personal:
+            home = sides.personal_project(store.read(), current())
+            if home is None:
+                raise HTTPException(status_code=409, detail="There is no Personal project to file it under.")
+            return home
+        return None
+
+    def hand_in_aside(
+        snapshot_id: str, read_version: int, *, personal: bool, side: str | None = None
+    ) -> tuple[str | None, dict]:
+        """Take a set-aside mail out of the folder and hand it in (filed under the side the person named, or under the
+        Personal project when `personal`). Returns the request that is waiting and the mark it had."""
         snap = mail_snapshot(snapshot_id)
         mark = snap.data.get("set_aside")
         if not mark:
             raise HTTPException(status_code=404, detail="That isn't set aside.")
         if snap.version != read_version:
             raise HTTPException(status_code=409, detail="That message changed. Look at the folder again.")
-        home = None
-        if personal:
-            home = sides.personal_project(store.read(), current())
-            if home is None:
-                raise HTTPException(status_code=409, detail="There is no Personal project to file it under.")
+        home = home_of(personal, side)
         try:
             waiting = set_aside.put_back(ws, store, cfg, snapshot_id, hand_in=True)
             if waiting and home:
@@ -461,11 +489,12 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return waiting, mark
 
     @r.post("/set-aside/{snapshot_id}/work")
-    def set_aside_is_work(snapshot_id: str, body: ReadVersion) -> SetAsideDone:
-        """This is work: hand the message in after all, as Take a closer look does, and keep the correction."""
+    def set_aside_is_work(snapshot_id: str, body: TreatAsIn) -> SetAsideDone:
+        """This is work: hand the message in after all, as Take a closer look does, and keep the correction. With a
+        `side`, it is filed under that side."""
         from engine.dispatcher import signal
 
-        waiting, mark = hand_in_aside(snapshot_id, body.read_version, personal=False)
+        waiting, mark = hand_in_aside(snapshot_id, body.read_version, personal=False, side=body.side)
         signal(store, "pulled_back", [waiting or snapshot_id], f"Set aside: {mark['reason']}")
         events.changed()
         worker.poke()
@@ -491,13 +520,17 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         group: Literal["kind", "reason", "sender"] | None = None,
         q: str = "",
         item: Literal["mail", "calendar", "file", "page", "action", "question", "other"] | None = None,
+        side: str | None = None,
     ) -> HandledView:
         """One of the two lists of what was handled for the person, in groups: by kind, by reason or by sender (the
-        configured grouping when none is asked for), newest first, narrowed by the words of `q` and by the kind of
-        item, with the counts of both lists. The tab `closed` of an earlier version reads as `set_aside`."""
+        configured grouping when none is asked for), newest first, narrowed by the words of `q`, by the kind of item
+        and by a `side` (what came from a source serving it, or no one side), with the counts of both lists. The tab
+        `closed` of an earlier version reads as `set_aside`."""
         set_aside.purge_due(ws, store, cfg)
         config = current()
-        found = handled.listing(ws, store, config, tab, group or config.ui.handled_group, q.strip(), worker.now(), item)
+        found = handled.listing(
+            ws, store, config, tab, group or config.ui.handled_group, q.strip(), worker.now(), item, side or None
+        )
         return HandledView.model_validate(found)
 
     @r.get("/handled/counts")
@@ -518,15 +551,15 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             domain=set_aside.offerable_domain(address, current()),
         )
 
-    def handled_choice(snapshot_id: str, read_version: int, *, personal: bool) -> HandledDone:
-        """Treat as work or as personal for a mail on either list: a set-aside mail is handed in after all; a mail
-        the assistant read with nothing to do is read again, filed under Personal when asked. Either records a
-        correction."""
+    def handled_choice(snapshot_id: str, read_version: int, *, personal: bool, side: str | None = None) -> HandledDone:
+        """Treat as work, as personal or as a side for a mail on either list: a set-aside mail is handed in after all;
+        a mail the assistant read with nothing to do is read again, filed under Personal or the side when asked.
+        Either records a correction."""
         from engine.dispatcher import signal
 
         snap = mail_snapshot(snapshot_id)
         if snap.data.get("set_aside"):
-            waiting, mark = hand_in_aside(snapshot_id, read_version, personal=personal)
+            waiting, mark = hand_in_aside(snapshot_id, read_version, personal=personal, side=side)
             note = f"Set aside: {mark['reason']}" + ("; treated as personal" if personal else "")
             signal(store, "pulled_back", [waiting or snapshot_id], note)
             events.changed()
@@ -534,11 +567,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return handled_done(snapshot_id, waiting)
         if snap.version != read_version:
             raise HTTPException(status_code=409, detail="That message changed. Look at the list again.")
-        home = None
-        if personal:
-            home = sides.personal_project(store.read(), current())
-            if home is None:
-                raise HTTPException(status_code=409, detail="There is no Personal project to file it under.")
+        home = home_of(personal, side)
         try:
             made = handled.treat_read(ws, store, cfg, snapshot_id, project=home)
         except StoreError as err:
@@ -548,9 +577,10 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return handled_done(snapshot_id, made)
 
     @r.post("/handled/{snapshot_id}/work")
-    def handled_work(snapshot_id: str, body: ReadVersion) -> HandledDone:
-        """Treat as work: a set-aside mail is handed in after all; a mail read with nothing to do is read again."""
-        return handled_choice(snapshot_id, body.read_version, personal=False)
+    def handled_work(snapshot_id: str, body: TreatAsIn) -> HandledDone:
+        """Treat as work: a set-aside mail is handed in after all; a mail read with nothing to do is read again. With
+        a `side`, it is filed under that side."""
+        return handled_choice(snapshot_id, body.read_version, personal=False, side=body.side)
 
     @r.post("/handled/{snapshot_id}/personal")
     def handled_personal(snapshot_id: str, body: ReadVersion) -> HandledDone:

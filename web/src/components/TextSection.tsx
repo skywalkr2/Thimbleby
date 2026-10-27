@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
-import { readable } from "../lib/records";
+import { readable, useFieldLabel } from "../lib/records";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { SafeText } from "./SafeText";
@@ -25,6 +25,7 @@ export function authorshipCounts(spans: S["AuthorSpan"][]) {
 
 export function TextSection(props: { kind: string; id: string; field: string; help?: string; onReview: Review }) {
   const { t, tn } = useWords();
+  const labelOf = useFieldLabel();
   const act = useAct();
   const { kind, id, field } = props;
   const base = useId();
@@ -71,7 +72,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
   return (
     <section className="text-section" aria-labelledby={titleId}>
       <div className="heading">
-        <h3 id={titleId}>{readable(field)}</h3>
+        <h3 id={titleId}>{labelOf(field)}</h3>
         {data && !editing && (
           <button ref={editButton} type="button" className="btn" onClick={startEdit}>
             {t("text.edit")}
@@ -91,7 +92,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
       {data &&
         (editing ? (
           <div className="field">
-            <label htmlFor={`${base}-edit`}>{t("text.edit_label", { field: readable(field) })}</label>
+            <label htmlFor={`${base}-edit`}>{t("text.edit_label", { field: labelOf(field) })}</label>
             <textarea
               id={`${base}-edit`}
               ref={area}

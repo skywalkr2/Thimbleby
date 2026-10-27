@@ -310,7 +310,7 @@ test("each type has its own control, with its default shown", async () => {
 test("a setting's description is the help beside its field, not a line under it, and the field is still described by it", async () => {
   api([item("workspace.name", { value: "Lantern", default: "Workspace", description: "The name shown at the top of every screen." })]);
   open();
-  const field = await screen.findByLabelText("This workspace's name");
+  const field = await screen.findByLabelText("Name shown at the top");
   const row = field.closest(".setting") as HTMLElement;
   const help = row.querySelector("[data-help]") as HTMLElement;
   expect(help).toHaveTextContent("The name shown at the top of every screen.");
@@ -462,7 +462,7 @@ test("a value that setup wrote reads as set up, not as changed: no Changed, no R
     item("workspace.language", { value: "en-GB", default: "en-US", source: "file", description: "Which kind of English." }),
   ]);
   open();
-  const set = await screen.findByLabelText("This workspace's name");
+  const set = await screen.findByLabelText("Name shown at the top");
   const row = set.closest(".setting") as HTMLElement;
   expect(within(row).queryByText("Changed")).toBeNull();
   expect(within(row).queryByRole("button", { name: /^Reset/ })).toBeNull();

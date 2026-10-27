@@ -127,7 +127,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       </div>
       <div className="heading">
         <div>
-          {!isSide && <span className="kind k-review">{readableTail(kind)}</span>}
+          {!isSide && <span className="kind k-review">{justMe && kind === "project" ? t("record.kind.area") : readableTail(kind)}</span>}
           <h1 id="record-title">{heading}</h1>
         </div>
         {data && (
@@ -174,7 +174,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
           {page.data && <RecordActivity page={page.data} />}
           {kind === "project" && <SideInside id={id} />}
-          {kind === "project" && <ProjectKnows id={id} plain={justMe && isSide} />}
+          {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
           {data.long_text.map((field) => (
             <TextSection
               key={field}

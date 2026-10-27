@@ -1,6 +1,7 @@
 // Showing any record's values in plain words: field names made readable and values as lines of text.
 import { useCallback } from "react";
 import { day, whenText } from "./dates";
+import { useSides } from "./sides";
 import { useWords } from "./wording";
 
 /** A field or kind name as words: "_" and "-" become spaces and the first letter is a capital. */
@@ -34,7 +35,15 @@ function lines(value: unknown, t: (key: string) => string): string[] {
  * name made readable. */
 export function useFieldLabel() {
   const { t, has } = useWords();
-  return useCallback((name: string): string => (has(`field.${name}`) ? t(`field.${name}`) : readable(name)), [t, has]);
+  // A person with nothing beside Personal reads areas and who does it, where others read projects and owners.
+  const { justMe } = useSides();
+  return useCallback(
+    (name: string): string => {
+      if (justMe && has(`field.${name}.just_me`)) return t(`field.${name}.just_me`);
+      return has(`field.${name}`) ? t(`field.${name}`) : readable(name);
+    },
+    [t, has, justMe],
+  );
 }
 
 /** The fields a page lists first, in this order: who it is, their part, where they work, how to reach them. The rest follow

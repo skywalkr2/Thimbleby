@@ -25,7 +25,7 @@ from email.utils import parseaddr
 from pathlib import Path
 from typing import Any, Literal
 
-from engine import closes, set_aside
+from engine import closes, set_aside, sides
 from engine.connectors import CORE, declared_reads, reads
 from engine.mail_kinds import kind_of
 from engine.storage import StoreError, WriteContext
@@ -126,7 +126,7 @@ def _read_nothing(view: Any, requests: list[Any]) -> Any | None:
 
 
 def _row(
-    ws: Any, cfg: Any, snap: Any, tab: Tab, kind: str, labels: dict[str, str], extra: dict[str, Any]
+    ws: Any, cfg: Any, snap: Any, tab: Tab, kind: str, labels: dict[str, str], extra: dict[str, Any], view: Any = None
 ) -> dict[str, Any]:
     data = snap.data
     message = data["message"]
@@ -146,6 +146,7 @@ def _row(
         "item": "mail",
         "rule": None,
         "change": None,
+        "side": sides.watch_source_side(view, cfg, data["source"]) if view is not None else None,
         **extra,
     }
 
@@ -181,6 +182,7 @@ def _closed_rows(view: Any, cfg: Any, labels: dict[str, str], said: dict[str, st
                 "rule": mark["rule"],
                 "change": watched.get("change", "new"),
                 "older_version": mark["rule"] == VERSION_RULE,
+                "side": sides.watch_source_side(view, cfg, watched.get("source")),
             }
         )
     return out
@@ -217,6 +219,7 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
                         "saved": held[-1].data.get("source") if held else None,
                         "request": None,
                     },
+                    view,
                 )
             )
     else:
@@ -243,6 +246,7 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
                         "saved": made.data.get("source"),
                         "request": made.id,
                     },
+                    view,
                 )
             )
     out.sort(key=lambda r: _moment(r["received"]), reverse=True)
@@ -333,13 +337,17 @@ def listing(
     query: str,
     now: datetime | None = None,
     item: str | None = None,
+    side: str | None = None,
 ) -> dict[str, Any]:
     """One list for the screen: the counts of both lists (whatever the search or kind), the kinds of item the chosen
     list holds with a count each, and the rows that match the search and the kind, in groups. A group is ordered by its
-    newest row; rows in it are newest first. The tab `closed` reads as `set_aside`."""
+    newest row; rows in it are newest first. The tab `closed` reads as `set_aside`. With a `side`, only what came from
+    a source that serves that side or no one side is listed and counted."""
     now = now or datetime.now(UTC)
     tab = "set_aside" if tab == "closed" else tab
-    all_rows = {t: rows(ws, store, cfg, t, now) for t in TABS}
+    all_rows = {
+        t: [r for r in rows(ws, store, cfg, t, now) if side is None or r.get("side") in (None, side)] for t in TABS
+    }
     kinds: dict[str, int] = {}
     for found in all_rows[tab]:
         kinds[found["item"]] = kinds.get(found["item"], 0) + 1

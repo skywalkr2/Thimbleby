@@ -87,6 +87,9 @@ export const api = {
   addSide: (body: S["BusinessIn"]) => call<S["BusinessView"]>("POST", "setup/business", body),
   /** Takes a side back out while setup is open and nothing is filed under it. */
   removeSide: (project: string) => call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/remove`),
+  /** Removes a side whenever the person asks: what is filed under it moves to Personal or ends with it, as one change with Undo. */
+  removeSideWithWork: (project: string, where: S["SideRemoveIn"]["where"]) =>
+    call<S["Applied"]>("POST", `sides/${id(project)}/remove`, { where } satisfies S["SideRemoveIn"]),
   /** Undo of removeSide: the side comes back with its projects, as `kind` at `position` among the sides. */
   restoreSide: (project: string, body: S["SideRestoreIn"]) =>
     call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/restore`, body),
@@ -122,10 +125,11 @@ export const api = {
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),
   /** What was handled for the person: one list (`tab`), grouped by `group` (the configured one when empty), narrowed by `q` and by the kind of `item`. */
-  handled: (tab: S["HandledView"]["tab"], group: S["HandledView"]["group"] | null, q: string, item: S["HandledView"]["item"] = null) => {
+  handled: (tab: S["HandledView"]["tab"], group: S["HandledView"]["group"] | null, q: string, item: S["HandledView"]["item"] = null, side: string | null = null) => {
     const query = new URLSearchParams({ tab, q });
     if (group) query.set("group", group);
     if (item) query.set("item", item);
+    if (side) query.set("side", side);
     return call<S["HandledView"]>("GET", `handled?${query.toString()}`);
   },
   /** How many each list on Handled for you holds, for a line that only counts. */
@@ -154,6 +158,9 @@ export const api = {
     } satisfies S["VersionUndoIn"]),
   handledWork: (item: string, readVersion: number) =>
     call<S["HandledDone"]>("POST", `handled/${id(item)}/work`, { read_version: readVersion }),
+  /** Treat as one of the sides: handed in and filed under that side's project. */
+  handledAs: (item: string, readVersion: number, side: string) =>
+    call<S["HandledDone"]>("POST", `handled/${id(item)}/work`, { read_version: readVersion, side } satisfies S["TreatAsIn"]),
   handledPersonal: (item: string, readVersion: number) =>
     call<S["HandledDone"]>("POST", `handled/${id(item)}/personal`, { read_version: readVersion }),
   handledUndo: (item: string, readVersion: number) =>
@@ -359,6 +366,8 @@ export const api = {
   restoreProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/restore`),
 
   files: () => call<S["FileView"][]>("GET", "files"),
+  /** What refers to a file: newer versions of it, working copies made from it and add-on records that name it. */
+  fileUsedBy: (file: string) => call<S["FileUsedBy"]>("GET", `files/${id(file)}/used-by`),
   fileKinds: () => call<S["FileKindView"][]>("GET", "file-kinds"),
   /** Where a file's bytes are, relative to the page like every other address. */
   fileContent: (file: string) => `api/files/${id(file)}/content`,

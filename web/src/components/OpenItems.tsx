@@ -22,13 +22,14 @@ import {
 import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
 import { openOnToday } from "./AnswerOnToday";
-import { useSides } from "../lib/sides";
+import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
 import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { AskChooser } from "./AskChooser";
+import { SideFilter } from "./SideFilter";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { useDropAction } from "./DropAction";
 import { useAddTodo } from "./AddTodo";
@@ -60,8 +61,11 @@ export function OpenItems() {
   const [filters, setFilters] = useState<Filters>(takeFilters);
   const ids = useId();
   const addTodo = useAddTodo();
-  const actions = items.data?.actions ?? [];
-  const questions = items.data?.questions ?? [];
+  // With a side beside Personal, the list can be narrowed to one side; what is on no side shows under every choice.
+  const side = useSideFilter();
+  const sideOf = useSideOf();
+  const actions = (items.data?.actions ?? []).filter((a) => onSide(sideOf(a.project), side.choice));
+  const questions = (items.data?.questions ?? []).filter((q) => onSide(sideOf((q.projects ?? [])[0]), side.choice));
 
   const projectName = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? actions.find((a) => a.project === id)?.project_name ?? id;
   const projectChoices = [...new Set(tab === "actions" ? actions.map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
@@ -90,6 +94,7 @@ export function OpenItems() {
     <section className="panel-section" aria-labelledby="open-title" data-open-items="">
       <div className="heading">
         <h1 id="open-title">{t("open.title")}</h1>
+        <SideFilter />
         <div className="filters" role="group" aria-label={t("open.tabs")}>
           <button type="button" aria-pressed={tab === "actions"} onClick={() => choose("actions")}>
             {t("open.tab.actions", { n: actions.length })}
@@ -116,7 +121,7 @@ export function OpenItems() {
         </p>
       ) : actions.length + questions.length === 0 ? (
         <div className="empty">
-          <p>{t("open.empty")}</p>
+          <p>{side.choice === "all" ? t("open.empty") : t("sides.empty.open", { side: side.named })}</p>
           <Button variant="primary" icon="plus" onClick={addTodo.open}>
             {t("addtodo.open")}
           </Button>

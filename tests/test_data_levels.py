@@ -2,6 +2,7 @@
 kind's, else the default), or from the upload; the level on a source decides which accounts may see its text."""
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -59,7 +60,7 @@ def test_a_watched_sources_level_is_its_own_setting_else_its_kinds_else_the_defa
 def test_the_level_is_chosen_from_the_source_then_its_kind_then_the_default():
     class Source:
         def __init__(self, level):
-            self.data_level, self.connector = level, "kind"
+            self.data_level, self.connector, self.sides = level, "kind", []
 
     class Watch:
         connector_data_levels = {"kind": "open"}
@@ -67,6 +68,7 @@ def test_the_level_is_chosen_from_the_source_then_its_kind_then_the_default():
 
     class Cfg:
         watch = Watch()
+        workspace = SimpleNamespace(project=SimpleNamespace(personal=None, sides=[], personal_data_level="restricted"))
 
     assert data_level_of(Cfg, Source("restricted")) == "restricted"
     assert data_level_of(Cfg, Source(None)) == "open"

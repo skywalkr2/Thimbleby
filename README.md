@@ -65,7 +65,7 @@ that you can leave out `uv run` and the trip to the checkout.
 The workspace starts empty. The first screen is a setup walkthrough of about 10 to 20 minutes: your name, your AI account
 (a recommended service with numbered steps; the key is checked as you paste it), your mail and calendar (installed, turned
 on and signed in on the screen, with one restart you press), a backup folder (the cloud-drive folders found on the computer
-are offered by name) and the people you work with. You never edit a file, and nothing is spent until you press Go at the end. For a workspace elsewhere, `uv run cockpit init <folder>`
+are offered by name) and the people in your life. You never edit a file, and nothing is spent until you press Go at the end. For a workspace elsewhere, `uv run cockpit init <folder>`
 then `uv run cockpit serve -w <folder>`.
 
 Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts,

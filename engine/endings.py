@@ -445,10 +445,18 @@ def left_behind(store: Any, project: str, closing: Sequence[str] = ()) -> list[L
 
 
 def finish_ending(
-    store: Any, cfg: Any, changeset_id: str, index: int, keep: Sequence[int], *, now: datetime | None = None
+    store: Any,
+    cfg: Any,
+    changeset_id: str,
+    index: int,
+    keep: Sequence[int],
+    *,
+    now: datetime | None = None,
+    ws: Any = None,
 ) -> None:
     """Confirm a project ending that waits for the person: the items in `keep` stay open (each is declined, and the
-    choice is a signal), and the ending and every other drop apply, so one Undo of the change takes them back."""
+    choice is a signal), and the ending and every other drop apply, so one Undo of the change takes them back. With
+    the workspace given, an ending that drops many records makes a backup first (`storage.backups`)."""
     from engine.applier import decline_held_many, release
 
     ending = _held_ending(store, changeset_id, index)
@@ -456,6 +464,10 @@ def finish_ending(
     named = {item.index for item in ending.items}
     if not set(wanted) <= named:
         raise StoreError("one of those isn't an item this ending would drop")
+    if ws is not None:
+        from engine import backup
+
+        backup.backup_before_many(ws, backup.live(ws, cfg), 1 + len(named - set(wanted)), now)
     if wanted:
         decline_held_many(store, changeset_id, wanted, now=now)
     for position in [ending.index, *(item.index for item in ending.items if item.index not in wanted)]:

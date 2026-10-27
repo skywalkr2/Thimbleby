@@ -14,6 +14,7 @@ import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { LookBack } from "./LookBack";
@@ -60,6 +61,15 @@ export function lastReadText(source: Source, t: T): string {
     default:
       return t("sources.last.failed");
   }
+}
+
+/** How private what a source holds is, and why: the person's own choice, the sides it serves, or the usual. */
+export function privacyFact(source: Source, t: T): string {
+  const level = t(`sources.level.${source.data_level ?? "internal"}`);
+  const sides = source.data_level_sides ?? [];
+  if (source.data_level_from === "source") return t("sources.privacy.own", { level });
+  if (source.data_level_from === "side" && sides.length > 0) return t("sources.privacy.side", { level, sides: sides.join(", ") });
+  return t("sources.privacy.plain", { level });
 }
 
 /** Why a source can't be read, while its last read failed. */
@@ -268,6 +278,7 @@ function SourceRow(props: {
     source.read_at && source.items > 0 ? tn("sources.items", source.items) : "",
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
     ...(source.account ? [t("sources.reads_account", { account: source.account })] : []),
+    privacyFact(source, t),
   ].filter(Boolean);
   const schedule = [
     source.enabled ? tn("sources.read_every", source.every_minutes) : t("sources.off"),
@@ -375,6 +386,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const { mode } = props;
   const adding = mode.type === "add";
   const source = mode.type === "change" ? mode.source : null;
+  // With nothing beside Personal the places a connection can be filed are areas of the person's life.
+  const { justMe } = useSides();
 
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: !adding });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects, enabled: adding });
@@ -393,6 +406,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [author, setAuthor] = useState(source?.author ?? "");
   const [account, setAccount] = useState(source?.account ?? "");
   const [color, setColor] = useState<string>(source?.color ?? "");
+  // The privacy the person set for this connection ("" follows its sides, else the usual).
+  const [level, setLevel] = useState<string>(source?.data_level_own ?? "");
   const [edits, setEdits] = useState<Record<string, Draft>>({});
   const [pasted, setPasted] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -564,6 +579,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           every_minutes: minutes,
           author: author || null,
           ...(calendarSource ? { color: (color || null) as Source["color"] } : {}),
+          ...(level !== (mode.source.data_level_own ?? "") ? { data_level: (level || null) as Source["data_level_own"] } : {}),
           ...(accountList !== null && accountChosen ? { account: accountChosen } : {}),
           ...(items.length > 0 ? { settings: nest(sent) } : {}),
           ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
@@ -682,9 +698,9 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           )}
           {adding && choices.length > 0 && (
             <div className="field">
-              <label htmlFor={`${base}-project`}>{t("sources.field.project")}</label>
+              <label htmlFor={`${base}-project`}>{t(justMe ? "sources.field.area" : "sources.field.project")}</label>
               <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
-                <option value="">{t("sources.field.no_project")}</option>
+                <option value="">{t(justMe ? "sources.field.no_area" : "sources.field.no_project")}</option>
                 {choices.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
@@ -727,6 +743,26 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               </select>
               <p className="hint" id={`${base}-color-hint`}>
                 {t("sources.field.color_hint")}
+              </p>
+            </div>
+          )}
+          {source && (
+            <div className="field">
+              <label htmlFor={`${base}-level`}>{t("sources.field.level")}</label>
+              <select id={`${base}-level`} value={level} aria-describedby={`${base}-level-hint`} onChange={(e) => setLevel(e.target.value)}>
+                <option value="">
+                  {source.data_level_side_level
+                    ? t("sources.field.level_side", { level: t(`sources.level.${source.data_level_side_level}`) })
+                    : t("sources.field.level_usual")}
+                </option>
+                {(["open", "internal", "restricted"] as const).map((name) => (
+                  <option key={name} value={name}>
+                    {t(`sources.level.${name}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="hint" id={`${base}-level-hint`}>
+                {t("sources.field.level_hint")}
               </p>
             </div>
           )}

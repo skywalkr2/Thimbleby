@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from engine import settings as config_screens
+from engine import sides
 from engine.config import ConfigError, load_config
 from engine.state_file import changing, write_whole
 
@@ -220,6 +221,7 @@ def _start_sources(
             base if base not in taken else next(f"{base}-{n}" for n in range(2, 999) if f"{base}-{n}" not in taken)
         )
         taken.add(source_id)
+        own = sides.alone_with_personal(current)
         sources.append(
             {
                 "id": source_id,
@@ -230,6 +232,8 @@ def _start_sources(
                 "first_run": "intake",
                 "settings": settings,
                 **({"account": address} if address else {}),
+                # With nothing beside the person's own life, a new connection serves it (and takes its data level).
+                **({"sides": [own]} if own else {}),
                 **more,
             }
         )

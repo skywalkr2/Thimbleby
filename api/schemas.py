@@ -1334,6 +1334,15 @@ class ProjectRoleIn(BaseModel):
     role: Literal["run", "design", "watch"] = Field(description="run, design or watch.")
 
 
+class SideRemoveIn(BaseModel):
+    """Remove a side after setup: what happens to the projects and to-dos filed under it."""
+
+    model_config = ConfigDict(extra="forbid")
+    where: Literal["personal", "end"] = Field(
+        description="personal: its projects and to-dos move to Personal. end: they end with it."
+    )
+
+
 class Created(BaseModel):
     id: str
 
@@ -1912,6 +1921,16 @@ class ReadVersion(BaseModel):
     read_version: int = Field(ge=1)
 
 
+class TreatAsIn(ReadVersion):
+    """Treat a message as work, optionally as one of the person's sides."""
+
+    side: str | None = Field(
+        None,
+        description="The id of the side (a top-level project) to file it under; left out, the message is filed where "
+        "its people and words place it.",
+    )
+
+
 class StageTaskOrigin(BaseModel):
     kind: str
     record: str
@@ -1948,6 +1967,21 @@ class FileView(BaseModel):
     data_level: Literal["open", "internal", "restricted"] = Field(
         "internal", description="How sensitive its content is: it goes only to AI accounts allowed this level."
     )
+
+
+class FileUse(BaseModel):
+    """One record that refers to a file: a newer version of it, a working copy made from it, or an add-on's record."""
+
+    kind: str = Field(description="The record's kind, for its page.")
+    id: str
+    kind_label: str = Field(description="What to call the kind of record on screen.")
+    label: str = Field(description="The record's own name, title or text, else its id.")
+
+
+class FileUsedBy(BaseModel):
+    """What refers to a file, so the person sees what removing or replacing it would touch."""
+
+    items: list[FileUse]
 
 
 class RetryRequest(BaseModel):
@@ -4577,6 +4611,26 @@ class WatchSourceView(BaseModel):
         None, description="For a calendar: the color of its mark on the schedule, from a short named list."
     )
     items: int = Field(description="Items it held at the last read.")
+    data_level: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="How sensitive what it holds is: its items go only to AI accounts allowed this level."
+    )
+    data_level_from: Literal["source", "side", "kind", "default"] | None = Field(
+        None,
+        description="Where that level comes from: the source's own setting, the sides it serves, its kind of source, "
+        "or the default for all sources.",
+    )
+    data_level_sides: list[str] = Field(
+        default_factory=list,
+        description="When the level comes from the sides it serves: the names of the sides that give it.",
+    )
+    data_level_own: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="The level the source itself sets, when it sets one."
+    )
+    data_level_side_level: Literal["open", "internal", "restricted"] | None = Field(
+        None,
+        description="The level the sides it serves give it, whether or not the source sets its own; none when it "
+        "serves no side.",
+    )
     last: WatchRunView | None = None
     read_at: str | None = Field(
         None, description="When it was last actually read; a try that found no network or failed doesn't count."
@@ -4829,6 +4883,11 @@ class HandledRow(BaseModel):
     title: str
     sender: str | None = None
     source: str = Field(description="The watched source's label.")
+    side: str | None = Field(
+        None,
+        description="The side (a top-level project) of the one source it came from serves; empty when that source "
+        "serves none or several, so the side filter shows it under every choice.",
+    )
     received: str | None = Field(None, description="ISO 8601 date-time with its offset, as the service gave it.")
     reason: str | None = Field(
         None,
@@ -5588,6 +5647,11 @@ class WatchSourceChange(BaseModel):
     )
     color: CalendarColor | None = Field(
         None, description="For a calendar: the color of its mark on the schedule; null, when sent, clears it."
+    )
+    data_level: Literal["open", "internal", "restricted"] | None = Field(
+        None,
+        description="How sensitive what the source holds is, as the person sets it; null, when sent, goes back to "
+        "following the sides it serves (else its kind of source, else the default).",
     )
     settings: dict[str, Any] | None = None
     secrets: dict[str, str] = Field(

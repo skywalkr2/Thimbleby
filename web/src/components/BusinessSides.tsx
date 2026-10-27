@@ -1,5 +1,6 @@
 // The business on its page of Settings (design 7.9, "Your business"): each side of the person's work beside their own
-// life by name, with Rename (an edit of its project) and, while setup is open and nothing is filed under it, Remove.
+// life by name, with Rename (an edit of its project) and Remove, which asks each time whether its projects and to-dos move
+// to Personal or end with it (one change with Undo).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -15,7 +16,8 @@ export function BusinessSides() {
   const [problem, setProblem] = useState("");
   const sides = state.data?.sides ?? [];
   if (sides.length === 0) return null;
-  const refresh = () => Promise.all(["business", "setup", "projects"].map((key) => client.invalidateQueries({ queryKey: [key] })));
+  // Removing a side moves or ends what was filed under it, so every list is read again.
+  const refresh = () => client.invalidateQueries();
   return (
     <section aria-labelledby="business-sides">
       <h3 id="business-sides">{t("settings.business.sides")}</h3>
@@ -29,6 +31,7 @@ export function BusinessSides() {
             onChanged={refresh}
             onProblem={(err) => setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t))}
             onClear={() => setProblem("")}
+            removal="ask"
           />
         ))}
       </ul>

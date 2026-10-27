@@ -1,13 +1,13 @@
-// "Just me" sees no work words (the UI/UX review's F3; roadmap check U4): on a workspace made with no work, whose only side is
-// Personal, every main screen is read as a person reads it and none of the words Work, Project, Stage, Organization, Owner or
-// Template is in what it shows. The words are the capitalized ones headings, labels, buttons, menus and empty states use, as
-// whole words with their plurals; a side's own name could hold one, and this workspace has no side. The server (`--just-me`)
-// holds an area of life, a person with their relation, a to-do and a question on Personal, and says what they are called
-// at /__e2e/just-me, so no name is written out here. Setting descriptions and other running text come from the app's
-// settings and are not part of this check.
+// "Just me" sees no work words (the UI/UX review's F3 and the reviewer's follow-up; roadmap check U4): on a workspace made with
+// no work, whose only side is Personal, every screen is read as a person reads it and none of the words Work, Project, Stage,
+// Organization, Owner or Template is in what it shows, nor the lowercase "project" or "workspace". The screens are the main
+// ones, each setup screen and Done, the forms (a to-do, a file, handing something in), a row's menu, Knowledge, Quality, Ask
+// and a record's own page. The words are whole words with their plurals; a side's own name could hold one, and this
+// workspace has no side. The server (`--just-me`) holds an area of life, a person with their relation, a to-do and a
+// question on Personal, and says what they are called at /__e2e/just-me, so no name is written out here.
 import { expect, test, type Page } from "@playwright/test";
 
-const WORK_WORDS = /\b(Work|Projects?|Stages?|Organizations?|Owners?|Templates?)\b/;
+const WORK_WORDS = /\b(Work|Projects?|Stages?|Organizations?|Owners?|Templates?|projects?|[Ww]orkspaces?)\b/;
 
 /** What a screen's data takes to arrive on a busy computer: each screen is read once it shows what it loads. */
 const LOADED = { timeout: 20_000 };
@@ -15,10 +15,10 @@ const LOADED = { timeout: 20_000 };
 interface Seeded {
   enabled: boolean;
   personal: string;
-  area: { name: string };
-  person: { name: string; relation: string; address: string };
-  todo: { text: string };
-  question: { title: string };
+  area: { id: string; name: string };
+  person: { id: string; name: string; relation: string; address: string };
+  todo: { id: string; text: string };
+  question: { id: string; title: string };
 }
 
 let seeded: Seeded;
@@ -78,6 +78,34 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
   { name: "Settings: Appearance", hash: () => "settings/appearance", ready: (page) => section(page, "Appearance") },
 ];
 
+/** The words a screen shows that a person with no work must not see, each once. */
+const workWordsIn = (text: string) => {
+  const found = new Map<string, string>();
+  for (const hit of text.matchAll(new RegExp(WORK_WORDS, "g"))) {
+    if (found.has(hit[0])) continue;
+    const at = hit.index ?? 0;
+    found.set(hit[0], `${hit[0]} (…${text.slice(Math.max(0, at - 24), at + hit[0].length + 24).replace(/\s+/g, " ")}…)`);
+  }
+  return [...found.values()];
+};
+
+/** Reads the visible text once the screen has stopped changing: what loads in answers is in it. */
+async function settledText(page: Page): Promise<string> {
+  let last = await visibleText(page);
+  for (let i = 0; i < 12; i += 1) {
+    await page.waitForTimeout(250);
+    const now = await visibleText(page);
+    if (now === last) return now;
+    last = now;
+  }
+  return last;
+}
+
+const go = (page: Page, hash: string) =>
+  page.evaluate((to) => {
+    window.location.hash = to;
+  }, hash);
+
 test.describe('"Just me" sees no work words', () => {
   test.beforeAll(async ({ request }) => {
     seeded = await (await request.get("__e2e/just-me")).json();
@@ -132,10 +160,142 @@ test.describe('"Just me" sees no work words', () => {
         window.location.hash = hash;
       }, screen.hash());
       await screen.ready(page);
-      const text = await visibleText(page);
-      const words = [...new Set(text.match(new RegExp(WORK_WORDS, "g")) ?? [])];
+      const words = workWordsIn(await visibleText(page));
       if (words.length > 0) found.push(`${screen.name}: ${words.join(", ")}`);
     }
+    expect(found).toEqual([]);
+  });
+
+  test("no setup screen, and not Done, shows them", async ({ page }) => {
+    test.setTimeout(240_000);
+    const found: string[] = [];
+    await go(page, "setup");
+    await expect(page.locator("[data-walkthrough]")).toBeVisible(LOADED);
+    // A setup that has not begun opens on Welcome, whose one button starts it.
+    const start = page.getByRole("button", { name: "Start", exact: true });
+    if (await start.isVisible()) {
+      const words = workWordsIn(await settledText(page));
+      if (words.length > 0) found.push(`Welcome: ${words.join(", ")}`);
+      await start.click();
+    }
+    const steps: Array<[string, string]> = [
+      ["you", "You"],
+      ["work", "What it's for"],
+      ["ai", "Your AI account"],
+      ["mail", "Mail and calendar"],
+      ["promises", "Your promises"],
+      ["backup", "Backups"],
+      ["people", "People"],
+      ["done", "Done"],
+    ];
+    for (const [id, title] of steps) {
+      await page.locator(`nav button[data-screen="${id}"]`).click();
+      await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible(LOADED);
+      const words = workWordsIn(await settledText(page));
+      if (words.length > 0) found.push(`${title}: ${words.join(", ")}`);
+    }
+    expect(found).toEqual([]);
+  });
+
+  test("no form, menu, Knowledge, Quality, Ask or record page shows them", async ({ page }) => {
+    test.setTimeout(300_000);
+    const found: string[] = [];
+    const read = async (name: string) => {
+      const words = workWordsIn(await settledText(page));
+      if (words.length > 0) found.push(`${name}: ${words.join(", ")}`);
+    };
+    const close = async () => {
+      await page.keyboard.press("Escape");
+    };
+
+    // To-dos: the form to add one, and the menu of a row.
+    await go(page, "work/open");
+    await expect(page.getByText(seeded.todo.text).first()).toBeVisible(LOADED);
+    await page.getByRole("button", { name: "Add a to-do" }).first().click();
+    await expect(page.getByRole("dialog", { name: "Add a to-do" })).toBeVisible(LOADED);
+    await read("Add a to-do");
+    await close();
+    await expect(page.getByRole("dialog", { name: "Add a to-do" })).toHaveCount(0);
+    await page.getByRole("button", { name: new RegExp(`^More actions for ${seeded.todo.text}`) }).first().click();
+    await expect(page.getByRole("menuitem").first()).toBeVisible(LOADED);
+    await read("A to-do's menu");
+    await close();
+    // The forms the menu opens (the ones that change nothing until they are saved): edit, reassign and add a note.
+    for (const entry of [/^Edit/, /^Reassign/, /^Add a note/]) {
+      await page.getByRole("button", { name: new RegExp(`^More actions for ${seeded.todo.text}`) }).first().click();
+      const item = page.getByRole("menuitem", { name: entry });
+      // Editing is always offered; the others are read when the menu has them.
+      if (entry.source === "^Edit") await expect(item.first()).toBeVisible(LOADED);
+      if ((await item.count()) === 0) {
+        await close();
+        continue;
+      }
+      await item.first().click();
+      await read(`A to-do's form: ${entry.source}`);
+      await close();
+    }
+
+    // People: a row's menu.
+    await go(page, "records/people");
+    await expect(page.getByText(seeded.person.name).first()).toBeVisible(LOADED);
+    await page.getByRole("button", { name: new RegExp(`^More actions for ${seeded.person.name}`) }).first().click();
+    await expect(page.getByRole("menuitem").first()).toBeVisible(LOADED);
+    await read("A person's menu");
+    await close();
+
+    await page.getByRole("button", { name: "Add a person" }).first().click();
+    await expect(page.getByRole("dialog", { name: "Add a person" })).toBeVisible(LOADED);
+    await read("Add a person");
+    await close();
+
+    // Connections: the form to add one.
+    await go(page, "settings/connections");
+    await heading(page, "Connections");
+    await page.getByRole("button", { name: "Add a connection" }).first().click();
+    await expect(page.getByRole("heading", { name: "Add a connection" })).toBeVisible(LOADED);
+    await read("Add a connection");
+    await close();
+
+    // Files: the form to add one.
+    await go(page, "records/files");
+    await heading(page, "Files");
+    await page.getByRole("button", { name: "Add a file" }).first().click();
+    await expect(page.getByRole("dialog", { name: /^Add a file/ })).toBeVisible(LOADED);
+    await read("Add a file");
+    await close();
+
+    // Handing something in, and asking.
+    await go(page, "today");
+    await heading(page, "Today");
+    await page.getByRole("button", { name: "Hand something in" }).first().click();
+    await expect(page.getByRole("dialog", { name: "Hand something in" })).toBeVisible(LOADED);
+    await read("Hand something in");
+    await close();
+    await expect(page.getByRole("dialog", { name: "Hand something in" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Ask", exact: true }).first().click();
+    await expect(page.getByRole("dialog", { name: /^Ask / }).or(page.getByRole("complementary", { name: /^Ask / }))).toBeVisible(LOADED);
+    await read("Ask");
+    await close();
+
+    // Knowledge and Quality.
+    await go(page, "records/knowledge");
+    await heading(page, "Knowledge");
+    await read("Knowledge");
+    await go(page, "quality");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+    await read("Quality");
+
+    // A record's own page: the person, the area of life and the to-do.
+    await go(page, `records/person/${encodeURIComponent(seeded.person.id)}`);
+    await expect(page.getByRole("heading", { level: 1, name: seeded.person.name })).toBeVisible(LOADED);
+    await read("A person's page");
+    await go(page, `records/project/${encodeURIComponent(seeded.area.id)}`);
+    await heading(page, seeded.area.name);
+    await read("An area's page");
+    await go(page, `records/action/${encodeURIComponent(seeded.todo.id)}`);
+    await expect(page.getByText(seeded.todo.text).first()).toBeVisible(LOADED);
+    await read("A to-do's page");
+
     expect(found).toEqual([]);
   });
 });

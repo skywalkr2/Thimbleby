@@ -707,10 +707,42 @@ def _kept_set_aside(before: Any) -> dict[str, str] | None:
     return mark if mark and mark.get("by") == "person" else None
 
 
+#: The data levels from the least private to the most.
+DATA_LEVELS = ("open", "internal", "restricted")
+
+
+def side_data_level(cfg: Any, source: Any) -> tuple[str, list[str]] | None:
+    """The level a source takes from the sides it serves, with those sides' ids: the most private level among them
+    (the personal project's own, else the one each side sets). None when it serves none that is listed."""
+    project = cfg.workspace.project
+    levels: dict[str, str] = {}
+    for side in source.sides:
+        if project.personal and side == project.personal:
+            levels[side] = project.personal_data_level
+        elif entry := next((e for e in project.sides if e.project == side), None):
+            levels[side] = entry.data_level
+    if not levels:
+        return None
+    top = max(levels.values(), key=DATA_LEVELS.index)
+    return top, [side for side, level in levels.items() if level == top]
+
+
+def data_level_source(cfg: Any, source: Any) -> tuple[str, str, list[str]]:
+    """How sensitive what a watched source holds is, and where that comes from: the source's own setting ("source"),
+    else the most private level of the sides it serves ("side", with those sides' ids), else the one for its kind of
+    source ("kind"), else the default for all sources ("default")."""
+    if source.data_level:
+        return source.data_level, "source", []
+    if found := side_data_level(cfg, source):
+        return found[0], "side", found[1]
+    if level := cfg.watch.connector_data_levels.get(source.connector):
+        return level, "kind", []
+    return cfg.watch.default_data_level, "default", []
+
+
 def data_level_of(cfg: Any, source: Any) -> str:
-    """How sensitive what a watched source holds is: the source's own setting, else the one for its kind of source,
-    else the default for all sources."""
-    return source.data_level or cfg.watch.connector_data_levels.get(source.connector) or cfg.watch.default_data_level
+    """How sensitive what a watched source holds is: see `data_level_source`."""
+    return data_level_source(cfg, source)[0]
 
 
 def _details(item: SourceItem) -> dict[str, Any]:

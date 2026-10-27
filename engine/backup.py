@@ -14,6 +14,7 @@ into a folder that already has files, and the backup itself is never changed.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -25,9 +26,10 @@ from pathlib import Path
 from typing import Any
 
 from engine import backup_crypto
-from engine.config import Config
+from engine.config import Config, ConfigError, load_config
 from engine.secrets import SecretError, resolve_secret
 from engine.state_file import write_whole
+from engine.storage import StoreError
 from engine.workspace import WORKSPACE_GITIGNORE, Workspace
 
 #: The folders a backup holds beside its database, copied into a restored workspace.
@@ -51,6 +53,49 @@ class BackupState:
 def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[str, Any]:
     with _RUNNING:
         return _run(ws, cfg, now or datetime.now(UTC))
+
+
+def live(ws: Workspace, cfg: Config) -> Config:
+    """The settings as the files hold them now (a backup folder chosen a moment ago counts), else `cfg`."""
+    try:
+        return load_config(ws.config_dir, env=dict(os.environ))
+    except ConfigError:
+        return cfg
+
+
+class BackupFirstFailed(StoreError):
+    """The backup made before a change that is hard to take back couldn't be made, so the change wasn't made. The
+    message says why in plain words."""
+
+
+def backup_before(ws: Workspace, cfg: Config, now: datetime | None = None) -> bool:
+    """Make a backup before a change that is hard to take back (restoring from the synced folder, installing or updating
+    an add-on, releasing everything an answer holds, loading data from files, removing many records), with the same
+    function the schedule uses. Returns whether one was made: nothing is made when backups before changes are off or no
+    place to back up to is set up. Raises `BackupFirstFailed` when places are set up and none of them got a copy, so
+    the caller stops before changing anything."""
+    settings = cfg.storage.backups
+    if not settings.before_changes or not settings.targets:
+        return False
+    now = now or datetime.now(UTC)
+    status = run_backup(ws, cfg, now)
+    stamp = now.isoformat()
+    if any(status.get(t.path, {}).get("last_success") == stamp for t in settings.targets):
+        return True
+    errors = [str(e) for t in settings.targets if (e := status.get(t.path, {}).get("last_error"))]
+    why = f" {errors[0].rstrip('.')}." if errors else ""
+    raise BackupFirstFailed(
+        "Nothing was changed, because the backup made first couldn't be made." + why + " Check where backups go "
+        "in Settings, then try again."
+    )
+
+
+def backup_before_many(ws: Workspace, cfg: Config, records: int, now: datetime | None = None) -> bool:
+    """`backup_before` for a removal that touches `records` records: made only when that is at least
+    `storage.backups.bulk_change_records`."""
+    if records < cfg.storage.backups.bulk_change_records:
+        return False
+    return backup_before(ws, cfg, now)
 
 
 def due(ws: Workspace, cfg: Config, now: datetime | None = None) -> bool:

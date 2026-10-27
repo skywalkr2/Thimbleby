@@ -56,7 +56,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     const fullName = main.getByLabel("Your full name");
     await expect(fullName).toBeFocused();
     await page.keyboard.type(me);
-    await expect(main.getByLabel("This workspace's name")).toHaveCount(0);
+    await expect(main.getByLabel("Name shown at the top")).toHaveCount(0);
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
     await expect(main.getByRole("radio")).toHaveCount(0);
     const zone = main.getByRole("combobox", { name: "Your time zone" });
@@ -70,16 +70,16 @@ test.describe.serial("journey: the owner's first evening", () => {
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
 
-    // 1b. Work, on its own screen: Just me first, then two tick boxes under Also track. A job shows the notice about work
+    // 1b. What it's for, on its own screen: Just my own life first, then two tick boxes. A job shows the notice about work
     // mail; the evening is Just me.
-    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
     await expect(main.getByRole("radio")).toHaveCount(1);
     await expect(main.getByRole("checkbox")).toHaveCount(2);
-    await expect(main.getByRole("radio", { name: "Just me" })).toBeChecked();
-    await main.getByRole("checkbox", { name: "My job" }).check();
+    await expect(main.getByRole("radio", { name: "Just my own life" })).toBeChecked();
+    await main.getByRole("checkbox", { name: "My life and my job" }).check();
     await expect(main.getByRole("note")).toContainText("may need your employer's permission");
-    await main.getByRole("radio", { name: "Just me" }).check();
-    await expect(main.getByRole("checkbox", { name: "My job" })).not.toBeChecked();
+    await main.getByRole("radio", { name: "Just my own life" }).check();
+    await expect(main.getByRole("checkbox", { name: "My life and my job" })).not.toBeChecked();
     await expect(main.getByRole("note")).toHaveCount(0);
     await main.getByRole("button", { name: "Continue" }).click();
 

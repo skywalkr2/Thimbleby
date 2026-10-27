@@ -88,6 +88,19 @@ export function useSetAside() {
   );
   const isWork = useMemo(() => treat(false), [treat]);
   const isPersonal = useMemo(() => treat(true), [treat]);
+  /** Treat as one of the person's sides (Personal or a business): handed in and filed under that side's project. */
+  const isSide = useCallback(
+    (side: { id: string; name: string }) => (mail: HandledMail) =>
+      act(
+        () => api.handledAs(mail.id, mail.version, side.id),
+        (done) => ({
+          message: t("setaside.treat_as_done", { title: mail.title, side: side.name }),
+          undo: () => (mail.tab === "read" ? api.handledUndo(done.id, done.version) : api.setAsideMail(done.id, done.section)),
+          ...(mail.tab === "read" ? {} : offers("never", done, "")),
+        }),
+      ),
+    [act, offers, t],
+  );
 
   /** "Always set aside mail like this": a saved rule for the sender, read back with Undo, kept as a correction. */
   const alwaysLikeThis = useCallback(
@@ -99,5 +112,5 @@ export function useSetAside() {
     [act, afterSave, fresh, t, what],
   );
 
-  return { setAside, isWork, isPersonal, alwaysLikeThis, always };
+  return { setAside, isWork, isPersonal, isSide, alwaysLikeThis, always };
 }

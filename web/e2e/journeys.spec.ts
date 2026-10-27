@@ -48,7 +48,7 @@ test.describe.serial("journeys", () => {
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
     await main.getByLabel("Your full name").fill(info.people[0]);
     await expect(main.getByLabel("Your time zone")).toBeVisible();
-    await expect(main.getByLabel("This workspace's name")).toHaveCount(0);
+    await expect(main.getByLabel("Name shown at the top")).toHaveCount(0);
     // The assistant is introduced by name, with Rename; the name isn't a box until I ask to change it.
     await expect(main.getByText("Your assistant is called Reginald.")).toBeVisible();
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
@@ -58,12 +58,12 @@ test.describe.serial("journeys", () => {
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
     await visit(page);
 
-    // Work: Just me, or under Also track a job and an own business; the job brings the notice about work mail, and Just
+    // What it's for: Just my own life, or a job and an own business; the job brings the notice about work mail, and Just
     // me carries on.
-    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
-    await main.getByRole("checkbox", { name: "My job" }).check();
+    await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
+    await main.getByRole("checkbox", { name: "My life and my job" }).check();
     await expect(main.getByRole("note")).toContainText("may need your employer's permission");
-    await main.getByRole("radio", { name: "Just me" }).check();
+    await main.getByRole("radio", { name: "Just my own life" }).check();
     await main.getByRole("button", { name: "Continue" }).click();
 
     // Your AI account: a service of my own that speaks the common chat format, at the address the fake service
@@ -100,9 +100,10 @@ test.describe.serial("journeys", () => {
     await visit(page);
     await main.getByRole("button", { name: "I'll do this later" }).click();
 
-    // Your promises comes right after mail: with no mail connected it says so and offers nothing to read.
+    // Your promises comes right after mail: with no mail connected it says so and offers handing something in.
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
-    await expect(main.getByText(/Connect your mail first/)).toBeVisible();
+    await expect(main.getByText(/hand it something to read/)).toBeVisible();
+    await expect(main.getByRole("button", { name: "Hand something in to see what it does" })).toBeVisible();
     await expect(main.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();

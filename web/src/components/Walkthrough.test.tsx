@@ -624,7 +624,7 @@ describe("toasts", () => {
     await user.click(screen.getByRole("button", { name: "say something" }));
     expect(within(region()).getByText("Saved. Workspace name: Offsite team")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "What it's for" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(region()).queryByText(/Saved\./)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "say something" }));
@@ -696,13 +696,13 @@ describe("each screen", () => {
     await user.clear(zone);
     await user.type(zone, "Zone-Two");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "What it's for" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester", workspace_name: "Sam's" });
     expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.user.timezone": "Zone-Two" } });
     expect(calls.some((c) => c.route === "POST setup/business" || c.route === "POST setup/work")).toBe(false);
   });
 
-  test("Work: Just me first, then two tick boxes under Also track; Continue keeps Just me and goes on to the AI account", async () => {
+  test("Work: Just my own life first, then two tick boxes; Continue keeps Just my own life and goes on to the AI account", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
@@ -712,19 +712,19 @@ describe("each screen", () => {
       ),
     );
     open();
-    expect(await screenTitle()).toHaveTextContent("Work");
-    const just = await screen.findByRole("radio", { name: "Just me" });
+    expect(await screenTitle()).toHaveTextContent("What it's for");
+    const just = await screen.findByRole("radio", { name: "Just my own life" });
     expect(just).toBeChecked();
     expect(just).toHaveFocus();
     // Two large cards, each with its one-line description, as on the AI step; no bordered box with a legend in the border.
     expect(just).toHaveAccessibleDescription("Your own to-dos, people and mail, nothing else.");
     expect(just.closest("label")).toHaveClass("kind-card");
-    const also = screen.getByRole("group", { name: "Also track" });
+    const also = screen.getByRole("group", { name: "Or your life and" });
     expect(also).toHaveClass("kind-card");
-    expect(also).toHaveAccessibleDescription("Work of yours that you keep apart: tick one or both.");
+    expect(also).toHaveAccessibleDescription("A job or a business that you keep apart: tick one or both.");
     expect(also.tagName).not.toBe("FIELDSET");
     const boxes = within(also).getAllByRole("checkbox");
-    expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["My job", "My own business"]);
+    expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["My life and my job", "My life and my own business"]);
     expect(boxes.every((b) => !(b as HTMLInputElement).checked)).toBe(true);
     expect(screen.queryByText(/employer's permission/)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -742,8 +742,8 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My job" }));
-    expect(screen.getByRole("radio", { name: "Just me" })).not.toBeChecked();
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my job" }));
+    expect(screen.getByRole("radio", { name: "Just my own life" })).not.toBeChecked();
     expect(screen.getByRole("note")).toHaveTextContent("Reading work mail may need your employer's permission. Check your workplace's rules before you connect a work mailbox.");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     expect(screen.getByText("Say what your work is called to go on.")).toBeInTheDocument();
@@ -753,7 +753,7 @@ describe("each screen", () => {
     expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: EMPLOYER, kind: "job" }]);
     // The notice belongs to the job path alone: ticking only the business shows none.
     await user.click(screen.getByRole("button", { name: "Back" }));
-    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
     expect(screen.queryByRole("note")).toBeNull();
   });
 
@@ -770,7 +770,7 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
     expect(screen.queryByRole("note")).toBeNull();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
@@ -781,6 +781,90 @@ describe("each screen", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: SHOP, kind: "business" }]);
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: after what a business works on there is one closed line to group some of them; with no group named nothing is grouped and the word program never shows", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
+    await user.paste(WORKS_ON.join("\n"));
+    const line = screen.getByText("Do some of these belong together? Give the group a name");
+    expect(line.closest("details")).not.toHaveAttribute("open");
+    expect(document.body.textContent).not.toMatch(/program/i);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: a named group becomes a project inside the business with the ticked ones inside it, and a name with nothing ticked makes nothing", async () => {
+    const user = userEvent.setup();
+    const GROUP = "Trade customers";
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
+    await user.paste(WORKS_ON.join("\n"));
+    await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    await user.type(screen.getByLabelText("Group name"), GROUP);
+    // A name with nothing ticked groups nothing: Continue is still allowed, and makes only the projects.
+    const ticks = screen.getAllByRole("checkbox").filter((box) => WORKS_ON.includes(box.closest("label")?.textContent ?? ""));
+    expect(ticks).toHaveLength(WORKS_ON.length);
+    await user.click(ticks[0]);
+    await user.click(ticks[1]);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual([
+      { name: GROUP, parent: "PRJ-2" },
+      { name: WORKS_ON[0], parent: "PRJ-9" },
+      { name: WORKS_ON[1], parent: "PRJ-9" },
+      { name: WORKS_ON[2], parent: "PRJ-2" },
+    ]);
+  });
+
+  test("Work: a group name with nothing ticked in it makes no group", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
+    await user.paste(WORKS_ON.join("\n"));
+    await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    await user.type(screen.getByLabelText("Group name"), "Trade customers");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
   });
 
@@ -801,8 +885,8 @@ describe("each screen", () => {
       ),
     );
     open();
-    await user.click(await screen.findByRole("checkbox", { name: "My job" }));
-    await user.click(screen.getByRole("checkbox", { name: "My own business" }));
+    await user.click(await screen.findByRole("checkbox", { name: "My life and my job" }));
+    await user.click(screen.getByRole("checkbox", { name: "My life and my own business" }));
     await user.type(screen.getByLabelText("What is your employer called?"), EMPLOYER);
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(screen.getByRole("button", { name: "Add another business" }));
@@ -840,9 +924,9 @@ describe("each screen", () => {
     expect(rows.map((r) => r.getAttribute("data-kind"))).toEqual(["job", "business"]);
     expect(rows[1]).toHaveTextContent(`Projects: ${WORKS_ON[0]}, ${WORKS_ON[1]}`);
     expect(rows[0]).toHaveTextContent("Nothing under it yet.");
-    expect(screen.getByRole("radio", { name: "Just me" })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "My job" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "My own business" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Just my own life" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "My life and my job" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "My life and my own business" })).toBeChecked();
     // Remove is offered only for a side the server says can still be taken back out.
     expect(within(rows[0]).queryByRole("button", { name: /^Remove/ })).toBeNull();
     expect(within(rows[1]).getByRole("button", { name: `Remove ${SHOP}` })).toBeInTheDocument();
@@ -924,7 +1008,7 @@ describe("each screen", () => {
     await user.click(await screen.findByRole("button", { name: `Remove ${SHOP}` }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/sides/PRJ-3/remove")).toBe(true));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Added so far" })).toBeNull());
-    expect(screen.getByRole("radio", { name: "Just me" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Just my own life" })).toBeChecked();
   });
 
   test("Your AI account: spending is one sentence with its starting amounts, and Continue saves a change to them", async () => {
@@ -1823,7 +1907,7 @@ describe("the look", { timeout: 20_000 }, () => {
     await waitFor(() => expect(within(main).getByRole("button", { name: "Continue" })).toBeEnabled(), { timeout: 5000 });
     expect(within(main).queryByRole("button", { name: "Save and continue" })).toBeNull();
     await user.click(within(main).getByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "What it's for" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Harbor Work", workspace_name: "Harbor's" });
   });
 
@@ -1851,7 +1935,7 @@ describe("the look", { timeout: 20_000 }, () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     // A busy computer takes longer than the default second to save and move on.
     await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true), { timeout: 5000 });
-    expect(await screen.findByRole("heading", { level: 2, name: "Work" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "What it's for" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   test("a screen's Continue that couldn't save keeps the person on it", async () => {
@@ -1877,7 +1961,7 @@ describe("the look", { timeout: 20_000 }, () => {
 describe("one list of seven steps", () => {
   const SEVEN: [S["WalkthroughView"]["step"], string][] = [
     ["you", "You"],
-    ["work", "Work"],
+    ["work", "What it's for"],
     ["ai", "Your AI account"],
     ["mail", "Mail and calendar"],
     ["promises", "Your promises"],

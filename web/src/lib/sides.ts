@@ -52,6 +52,10 @@ function useStoredChoice(): SideChoice {
 /** Whether a line or row shows under a choice: everything under "all", and what is on that side or on none. */
 export const onSide = (side: Side | null | undefined, choice: SideChoice): boolean => choice === "all" || !side || side === choice;
 
+/** The same for a record that names the sides it is on (a person): under every choice when it names none. */
+export const onSides = (held: readonly Side[] | null | undefined, choice: SideChoice): boolean =>
+  choice === "all" || !held || held.length === 0 || held.includes(choice);
+
 export interface SideOption {
   /** The side's id: what the choice holds and what a line's `side` is. */
   id: Side;
@@ -99,6 +103,25 @@ export interface SidesState {
   personal: string | null;
   /** The sides beside Personal, in the person's order. */
   sides: S["SideView"][];
+}
+
+/** The side a project is on, as a function: the top of its parent chain when that is Personal or one of the sides, else none
+ * (a project on no side, or none named, shows under every choice of the side filter). */
+export function useSideOf(): (project: string | null | undefined) => Side | null {
+  const state = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const known = new Set([state.data?.personal, ...(state.data?.sides ?? []).map((s) => s.project)].filter((id): id is string => !!id));
+  const parents = new Map((projects.data ?? []).map((p) => [p.id, p.parent ?? null]));
+  return (project) => {
+    if (!project) return null;
+    const seen = new Set<string>();
+    let at = project;
+    while (!seen.has(at) && parents.get(at)) {
+      seen.add(at);
+      at = parents.get(at) as string;
+    }
+    return known.has(at) ? at : null;
+  };
 }
 
 /** The sides as the screens read them: whether there is nothing beside Personal, Personal's own project, and the sides. */

@@ -1,9 +1,13 @@
-// The work question of setup (design 7.8): "Just me", or, under "Also track", two tick boxes: My job and My own business,
-// either or both. A job asks the employer's name and shows the notice about reading work mail; a business asks its name and
-// what it works on (jobs, clients or orders, typed or pasted, each becoming a project inside it), and "Add another business"
+// The question of setup that asks what it is for (design 7.8): "Just my own life", or, as well, two tick boxes: My life and
+// my job, and My life and my own business, either or both. A job asks the employer's name and shows the notice about reading
+// work mail; a business asks its name and
+// what it works on (jobs, clients or orders, typed or pasted, each becoming a project inside it), then one optional, closed
+// line, "Do some of these belong together?", which names a group and ticks what is in it (the group is a project inside the
+// business and the ticked ones are inside it; nothing is made without a name and a tick), and "Add another business"
 // repeats that. Each is a side of the person's work (design 6.32). Sides already saved are listed with their projects, each
-// with Rename (an edit of its project, never a second add) and, until setup is finished and while nothing is filed under it,
-// Remove. It stays one counted step.
+// with Rename (an edit of its project, never a second add) and Remove: in setup, while nothing is filed under it; on the
+// business page of Settings always, asking each time whether its projects and to-dos move to Personal or end with it. It
+// stays one counted step.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -14,7 +18,10 @@ import { useWords } from "../lib/wording";
 import { workLines } from "../lib/work-lines";
 
 type Side = S["SideView"];
-type Draft = { key: number; name: string; lines: string };
+/** A group of what a business works on: its name and which of the typed lines are in it. */
+type Group = { name: string; picked: string[] };
+type Draft = { key: number; name: string; lines: string; group: Group };
+const noGroup = (): Group => ({ name: "", picked: [] });
 
 /** The work question. In the walkthrough its Continue saves the answer and moves on (`useContinue`); in the setup list it
  * has a button of its own. */
@@ -29,10 +36,11 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   const [jobName, setJobName] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [more, setMore] = useState<Record<string, string>>({});
+  const [moreGroup, setMoreGroup] = useState<Record<string, Group>>({});
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const counter = useRef(0);
-  const blank = (): Draft => ({ key: ++counter.current, name: "", lines: "" });
+  const blank = (): Draft => ({ key: ++counter.current, name: "", lines: "", group: noGroup() });
 
   const answered = state.data?.chosen ?? null;
   const saved: Side[] = state.data?.sides ?? [];
@@ -60,11 +68,17 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   const sayProblem = (err: unknown) =>
     setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
 
-  /** The lines become projects inside the side, each by the project route; one the side already holds is left alone. */
-  const addLines = async (side: string, text: string) => {
+  /** The lines become projects inside the side, each by the project route; one the side already holds is left alone. A
+   * group with a name and something ticked is a project inside the side too, and what is ticked goes inside it. */
+  const addLines = async (side: string, text: string, group?: Group) => {
     const held = new Set((projects.data ?? []).filter((p) => p.parent === side).map((p) => p.name.toLowerCase()));
-    for (const name of workLines(text)) {
-      if (!held.has(name.toLowerCase())) await api.addProject({ name, parent: side });
+    const lines = workLines(text);
+    const inside = new Set((group?.picked ?? []).filter((name) => lines.includes(name)).map((name) => name.toLowerCase()));
+    const groupName = group?.name.replace(/\s+/g, " ").trim() ?? "";
+    const parent = groupName && inside.size > 0 ? (await api.addProject({ name: groupName, parent: side })).id : side;
+    for (const name of lines) {
+      if (held.has(name.toLowerCase())) continue;
+      await api.addProject({ name, parent: parent !== side && inside.has(name.toLowerCase()) ? parent : side });
     }
   };
 
@@ -82,14 +96,15 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         if (businessTicked) {
           for (const draft of named) {
             const made = await api.addSide({ name: draft.name.trim(), kind: "business" });
-            await addLines(made.project, draft.lines);
+            await addLines(made.project, draft.lines, draft.group);
             setDrafts((all) => all.filter((d) => d.key !== draft.key));
           }
           for (const side of savedBusinesses) {
             const text = more[side.project] ?? "";
             if (workLines(text).length === 0) continue;
-            await addLines(side.project, text);
+            await addLines(side.project, text, moreGroup[side.project]);
             setMore((all) => ({ ...all, [side.project]: "" }));
+            setMoreGroup((all) => ({ ...all, [side.project]: noGroup() }));
           }
         }
       }
@@ -119,6 +134,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   };
   const draftName = (key: number, name: string) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, name } : d)));
   const draftLines = (key: number, lines: string) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, lines } : d)));
+  const draftGroup = (key: number, group: Group) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, group } : d)));
   const rows = savedBusinesses.length + drafts.length;
 
   return (
@@ -228,6 +244,13 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
             <p className="hint" id={`work-more-${side.project}-hint`}>
               {t("walkthrough.work.works_on_hint", { name: side.name })}
             </p>
+            <GroupThem
+              id={`work-more-${side.project}`}
+              business={side.name}
+              lines={workLines(more[side.project] ?? "")}
+              group={moreGroup[side.project] ?? noGroup()}
+              onChange={(group) => setMoreGroup((all) => ({ ...all, [side.project]: group }))}
+            />
           </div>
         ))}
 
@@ -267,6 +290,13 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                     ? t("walkthrough.work.works_on_hint", { name: label })
                     : t("walkthrough.work.works_on_hint_unnamed")}
                 </p>
+                <GroupThem
+                  id={id}
+                  business={label}
+                  lines={workLines(draft.lines)}
+                  group={draft.group}
+                  onChange={(group) => draftGroup(draft.key, group)}
+                />
               </div>
               {rows > 1 && (
                 <div className="row-end">
@@ -307,6 +337,49 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   );
 }
 
+/** The optional line under what a business works on: "Do some of these belong together? Give the group a name". It is
+ * closed until opened and skipped otherwise; a name and at least one tick make the group. */
+function GroupThem(props: { id: string; business: string; lines: string[]; group: Group; onChange: (group: Group) => void }) {
+  const { t } = useWords();
+  const { group } = props;
+  const picked = new Set(group.picked.map((name) => name.toLowerCase()));
+  const toggle = (name: string, on: boolean) =>
+    props.onChange({ ...group, picked: on ? [...group.picked, name] : group.picked.filter((n) => n.toLowerCase() !== name.toLowerCase()) });
+  return (
+    <details className="more-options group-them" data-group="">
+      <summary>{t("walkthrough.work.group.open")}</summary>
+      <div className="field">
+        <label htmlFor={`${props.id}-group-name`}>{t("walkthrough.work.group.name")}</label>
+        <input
+          id={`${props.id}-group-name`}
+          type="text"
+          value={group.name}
+          autoComplete="off"
+          aria-describedby={`${props.id}-group-name-hint`}
+          onChange={(e) => props.onChange({ ...group, name: e.target.value })}
+        />
+        <p className="hint" id={`${props.id}-group-name-hint`}>
+          {props.business ? t("walkthrough.work.group.name_hint_named", { name: props.business }) : t("walkthrough.work.group.name_hint")}
+        </p>
+      </div>
+      {props.lines.length === 0 ? (
+        <p className="hint">{t("walkthrough.work.group.none_listed")}</p>
+      ) : (
+        <fieldset className="field">
+          <legend>{t("walkthrough.work.group.pick")}</legend>
+          {props.lines.map((name) => (
+            <label key={name} className="check-line">
+              <input type="checkbox" checked={picked.has(name.toLowerCase())} onChange={(e) => toggle(name, e.target.checked)} />
+              <span>{name}</span>
+            </label>
+          ))}
+          <p className="hint">{t("walkthrough.work.group.pick_hint")}</p>
+        </fieldset>
+      )}
+    </details>
+  );
+}
+
 /** A side already saved: its name and kind, what is inside it, Rename (an edit of its project) and, while setup is open and
  * nothing is filed under it, Remove. */
 export function SavedSide(props: {
@@ -316,6 +389,9 @@ export function SavedSide(props: {
   onChanged: () => Promise<unknown>;
   onProblem: (err: unknown) => void;
   onClear: () => void;
+  /** "setup": Remove while nothing is filed under the side. "ask": Remove at any time, asking what happens to its projects
+   * and to-dos. */
+  removal?: "setup" | "ask";
 }) {
   const { t } = useWords();
   const { side } = props;
@@ -323,7 +399,9 @@ export function SavedSide(props: {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(side.name);
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
   const base = `work-side-${side.project}`;
+  const ask = props.removal === "ask";
 
   const rename = async () => {
     const next = name.trim();
@@ -354,6 +432,28 @@ export function SavedSide(props: {
         message: t("walkthrough.work.removed", { name: side.name }),
         undo: async () => {
           await api.restoreSide(side.project, { kind: side.kind, position: props.position });
+          await props.onChanged();
+        },
+      });
+    } catch (err) {
+      props.onProblem(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Removing with a choice: the projects and to-dos move to Personal or end with the side, as one change with Undo. */
+  const removeWith = async (where: "personal" | "end") => {
+    setBusy(true);
+    props.onClear();
+    try {
+      const done = await api.removeSideWithWork(side.project, where);
+      setAsking(false);
+      await props.onChanged();
+      push({
+        message: t(where === "personal" ? "settings.business.removed_move" : "settings.business.removed_end", { name: side.name, personal: t("sides.filter.personal") }),
+        undo: async () => {
+          await api.undo(done.changeset);
           await props.onChanged();
         },
       });
@@ -429,13 +529,14 @@ export function SavedSide(props: {
               >
                 {t("walkthrough.work.rename")}
               </button>
-              {side.removable && (
+              {(ask || side.removable) && (
                 <button
                   type="button"
                   className="btn quiet small"
                   disabled={busy}
+                  aria-expanded={ask ? asking : undefined}
                   aria-label={t("walkthrough.work.remove_named", { name: side.name })}
-                  onClick={() => void remove()}
+                  onClick={() => (ask ? setAsking((on) => !on) : void remove())}
                 >
                   {t("walkthrough.work.remove")}
                 </button>
@@ -444,6 +545,22 @@ export function SavedSide(props: {
           )}
         </div>
       </div>
+      {ask && asking && (
+        <div className="field" role="group" aria-labelledby={`${base}-ask`} data-remove-ask="">
+          <p id={`${base}-ask`}>{t("settings.business.remove_ask", { name: side.name })}</p>
+          <div className="row-end">
+            <button type="button" className="btn quiet" disabled={busy} onClick={() => setAsking(false)}>
+              {t("settings.business.remove_cancel")}
+            </button>
+            <button type="button" className="btn" disabled={busy} onClick={() => void removeWith("end")}>
+              {t("settings.business.remove_end")}
+            </button>
+            <button type="button" className="btn primary" disabled={busy} onClick={() => void removeWith("personal")}>
+              {t("settings.business.remove_move", { personal: t("sides.filter.personal") })}
+            </button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }

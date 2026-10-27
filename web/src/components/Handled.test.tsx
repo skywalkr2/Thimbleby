@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
+import en from "../wording/en.json";
 import { Handled } from "./Handled";
 
 // Made-up addresses are built from parts, so none is written out whole.
@@ -487,4 +488,68 @@ test("a group shows a page of rows and Show more adds the next page, newest firs
 test("the screen says how long items are kept, in the singular for one day", async () => {
   open({ "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, kept_days: 1 }) });
   expect(await screen.findByText("Kept for 1 day, then it leaves this list. The original stays where it came from.")).toBeInTheDocument();
+});
+
+// ---- Just me has no work words; with sides the button names the side (design 6.32, 7.20) ------------------------------
+
+const project = (id: string, name: string, parent: string | null = null) => ({ id, name, parent }) as S["ProjectView"];
+const JUST_ME: Routes = {
+  "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+  "GET projects": () => [project("PRJ-personal", "Personal")],
+};
+const TWO_SIDES: Routes = {
+  "GET setup/business": () => ({
+    business: true,
+    name: "Hale Upholstery",
+    personal: "PRJ-personal",
+    sides: [
+      { project: "PRJ-shop", name: "Hale Upholstery", kind: "business", removable: false },
+      { project: "PRJ-day", name: "Day job", kind: "job", removable: false },
+    ],
+    chosen: "work",
+  }),
+  "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", "Hale Upholstery"), project("PRJ-day", "Day job")],
+};
+
+test("with nothing beside Personal a set-aside row offers a closer look and neither Treat as work nor Treat as personal appears", async () => {
+  const user = userEvent.setup();
+  const calls = open({ ...JUST_ME, "POST handled/a/work": () => done("a") });
+  const sales = await open_(user, SALES);
+  await waitFor(() => expect(within(sales).getByRole("button", { name: "Take a closer look at Offer a" })).toBeInTheDocument());
+  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
+  expect(screen.queryByRole("menuitem", { name: /Treat as/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Treat as/ })).toBeNull();
+  await user.keyboard("{Escape}");
+  await user.click(within(sales).getByRole("button", { name: "Take a closer look at Offer a" }));
+  await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3 }));
+});
+
+test("the reworded line for mail that is not sales or notices says nothing about work", () => {
+  expect(en["setaside.what.mixed"]).not.toMatch(/work/i);
+});
+
+test("with sides the button names the first side, and the menu names Personal and each other side", async () => {
+  const user = userEvent.setup();
+  const calls = open({ ...TWO_SIDES, "POST handled/a/work": () => done("a"), "POST mail/a/set-aside": () => ({ id: "a", version: 6, section: "sales", address: addr("a"), domain: null }) });
+  const sales = await open_(user, SALES);
+  const button = await within(sales).findByRole("button", { name: "Treat as Hale Upholstery: Offer a" });
+  expect(button).toHaveTextContent("Treat as Hale Upholstery");
+  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
+  expect(await screen.findByRole("menuitem", { name: "Treat as Personal" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Treat as Day job" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Treat as Hale Upholstery" })).toBeNull();
+  expect(screen.queryByText(/Treat as work|Treat as personal/)).toBeNull();
+  await user.click(screen.getByRole("menuitem", { name: "Treat as Day job" }));
+  await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3, side: "PRJ-day" }));
+  expect(await screen.findByText(/Handed in Offer a for Day job/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(body(calls, "POST mail/a/set-aside")).toEqual({ section: "sales" }));
+});
+
+test("the primary button treats the message as the first side", async () => {
+  const user = userEvent.setup();
+  const calls = open({ ...TWO_SIDES, "POST handled/a/work": () => done("a") });
+  const sales = await open_(user, SALES);
+  await user.click(await within(sales).findByRole("button", { name: "Treat as Hale Upholstery: Offer a" }));
+  await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3, side: "PRJ-shop" }));
 });

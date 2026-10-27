@@ -562,14 +562,14 @@ test("the question isn't asked before the key works", async () => {
   expect(screen.queryByRole("group", { name: /to read your work mail and notes/ })).toBeNull();
 });
 
-test("Allow lets the account read open and internal material; Not now leaves it at open material only", async () => {
+test("Allow lets the account read open, internal and private material; Not now leaves it at open material only", async () => {
   const user = userEvent.setup();
   const calls = api();
   open();
   await ready(user, "Allow");
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
-  expect(body(calls).allowed_data).toEqual(["open", "internal"]);
+  expect(body(calls).allowed_data).toEqual(["open", "internal", "restricted"]);
   expect(body(calls).work_data ?? "").toBe("");
 
   const again = api();
@@ -594,7 +594,7 @@ test("the three levels stay under Advanced, with Open the only one ticked until 
   expect(within(levels).getByLabelText("Internal material")).not.toBeChecked();
   expect(within(levels).getByLabelText("Restricted material")).not.toBeChecked();
   expect(within(levels).getByText("Material goes only to AI accounts you've allowed for its privacy level.")).toBeInTheDocument();
-  expect(within(levels).getByText("Your notes, mail and meetings are internal, so the assistant can work on them only once Internal is ticked.")).toBeInTheDocument();
+  expect(within(levels).getByText("Your mail is private and your notes and meetings are internal, so the assistant can work on them only once both are ticked.")).toBeInTheDocument();
   await user.click(screen.getByRole("radio", { name: /^Allow/ }));
   expect(within(levels).getByLabelText("Internal material")).toBeChecked();
   await user.click(screen.getByRole("radio", { name: /^Not now/ }));
@@ -680,7 +680,7 @@ test("Save adds the account with the model chosen, tests it, and lists one plain
     base_url: `${WEB}api.service-a.example.com/v1`,
     key: "secret-value",
     models: { everyday: "model-a" },
-    allowed_data: ["open", "internal"],
+    allowed_data: ["open", "internal", "restricted"],
     use: { routine: "everyday", deep: "everyday" },
     fingerprint: "fp-1",
   });

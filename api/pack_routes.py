@@ -18,7 +18,7 @@ from api.schemas import (
     PacksView,
     PackView,
 )
-from engine import pack_install, packs
+from engine import backup, pack_install, packs
 from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
 from engine.plugin_manifest import declared_plugins, shipped_plugins
@@ -215,7 +215,11 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 )
                 for lib in chosen
             ]
+            # An install or an update changes what the app runs, so a backup comes first; without one nothing changes.
+            backup.backup_before(ws, backup.live(ws, cfg))
             done = pack_install.install(data, None, blobs)
+        except backup.BackupFirstFailed as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
         except SecretError:
             raise HTTPException(
                 status_code=409,

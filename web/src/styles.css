@@ -598,3 +598,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
   .mail-step .row.pair { grid-template-columns: minmax(0, 1fr); }
   .mail-step .row.pair > .acts { display: grid; }
 }
+
+/* A file's preview in its details pane (design 7.15): a picture at most as wide as the pane, text kept to the pane's width. */
+img.file-preview { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--space-3); background: var(--surface-sunk); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: var(--text-sm); }

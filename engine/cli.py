@@ -210,6 +210,7 @@ def _parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_backup)
 
     sp = sub.add_parser("install", help="install an add-on from its package file (.whl)")
+    ws_arg(sp)
     sp.add_argument("file", type=Path, help="the add-on's package file")
     sp.set_defaults(func=cmd_install)
 
@@ -334,6 +335,12 @@ def cmd_install(args: argparse.Namespace) -> int:
     if not path.is_file():
         print(f"cockpit: there is no file at {path}.", file=sys.stderr)
         return 1
+    if args.workspace or os.environ.get("COCKPIT_WORKSPACE"):
+        from engine import backup
+
+        # An install or an update changes what the app runs, so the workspace it is for is backed up first.
+        ws = resolve(args.workspace)
+        backup.backup_before(ws, ws.config())
     try:
         done = pack_install.install(path.read_bytes())
     except pack_install.InstallError as err:
@@ -775,7 +782,11 @@ def cmd_export(args: argparse.Namespace) -> int:
 
 
 def cmd_import(args: argparse.Namespace) -> int:
+    from engine import backup
+
     ws = resolve(args.workspace)
+    # Loading records is hard to take back, so a backup comes first; without one nothing is loaded.
+    backup.backup_before(ws, ws.config())
     store = Store(ws.db_path)
     try:
         source = args.data_dir or ws.data_dir

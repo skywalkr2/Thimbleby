@@ -2,19 +2,23 @@
 // assistant read it: what was sorted away before it read it (mail set aside and changes a rule closed, of any kind of
 // item) and mail it read with nothing to do. Rows are grouped by kind, by the reason they were handled or by sender,
 // collapsed, with a count and a Show more past a page of rows; a kind-of-item filter and a search narrow them. Every row says what kind of item it is and why, and offers Take a
-// closer look (or Treat as work for set-aside mail) in one click with Undo, each recording a correction. Leaving an item
-// where it is is the confirmation, so there is no choice that keeps it.
+// closer look (or, for set-aside mail, Treat as the side it belongs to) in one click with Undo, each recording a
+// correction. With nothing beside the person's own life there is no side to name, so the set-aside row offers a closer look
+// too and neither Treat as work nor Treat as personal appears. Leaving an item where it is is the confirmation, so there
+// is no choice that keeps it.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { whenText as when } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
+import { useSideFilter, useSides } from "../lib/sides";
 import { recordView, toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Handled.module.css";
 import { AssistantCloses } from "./HandledClosed";
+import { SideFilter } from "./SideFilter";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useVersionActs } from "./SameDocument";
 import { useAct } from "../lib/act";
@@ -49,7 +53,14 @@ export function Handled() {
     return () => window.clearTimeout(timer);
   }, [typed]);
 
-  const list = useQuery({ queryKey: ["handled", tab, group, query, item], queryFn: () => api.handled(tab, group, query, item), placeholderData: keepPreviousData });
+  // With a side beside Personal the lists can be narrowed to one side: what came from a source serving it, or no one side.
+  const side = useSideFilter();
+  const sideId = side.choice === "all" ? null : side.choice;
+  const list = useQuery({
+    queryKey: ["handled", tab, group, query, item, sideId],
+    queryFn: () => api.handled(tab, group, query, item, sideId),
+    placeholderData: keepPreviousData,
+  });
   const shownGroup: Group = group ?? list.data?.group ?? "kind";
   const pageRows = list.data?.page_rows ?? 25;
   // A kind that the list no longer holds stops narrowing it.
@@ -66,6 +77,7 @@ export function Handled() {
     <section className="panel-section" aria-labelledby={`${ids}-title`} data-handled="">
       <div className="heading">
         <h1 id={`${ids}-title`}>{t("handled.title")}</h1>
+        <SideFilter />
         <div className={`filters ${styles.tabs}`} role="group" aria-label={t("handled.tabs")}>
           {TABS.map((name) => (
             <button key={name} type="button" aria-pressed={tab === name} onClick={() => {
@@ -115,7 +127,7 @@ export function Handled() {
         </p>
       ) : list.data.groups.length === 0 ? (
         <p className="empty" role="status">
-          {t(query ? "handled.none_match" : `handled.empty.${tab}`)}
+          {query ? t("handled.none_match") : side.choice !== "all" ? t("sides.empty.handled", { side: side.named }) : t(`handled.empty.${tab}`)}
         </p>
       ) : (
         <div className={styles.groups}>
@@ -170,7 +182,8 @@ export function Handled() {
 function HandledRow(props: { item: Row }) {
   const { t } = useWords();
   const act = useAct();
-  const { isWork, isPersonal, alwaysLikeThis } = useSetAside();
+  const { isWork, isPersonal, isSide, alwaysLikeThis } = useSetAside();
+  const { justMe, personal, sides } = useSides();
   const [busy, setBusy] = useState(false);
   const { item } = props;
   const titleId = `handled-row-${item.id}`;
@@ -210,9 +223,22 @@ function HandledRow(props: { item: Row }) {
     closed && item.item === "file" ? item.saved : null,
     item.older_version && item.request ? { request: item.request, readVersion: item.version } : undefined,
   );
+  // The places a message can be treated as belonging to: with a side beside Personal, each one by name (Personal first
+  // in the menu); with only Personal there are none; otherwise the older work and personal pair.
+  const named = sides.length > 0 ? sides.map((side) => ({ id: side.project, name: side.name })) : [];
+  const personalSide = personal ? { id: personal, name: t("sides.filter.personal") } : null;
+  const asSides = [...(personalSide ? [personalSide] : []), ...named];
   const menu: MenuAction[] = closed
     ? [{ id: "seen", label: t("sources.silent.seen"), run: () => void seen() }]
-    : [{ id: "personal", label: t("setaside.personal"), run: () => void choose(isPersonal) }];
+    : justMe
+      ? []
+      : named.length > 0
+        ? (item.tab === "set_aside" ? asSides.filter((side) => side.id !== named[0].id) : asSides).map((side) => ({
+            id: `side-${side.id}`,
+            label: t("setaside.treat_as", { side: side.name }),
+            run: () => void choose(isSide(side)),
+          }))
+        : [{ id: "personal", label: t("setaside.personal"), run: () => void choose(isPersonal) }];
   if (!closed && item.address) {
     menu.push({
       id: "always",
@@ -228,8 +254,10 @@ function HandledRow(props: { item: Row }) {
     : item.reason
       ? t("handled.set_aside_why", { reason: item.reason.replace(/[.\s]+$/, "") })
       : t("handled.read_why");
-  // Set-aside mail is handed in as work; a mail read with nothing to do, or a change a rule closed, gets a closer look.
-  const look = item.tab !== "set_aside";
+  // Set-aside mail is handed in as work, or as its side when there is one; a mail read with nothing to do, a change a rule
+  // closed, and (with nothing beside Personal) set-aside mail get a closer look.
+  const primarySide = !closed && !justMe && item.tab === "set_aside" && named.length > 0 ? named[0] : null;
+  const look = item.tab !== "set_aside" || justMe;
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
       <div className="row">
@@ -247,10 +275,14 @@ function HandledRow(props: { item: Row }) {
             className="btn primary"
             data-key="primary"
             disabled={busy}
-            aria-label={t(look ? "handled.look_named" : "setaside.work_named", { title: item.title })}
-            onClick={() => void (closed ? lookCloser() : choose(isWork))}
+            aria-label={
+              primarySide
+                ? t("setaside.treat_as_named", { side: primarySide.name, title: item.title })
+                : t(look ? "handled.look_named" : "setaside.work_named", { title: item.title })
+            }
+            onClick={() => void (closed ? lookCloser() : choose(primarySide ? isSide(primarySide) : isWork))}
           >
-            {t(look ? "handled.look" : "setaside.work")}
+            {primarySide ? t("setaside.treat_as", { side: primarySide.name }) : t(look ? "handled.look" : "setaside.work")}
           </button>
           <RowMenu label={item.title} actions={menu} />
         </div>

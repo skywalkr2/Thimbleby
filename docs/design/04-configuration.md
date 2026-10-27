@@ -102,6 +102,9 @@ Built keys, with defaults:
 - `project.sides`: the sides besides Personal (6.32), each `project` (a top-level project id) and `kind` (`job` or
   `business`), in order; empty by default. Setup's Work step adds to it. The older `project.business` (one id) is read
   as the first entry of kind `business`, with no file rewrite. Basic, shown read-only; live.
+  Each entry also has `data_level` (open, internal or restricted; internal by default): how sensitive what a connection
+  serving only that side holds is (6.32; change log 233). `project.personal_data_level` (restricted by default, the most
+  private level there is) is the same for the personal project. Files-only; a connection's own `data_level` wins.
 - `project.side_words`: `personal` and `business`, each a list of words or phrases (empty by default) that place an item
   on a side when the people it names don't (6.32). With a business set, an item's text and quote are matched as whole
   words, whatever the case, as the last rank of the filing signals (6.32): after the people, the sender's mail domain, the
@@ -767,6 +770,8 @@ Built keys:
     before it is saved.
   - `every_hours` (24), `keep` (14: older backups in each target are removed) and `retry_minutes` (60, at least 5: after a
     failed backup, how long before trying again).
+  - `before_changes` (true) and `bulk_change_records` (25, at least 1): a backup is made first before a change that is hard
+    to take back, and a removal touching at least that many records counts as one (5.0; change log 233). Files-only.
   - `cloud_folders` (the app's shipped list, `engine/defaults/cloud_folders.yaml`): the cloud drives the setup guide
     looks for, each a `name` and the places its folder can be on `macos`, `windows` and `linux`, inside the home folder (a
     `*` matches any characters in a name); the first one found is recommended. `cloud_path` (`Backups`, then the app's

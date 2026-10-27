@@ -88,17 +88,37 @@ class SideInfo:
     name: str
 
 
+def _stands_as_a_side(view: Any, record: Any) -> bool:
+    """Whether a side's project still stands as one: it is at the top (a side moved inside another project, Personal
+    say, is no longer a side) and it has not ended (an ended side is gone from the sides)."""
+    from engine.endings import project_ended
+
+    return not record.data.get("parent") and not project_ended(view, record.id)
+
+
 def side_list(view: Any, cfg: Any) -> list[SideInfo]:
     """The sides besides Personal, in the order the person listed them (the older single business first): only those
-    whose project still exists, each once. The one place the list is read."""
+    whose project still exists and stands as a side (`_stands_as_a_side`), each once. The one place the list is read."""
     found: list[SideInfo] = []
     personal = cfg.workspace.project.personal
     for entry in cfg.workspace.project.sides:
         record = view.get("project", entry.project)
-        if record is None or entry.project == personal or any(f.project == entry.project for f in found):
+        if (
+            record is None
+            or entry.project == personal
+            or any(f.project == entry.project for f in found)
+            or not _stands_as_a_side(view, record)
+        ):
             continue
         found.append(SideInfo(entry.project, entry.kind, str(record.data.get("name") or "")))
     return found
+
+
+def alone_with_personal(cfg: Any) -> str | None:
+    """The personal project's id when the person has no side beside their own life, else none. A connection made then
+    serves it, so it takes that side's data level and keeps it when a side is added later."""
+    project = cfg.workspace.project
+    return project.personal if project.personal and not project.sides else None
 
 
 def business_project(view: Any, cfg: Any) -> str | None:
@@ -144,6 +164,16 @@ def side_word(view: Any, cfg: Any, side: str | None) -> Literal["personal", "bus
     if side == personal_project(view, cfg):
         return "personal"
     return "business" if any(s.project == side for s in side_list(view, cfg)) else None
+
+
+def watch_source_side(view: Any, cfg: Any, source_id: str | None) -> Side | None:
+    """The one side a watched source serves (the sides that exist, in the sides' order); none when it serves none or
+    several, so what came from it shows under every choice of the side filter."""
+    source = next((s for s in cfg.watch.sources if s.id == source_id), None)
+    if source is None:
+        return None
+    served = [i for i in side_ids(view, cfg) if i in set(source.sides)]
+    return served[0] if len(served) == 1 else None
 
 
 def resolve_side(view: Any, cfg: Any, choice: str | None) -> Side | None:
@@ -690,6 +720,51 @@ def remove_side(ws: Any, store: Any, cfg: Any, project_id: str, *, env: dict[str
         allow=(SETTING_SIDES,),
     )
     return gone
+
+
+#: What happens to a side's projects and to-dos when the side is removed after setup: they move to Personal, or they end
+#: with it.
+REMOVALS = ("personal", "end")
+
+
+def remove_with_work(store: Any, cfg: Any, project_id: str, where: str, *, ws: Any = None) -> str:
+    """Remove a side after setup, as the person's own change in one changeset with Undo (`apply_as_person`, no new op).
+    `where` is what happens to what is filed under it: "personal" moves the side's project inside Personal
+    (`record.set` of its parent), so its projects and to-dos are Personal's and none is lost; "end" moves the side's
+    project and every project inside it to the status that means finished (`record.set` of the status), and the
+    ending drops what is open on them, nobody credited. Either way the project no longer stands as a side
+    (`side_list`), and Undo of the changeset brings the side back whole. A removal that touches many records makes a
+    backup first when the workspace is given (`storage.backups`). Returns the changeset id; raises `StoreError` in plain
+    words for a project that isn't a side, a choice that isn't one, or no personal project to move to."""
+    from engine.applier import apply_as_person
+    from engine.endings import project_ended
+
+    view = store.read()
+    side = next((s for s in side_list(view, cfg) if s.project == project_id), None)
+    if side is None:
+        raise StoreError("That isn't one of your sides.")
+    if where not in REMOVALS:
+        raise StoreError("Say whether its projects and to-dos move to Personal or end with it.")
+    family = [project_id, *_below(view, project_id)]
+    touched = len(family) + sum(1 for pid in family for kind, _ in referrers(view, "project", pid) if kind != "project")
+    if ws is not None:
+        from engine import backup
+
+        backup.backup_before_many(ws, backup.live(ws, cfg), touched)
+    if where == "personal":
+        personal = personal_project(view, cfg)
+        if personal is None:
+            raise StoreError("There is no personal side to move them to.")
+        ops = [{"op": "record.set", "kind": "project", "id": project_id, "field": "parent", "value": personal}]
+    else:
+        status = cfg.workspace.project.completed_status
+        ops = [
+            {"op": "record.set", "kind": "project", "id": pid, "field": "status", "value": status}
+            for pid in family
+            if not project_ended(view, pid)
+        ]
+    # Ending a side is no comment on the assistant's work, so its drops write no correction.
+    return apply_as_person(store, cfg, ops, f"Removed {side.name}", all_or_nothing=True, corrections=False)
 
 
 def restore_side(

@@ -45,6 +45,7 @@ from api.schemas import (
     AiTestResult,
     AiTierView,
     AiWorkKindView,
+    Applied,
     BackupFolderAdd,
     BusinessIn,
     BusinessState,
@@ -76,6 +77,7 @@ from api.schemas import (
     SettingsView,
     SetupStepView,
     SetupView,
+    SideRemoveIn,
     SideRestoreIn,
     SideView,
     SortingRuleIn,
@@ -89,7 +91,7 @@ from api.schemas import (
     WatchSourceIn,
     WorkIn,
 )
-from engine import act_accounts, audit, kept_secrets, references, setup, templates
+from engine import act_accounts, audit, kept_secrets, references, setup, sides, templates
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
@@ -467,6 +469,19 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         events.changed()
         return business_state()
 
+    @r.post("/sides/{project}/remove")
+    def side_remove_after_setup(project: str, body: SideRemoveIn) -> Applied:
+        """Remove a side whenever the person asks, with what is filed under it moved to Personal or ended with it,
+        as one changeset with Undo. A removal that touches many records makes a backup first."""
+        from engine import sides
+
+        try:
+            changeset = sides.remove_with_work(store, current(), project, body.where, ws=ws)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return Applied(changeset=changeset)
+
     @r.post("/setup/sides/{project}/restore")
     def side_restore(project: str, body: SideRestoreIn) -> BusinessState:
         """Undo of taking a side back out: its project and the projects that were inside it come back, and it is
@@ -838,6 +853,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["account"] = account
         if body.color:
             new["color"] = body.color
+        if own := sides.alone_with_personal(current()):
+            # With nothing beside the person's own life, a new connection serves it, so it takes that side's level.
+            new["sides"] = [own]
         fresh = keep_all(to_keep, f"source:{source_id}")
         sent = None
         if with_sent and body.connector == "mailbox" and not body.author and current().workspace.user.person:
@@ -956,6 +974,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found["account"] = checked_account(found["connector"], body.account)
         if "color" in body.model_fields_set:
             found["color"] = body.color
+        if "data_level" in body.model_fields_set:
+            found["data_level"] = body.data_level
         fresh = keep_all(to_keep, f"source:{source_id}")
         try:
             return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))

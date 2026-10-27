@@ -280,7 +280,7 @@ test.describe.serial("acceptance scenario", () => {
     const line = page.getByRole("region", { name: "Setup", exact: true });
     await expect(line).toBeVisible();
     await expect(line).toContainText(/Setup \d+ of 7/);
-    await expect(line).toContainText("Next: Say whether your work is part of this");
+    await expect(line).toContainText("Next: Say what you'll use it for");
     // The stand-in assistant is a line in the status popover with a button to the AI step, and no command line.
     const status = await openStatus(page);
     await expect(status).toContainText("You're using a practice assistant");
@@ -297,10 +297,10 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     // The next step is still the first one not done or skipped: the work question comes before the AI account.
-    await expect(line).toContainText("Next: Say whether your work is part of this");
+    await expect(line).toContainText("Next: Say what you'll use it for");
     // Continue setup opens the walkthrough at that step, with the cursor in its first field.
     await line.getByRole("button", { name: "Continue setup" }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
       .toBe(true);

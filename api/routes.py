@@ -56,6 +56,8 @@ from api.schemas import (
     EntryTodoMade,
     FieldView,
     FileKindView,
+    FileUse,
+    FileUsedBy,
     FileView,
     FirstGoSorting,
     FirstGoStarted,
@@ -1202,6 +1204,28 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         headers = {"Content-Disposition": disposition, "X-Content-Type-Options": "nosniff"}
         return Response(content=data, media_type=media if inline else "application/octet-stream", headers=headers)
 
+    @r.get("/files/{file_id}/used-by")
+    def file_used_by(file_id: str) -> FileUsedBy:
+        """What refers to a file: newer versions of it, working copies made from it, and add-on records that name it."""
+        from engine.records import kind_label
+        from engine.stages import record_title
+
+        need("file", file_id)
+        view = store.read()
+        found = []
+        for kind, record_id in store.plugins._referrers(view)("file", file_id):
+            record = view.get(kind, record_id)
+            if record is not None:
+                found.append(
+                    FileUse(
+                        kind=kind,
+                        id=record_id,
+                        kind_label=kind_label(store.plugins.records.get(kind), kind),
+                        label=record_title(record),
+                    )
+                )
+        return FileUsedBy(items=found)
+
     def staged(kind: str) -> None:
         # Only kinds that move through stages are served here; bookkeeping records have their own routes.
         if kind not in store.plugins.stages.types:
@@ -1661,7 +1685,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         the ending back; kept items were never dropped), or keep the project and every item as they are."""
         need("changeset", cs_id)
         if body.end:
-            guard(lambda: endings.finish_ending(store, cfg, cs_id, index, body.keep))
+            guard(lambda: endings.finish_ending(store, cfg, cs_id, index, body.keep, ws=ws))
         else:
             guard(lambda: endings.decline_ending(store, cs_id, index))
         changed()

@@ -65,7 +65,7 @@ test.describe.serial("journey: new start", () => {
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // The save went on to the next screen, so its mark in the step list says it (a toast from one screen goes when the
     // next opens); that screen's own buttons can be pressed right away. The next screen is Work: Just me is chosen.
-    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("button", { name: "Back" }).click({ trial: true });

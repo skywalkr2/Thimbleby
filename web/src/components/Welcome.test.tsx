@@ -167,7 +167,7 @@ test("on a workspace made by the init command, the defaults written in its files
   });
   open();
   expect(await screen.findByLabelText("Your time zone")).toHaveValue("America/Chicago");
-  expect(screen.queryByLabelText("This workspace's name")).toBeNull();
+  expect(screen.queryByLabelText("Name shown at the top")).toBeNull();
   vi.restoreAllMocks();
 });
 
@@ -295,14 +295,14 @@ test("a plugin's step shows the settings it suggests in words, and Apply sends t
   );
   open();
   const suggested = await screen.findByRole("list", { name: "Suggested settings" });
-  expect(within(suggested).getByText("This workspace's name: Harbor")).toBeInTheDocument();
+  expect(within(suggested).getByText("Name shown at the top: Harbor")).toBeInTheDocument();
   expect(within(suggested).getByText("Back up automatically: Yes")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Apply these settings" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST setup/plugin/tidy/apply-settings")?.body).toEqual({ fingerprint: "fp-1" }),
   );
   // The read-back with Undo, as after any saved setting.
-  expect(await screen.findByText("Saved. This workspace's name: Harbor")).toBeInTheDocument();
+  expect(await screen.findByText("Saved. Name shown at the top: Harbor")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
 });
 
@@ -537,8 +537,8 @@ test("the setup list asks the work question as its own step, with a Save of its 
     "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "job", created: true, changeset: "CS-1" }),
   });
   open();
-  expect(await screen.findByRole("heading", { name: "Say whether your work is part of this" })).toBeInTheDocument();
-  await user.click(await screen.findByRole("checkbox", { name: "My job" }));
+  expect(await screen.findByRole("heading", { name: "Say what you'll use it for" })).toBeInTheDocument();
+  await user.click(await screen.findByRole("checkbox", { name: "My life and my job" }));
   expect(screen.getByRole("note")).toHaveTextContent("employer's permission");
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   await user.type(screen.getByLabelText("What is your employer called?"), employer);

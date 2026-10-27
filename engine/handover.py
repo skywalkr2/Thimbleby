@@ -316,6 +316,10 @@ def load_from_folder(ws: Any, cfg: Any) -> str | None:
     plugin_data = _verified(folder, f"{MACHINE}/plugin-data/")
     blobs = _verified(folder, f"{MACHINE}/files/")
     texts = _verified(folder, f"{MACHINE}/sources/")
+    # Replacing this computer's copy is hard to take back, so a backup comes first; without one nothing is replaced.
+    from engine import backup
+
+    backup.backup_before(ws, backup.live(ws, cfg))
     with tempfile.TemporaryDirectory(prefix="cockpit-load-") as tmp:
         data_dir, config_dir = Path(tmp) / "export", Path(tmp) / "config"
         shutil.copytree(ws.config_dir, config_dir)

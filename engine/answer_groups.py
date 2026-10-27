@@ -102,6 +102,11 @@ def release_all(store: Store, cfg: Any, changeset_id: str, *, ws: Any = None) ->
     cs = store.read().get("changeset", changeset_id)
     if cs is None:
         raise StoreError(f"there is no changeset {changeset_id}")
+    if ws is not None and any(o["status"] == "held" for o in cs.data["ops"]):
+        # Releasing everything at once is hard to take back piece by piece, so a backup comes first.
+        from engine import backup
+
+        backup.backup_before(ws, backup.live(ws, cfg))
     return _release(store, cfg, changeset_id, [o["index"] for o in cs.data["ops"]], ws)
 
 

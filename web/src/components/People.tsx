@@ -7,7 +7,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
-import { useSides } from "../lib/sides";
+import { onSides, useSideFilter, useSides } from "../lib/sides";
 import { viewHref, recordView } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -19,6 +19,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { Organizations } from "./Organizations";
 import styles from "./People.module.css";
 import { PersonDrawer } from "./PersonForm";
+import { SideFilter } from "./SideFilter";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 /** The organization filter's choices besides one on file: everyone, and people with none. */
@@ -35,11 +36,15 @@ export function People() {
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   // With no side beside Personal a person is said by who they are to you: no role, organization or list of organizations.
   const { justMe } = useSides();
+  // With a side beside Personal the list can be narrowed to one side; a person on no known side shows under every choice.
+  const side = useSideFilter();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<S["PersonView"] | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
   const [org, setOrg] = useState(ALL);
-  const all = [...(people.data ?? [])].sort((a, b) => (a.is_pm === b.is_pm ? a.name.localeCompare(b.name) : a.is_pm ? -1 : 1));
+  const all = [...(people.data ?? [])]
+    .filter((p) => p.is_pm || onSides(p.sides, side.choice))
+    .sort((a, b) => (a.is_pm === b.is_pm ? a.name.localeCompare(b.name) : a.is_pm ? -1 : 1));
   const rows = all.filter((p) => org === ALL || (org === NONE ? !p.org : p.org === org));
   const selected = all.find((p) => p.id === chosen) ?? null;
   const onPersonalSide = (p: S["PersonView"]) => p.side === "personal";
@@ -133,6 +138,7 @@ export function People() {
     <section className="panel-section" aria-labelledby="people-title">
       <div className="heading">
         <h1 id="people-title">{t("setup.people")}</h1>
+        <SideFilter />
         <Button variant="primary" onClick={() => setAdding(true)}>
           {t("setup.add_person")}
         </Button>
@@ -146,7 +152,7 @@ export function People() {
         {people.isPending ? (
           <Skeleton />
         ) : all.length === 0 ? (
-          <EmptyState text={t(justMe ? "setup.no_people.just_me" : "setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
+          <EmptyState text={side.choice !== "all" ? t("sides.empty.people", { side: side.named }) : t(justMe ? "setup.no_people.just_me" : "setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
         ) : (
           <>
             {!justMe && (orgs.data ?? []).length > 0 && filter}

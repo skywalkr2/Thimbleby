@@ -35,7 +35,19 @@ export function FirstPromises(props: { go: (screen: Screen) => void; onOpenSourc
     case "no_ai":
       return <Needs text={t("walkthrough.promises.no_ai")} label={t("walkthrough.promises.to_ai")} run={() => props.go("ai")} />;
     case "no_mail":
-      return <Needs text={t("walkthrough.promises.no_mail")} label={t("walkthrough.promises.to_mail")} run={() => props.go("mail")} />;
+      // With no mail read there is nothing to look back over: handing something in is the way to see what the assistant
+      // does, and connecting mail is the quieter choice beside it.
+      return (
+        <div className="field" data-first-promises="needs">
+          <p>{t("walkthrough.promises.no_mail")}</p>
+          <div className="row-end">
+            <Button onClick={() => props.go("mail")}>{t("walkthrough.promises.to_mail")}</Button>
+            <Button variant="primary" onClick={props.onHandIn}>
+              {t("walkthrough.promises.none_hand_in")}
+            </Button>
+          </div>
+        </div>
+      );
     case "reading":
       return (
         <p role="status" data-first-promises="reading">

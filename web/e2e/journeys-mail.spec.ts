@@ -53,7 +53,7 @@ test.describe.serial("journey: mail", () => {
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // Work: Just me, which is already chosen.
-    await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+    await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).check();
@@ -260,8 +260,9 @@ test.describe.serial("journey: mail", () => {
     await expect(salesRow).toContainText("Set aside because: it was sent to many people");
     await visit(page);
 
-    // This is work on the sales mail hands it in: it gets its own request, and nothing else is asked.
-    await salesRow.getByRole("button", { name: `Treat as work: ${sales}` }).click();
+    // A closer look at the sales mail hands it in (this person has no side to name): it gets its own request, and nothing else
+    // is asked.
+    await salesRow.getByRole("button", { name: `Take a closer look at ${sales}` }).click();
     await expect(page.getByText(`Handed in ${sales}.`)).toBeVisible();
     await expect(folder.locator("li.line", { hasText: sales })).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn + 1);

@@ -401,7 +401,7 @@ test.describe("screen use and the shell", () => {
         .toBe(true);
       await main.getByRole("button", { name: "Back" }).click();
       // Back from the AI step is the Work step, which comes between You and Your AI account.
-      await expect(main.getByRole("heading", { level: 2, name: "Work" })).toBeVisible();
+      await expect(main.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
       await expect(notices.getByText("Nothing to undo.")).toHaveCount(0);
     });
   }
@@ -848,14 +848,14 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
   test("Settings saves each change as it is made, with Changed and Reset, a toast with Undo, and no Save button", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page, "settings/you");
-    const name = page.getByRole("textbox", { name: "This workspace's name" });
+    const name = page.getByRole("textbox", { name: "Name shown at the top" });
     await expect(page.getByRole("textbox", { name: "Your name" })).toBeFocused();
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
     const before = await name.inputValue();
     await name.fill("Harbor workspace");
     await name.press("Enter");
     const toasts = page.getByRole("region", { name: "Notifications" });
-    await expect(toasts).toContainText("This workspace's name: Harbor workspace", SAVED);
+    await expect(toasts).toContainText("Name shown at the top: Harbor workspace", SAVED);
     const row = page.locator(".setting", { has: name });
     await expect(row.getByText("Changed", { exact: true })).toBeVisible();
     await toasts.getByRole("button", { name: "Undo" }).first().click();
@@ -865,7 +865,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     // Reset puts it back to its default at once, and says so.
     await name.fill("Second harbor");
     await name.press("Enter");
-    await expect(toasts).toContainText("This workspace's name: Second harbor", SAVED);
+    await expect(toasts).toContainText("Name shown at the top: Second harbor", SAVED);
     await row.getByRole("button", { name: /^Reset/ }).click();
     await expect(row.getByText("Changed", { exact: true })).toHaveCount(0, SAVED);
     await expectNoViolations(page);

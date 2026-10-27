@@ -286,6 +286,8 @@ INTERNAL = (
     "storage.export.remote",
     "storage.backups.cloud_path",
     "storage.backups.retry_minutes",
+    "storage.backups.before_changes",
+    "storage.backups.bulk_change_records",
     "storage.files",
     "storage.sync.lease_stale_after_minutes",
     "ai.evaluation",

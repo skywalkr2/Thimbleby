@@ -275,6 +275,54 @@ def test_treat_as_personal_on_set_aside_mail_files_it_under_the_personal_project
     assert len(signals) == 1 and "treated as personal" in signals[0]["note"]
 
 
+def test_treat_as_a_side_files_the_hand_in_under_that_side_on_either_list_and_refuses_what_is_not_a_side(app):
+    from tests.test_sides import BUSINESS_NAME
+
+    ws, cfg, store, client, base = app
+    side = sides.set_business(ws, store, cfg, BUSINESS_NAME, kind="business").project
+    item = row(get(client, base, tab="set_aside"), "Sale sale-a")
+    refused = client.post(
+        f"{base}/handled/{item['id']}/work", json={"read_version": item["version"], "side": "PRJ-404"}
+    )
+    assert refused.status_code == 409 and "isn't one of your sides" in refused.json()["detail"]
+    done = client.post(f"{base}/handled/{item['id']}/work", json={"read_version": item["version"], "side": side})
+    assert done.status_code == 200, done.text
+    assert store.read().get("request", done.json()["request"]).data["project"] == side
+    read = row(get(client, base, tab="read"), "Lunch is moved")
+    again = client.post(f"{base}/handled/{read['id']}/work", json={"read_version": read["version"], "side": side})
+    assert again.status_code == 200, again.text
+    assert store.read().get("request", again.json()["request"]).data["project"] == side
+    # With no side named, nothing is filed by the choice itself.
+    plain = row(get(client, base, tab="set_aside"), "Sale sale-b")
+    made = client.post(f"{base}/handled/{plain['id']}/work", json={"read_version": plain["version"]})
+    assert not store.read().get("request", made.json()["request"]).data.get("project")
+
+
+def test_a_row_carries_the_one_side_its_source_serves_and_the_side_filter_narrows_the_lists_and_counts(app):
+    import yaml
+
+    from tests.test_sides import BUSINESS_NAME
+
+    ws, cfg, store, client, base = app
+    side = sides.set_business(ws, store, cfg, BUSINESS_NAME, kind="business").project
+    personal = sides.personal_project(store.read(), cfg)
+    everything = get(client, base, tab="set_aside")
+    assert {i["side"] for g in everything["groups"] for i in g["items"]} == {None}  # the source serves no side yet
+    path = ws.config_dir / "watch.yaml"
+    config = yaml.safe_load(path.read_text())
+    config["sources"][0]["sides"] = [side]
+    path.write_text(yaml.safe_dump(config))
+    mine = get(client, base, tab="set_aside", side=side)
+    assert titles(mine) == titles(everything) and {i["side"] for g in mine["groups"] for i in g["items"]} == {side}
+    elsewhere = get(client, base, tab="set_aside", side=personal)
+    assert titles(elsewhere) == [] and elsewhere["counts"] == {"set_aside": 0, "read": 0}
+    # A source that serves two sides says neither, so its mail shows under every choice.
+    config["sources"][0]["sides"] = [side, personal]
+    path.write_text(yaml.safe_dump(config))
+    both = get(client, base, tab="set_aside", side=personal)
+    assert titles(both) == titles(everything) and {i["side"] for g in both["groups"] for i in g["items"]} == {None}
+
+
 def test_treat_as_work_on_mail_read_with_nothing_to_do_reads_it_again_and_records_a_signal(app):
     ws, cfg, store, client, base = app
     item = row(get(client, base, tab="read"), "Lunch is moved")

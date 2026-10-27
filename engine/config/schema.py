@@ -93,6 +93,12 @@ class SideEntry(ConfigModel):
         "business",
         description="What the side is: a job (the person works for someone) or a business (their own).",
     )
+    data_level: Literal["open", "internal", "restricted"] = Field(
+        "internal",
+        description="How sensitive what this side's mailboxes and calendars hold is: a connection that serves only "
+        "this side takes this level (the most private of them when it serves several), unless the connection sets "
+        "its own. Its items go only to AI accounts allowed this level.",
+    )
 
 
 class ProjectSettings(ConfigModel):
@@ -121,6 +127,12 @@ class ProjectSettings(ConfigModel):
         description="The older form of the sides list, for one business or job: read as one entry of kind business in "
         "the sides list, whatever else that holds. Use the sides list instead.",
         json_schema_extra={"choices": "projects"},
+    )
+    personal_data_level: Literal["open", "internal", "restricted"] = Field(
+        "restricted",
+        description="How sensitive what the person's own life holds is: a connection that serves the personal project "
+        "takes this level (the most private of the sides it serves), unless the connection sets its own. The default "
+        "is the most private level there is.",
     )
     sides: list[SideEntry] = Field(
         default_factory=list,
@@ -262,7 +274,7 @@ class PluginSettings(ConfigModel):
 
 
 class WorkspaceFile(FileModel):
-    name: str = Field("Workspace", description="The workspace's display name.")
+    name: str = Field("Workspace", description="The name shown at the top of every screen. Setup names it after you.")
     assistant_name: str = Field(
         "Reginald", description="The assistant's display name; the only name people see. Setup offers it to rename."
     )
@@ -442,6 +454,20 @@ class BackupSettings(ConfigModel):
         ge=5,
         description="After a failed backup (a drive not connected, say), how long before trying again.",
         json_schema_extra={"enabled_by": "automatic"},
+    )
+    before_changes: bool = Field(
+        True,
+        description="Make a backup first before a change that is hard to take back: loading a copy from the synced "
+        "folder, installing or updating an add-on, releasing everything an answer holds, loading data from files, or "
+        "removing many records at once. When backups are set up and the copy can't be made, the change doesn't "
+        "happen and the message says why. Off makes none of them.",
+    )
+    bulk_change_records: int = Field(
+        25,
+        ge=1,
+        description="A removal that touches at least this many records counts as many and makes a backup first (when "
+        "backups before changes are on).",
+        json_schema_extra={"enabled_by": "before_changes"},
     )
 
     @field_validator("encrypt")

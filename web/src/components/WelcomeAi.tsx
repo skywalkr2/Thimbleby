@@ -98,8 +98,9 @@ type Verdict =
   | { state: "checking" }
   | { state: "works"; identity: string | null; unknown: string | null }
   | { state: "failed"; message: string; retired?: { model: string; next: string | null } };
-/** What "Allow" lets a new account read: open material and the internal kind work mail and notes are. */
-const ALLOWED: Level[] = ["open", "internal"];
+/** What "Allow" lets a new account read: open material, the internal kind notes and meetings are, and the private kind a
+ * connection to the person's own life is (a connection takes the privacy of the side it serves, 6.32). */
+const ALLOWED: Level[] = ["open", "internal", "restricted"];
 
 export function WelcomeAi(props: {
   local: boolean;

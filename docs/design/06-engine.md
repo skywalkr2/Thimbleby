@@ -3854,6 +3854,25 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     one business side, and with several it is refused in plain words ("say which side").
   - **Mailboxes and calendars:** a watched source's `sides` says which sides it serves (empty: not said). It is a filing
     rank right after people: one side files there; several narrow the choice to them.
+  - **A connection's data level follows its side** (the UI/UX reviewer's answer 9; change log 233; built,
+    `tests/test_side_data_levels.py`): it is not asked in setup. A watched source takes the most private level among the
+    sides it serves. Personal's level is `workspace.project.personal_data_level` (restricted, the most private level
+    there is) and each side's is its entry's `data_level` (internal until the person says otherwise). A level the source
+    sets itself wins, and clearing it goes back to following its sides; a source that serves no side keeps the older
+    order (its kind's level, then `watch.default_data_level`), `engine/watch.py::data_level_source`. With nothing beside
+    the person's own life, a connection made from then on (a sign-in's sources, or the add form) records the personal
+    project as the side it serves, so it takes that level and keeps it when a side is added later. Settings › Connections
+    shows the level and why on the connection's row and sets or clears one (7.15).
+  - **Removing a side after setup** (owner; change log 233; built, `tests/test_remove_side.py`): the business page asks
+    each time whether the side's projects and to-dos move to Personal or end with it, `POST /api/sides/{project}/remove`.
+    It is one changeset by the person's own change (`apply_as_person`), so it is in the ledger and one Undo brings the side
+    back whole, and it adds no op. *Move to Personal* is one `record.set` of the side's project `parent` (everything inside
+    moves with it, nothing is dropped or edited); *end with it* is a `record.set` of `status` to the status that means
+    finished (`workspace.project.completed_status`) on the side's project and every project inside it, and the ending's own
+    drops close what is open on them, nobody credited. Either way the project no longer stands as a side: `side_list` lists
+    only a project at the top that has not ended, so Personal, the filters and the filing ranks stop seeing it. A removal
+    touching at least `storage.backups.bulk_change_records` records makes a backup first (5.0). During setup, a side with
+    nothing filed under it is still taken out by `POST /api/setup/sides/{project}/remove`.
   - **Plugin API 0.3.91** (the owner lifted the hold for this alone): `person.sides`; on the read view, `sides()` (Personal
     first, kind `personal`, then each side with its kind and name) and `side_of(record or project id)`. Nothing is
     removed. A person stored before 0.3.91 with only `side` has an empty `sides` on its raw record; the core reads `side`
@@ -3869,8 +3888,13 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     both a list to pick from.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
   second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
-  a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
-  another person stays whole while any of its items is on the chosen side, since it is one message). Filing reads the
+  a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Every list that can hold both sides (Today, What changed, Handled for you, Follow-ups, To-dos, People and
+  Files) has the same "All / Personal / <side>" control in the same place, hidden entirely when there is no side (the
+  reviewer's answer 6; *built* except What changed's rows, `web/src/components/SideFilter.test.tsx`,
+  `web/src/components/SideFilterLists.test.tsx`; what is on no side shows under every choice; Handled for you asks the
+  server (`GET /api/handled?side=`), whose rows carry the one side their source serves; a follow-up section for
+  another person stays whole while any of its items is on the chosen side, since it is one message; What changed draws
+  the control, and filtering its rows waits for that screen's rebuild). Filing reads the
   signals in this order (designer, 2026-10-22; change log 174; **built, B-12 batch 1:** `tests/test_filing_signals.py`,
   `tests/test_sides.py`; the first rank that decides, decides, and a rank whose signals point to both sides decides
   nothing, so the next is read): **people first**, since each person belongs to a side; then **the sender's domain**,

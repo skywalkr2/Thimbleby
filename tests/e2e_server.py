@@ -31,7 +31,7 @@ from engine.cleaning import normalize
 from engine.cli import KEEP_ALIVE
 from engine.config.yaml_edit import set_key
 from engine.evaluate import load_cases
-from engine.setup import keep_walkthrough
+from engine.setup import keep_walkthrough, note_set_by_setup
 from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
@@ -282,7 +282,10 @@ def main() -> None:
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
     if args.just_me:
-        ws = init_workspace(tmp / "ws", git=False, you=the_person())
+        # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
+        # header reads "Workspace".
+        ws = init_workspace(tmp / "ws", git=False, you=the_person(), name=f"{the_person().split()[0]}'s")
+        note_set_by_setup(ws, {"workspace.name": f"{the_person().split()[0]}'s"})
         # The same stand-in account and tiers the fixture workspaces have, so the person has chosen an account and the
         # walkthrough does not open by itself (a new workspace has none).
         fixture = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text(encoding="utf-8"))

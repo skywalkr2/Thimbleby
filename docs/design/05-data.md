@@ -60,6 +60,18 @@ offered, and a passage both changed is the person's pick.
   connected can't turn into a "backup" on the local disk (decisions, 2026-10-11, "Backups run on their own…"). The database
   is copied with SQLite's online backup, with `config/`, `sources/`, `files/`, `texts/` and `plugin-data/`. A backup to a
   target outside the person's control is encrypted (`backups.encrypt`, *phase L-core*, 12.1).
+- **Before a change that is hard to take back** (owner, 2026-10-27; change log 233; built, `tests/test_backup_before_changes.py`):
+  a backup is made first, with the same function the schedule uses (`engine/backup.py::backup_before`), before loading a
+  copy from the synced folder (the restore that replaces this computer's data; it also keeps its own private copy of the
+  database), before an add-on is installed or updated (the Add-ons screen's Install, and `cockpit install -w`), before
+  "Release all" on an answer, before `cockpit import`, and before a removal that touches many records (taking a side out
+  after setup, a project ending that drops many items; the threshold is `storage.backups.bulk_change_records`, 25). A copy
+  that can't be made stops the change before anything is written, with a plain message ("Nothing was changed, because the
+  backup made first couldn't be made. ... Check where backups go in Settings, then try again."); with no place to back up
+  to, or `storage.backups.before_changes` off, nothing is made and the change goes ahead. `cockpit restore --backup` writes
+  only into an empty new folder, so there is nothing of the person's to back up; `cockpit restore --as-of` (designed) takes
+  one the same way when it is built. The two keys are files-only; the fictional workspaces turn the first off because their
+  backup folder is made up.
 
 **Provenance.** Each ledger entry records whether the write came from trusted or untrusted content (12.2), so every field's
 provenance is known; packets mark untrusted-derived fields as data (6.6).
