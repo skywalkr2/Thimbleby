@@ -1221,6 +1221,25 @@ as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't cl
 - [x] [C57] An item appears once on Today.
   **Built:** `tests/test_today_queue.py::test_an_item_that_would_fall_in_two_groups_stays_in_the_higher_one_only`, `::test_no_line_key_repeats_with_overdue_to_dos_setup_open_and_mail_not_connected`.
 
+### Phase U, second pass (review of f973493, 2026-10-28)
+
+The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the designer's answers F39 to F46
+(`docs/project/designer-answers-2026-10-28.md`) are all built here (owner, 2026-10-28; decision 2026-10-28, change log
+234), in batches with the full suites once per batch. Then both personas walk a fresh install again.
+- [ ] [G1-G4] The P0s: no raw data in messages and none over a control (G1); a review on Today (G2, F39); unsure filing
+  under Personal with one question (G3, F40, F41); setup reads an add-on's sent mail (G4, F10).
+- [ ] [G5-G14] The P1s: the AI step's words (G5, F46), the service's name (G6), the setup group saved with its jobs (G7),
+  ticks from records (G8), the brief summarises (G9, F42), plain titles and facts (G10, F44), phone lines (G11), tonal
+  in night mode (G12), "Who they are" (G13, F45), the outside marker (G14, F43).
+- [ ] [G15-G23] The P2s, as the review lists them.
+- [ ] [U13] No JSON, ids or raw headers in any message, title or label.
+- [ ] [U14] A review happens on Today: the address stays and the count never rises; no Today action adds lines.
+- [ ] [U15] A business's first read leaves at most one filing question.
+- [ ] [U16] Setup's ticks come from records.
+- [ ] [U17] At 390px, queue titles show at least 25 characters.
+- [ ] [U18] Row actions are tonal in both themes, only the selected line's filled.
+- [ ] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
+
 ## Phase I: installers for Windows and macOS (after phase S)
 
 - [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches

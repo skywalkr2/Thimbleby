@@ -4,6 +4,25 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Every finding of the reviewer's second pass is built, with the designer's answers F39 to F46
+
+**Decided:** All of G1 to G23 of the second pass (`reviews/ui-ux-2026-10/review-f973493/`) and checks U13 to U18 are
+built in phase U, together with the designer's answers to F39 to F46 (`docs/project/designer-answers-2026-10-28.md`): a
+review happens on Today and no action on Today adds lines; unsure filing goes under Personal with one grouped question per
+side per day and a rule only after a repeated move; notes from mail need no project; the brief summarises; the outside
+marker leaves lists but stays at outward steps; note titles from subject and sender, `said_by` on claims and a lint on
+"decided"; one "Who they are" column; personal mail stays private and the AI step says so. Hand-made file links are kept by
+content, not path. "What it's for" keeps its tick boxes. The work is batched, with the full suites run once per batch.
+
+**Decided by:** the owner ("all of these findings need to be fixed or it will impact me when I'm using the app"; batch the
+work and run the full suites less often), with the functional designer's answers. The designer's proposed exit (only G1 to
+G4 before the gate week) was not taken.
+
+**Why:** the owner will use the app daily; the findings are what they'd meet.
+
+**Impact:** Design 7.7, 6.32, 6.2; roadmap phase U (G1 to G23, U13 to U18); open promise P69. Named notice apps wait for
+the owner's choice. Change log: section 234.
+
 ## 2026-10-27: Everything the reviewer asked is built before their second pass; the clear items now, the rest after their answers
 
 **Decided:** Every request in the UI/UX review of 45f7102 is built before it goes back to the reviewer, including the

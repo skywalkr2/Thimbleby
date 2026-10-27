@@ -96,7 +96,9 @@ a watched file leaves is a `snapshot`, written only by the watcher, and a new fi
 plugins see, which waits for the plugin API release. So each choice is a change to the settings `watch.versions.same_document`,
 `watch.versions.not_same` and `watch.versions.current`, saved the way the Settings screen saves (a `setting_change` records
 what it was and what it became, and Undo puts it back), read by the families on the next read of the folder, and kept in the
-workspace's own configuration like any other. They are not shown on the Settings screen. Signals: `edited` for a link or a
+workspace's own configuration like any other. They are not shown on the Settings screen. Each entry names a file by its
+content (its hash), not its path, so a link and the current answer survive the older copy moving into an Archive folder and
+the current copy being renamed (the designer's input of 2026-10-28; change log 234; *designed, phase U*). Signals: `edited` for a link or a
 split from a file's page, `pulled_back` for a split from the older-version row, `answered_assistant` for the answer to the
 question. Built: `tests/test_versions.py`, `tests/test_version_choices.py`, `tests/test_version_choices_api.py`,
 `web/src/components/SameDocument.test.tsx`.
@@ -4227,6 +4229,30 @@ project, a calendar entry or a series. The `fact` op takes it (an id that names 
 record's page lists the facts about it, and a run working on that record (an ask or a conversation on it, an add-on's task kind
 on its record, through `view.knowledge`) reads them in its facts section, under the same budget as the project's.
 **Built:** `tests/test_facts_about.py`.
+
+**Filing, the brief and facts after the reviewer's second pass** (designer's answers F40 to F46, 2026-10-28; change log
+234; *designed, phase U*):
+- **Filing when unsure.** When the ranks can't decide between Personal and a side, the item is filed under Personal (the
+  more private level). One grouped question per side per day at most asks "These 4 items look like Hale Upholstery's.
+  Move them there?". Move says what it changes ("These 4 items will be visible with Hale Upholstery's work"), is the
+  person's own changeset with Undo, and a move to a less private level always needs the person's click, never a rule's.
+  A filing rule is proposed only after the person moves the same sender's items a second time, stating its reach ("mail
+  from maya@… goes to Hale Upholstery"). Unfiled is one line, never the top of Projects (check U15).
+- **Notes from mail need no project.** A note is reference material; it takes its mail's side (Personal when unsure). A
+  to-do or question drawn from it is filed as usual.
+- **The brief summarises and never repeats.** It keeps what Today doesn't show (the day's shape, the schedule, what
+  changed overnight) and gives the rest as counts linking to the lines. The weekly form is offered on the first day the
+  app is opened that week, until done or dismissed.
+- **Note titles and facts.** A note from mail is titled by its subject and sender ("Thanks · from Maya Okafor"), set by the
+  core: "Re:" and "Fwd:" chains stripped, the body's first words when there is no subject. A fact states the world when
+  settled; when it is one person's claim it keeps who said it (`said_by`, shown: "Maya says the offsite is on a Friday ·
+  Oct 27"). A lint flags "decided" written into a fact unless someone made a choice.
+- **Who they are.** People shows one column with every relation the person has to someone, Personal first ("sister ·
+  supplier at Hale Upholstery"); organization and role stay in the details. The shipped list keeps "customer", drops
+  "client", and the person may type their own relation.
+- **Private material and the AI account.** Personal mail stays private. The AI step's Allow names what it covers ("may read
+  your mail, notes and calendar, including private ones"), with "Only what could be public" and "Not my private mail" one
+  click away. A new or fallback account reads nothing private until the person says yes for that account (F25).
 
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 

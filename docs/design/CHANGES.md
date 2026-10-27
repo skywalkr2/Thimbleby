@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 234. The reviewer's second pass and the designer's answers F39 to F46 (2026-10-28; phase U; designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Today (7.7) | Look over sent the batch to What changed and split it into lines | A review on Today: only what needs a look, in the details pane, Not right per item, All looks good with Undo; no action adds lines |
+| Filing (6.32) | Unsure items Unfiled | Filed under Personal, one grouped Move question per side per day; a rule only after a repeated move |
+| Brief (6.32) | Listed Today's lines | Counts that link to the lines; the weekly form on the week's first open day |
+| Facts and notes (6.32, 6.7) | Raw header titles; claims without who said them | Subject and sender titles set by the core; `said_by` on a claim; a lint on "decided" |
+| Outside marker (7.7, 12.8) | On every list line | Once in the details pane, and at any outward step |
+| People (6.32) | Role and Organization columns with a business | "Who they are", every relation, Personal first; typed relations allowed |
+| File links (6.2) | Kept by path | Kept by content, so a move to Archive or a rename keeps them |
+
 ## 233. The rest of the review, built before the reviewer's second pass (2026-10-27; phase U; designed; the rows marked Built have a named test)
 
 | Where | Before | Now |
