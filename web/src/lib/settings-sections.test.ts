@@ -55,29 +55,32 @@ test("each setting belongs to the one section the app places it on, and an add-o
 test("a section lists the settings placed on it, in the order the app sends them, and every listed setting is in exactly one section", () => {
   expect(sectionItems(ITEMS, "you").map((i) => i.key)).toEqual(["workspace.name", "workspace.user.timezone"]);
   expect(sectionItems(ITEMS, "ai").map((i) => i.key)).toEqual(["ai.budgets.per_day_usd"]);
-  const sections = navSections(ITEMS, { business: true, files: true });
+  const sections = navSections(ITEMS, { business: true, lists: true, files: true });
   const all = sections.flatMap((s) => sectionItems(ITEMS, s));
   expect(all.length).toBe(ITEMS.filter(isListed).length);
 });
 
-test("the section list has the pages of basic settings, Your business where there is one, Connections and Add-ons, Advanced, then each add-on", () => {
-  expect(navSections(ITEMS, { business: true, files: true })).toEqual([
+test("the section list has the pages of basic settings, Your business and Lists where there are some, Connections and Add-ons, Advanced, then each add-on", () => {
+  expect(navSections(ITEMS, { business: true, lists: true, files: true })).toEqual([
     "you",
     "ai",
     "today",
     "backups",
     "appearance",
     "business",
+    "lists",
     "connections",
     "addons",
     "files",
     "advanced",
     "addon/sample-pack",
   ]);
-  // Without a business there is no page for one, and the Lists that sit on it are not offered either.
-  expect(navSections(ITEMS, { business: false, files: false })).not.toContain("business");
+  // Without a business there is no page for one; Lists is listed only where a list is left to show on it.
+  expect(navSections(ITEMS, { business: false, lists: false, files: false })).not.toContain("business");
+  expect(navSections(ITEMS, { business: false, lists: false, files: false })).not.toContain("lists");
+  expect(navSections(ITEMS, { business: false, lists: true, files: false })).toContain("lists");
   // Nothing to show means no entry, except AI accounts, Connections and Add-ons, which always have their lists.
-  expect(navSections([item("workspace.name", "you")], { business: false, files: false })).toEqual(["you", "ai", "connections", "addons"]);
+  expect(navSections([item("workspace.name", "you")], { business: false, lists: false, files: false })).toEqual(["you", "ai", "connections", "addons"]);
 });
 
 test("Advanced is grouped by topic, in the order of the eight topics, each topic holding its settings in the order sent", () => {

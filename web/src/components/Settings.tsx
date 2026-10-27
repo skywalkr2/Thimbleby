@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, ApiError, type S } from "../lib/api";
-import { useValueLists } from "../lib/lists";
+import { useListsPage, useValueLists } from "../lib/lists";
 import { problemText } from "../lib/problem";
 import {
   changedTime,
@@ -124,6 +124,7 @@ export function SettingsFrame(props: {
 }) {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const { sides } = useSides();
+  const onListsPage = useListsPage();
   const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
   const keyed = useQuery({
     queryKey: ["addon-secrets"],
@@ -131,6 +132,7 @@ export function SettingsFrame(props: {
   });
   const listed = navSections(settings.data?.items ?? [], {
     business: sides.length > 0,
+    lists: onListsPage.length > 0,
     files: (forms.data?.length ?? 0) > 0,
     keyed: (keyed.data ?? [])
       .filter((a) => a.secrets.length > 0)
@@ -214,6 +216,7 @@ export function Settings(props: {
   // With no side beside Personal, the settings that name which project is whose side are left out: nothing in them can be
   // changed to any use until there is one.
   const { justMe, sides } = useSides();
+  const onListsPage = useListsPage();
   const everything = (settings.data?.items ?? []).filter((i) => !(justMe && i.key.startsWith("workspace.project.")));
   // The accent color as it stands on screen: what is typed, else what is saved.
   const brand = everything.find((i) => i.key === "ui.brand.color");
@@ -223,6 +226,7 @@ export function Settings(props: {
   const canList = useFolderListing(everything.some((i) => i.picker));
   const listed = navSections(everything, {
     business: sides.length > 0,
+    lists: onListsPage.length > 0,
     files: (forms.data?.length ?? 0) > 0,
     keyed: (keyed.data ?? [])
       .filter((a) => a.secrets.length > 0)
@@ -234,9 +238,10 @@ export function Settings(props: {
     !lists.isPending &&
     !forms.isPending &&
     !keyed.isPending;
-  // An address naming a section that has nothing to show (an add-on turned off) opens the first one.
+  // An address naming a section that has nothing to show (an add-on turned off) opens the first one. The older address of
+  // the Lists page, when no list is left on it, opens the business page where the project lists are.
   const section: SettingsSection =
-    !loaded || listed.includes(wanted) ? wanted : "you";
+    !loaded || listed.includes(wanted) ? wanted : wanted === "lists" && listed.includes("business") ? "business" : "you";
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
       ? addonLabel(s.slice("addon/".length), t, has)
@@ -253,7 +258,7 @@ export function Settings(props: {
     settings.isSuccess &&
     (section === "ai"
       ? !accounts.isPending
-      : section === "business"
+      : section === "business" || section === "lists"
         ? !lists.isPending
         : section === "files"
           ? !forms.isPending
@@ -265,7 +270,7 @@ export function Settings(props: {
     const field = root.querySelector<HTMLElement>(FIRST_FIELD);
     const heading = root.querySelector<HTMLElement>("[data-section-heading]");
     const target =
-      section === "ai" || section === "files"
+      section === "ai" || section === "files" || section === "lists"
         ? heading
         : (field ?? heading);
     target?.focus({ preventScroll: true });
@@ -578,10 +583,11 @@ export function Settings(props: {
           {heading("business")}
           <BusinessSides />
           {form("business")}
-          <ValueLists level={3} />
+          <ValueLists level={3} place="business" />
         </>
       );
     }
+    if (section === "lists") return <ValueLists level={2} />;
     if (section === "files") return <DataForms level={2} />;
     if (section === "advanced") {
       return (

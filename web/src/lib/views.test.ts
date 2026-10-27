@@ -95,12 +95,12 @@ test("a view's link keeps this page's path and query, so it works in a new tab",
   window.history.replaceState(null, "", "/");
 });
 
-test("the older address of the Lists page opens the business page, where the Lists are now", () => {
-  expect(settingsSectionOf("settings/lists")).toBe("business");
+test("the address of the Lists page names the Lists section", () => {
+  expect(settingsSectionOf("settings/lists")).toBe("lists");
 });
 
 test("each section of Settings has its own address, and an add-on's section carries the add-on's name", () => {
-  for (const section of ["you", "ai", "today", "backups", "appearance", "business", "connections", "addons", "files", "advanced"] as const) {
+  for (const section of ["you", "ai", "today", "backups", "appearance", "business", "lists", "connections", "addons", "files", "advanced"] as const) {
     const view = settingsView(section);
     expect(toHash(view)).toBe(`settings/${section}`);
     expect(fromHash(`#${toHash(view)}`)).toBe(view);

@@ -32,7 +32,7 @@ export type CoreView =
 export type MovedView = "work/outgoing" | "sources" | "addons";
 export type PanelGroup = "work" | "records";
 /** The sections of Settings that are always there; an add-on's own is `addon/<name>`. */
-export const SETTINGS_SECTIONS = ["you", "ai", "today", "backups", "appearance", "business", "connections", "addons", "files", "advanced"] as const;
+export const SETTINGS_SECTIONS = ["you", "ai", "today", "backups", "appearance", "business", "lists", "connections", "addons", "files", "advanced"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number] | `addon/${string}`;
 export type View = CoreView | MovedView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}` | `settings/${SettingsSection}`;
 
@@ -98,8 +98,6 @@ export function settingsSectionOf(view: string): SettingsSection | null {
   if (!view.startsWith("settings/")) return null;
   const rest = view.slice("settings/".length);
   if ((SETTINGS_SECTIONS as readonly string[]).includes(rest)) return rest as SettingsSection;
-  // The Lists page now sits on the business page, where the older address leads.
-  if (rest === "lists") return "business";
   if (rest.startsWith("addon/") && rest.length > "addon/".length) {
     try {
       return `addon/${decodeURIComponent(rest.slice("addon/".length))}`;

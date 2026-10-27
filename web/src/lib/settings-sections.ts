@@ -46,15 +46,15 @@ export const sectionItems = (items: Item[], section: SettingsSection): Item[] =>
   items.filter((i) => isListed(i) && sectionOfItem(i) === section);
 
 /** The sections to list down the side, in order: the pages of the basic settings, Your business where there is one,
- * Connections and Add-ons, the add-on files where there are some, Advanced, then one for each add-on that has settings.
+ * Lists where a list is left to show there, Connections and Add-ons, the add-on files where there are some, Advanced, then one for each add-on that has settings.
  * AI accounts, Connections and Add-ons are always there: they hold lists of their own rather than settings. */
-export function navSections(items: Item[], has: { business: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
+export function navSections(items: Item[], has: { business: boolean; lists: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
   const present = new Set(items.filter(isListed).map(sectionOfItem));
   // An add-on that needs keys has a section for them even when it has no settings of its own.
   for (const plugin of has.keyed ?? []) present.add(`addon/${plugin}`);
   const out: SettingsSection[] = [];
   for (const id of SETTINGS_SECTIONS) {
-    const shown = id === "ai" || id === "connections" || id === "addons" || (id === "business" ? has.business : id === "files" ? has.files : present.has(id));
+    const shown = id === "ai" || id === "connections" || id === "addons" || (id === "business" ? has.business : id === "lists" ? has.lists : id === "files" ? has.files : present.has(id));
     if (shown) out.push(id);
   }
   const addons = [...present].filter((s) => s.startsWith("addon/"));

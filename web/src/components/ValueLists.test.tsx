@@ -268,3 +268,36 @@ test("with no side besides Personal and no other list, the page says there is no
   expect(await screen.findByText(/There are no lists to change yet/)).toBeInTheDocument();
   expect(screen.queryByText(/Project/)).toBeNull();
 });
+
+const WITH_SIDE = {
+  "GET setup/business": () => ({
+    business: true,
+    name: "Orchard Press",
+    personal: "PRJ-1",
+    sides: [{ project: "PRJ-2", kind: "business", name: "Orchard Press", removable: false }],
+    chosen: "work",
+  }),
+  "GET projects": () => [project("PRJ-1", "Personal"), { ...project("PRJ-2", "Orchard Press"), parent: null }],
+};
+
+test("with a side, the business place holds only the project lists and the Lists page leaves them out", async () => {
+  api(WITH_SIDE);
+  const { unmount } = renderApp(<ValueLists level={3} place="business" />);
+  expect(await screen.findByText("Project status")).toBeInTheDocument();
+  expect(screen.getByText("Project group")).toBeInTheDocument();
+  expect(screen.queryByText("Stages")).toBeNull();
+  expect(screen.queryByText("Loose list")).toBeNull();
+  unmount();
+  renderApp(<ValueLists level={2} />);
+  expect(await screen.findByText("Stages")).toBeInTheDocument();
+  expect(screen.getByText("Loose list")).toBeInTheDocument();
+  expect(screen.queryByText("Project status")).toBeNull();
+  expect(screen.queryByText("Project group")).toBeNull();
+});
+
+test("the business place shows nothing, not even a heading, when no list is a project's", async () => {
+  fakeApi({ "GET lists": () => lists().filter((list) => !list.used_by.some((use) => use.startsWith("project."))), ...WITH_SIDE });
+  renderApp(<ValueLists level={3} place="business" />);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(screen.queryByRole("heading", { name: "Lists" })).toBeNull();
+});

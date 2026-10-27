@@ -151,18 +151,78 @@ test("the section list sits down the side: the pages, Your business only with a 
   expect(within(nav).getByRole("link", { name: "Add-ons" })).toHaveAttribute("href", expect.stringMatching(/#settings\/addons$/));
 });
 
-test("without a business there is no Your business page and no Lists", async () => {
-  api([...ITEMS], {
-    "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
-    "GET projects": () => [project("PRJ-1", "Personal")],
-    "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] }],
-  });
-  open();
+const NO_SIDE = {
+  "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
+};
+const JUST_ME = { ...NO_SIDE, "GET projects": () => [project("PRJ-1", "Personal")] };
+const WITH_PROJECTS = { ...NO_SIDE, "GET projects": () => [project("PRJ-1", "Personal"), { ...project("PRJ-2", "Spring catalog"), parent: "PRJ-1" }, project("PRJ-3", "Garden")] };
+const projectList = (): S["ValueListView"] => ({ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] });
+const otherList = (): S["ValueListView"] => ({ id: "L-2", name: "demo/stages", label: "Stages", values: ["Draft"], retired: [], used_by: ["demo/chapter.stage"] });
+/** The section links, once the screen has loaded and settled on a section: the You page by default. */
+const sectionLinks = async (page: string | null = "The display name.") => {
   const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-  await screen.findByLabelText("The display name.");
-  expect(within(nav).queryByRole("link", { name: "Your business" })).toBeNull();
-  expect(within(nav).queryByRole("link", { name: "Lists" })).toBeNull();
+  if (page) await screen.findByLabelText(page);
+  return within(nav);
+};
+
+test("with projects and no side, the Lists page is listed and holds every list, and the older address opens it", async () => {
+  api([...ITEMS], { ...WITH_PROJECTS, "GET lists": () => [projectList(), otherList()] });
+  open("lists");
+  const nav = await sectionLinks(null);
+  expect(nav.queryByRole("link", { name: "Your business" })).toBeNull();
+  await waitFor(() => expect(nav.getByRole("link", { name: "Lists" })).toHaveAttribute("aria-current", "page"));
+  const heading = await screen.findByRole("heading", { level: 2, name: "Lists" });
+  await waitFor(() => expect(heading).toHaveFocus());
+  expect(screen.getByText("Project status")).toBeInTheDocument();
+  expect(screen.getByText("Stages")).toBeInTheDocument();
 });
+
+test("under Just me with only project lists there is no Lists page, and its address opens the first section", async () => {
+  api([...ITEMS], { ...JUST_ME, "GET lists": () => [projectList()] });
+  open("lists");
+  const nav = await sectionLinks();
+  expect(nav.queryByRole("link", { name: "Lists" })).toBeNull();
+  expect(nav.queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(nav.getByRole("link", { name: "You" })).toHaveAttribute("aria-current", "page");
+  expect(screen.queryByText("Project status")).toBeNull();
+});
+
+test("under Just me with a list that is not a project's, the Lists page is listed and holds only that list", async () => {
+  api([...ITEMS], { ...JUST_ME, "GET lists": () => [projectList(), otherList()] });
+  const { unmount } = open();
+  const nav = await sectionLinks();
+  await waitFor(() => expect(nav.getByRole("link", { name: "Lists" })).toBeInTheDocument());
+  expect(nav.queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(nav.getByRole("link", { name: "Lists" })).toHaveAttribute("href", expect.stringMatching(/#settings\/lists$/));
+  unmount();
+  open("lists");
+  expect(await screen.findByText("Stages")).toBeInTheDocument();
+  expect(screen.queryByText("Project status")).toBeNull();
+});
+
+test("with a business the project lists are on the business page and the others on the Lists page, each in one place", async () => {
+  api([...ITEMS], { ...BUSINESS, "GET lists": () => [projectList(), otherList()] });
+  const { unmount } = open("business");
+  const nav = await sectionLinks(null);
+  await waitFor(() => expect(nav.getByRole("link", { name: "Lists" })).toBeInTheDocument());
+  expect(await screen.findByText("Project status")).toBeInTheDocument();
+  expect(screen.queryByText("Stages")).toBeNull();
+  unmount();
+  open("lists");
+  expect(await screen.findByRole("heading", { level: 2, name: "Lists" })).toBeInTheDocument();
+  expect(screen.getByText("Stages")).toBeInTheDocument();
+  expect(screen.queryByText("Project status")).toBeNull();
+});
+
+test("with a business and only project lists there is no Lists page: they are on the business page, which the older address opens", async () => {
+  api([...ITEMS], { ...BUSINESS, "GET lists": () => [projectList()] });
+  open("lists");
+  const nav = await sectionLinks(null);
+  await waitFor(() => expect(nav.getByRole("link", { name: "Your business" })).toHaveAttribute("aria-current", "page"));
+  expect(nav.queryByRole("link", { name: "Lists" })).toBeNull();
+  expect(await screen.findByText("Project status")).toBeInTheDocument();
+});
+
 test("choosing a section shows that section's settings and no others; the choice goes to the address when the screen asks", async () => {
   const user = userEvent.setup();
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);

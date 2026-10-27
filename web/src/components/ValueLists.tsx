@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
-import { offers, useListChange, useValueLists, type ValueList } from "../lib/lists";
+import { listsOn, offers, useListChange, useValueLists, type ListsPlace, type ValueList } from "../lib/lists";
 import { readable, readableTail } from "../lib/records";
 import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -18,18 +18,18 @@ type Meaning = NonNullable<S["ListSuggestionView"]["meaning"]>;
 const TONES: Tone[] = ["ok", "warn", "danger", "neutral"];
 const MEANINGS: Meaning[] = ["not_started", "open", "at_risk", "blocked", "done"];
 
-/** `level` 2 makes the heading the heading of a section of its own, which takes the cursor when the section opens. */
-export function ValueLists(props: { level?: 2 | 3 }) {
+/** `level` 2 makes the heading the heading of a section of its own, which takes the cursor when the section opens. `place`
+ * is the page the lists are shown on, which decides which of them it holds (each list shows in one place only). */
+export function ValueLists(props: { level?: 2 | 3; place?: ListsPlace }) {
   const { t } = useWords();
   const lists = useValueLists();
-  const { justMe } = useSides();
+  const { justMe, sides } = useSides();
+  const place = props.place ?? "lists";
   // Nothing is shown until the lists have loaded; a failure says so quietly.
   if (lists.isPending) return null;
   if (lists.isError) return <p className="hint">{t("lists.load_failed")}</p>;
-  // With no side beside Personal, the lists only the project fields take their values from (group, phase, priority and
-  // status) are left out, and the page says so in words rather than showing nothing.
-  const shown = justMe ? lists.data.filter((list) => !(list.used_by.length > 0 && list.used_by.every((use) => use.startsWith("project.")))) : lists.data;
-  if (lists.data.length === 0) return null;
+  const shown = listsOn(lists.data, place, { sides: sides.length > 0, justMe });
+  if (lists.data.length === 0 || (place === "business" && shown.length === 0)) return null;
   const Heading = props.level === 2 ? "h2" : "h3";
   return (
     <section className="panel-section" aria-labelledby="lists-title">
@@ -38,7 +38,7 @@ export function ValueLists(props: { level?: 2 | 3 }) {
           {t("lists.title")}
         </Heading>
       </div>
-      <p className="hint">{t(justMe ? "lists.intro.just_me" : "lists.intro")}</p>
+      <p className="hint">{t(justMe && place === "lists" ? "lists.intro.just_me" : "lists.intro")}</p>
       {shown.length === 0 ? (
         <p className="empty">{t("lists.none_yet")}</p>
       ) : (
