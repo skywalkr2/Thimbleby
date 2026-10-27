@@ -5,7 +5,7 @@ Kept current by the build session; finished items leave the list.
 ## Today (2026-10-28)
 
 1. **Ready to test (pushed 2026-10-28, commit 61f1f8b, CI green):**
-   `cd ~/dev/Thimbleby && git pull && uv sync && npm --prefix web ci && npm --prefix web run build`, then
+   `cd ~/dev/Thimbleby && git pull && uv sync --inexact && npm --prefix web ci && npm --prefix web run build`, then
    `uv run cockpit init ~/Thimbleby-try5` and `uv run cockpit serve -w ~/Thimbleby-try5`. You should see:
    - setup's "What it's for" as two tick boxes, and no raw data or lost ticks while you tick a mailbox's sides;
    - your sent mail read without choosing a folder;
