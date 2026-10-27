@@ -20,6 +20,7 @@ from typing import Any
 from engine import audience
 from engine.config import Config
 from engine.config.schema import ReportedSpeech
+from engine.language_words import language_words
 from engine.names import People
 from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
@@ -58,7 +59,7 @@ def hand_in(
     limit = None
     if pasted:
         settings = cfg or ws.config()
-        limit = audience.limit_of(pasted, settings.language.limit_markings, People(store, settings))
+        limit = audience.limit_of(pasted, language_words(settings.language, "limit_markings"), People(store, settings))
     with store.transaction() as tx:
         if pasted:
             digest = hashlib.sha256(pasted.encode("utf-8")).hexdigest()
@@ -162,20 +163,23 @@ def repeats_someone(text: str, speech: ReportedSpeech) -> bool:
     """Whether a note repeats someone else's words: a speaker other than the person next to a word of speech (before
     it, or after a leading word such as "per"), a passage in quotation marks of at least the configured length, or a
     chat pasted in. A speech word followed by a request to the person ("<name> asked me to ...") is not."""
-    own = {w.casefold() for w in speech.own_speakers}
-    if speech.verbs:
-        asked = f"(?!\\s+(?:{_words(speech.request_words)})\\b)" if speech.request_words else ""
-        pattern = rf"(?i)\b([^\W\d_][\w'’.-]*)\s+(?:{_words(speech.verbs)})\b{asked}"
+    own = {w.casefold() for w in language_words(speech, "own_speakers")}
+    verbs = language_words(speech, "verbs")
+    if verbs:
+        request_words = language_words(speech, "request_words")
+        asked = f"(?!\\s+(?:{_words(request_words)})\\b)" if request_words else ""
+        pattern = rf"(?i)\b([^\W\d_][\w'’.-]*)\s+(?:{_words(verbs)})\b{asked}"
         if any(found.group(1).casefold() not in own for found in re.finditer(pattern, text)):
             return True
-    if speech.lead_words:
-        pattern = rf"(?i:\b(?:{_words(speech.lead_words)}))\s+([^\W\d_a-z][\w'’.-]*)"
+    lead_words = language_words(speech, "lead_words")
+    if lead_words:
+        pattern = rf"(?i:\b(?:{_words(lead_words)}))\s+([^\W\d_a-z][\w'’.-]*)"
         if any(found.group(1).casefold() not in own for found in re.finditer(pattern, text)):
             return True
     for quoted in re.finditer(r'"([^"]+)"|“([^”]+)”', text):
         if len((quoted.group(1) or quoted.group(2)).split()) >= speech.quote_min_words:
             return True
-    chat = [re.compile(p, re.MULTILINE) for p in speech.chat_line_patterns]
+    chat = [re.compile(p, re.MULTILINE) for p in language_words(speech, "chat_line_patterns")]
     return sum(1 for p in chat for _ in p.finditer(text)) >= speech.chat_min_lines
 
 

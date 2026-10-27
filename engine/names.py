@@ -15,7 +15,7 @@ from email.utils import parseaddr
 from typing import Any, Literal
 
 from engine.config import Config
-from engine.config.schema import DEFAULT_SELF_WORDS
+from engine.language_words import language_words, shipped
 from engine.storage import Store
 
 
@@ -107,7 +107,7 @@ class People:
             {p.id: p.data for p in store.read().list("person")},
             cfg.workspace.user.person,
             context,
-            cfg.language.self_words,
+            language_words(cfg.language, "self_words"),
         )
         self.owner_format = cfg.workspace.owner_format
         self.team_names = {t.id: t.data["name"] for t in store.read().list("team")}
@@ -119,13 +119,13 @@ class People:
         pm: str | None,
         *,
         context: Iterable[str] = (),
-        self_words: Iterable[str] = DEFAULT_SELF_WORDS,
+        self_words: Iterable[str] | None = None,
         owner_format: str = "{full_name}",
         team_names: Mapping[str, str] | None = None,
     ) -> People:
         """The people from their records alone, for work that has no store."""
         self = object.__new__(cls)
-        self._build(dict(records), pm, context, self_words)
+        self._build(dict(records), pm, context, shipped("self_words") if self_words is None else self_words)
         self.owner_format = owner_format
         self.team_names = dict(team_names or {})
         return self

@@ -9,29 +9,12 @@ from __future__ import annotations
 import re
 import string
 from datetime import date
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from engine.due_phrases import (
-    DEFAULT_BEFORE_WORDS,
-    DEFAULT_CONDITION_WORDS,
-    DEFAULT_HOLD_WORDS,
-    DEFAULT_LEAD_WORDS,
-    DEFAULT_NUMBER_WORDS,
-    DEFAULT_ORDINAL_SUFFIXES,
-    DEFAULT_PHRASE_WORDS,
-    DEFAULT_TASK_VERBS,
-    DEFAULT_TIME_ZONES,
-)
-from engine.endings import (
-    DEFAULT_CALLED_OFF_WORDS,
-    DEFAULT_CLOSED_WORDS,
-    DEFAULT_DELIVERY_WORDS,
-    DEFAULT_MEETING_WORDS,
-)
-from engine.everyday_words import shipped as shipped_everyday_words
+from engine.due_phrases import DEFAULT_PHRASE_WORDS
 from engine.secrets import SecretHint
 
 
@@ -1694,14 +1677,6 @@ class ChecksFile(FileModel):
     )
 
 
-DEFAULT_TITLE_SKIP = (
-    r"(hi|hello|hey|dear|good (morning|afternoon|evening)|greetings)\b",
-    r"(from|to|cc|bcc|sent|date|subject|reply-to)\s*:",
-    r"(thanks|thank you|best|regards|cheers|sincerely)\b[ ,!.]*$",
-    r"-{2,}|_{2,}|>",
-)
-
-
 class MessageSettings(ConfigModel):
     greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
     actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
@@ -1857,45 +1832,38 @@ class MessageSettings(ConfigModel):
     )
 
 
-DEFAULT_SELF_WORDS = ("me", "myself", "I")
-DEFAULT_OWED_WORDS = ("you", "your", "please send", "me")
-DEFAULT_REQUEST_WORDS = ("can", "could", "will", "would", "please", "need to", "needs to", "should", "must")
-
-
-DEFAULT_CHAT_LINE_PATTERNS = (
-    # a time, then who wrote it and a colon: "[10:32] Name: ...", "10:32 - Name: ..."
-    r"^\s*[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AaPp][Mm])?(?:,\s?[\d/.-]{6,10})?"
-    r"[^\w\n:]{0,4}[^\W\d_][\w'’. -]{0,40}:\s+\S",
-    # who wrote it, then the time with am or pm, alone on the line: "Name  10:32 AM"
-    r"^\s*[^\W\d_][\w'’.-]*(?:\s+[^\W\d_][\w'’.-]*){0,2}\s+[\[(]?\d{1,2}:\d{2}(?::\d{2})?\s?[AaPp][Mm][\])]?\s*$",
+SHIPPED_LIST = "Not set by default: the core's shipped list is used, and setting this replaces that whole list."
+SHIPPED_BY_MEANING = (
+    "Not set by default: the core's shipped words are used for every meaning, and a meaning set here replaces the "
+    "shipped words of that meaning alone."
 )
 
 
+def word_list(description: str, *, meaning: bool = False) -> Any:
+    """A language word list: not set by default, because the core ships it (`engine/language_words.py` reads it, and
+    the workspace's own value replaces it)."""
+    return Field(None, description=f"{description} {SHIPPED_BY_MEANING if meaning else SHIPPED_LIST}")
+
+
 class ReportedSpeech(ConfigModel):
-    verbs: list[str] = Field(
-        default_factory=lambda: [
-            *("said", "says", "confirmed", "confirms", "told", "wrote", "writes", "asked", "wants"),
-            *("mentioned", "replied", "responded", "noted", "commented", "pinged"),
-        ],
-        description="Words that, after a name or other speaker, mark a note as repeating someone else's words: "
-        '"<name> said ...". Matched as whole words, ignoring case.',
+    words_group: ClassVar[str] = "reported_speech"
+
+    verbs: list[str] | None = word_list(
+        "Words that, after a name or other speaker, mark a note as repeating someone else's words: "
+        '"<name> said ...". Matched as whole words, ignoring case.'
     )
-    lead_words: list[str] = Field(
-        default_factory=lambda: ["per", "according to"],
-        description="Words that, before a name or other speaker, mark a note as repeating someone else's words: "
+    lead_words: list[str] | None = word_list(
+        "Words that, before a name or other speaker, mark a note as repeating someone else's words: "
         '"per <name> ...". The speaker has to start with a capital letter, so "per week" is not a speaker. Matched '
-        "as whole words, ignoring case.",
+        "as whole words, ignoring case."
     )
-    own_speakers: list[str] = Field(
-        default_factory=lambda: ["I", "we"],
-        description='Speakers that are the person themselves, so "I said" and "I told <name>" stay the person\'s own '
-        "words.",
+    own_speakers: list[str] | None = word_list(
+        'Speakers that are the person themselves, so "I said" and "I told <name>" stay the person\'s own words.'
     )
-    request_words: list[str] = Field(
-        default_factory=lambda: ["me to", "us to"],
-        description="Words that, right after one of the speech words, mean the speaker is asking the person to do "
+    request_words: list[str] | None = word_list(
+        "Words that, right after one of the speech words, mean the speaker is asking the person to do "
         'something: "<name> asked me to ..." is a request to the person, not content they report. Matched as whole '
-        "words, ignoring case.",
+        "words, ignoring case."
     )
     quote_min_words: int = Field(
         3,
@@ -1903,11 +1871,10 @@ class ReportedSpeech(ConfigModel):
         le=50,
         description="Text in quotation marks with at least this many words is someone else's words.",
     )
-    chat_line_patterns: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_CHAT_LINE_PATTERNS),
-        description="Patterns (regular expressions, matched at the start of a line) for a line of a pasted chat: a "
+    chat_line_patterns: list[str] | None = word_list(
+        "Patterns (regular expressions, matched at the start of a line) for a line of a pasted chat: a "
         "time and the name of who wrote it. A note with enough such lines is a chat pasted in, which is someone "
-        "else's words as a whole.",
+        "else's words as a whole."
     )
     chat_min_lines: int = Field(
         2,
@@ -1917,210 +1884,110 @@ class ReportedSpeech(ConfigModel):
     )
 
 
-DEFAULT_NEW_TERM_PATTERNS = [r"\b[A-Z]{2,}[0-9]*\b", r"\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b"]
-DEFAULT_NEW_TERM_IGNORE = [
-    *("OK", "FYI", "ASAP", "TBD", "TBC", "EOD", "ETA", "AM", "PM", "RE", "FW", "CC", "BCC", "NB", "PS"),
-    *("URGENT", "NOTE", "UPDATE", "REMINDER"),
-]
-
-
-DEFAULT_VERSION_PATTERNS = [
-    r"\b[vV]\d+(?:\.\d+){0,3}\b",
-    r"\b\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?\b",
-    r"(?i)\b(?:version|ver\.?|release|build)\s+\d+(?:\.\d+)*\b",
-]
-#: How a day is written in running text, as patterns with {iso}, {day}, {month} (the month's full or short name) and
-#: {year} filled in for the day being looked for.
-DEFAULT_DATE_PATTERNS = [
-    r"{iso}",
-    r"\b{day}(?:st|nd|rd|th)?\s+(?:of\s+)?{month}\b",
-    r"\b{month}\.?\s+{day}(?:st|nd|rd|th)?\b",
-    r"\bthe\s+{day}(?:st|nd|rd|th)\b",
-]
-DEFAULT_FINDINGS_WORDS = [
-    *("found", "finding", "findings", "discovered", "discrepancy", "discrepancies"),
-    *("inconsistency", "inconsistencies", "mismatch", "turns out"),
-]
-DEFAULT_MADE_PHRASES = [
-    *("drafted", "wrote up", "write-up", "writeup"),
-    *("created a draft", "made a draft", "prepared a draft", "saved a draft"),
-    *("created a file", "made a file", "saved a file", "generated a file"),
-    *("created a document", "made a document", "saved a document"),
-    *("created minutes", "wrote minutes", "made minutes"),
-]
-DEFAULT_NAME_SKIP_WORDS = [
-    *("the", "a", "an", "this", "that", "these", "those", "our", "your", "my", "his", "her", "their", "its"),
-    *("hi", "hello", "hey", "dear", "thanks", "thank", "please", "also", "and", "but", "so", "if", "when", "as"),
-    *("for", "to", "from", "with", "on", "in", "at", "by", "of", "is", "are", "was", "were", "we", "i", "it", "do"),
-]
-
-
 class LanguageFile(FileModel):
     messages: MessageSettings = Field(default_factory=MessageSettings, description="Wording of copied messages.")
-    self_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_SELF_WORDS),
-        description='The words the language uses for the person themselves ("assign it to me"). A name written as one '
-        "of these means the person, whatever case it is in.",
+    self_words: list[str] | None = word_list(
+        'The words the language uses for the person themselves ("assign it to me"). A name written as one '
+        "of these means the person, whatever case it is in."
     )
-    internal_terms: list[str] = Field(
-        default_factory=lambda: [
-            "changeset",
-            "ledger",
-            "applier",
-            "the assistant noticed",
-            "the assistant found",
-        ],
-        description="Words of the app's own workings that never belong in text written for someone else (a question "
-        "to them, a reply). Matched as whole words, ignoring case.",
+    internal_terms: list[str] | None = word_list(
+        "Words of the app's own workings that never belong in text written for someone else (a question "
+        "to them, a reply). Matched as whole words, ignoring case."
     )
-    rejecting_words: list[str] = Field(
-        default_factory=lambda: [
-            "not my job",
-            "not my place",
-            "why are we asking",
-            "don't ask",
-            "do not ask",
-            "no need to ask",
-            "we are not their boss",
-            "not ours to ask",
-        ],
-        description="Words in your note on a question that reject asking it at all, not its wording. The question is "
+    rejecting_words: list[str] | None = word_list(
+        "Words in your note on a question that reject asking it at all, not its wording. The question is "
         "then dropped with your words as the reason, never reworded into a politer version of the same ask. Matched "
-        "as whole words, ignoring case.",
+        "as whole words, ignoring case."
     )
-    owed_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_OWED_WORDS),
-        description="Words that, in the quoted words of an action for someone on another team, show the person owes "
+    owed_words: list[str] | None = word_list(
+        "Words that, in the quoted words of an action for someone on another team, show the person owes "
         'it something: a request addressed to them, such as "can you send it" or "please send the plan". Without '
         "one of them, or the person's or their team's name followed by a request word, such an action is recorded as "
-        "a fact instead. Matched as whole words, ignoring case.",
+        "a fact instead. Matched as whole words, ignoring case."
     )
-    request_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_REQUEST_WORDS),
-        description="Words that, right after the person's name or their team's (a comma or colon may come between), "
+    request_words: list[str] | None = word_list(
+        "Words that, right after the person's name or their team's (a comma or colon may come between), "
         'make the words a request addressed to them: "<name>, can you ..." or "<team> will need ...". A name with '
-        "none of them after it only says who something is for. Matched as whole words, ignoring case.",
+        "none of them after it only says who something is for. Matched as whole words, ignoring case."
     )
-    blocked_phrases: list[str] = Field(
-        default_factory=lambda: ["confirm", "check whether", "check if", "TBD?"],
-        description="Wording not allowed in actions and shared text; actions say what to do.",
+    blocked_phrases: list[str] | None = word_list(
+        "Wording not allowed in actions and shared text; actions say what to do."
     )
-    unanchored_words: list[str] = Field(
-        default_factory=lambda: [
-            "it",
-            "this",
-            "that",
-            "them",
-            "these",
-            "those",
-            "him",
-            "her",
-            "the above",
-            "the same",
-            "as discussed",
-            "as agreed",
-        ],
-        description="Words that point at something the reader can't see, so an action built on them can't be read on "
+    unanchored_words: list[str] | None = word_list(
+        "Words that point at something the reader can't see, so an action built on them can't be read on "
         'its own ("send it", "follow up on that"). A single word counts as the thing the action is done to, right '
         "after its first word and the lead words, or as its last word after a lead word; a phrase counts anywhere. "
-        "Matched as whole words, ignoring case.",
+        "Matched as whole words, ignoring case."
     )
-    unanchored_lead_words: list[str] = Field(
-        default_factory=lambda: ["up", "on", "to", "with", "about", "for", "back", "out", "off", "over", "at"],
-        description="Words that may come between an action's first word and the thing it is done to, such as the "
-        "'up on' of 'follow up on'.",
+    unanchored_lead_words: list[str] | None = word_list(
+        "Words that may come between an action's first word and the thing it is done to, such as the "
+        "'up on' of 'follow up on'."
     )
-    reasoning_phrases: list[str] = Field(
-        default_factory=lambda: [
-            *("no recorded fact", "no fact gives", "nothing recorded", "not recorded"),
-            *("couldn't find", "could not find", "not stated", "not mentioned"),
-            *("I assume", "I think"),
-        ],
-        description="Words and phrases that mark the assistant's reasoning, so a to-do's or a question's title that "
+    reasoning_phrases: list[str] | None = word_list(
+        "Words and phrases that mark the assistant's reasoning, so a to-do's or a question's title that "
         "holds one is returned: a title says what to do or ask, and the reasoning belongs in the change's summary. "
-        "Matched as whole words, ignoring case; words quoted from the input don't count.",
+        "Matched as whole words, ignoring case; words quoted from the input don't count."
     )
-    singling_out_phrases: list[str] = Field(
-        default_factory=lambda: [
-            *("missed", "forgot", "forgotten", "dropped the ball", "failed to"),
-            *("didn't send", "did not send", "never sent", "hasn't sent", "still hasn't"),
-            *("was late", "is late", "your fault", "their fault", "to blame"),
-        ],
-        description="Words and phrases that blame someone for a miss. A draft to several people that holds one in a "
+    singling_out_phrases: list[str] | None = word_list(
+        "Words and phrases that blame someone for a miss. A draft to several people that holds one in a "
         "sentence naming one of them is returned: a discrepancy in one person's work is asked of that person alone, in "
-        "a draft to them. Matched as whole words, ignoring case.",
+        "a draft to them. Matched as whole words, ignoring case."
     )
-    question_marks: list[str] = Field(
-        default_factory=lambda: ["?", "\uff1f", "\u061f"],
-        description="The characters that end a question in the language. A question's title that doesn't end in one "
-        "(a closing quote or bracket may follow) is a statement, and is returned to be asked as a question.",
+    question_marks: list[str] | None = word_list(
+        "The characters that end a question in the language. A question's title that doesn't end in one "
+        "(a closing quote or bracket may follow) is a statement, and is returned to be asked as a question."
     )
-    ask_lead_words: list[str] = Field(
-        default_factory=lambda: ["Can you", "Could you", "Would you", "Please"],
-        description="Words a sentence starts with when it asks someone to do something. In mail the person sent, an "
+    ask_lead_words: list[str] | None = word_list(
+        "Words a sentence starts with when it asks someone to do something. In mail the person sent, an "
         "action quoting such a sentence (or one that ends in a question mark) is the person asking someone else, not "
-        "their own promise. Matched as whole words, ignoring case.",
+        "their own promise. Matched as whole words, ignoring case."
     )
-    asking_words: list[str] = Field(
-        default_factory=lambda: [
-            *("when", "what", "which", "where", "will", "would", "could", "should"),
-            *("tell", "know", "does", "have", "there", "please", "about", "confirm"),
-        ],
-        description="Words that frame a question rather than say what it is about; they are left out when checking "
-        "whether a recorded fact already answers it.",
+    asking_words: list[str] | None = word_list(
+        "Words that frame a question rather than say what it is about; they are left out when checking "
+        "whether a recorded fact already answers it."
     )
-    own_promise_words: list[str] = Field(
-        default_factory=lambda: ["I'll", "I will"],
-        description="Words that make a sentence the person's own promise even when it also asks something: a request "
-        "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
+    own_promise_words: list[str] | None = word_list(
+        "Words that make a sentence the person's own promise even when it also asks something: a request "
+        "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case."
     )
-    claim_words: list[str] = Field(
-        default_factory=lambda: ["told me", "told us", "said that", "says that", "tells me", "claims"],
-        description="Words that, right after a person's name, say that person stated something (\"Kit told me it ships "
+    claim_words: list[str] | None = word_list(
+        "Words that, right after a person's name, say that person stated something (\"Kit told me it ships "
         'on the 10th"). A question to you about it is sent back once to ask that person instead. Matched as whole '
-        "words, ignoring case.",
+        "words, ignoring case."
     )
-    project_start_words: list[str] = Field(
-        default_factory=lambda: ["starting", "launching", "kicking off", "start", "launch", "kick off"],
-        description='Words that start a new piece of work ("we are starting the Harbor Survey"). Followed by a '
+    project_start_words: list[str] | None = word_list(
+        'Words that start a new piece of work ("we are starting the Harbor Survey"). Followed by a '
         "name in capitals that no project has, and recorded only as a fact, they are sent back once to propose the "
-        "project. Matched as whole words, ignoring case.",
+        "project. Matched as whole words, ignoring case."
     )
-    everyday_words: list[str] = Field(
-        default_factory=shipped_everyday_words,
-        description='Common words that a project named by one of them alone never files an item by ("Launch", '
+    everyday_words: list[str] | None = word_list(
+        'Common words that a project named by one of them alone never files an item by ("Launch", '
         '"Home"): they would match almost any message. Matched as whole words, ignoring case. Longer names, and a '
-        "project's aliases, still count. The default is the core's list for English; setting this replaces it, so "
-        "keep the words of it you still want and add the words of your own language or work.",
+        "project's aliases, still count."
     )
-    due_move_words: list[str] = Field(
-        default_factory=lambda: ["is now due", "can wait until", "moved to", "pushed to", "postponed to", "push it to"],
-        description='Words that give an open action a new day ("my review can wait until the 20th"). Followed by a '
+    due_move_words: list[str] | None = word_list(
+        'Words that give an open action a new day ("my review can wait until the 20th"). Followed by a '
         "date and answered with only a fact or a note, they are sent back once to move the action's date. Matched as "
-        "whole words, ignoring case.",
+        "whole words, ignoring case."
     )
-    unassigned_words: list[str] = Field(
-        default_factory=lambda: ["someone", "somebody", "anyone", "anybody", "nobody", "no one"],
-        description='Words that leave who does something open ("someone should find out"). An action quoting one, '
+    unassigned_words: list[str] | None = word_list(
+        'Words that leave who does something open ("someone should find out"). An action quoting one, '
         "given owners the words don't name, is sent back once to leave its owners empty so you pick one. Matched as "
-        "whole words, ignoring case.",
+        "whole words, ignoring case."
     )
-    promise_words: list[str] = Field(
-        default_factory=lambda: ["will", "is going to", "are going to"],
-        description='Words that make a sentence someone\'s promise to do something ("Kit will send it by Friday"). '
+    promise_words: list[str] | None = word_list(
+        'Words that make a sentence someone\'s promise to do something ("Kit will send it by Friday"). '
         "Such words after a name and before a date, recorded as a fact rather than as that person's action, are sent "
-        "back once. Matched as whole words, ignoring case.",
+        "back once. Matched as whole words, ignoring case."
     )
-    promise_state_words: list[str] = Field(
-        default_factory=lambda: ["be"],
-        description='Words that, right after a promise word, make it a state rather than a promise ("will be away on '
-        'the 20th"): such a sentence stays a fact. Matched as whole words, ignoring case.',
+    promise_state_words: list[str] | None = word_list(
+        'Words that, right after a promise word, make it a state rather than a promise ("will be away on '
+        'the 20th"): such a sentence stays a fact. Matched as whole words, ignoring case.'
     )
-    team_promise_words: list[str] = Field(
-        default_factory=lambda: ["we'll", "we will", "we're going to"],
-        description="Words that make a promise a team's rather than one person's. An action quoting one of them, owned "
+    team_promise_words: list[str] | None = word_list(
+        "Words that make a promise a team's rather than one person's. An action quoting one of them, owned "
         "by the message's sender alone though the words don't name them, is sent back to leave its owners empty. "
-        "Matched as whole words, ignoring case.",
+        "Matched as whole words, ignoring case."
     )
     title_min_words: int = Field(
         3,
@@ -2130,35 +1997,20 @@ class LanguageFile(FileModel):
         "gives way to the first meaningful line of what came in, but only when that line fits whole; with no whole "
         "line a short topic of two words or more stays, and with none the title says its topic is missing.",
     )
-    run_on_separators: list[str] = Field(
-        default_factory=lambda: [" / ", "; "],
-        description="Separators that mean several items were crammed in one line.",
-    )
-    rule_report_phrases: list[str] = Field(
-        default_factory=lambda: [
-            "from now on",
-            "going forward",
-            "from here on",
-            "in future",
-            "should never",
-            "should always",
-            "don't ask",
-            "do not ask",
-        ],
-        description="Phrases that mark a draft report to the product's maintainers as a standing rule for the "
+    run_on_separators: list[str] | None = word_list("Separators that mean several items were crammed in one line.")
+    rule_report_phrases: list[str] | None = word_list(
+        "Phrases that mark a draft report to the product's maintainers as a standing rule for the "
         "assistant rather than a request for a change to the product. Such a report is sent back to be proposed as "
-        "a rule, which waits for you.",
+        "a rule, which waits for you."
     )
-    new_term_patterns: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_NEW_TERM_PATTERNS),
-        description="Patterns (regular expressions) for words in an input that look like the name of a system or an "
+    new_term_patterns: list[str] | None = word_list(
+        "Patterns (regular expressions) for words in an input that look like the name of a system or an "
         "acronym: by default two or more capital letters in a row, or a word of several capitalized parts. A word "
-        "that matches and is not in the glossary, the people or the projects is suggested as a new term.",
+        "that matches and is not in the glossary, the people or the projects is suggested as a new term."
     )
-    new_term_ignore: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_NEW_TERM_IGNORE),
-        description="Words that match a new-term pattern but are everyday abbreviations, never suggested as new "
-        "terms. Case is ignored.",
+    new_term_ignore: list[str] | None = word_list(
+        "Words that match a new-term pattern but are everyday abbreviations, never suggested as new "
+        "terms. Case is ignored."
     )
     known_terms_shipped: bool = Field(
         True,
@@ -2174,10 +2026,9 @@ class LanguageFile(FileModel):
     never_shown: list[str] = Field(
         default_factory=list, description="Words that must never appear in anything people see (model names are added)."
     )
-    title_skip: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_TITLE_SKIP),
-        description="Lines an item's title never comes from: greetings, quoted mail headers, sign-offs (regular "
-        "expressions, matched at the start of a line, ignoring case). A title is taken from the first line left.",
+    title_skip: list[str] | None = word_list(
+        "Lines an item's title never comes from: greetings, quoted mail headers, sign-offs (regular "
+        "expressions, matched at the start of a line, ignoring case). A title is taken from the first line left."
     )
     reported_speech: ReportedSpeech = Field(
         default_factory=ReportedSpeech,
@@ -2185,66 +2036,55 @@ class LanguageFile(FileModel):
         "person reports, whatever button it was typed on: facts and dates from it apply, but a rule or lesson from it "
         "waits for the person.",
     )
-    already_sent_phrases: list[str] = Field(
-        default_factory=lambda: [
-            *("I sent", "I've sent", "I have sent", "I just sent", "I emailed", "I've emailed"),
-            *("I forwarded", "I've forwarded", "we sent", "we've sent"),
-        ],
-        description="Phrases that say the person already sent something. When an input says so and names no one it "
+    already_sent_phrases: list[str] | None = word_list(
+        "Phrases that say the person already sent something. When an input says so and names no one it "
         "went to, a question or action that names a recipient for it is returned: the assistant asks the person "
-        "who it went to instead of guessing.",
+        "who it went to instead of guessing."
     )
-    due_lead_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_LEAD_WORDS),
-        description="Words that may begin the words a due date is read from and say only that a date follows "
+    due_lead_words: list[str] | None = word_list(
+        "Words that may begin the words a due date is read from and say only that a date follows "
         '("by", "on", "due", "due by", "no later than"). The date reader steps past them, so "due Oct 22" and '
-        '"on the 3rd" read as the date alone. Case is ignored.',
+        '"on the 3rd" read as the date alone. Case is ignored.'
     )
-    due_ordinal_suffixes: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_ORDINAL_SUFFIXES),
-        description='The endings that make a number the day of a month ("st", "nd", "rd" and "th" of "the 25th"). '
-        'With none, "the 25th" is not read as a date. Case is ignored.',
+    due_ordinal_suffixes: list[str] | None = word_list(
+        'The endings that make a number the day of a month ("st", "nd", "rd" and "th" of "the 25th"). '
+        'With none, "the 25th" is not read as a date. Case is ignored.'
     )
-    due_condition_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_CONDITION_WORDS),
-        description='Words that make a promise\'s due a condition or leave it open ("once the keys arrive", "after the '
+    due_condition_words: list[str] | None = word_list(
+        'Words that make a promise\'s due a condition or leave it open ("once the keys arrive", "after the '
         'workshop", "soon"). Due words with one of them, as whole words, that the date reader can\'t read as a date '
         "keep their words and have no date, whatever date the assistant gave. Other due words the reader can't read "
-        "keep the assistant's own date, marked for you to check. Case is ignored.",
+        "keep the assistant's own date, marked for you to check. Case is ignored."
     )
-    due_hold_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_HOLD_WORDS),
-        description='The condition words that wait for something to happen ("once the keys arrive", "after the '
+    due_hold_words: list[str] | None = word_list(
+        'The condition words that wait for something to happen ("once the keys arrive", "after the '
         'workshop", "until you publish it"). A promise whose due words hold one, and that the date reader can\'t read '
         "as a date, is put on hold from the start, waiting for those words. Condition words not listed here only leave "
-        "the date open. Case is ignored.",
+        "the date open. Case is ignored."
     )
-    due_before_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_BEFORE_WORDS),
-        description='The condition words after which a calendar entry may be named ("before the print sync"). When the '
+    due_before_words: list[str] | None = word_list(
+        'The condition words after which a calendar entry may be named ("before the print sync"). When the '
         "words that follow name one entry that is still ahead, the promise is due at that entry and moves with it; "
-        "when they name none, or more than one, it has no date and keeps its words. Case is ignored.",
+        "when they name none, or more than one, it has no date and keeps its words. Case is ignored."
     )
-    due_phrase_words: dict[str, list[str]] = Field(
-        default_factory=lambda: {concept: list(words) for concept, words in DEFAULT_PHRASE_WORDS.items()},
-        description="The words of the day-and-time phrases the date reader knows, by what they mean: "
+    due_phrase_words: dict[str, list[str]] | None = word_list(
+        "The words of the day-and-time phrases the date reader knows, by what they mean: "
         'day_after_tomorrow, later_today, tonight, noon, midnight, first_thing ("first thing Monday"), '
         'end_of_month, end_of_next_month, this_weekend, within ("within 48 hours") and the units hours, days and '
         "working_days. Each is a list of whole phrases; a meaning left out keeps its default, and an empty list turns "
         "it off. Case is ignored.",
+        meaning=True,
     )
-    due_number_words: dict[str, int] = Field(
-        default_factory=lambda: dict(DEFAULT_NUMBER_WORDS),
-        description='The number words the date reader understands in "within two working days", each with its number. '
-        "Digits are always read. Case is ignored.",
+    due_number_words: dict[str, int] | None = word_list(
+        'The number words the date reader understands in "within two working days", each with its number. '
+        "Digits are always read. Case is ignored."
     )
-    time_zone_abbreviations: dict[str, str] = Field(
-        default_factory=lambda: dict(DEFAULT_TIME_ZONES),
-        description='Time zone abbreviations and plain names, and the zone each names (ET, or "Eastern", for Eastern '
+    time_zone_abbreviations: dict[str, str] | None = word_list(
+        'Time zone abbreviations and plain names, and the zone each names (ET, or "Eastern", for Eastern '
         'time), so "by 5pm ET" is read in that zone and shown in yours. A name stands for the zone on that date, so '
         '"CST" in July is Central time. An abbreviation that means different zones in different places ("IST") is '
         "better left out: it is read in your own time zone when that zone goes by it on that date, and otherwise its "
-        "words are left for you to check. Case is ignored.",
+        "words are left for you to check. Case is ignored."
     )
     holiday_calendar: str | None = Field(
         None,
@@ -2252,77 +2092,63 @@ class LanguageFile(FileModel):
         "for your language, when there is one; a language with none reads no holiday names.",
         json_schema_extra={"choices": "holiday_calendars"},
     )
-    task_verbs: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_TASK_VERBS),
-        description='The verbs a task\'s title starts with ("pay", "send", "book"). A plain calendar entry (nobody '
+    task_verbs: list[str] | None = word_list(
+        'The verbs a task\'s title starts with ("pay", "send", "book"). A plain calendar entry (nobody '
         'else invited, no description) whose first word is one of them is offered as a to-do with one click ("Pay '
-        'the deposit"); other entries are just kept in the calendar. Case is ignored.',
+        'the deposit"); other entries are just kept in the calendar. Case is ignored.'
     )
-    delivery_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_DELIVERY_WORDS),
-        description='The words that say something was delivered ("sent", "finished", "it\'s in", "did it", "done"). '
+    delivery_words: list[str] | None = word_list(
+        'The words that say something was delivered ("sent", "finished", "it\'s in", "did it", "done"). '
         "An ending the assistant reads as done stands, and credits the people who owed it, only when the words it "
-        "quotes hold one of these and none of the called-off words. Case is ignored.",
+        "quotes hold one of these and none of the called-off words. Case is ignored."
     )
-    called_off_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_CALLED_OFF_WORDS),
-        description="The words that say something was learned another way, moved to a meeting or no longer matters "
+    called_off_words: list[str] | None = word_list(
+        "The words that say something was learned another way, moved to a meeting or no longer matters "
         '("moot", "covered by", "no longer needed", "we\'ll get it in", "will cover"). An ending whose words hold one '
         "of these and none of the delivery words is called off instead of done: nobody is credited, and your words "
-        "are the reason. Case is ignored.",
+        "are the reason. Case is ignored."
     )
-    meeting_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_MEETING_WORDS),
-        description="The words that say something moved into a meeting ('we'll cover it', 'in the planning sessions', "
+    meeting_words: list[str] | None = word_list(
+        "The words that say something moved into a meeting ('we'll cover it', 'in the planning sessions', "
         "'take it up at'). An ending that is called off, whose words hold one of these and name a meeting the "
         "workspace knows (a calendar entry still ahead, or a series), also puts the action on that meeting's agenda, "
-        "linked to it. Case is ignored.",
+        "linked to it. Case is ignored."
     )
-    closed_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_CLOSED_WORDS),
-        description='The words that only say something is closed ("close", "closed", "mark it closed"). Closed with '
+    closed_words: list[str] | None = word_list(
+        'The words that only say something is closed ("close", "closed", "mark it closed"). Closed with '
         'neither delivery words nor called-off words is neither done nor called off: you are asked "Done by the owner, '
-        'or no longer needed?", even for your own note. Case is ignored.',
+        'or no longer needed?", even for your own note. Case is ignored.'
     )
-    limit_markings: list[str] = Field(
-        default_factory=lambda: [
-            *("internal only", "do not forward", "don't forward", "not for the client"),
-            *("not for distribution", "confidential", "for your eyes only"),
-        ],
-        description="Phrases (whole words, ignoring case) with which a sender limits who may see a message. When the "
+    limit_markings: list[str] | None = word_list(
+        "Phrases (whole words, ignoring case) with which a sender limits who may see a message. When the "
         "new text of a message holds one, the message is limited to the people it went to and came from: a question "
-        "or reply drafted from it to anyone else is refused, until the person widens the limit.",
+        "or reply drafted from it to anyone else is refused, until the person widens the limit."
     )
-    version_patterns: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_VERSION_PATTERNS),
-        description="Patterns (regular expressions) for a tool's version number, such as v2.3 or build 1042. A "
+    version_patterns: list[str] | None = word_list(
+        "Patterns (regular expressions) for a tool's version number, such as v2.3 or build 1042. A "
         "question or draft for someone else that holds one is returned: it names the page, links it and says what "
         "changed or when. A version that is part of a name the workspace knows (a glossary term, a project, an "
-        "organization or a team) passes.",
+        "organization or a team) passes."
     )
-    date_patterns: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_DATE_PATTERNS),
-        description="Patterns (regular expressions) for how a day is written in running text, with {iso} (2026-10-22), "
+    date_patterns: list[str] | None = word_list(
+        "Patterns (regular expressions) for how a day is written in running text, with {iso} (2026-10-22), "
         "{day}, {month} (the month's full or short name) and {year} standing for the day being looked for. When a "
         "date moves, records on the same project whose words match the old day are brought to the assistant as "
-        "tied to it. Case is ignored.",
+        "tied to it. Case is ignored."
     )
-    findings_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_FINDINGS_WORDS),
-        description="Words that show a project's summary holds findings instead of its status (a discrepancy found, "
-        "a mismatch). The summary says where the project stands; what was found goes to facts. Case is ignored.",
+    findings_words: list[str] | None = word_list(
+        "Words that show a project's summary holds findings instead of its status (a discrepancy found, "
+        "a mismatch). The summary says where the project stands; what was found goes to facts. Case is ignored."
     )
-    made_phrases: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_MADE_PHRASES),
-        description="Phrases that say a change made a draft, a write-up or a file. When a change's summary says so "
+    made_phrases: list[str] | None = word_list(
+        "Phrases that say a change made a draft, a write-up or a file. When a change's summary says so "
         "and the change holds nothing it made, it is returned: the draft or file is made where the person can open "
-        "it, or the summary stops claiming it.",
+        "it, or the summary stops claiming it."
     )
-    name_skip_words: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_NAME_SKIP_WORDS),
-        description="Everyday words that can start a sentence or a phrase and are never part of a person's name. The "
+    name_skip_words: list[str] | None = word_list(
+        "Everyday words that can start a sentence or a phrase and are never part of a person's name. The "
         "check that names are spelled as the workspace has them ignores them at the edges of a capitalized phrase. "
-        "Case is ignored.",
+        "Case is ignored."
     )
     bare_confirmation_words: int = Field(
         4,
@@ -2335,8 +2161,8 @@ class LanguageFile(FileModel):
 
     @field_validator("title_skip", "new_term_patterns", "version_patterns")
     @classmethod
-    def _patterns_compile(cls, value: list[str]) -> list[str]:
-        for pattern in value:
+    def _patterns_compile(cls, value: list[str] | None) -> list[str] | None:
+        for pattern in value or []:
             try:
                 re.compile(pattern)
             except re.error as exc:
@@ -2345,8 +2171,8 @@ class LanguageFile(FileModel):
 
     @field_validator("due_phrase_words")
     @classmethod
-    def _phrase_words_are_known(cls, value: dict[str, list[str]]) -> dict[str, list[str]]:
-        unknown = sorted(set(value) - set(DEFAULT_PHRASE_WORDS))
+    def _phrase_words_are_known(cls, value: dict[str, list[str]] | None) -> dict[str, list[str]] | None:
+        unknown = sorted(set(value or {}) - set(DEFAULT_PHRASE_WORDS))
         if unknown:
             raise ValueError(
                 f"{', '.join(unknown)} is not a meaning the date reader knows; use {sorted(DEFAULT_PHRASE_WORDS)}"
@@ -2355,8 +2181,8 @@ class LanguageFile(FileModel):
 
     @field_validator("time_zone_abbreviations")
     @classmethod
-    def _abbreviations_name_zones(cls, value: dict[str, str]) -> dict[str, str]:
-        for abbreviation, name in value.items():
+    def _abbreviations_name_zones(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        for abbreviation, name in (value or {}).items():
             try:
                 ZoneInfo(name)
             except (ZoneInfoNotFoundError, ValueError) as exc:
@@ -2365,8 +2191,8 @@ class LanguageFile(FileModel):
 
     @field_validator("date_patterns")
     @classmethod
-    def _date_patterns_compile(cls, value: list[str]) -> list[str]:
-        for pattern in value:
+    def _date_patterns_compile(cls, value: list[str] | None) -> list[str] | None:
+        for pattern in value or []:
             filled = pattern
             for name, sample in (("iso", "2026-01-02"), ("day", "2"), ("month", "January"), ("year", "2026")):
                 filled = filled.replace("{" + name + "}", sample)

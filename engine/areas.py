@@ -23,6 +23,7 @@ from typing import Any
 from engine import sides
 from engine.ai.router import accounts
 from engine.ai.smoke import where_of
+from engine.language_words import language_words
 
 
 def area_of(view: Any, project_id: str | None) -> str | None:
@@ -193,7 +194,7 @@ def proposals(view: Any, cfg: Any) -> list[Proposal]:
     personal = sides.personal_project(view, cfg)
     if needed <= 0 or personal is None:
         return []
-    everyday = {w.strip().lower() for w in cfg.language.everyday_words}
+    everyday = {w.strip().lower() for w in language_words(cfg.language, "everyday_words")}
     named = {
         _stem(word)
         for project in view.list("project")

@@ -23,6 +23,7 @@ from datetime import UTC, datetime, time, timedelta
 from typing import Any, Literal
 
 from engine import closes, sides
+from engine.language_words import language_words
 from engine.reply_lines import ANSWERED_RULE as RULE_REPLIED
 from engine.storage import WriteContext
 from engine.titles import head_of, title_for
@@ -253,7 +254,7 @@ def _who(ws: Any, view: Any, cfg: Any, people: Any, request: Any, cs: Any) -> _W
         source.data if source is not None else None,
         cs.data,
         people=people,
-        skip=list(cfg.language.title_skip),
+        skip=list(language_words(cfg.language, "title_skip")),
         min_words=cfg.language.title_min_words,
         head=head_of(ws.sources_dir, source.data.get("content_hash") if source is not None else None),
     )

@@ -516,13 +516,19 @@ def test_a_pasted_chat_is_reported_as_a_whole():
 
 def test_the_reported_speech_words_have_defaults_and_demo_values_in_both_workspaces():
     from engine.config.schema import ReportedSpeech
+    from engine.language_words import language_words
 
     default = ReportedSpeech()
-    assert {"mentioned", "replied", "responded", "noted", "commented", "pinged"} <= set(default.verbs)
-    assert default.lead_words == ["per", "according to"]
+    assert {"mentioned", "replied", "responded", "noted", "commented", "pinged"} <= set(
+        language_words(default, "verbs")
+    )
+    assert language_words(default, "lead_words") == ["per", "according to"]
     for template in (DEMO_A, DEMO_B):
         shown = yaml.safe_load((template / "config" / "language.yaml").read_text())["reported_speech"]
-        assert ReportedSpeech(**shown) == default, template.name
+        demo = ReportedSpeech(**shown)
+        for name in ("verbs", "lead_words", "own_speakers", "request_words", "chat_line_patterns"):
+            assert language_words(demo, name) == language_words(default, name), (template.name, name)
+        assert (demo.quote_min_words, demo.chat_min_lines) == (default.quote_min_words, default.chat_min_lines)
 
 
 def test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person(api):

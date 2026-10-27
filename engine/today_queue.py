@@ -41,6 +41,7 @@ from engine import (
 from engine.blocked import standing_hold
 from engine.firm_due import firm_due
 from engine.followups import ROUTING, sections
+from engine.language_words import language_words
 from engine.names import People
 from engine.owners import suggest_owner
 from engine.plugin_api import TODAY_GROUPS
@@ -364,7 +365,7 @@ def _everything(
     sources = {s.id: s.data for s in reader.list("source")}
     changesets = {c.id: c.data for c in reader.list("changeset")}
     kinds = watched_kinds(reader)
-    skip = list(cfg.language.title_skip)
+    skip = list(language_words(cfg.language, "title_skip"))
 
     titled: dict[tuple[int, int | None], Title] = {}
 

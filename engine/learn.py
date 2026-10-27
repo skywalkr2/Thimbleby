@@ -20,6 +20,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from engine.language_words import language_words
 from engine.ops import ChangesetIn
 from engine.records import REGISTRY, RunKnowledge
 from engine.storage import WriteContext
@@ -390,7 +391,7 @@ def rule_in_report(cfg: Any, title: str, text: str) -> str | None:
     """The configured phrase that makes a draft report to the maintainers read as a standing rule for the assistant,
     or None."""
     words = f"{title} {text}".lower()
-    for phrase in cfg.language.rule_report_phrases:
+    for phrase in language_words(cfg.language, "rule_report_phrases"):
         if phrase.strip() and re.search(r"(?<![a-z])" + re.escape(phrase.lower()) + r"(?![a-z])", words):
             return phrase
     return None

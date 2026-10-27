@@ -238,12 +238,15 @@ def test_a_plain_entry_whose_first_word_is_a_task_verb_is_offered_as_a_to_do_and
 
 def test_the_task_verbs_are_a_language_setting_with_a_description_and_demo_values(tmp_path):
     from engine.config.schema import LanguageFile
+    from engine.language_words import language_words
 
     assert LanguageFile.model_fields["task_verbs"].description
-    assert "pay" in LanguageFile().task_verbs and "send" in LanguageFile().task_verbs
+    assert "pay" in language_words(LanguageFile(), "task_verbs") and "send" in language_words(
+        LanguageFile(), "task_verbs"
+    )
     for name in ("demo-a", "demo-b"):
         language = yaml.safe_load((DEMO_B.parent / name / "config" / "language.yaml").read_text())
-        assert language["task_verbs"] == LanguageFile().task_verbs
+        assert language["task_verbs"] == language_words(LanguageFile(), "task_verbs")
 
 
 def test_changing_the_verbs_changes_what_is_offered(cal):

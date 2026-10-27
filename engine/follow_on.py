@@ -28,6 +28,7 @@ from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from engine.language_words import language_words
 from engine.storage.store import WriteContext
 
 TASK = "follow-on"
@@ -315,7 +316,7 @@ def tied_records(view: Any, cfg: Any, moves: list[Move]) -> list[Tied]:
                 continue
             words = _words(kind, data)
             for day in old:
-                if any(rx.search(words) for rx in date_regexes(cfg.language.date_patterns, day)):
+                if any(rx.search(words) for rx in date_regexes(language_words(cfg.language, "date_patterns"), day)):
                     add(move, kind, stored, f"its words give the old day, {day.isoformat()}", link=False, cites=True)
             if replaced is not None and topic_share(replaced.data["text"], words) >= settings.follow_on_match:
                 add(move, kind, stored, f"its words repeat the replaced fact {replaced.id}", link=False, cites=True)

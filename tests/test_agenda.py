@@ -14,6 +14,7 @@ import pytest
 from engine import endings
 from engine.ai.adapters.stub import set_responder
 from engine.applier import Context, Inputs, apply_changeset, check, release, undo
+from engine.language_words import shipped
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, PERSON_ONLY_OPS, TIERS
 from engine.record_page import page as record_page
@@ -235,10 +236,10 @@ def test_the_meeting_words_have_a_description_a_default_and_demo_values_in_both_
     from engine.config.schema import LanguageFile
     from tests.conftest import DEMO_A
 
-    assert LanguageFile.model_fields["meeting_words"].description and LanguageFile().meeting_words
+    assert LanguageFile.model_fields["meeting_words"].description and shipped("meeting_words")
     for template in (DEMO_A, DEMO_B):
         language = yaml.safe_load((template / "config" / "language.yaml").read_text())
-        assert language["meeting_words"] == list(endings.DEFAULT_MEETING_WORDS)
+        assert language["meeting_words"] == shipped("meeting_words")
 
 
 def test_called_off_into_a_meeting_it_is_dropped_and_put_on_that_meetings_agenda_and_undo_takes_both_back(env):

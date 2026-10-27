@@ -235,6 +235,7 @@ from engine.followups import (
     unmark_sent,
 )
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
+from engine.language_words import language_words
 from engine.made import made_by
 from engine.names import People, render_owner
 from engine.next_steps import add_project as add_held_project
@@ -1567,7 +1568,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                             source,
                             cs.data if cs is not None else None,
                             people=people,
-                            skip=list(cfg.language.title_skip),
+                            skip=list(language_words(cfg.language, "title_skip")),
                             min_words=cfg.language.title_min_words,
                             head=head_of(ws.sources_dir, (source or {}).get("content_hash")),
                             watched_kind=kinds.get((watched.get("source"), watched.get("key"))),

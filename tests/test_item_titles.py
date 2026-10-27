@@ -6,12 +6,12 @@ and no title ends in a piece of a sentence."""
 
 from __future__ import annotations
 
-from engine.config.schema import DEFAULT_TITLE_SKIP
+from engine.language_words import shipped
 from engine.names import Resolved
 from engine.titles import title_for
 from tests.conftest import DEMO_B, fixture_records
 
-SKIP = list(DEFAULT_TITLE_SKIP)
+SKIP = shipped("title_skip")
 MIN = 3
 ORG = fixture_records(DEMO_B, "organization")[2]["name"]
 

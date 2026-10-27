@@ -18,6 +18,7 @@ from engine import endings, held_ask
 from engine.applier import Context, Inputs, apply_as_person, apply_changeset, release, undo
 from engine.config.schema import LanguageFile
 from engine.dispatcher import signal as record_signal  # noqa: F401  (the one place signals are written)
+from engine.language_words import shipped
 from engine.names import People
 from engine.ops import CHANGESET
 from engine.record_page import _completed
@@ -295,16 +296,16 @@ def test_an_owner_who_was_never_told_gets_no_line_and_neither_does_the_person(en
 def test_the_settings_have_descriptions_defaults_and_demo_values_in_both_workspaces():
     for key in ("delivery_words", "called_off_words", "closed_words"):
         assert LanguageFile.model_fields[key].description
-        assert getattr(LanguageFile(), key)
+        assert shipped(key) and getattr(LanguageFile(), key) is None
     assert LanguageFile.model_fields["messages"].annotation.model_fields["called_off_notice"].description
     for template in (DEMO_A, DEMO_B):
         language = yaml.safe_load((template / "config" / "language.yaml").read_text())
         for key, default in (
-            ("delivery_words", endings.DEFAULT_DELIVERY_WORDS),
-            ("called_off_words", endings.DEFAULT_CALLED_OFF_WORDS),
-            ("closed_words", endings.DEFAULT_CLOSED_WORDS),
+            ("delivery_words", shipped("delivery_words")),
+            ("called_off_words", shipped("called_off_words")),
+            ("closed_words", shipped("closed_words")),
         ):
             assert language[key] == list(default)
         assert "{item}" in language["messages"]["called_off_notice"]
-    for word in endings.DEFAULT_CLOSED_WORDS:
+    for word in shipped("closed_words"):
         assert endings.reading(word, LanguageFile()) == "choice"  # each alone is neither done nor called off

@@ -45,6 +45,7 @@ from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
 from engine.intake import is_reported, source_text
+from engine.language_words import language_words
 from engine.learning import request_learns
 from engine.names import People
 from engine.new_refs import NewRefs, WithMade, created_in
@@ -708,7 +709,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 ctx.store,
                 asked,
                 similarity=ctx.cfg.checks.tuning.already_known.similarity,
-                asking_words=ctx.cfg.language.asking_words,
+                asking_words=language_words(ctx.cfg.language, "asking_words"),
                 level=ctx.data_level,
             )
             if known is not None:
@@ -774,7 +775,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 _wording(i, op.reply, ctx, lint, quotes)
                 _for_reader(i, op.reply, ctx, lint)
                 _single_out(i, [op.reply], singling_out.group_of_message(ctx.people, ctx.inputs.raw_input), ctx, lint)
-            if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
+            if any(sep in reads for sep in language_words(ctx.cfg.language, "run_on_separators")):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
             _item_text(i, op.text, ctx, lint, quotes)
             if not _stands_alone(without_links(op.text), ctx):
@@ -1114,7 +1115,7 @@ def _quotes_in(op: OpModel, ctx: Context) -> list[str]:
 
 def _wording(i: int, text: str, ctx: Context, lint: Any, quotes: list[str] | None = None) -> None:
     lowered = words_of(text, quotes or []).lower()
-    for phrase in ctx.cfg.language.blocked_phrases:
+    for phrase in language_words(ctx.cfg.language, "blocked_phrases"):
         if re.search(r"(?<![a-z])" + re.escape(phrase.lower()) + r"(?![a-z])", lowered):
             lint(i, "blocked-wording", f"avoid {phrase!r}: say what to do, or ask the real question")
             return
@@ -1131,7 +1132,10 @@ def _item_text(i: int, title: str, ctx: Context, lint: Any, quotes: list[str], *
     asked as one. What marks reasoning and what ends a question are language settings; words quoted from the input are
     the sender's, not the assistant's reasoning."""
     reads = words_of(title, quotes)
-    phrase = next((p for p in ctx.cfg.language.reasoning_phrases if p.strip() and scope.has_word(reads, p)), None)
+    phrase = next(
+        (p for p in language_words(ctx.cfg.language, "reasoning_phrases") if p.strip() and scope.has_word(reads, p)),
+        None,
+    )
     if phrase is not None:
         lint(i, "reasoning-in-title", f"the title holds reasoning ({phrase!r}): {REASONING_WHERE}")
     if asks and not _asked_as_question(title, ctx):
@@ -1146,7 +1150,7 @@ def _asked_as_question(title: str, ctx: Context) -> bool:
     """Whether a title ends in one of the language's question marks, ignoring spaces and the closing quotes and
     brackets after it."""
     ended = title.rstrip().rstrip("\"'\u2019\u201d)]}>").rstrip()
-    return any(ended.endswith(mark) for mark in ctx.cfg.language.question_marks if mark)
+    return any(ended.endswith(mark) for mark in language_words(ctx.cfg.language, "question_marks") if mark)
 
 
 def _for_reader(i: int, text: str, ctx: Context, lint: Any) -> None:
@@ -1154,7 +1158,9 @@ def _for_reader(i: int, text: str, ctx: Context, lint: Any) -> None:
     quoted back."""
     ids = "|".join(sorted({model.prefix for model in REGISTRY.values()}, key=len, reverse=True))
     found = re.search(rf"(?<![A-Za-z0-9-])(?:{ids})-\d+(?![A-Za-z0-9])", text)
-    term = next((t for t in ctx.cfg.language.internal_terms if t.strip() and scope.has_word(text, t)), None)
+    term = next(
+        (t for t in language_words(ctx.cfg.language, "internal_terms") if t.strip() and scope.has_word(text, t)), None
+    )
     if found is not None:
         lint(i, "bookkeeping", f"{found.group(0)} is the app's own id: name the thing in words the reader knows")
     elif term is not None:
@@ -1170,7 +1176,9 @@ def _single_out(i: int, texts: Any, group: list[str], ctx: Context, lint: Any) -
     group of two or more people other than the person is checked for a sentence that blames one of them."""
     if len(group) < 2:
         return
-    found = singling_out.singled_out(ctx.people, " ".join(texts), group, ctx.cfg.language.singling_out_phrases)
+    found = singling_out.singled_out(
+        ctx.people, " ".join(texts), group, language_words(ctx.cfg.language, "singling_out_phrases")
+    )
     if found is not None:
         who = ctx.people.name(found[0])
         lint(
@@ -1590,7 +1598,10 @@ def _guessed_recipient(ctx: Context, view: Any, op: QuestionAddOp | ActionAddOp)
         if person is not None:
             recipients.append([person.data["full_name"], *person.data.get("aliases", [])])
     return guessed_recipient(
-        f"{ctx.inputs.raw_input}\n{ctx.inputs.note}", text, recipients, ctx.cfg.language.already_sent_phrases
+        f"{ctx.inputs.raw_input}\n{ctx.inputs.note}",
+        text,
+        recipients,
+        language_words(ctx.cfg.language, "already_sent_phrases"),
     )
 
 
@@ -2172,13 +2183,13 @@ def _stands_alone(text: str, ctx: Context) -> bool:
     if len(words) < ctx.cfg.checks.tuning.action_stands_alone.min_words:
         return False
     language = ctx.cfg.language
-    pointers = [p.lower().split() for p in language.unanchored_words]
+    pointers = [p.lower().split() for p in language_words(language, "unanchored_words")]
     single = {p[0] for p in pointers if len(p) == 1}
     phrases = [p for p in pointers if len(p) > 1]
     joined = " " + " ".join(words) + " "
     if any(" " + " ".join(p) + " " in joined for p in phrases):
         return False
-    leads = {w.lower() for w in language.unanchored_lead_words}
+    leads = {w.lower() for w in language_words(language, "unanchored_lead_words")}
     # The thing it is done to is the word right after its first word and any lead words ("follow up on that").
     at = 1
     while at < len(words) - 1 and words[at] in leads:
@@ -2541,7 +2552,7 @@ def _owner_mail_unanswered(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 
 def _own_promises(text: str, ctx: Context) -> list[str]:
     """The sentences of a message's new text that hold one of the language's own-promise words ("I'll"), as said."""
-    words = [w for w in ctx.cfg.language.own_promise_words if w.strip()]
+    words = [w for w in language_words(ctx.cfg.language, "own_promise_words") if w.strip()]
     sentences = (s.strip() for s in re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s+|\n+", text))
     return [s for s in sentences if s and any(scope.has_word(s, w) for w in words)]
 
@@ -2603,7 +2614,9 @@ def _names_a_date(text: str, ctx: Context) -> bool:
     locale = "en_US" if language.lower().startswith("en-us") else "en_GB"
     settings = ctx.cfg.language
     words = text.split()
-    leads = {w.strip().lower() for w in settings.due_lead_words if w.strip() and " " not in w.strip()}
+    leads = {
+        w.strip().lower() for w in language_words(settings, "due_lead_words") if w.strip() and " " not in w.strip()
+    }
     for i, word in enumerate(words):
         if i > 0 and word.lower().strip(",.;:") not in leads:
             continue
@@ -2614,8 +2627,8 @@ def _names_a_date(text: str, ctx: Context) -> bool:
                 _ANY_DAY,
                 UTC,
                 locale=locale,
-                lead_words=settings.due_lead_words,
-                ordinal_suffixes=settings.due_ordinal_suffixes,
+                lead_words=language_words(settings, "due_lead_words"),
+                ordinal_suffixes=language_words(settings, "due_ordinal_suffixes"),
             )
             if found.start is not None or found.end is not None:
                 return True
@@ -2659,8 +2672,8 @@ def _promise_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     ):
         return []
     language = ctx.cfg.language
-    promise_words = [w.strip() for w in language.promise_words if w.strip()]
-    state_words = [w.strip() for w in language.promise_state_words if w.strip()]
+    promise_words = [w.strip() for w in language_words(language, "promise_words") if w.strip()]
+    state_words = [w.strip() for w in language_words(language, "promise_state_words") if w.strip()]
     if not promise_words:
         return []
     view = ctx.store.read()
@@ -2716,7 +2729,7 @@ def _due_move_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     level = ctx.cfg.checks.lints.get(name, "off")
     if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or "record.set" not in ctx.allowed_ops:
         return []
-    words = [w.strip() for w in ctx.cfg.language.due_move_words if w.strip()]
+    words = [w.strip() for w in language_words(ctx.cfg.language, "due_move_words") if w.strip()]
     if not words:
         return []
     text = "\n".join(t for t in (ctx.inputs.note, ctx.inputs.raw_input) if t.strip())
@@ -2761,7 +2774,7 @@ def _project_start_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         return []
     if any(isinstance(op, ProjectAddOp) for op in cs.ops):
         return []
-    words = [w.strip() for w in ctx.cfg.language.project_start_words if w.strip()]
+    words = [w.strip() for w in language_words(ctx.cfg.language, "project_start_words") if w.strip()]
     if not words:
         return []
     known = set()
@@ -2893,7 +2906,7 @@ def _claim_asked_of_the_person(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     pm = ctx.people.pm
     if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or not pm:
         return []
-    words = [w.strip() for w in ctx.cfg.language.claim_words if w.strip()]
+    words = [w.strip() for w in language_words(ctx.cfg.language, "claim_words") if w.strip()]
     if not words:
         return []
     text = "\n".join(t for t in (ctx.inputs.raw_input, ctx.inputs.note) if t.strip())
@@ -2945,12 +2958,12 @@ def _asks_someone(quote: str, ctx: Context) -> bool:
     """Whether a quoted sentence asks someone to do something and doesn't say the speaker will: it ends in one of the
     language's question marks or starts with one of its asking words, and holds none of its promising words."""
     language = ctx.cfg.language
-    if any(scope.has_word(quote, word) for word in language.own_promise_words if word.strip()):
+    if any(scope.has_word(quote, word) for word in language_words(language, "own_promise_words") if word.strip()):
         return False
     text = quote.strip()
     leads = any(
         re.match(re.escape(word.strip()) + r"(?!\w)", text, re.IGNORECASE)
-        for word in language.ask_lead_words
+        for word in language_words(language, "ask_lead_words")
         if word.strip()
     )
     return leads or _asked_as_question(text, ctx)
@@ -2967,7 +2980,7 @@ def _someone_owner_level(op: ActionAddOp, ctx: Context) -> str:
     if level == "off" or evidence is None or ctx.actor == "pm" or ctx.confirmed_by_pm or not op.owners:
         return "off"
     quote = evidence.quote
-    if not any(scope.has_word(quote, w) for w in ctx.cfg.language.unassigned_words if w.strip()):
+    if not any(scope.has_word(quote, w) for w in language_words(ctx.cfg.language, "unassigned_words") if w.strip()):
         return "off"
     if _asks_someone(quote, ctx):
         return "off"
@@ -3021,7 +3034,9 @@ def _owed_to_readers(op: ActionAddOp, ctx: Context) -> list[str]:
     evidence = _evidence(op)
     if level == "off" or evidence is None or ctx.actor == "pm" or ctx.confirmed_by_pm or op.promised_to:
         return []
-    if not any(scope.has_word(evidence.quote, w) for w in ctx.cfg.language.own_promise_words if w.strip()):
+    if not any(
+        scope.has_word(evidence.quote, w) for w in language_words(ctx.cfg.language, "own_promise_words") if w.strip()
+    ):
         return []
     head = reply_lines.leading_headers(ctx.inputs.raw_input)
     if head is None or not head[0].get("from"):
@@ -3054,9 +3069,9 @@ def _team_word_one_owner_level(op: ActionAddOp, ctx: Context) -> str:
         return "off"
     language = ctx.cfg.language
     quote = evidence.quote
-    if not any(scope.has_word(quote, w) for w in language.team_promise_words if w.strip()):
+    if not any(scope.has_word(quote, w) for w in language_words(language, "team_promise_words") if w.strip()):
         return "off"
-    if any(scope.has_word(quote, w) for w in language.own_promise_words if w.strip()):
+    if any(scope.has_word(quote, w) for w in language_words(language, "own_promise_words") if w.strip()):
         return "off"
     head = reply_lines.leading_headers(ctx.inputs.raw_input)
     if head is None or not head[0].get("from"):
@@ -3096,7 +3111,9 @@ def _rejects_asking(ctx: Context) -> bool:
     """Whether the words handed in reject asking a question at all (the workspace's `rejecting_words`), not only how
     it is worded."""
     said = f"{ctx.inputs.raw_input} {ctx.inputs.note}"
-    return any(scope.has_word(said, word) for word in ctx.cfg.language.rejecting_words if word.strip())
+    return any(
+        scope.has_word(said, word) for word in language_words(ctx.cfg.language, "rejecting_words") if word.strip()
+    )
 
 
 def origin_of(ctx: Context) -> dict[str, Any]:
@@ -3153,7 +3170,7 @@ def _reporter(ctx: Context) -> str | None:
         source.data if source is not None else None,
         None,
         people=ctx.people,
-        skip=list(ctx.cfg.language.title_skip),
+        skip=list(language_words(ctx.cfg.language, "title_skip")),
         min_words=ctx.cfg.language.title_min_words,
         head=ctx.inputs.raw_input,
     ).person
@@ -3879,17 +3896,17 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
         received,
         where,
         locale=locale,
-        lead_words=settings.due_lead_words,
-        ordinal_suffixes=settings.due_ordinal_suffixes,
-        phrase_words=settings.due_phrase_words,
-        number_words=settings.due_number_words,
-        time_zones=settings.time_zone_abbreviations,
+        lead_words=language_words(settings, "due_lead_words"),
+        ordinal_suffixes=language_words(settings, "due_ordinal_suffixes"),
+        phrase_words=language_words(settings, "due_phrase_words"),
+        number_words=language_words(settings, "due_number_words"),
+        time_zones=language_words(settings, "time_zone_abbreviations"),
         sender_zone=zone(ctx.cfg),
         holidays=load_holidays(settings.holiday_calendar or language),
     )
     day = found.end or found.start
     if day is None:
-        if given is None or is_condition(words, settings.due_condition_words):
+        if given is None or is_condition(words, language_words(settings, "due_condition_words")):
             return None, False
         return given, True
     # One day read with doubt ("next Friday", a year-less date far ahead) is checked; a range is due at its end.
@@ -3905,11 +3922,13 @@ def _condition(tx: Tx, ctx: Context, source: str | None, words: str, today: date
 
     settings = ctx.cfg.language
     language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
-    if not language.lower().startswith("en") or not is_condition(words, settings.due_condition_words):
+    if not language.lower().startswith("en") or not is_condition(
+        words, language_words(settings, "due_condition_words")
+    ):
         return None, None
-    if is_condition(words, settings.due_hold_words):
+    if is_condition(words, language_words(settings, "due_hold_words")):
         return "hold", None
-    named = after_marker(words, settings.due_before_words)
+    named = after_marker(words, language_words(settings, "due_before_words"))
     if named:
         found = named_entry(tx.list("event"), named, today.isoformat())
         if found is not None:
@@ -4935,7 +4954,7 @@ class _FirstWeek:
             summary = op.value if isinstance(op.value, str) else None
         if summary:
             for reason in draft_checks.summary_problems(
-                summary, cfg.workspace.project.summary_max_lines, cfg.language.findings_words
+                summary, cfg.workspace.project.summary_max_lines, language_words(cfg.language, "findings_words")
             ):
                 add(
                     "summary-is-status",
@@ -4972,7 +4991,9 @@ class _FirstWeek:
             )
         if _reaches_someone_else(op, self.ctx):
             shown = words_of(body, quotes)
-            for number in draft_checks.version_numbers(shown, cfg.language.version_patterns, self.known_terms()):
+            for number in draft_checks.version_numbers(
+                shown, language_words(cfg.language, "version_patterns"), self.known_terms()
+            ):
                 add(
                     "version-number",
                     f"{number} is a tool's version number, which doesn't belong in a message to someone else.",
@@ -4984,7 +5005,7 @@ class _FirstWeek:
                 self.people(),
                 self.known_terms(),
                 [inputs.raw_input, inputs.note],
-                cfg.language.name_skip_words,
+                language_words(cfg.language, "name_skip_words"),
                 cfg.language.messages.greeting,
             ):
                 add(
@@ -5001,7 +5022,7 @@ def _made_problems(cs: ChangesetIn, ctx: Context, lints: dict[str, Any]) -> list
     severity = lints.get("unlinked-made", "off")
     if severity == "off":
         return []
-    phrase = draft_checks.says_it_made(cs.summary, ctx.cfg.language.made_phrases)
+    phrase = draft_checks.says_it_made(cs.summary, language_words(ctx.cfg.language, "made_phrases"))
     if phrase is None or any(op.op in MAKING_OPS or "/" in op.op for op in cs.ops):
         return []
     return [

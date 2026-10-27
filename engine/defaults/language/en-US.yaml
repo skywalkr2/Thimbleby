@@ -1,0 +1,232 @@
+# The core's word lists for American English (`en-US`): the words and patterns the program reads to understand and check
+# text. Each list is the default of the setting of the same name in `config/language.yaml` (the ones under
+# `reported_speech` are `language.reported_speech.<name>`), which is not set by default. Setting one in the workspace
+# replaces the whole shipped list, so copy the words of it you still want and add your own; the date phrases are
+# replaced meaning by meaning. A setting changed in the files applies at once, with no restart. Matching is by whole
+# words, ignoring case, unless a list says otherwise. One file for each language, named by its language tag.
+
+# Who is meant: the person themselves, who is asked, and who promises. These tell "me" from "you", a request to the
+# person from a note about them, and the person's own promise from a team's.
+# The words the language uses for the person themselves ("assign it to me").
+self_words: [me, myself, I]
+# Words in an action's quoted words that show the person owes it something to someone on another team.
+owed_words: [you, your, please send, me]
+# Words that, right after the person's name or their team's, make the words a request addressed to them.
+request_words: [can, could, will, would, please, need to, needs to, should, must]
+# Words a sentence starts with when it asks someone to do something.
+ask_lead_words: [Can you, Could you, Would you, Please]
+# Words that make a sentence the person's own promise even when it also asks something.
+own_promise_words: [I'll, I will]
+# Words that make a promise a team's rather than one person's.
+team_promise_words: [we'll, we will, we're going to]
+# Words that make a sentence someone's promise to do something ("Kit will send it by Friday").
+promise_words: [will, is going to, are going to]
+# Words that, right after a promise word, make it a state ("will be away") that stays a fact.
+promise_state_words: [be]
+# Words that leave who does something open ("someone should find out").
+unassigned_words: [someone, somebody, anyone, anybody, nobody, no one]
+# Words that, right after a name, say that person stated something.
+claim_words: [told me, told us, said that, says that, tells me, claims]
+# Phrases that say the person already sent something.
+already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded,
+  I've forwarded, we sent, we've sent]
+
+# Checks on what the assistant writes: wording that never belongs in an action, a question or a reply to someone
+# else, and the sentences that point at nothing the reader can see.
+# Wording not allowed in actions and shared text.
+blocked_phrases: [confirm, check whether, check if, 'TBD?']
+# Words of the app's own workings that never belong in text written for someone else.
+internal_terms: [changeset, ledger, applier, the assistant noticed, the assistant found]
+# Words that mark the assistant's reasoning, which belongs in a change's summary, not in a title.
+reasoning_phrases: [no recorded fact, no fact gives, nothing recorded, not recorded, couldn't find, could not find,
+  not stated, not mentioned, I assume, I think]
+# Words that blame someone for a miss.
+singling_out_phrases: [missed, forgot, forgotten, dropped the ball, failed to, didn't send, did not send, never sent,
+  hasn't sent, still hasn't, was late, is late, your fault, their fault, to blame]
+# Words in the person's note on a question that reject asking it at all.
+rejecting_words: [not my job, not my place, why are we asking, don't ask, do not ask, no need to ask,
+  we are not their boss, not ours to ask]
+# The characters that end a question.
+question_marks: ['?', "\uFF1F", "\u061F"]
+# Separators that mean several items were crammed in one line (matched as written).
+run_on_separators: [' / ', '; ']
+# Words that point at something the reader can't see ("send it").
+unanchored_words: [it, this, that, them, these, those, him, her, the above, the same, as discussed, as agreed]
+# Words that may come between an action's first word and the thing it is done to ("follow up on that").
+unanchored_lead_words: [up, 'on', to, with, about, for, back, out, 'off', over, at]
+# Phrases that make a draft report to the maintainers a standing rule for the assistant.
+rule_report_phrases: [from now on, going forward, from here on, in future, should never, should always, don't ask,
+  do not ask]
+# Words that show a project's summary holds findings instead of its status.
+findings_words: [found, finding, findings, discovered, discrepancy, discrepancies, inconsistency, inconsistencies,
+  mismatch, turns out]
+# Phrases that say a change made a draft, a write-up or a file.
+made_phrases: [drafted, wrote up, write-up, writeup, created a draft, made a draft, prepared a draft, saved a draft,
+  created a file, made a file, saved a file, generated a file, created a document, made a document, saved a document,
+  created minutes, wrote minutes, made minutes]
+# Everyday words that can start a phrase and are never part of a person's name.
+name_skip_words: [the, a, an, this, that, these, those, our, your, my, his, her, their, its, hi, hello, hey, dear,
+  thanks, thank, please, also, and, but, so, if, when, as, for, to, from, with, 'on', in, at, by, of, is, are, was,
+  were, we, i, it, do]
+# Phrases with which a sender limits who may see a message.
+limit_markings: [internal only, do not forward, don't forward, not for the client, not for distribution, confidential,
+  for your eyes only]
+# Patterns (regular expressions) for a tool's version number.
+version_patterns: ['\b[vV]\d+(?:\.\d+){0,3}\b', '\b\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?\b',
+  '(?i)\b(?:version|ver\.?|release|build)\s+\d+(?:\.\d+)*\b']
+
+# Reading a note or a message: words that start a piece of work or move a date, the words a project is never named
+# by alone, and the lines a title is never taken from.
+# Words that start a new piece of work.
+project_start_words: [starting, launching, kicking off, start, launch, kick off]
+# Words that give an open action a new day.
+due_move_words: [is now due, can wait until, moved to, pushed to, postponed to, push it to]
+# Words that frame a question rather than say what it is about.
+asking_words: [when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
+  confirm]
+# Common words that a project named by one of them alone never files an item by. Lower case.
+everyday_words: [a, about, above, account, across, act, action, add, after, again, against, age, agent, ago, agree,
+  air, all, allow, almost, alone, along, already, also, always, among, and, animal, another, answer, any, app, apple,
+  area, arm, around, art, ask, at, audit, away, baby, back, bad, bag, ball, bank, base, basic, bath, be, beach, bed,
+  before, begin, behind, believe, below, best, better, between, big, bike, bill, bird, birthday, black, blog, blue,
+  board, boat, body, bonus, book, boss, both, bottom, box, boy, brain, branch, bread, break, bridge, bring, brother,
+  brown, budget, build, building, bus, business, busy, but, buy, by, cake, call, camp, can, car, card, care, career,
+  carry, case, cash, cat, center, chair, change, charge, check, child, choice, city, class, clean, cleanup, clear,
+  clock, close, clothes, cloud, club, coach, coat, coffee, cold, college, color, come, common, company, contract,
+  cook, cool, copy, corner, cost, count, country, course, court, cover, craft, credit, crew, cross, cup, customer,
+  cut, dad, daily, dance, data, date, daughter, day, deal, dear, debt, decision, deep, delivery, design, desk, detail,
+  dinner, doctor, dog, door, down, draft, dream, dress, drink, drive, early, earth, east, easy, eat, edge, effort,
+  egg, end, energy, event, every, exam, example, exit, expense, extra, eye, face, fact, fair, fall, family, far, farm,
+  fast, father, fee, feel, field, file, fill, film, final, find, fine, finish, fire, first, fish, fix, flight, floor,
+  flow, food, foot, for, forest, form, forward, free, fresh, friday, friend, from, front, fruit, fuel, full, fun,
+  fund, future, game, garage, garden, gas, gate, gift, girl, give, glass, go, goal, gold, good, grade, grand, green,
+  group, grow, guest, guide, gym, hair, half, hall, hand, happy, hard, head, health, hear, heart, help, here, high,
+  hill, history, hobby, hold, holiday, home, hope, horse, hospital, hot, hotel, hour, house, how, human, idea,
+  important, in, income, insurance, interest, invoice, issue, it, item, job, join, journey, just, keep, key, kid,
+  kind, king, kitchen, know, lab, lake, land, large, last, late, launch, law, lead, learn, leave, left, legal, lesson,
+  letter, level, library, life, light, like, line, list, little, live, loan, local, long, look, lost, love, low, luck,
+  lunch, machine, mail, main, make, man, many, map, market, marriage, master, match, math, matter, meal, meeting,
+  member, memory, message, middle, mile, milk, mind, minute, miss, mobile, mom, monday, money, month, moon, more,
+  morning, mother, move, movie, music, name, need, network, new, news, next, night, noon, north, note, now, number,
+  office, old, one, open, order, other, outside, over, owner, pack, page, paint, pair, paper, parent, park, part,
+  partner, party, pass, past, path, pay, peace, pen, people, pet, phone, photo, piece, pilot, place, plan, plant,
+  plate, play, plug, point, pool, poor, port, power, present, price, print, private, problem, process, product,
+  profile, project, promise, property, public, purchase, push, quality, question, quick, quiet, race, rain, rate,
+  read, ready, real, reason, record, red, refresh, release, remote, renewal, rent, repair, report, request, rest,
+  result, return, review, rich, ride, right, ring, rise, river, road, rock, roll, roof, room, root, round, route,
+  rule, run, safe, sale, salt, save, school, science, sea, season, seat, second, secret, see, sell, send, service,
+  set, shop, short, show, sick, side, sign, simple, sister, site, size, skill, sky, sleep, slow, small, snow, social,
+  soft, sold, son, song, soon, sort, sound, south, space, speed, spend, sport, spring, staff, stage, star, start,
+  state, stay, step, stock, stop, store, story, street, strong, student, study, style, success, summer, sun, sunday,
+  supply, support, sure, system, table, take, talk, task, tax, taxes, tea, teacher, team, test, thing, think, this,
+  thursday, ticket, time, today, tomorrow, tool, top, total, town, trade, train, travel, tree, trip, 'true', trust,
+  try, tuesday, turn, type, under, unit, update, use, user, value, view, visit, voice, wait, walk, wall, want, warm,
+  watch, water, way, wedding, wednesday, week, weekend, west, what, when, where, white, who, why, wife, win, wind,
+  window, winter, wish, with, woman, wonder, wood, word, work, world, write, year, yellow, 'yes', you, young]
+# Lines an item's title never comes from (patterns, matched at the start of a line, ignoring case).
+title_skip: [(hi|hello|hey|dear|good (morning|afternoon|evening)|greetings)\b,
+  '(from|to|cc|bcc|sent|date|subject|reply-to)\s*:', '(thanks|thank you|best|regards|cheers|sincerely)\b[ ,!.]*$',
+  '-{2,}|_{2,}|>']
+# Patterns (regular expressions) for words that look like a system name or an acronym; matched as written.
+new_term_patterns: ['\b[A-Z]{2,}[0-9]*\b', '\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b']
+# Everyday abbreviations that match those patterns and are never suggested as new terms.
+new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB, PS, URGENT, NOTE, UPDATE, REMINDER]
+
+# Reported speech: how a typed note that repeats someone else's words is recognized.
+reported_speech:
+  # Words that, after a name, mark a note as repeating someone's words ("<name> said ...").
+  verbs: [said, says, confirmed, confirms, told, wrote, writes, asked, wants, mentioned, replied, responded, noted,
+    commented, pinged]
+  # Words that, before a name, do the same ("per <name> ...").
+  lead_words: [per, according to]
+  # Speakers that are the person themselves.
+  own_speakers: [I, we]
+  # Words that, right after a speech word, make it a request to the person ("<name> asked me to ...").
+  request_words: [me to, us to]
+  # Patterns for a line of a pasted chat: a time and who wrote it (matched at the start of a line).
+  chat_line_patterns:
+    - '^\s*[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AaPp][Mm])?(?:,\s?[\d/.-]{6,10})?[^\w\n:]{0,4}[^\W\d_][\w''’. -]{0,40}:\s+\S'
+    - '^\s*[^\W\d_][\w''’.-]*(?:\s+[^\W\d_][\w''’.-]*){0,2}\s+[\[(]?\d{1,2}:\d{2}(?::\d{2})?\s?[AaPp][Mm][\])]?\s*$'
+
+# Dates and times: the words a due date is read from, and the phrases it can be written in. A pattern may hold {iso},
+# {day}, {month} and {year}, which stand for the day looked for.
+# Words that begin a due date's words without being part of it ("due Oct 22").
+due_lead_words: [by, 'on', due, due on, due by, on or before, no later than, not later than]
+# The endings that make a number the day of a month ("the 25th"). Matched as written.
+due_ordinal_suffixes: [st, nd, rd, th]
+# Words that tie a due to something that happens, so it has no date ("once the keys arrive").
+due_condition_words: [once, after, before, when, whenever, until, till, if, unless, upon, as soon as, of receiving,
+  of receipt, sometime, soon, eventually]
+# Of those, the ones that put a promise on hold from the start.
+due_hold_words: [once, after, when, whenever, until, till, if, unless, upon, as soon as, of receiving, of receipt]
+# Of those, the ones after which a calendar entry may be named ("before the print sync").
+due_before_words: [before]
+# The day-and-time phrases the date reader knows, by what they mean. Each meaning is a list of whole phrases.
+due_phrase_words:
+  day_after_tomorrow: [day after tomorrow]
+  later_today: [later today]
+  tonight: [tonight]
+  noon: [noon, midday]
+  midnight: [midnight]
+  first_thing: [first thing]
+  end_of_month: [end of month, end of the month, end of this month]
+  end_of_next_month: [end of next month, end of the next month]
+  this_weekend: [this weekend]
+  within: [within]
+  hours: [hours, hour]
+  days: [days, day]
+  working_days: [working days, working day, business days, business day]
+# The number words read in "within two working days", each with its number.
+due_number_words: {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12}
+# Time zone abbreviations and plain names, and the zone each names ("5pm ET").
+time_zone_abbreviations:
+  ET: America/New_York
+  EST: America/New_York
+  EDT: America/New_York
+  Eastern: America/New_York
+  Eastern time: America/New_York
+  CT: America/Chicago
+  CST: America/Chicago
+  CDT: America/Chicago
+  Central: America/Chicago
+  Central time: America/Chicago
+  MT: America/Denver
+  MST: America/Denver
+  MDT: America/Denver
+  Mountain: America/Denver
+  Mountain time: America/Denver
+  PT: America/Los_Angeles
+  PST: America/Los_Angeles
+  PDT: America/Los_Angeles
+  Pacific: America/Los_Angeles
+  Pacific time: America/Los_Angeles
+  UTC: UTC
+  GMT: UTC
+  BST: Europe/London
+# How a day is written in running text, to tie records to a date that moves.
+date_patterns: ['{iso}', '\b{day}(?:st|nd|rd|th)?\s+(?:of\s+)?{month}\b', '\b{month}\.?\s+{day}(?:st|nd|rd|th)?\b',
+  '\bthe\s+{day}(?:st|nd|rd|th)\b']
+# The verbs a task's title starts with, so a plain calendar entry that starts with one is offered as a to-do.
+task_verbs: [pay, send, call, email, text, book, buy, order, renew, submit, file, return, pick, drop, cancel, confirm,
+  schedule, register, sign, review, write, finish, prepare, collect, fix, clean, pack, check, ask, remind, reply,
+  print, post, pickup, organize, arrange]
+
+# Endings: the words that read how an action ended from the words quoted for it. Delivered is done; learned another way,
+# moved to a meeting or no longer needed is called off; only "closed" asks the person which it was.
+# Words that say it was delivered.
+delivery_words: [sent, finished, delivered, it's in, its in, did it, done, completed, handed in, turned in, submitted,
+  shipped, attached, uploaded, published, emailed, mailed, posted, paid, booked, signed, returned, taken care of,
+  took care of, came through, they did, she did, he did, went out, gone out, is out, handed over, shared, forwarded,
+  got it, received, arrived]
+# Words that say it was learned another way, moved to a meeting or no longer matters.
+called_off_words: [moot, covered by, covered in, will cover, we'll cover, we will cover, will be covered,
+  no longer needed, no longer need, not needed, isn't needed, no need, don't need, drop it, drop this, call it off,
+  called off, cancel, canceled, cancelled, never mind, forget it, we'll get it in, we will get it in,
+  in our discussions, in the discussions, in our discussion, in the planning sessions, in our planning, superseded,
+  obsolete, unnecessary]
+# Words that say it moved into a meeting.
+meeting_words: [will cover, we'll cover, we will cover, will be covered, covered in, covered at, take it up,
+  in our discussions, in the discussions, in our discussion, in the planning sessions, in our planning,
+  we'll get it in, we will get it in, raise it, bring it up, discuss it, move it to, moved to]
+# Words that only say it is closed.
+closed_words: [close, closed, closing, close out, closed out]

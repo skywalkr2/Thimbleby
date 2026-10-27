@@ -28,6 +28,7 @@ from typing import Any
 
 from engine import id_words
 from engine.config.schema import LanguageFile, MessageSettings, WorkspaceFile
+from engine.language_words import language_words
 from engine.names import People
 from engine.storage import StoreError, WriteContext
 from engine.titles import title_for
@@ -192,11 +193,11 @@ class SourceLabels:
         language = cfg.language if cfg is not None else LanguageFile()
         self.view = view
         self.words: MessageSettings = language.messages
-        self.skip = list(language.title_skip)
+        self.skip = list(language_words(language, "title_skip"))
         self.min_words = language.title_min_words
         pm = cfg.workspace.user.person if cfg is not None else getattr(view, "user", None)
         self.people = People.from_records(
-            {p.id: p.data for p in view.list("person")}, pm, self_words=language.self_words
+            {p.id: p.data for p in view.list("person")}, pm, self_words=language_words(language, "self_words")
         )
         self.names = assistant_names(view, cfg.workspace.assistant_name if cfg is not None else DEFAULT_NAME)
 

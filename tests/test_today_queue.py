@@ -10,15 +10,15 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
-from engine.config.schema import DEFAULT_TITLE_SKIP
 from engine.evaluate import load_cases
+from engine.language_words import shipped
 from engine.names import Resolved
 from engine.titles import first_line, title_for
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 
 TOKEN = "test-token-value"
-SKIP = list(DEFAULT_TITLE_SKIP)
+SKIP = shipped("title_skip")
 
 
 def case(case_id: str) -> dict:

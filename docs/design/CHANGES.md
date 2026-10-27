@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 236. The `language.*` word lists moved into shipped data (2026-10-28; roadmap A5, the functional designer's full read, point 5)
+
+| Where | Before | Now |
+|---|---|---|
+| Word lists (4.6, 4.0) | About 50 list settings in `language.yaml`, each with its default list written out in the schema; the date reader's and the endings' defaults in code; most restart-only | **Built** (`tests/test_language_words.py`, with `tests/fixtures/language/old_defaults.json`, the lists as the schema wrote them): the 52 lists are the core's shipped data, `engine/defaults/language/en-US.yaml`, grouped by what they do; one file serves each language tag |
+| The settings | The default was the list | Every key stays and is **not set by default**; setting it **replaces the whole shipped list** (an empty list turns it off), `due_phrase_words` one meaning at a time; a workspace file that set a key keeps working unchanged |
+| The reader | `cfg.language.<name>` in each caller | One function, `language_words(settings, name)` (`engine/language_words.py`): the workspace's value when set, else the shipped list, read at the moment of use |
+| Restarts (4.22) | Five language keys live | Every word list is live (`LIVE_KEYS` lists them from the shipped file); the settings that are not lists are unchanged |
+| Everyday words (6.32) | Their own shipped file and reader | The same file and function as the other lists (`engine/everyday_words.py` and its file removed) |
+
+The lists' effective values are unchanged: the test compares each with its old default. Nothing a plugin can read changed.
+
 ## 235. The gate's instruments matched to the drafted pass bar, and the designer's small open points (2026-10-28; roadmap A3, A5)
 
 | Where | Before | Now |

@@ -7,6 +7,8 @@ from pathlib import Path
 GUIDANCE = Path(__file__).parent / "guidance"
 
 
-def guidance(name: str) -> str:
+def practice(name: str) -> str:
+    """The playbook's good practice for a kind of work, or nothing when it has none. Named apart from the `guidance`
+    folder, which, once loaded as a package, would replace a function of the same name."""
     path = GUIDANCE / f"{name}.md"
     return path.read_text(encoding="utf-8").strip() if path.exists() else ""

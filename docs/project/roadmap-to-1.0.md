@@ -1284,7 +1284,9 @@ code. Nearly all is built or planned. What is left, in two batches:
   come only from the assistant's proposals, as design 7.8 says.)
   *Built so far (2026-10-28):* the day-30 scenario in the typical-week shares (P5, `tests/test_pairs.py`); the Monday message asking once who it
   is for; "Drop it and draft the note"; P40 point 8 reproduced with a test that passes (see `open-promises.md`); B-11b's cost per day
-  for each tier (`tests/test_tier_costs.py`). *Left:* the `language.*` word lists in shipped data.
+  for each tier (`tests/test_tier_costs.py`); the 52 `language.*` word lists in shipped data, `engine/defaults/language/en-US.yaml`, each setting an
+  optional override that replaces the whole shipped list and applies at once (full-read point 5, change log 236, `tests/test_language_words.py`).
+  *Left:* nothing in this item but the box itself, which the main session ticks after reviewing it.
 - Held, not dropped: `includes:` (P62, P39) with the next plugin API release; calendar create, move and cancel and the
   add-on channels with the add-on builders.
 

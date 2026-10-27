@@ -26,66 +26,28 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 
-DEFAULT_LEAD_WORDS = ("by", "on", "due", "due on", "due by", "on or before", "no later than", "not later than")
-DEFAULT_ORDINAL_SUFFIXES = ("st", "nd", "rd", "th")
-DEFAULT_CONDITION_WORDS = (
-    *("once", "after", "before", "when", "whenever", "until", "till", "if", "unless", "upon", "as soon as"),
-    *("of receiving", "of receipt", "sometime", "soon", "eventually"),
-)
+from engine.language_words import shipped
+
+#: The words the date reader starts from are the core's shipped lists (`engine/defaults/language/`), read once here as
+#: the defaults of a reading made without the settings. The language settings replace any of them.
+DEFAULT_LEAD_WORDS = tuple(shipped("due_lead_words"))
+DEFAULT_ORDINAL_SUFFIXES = tuple(shipped("due_ordinal_suffixes"))
+DEFAULT_CONDITION_WORDS = tuple(shipped("due_condition_words"))
 #: The condition words that wait for something to happen: a due with one is on hold from the start. The rest of the
 #: condition words only leave the date open.
-DEFAULT_HOLD_WORDS = (
-    *("once", "after", "when", "whenever", "until", "till", "if", "unless", "upon", "as soon as"),
-    *("of receiving", "of receipt"),
-)
+DEFAULT_HOLD_WORDS = tuple(shipped("due_hold_words"))
 #: The condition words after which a calendar entry may be named: a due "before the print sync" is due at that entry.
-DEFAULT_BEFORE_WORDS = ("before",)
+DEFAULT_BEFORE_WORDS = tuple(shipped("due_before_words"))
 #: The verbs a task's title starts with: a plain calendar entry whose first word is one is offered as a to-do.
-DEFAULT_TASK_VERBS = (
-    *("pay", "send", "call", "email", "text", "book", "buy", "order", "renew", "submit", "file", "return", "pick"),
-    *("drop", "cancel", "confirm", "schedule", "register", "sign", "review", "write", "finish", "prepare", "collect"),
-    *("fix", "clean", "pack", "check", "ask", "remind", "reply", "print", "post", "pickup", "organize", "arrange"),
-)
-#: The words of the day-and-time phrases the date reader knows, by what they mean. Each is a list of whole phrases; the
-#: language settings override any of them.
+DEFAULT_TASK_VERBS = tuple(shipped("task_verbs"))
+#: The words of the day-and-time phrases the date reader knows, by what they mean. Each is a list of whole phrases.
 DEFAULT_PHRASE_WORDS: dict[str, tuple[str, ...]] = {
-    "day_after_tomorrow": ("day after tomorrow",),
-    "later_today": ("later today",),
-    "tonight": ("tonight",),
-    "noon": ("noon", "midday"),
-    "midnight": ("midnight",),
-    "first_thing": ("first thing",),
-    "end_of_month": ("end of month", "end of the month", "end of this month"),
-    "end_of_next_month": ("end of next month", "end of the next month"),
-    "this_weekend": ("this weekend",),
-    "within": ("within",),
-    "hours": ("hours", "hour"),
-    "days": ("days", "day"),
-    "working_days": ("working days", "working day", "business days", "business day"),
+    concept: tuple(found) for concept, found in shipped("due_phrase_words").items()
 }
 #: The number words read in "within <n> hours".
-DEFAULT_NUMBER_WORDS: dict[str, int] = {
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-    "twelve": 12,
-}
+DEFAULT_NUMBER_WORDS: dict[str, int] = shipped("due_number_words")
 #: Time zone abbreviations and plain names to the zone they name, for a time like "5pm ET" or "5pm Central".
-DEFAULT_TIME_ZONES: dict[str, str] = {
-    **dict.fromkeys(("ET", "EST", "EDT", "Eastern", "Eastern time"), "America/New_York"),
-    **dict.fromkeys(("CT", "CST", "CDT", "Central", "Central time"), "America/Chicago"),
-    **dict.fromkeys(("MT", "MST", "MDT", "Mountain", "Mountain time"), "America/Denver"),
-    **dict.fromkeys(("PT", "PST", "PDT", "Pacific", "Pacific time"), "America/Los_Angeles"),
-    **dict.fromkeys(("UTC", "GMT"), "UTC"),
-    "BST": "Europe/London",
-}
+DEFAULT_TIME_ZONES: dict[str, str] = shipped("time_zone_abbreviations")
 HOLIDAYS_FILE = Path(__file__).parent / "defaults" / "holidays.yaml"
 
 

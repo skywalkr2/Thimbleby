@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from engine.language_words import language_words
 from engine.mail_kinds import kind_of_input
 from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
 from engine.records import FiledBy, referrers
@@ -339,7 +340,9 @@ Patterns = dict[Side, list[tuple[re.Pattern[str], str | None, str]]]
 
 def _everyday(cfg: Any) -> frozenset[str]:
     """The words a project name made of one of them alone never files by (`language.everyday_words`), case ignored."""
-    return frozenset(" ".join(w.split()).casefold() for w in cfg.language.everyday_words if w.strip())
+    return frozenset(
+        " ".join(w.split()).casefold() for w in language_words(cfg.language, "everyday_words") if w.strip()
+    )
 
 
 def _name_counts(name: str, everyday: frozenset[str]) -> bool:

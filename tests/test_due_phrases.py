@@ -923,6 +923,7 @@ def test_the_language_settings_accept_only_known_meanings_and_real_zones():
     from pydantic import ValidationError
 
     from engine.config.schema import LanguageFile
+    from engine.language_words import language_words
 
     assert LanguageFile(due_phrase_words={"noon": ["noon"]}).due_phrase_words == {"noon": ["noon"]}
     with pytest.raises(ValidationError):
@@ -931,8 +932,8 @@ def test_the_language_settings_accept_only_known_meanings_and_real_zones():
         LanguageFile(time_zone_abbreviations={"ET": "Nowhere/Land"})
     defaults = LanguageFile()
     assert defaults.holiday_calendar is None
-    assert defaults.time_zone_abbreviations["ET"] == "America/New_York"
-    assert defaults.due_number_words["two"] == 2
+    assert language_words(defaults, "time_zone_abbreviations")["ET"] == "America/New_York"
+    assert language_words(defaults, "due_number_words")["two"] == 2
 
 
 def test_the_demo_workspaces_language_settings_read_the_new_words(tmp_path):

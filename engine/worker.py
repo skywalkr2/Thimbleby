@@ -14,7 +14,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from engine import problems, running
+from engine import language_words, problems, running
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import needs_you, process
@@ -33,15 +33,15 @@ ADD_ONS = "add-ons"
 
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
-#: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
-#: each request; which projects are the personal and business sides, for each item filed; where and how often backups
-#: go, for each backup; how often the readable export is written; the watched
-#: sources, for each read; whether and how corrections are learned from, for each correction and each learning run; the
-#: scan for new terms, for each input; the catalogs, tokens and refresh time of the Add-ons screen, for each time it
-#: reads them; whether a switch of account is offered a check, for each switch; how much of a
-#: file is read, for each file; the window and the smallest week of the quality figures, for each time they are asked
-#: for; how long a preview beside a data form may take, and how many searches an add-on's packet function may make,
-#: for each time they are used).
+#: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording
+#: for each request; which projects are the personal and business sides, for each item filed; where and how often
+#: backups go, for each backup; how often the readable export is written; the watched sources, for each read; whether
+#: and how corrections are learned from, for each correction and each learning run; the scan for new terms, for each
+#: input; the word lists the program reads text by (`engine/language_words.py`), for each text read; the catalogs,
+#: tokens and refresh time of the Add-ons screen, for each time it reads them; whether a switch of account is offered
+#: a check, for each switch; how much of a file is read, for each file; the window and the smallest week of the
+#: quality figures, for each time they are asked for; how long a preview beside a data form may take, and how many
+#: searches an add-on's packet function may make, for each time they are used).
 #: Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
@@ -65,10 +65,7 @@ LIVE_KEYS = (
     "workspace.plugins.catalog.",
     "workspace.plugins.preview_seconds",
     "language.bare_confirmation_words",
-    "language.rule_report_phrases",
-    "language.new_term_patterns",
-    "language.new_term_ignore",
-    "language.date_patterns",
+    *(f"language.{name}" for name in language_words.names()),
     "dispatch.knowledge.learn",
     "dispatch.knowledge.learn_every_minutes",
     "dispatch.knowledge.learn_input_chars",

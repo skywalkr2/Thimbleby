@@ -17,38 +17,13 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
+from engine.language_words import language_words
 from engine.ops import ActionCloseOp, ActionDropOp, QuestionDropOp, RecordSetOp
 from engine.records import values_at
 from engine.storage import StoreError
 
 Reading = Literal["done", "called_off", "choice"]
 Answer = Literal["done", "called_off"]
-
-#: The words that say it was delivered: an ending with only these is done, and credits the owners.
-DEFAULT_DELIVERY_WORDS = (
-    *("sent", "finished", "delivered", "it's in", "its in", "did it", "done", "completed", "handed in", "turned in"),
-    *("submitted", "shipped", "attached", "uploaded", "published", "emailed", "mailed", "posted", "paid", "booked"),
-    *("signed", "returned", "taken care of", "took care of", "came through", "they did", "she did", "he did"),
-    *("went out", "gone out", "is out", "handed over", "shared", "forwarded", "got it", "received", "arrived"),
-)
-#: The words that say it was learned elsewhere, moved to a meeting or no longer matters: an ending with only these is
-#: called off, and credits nobody.
-DEFAULT_CALLED_OFF_WORDS = (
-    *("moot", "covered by", "covered in", "will cover", "we'll cover", "we will cover", "will be covered"),
-    *("no longer needed", "no longer need", "not needed", "isn't needed", "no need", "don't need", "drop it"),
-    *("drop this", "call it off", "called off", "cancel", "canceled", "cancelled", "never mind", "forget it"),
-    *("we'll get it in", "we will get it in", "in our discussions", "in the discussions", "in our discussion"),
-    *("in the planning sessions", "in our planning", "superseded", "obsolete", "unnecessary"),
-)
-#: The words that say it moved into a meeting: a call-off with one of these that names a meeting the workspace knows
-#: puts the action on that meeting's agenda.
-DEFAULT_MEETING_WORDS = (
-    *("will cover", "we'll cover", "we will cover", "will be covered", "covered in", "covered at", "take it up"),
-    *("in our discussions", "in the discussions", "in our discussion", "in the planning sessions", "in our planning"),
-    *("we'll get it in", "we will get it in", "raise it", "bring it up", "discuss it", "move it to", "moved to"),
-)
-#: The words that only say it is closed: with neither of the other two, they are neither done nor called off.
-DEFAULT_CLOSED_WORDS = ("close", "closed", "closing", "close out", "closed out")
 
 #: The name of the check that holds a bare close, so a screen can tell the choice from any other hold.
 CHOICE_CHECK = "ending-choice"
@@ -70,19 +45,19 @@ def _has(text: str, markers: Sequence[str]) -> bool:
     )
 
 
-def reading(quote: str, words: Any) -> Reading | None:
-    """What the quoted words say about how it ended, by the language settings `words` (delivery, called-off and closed
+def reading(quote: str, settings: Any) -> Reading | None:
+    """What the quoted words say about how it ended, by the language settings (delivery, called-off and closed
     words): `done` (delivery words alone), `called_off` (call-off words alone, even beside "closed"), `choice` (both
     kinds, or "closed" with neither: not one answer) or None when the words say nothing about an ending."""
-    delivered = _has(quote, words.delivery_words)
-    called_off = _has(quote, words.called_off_words)
+    delivered = _has(quote, language_words(settings, "delivery_words"))
+    called_off = _has(quote, language_words(settings, "called_off_words"))
     if delivered and called_off:
         return "choice"
     if delivered:
         return "done"
     if called_off:
         return "called_off"
-    return "choice" if _has(quote, words.closed_words) else None
+    return "choice" if _has(quote, language_words(settings, "closed_words")) else None
 
 
 def _reason(quote: str) -> str:
@@ -143,7 +118,7 @@ def moved_into(quote: str, ctx: Any) -> dict[str, str] | None:
     else a series), exactly one."""
     from engine.agenda import named_meeting
 
-    if not _has(quote, ctx.cfg.language.meeting_words):
+    if not _has(quote, language_words(ctx.cfg.language, "meeting_words")):
         return None
     found = named_meeting(ctx.store.read(), quote, _today(ctx))
     return {"series" if found[0] == "series" else "event": found[1]} if found is not None else None

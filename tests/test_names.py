@@ -9,6 +9,7 @@ import yaml
 
 from engine.config import load_config
 from engine.config.schema import WorkspaceFile
+from engine.language_words import language_words
 from engine.names import People, header_entries
 from engine.record_page import page as record_page
 from engine.storage import Store
@@ -127,13 +128,13 @@ def test_an_owner_format_without_the_full_name_or_with_unknown_fields_is_refused
 
 def test_the_words_that_mean_the_person_come_from_the_language_setting():
     cfg = load_config(DEMO_B)
-    assert cfg.language.self_words, "the demo workspace sets the words"
+    assert language_words(cfg.language, "self_words"), "the shipped words are read when none are set"
     words = ["moi", "ich"]
     mine = People.from_records(PEOPLE, PM, self_words=words)
     for word in words:
         assert mine.resolve(word.upper()).person == PM
     assert mine.resolve("me").status != "ok", "the default English words are not hard-coded"
-    for word in cfg.language.self_words:
+    for word in language_words(cfg.language, "self_words"):
         assert people().resolve(word).person == PM
 
 

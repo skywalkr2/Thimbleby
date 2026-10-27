@@ -237,11 +237,12 @@ def test_the_settings_have_descriptions_and_the_defaults_the_reader_starts_from(
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     language = ws.config(env={}).language
     from engine.config.schema import LanguageFile
+    from engine.language_words import language_words
 
     for key in ("due_lead_words", "due_ordinal_suffixes", "due_condition_words"):
         assert LanguageFile.model_fields[key].description
     assert language.due_lead_words == list(DEFAULT_LEAD_WORDS)
-    assert LanguageFile().due_condition_words == list(DEFAULT_CONDITION_WORDS)
+    assert language_words(LanguageFile(), "due_condition_words") == list(DEFAULT_CONDITION_WORDS)
 
 
 def test_a_lessons_breadth_is_read_from_the_persons_words_and_a_mistake_always_teaches_the_narrow_one():

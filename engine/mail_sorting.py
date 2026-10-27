@@ -22,7 +22,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from engine.ai.task import AiError, AiTask
-from engine.playbook import guidance
+from engine.playbook import practice
 from engine.prompts import render
 from engine.tasks import settings, task_kind
 
@@ -113,7 +113,7 @@ def build_task(ws: Any, cfg: Any, headers: list[Header]) -> tuple[AiTask, dict[s
     task = AiTask(
         kind=KIND,
         instructions=render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file),
-        stable="# Practice\n" + guidance(kind.playbook),
+        stable="# Practice\n" + practice(kind.playbook),
         request='<untrusted source="mail headers">\n' + "\n".join(lines) + "\n</untrusted>",
         output_schema=SCHEMA,
         temperature=chosen.temperature,

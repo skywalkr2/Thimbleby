@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from engine.language_words import language_words
 from engine.ops import ActionAddOp, OpModel, QuestionAddOp
 from engine.records import PROJECT_ROLES
 
@@ -92,7 +93,7 @@ def _owed(op: ActionAddOp, view: Any, people: Any, language: Any) -> bool:
     if any(people.resolve(name).person == people.pm for name in op.promised_to):
         return True
     quote = op.evidence.quote
-    if any(has_word(quote, word) for word in language.owed_words if word):
+    if any(has_word(quote, word) for word in language_words(language, "owed_words") if word):
         return True
     pm = people.records.get(people.pm, {})
     names = [pm.get("full_name"), pm.get("first_name"), *(pm.get("aliases") or [])]
@@ -102,7 +103,7 @@ def _owed(op: ActionAddOp, view: Any, people: Any, language: Any) -> bool:
     team = view.get("team", team_id) if team_id else None
     if team is not None:
         names += [team.data.get("name"), *(team.data.get("aliases") or [])]
-    return any(_addressed(quote, name, language.request_words) for name in names if name)
+    return any(_addressed(quote, name, language_words(language, "request_words")) for name in names if name)
 
 
 def _addressed(quote: str, name: str, request_words: list[str]) -> bool:

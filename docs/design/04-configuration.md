@@ -113,9 +113,9 @@ Built keys, with defaults:
   **Built (S1-4, B-12 batch 1):** `tests/test_sides.py`, `tests/test_filing_signals.py`.
 - `everyday_words`: common words that a project named by one of them alone never files an item by ("Launch", "Home"):
   they would match almost any message. Matched as whole words, ignoring case; a longer name and a project's aliases still
-  count (6.32). The default is the core's list for the language, read from `engine/defaults/everyday_words.yaml`
-  (637 English words, written for the core by hand and taken from no outside list); setting it replaces that list, so a
-  workspace keeps the words of it that it wants and adds its own. Live. **Built (B-12 batch 1):**
+  count (6.32). The default is the core's list for the language, shipped with the other word lists in
+  `engine/defaults/language/en-US.yaml` (637 English words, written for the core by hand and taken from no outside list;
+  4.6); setting it replaces that list, so a workspace keeps the words of it that it wants and adds its own. Live. **Built (B-12 batch 1):**
   `tests/test_filing_signals.py::test_a_one_word_everyday_project_name_never_files_an_item_but_the_same_word_as_an_alias_does`.
 - `our_accounts`: the names this app uses on watched sources (its own publishes). A watched change by one of them is
   marked `by_us` (6.4, 6.5). Live.
@@ -313,6 +313,24 @@ source's `every_minutes`, `storage.backups.every_hours`, a plugin job's `every_m
 every few seconds, and the settings in 6.14.
 
 ## 4.6 `config/language.yaml`
+
+**Word lists are shipped data** (change log 236). The words and patterns the program reads to understand and check text
+(52 lists: the words for the person themselves, request and promise words, the wording checks, reported speech, the date
+reader's words and phrases, the ending words and the rest below) are not in the settings schema or in code. The core
+ships them for American English in `engine/defaults/language/en-US.yaml`, grouped by what they do with a comment on each
+group and list; one file serves each language tag (the tag's own file, else the one with the same primary language,
+else `en-US`). Each list keeps its setting in this file, **not set by default**, and the setting is an optional
+override with one rule for every list: setting it **replaces the whole shipped list** (so a workspace copies the words of
+the shipped list that it still wants and adds its own; an empty list turns the list off). The two exceptions follow
+the shape of the list: `due_phrase_words` is replaced one meaning at a time (a meaning left out keeps its shipped
+words), and a mapping (`due_number_words`, `time_zone_abbreviations`) is replaced as a whole. A workspace that already set
+one of these keys in its files keeps working unchanged, since a value there always was the whole list. One function,
+`language_words(settings, name)` in `engine/language_words.py`, is the only reader: the workspace's own value when it is
+set, else the shipped list, read at the moment of use, so **every list applies at once** (`LIVE_KEYS` names them, from the
+shipped file). The settings that are not lists (`messages`, `title_min_words`, `bare_confirmation_words`,
+`holiday_calendar`, `known_terms_shipped`, and the person's own additions `known_terms` and `never_shown`) are as before.
+**Built (A5):** `tests/test_language_words.py` (every list reads exactly as its old default, from a fixture of the old
+defaults; the override rule; live).
 
 Built keys:
 
@@ -1002,9 +1020,9 @@ from the screens…" and "The app restarts only when it must, and only when the 
   written by the PM with op `config.set`, so it has history and can be put back.
 - **Live keys apply at once.** These are taken in without a restart because everything that reads them reads the shared
   config at the moment of use (`LIVE_KEYS` in `engine/worker.py`): `ai.*` (accounts, tiers, budgets), `ui.*`,
-  `workspace.user.*`, `workspace.name`, `workspace.assistant_name`, `workspace.our_accounts`, `storage.backups.*` and `watch.*`.
+  `workspace.user.*`, `workspace.name`, `workspace.assistant_name`, `workspace.our_accounts`, `storage.backups.*` and `watch.*`, and the language word lists (4.6).
 - **Every other key needs a restart:** `server.*`, the rest of `storage.*`, `workspace.language`, `workspace.plugins.*`
-  (including turning an add-on on or off), `dispatch.*`, `checks.*`, `language.*`, `stages.*`, `rules.*` and every plugin's
+  (including turning an add-on on or off), `dispatch.*`, `checks.*`, `language.*` except the word lists, `stages.*`, `rules.*` and every plugin's
   own settings. A change to the program's own code counts too. The app then says a restart is needed and why, holds new AI
   work ("Settings or code changed; restart to use them"), and waits for the person to choose **Restart now** or **Later**. It
   never restarts on its own (6.14). A copy that can't start itself again says to close and start it.

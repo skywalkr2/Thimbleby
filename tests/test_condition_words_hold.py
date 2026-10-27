@@ -159,12 +159,13 @@ def test_the_settings_have_descriptions_defaults_and_demo_values():
     import yaml
 
     from engine.config.schema import LanguageFile
+    from engine.language_words import language_words
     from tests.conftest import DEMO_A, DEMO_B
 
     for key in ("due_hold_words", "due_before_words"):
         assert LanguageFile.model_fields[key].description
-    assert LanguageFile().due_hold_words == list(DEFAULT_HOLD_WORDS)
-    assert LanguageFile().due_before_words == list(DEFAULT_BEFORE_WORDS)
+    assert language_words(LanguageFile(), "due_hold_words") == list(DEFAULT_HOLD_WORDS)
+    assert language_words(LanguageFile(), "due_before_words") == list(DEFAULT_BEFORE_WORDS)
     for template in (DEMO_A, DEMO_B):
         language = yaml.safe_load((template / "config" / "language.yaml").read_text())
         assert language["due_hold_words"] == list(DEFAULT_HOLD_WORDS)

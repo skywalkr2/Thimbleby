@@ -25,7 +25,7 @@ from engine.learn import is_learning
 from engine.learning import offered_ops, request_learns
 from engine.names import People
 from engine.ops import reach_choices, reference_for, schema_for
-from engine.playbook import guidance
+from engine.playbook import practice
 from engine.prompts import render
 from engine.records import PackSearch, Rule, RunKnowledge
 from engine.refusals import seed_section
@@ -563,7 +563,7 @@ def _task(cfg: Config, store: Store, kind: TaskKind, instructions: str, stable: 
 def _guidance(kind: TaskKind) -> str:
     if kind.guidance_file is not None:
         return kind.guidance_file.read_text(encoding="utf-8").strip()
-    return guidance(kind.playbook)
+    return practice(kind.playbook)
 
 
 NO_COPY_RULE = (

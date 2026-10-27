@@ -15,6 +15,7 @@ from typing import Any
 
 from engine.connectors import EventDetails, EventPerson, SourceItem
 from engine.due_phrases import names_title
+from engine.language_words import language_words
 from engine.own_accounts import own_names
 
 
@@ -90,7 +91,7 @@ def task_offer(entry: dict[str, Any], cfg: Any) -> str | None:
     language's task verbs; None when it isn't plain, is called off, is an invitation, or reads as no task."""
     if not entry.get("plain") or entry.get("cancelled") or entry.get("invitation"):
         return None
-    verbs = {v.casefold() for v in cfg.language.task_verbs}
+    verbs = {v.casefold() for v in language_words(cfg.language, "task_verbs")}
     return str(entry["title"]) if first_word(str(entry["title"])) in verbs else None
 
 

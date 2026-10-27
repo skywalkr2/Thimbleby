@@ -17,6 +17,7 @@ from typing import Any
 from engine import repeats
 from engine.applier import apply_as_person
 from engine.due_phrases import load_holidays, resolve
+from engine.language_words import language_words
 from engine.storage import StoreError
 from engine.today import zone
 
@@ -48,11 +49,11 @@ def read_day(store: Any, cfg: Any, words: str | None) -> DayReading:
         datetime.fromisoformat(store.clock()).astimezone(where),
         where,
         locale="en_US" if language.lower().startswith("en-us") else "en_GB",
-        lead_words=settings.due_lead_words,
-        ordinal_suffixes=settings.due_ordinal_suffixes,
-        phrase_words=settings.due_phrase_words,
-        number_words=settings.due_number_words,
-        time_zones=settings.time_zone_abbreviations,
+        lead_words=language_words(settings, "due_lead_words"),
+        ordinal_suffixes=language_words(settings, "due_ordinal_suffixes"),
+        phrase_words=language_words(settings, "due_phrase_words"),
+        number_words=language_words(settings, "due_number_words"),
+        time_zones=language_words(settings, "time_zone_abbreviations"),
         sender_zone=where,
         holidays=load_holidays(settings.holiday_calendar or language),
     )

@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
-from pathlib import Path
 
 import pytest
 
 from engine import sides, since_yesterday
 from engine.applier import Context, Inputs, apply_as_person, apply_changeset, undo
-from engine.everyday_words import shipped
+from engine.language_words import SHIPPED_DIR, language_words, shipped
 from engine.names import People
 from engine.ops import CHANGESET
 from engine.record_page import page
@@ -167,11 +166,11 @@ def test_a_rank_that_points_to_both_sides_decides_nothing_and_the_next_is_read(e
 def test_the_everyday_words_come_from_a_shipped_file_the_setting_defaults_to():
     from engine.config.schema import LanguageFile
 
-    words = LanguageFile().everyday_words
-    assert words == shipped() and len(words) > 500
+    assert LanguageFile().everyday_words is None
+    words = language_words(LanguageFile(), "everyday_words")
+    assert words == shipped("everyday_words") and len(words) > 500
     assert words == [w.lower() for w in words] and len(set(words)) == len(words)
-    shipped_file = Path(sides.__file__).parent / "defaults" / "everyday_words.yaml"
-    assert load_yaml(shipped_file.read_text(encoding="utf-8"))["en"] == words
+    assert load_yaml((SHIPPED_DIR / "en-US.yaml").read_text(encoding="utf-8"))["everyday_words"] == words
 
 
 def test_a_one_word_everyday_project_name_never_files_an_item_but_the_same_word_as_an_alias_does(env):

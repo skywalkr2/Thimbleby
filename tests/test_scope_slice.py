@@ -390,11 +390,12 @@ def test_on_a_watched_project_only_the_role_is_named_when_both_would_apply(env):
 
 def test_the_scope_lints_and_the_owed_words_have_defaults_and_demo_values_in_both_workspaces():
     from engine.config.schema import ChecksFile, LanguageFile
+    from engine.language_words import language_words
     from tests.conftest import DEMO_B
 
     assert ChecksFile().lints["watched-project"] == "return" and ChecksFile().lints["other-team-item"] == "return"
-    assert LanguageFile().owed_words == ["you", "your", "please send", "me"]
-    assert "can" in LanguageFile().request_words
+    assert language_words(LanguageFile(), "owed_words") == ["you", "your", "please send", "me"]
+    assert "can" in language_words(LanguageFile(), "request_words")
     for template in (DEMO_A, DEMO_B):
         assert "watched-project: return" in (template / "config" / "checks.yaml").read_text()
         assert "owed_words:" in (template / "config" / "language.yaml").read_text()

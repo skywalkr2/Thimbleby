@@ -25,6 +25,7 @@ from typing import Any
 from engine import knowledge
 from engine.automatic_mail import classify_automatic
 from engine.config import Config
+from engine.language_words import language_words
 from engine.names import People
 from engine.ops import GlossaryAddOp
 from engine.storage import WriteContext
@@ -211,7 +212,9 @@ def scan(store: Any, cfg: Config, request_id: str, text: str, now: datetime, *, 
     known = known_names(view) | never_asked(cfg)
     before = raised_terms(view)
     chosen: list[tuple[str, str]] = []
-    for word, line in candidates(text, cfg.language.new_term_patterns, cfg.language.new_term_ignore):
+    for word, line in candidates(
+        text, language_words(cfg.language, "new_term_patterns"), language_words(cfg.language, "new_term_ignore")
+    ):
         key = _key(word)
         if key in known or key in before:
             continue

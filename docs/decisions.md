@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: The language word lists are shipped data; a setting replaces a list whole
+
+**Decided:** The 52 `language.*` word lists (words, phrases, patterns and the date reader's mappings) move out of the
+settings schema into `engine/defaults/language/en-US.yaml`, one file for each language tag. Each setting keeps its key and
+becomes an optional override, not set by default; setting it replaces the whole shipped list, for every list alike, so a
+workspace that set one in its files behaves as before. `due_phrase_words` stays per meaning, as it was. One function
+(`language_words`) reads them at the moment of use and every list is live. The lists that were already empty by default
+(`known_terms`, `never_shown`) and every `language.*` setting that is not a list stay as they are.
+
+**Decided by:** the owner's direction, from the functional designer's full read, point 5 ("Move word lists into shipped
+data"), roadmap A5; replace rather than extend chosen by the main session so that no existing file changes meaning.
+
+**Why:** the lists do what the assistant's own reading mostly already does, were hidden in files-only settings and written
+out in the schema, and several needed a restart. Shipped data is reviewable by group and a workspace layers over it.
+
+**Impact:** Design 4.6 and 4.22 updated, roadmap A5's note, no change to behavior or to what a plugin reads. Change log:
+section 236.
+
 ## 2026-10-28: Setup asks nothing about areas; they come from the assistant's proposals
 
 **Decided:** Setup offers no tick boxes for common Personal areas (Home, Health, Money and the like). Areas come only from
