@@ -58,7 +58,7 @@ ideal:
     ops:
     - op: action.add
       text: Share the load-test results with the group
-      owners: [Odile Fenwick]
+      owners: []
       project: PRJ-1
       evidence:
         quote: Someone on our side should share them with the group

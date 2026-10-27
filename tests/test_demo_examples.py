@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from engine import follow_on
+from engine import endings, follow_on
 from engine.record_page import fact_source
 from engine.record_page import page as record_page
 from engine.rule_review import due as rule_review_due
@@ -105,7 +105,10 @@ def test_held_lines_ask_to_close_and_to_drop_each_with_the_words_it_rests_on(env
     assert shown["close"]["item"] == actions[close["id"]]["text"]
     assert shown["close"]["quote"] == close["evidence"]["quote"]
     assert shown["drop"]["item"] == actions[drop["id"]]["text"]
-    assert sorted(shown["drop"]["told"]) == sorted(people[p]["full_name"] for p in actions[drop["id"]]["told"])
+    # Who gets a note: everyone told, less the person and anyone they only watch or report to.
+    reached = endings.told_people(store.read(), cfg, cfg.workspace.user.person, store.read().get("action", drop["id"]))
+    assert sorted(shown["drop"]["told"]) == sorted(people[p]["full_name"] for p in reached)
+    assert set(reached) <= set(actions[drop["id"]]["told"])
     for key in ("queue.held.a.close", "queue.held.k.close", "queue.held.a.drop"):
         assert WORDING[key]  # the three verbs: Close it, Keep it open, Drop it
 
