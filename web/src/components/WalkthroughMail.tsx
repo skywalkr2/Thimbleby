@@ -363,7 +363,12 @@ export function WalkthroughMail(props: {
       const mine = (signIns.data ?? []).filter((s) => addonOfSignIn(s.name) === service.id);
       return service.state === "ready" && mine.length > 0 && mine.every((s) => s.status === "signed_in");
     })
-    .map((service) => ({ service, reads: read.filter((s) => addonOfSignIn(s.connector) === service.id) }));
+    .map((service) => {
+      // The service as the person knows it: the catalog's name, or for an add-on no catalog lists, its sign-in's own label.
+      const mine = (signIns.data ?? []).filter((s) => addonOfSignIn(s.name) === service.id);
+      const title = service.name !== service.id ? service.name : (mine[0]?.label ?? service.name);
+      return { service, title, reads: read.filter((s) => addonOfSignIn(s.connector) === service.id) };
+    });
   const covered = new Set(connected.flatMap((c) => c.reads.map((s) => s.id)));
   const others = read.filter((s) => !covered.has(s.id));
   const hasResult = connected.length > 0;
@@ -392,12 +397,12 @@ export function WalkthroughMail(props: {
     <div className="mail-step">
       {hasResult && (
         <div ref={result} data-mail-result="">
-          {connected.map(({ service, reads }) => {
+          {connected.map(({ service, title, reads }) => {
             const what = listOf(reads.map((s) => s.label));
             return (
               <section key={service.id} className="field" data-reading="" data-connected={service.id}>
                 <p className="what">
-                  <strong>{t("walkthrough.mail.result.connected", { service: service.name })}</strong>
+                  <strong>{t("walkthrough.mail.result.connected", { service: title })}</strong>
                   {reads.length > 0 && <> {t("walkthrough.mail.result.reading", { what })}</>}
                 </p>
                 {reads.length > 0 && <p className="hint">{t("walkthrough.mail.first_go")}</p>}
