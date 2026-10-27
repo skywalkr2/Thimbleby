@@ -62,7 +62,7 @@ Cautions that apply to many rows:
 | Item | What it asks, in a few words | Status | Evidence / what is missing |
 |---|---|---|---|
 | C1 | Sidebar with Today / Work / Records / Sources / Add-ons / Settings; plugin panels nest; header never wraps | Partial | Sidebar and nesting: `Sidebar.test.tsx` ("the views are links, in the fixed groups, with plugin panels only under Work or Records"). B-7 made the header one row at every width (`web/src/shell/Header.test.tsx`: "below 1440px the assistant's state moves into the status chip's popover, as on the phone, and the line beside the chip is gone"). Missing: the browser check of one row at 1000, 1100 and 1200px (`shell.spec.ts`, "the header is one row…") is written, not run. |
-| C2 | One-row header of 56px or less with Demo chip, Ask, status chip, Hand in, Help, user menu; no footer, no banner | Partial | `Header.test.tsx` covers every control, and from B-7 "Your pages" is the person's menu's first group (`HeaderLinks.test.tsx`). `shell.spec.ts` "every view fills the content area, under a header of at most 56px and no banner" checks 1440 and 1920 (ran at `ec37749`). Missing: the one-row check below 1280px is written, not run; no test asserts there is no footer, though none exists in `web/src`. |
+| C2 | One-row header of 56px or less with Demo chip, Ask, status chip, Hand in, Help, user menu; no footer, no banner | Partial | `Header.test.tsx` covers every control, and from B-7 "Your pages" is the person's menu's first group (`HeaderLinks.test.tsx`). `shell.spec.ts` "every view fills the content area, under a header of at most 56px and no banner" checks 1440 and 1920 (ran at `ec37749`). Missing: the one-row check below 1280px has run in the full runs since; no test asserts there is no footer, though none exists in `web/src`. |
 | C3 | Header and sidebar don't move between views | Done | `shell.spec.ts` "the header and the sidebar do not move when the view changes" (ran at `ec37749`). |
 | C4 | At 1440 and 1920 content covers 90% or more of the width beside the sidebar; no margin over 48px | Done | `shell.spec.ts` "every view fills the content area" asserts main width ≥ 90% at 1440 and 1920 on every view. The 48px margin limit is not asserted directly. |
 | C5 | Panes added by width: inspector at 1680 or wider on Today, detail panes on lists | Partial | Today: `Today.test.tsx` "from 1680px the pane opens on the first line at once…". Lists: Projects and People use the list-and-detail pane, which from B-7 overlays the table when the columns don't fit (`TablesBesidePane.test.tsx`). Missing: Files, Sources, What changed and Follow-ups have no detail pane. |
@@ -99,7 +99,7 @@ Cautions that apply to many rows:
 | C36 | Line icons replace text glyphs; nav shows icon and label | Done | `ui/Icon.test.tsx`; `Sidebar.test.tsx`; `Header.test.tsx` ("Missed one is a button with its words, not a bare warning icon"); and `ui/glyphs.test.ts`: no component draws a check, cross, warning, arrow or open circle as text; the setup stepper, AI compare, AI accounts, Templates, working copies and the mail step use line icons beside their words (`WelcomeAi.test.tsx`, `AiAccounts.test.tsx`, `AiCompare.test.tsx`). The approximate sign of the inferred pill is notation, kept (`ui/Pill.test.tsx`). |
 | C37 | Density setting; touch targets of 44px or more on coarse pointers | Partial | Density: `lib/theme.test.ts`; `Header.test.tsx` "the person's initials open the user menu, where theme and density are saved…". B-7: icon-only buttons at least 32×32 and any button at least 24×24 (`web/src/theme/targets.test.ts`). The 44px rule is in `tokens.css` under `pointer: coarse`. Missing: the browser check of every main screen (`a11y.spec.ts`, "has no visible interactive element under 24×24") is written, not run. |
 | C38 | Theme toggle (System / Light / Dark) | Done | `Header.test.tsx`; `lib/theme.test.ts`; `shell.spec.ts` "the user menu's theme and density are kept for this device". |
-| C39 | Control borders 3:1 or better; double focus ring; axe passes in light and dark at 390, 1024, 1440, 1920 | Partial | `tokens.css`: `--border-strong` 3.26:1 light, 3.9:1 dark; double ring. `shell.spec.ts` and `a11y.spec.ts` run axe in both themes at four widths and passed at `ec37749`; B-7 changed screens and the specs since. Missing: axe has not run over what B-7 changed; no automated check of the 3:1 border contrast. |
+| C39 | Control borders 3:1 or better; double focus ring; axe passes in light and dark at 390, 1024, 1440, 1920 | Partial | `tokens.css`: `--border-strong` 3.26:1 light, 3.9:1 dark; double ring. `shell.spec.ts` and `a11y.spec.ts` run axe in both themes at four widths and passed at `ec37749`; B-7 changed screens and the specs since. Missing: axe has run over what B-7 changed in the full runs since; no automated check of the 3:1 border contrast. |
 | C40 | Focus goes to the heading on view change; focus returns from drawers and dialogs | Done | `shell.spec.ts` "changing view moves focus to the new view's heading"; `App.test.tsx`; `ui/Drawer.test.tsx`. |
 | C41 | Skeleton rows with `aria-busy` instead of "Loading…" | Done | `ui/EmptyState.test.tsx` "skeleton rows mark their region busy…"; `ui/loading.test.ts`: no component shows "Loading…" as text; every waiting region is `ui/Skeleton`. |
 | C42 | Live updates invalidate by kind; new items wait behind "N new · Show" | Done | `lib/live.test.tsx`; `Today.test.tsx` "lines that arrive while the person is working in the queue wait behind 'N new · Show'"; `WhatChanged.test.tsx` "rows that arrive while the list shows others still wait behind N new". |
@@ -146,7 +146,7 @@ N1–N8: Done 5 (N3 to N7), Partial 0, Not done 3 (N1, N2, N8).
 
 What the re-review at `0f37be4` changed: C19, C47, C48 and C52 became Done (measured on screen); C14 stayed Partial for S4
 and C55 was Partial for S2, and B-9 built both with tests (above). C49 stays Partial: its browser check (`tables.spec.ts`)
-is written, not run.
+has run in the full runs since.
 
 What B-7 changed in the C1–C46 marks: C18 (record pages) became Done; C27 (tables) became Partial until the browser check
 of the tables runs; C33 stayed Done with its missing rule now built; C1, C2, C9 and C19 are built further but Partial for
@@ -168,7 +168,7 @@ Partial 21, Not done 2.
 - **The header is one row at every width** (B-7; the re-review's 3.7): below 1440px the assistant's state is a section of
   the status chip's popover, "Your pages" is the first group of the person's menu and the warning icon says "Missed one".
   This replaces the two rows from 1024 to 1279px (88px) the build had chosen before, so it is no longer a difference
-  from the review; the browser check of it is written, not run.
+  from the review; the browser check of it has run in the full runs since.
 - **The pane overlays a table when its columns don't fit** (B-7; the re-review's 3.3): beside the pane only the columns of
   highest priority stay (People: Name, Role, Organization, Open items; Projects: Name, Status, Target, Owner, Open
   items) and, when even those don't fit, the pane lays over the table. The review asked for the table not to be squeezed

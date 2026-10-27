@@ -27,65 +27,48 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 says what each batch covers, what passes at its end and how big it is. A batch is one meaningful piece of scope, with
 one full test run and one push (CLAUDE.md, "Usage and machine load").
 
-## Where things stand (2026-10-26)
+## Where things stand (2026-10-28)
 
-- **Phase S and the fix batch are built and pushed.** The owner's first evening on a fresh workspace (2026-10-22) found the
-  app not ready; everything batched from it (open promises P34 to P50, the lessons P51 to P54) and the functional
-  designer's 2026-10-26 answers that need no plugin API change (F33 to F38 "now" parts, lessons 3, 5, 6, 7 and 11) are
-  built, each with its test, and pass the full suites and the browser tests.
-- **Next, in order** (decisions, 2026-10-26, "The owner's answers to the designer's full read"): the UI/UX review of the
-  whole app (P56, with the designer's settings and one-place-to-act points in its hand-over); the one batched plugin API
-  release alongside it (P64, `docs/project/plugin-api-release-plan.md`); then the gate week, once its pass bar is set
-  (P65); then phase I, which starts only after roadmap I-0c and I-0d.
-- **Updated order (2026-10-26, after checking this file for anything dropped):**
-  1. Phase U's sides and setup work (F3, F4, plugin API 0.3.91): merged, one full run, pushed, the add-on builders told.
-  2. A sweep: tick what is now proven (U1, U2, U3, U5, U9, U11 and the browser tests that were written but not run),
-     then the leftovers the plugin API release unblocked (P58 "Not an older version", P63 lessons 4, 5 and 8, P62
-     `includes:`) and the small fix-batch leftovers (P36, P44, P49).
-  3. The rest of phase U: each item once on Today and one place to act (F6, C57, the reviewer's section 4), the
-     Settings cut with B-11b's screens folded in (F8, U12), day mode (F7), the P1 and P2 findings, the U checks.
-  4. The UI/UX reviewer's second pass with both personas (fresh captures, the six judgement calls on P69), and every
-     fix it brings built before this step counts as done (owner, 2026-10-26: "we should do 7 before 6 and then any fix
-     that comes from that before 7 is finally done"); the writer walk-through (P70) once the writing pack has screens.
-  5. Every kind of AI account hardened (B-11c, gate I-0a), checked on a low-cost model first, then the owner's re-run.
-  6. The owner's part: the laptop and phone exit checks (B-6a, B-6b), an add-on installed from a real private release
-     host (B-5), the gate week with its pass bar (P65), the AI re-run (B-10, O3).
-  7. Phase S's small "Left:" items that the gate week shows matter; the rest stay listed where they are.
-  8. Phase I, once I-0, I-0a, I-0c and I-0d pass.
-- **Status lives here and in `open-promises.md`;** finished promises move to `open-promises-done.md`.
+- **Built:** phase S, apart from the Lefts each of its boxes names; the fix batch from the owner's first evening
+  (open promises P34 to P50, the lessons P51 to P54); and **phase U, built and validated by the reviewer**
+  (`reviews/ui-ux-2026-10/validate-82d24cc/`: G1 to G4 fixed, both personas finish setup alone, no Today action raised the
+  count), with its second pass, the audit's leftovers (A2, A2b, A3, A5) and the bookkeeping (A1) done. Each ticked box cites its
+  tests. **Plugin API 0.3.91**; the hold on API changes applies again (P33).
+- **Open in the audit's batch:** A4, the checklist's partials, each re-marked with why (C16, C23, C24, C29, C35, C43).
+- **Next, in order:**
+  1. **AI account hardening** (gate I-0a): B-11c's last item (`thinking: off`, which the service's listing gives no capability
+     for), B-11b's rest (the recommendation by cost per passing answer, "Measure", the model picker's role words, effort in the
+     pre-save check, confirming each service's effort parameter), each fix checked on a low-cost model first, then the owner's
+     re-run (B-10; P30 and P31 are the owner's captures and the learning-pair groups).
+  2. **The owner's checks and the gate week with its pass bar** (P65: drafted in `docs/project/gate-pass-bar-draft-2026-10-28.md`,
+     waiting for the owner's yes; the thresholds paragraph of design 6.32 is matched to it after that yes): the laptop and phone
+     exit checks (B-6a, B-6b), an add-on installed from a real release host (B-5), the app-password check (P67), the real-mail
+     re-run (P46). The gate's instruments already count the pass bar's rows for lost promises, the 50-message sample, sources not read and review time (change log 235).
+  3. **Phase S's leftovers**, the gate week showing which matter; those that need an add-on (calendar acts, the add-ons' channels,
+     Move to, older mail) go to the add-on builders.
+  4. **Phase I**, once I-0, I-0a, I-0c and I-0d pass.
+- **Held, not dropped:** `includes:` (P62, P39) and the test kit case for a validator that reads a file (P71) and a core op that
+  copies long text with its authorship (P72) wait for the next plugin API release; the writer walk-through (P70) waits for the
+  writing pack to register its screens.
+- **Status lives here and in `open-promises.md`;** finished promises move to `open-promises-done.md`; finished roadmap work to
+  `roadmap-done.md`.
 
-## Where things stand (2026-10-20)
+## How the order was set (decided; kept from 2026-10-20)
 
-- **Done** (all in `roadmap-done.md`): phase 0; phase A (2026-10-13); phase L-core's code, L0 to L7, apart from the
-  owner's re-run of the failed learning cases (O3, below); phase B's waves 1 to 4 and every defect the four outside
-  reviews found, each with its test; in phase S, batches S1-1 and S1-3 and S1's outage handling, coverage line, rule check
-  before applying, unseen-close counting, quiet source intake and spending as a range; and, built on 2026-10-19 and 20,
-  most of phase B's last screens: batches B-5, B-6a and B-6b, the UI/UX designer's re-review (the UI gate: its feedback
-  is recorded in `ui-rereview-2026-10-20.md`) and seven of batch B-7's sub-items. Each open item below says what is built
-  and what is left; a part is never ticked.
-- **In progress:** the end of phase B. The sweep for ids, ISO dates and raw words now covers every view
-  (`web/src/components/ViewSweep.test.tsx`), and the browser checks written on 2026-10-20 all pass in the full run of
-  `9c0f76e`. What B-7 and B-6b still lack: the reviewer's next round on the pushed commit, and the owner's re-run of the
-  failed learning cases. The items below name the rest.
-- **The order** (decided; the batches below follow it; changed by the owner, 2026-10-22: the gate week comes once the
-  core is built, so the rest of S no longer waits for it): S1 (S1-1 to S1-3) → B's waves 5 and 6 (B-5, B-6a, B-6b) built
-  to S's shape → the UI/UX designer's re-review and the feedback it brings (UI gate, B-7) → the rest of S (S1b, S2 to S5)
-  → the gate week on the core as built → I (installers; the first milestone ends here) → C (the writing pack) → P (the other packs) → D
-  (sign-off) → L-more (beside real use, after the packs) and E (the rest of version 1, ordered by what protects real data
-  first) → Publish 1.0 once the owner finalizes scope.
-- **The first milestone** (owner, 2026-10-19): the core complete, with full UI and code reviews approved, and the
-  installers (phases B, S and I), published as the free core release (the free core's own phase I item, I-3). 1.0 is a
-  moving target until the owner finalizes scope; it ships on plugin API 0.x. There is no go/no-go date: the 2026-10-30 one was
-  set aside on 2026-10-09 and 2026-10-12, and stays set aside.
-- **When the owner uses it:** the owner tests it after phase B and starts real use once the writing pack is complete
-  (owner, 2026-10-15; confirmed 2026-10-19). Phase S's gate week is the measured trial of the core on the owner's personal
-  mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
-- **Owner action pending:** the owner's first run of the learning tests (O3) was made on 2026-10-20 (81% of 214, 79% harder,
-  53% pairs, 30% harder pairs; one run per case, as the B-6b item below records), and its failures led to
-  the fixes built in batch B-7 (design `CHANGES.md` section 126). Left: the owner re-runs the failed cases with
-  `cockpit evaluate ... --case-failed <the report>` on the commit that batch pushes (steps under O3, below).
-- **Open items:** 112, each in exactly one batch; 262 done items are in `roadmap-done.md`.
-- **Plugin API:** 0.3.86 (the change notes are in `docs/plugin-api-0.x.md`).
+- **The order:** phase B and its UI gate, then phase S (the daily steward), then phase U (the UI/UX reviewer's findings), then
+  AI account hardening, then the gate week on the core as built, then phase I (installers; the first milestone ends there),
+  then C (the writing pack), P (the other packs), D (sign-off), L-more and E, then Publish 1.0 once the owner finalizes scope
+  (owner, 2026-10-22: the gate week comes once the core is built; 2026-10-26: phase U before the gate week).
+- **The first milestone** (owner, 2026-10-19): the core complete, with full UI and code reviews approved, and the installers
+  (phases B, S and I), published as the free core release (the free core's own phase I item, I-3). 1.0 is a moving target until
+  the owner finalizes scope; it ships on plugin API 0.x. There is no go/no-go date: the 2026-10-30 one was set aside on
+  2026-10-09 and 2026-10-12, and stays set aside.
+- **When the owner uses it:** the owner tests it in the evenings as it goes, and starts real use once the writing pack is
+  complete (owner, 2026-10-15; confirmed 2026-10-19). Phase S's gate week is the measured trial of the core on the owner's
+  personal mail (R9 rules out work mail), before testers.
+- **The AI re-run:** the owner's first run of the learning tests (O3) was made on 2026-10-20 (81% of 214, 79% harder, 53% pairs,
+  30% harder pairs); its failures were fixed in batch B-7 (design `CHANGES.md` section 126). The owner re-runs the failed cases
+  (B-10, steps under O3, below).
 
 ## The plan in batches
 
@@ -294,17 +277,13 @@ from" link are built for real use at the end of L-core ("Ready for real use"); p
 
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 
-**Where phase B stands (2026-10-20).** Waves 1 to 4 are built, and so is every defect the outside reviews found
-(roadmap-done.md, "Phase B"). Waves 5 and 6 (batches B-5, B-6a and B-6b) were built on 2026-10-19 and 20 apart from the
-items below, each of which says what is built and what is left; the UI/UX designer's re-review is done and recorded (UI
-gate), and batch B-7 builds its feedback, the first-run review's and the functional designer's answers F15 to F25: seven
-of its thirteen sub-items are built and checked off, and the rest wait on browser checks that are written and not yet
-run, a sweep over more views, the reviewer's next look and the owner's re-run of the failed learning cases. The owner
-holds feedback until phase B is done and then tests it all at once ("im going to wait on any other feedback until we
-get all the updates done"); the message then gives the update commands and a walkthrough.
+**Where phase B stands (2026-10-28).** Waves 1 to 6 are built, and so is every defect the outside reviews found
+(roadmap-done.md, "Phase B"); the UI/UX designer's re-review is done and recorded (UI gate), B-7, B-8 and B-9 are built, and
+phase U's reviews of the whole app are built and validated (see phase U below). Each open item below says what is built and
+what is left; what remains is mostly the owner's own checks and re-run (B-5, B-6a, B-10) and the AI account items (B-11).
 
 From the three outside reviews of 2026-10-18 (`docs/project/incoming/reviews-2026-10-18/`); their defects are fixed
-(roadmap-done.md), and this one is for the owner to decide:
+(roadmap-done.md), and this one was for the owner to decide (decided 2026-10-19, below):
 
 3. **Plan changes proposed, for the owner to decide** (product review): the tester cohort as a roadmap milestone with
    exit numbers; a real-mail acceptance gate at S1 (the owner's mailbox, one week, the promise workflow whole, a
@@ -315,12 +294,13 @@ From the three outside reviews of 2026-10-18 (`docs/project/incoming/reviews-202
    line (what was read, when, and what wasn't) so "nothing needs you" never looks like "couldn't check"; a cheap way
    to add a missed promise, with omissions measured.
 
-**Owner decisions waiting (from the reviews):** the product review's plan changes above; numeric dependability
-thresholds set before the acceptance run, measured with denominators and a held-out set, omissions found by an
-independent reading of a consented sample; publisher acceptance tests (stale approvals, duplicates after a retry,
-uncertain remote results, revoked sign-ins, hostile content redirecting an act); (decided 2026-10-20: the
-installers ship the mail and calendar add-ons ready to sign in, see the I-1 item); and the owner's target of sharing installers with a small invited
-group on 2026-10-20, which the plan's order (B, S, then I) and the integrity items above don't yet support.
+**Owner decisions from the reviews (decided 2026-10-19 to 2026-10-26, `docs/decisions.md`):** the product review's plan
+changes above (the owner's review of the batched plan and calls on the designer's plan points, 2026-10-19); the publisher's
+acceptance tests are built (stale approvals, a retry never sending twice, an uncertain answer never shown as sent, a withdrawn
+sign-in, outside content that tries to change a recipient: `tests/test_publisher.py`); the installers ship the mail and calendar
+add-ons ready to sign in (decided 2026-10-20, the I-1 item). **Still waiting for the owner's yes:** the numeric thresholds for
+"dependable" (the gate week's pass bar, P65, drafted in `docs/project/gate-pass-bar-draft-2026-10-28.md`), measured with
+denominators and a held-out set, with omissions found by an independent reading of a consented sample (built, A3).
 
 **The waves left** (waves 1 to 4 are in roadmap-done.md):
 
@@ -361,6 +341,7 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
 - [ ] [B-6b] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
   the other answer a visible button.
   *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. *Built (audit A5):* "Drop it and draft the note" (`tests/test_drop_and_draft_note.py`, `web/src/components/TodayRecords.test.tsx`).
+  *Left:* a note box on "Keep it open" (design 7.6 says "Not built"); nothing else of this item.
 
 From the original designer's lessons of 2026-10-14:
 - [x] [B-6b] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
@@ -380,13 +361,13 @@ From the original designer's lessons of 2026-10-14:
   `journeys.spec.ts`, `panes.spec.ts` with both phone review modes setting up their own item instead of skipping,
   `shell.spec.ts`, `layout.spec.ts`, `a11y.spec.ts`). A To send line shows the count without an age, because the server
   holds none for a message not yet sent (the design asks for none).
-- [ ] [B-6a] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
+- [x] [B-6a] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
   *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
   *Built (B-6a):* the contrast warning in Appearance and the date-format list (`web/src/lib/theme.test.ts`,
-  `web/src/components/Settings.test.tsx`). *Left:* a money list: the functional designer answered that amounts are US dollars, labeled plainly, for 1.0 (design 7.9,
+  `web/src/components/Settings.test.tsx`). *Not built, by decision:* a money list: the functional designer answered that amounts are US dollars, labeled plainly, for 1.0 (design 7.9,
   change log 174), because every cost is an AI service's price in dollars and the app has no exchange rates; a currency
-  setting waits for that.
+  setting waits for that (checklist C29, kept open in A4).
 - [x] [B-6b] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
   tooltip; amber or red when something is wrong. The held-work and paused lines cover the bad case; this covers "is it
@@ -402,13 +383,14 @@ From the original designer's lessons of 2026-10-14:
   header is one row, with every control inside the window and the assistant's state in the status chip", passing at
   `9c0f76e`), with a long assistant line beside the chip at 1440px ("the header never wraps, with plugin panels
   present").
-- [ ] [B-6b] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
+- [x] [B-6b] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
   *Built (B-6b):* the stages board (`web/src/components/StagesBoard.test.tsx`, `tests/test_stage_cards.py`), the hand-in as a
   drawer and Ask as a pane from 1440px (`web/src/components/AskPane.test.tsx`), and the phone's review mode on What
   changed (`web/src/components/WhatChanged.test.tsx`: "review mode on a phone"). The same mode for Follow-ups' messages to send, one person at a time
   with the message's own Copy and Mark sent and Next in the bar (`web/src/components/FollowUpsListDetail.test.tsx`: "review mode
-  on a phone"; `web/e2e/panes.spec.ts`, not yet run). The review-mode browser tests no longer skip: each hands in its own item.
-  *Left:* the review mode on Waiting to go out, which waits for the publisher (7.4).
+  on a phone"). The review-mode browser tests no longer skip: each hands in its own item (`web/e2e/panes.spec.ts`, which
+  has run in the full run since; What changed has no phone review mode now, it is the history, change log 229).
+  *Not a separate screen any more:* Waiting to go out is the To send tab of Follow-ups, with its review mode (change log 229).
 - [ ] [B-6b] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.
@@ -583,7 +565,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     *Built:* the fixes, each with its test (see "Found by the owner's first real use", B-6b). *Left:* the owner's re-run
     of the failed cases, which is this sub-item's acceptance, and its result.
 
-- [ ] [B-8] **Build the UI/UX designer's review of batch B-7** (received 2026-10-20 at `46cc3ea`,
+- [x] [B-8] **Build the UI/UX designer's review of batch B-7** (received 2026-10-20 at `46cc3ea`,
   `reviews/ui-ux-2026-10/rereview-46cc3ea/README.md`; the owner's standing answer, 2026-10-20: "give them what they
   want"). B-7's six deliberate differences were accepted; F25's yes is accepted on two conditions, which are built here.
   Each sub-item is done when its test passes:
@@ -605,7 +587,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     `web/src/components/TodayRecords.test.tsx` ("Outside in the pill column, meta one line"), `web/e2e/shell.spec.ts` (six
     lines in full at 1280×720 with the demo's longest held and moved lines, each meta one line), and in a browser
     (`web/e2e/today-capacity.spec.ts`: "Today at 1280x720 shows six lines in full when the held and moved lines are as
-    long as the demo's, each with its meta on one line", passing at `9c0f76e`). *Left:* the stopped-work lines
+    long as the demo's, each with its meta on one line", passing at `9c0f76e`). *Carried, not blocking the box:* the stopped-work lines
     (`HeldLines`) still wrap their second line, because it says why and until when and has no inspector to hold the rest;
   - R4: on a new workspace the header has no "Missed one" until there is something it could have missed, and the
     workspace's new name shows without a reload. **Built (wave 1):** `web/src/shell/Header.test.tsx` ("a new workspace
@@ -638,7 +620,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     every recap row at most 64px high), R9 (`web/e2e/a11y.spec.ts`, "… has no visible interactive element under 24×24
     at 1024, 1440 and 390px", measuring the control itself) and R10 (`web/e2e/shell.spec.ts`, "What changed titles follow
     Today's title rule, never From: and a person") pass at `9c0f76e`; R7's side panel is still not measured in a
-    browser (its CSS follows the review's numbers and the stylesheet tests);
+    browser, carried and not blocking the box (its CSS follows the review's numbers and the stylesheet tests);
   - CI's python-later job (the tests with the clock 40 days ahead) finishes: on `46cc3ea` it ran past 30 minutes with
     every other job green and was cancelled, as the same run hung locally at 94% with three workers and passed with two.
     The job now has a time limit and prints the stack of any test past five minutes; the hanging test is found and fixed,
@@ -816,11 +798,14 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   (`thinking_room`), and a tier's `thinking: off` sent only where a model's listing accepts it, with the account check
   saying in plain words what a model doesn't take
   (`tests/test_anthropic_messages.py::test_a_model_that_takes_no_effort_gets_none_and_the_test_says_so_in_plain_words`).
-  Left in part 2: the service's listing names no "thinking can be turned off" capability, so `off` is never sent yet;
-  the preset's newest-of-family pick rests on the list's order, which the reference doesn't document (no date field);
-  estimates by the model's own token count (the reference's exact route is a count request per model; character
-  estimates undercount on the current models by about a third), plus a command-line agent's own overhead per request (the owner's Codex run counted 12,039 tokens for a two-word request); moving a saved account of the recommended service to
-  the native adapter (with B-11b's Settings screen).
+  *Part 2's other items built* (2026-10-22): estimates by the model's own token count, corrected from every run's reported usage,
+  plus a command-line agent's own overhead per request (`tests/test_estimate_calibration.py`); the preset's newest-of-family
+  pick by the listing's own date, then the version in the id, never the list's order (`tests/test_family.py`, and a newer
+  model of the family watched weekly, `tests/test_model_watch.py`); moving a saved account of the recommended service to the
+  native adapter, only on a yes with an identity read-back (`tests/test_native_move.py`).
+  *Left in part 2:* the service's listing names no "thinking can be turned off" capability, so `thinking: off` is never sent
+  yet. *Left in the item:* P30 (the owner captures each command-line agent's signed-out message) and the check of each fix
+  on a low-cost model.
   (3) **Failures captured in detail for feedback** (owner, 2026-10-21: "We should have something in the program that
   captures failures in detail so the user can send them in the feedback"): every failed AI call, account check,
   connector read and server error keeps what a maintainer needs (when, the task kind, the account's service and
@@ -1081,7 +1066,7 @@ S3. **People and meetings:**
   `steward.meetings.prep_hours_before` before it starts; an optional prep note as the core draft kind `meeting-prep`
   (estimated, held for the go, unreviewed until accepted); and after it ends a Today line that opens a note box tied to the
   entry, whose words are handed in like any note (`engine/meeting_prep.py`, `tests/test_meetings_people.py`,
-  `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** the browser journey, written and not yet run
+  `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** the browser journey, which has run in the full runs
   (`web/e2e/meetings-journey.spec.ts`; its seed is `tests/e2e_meetings.py`, `tests/test_e2e_meetings_seed.py`).
   **Left:** the journey passing in a browser run, a capture for an entry nobody else is on, and an undo for "nothing to note".
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
@@ -1093,9 +1078,9 @@ S3. **People and meetings:**
   `steward.people.quiet_promise_days` (`engine/people_memory.py`, `tests/test_meetings_people.py`,
   `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** Send a follow-up from the line (a message to whoever owes the promise, written from the wording
   sheet and drafted as an act for the person's yes) and Snooze to a day from a list, with Undo
-  (`tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`); the person's page journey, written and
-  not yet run (`web/e2e/meetings-journey.spec.ts`). **Left:** who asked a question (a question has no asker, so "asked by
-  them" is the replies owed), dates from a contact source or in other languages, and the journey passing in a browser run.
+  (`tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`); the person's page journey, which has run in the full runs
+  (`web/e2e/meetings-journey.spec.ts`). **Left:** who asked a question (a question has no asker, so "asked by
+  them" is the replies owed), dates from a contact source or in other languages.
 
 S4. **What arrives, and where it may go:**
 - [ ] [S4] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
@@ -1225,43 +1210,72 @@ as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't cl
 
 The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the designer's answers F39 to F46
 (`docs/project/designer-answers-2026-10-28.md`) are all built here (owner, 2026-10-28; decision 2026-10-28, change log
-234), in batches with the full suites once per batch. Then both personas walk a fresh install again.
-- [ ] [G1-G4] The P0s: no raw data in messages and none over a control (G1); a review on Today (G2, F39); unsure filing
-  under Personal with one question (G3, F40, F41); setup reads an add-on's sent mail (G4, F10). *G2 is built* (2026-10-28,
-  `tests/test_review_batches.py`, `tests/test_today_adds_no_lines.py`, `web/e2e/today-review.spec.ts`); G1, G3 and G4 are left.
-- [ ] [G5-G14] The P1s: the AI step's words (G5, F46), the service's name (G6), the setup group saved with its jobs (G7),
+234 and 237), in batches with the full suites once per batch. The reviewer then walked a fresh install again with both
+personas (`reviews/ui-ux-2026-10/validate-82d24cc/`): G1 to G4 fixed, phase U closed (roadmap A2b).
+- [x] [G1-G4] The P0s: no raw data in messages and none over a control (G1); a review on Today (G2, F39); unsure filing
+  under Personal with one question (G3, F40, F41); setup reads an add-on's sent mail (G4, F10). **Built:**
+  G1 `web/src/lib/raw-data.test.ts`, `web/src/lib/settings-save.test.tsx`,
+  `tests/test_screen_text.py::test_no_message_toast_title_or_label_shows_json_a_record_id_or_a_raw_mail_header`;
+  G2 `tests/test_review_batches.py`, `tests/test_today_adds_no_lines.py`, `web/e2e/today-review.spec.ts`;
+  G3 `tests/test_filing_unsure.py`, `tests/test_filing_api.py`, `web/src/components/TodaySides.test.tsx`,
+  `web/src/components/Unfiled.test.tsx`;
+  G4 `tests/test_sent_folder_addon.py`, `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`.
+- [x] [G5-G14] The P1s: the AI step's words (G5, F46), the service's name (G6), the setup group saved with its jobs (G7),
   ticks from records (G8), the brief summarises (G9, F42), plain titles and facts (G10, F44), phone lines (G11), tonal
-  in night mode (G12), "Who they are" (G13, F45), the outside marker (G14, F43). *Built:* G9, G11, G12 and G14 (2026-10-28,
-  `tests/test_brief.py`, `web/src/components/BriefCard.test.tsx`, `web/e2e/today-review.spec.ts`, `web/src/theme/dayMode.test.ts`,
-  `web/src/components/Today.test.tsx`); G5 to G8, G10 and G13 are left.
-- [ ] [G15-G23] The P2s, as the review lists them. *G22 is built* (2026-10-28, `web/src/components/TodayRail.test.tsx`); the rest
-  are left.
-- [ ] [U13] No JSON, ids or raw headers in any message, title or label.
+  in night mode (G12), "Who they are" (G13, F45), the outside marker (G14, F43). **Built:**
+  G5 `web/src/components/WelcomeAi.test.tsx`,
+  `tests/test_work_access.py::test_a_new_or_fallback_account_reads_nothing_private_until_the_person_says_yes_for_that_account`;
+  G6 and G7 `web/src/components/Walkthrough.test.tsx`;
+  G8 `tests/test_walkthrough.py::test_every_counted_tick_is_computed_from_its_own_record_and_no_screen_state_ticks_one`,
+  `::test_a_first_note_is_ticked_only_when_something_was_handed_in_not_for_any_change_made_on_a_screen`,
+  `::test_your_promises_is_not_ticked_before_its_screen_was_reached_even_when_the_look_back_ran`;
+  G9 `tests/test_brief.py`, `web/src/components/BriefCard.test.tsx`;
+  G10 `tests/test_plain_titles.py`, `web/src/components/RecordPageRecords.test.tsx`;
+  G11 and G12 `web/e2e/today-review.spec.ts`, `web/src/theme/dayMode.test.ts`;
+  G13 `web/src/components/People.test.tsx`;
+  G14 `web/src/components/Today.test.tsx`, `web/src/components/MeetingPrep.test.tsx` (the meeting prep's tag went with A2).
+- [x] [G15-G23] The P2s, as the review lists them. **Built:** G15 `web/src/lib/wording.test.tsx`; G16 and G19
+  `web/src/components/Walkthrough.test.tsx`,
+  `tests/test_walkthrough.py::test_the_work_templates_are_offered_only_when_no_jobs_were_given_in_setup`; G17, G22
+  `web/src/components/TodayRail.test.tsx`; G18 `web/src/components/Settings.test.tsx`,
+  `web/src/components/Notifications.test.tsx`, `tests/test_settings_cut.py`; G20 `web/src/components/FollowUps.test.tsx`;
+  G21 `web/src/components/OpenItems.test.tsx`, `web/src/wording/wording.test.ts` ("Stale" and "On hold" everywhere, A2);
+  G23 `web/src/components/RecordPageRecords.test.tsx`.
+- [x] [U13] No JSON, ids or raw headers in any message, title or label. **Built:** `web/src/lib/raw-data.test.ts`,
+  `tests/test_screen_text.py::test_no_message_toast_title_or_label_shows_json_a_record_id_or_a_raw_mail_header`,
+  `tests/test_note_title_migration.py` (notes stored before the title rule were re-titled once, A2).
 - [x] [U14] A review happens on Today: the address stays and the count never rises; no Today action adds lines.
   **Built:** `tests/test_today_adds_no_lines.py`, `web/e2e/today-review.spec.ts`.
-- [x] [U15] A business's first read leaves at most one filing question. **Built:** `tests/test_filing_unsure.py` (also with a job
-  and a business beside Personal: one question per side a day, one Today line that names neither).
-- [ ] [U16] Setup's ticks come from records.
+- [x] [U15] A business's first read leaves at most one filing question. **Built:** `tests/test_filing_unsure.py` (one
+  mailbox serving both sides ends with one question and nothing unfiled; also with a job and a business beside Personal:
+  one question per side a day, one Today line that names neither).
+- [x] [U16] Setup's ticks come from records. **Built:**
+  `tests/test_walkthrough.py::test_every_counted_tick_is_computed_from_its_own_record_and_no_screen_state_ticks_one`.
 - [x] [U17] At 390px, queue titles show at least 25 characters. **Built:** `web/e2e/today-review.spec.ts`.
 - [x] [U18] Row actions are tonal in both themes, only the selected line's filled. **Built:** `web/src/theme/dayMode.test.ts`,
   `web/e2e/today-review.spec.ts`.
-- [ ] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
+- [x] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
+  **Built:**
+  `tests/test_version_choices.py::test_a_link_survives_the_older_copy_moving_into_archive_and_the_current_copy_being_renamed`.
 - [x] [U20] A rail panel opened on a phone stays open when Today's data refreshes. **Built:** `web/src/components/TodayRailFold.test.tsx`
   (the cause: a card out of the page while what it asks is on its way lost its own fold; the rail keeps it now),
   `web/e2e/layout.spec.ts` (the walk opens Came in plainly, no retry).
-- [ ] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
-  address (the reviewer's answer 10; owner, 2026-10-28).
+- [x] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
+  address (the reviewer's answer 10; owner, 2026-10-28). **Built:** `tests/test_notice_apps.py`,
+  `web/src/components/Notifications.test.tsx`.
 
 ### Before AI hardening: the audit of 2026-10-28 (path to 1.0, the reviewer's and the designer's notes)
 
 Two read-only audits checked every roadmap item, the reviewer's notes (F1 to F27, G1 to G23, the 13 answers, the
 re-reviews, C1 to C57) and the designer's answers and notes (F1 to F46, lessons, future notes, the day's input) against the
 code. Nearly all is built or planned. What is left, in two batches:
-- [ ] [A1] Bookkeeping: tick the boxes built and never ticked (phase U's second pass, B-6a, B-6b, B-8, B-11c part 2),
+- [x] [A1] Bookkeeping: tick the boxes built and never ticked (phase U's second pass, B-6a, B-6b, B-8, B-11c part 2),
   CHANGES 234 complete and marked built, "Where things stand" brought up to date, built work no longer marked "designed"
   in the design, stale open-promise rows refreshed and cells capped, and two decisions written down that were taken in
   building: the handled-for-you count on Today supersedes the designer's F34 and P58 ("nothing about handled mail on
   Today"), and removing the Top priorities card keeps F15, F16 and F24's chase rules without their display.
+  *Checked by reading* (2026-10-28, docs only): every box named is ticked with its test or left open with what is left, the
+  design's marks and change log 234 are brought up to date, and the two decisions are in `docs/decisions.md` (2026-10-28).
 - [x] [A2] The second pass's leftovers: notes stored before today re-titled once (no raw headers anywhere); U20; the
   "From an email" note at a link to open and a payment; "Stale" and "On hold" replaced everywhere (G21); no "Outside" tag
   on meeting-prep lines (G14); U15 with a job and a business (two sides). **Built:** `tests/test_note_title_migration.py`,
@@ -1278,19 +1292,20 @@ code. Nearly all is built or planned. What is left, in two batches:
   reviewer saw, "The notes list that the offsite is on a Friday.", is the stand-in answer's shape for a "Decided:" line in
   a document (`engine/ai/adapters/stand_in.py`): the line says no one chose, and the stand-in sets no speaker; a fact with
   a known speaker now reads "Pat says …" with its day.
-- [ ] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
+- [x] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
   lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
   thresholds paragraph matched to the draft once the owner says yes.
   *Built so far (2026-10-28):* the review pane on Today is timed and the median is given; lost promises, sources unread over a day
   and the 50-message sample (setting, draw, the person's counts, `docs/project/gate-sample-procedure.md`) are counted with their
-  denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). *Left:* the thresholds
-  paragraph of design 6.32, which waits for the owner's yes.
+  denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). *Not part of
+  the box, waiting for the owner's yes (P65):* the thresholds paragraph of design 6.32, matched to the drafted pass bar once the
+  owner says yes.
 - [ ] [A4] The checklist's partials (C13, C15, C16, C23, C24, C29, C35, C36, C41, C43, C45) built or re-marked, with C21
   and C22 re-marked. Built with tests (`docs/project/ui-review-status-2026-10-20.md`): C13, C15, C21, C22, C25, C36, C41, C45.
   Left, each re-marked with why: C16 (the rail's rows to `ui/Row`), C23 (two columns and inline validation in the forms),
   C24 (a sweep of about 240 disabled controls), C29 (a currency setting), C35 (the `.kind` chips and three filter groups)
   and C43 (queued clicks while offline).
-- [ ] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
+- [x] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
   lists moved into shipped data (full-read point 5); the Monday message asking once who it is for; "Drop it and draft the
   note"; P40 point 8 reproduced; B-11b's tiers with a cost per day. (S4's setup tick boxes for common areas: dropped, owner 2026-10-28; areas
   come only from the assistant's proposals, as design 7.8 says.)
@@ -1298,7 +1313,7 @@ code. Nearly all is built or planned. What is left, in two batches:
   is for; "Drop it and draft the note"; P40 point 8 reproduced with a test that passes (see `open-promises.md`); B-11b's cost per day
   for each tier (`tests/test_tier_costs.py`); the 52 `language.*` word lists in shipped data, `engine/defaults/language/en-US.yaml`, each setting an
   optional override that replaces the whole shipped list and applies at once (full-read point 5, change log 236, `tests/test_language_words.py`).
-  *Left:* nothing in this item but the box itself, which the main session ticks after reviewing it.
+  Nothing is left in this item.
 - Held, not dropped: `includes:` (P62, P39) with the next plugin API release; calendar create, move and cancel and the
   add-on channels with the add-on builders.
 

@@ -2114,7 +2114,7 @@ in the queue; 7.7). Allow is `POST /api/ai/accounts/{name}/allow-work`: one sett
 the assistant's work, so it records no signal; the line goes the moment the account may see the internal level, however that
 came about. The browser tests' server can start with such an account (`tests/e2e_server.py --standin-account`, the `access` project) so
 the line and the yes can be captured. **Built:** `tests/test_work_access.py`, `web/src/components/WelcomeAi.test.tsx` (the question, its
-two answers, `work_data` sent with Not now only), `web/src/shell/HeldLines.test.tsx` (the line, Allow with Undo), `web/e2e/work-access.spec.ts` (written, not run).
+two answers, `work_data` sent with Not now only), `web/src/shell/HeldLines.test.tsx` (the line, Allow with Undo), `web/e2e/work-access.spec.ts` (has run in the full runs).
 *Built so far:* `tests/test_first_run_ai.py` (the catalog's recommendation and links, the open-only default, the messages by
 kind of account, every tier with its exact settings, the identity), `web/src/components/WelcomeAi.test.tsx`. Until a kind of work has a result the compare page says "Nothing measured yet" with
 "Measure (about $x)", and an account's row says "Not measured yet" with a Measure button, instead of "Good at 0 of 14"
@@ -3733,7 +3733,7 @@ people and details, and never acts in their name without their yes on the exact 
     `tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`.
   - **Left:** asking "who asked this" of a question (a question has no asker, so "asked by them" is the replies owed); a
     capture for an entry nobody else is on; birthdays from a contact source; dates written in languages other than
-    English; the browser journey `web/e2e/meetings-journey.spec.ts` (written, not yet run). `tests/test_meetings_people.py`,
+    English; the browser journey `web/e2e/meetings-journey.spec.ts` has run in the full runs. `tests/test_meetings_people.py`,
     `web/src/components/MeetingPrep.test.tsx`.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
   connection); areas of life with their own data level and allowed accounts; capture from anywhere, voice included
@@ -3844,7 +3844,7 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   Personal is its own kind of thing, not a project with rules switched off. It keeps the exceptions it has (no target
   day, no phase, no work-style questions, bills and orders filed there by default) and no new special case is added to it:
   the work-side rule for bills changes where a bill files, not what Personal is (functional designer, 2026-10-26, F37).
-- **Personal plus any number of sides** (owner, 2026-10-26; change log 227; *designed, phase U with F3 and F4, not built*):
+- **Personal plus any number of sides** (owner, 2026-10-26; change log 227; **Built**, phase U with F3 and F4: `tests/test_many_sides.py`, `tests/test_sides.py`, `tests/test_walkthrough.py::test_a_job_and_two_businesses_make_three_sides_in_order_with_their_kinds`):
   a person may track Personal, a job, and several businesses at once (a company of their own, their writing, and more
   later), so "the second side" below becomes a list. Each side is a top-level project with a kind (`job` or `business`)
   and its own name, mailboxes (or a mailbox shared with Personal or another side), people and relations; a pack's
@@ -3852,8 +3852,8 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   writing business), never to "the business". Packs on different sides still work together through the core's interfaces
   (3.9): a finished book on a writing side can be handed to a publishing pack serving another side, and each item stays on
   its own side. The filing ranks below read "a side" wherever they say "the business", a
-  rank pointing to two or more sides deciding nothing. Until it is built, the text below describes the one-business
-  version that runs today. The parts (change log 228):
+  rank pointing to two or more sides deciding nothing. The text below says "the second side" where it first described one
+  business; with several sides it reads as the list. The parts (change log 228):
   - **The sides' list:** `workspace.project.sides`, each entry a top-level project id and its kind (`job` or `business`).
     `workspace.project.business`, the old single value, is read as one entry of kind `business` by a config migration and
     is never written again. Personal stays `workspace.project.personal`.
@@ -3891,18 +3891,19 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   - **Setup's routes** (`POST /api/setup/work`, `/api/setup/business`, with an optional `kind`) add a side each time; a
     name an existing side already has returns that side. A side is renamed by editing its project, never by posting
     its name again.
-  - **Not yet:** the "which side" Today line and "Move to the other side" read only while there is one other side
-    (with several, Move goes to Personal from a side, and from Personal offers nothing yet); the screens task makes
-    both a list to pick from.
-- **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
+  - **Moving between sides (built):** the "which side" line and the item's page name every other side to move to, one
+    step when there is one and a list to pick from when there are several, from a side and from Personal alike
+    (`tests/test_many_sides.py::test_a_filing_names_every_other_side_to_move_to_and_one_step_only_when_there_is_one`,
+    `::test_the_page_lists_every_other_side_to_move_to_and_an_edit_to_one_of_them_moves_the_item`).
+- **Two sides from day one** (the UI/UX reviewer, 2026-10-21; **built**, S1-4: `tests/test_sides.py`, `tests/test_many_sides.py`): every item belongs to Personal or to the
   second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
   a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Every list that can hold both sides (Today, What changed, Handled for you, Follow-ups, To-dos, People and
   Files) has the same "All / Personal / <side>" control in the same place, hidden entirely when there is no side (the
-  reviewer's answer 6; *built* except What changed's rows, `web/src/components/SideFilter.test.tsx`,
+  reviewer's answer 6; *built*, `web/src/components/SideFilter.test.tsx`,
   `web/src/components/SideFilterLists.test.tsx`; what is on no side shows under every choice; Handled for you asks the
   server (`GET /api/handled?side=`), whose rows carry the one side their source serves; a follow-up section for
-  another person stays whole while any of its items is on the chosen side, since it is one message; What changed draws
-  the control, and filtering its rows waits for that screen's rebuild). Filing reads the
+  another person stays whole while any of its items is on the chosen side, since it is one message; What changed's rows
+  follow the control too, `SideFilterLists.test.tsx`). Filing reads the
   signals in this order (designer, 2026-10-22; change log 174; **built, B-12 batch 1:** `tests/test_filing_signals.py`,
   `tests/test_sides.py`; the first rank that decides, decides, and a rank whose signals point to both sides decides
   nothing, so the next is read): **people first**, since each person belongs to a side; then **the sender's domain**,
@@ -4115,10 +4116,11 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   is not part of the repeat-correction rate, and a lesson from it should name no kind of work unless the person's words
   do. The quality view (`GET /api/quality`) lists "Missed one" for each person and week with the week's dates, a week
   with none as zero. Built: `tests/test_missed_one.py`, `web/src/components/MissedOne.test.tsx`. The Quality screen shows it
-  by week. *Not built:* the evening wrap-up's entry (phase S2).
+  by week. The header's control is there beside the evening wrap-up (`web/src/shell/Header.test.tsx`); a button inside the
+  wrap-up card itself is not built.
 - **Measures** (the gate week, the tester group, the Quality screen): missed out of present; wrong out of proposed; wrong
   endings, a nudge treated as done included (chasing someone else's promise doesn't fulfill it); silent closes out of all
-  closes (the figure is built, `closes.measure`; the screen is not); changed dates, cancellations, partial deliveries and
+  closes (built: the figure, `closes.measure`, and its section of the Quality screen, `web/src/components/Quality.test.tsx`); changed dates, cancellations, partial deliveries and
   owner changes handled; review time; sources not read; and "Missed one" per person per week, which should fall from week
   one to week two. Counts with their denominators; a held-out set; and a replay set where each real miss becomes a case
   (starting state, the person's action, expected end). **The gate week's thresholds** are set from its two measured

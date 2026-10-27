@@ -1071,10 +1071,11 @@ The lists' effective values are unchanged: the test compares each with its old d
 
 The thresholds paragraph of 6.32 is unchanged; it waits for the owner's yes on the drafted pass bar.
 
-## 234. The reviewer's second pass and the designer's answers F39 to F46 (2026-10-28; phase U; designed)
+## 234. The reviewer's second pass and the designer's answers F39 to F46 (2026-10-28; phase U; built)
 
 | Where | Before | Now |
 |---|---|---|
+| Setup (7.8, G1, G4 to G8, G15, G16, G19, U13, U16) | Raw data and ids in messages and a message per tick; an add-on's sent mail not read until chosen; the AI step asking for "work mail"; `{service}` unfilled; a setup group not saved with its jobs; ticks from screen state; the work step a card | **Built** (commit 2330a4c; `tests/test_screen_text.py`, `web/src/lib/raw-data.test.ts`, `web/src/lib/settings-save.test.tsx`, `tests/test_sent_folder_addon.py`, `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`, `web/src/components/WelcomeAi.test.tsx`, `tests/test_work_access.py`, `web/src/components/Walkthrough.test.tsx`, `tests/test_walkthrough.py`, `web/src/lib/wording.test.tsx`): no message shows JSON, a record id or a raw mail header, and a quiet save raises no message; an add-on's sent mail is read by default and "Choose the Sent folder" opens the picker in place; the AI step says what Allow covers, private material included; the service's own name fills `{service}`; a setup group is saved with the jobs ticked into it and listed on the business page; every counted tick is computed from its own record, not from a screen; "Also keep track of" is two tick boxes with the work templates offered only when no jobs were given; the welcome and zero-minute wording |
 | Today (7.7) | Look over sent the batch to What changed and split it into lines | **Built** (`tests/test_review_batches.py`, `tests/test_today_adds_no_lines.py`, `web/src/components/Today.test.tsx`, `WhatChanged.test.tsx`, `web/e2e/today-review.spec.ts`): a review on Today: only what needs a look (a draft, a question, a decision, a new to-do, what is held or refused), in the details pane, Not right per item, All looks good with Undo and one `confirmed` signal for each request; no action adds lines; batches left unopened fold into "3 batches to look over" (`ui.today.fold_batches_after_days`); What changed reads "Filed" and "Checked" |
 | Filing (6.32) | Unsure items Unfiled | **Built** (`tests/test_filing_unsure.py`, `test_filing_api.py`, `TodaySides.test.tsx`): filed under Personal, one grouped Move question per side per day (Move is the person's own change with Undo, Keep leaves it); a rule only after a repeated move; a note from mail never in Unfiled; Unfiled one line below the projects (`Unfiled.test.tsx`, `Projects.test.tsx`) |
 | Brief (6.32) | Listed Today's lines | **Built** (`tests/test_brief.py`, `web/src/components/BriefCard.test.tsx`): counts that link to the lines ("2 things need you, 1 clash today"); the weekly form offered from the week's first open day until done or dismissed, named "this week's briefing" |
@@ -1087,7 +1088,7 @@ The thresholds paragraph of 6.32 is unchanged; it waits for the owner's yes on t
 | Schedule card (7.7, G22) | The agenda and the week's list merged | **Built** (`web/src/components/TodayRail.test.tsx`, `Today.test.tsx`): today's view only; the week is the inspector's |
 | The second pass's smaller points (7.7, 7.9) | "Add to agenda"; "Stale" and "On hold"; Notices headed twice, quiet hours as two full-width rows, hints of ten lines, a card for mail that can't be sent; Follow-ups listing the person's own to-dos; the Personal page opening with the chat | **Built** (G17, G18, G20, G21, G23; `TodayRail.test.tsx`, `OpenItems.test.tsx`, `Settings.test.tsx`, `Notifications.test.tsx`, `FollowUps.test.tsx`, `RecordPageRecords.test.tsx`, `tests/test_settings_cut.py`): "Add to schedule"; "Not touched in a while" and "Paused"; "Ways to get a notice"; quiet hours one row ("21:00 to 07:00"; 18 basic rows, 21 with a business); a hint is two lines with More; no mail card; the person's own to-dos one line, "5 to-dos of yours · Open"; a record's page opens with what is open, then the conversation, then the history |
 
-## 233. The rest of the review, built before the reviewer's second pass (2026-10-27; phase U; designed; the rows marked Built have a named test)
+## 233. The rest of the review, built before the reviewer's second pass (2026-10-27; phase U; built, each row with its named test)
 
 | Where | Before | Now |
 |---|---|---|
@@ -1128,13 +1129,13 @@ The thresholds paragraph of 6.32 is unchanged; it waits for the owner's yes on t
 | The first result (7.8) | Sent mail read only once the person chose the Sent folder; an empty result said nothing about what was read | The sent folder found and read with the inbox when the mailbox is connected (`watch.sent_folder_names`); an empty result gives the counts read and Hand something in |
 | People step (7.8) | The relation box started on "my partner"; no suggestions; no paste | Starts empty; sister and brother apart; landlord, school, tradesperson; the five people mailed most with Add; paste a list, addresses kept |
 
-## 230. The Settings cut (2026-10-26; phase U, F8; designed)
+## 230. The Settings cut (2026-10-26; phase U, F8; built)
 
 | Where | Before | Now |
 |---|---|---|
 | Settings (7.9) | 32 basic fields on seven pages and 156 advanced in 40 groups named after code prefixes, with ids and key names | Five basic pages (and Your business), 23 fields (26 with a business); eight advanced topics, 28 fields; short labels in plain words; the rest files-only with their keys kept; Quality in the user menu; the Lists on the business page |
 
-## 229. One place to act, each thing once on Today, three rail cards, Connections and Add-ons in Settings (2026-10-26; phase U, the reviewer's section 4, F6, F16, F17; designed)
+## 229. One place to act, each thing once on Today, three rail cards, Connections and Add-ons in Settings (2026-10-26; phase U, the reviewer's section 4, F6, F16, F17; built)
 
 | Where | Before | Now |
 |---|---|---|
@@ -1144,7 +1145,7 @@ The thresholds paragraph of 6.32 is unchanged; it waits for the owner's yes on t
 | What changed (7.3) | Rows with Looks good beside Today's review line | The history: past tense, no buttons, Undo in the row's menu |
 | Connections and Add-ons (7.2) | In the side menu, opening pages inside Settings | Sections of Settings; Today's lines link to them |
 
-## 228. Sides in detail, plugin API 0.3.91, and "Just me" with no work words (2026-10-26; phase U, F3, F4; designed)
+## 228. Sides in detail, plugin API 0.3.91, and "Just me" with no work words (2026-10-26; phase U, F3, F4; built)
 
 | Where | Before | Now |
 |---|---|---|
@@ -1153,7 +1154,7 @@ The thresholds paragraph of 6.32 is unchanged; it waits for the owner's yes on t
 | Setup's Work step (7.8) | "Just me" or "Me and my work", one name | "Just me", or My job and My own business tick boxes, "What does it work on?", "Add another business"; the mail step asks which sides each mailbox serves |
 | "Just me" screens (7.8) | Work, Stages, Projects, Organizations, roles and the work template shown | None of them on a workspace with no side besides Personal |
 
-## 227. Personal plus any number of sides (2026-10-26; owner; phase U with F3 and F4; designed, not built)
+## 227. Personal plus any number of sides (2026-10-26; owner; phase U with F3 and F4; built)
 
 | Where | Before | Now |
 |---|---|---|
@@ -1499,7 +1500,7 @@ regeneration are finished once at the end). Answers are in `docs/project/plugin-
   to do (the third tab lists mail only); a "tracker" kind chip (no source says it reads one); purging the app's copy by age.
   **Built:** `tests/test_handled.py`, `tests/test_handled_closed.py`, `web/src/components/Handled.test.tsx`,
   `Sources.test.tsx`, `TodayRail.test.tsx`, `WhatChanged.test.tsx`, `ViewSweep.test.tsx`; `web/e2e/handled.spec.ts`,
-  `journeys-mail.spec.ts`, `journeys-owner-evening.spec.ts` and `acceptance.spec.ts` are written, not yet run.
+  `journeys-mail.spec.ts`, `journeys-owner-evening.spec.ts` and `acceptance.spec.ts` have run in the full runs since.
 
 ## 215. Handled for you: one screen for mail set aside and mail read with nothing to do (2026-10-26; P41, P45, P46, P47)
 
@@ -1511,7 +1512,7 @@ regeneration are finished once at the end). Answers are in `docs/project/plugin-
   four choices, each recording a signal, and no "Keep set aside" anywhere: Treat as work, Treat as personal, Always set aside
   mail like this and Open the message. A mail is on one tab at most (P47). **Built:** `tests/test_handled.py`,
   `web/src/components/Handled.test.tsx`, `web/src/components/ViewSweep.test.tsx` ("Handled for you"),
-  `web/e2e/handled.spec.ts` (written, not yet run).
+  `web/e2e/handled.spec.ts` (has run in the full runs since).
 - **Design 6.5 and 6.32:** a mail the assistant read with nothing to do can be read again (Treat as work, or filed under
   Personal), a correction recorded as a `pulled_back` signal on the earlier read and undone while the new read is waiting;
   "Always set aside mail like this" on such a mail files the sender under `watch.handled_rule_section` (default notices,
@@ -1536,8 +1537,8 @@ regeneration are finished once at the end). Answers are in `docs/project/plugin-
   own), never by color alone. New route `GET /api/schedule?from=&days=` (`ScheduleView`), new setting
   `ui.today.schedule_days` (3, advanced, demo values in both workspaces); `today.agenda` takes a start day. A booking
   already on a calendar stays one entry. Not built: swiping between days, a color per calendar, a page for a connected event
-  with no kept entry. Built: `tests/test_schedule.py`, `web/src/components/Schedule.test.tsx`; `web/e2e/schedule.spec.ts` is
-  written and has not yet run.
+  with no kept entry. Built: `tests/test_schedule.py`, `web/src/components/Schedule.test.tsx`; `web/e2e/schedule.spec.ts` has
+  run in the full runs since.
 ## 213. The product's own add-ons catalog is built in (2026-10-26; P37)
 
 The address of the product's own packs catalog is committed in `catalog/product.yaml`, so a run from a checkout and every
@@ -1750,7 +1751,7 @@ Built: `tests/test_versions.py`. (The log's top entry was 211, so this takes 212
   expects a `text.draft`; a forbidden op may say `attempted: true`; the cases `action-work-drafts-the-message` (both
   workspaces) and `standing-rule-only-suggests-an-act`; the evaluation and switch estimates use the workspace's measured
   token counts and agent overhead.
-- **Roadmap and tests:** the browser journey `web/e2e/meetings-journey.spec.ts` (written, not run); roadmap items checked off
+- **Roadmap and tests:** the browser journey `web/e2e/meetings-journey.spec.ts` (has run in the full runs since); roadmap items checked off
   with their tests and "Left" notes narrowed; `acts-journey.spec.ts` ran green.
 - **Not built, by decision:** notices by mail to the person, a currency setting, the stopped-work lines' wrap (decisions,
   "One family of follow-up timing…").
@@ -2656,7 +2657,7 @@ Vitest files named in 7.7 to 7.9.
 | Projects and People tables (7.13, 7.14) | With the pane open the table was squeezed: words broke inside ("Statu/s", "maya.okaf/or@examp/le.org"), and every row had a filled Details button beside its menu | No break inside a word (headers on one line; a long value ends in an ellipsis with the whole value as its title); a row, Enter on it or its name opens the pane (the name stays a link to the page for a new tab); no Details button; columns have a priority, and beside the pane only Name, Status, Target, Owner and Open items (People: Name, Role, Organization, Open items) stay, the rest behind a column picker; when those don't fit (`fit`) the pane overlays the table. Built: `web/src/components/TablesBesidePane.test.tsx`; the 1440px browser check is written in `web/e2e/tables.spec.ts`, not run |
 | People's filter and Organizations (7.14, 5.1) | A full-width organization select; Organizations as a list of cards | The filter is as wide as its longest choice; Organizations is a table (organization, people, other names, menu). Built: `TablesBesidePane.test.tsx` |
 | What changed (7.3) | Every change open; each to-do showed Who owes it / Promised to / Due with a "Change" link under each value | Only the first change is open (a row holding a question still starts open); the rest are one line each. A to-do's owner, day and promise are one meta line, each part a button over a small popover with its list or date picker. Built: `web/src/components/WhatChangedFold.test.tsx` |
-| The header (7.1) | Two rows below 1280px; "Lan…" at 1024; the assistant's line cut to "Assis…"; a "Your pages" text button and a bare warning icon | One row at every width; below 1440px the assistant's state is a section of the status chip's popover; the workspace's name keeps its room before Ask does; Your pages is the first group of the person's menu; Missed one has its words. The header checks in `web/e2e/shell.spec.ts` now assert one row, and the assistant's line only from 1440px (written, not run). Built: `web/src/shell/Header.test.tsx`, `HeaderLinks.test.tsx` |
+| The header (7.1) | Two rows below 1280px; "Lan…" at 1024; the assistant's line cut to "Assis…"; a "Your pages" text button and a bare warning icon | One row at every width; below 1440px the assistant's state is a section of the status chip's popover; the workspace's name keeps its room before Ask does; Your pages is the first group of the person's menu; Missed one has its words. The header checks in `web/e2e/shell.spec.ts` now assert one row, and the assistant's line only from 1440px (has run in the full runs since). Built: `web/src/shell/Header.test.tsx`, `HeaderLinks.test.tsx` |
 | Target sizes (7.10) | Row menus 20×30px; "Change", "Reset" and "Where it came from" 22px tall; checkboxes 18px | Icon-only buttons at least 32×32 and never squeezed by a row; any button at least 24×24; checkbox hit areas at least 24px (label padding, and the box reaching out). Built: `web/src/theme/targets.test.ts`; the check that no visible control on a main screen is under 24×24 is written in `web/e2e/a11y.spec.ts`, not run |
 | Weights (7.12) | 700 from the browser's own bold on `strong`, `th` and `b`, and a fallback number in one style sheet | A stylelint rule `cockpit/weight-tokens` allows only the three weight tokens (no number or word, no fallback number, in `font-weight` or `font`); the base styles give the browser-bold elements the semibold token. Built: `web/src/theme/stylelint-rules.test.ts` |
 | Small points (7.7, 7.3, 7.13) | The inspector's "1 of 21 · j / k" wrapped; the Send back box spanned the pane and its disabled button gave no reason; "Whose words" was two stacked radios | The count stays on one line; the box is at most 72ch and the button says "Write what to do differently first."; "Whose words are these?" is the segmented control (arrows move along it, Space chooses). Built: `web/src/components/SmallPoints.test.tsx` |
@@ -2666,7 +2667,7 @@ Vitest files named in 7.7 to 7.9.
 | Where | Before | Now |
 |---|---|---|
 | The backup reminder (7.7) | A full-width bar above the queue, besides the header chip | One At risk queue line, "Back up your work · No backup has worked yet · Back up now" (kind `backup`, from the engine like every line), plus the chip; no bar. Built: `tests/test_follow_up_lines.py`, `web/src/components/TodayFirstScreen.test.tsx`, `web/e2e/shell.spec.ts` |
-| This week (7.7, 7.13) | A section folded above the queue below 2560px, a rail panel from there | A rail panel at every width, after Top priorities. The first queue line is at most 260px down at 1280×720 with setup unfinished (200px with it done) with six lines in view; the e2e check is written, not run. Built: `web/src/components/Today.test.tsx`, `TodayFirstScreen.test.tsx` |
+| This week (7.7, 7.13) | A section folded above the queue below 2560px, a rail panel from there | A rail panel at every width, after Top priorities. The first queue line is at most 260px down at 1280×720 with setup unfinished (200px with it done) with six lines in view; the e2e check has run in the full runs since. Built: `web/src/components/Today.test.tsx`, `TodayFirstScreen.test.tsx` |
 | Follow-ups on Today (6.33, 7.7) | One "Chase <name>: <item>, due …" line per promise someone else owes, beside the person's follow-up line and Send line | One follow-up line per person ("Follow up with Sam Rivera · 2 overdue, oldest Tue, Oct 13 · Draft a nudge"), covering what 6.9 says is due and what 6.33 says is late, opening the one message to them; a promise owed by someone the person reports to and the person's own keep their lines. `followups.sections` takes the promise rule's list, so the message lists the same items. New fields `overdue` and `age_hours` on a queue line. Built: `tests/test_follow_up_lines.py`, `tests/test_promise_lines.py`, `tests/test_stance_lines.py` |
 | Top priorities (7.7) | Row buttons (Mark done, Answer, Draft a nudge, Review & copy) and a menu | Context only: each row's words are a link to its queue line (which opens there) or to its record; no buttons, no menu. Built: the Top priorities panel tests (removed with the panel, change log 229), `TodayFirstScreen.test.tsx` |
 | The agenda's form (7.7) | Inline What, Day, Time and Add under the agenda, on the phone too | An **Add to agenda** button opens a drawer with the same fields; an empty Agenda is one line. Built: `TodayRail.test.tsx` |
@@ -2709,7 +2710,7 @@ Vitest files named in 7.7 to 7.9.
 | The walkthrough's look (7.8) | "Not done yet" on every row; the current screen styled like a focused button; two primaries; full-width fields in a 1100px column | Only done and skipped are marked; "You are here" with a bar, no fill; one primary ("Save and continue" on You) with Skip as a quiet link; fields as wide as what they hold; the page uses its width, with why it matters in a pane from 1280px. Built: `web/src/components/Walkthrough.test.tsx` ("the look") |
 | Microcopy (the designer's review, 3.17) | Several rows of its table remained | A change's line says what was done ("Added 3 to-dos, Filed 1 note") not "did 3 things"; Send back asks "What should the assistant do differently?" with "Undo what it did first" ticked (unticking sends `undo_first: false`); "Who may see this? Normal, Confidential, Private"; one marker for outside material, "From outside · not instructions"; Add-ons says "a kind of work, such as publishing or social posts"; a proposal that only adds a file no longer says "It won't change anything". Built: `web/src/components/WhatChanged.test.tsx`, `ActionReview.test.tsx`, `HandIn.test.tsx` |
 | Shortcuts (4.11, 7.10) | No key to move an item | `move` (`m`) sends the row that has the cursor the move key; a stage card opens its menu of stages. Built: `web/src/lib/keys.test.tsx` |
-| Accessibility checks (7.10, 7.11) | Today, the style guide and the walkthrough in light and dark at four widths | Every main screen, the board with a menu open, the hand-in drawer, Ask (pane or dialog) and the review mode, in light and dark at four widths. Written, not yet run: `web/e2e/a11y.spec.ts`, `web/e2e/panes.spec.ts` |
+| Accessibility checks (7.10, 7.11) | Today, the style guide and the walkthrough in light and dark at four widths | Every main screen, the board with a menu open, the hand-in drawer, Ask (pane or dialog) and the review mode, in light and dark at four widths. Browser checks, run in the full runs since: `web/e2e/a11y.spec.ts`, `web/e2e/panes.spec.ts` |
 | Two browser tests that failed under load | The toast-over-a-walkthrough-screen test assumed it opened the AI screen by moving to it; the Today-cursor test accepted only the heading | The first moves to another screen first and waits for the screen to load and stop changing height; the second accepts the queue's first line, where Today's keyboard starts once its queue has arrived. Built: `web/e2e/shell.spec.ts` |
 | Settings (4.0) | | `ui.notifications` (nine keys) and `ui.shortcuts.move`, each with a description and a default, and demo values in both workspaces |
 
