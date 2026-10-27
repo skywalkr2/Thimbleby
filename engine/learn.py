@@ -51,6 +51,14 @@ NETTED_WAITING = "Not learned from: the correction was undone."
 CUT = "(cut: the rest isn't shown)"
 
 #: What each kind of correction means, in words for the packet.
+#: The ops that end a promise; a declined hold of one of them teaches what ends a promise, not whose it was.
+ENDING_OPS = ("action.close", "action.drop", "action.part")
+DECLINED_ENDING = (
+    "The person kept open a to-do the assistant had held to end: the words it quoted did not end it, or not that way "
+    '(a "closed" with no delivery is neither done nor called off, and the person is asked which). Teach what does '
+    "and does not end a promise in words like these, never relevance or routing."
+)
+
 KIND_WORDS = {
     "sent_back": "The person sent the assistant's work back with a note.",
     "undone": "The person undid some or all of the assistant's work (the ops marked undone).",
@@ -571,7 +579,10 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     )
 
     note = data.get("note") or ""
-    correction = [KIND_WORDS.get(data["kind"], "The person corrected the assistant's work.")]
+    words = KIND_WORDS.get(data["kind"], "The person corrected the assistant's work.")
+    if data["kind"] == "held_declined" and note.split(":", 1)[0].strip() in ENDING_OPS:
+        words = DECLINED_ENDING
+    correction = [words]
     if note and data["kind"] in ("sent_back", "draft_edited", "answered_assistant", "missed", "dropped"):
         correction.append(f"<note>\n{note}\n</note>")
     elif note:

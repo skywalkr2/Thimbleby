@@ -692,6 +692,9 @@ def test_the_packet_says_what_each_of_the_three_kinds_teaches(env):
     declined = packet_of(env, "held_declined", "Add the display boards action")
     assert "not theirs, or not a promise" in declined and "teach relevance or routing" in declined
     assert "failed to find it" not in declined and "no longer needed" not in declined
+    ending = packet_of(env, "held_declined", "action.close: Close the display boards")
+    assert "kept open a to-do the assistant had held to end" in ending and "never relevance or routing" in ending
+    assert "teach relevance or routing" not in ending, "a declined ending teaches what ends a promise"
     dropped = packet_of(env, "dropped", "The venue changed, so nothing is needed for any hall.")
     assert "no longer needed" in dropped and "not a mistake of the assistant's by itself" in dropped
     assert 'never "don\'t file this"' in dropped
