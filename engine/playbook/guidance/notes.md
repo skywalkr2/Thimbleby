@@ -45,7 +45,8 @@ Practice for reading notes, minutes and messages (core playbook):
   - a hope, a maybe, a suggestion ("we should"), a question ("could I send it Friday instead?"), an offer ("I can send
     it if you need it") or a refusal ("I can't promise an answer");
   - sarcasm and jokes, a request the user made that nobody accepted, and a promise to hold something back. A request
-    made of the user ("I've asked you to check the figures by the 3rd") is the user's to-do, with its date.
+    made of the user, as "you" or by the user's own name or alias ("I've asked you to check the figures by the 3rd"),
+    is the user's to-do, with its date.
 - Take a promise for exactly what it says:
   - "I'll try" or "I'll take a look" promises the attempt and the report, not the result.
   - A promise with a condition waits on hold for it ("once the keys arrive"); a date tied to a meeting follows the

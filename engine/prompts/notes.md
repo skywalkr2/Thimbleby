@@ -65,10 +65,13 @@ How to answer:
   "due", and the same quoted words are its evidence.
 - When an input gives a new day for the work an open action in the list describes ("is now due", "can wait until",
   "moved to", "will send it tomorrow"), change that action's "due" with "record.set" (kind "action", field "due"),
-  quoting the words; never add a second action, a fact or a calendar entry for it. A vague time ("next week", "soon",
+  quoting the words; never add a second action, a fact or a calendar entry for it. That is for the same people's work:
+  when the input asks someone who is not among that action's owners to do it, it is a new action for them, and the
+  open one keeps its date. A vague time ("next week", "soon",
   "later this month") is not a new day: leave the due date as it is. Words that say the work moves but give no new
   day ("which pushes back our sign-off") leave the date known to be wrong: ask whoever decides that action's date
-  (the user when nobody is named) for the new one, quoting the words.
+  (the user when nobody is named) for the new one, quoting the words. Work named after the user's own team, or that an
+  open action in the list describes, is the user's work even in another team's row.
   When that action is a promise (its line in the list says "promised to"), use "action.move" instead, as described
   below.
 - A promise is something someone owes someone ("I'll send it Friday", "she'll get back to me Tuesday"). Record it with

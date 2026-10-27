@@ -156,6 +156,8 @@ def test_a_forwarded_promise_a_request_of_the_user_and_an_undated_move_each_say_
     assert "it is still an action, owned by whoever" in playbook
     assert "A request\n    made of the user" in playbook and "is the user's to-do, with its date" in playbook
     assert "give no new\n  day" in prompt and "ask whoever decides that action's date" in prompt
+    assert "by the user's own name or alias" in playbook and "Work named after the user's own team" in prompt
+    assert "who is not among that action's owners to do it, it is a new action for them" in prompt
 
 
 # ---- a moved promise from a quoted thread waits for the person's Keep --------------------------------------------
