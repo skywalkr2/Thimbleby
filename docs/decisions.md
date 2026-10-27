@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: A calendar page with day, work week, week and month views
+
+**Decided:** The schedule gets a calendar page like a desktop mail program's: Day, Work week, Week and Month views, a
+Today button and arrows, a time grid with an all-day strip, every entry the app knows (the person's calendars, the
+app's own entries, deliveries, reminders and due dates) with its side and the side filter, and an entry's details
+beside it. Read and open only in this step; dragging and making events on the grid come later, and a change to an
+outside calendar still waits for the person's yes. Today's Schedule card stays a short look ahead with a link to it.
+
+**Decided by:** the owner ("we shouild really improve the calendar view so it looks more like MS Outlook"; chose to
+build it now, without dragging).
+
+**Why:** the schedule showed three days at a time, too little to plan a week.
+
+**Impact:** Design 7.x (the calendar page), the roadmap (before the gate week, after the owner's first-evening fixes).
+Change log: none.
+
 ## 2026-10-28: Narrow windows yes, phone polish later
 
 **Decided:** Until there is a hosted install people would open on a phone, screens keep working in narrow windows (no
