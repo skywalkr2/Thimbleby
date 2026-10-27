@@ -55,6 +55,8 @@ CORE_GROUPS = {
 COUNTED_STEPS = frozenset({"workspace", "work", "ai", "mail", "promises", "backup", "people"})
 #: Why a skipped step was skipped, when another step it needs was skipped.
 NEEDS_MAIL = "needs_mail"
+#: Why People reads as skipped when the person moved on from it without adding anyone: not everyone has people to add.
+NONE_ADDED = "none_added"
 #: What the person answered to the work question.
 WORK_CHOICES = ("me", "work")
 CATALOG = shipped("catalog") / "ai-endpoints.yaml"
@@ -176,9 +178,16 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     # The first result can't happen without mail: with mail skipped (and nothing handed in) it reads as skipped, and
     # says why. Moving on from its screen without it having happened skips it too.
     mail_skipped = "mail" in skipped and not done["mail"]
-    moved_on = bool(_walkthrough_state(state).get("promises_done"))
-    passed = {"promises": "promises" in skipped or moved_on or mail_skipped}
-    reasons = {"promises": NEEDS_MAIL if mail_skipped else None}
+    mine = _walkthrough_state(state)
+    moved_on = bool(mine.get("promises_done"))
+    # Moving on from People with nobody added passes it: the walkthrough keeps that, or (kept before it did) the screen
+    # the person reached past it.
+    kept = mine.get("step")
+    past_people = bool(mine.get("people_done")) or (
+        kept in WALKTHROUGH_STEPS and WALKTHROUGH_STEPS.index(kept) > WALKTHROUGH_STEPS.index("people")
+    )
+    passed = {"promises": "promises" in skipped or moved_on or mail_skipped, "people": past_people}
+    reasons = {"promises": NEEDS_MAIL if mail_skipped else None, "people": NONE_ADDED if past_people else None}
     found = [
         Step(
             step,
@@ -472,6 +481,8 @@ def keep_walkthrough(ws: Any, step: str | None = None, closed: bool | None = Non
             mine["step"], mine["started"] = step, True
             if WALKTHROUGH_STEPS.index(step) > WALKTHROUGH_STEPS.index("promises"):
                 mine["promises_done"] = True
+            if WALKTHROUGH_STEPS.index(step) > WALKTHROUGH_STEPS.index("people"):
+                mine["people_done"] = True
         if closed is not None:
             mine["closed"] = closed
         if ended is not None:

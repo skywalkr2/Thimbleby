@@ -19,14 +19,20 @@ def purelib() -> Path:
     return Path(sysconfig.get_paths()["purelib"])
 
 
+#: The app's own default, kept before each test gives itself an empty folder in its place.
+REAL_DEFAULT = addons.default_folder
+
+
 def listing(folder: Path) -> set[str]:
     return {p.name for p in folder.iterdir()}
 
 
 def test_the_folder_is_the_one_the_setting_names_else_the_apps_data_place(tmp_path, monkeypatch):
     assert addons.resolve(str(tmp_path / "named")) == tmp_path / "named"
-    assert addons.resolve() == Path(os.environ[addons.ENV_ADDONS_DIR])
+    monkeypatch.setenv(addons.ENV_ADDONS_DIR, str(tmp_path / "from-env"))
+    assert addons.resolve() == tmp_path / "from-env"
     monkeypatch.delenv(addons.ENV_ADDONS_DIR)
+    monkeypatch.setattr(addons, "default_folder", REAL_DEFAULT)
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "share"))
     monkeypatch.setattr("platform.system", lambda: "Linux")
     assert addons.resolve() == tmp_path / "share" / addons.APP_NAME / "addons"
@@ -36,7 +42,7 @@ def test_an_add_on_installs_into_the_add_ons_folder_and_nothing_goes_to_the_envi
     before = listing(purelib())
     place = addons.activate()
     done = pack_install.install(wheel(extra=MANIFEST))
-    assert place == Path(os.environ[addons.ENV_ADDONS_DIR]) / addons.SITE
+    assert place == addons.default_folder() / addons.SITE
     assert (place / "pack_demo" / "__init__.py").is_file() and pack_install.installed_here(done.name)
     assert listing(purelib()) == before
     assert str(place) in sys.path
@@ -69,7 +75,7 @@ def test_an_add_on_is_found_and_loads_in_a_fresh_start_after_the_environment_is_
         "print('loads', [e.load().__name__ for e in found])\n"
         "store.close()\n"
     )
-    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    env = {**os.environ, "PYTHONPATH": str(ROOT), addons.ENV_ADDONS_DIR: str(addons.default_folder())}
     run = subprocess.run(
         [sys.executable, "-c", script, str(ws.db_path)],
         cwd=tmp_path,

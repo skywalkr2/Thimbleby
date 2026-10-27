@@ -3928,8 +3928,10 @@ class SetupStepView(BaseModel):
         description='A counted step\'s place in the one list of counted steps, from 1 (the 1 of "You · 1 of 7"); the '
         "walkthrough, its last screen and Today's setup line all read it from here.",
     )
-    reason: Literal["needs_mail"] | None = Field(
-        None, description="Why a skipped step was skipped, when it needed a step that was skipped: needs_mail."
+    reason: Literal["needs_mail", "none_added"] | None = Field(
+        None,
+        description="Why a skipped step was skipped: needs_mail, when it needed a step that was skipped; none_added, "
+        "when the person moved on from People without adding anyone.",
     )
     applies: bool | None = Field(
         None, description="False when there is nothing for the person to do here, so the step isn't offered."

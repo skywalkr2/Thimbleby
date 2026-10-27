@@ -676,3 +676,13 @@ def test_every_counted_tick_is_computed_from_its_own_record_and_no_screen_state_
     ticked = [s for s, v in _steps(c).items() if v["counted"] and v["done"]]
     assert ticked == [], f"ticked with no record behind it: {ticked}"
     assert not _steps(c)["first_note"]["done"]
+
+
+def test_moving_on_from_people_with_nobody_added_passes_the_step_and_says_so(tmp_path):
+    _, c = _fresh(tmp_path)
+    assert not _steps(c)["people"]["skipped"]
+    c.post("/api/setup/walkthrough", json={"step": "done"})
+    people = _steps(c)["people"]
+    assert people["skipped"] and not people["done"] and people["reason"] == "none_added"
+    c.post("/api/setup/walkthrough", json={"step": "people"})
+    assert _steps(c)["people"]["skipped"], "going back to look does not make it a to-do again"

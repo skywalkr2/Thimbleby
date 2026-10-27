@@ -26174,14 +26174,17 @@
           "reason": {
             "anyOf": [
               {
-                "const": "needs_mail",
+                "enum": [
+                  "needs_mail",
+                  "none_added"
+                ],
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Why a skipped step was skipped, when it needed a step that was skipped: needs_mail.",
+            "description": "Why a skipped step was skipped: needs_mail, when it needed a step that was skipped; none_added, when the person moved on from People without adding anyone.",
             "title": "Reason"
           },
           "settings": {

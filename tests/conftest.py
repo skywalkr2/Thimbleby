@@ -103,12 +103,14 @@ def _no_temp_folder_notice(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _own_addons_folder(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
     """No test installs an add-on into the person's real add-ons folder, or leaves one on the import path for the next
-    test: each starts with its own empty folder named by the setting's environment variable."""
+    test: each starts with its own empty folder as the app's data place. Not through the setting's environment variable,
+    which settings loaded from the environment would read as a changed setting waiting for a restart."""
     import sys
 
     from engine import addons
 
-    monkeypatch.setenv(addons.ENV_ADDONS_DIR, str(tmp_path_factory.mktemp("addons")))
+    own = tmp_path_factory.mktemp("addons")
+    monkeypatch.setattr(addons, "default_folder", lambda: own)
     monkeypatch.setattr(addons, "_active", None)
     # A test never moves what an earlier install left in the environment running it.
     monkeypatch.setattr("engine.pack_install.environment_places", lambda: [])
