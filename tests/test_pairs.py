@@ -89,6 +89,39 @@ def test_the_scenario_lists_its_expected_differences_and_a_month_of_noise():
     assert any("correct" in s for s in scenario["history"]) and any("keep_all" in s for s in scenario["history"])
 
 
+#: One ordinary working week of input as the designer counted it: the share of incoming changes of each kind, and the
+#: share closed with nothing for the person. One person's numbers.
+TYPICAL_WEEK = {"bump": 0.31, "issue": 0.27, "edit": 0.22, "file": 0.14, "paste": 0.07}
+NOTHING_FOR_THE_PERSON = 0.86
+
+
+def kind_of_noise(spec):
+    """Which kind of incoming change a history input stands for, from the source it names."""
+    watched = spec.get("watched")
+    if not watched:
+        return "paste"
+    where = watched.get("source")
+    if where == "issues":
+        return "issue"
+    if where == "folder":
+        return "file"
+    return "bump" if "version" in str(watched.get("title", "")).lower() else "edit"
+
+
+def test_the_scenarios_month_of_noise_follows_the_typical_weeks_shares():
+    scenario = load_scenarios(DEMO_B)[0]
+    inputs = [s["input"] for s in scenario["history"] if "input" in s]
+    quiet = [s for s in inputs if not s["answer"]["ops"]]
+    assert len(quiet) / len(inputs) >= NOTHING_FOR_THE_PERSON - 0.05
+    counts = {kind: 0 for kind in TYPICAL_WEEK}
+    for spec in quiet:
+        counts[kind_of_noise(spec)] += 1
+    for kind, share in TYPICAL_WEEK.items():
+        assert abs(counts[kind] / len(quiet) - share) <= 0.05, (kind, counts)
+    dates = [str(s["received"]) for s in inputs]
+    assert dates == sorted(dates), "the month is told in order"
+
+
 # ---- a wrong later answer fails ----------------------------------------------------------------------------------
 
 

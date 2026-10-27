@@ -34,6 +34,29 @@ the owner sent the reviewer's findings to be built.
 **Impact:** Design 7.7 already says both; the designer's answers F15, F16, F24 and F34 read with this entry. Change log:
 none.
 
+## 2026-10-28: The gate's instruments, the sample of messages and the audit's small points, built to the drafted bar
+
+**Decided:** The gate week's instruments match the drafted pass bar (rows 1, 3, 6 and 7), each a count with its
+denominator from `GET /api/quality`. *Review time:* Today's review pane is timed, and the figure is the median of a day's
+total over the days with any review (a day nobody reviewed is not a day of review, so it can't let the figure pass by not
+looking). *Lost promises:* a promise that was open in the window and left open, or was deleted, and stays gone, with a
+write that was neither the person's own action nor an ending op; an ending op the person hasn't seen is a silent close,
+not a lost one; a promise brought back is not lost. *Sources not read:* in source-days, each connected source at the end of
+each day, unread over 24 hours, and silent when Today's coverage line would have said nothing. *The sample:* the person
+allows it (a setting, off), the app draws 50 mail messages of the window by a seeded hash, once per window, and the
+person's own counts per message join the daily counts. Also built: the Monday message asks once who it is for; "Drop it
+and draft the note"; each tier's cost per day; the day-30 noise in the designer's shares.
+
+**Decided by:** the audit of 2026-10-28 and the drafted pass bar; the rules above were the builder's choice, for review.
+The thresholds paragraph of 6.32 waits for the owner's yes.
+
+**Why:** Without these the gate week would pass by not measuring: a lost promise, a source nobody read and the time on the
+new review pane were not counted, and the independent reading had no instrument.
+
+**Impact:** Design 6.32, 7.6, 5.1 (a core record `gate_sample`, a field on `week_plan`); new settings
+`dispatch.knowledge.sample_consent`, `sample_size` and `language.messages.called_off_subject` with demo values in both
+workspaces; the plugin guide is regenerated (a core record). Change log: section 235.
+
 ## 2026-10-28: Notices name the apps they go to, from a shipped list
 
 **Decided:** Settings › Notices offers the common apps by name (for example a chat app, a team chat, a phone-push

@@ -4159,6 +4159,25 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   `::test_the_daily_count_is_entered_corrected_and_undone_through_the_api` and the export round trip
   `::test_a_window_with_no_counts_is_zero_over_zero_and_the_counts_survive_export_and_import`; the screen:
   `web/src/components/Quality.test.tsx`. *Not built:* a record of when the replays last ran.
+  **The instruments match the drafted pass bar** (`docs/project/gate-pass-bar-draft-2026-10-28.md`, roadmap A3; the
+  thresholds paragraph above is unchanged until the owner says yes). *Built:* **review time** counts the review pane on
+  Today (screen `today`, `BatchDetail.tsx`) with the others, and `GET /api/quality` gives each day's seconds and visits
+  and the median of the daily totals over the days with any review; **lost promises** are promises (actions read as
+  one) open in the window that left open (status) or were deleted, stay gone, and did so by a write that was neither the
+  person's own (the ledger's actor is the person) nor an ending op (close, drop, move, part, unhold): a sweep or a
+  plugin's status write is lost, an ending the person hasn't seen is a silent close, not a lost promise, and one brought
+  back by Undo or a reopening hasn't vanished, with the lost ones listed (`engine/gate_measures.py::lost_measure`);
+  **sources not read** are counted in source-days, each source that is on and had been tried, at the end of each day:
+  unread over 24 hours (its last good read, else its first try), and silent when the coverage line would have said
+  nothing, as it does for a failed or offline source, one stale beyond `watch.stale_after_hours` or one never read
+  (`sources_measure`, `coverage_line`; the stale hours and the sources are as configured now, since a past setting isn't
+  kept); **the independent reading** is `engine/gate_sample.py`: with `dispatch.knowledge.sample_consent` on (off by
+  default), `POST /api/quality/sample` draws `dispatch.knowledge.sample_size` (50) mail messages of the quality window by a
+  seeded hash, once for the window, as the core record `gate_sample`; the person reads each in their own mail and saves
+  how many promises it holds and how many the app didn't have (`PUT /api/quality/sample/{id}/items/{source}`, Undo); and
+  "Missed out of present, all together" adds those to the daily counts. The procedure is
+  `docs/project/gate-sample-procedure.md`. Tests: `tests/test_gate_instruments.py`,
+  `web/src/components/BatchDetail.test.tsx`, `web/src/components/Quality.test.tsx`.
 - **Sending (S1b) is accepted only on named tests:** exact content and recipients; an approval goes stale when the draft,
   its recipients or its inputs change, a restart that re-resolved addresses or updated a template included; never twice
   after a timeout, retry or restart; after a closed lid or lost network mid-send, the result is checked with the service
@@ -4739,7 +4758,7 @@ until an event yet; `release_at` is the rule it will use), and Today lines that 
 **The Monday briefing (S2).** On the first open of the week (the day is a setting):
 1. **A copy-ready message to whoever the person reports to**: the people whose stance is *I report to them* (6.34).
    It is a draft under the rules above (unreviewed until the person copies it), covering what was done, what moved and
-   what needs them. With nobody marked, the briefing asks once who it is for.
+   what needs them. With nobody marked, the briefing asks once who it is for: pick a person (marked as someone the person reports to, an ordinary stance change with Undo) or "I report to no one", after which it doesn't ask again in any week (`week_plan.reports_to_nobody_at`).
 2. **This week**, through the last working day: promises due by owner, overdue first; questions to send; answers to
    chase; decisions waiting. Built from the records by rules.
 3. **Goals:** three to five for the week, proposed from what is due and open, which the person confirms, changes or
@@ -4757,9 +4776,8 @@ due through the week, to confirm in one press or change. The morning brief carri
 message* is the core draft kind `monday-message` on the record's `message` text: asked for with `POST /api/brief/message`,
 estimated and held for the person's go like every draft, written from the week's facts under the draft rules, shown
 as "Draft, not yet reviewed" and made the person's by Copy (`POST /api/brief/message/copied`); setting it aside is a
-signal like any draft's. It is for the people marked "I report to them" and absent when there are none. **Built (cleanup batch, change log 196):** **Send** beside Copy
+signal like any draft's. It is for the people marked "I report to them"; with none marked it asks once who it is for (`POST /api/brief/message/for`: a person, or nobody, either undone) and is absent after "I report to no one". **Built (cleanup batch, change log 196):** **Send** beside Copy
 when one account clearly carries a new message (`GET /api/acts/send-options`: the account the latest act named when it can
 act, else the only one that can; with several and none chosen there is none, so Copy stays the one button): it drafts the
-message as an act through `POST /api/acts` for the person's yes in Waiting to go out, and marks nothing copied. **Left:**
-asking once who it is for when nobody is marked (the section is simply absent). `tests/test_brief.py`, `tests/test_brief_week.py`,
-`web/src/components/BriefCard.test.tsx`.
+message as an act through `POST /api/acts` for the person's yes in Waiting to go out, and marks nothing copied. **Built (audit A5):** asking once who it is for when nobody is marked.
+`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`.

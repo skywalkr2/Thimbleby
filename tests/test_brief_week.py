@@ -310,7 +310,8 @@ def test_the_brief_route_names_the_form_the_goals_and_the_message_state(client):
     monday = http.get("/api/brief", params={"form": "monday"})
     assert monday.status_code == 200
     body = monday.json()
-    assert body["form"] == "monday" and body["goals"]["confirmed"] is False and body["message"] is None
+    assert body["form"] == "monday" and body["goals"]["confirmed"] is False
+    assert body["message"]["state"] == "ask" and body["message"]["to"] == [] and body["message"]["choices"]
     morning = http.get("/api/brief", params={"form": "morning"}).json()
     assert morning["form"] == "morning" and morning["goals"] is None
     assert http.get("/api/brief", params={"form": "noon"}).status_code == 422
@@ -335,3 +336,47 @@ def test_copying_with_no_message_waiting_is_refused(client):
 def test_asking_for_a_message_with_nobody_to_report_to_is_refused_on_the_route(client):
     http, _, _ = client
     assert http.post("/api/brief/message", json={}).status_code == 409
+
+
+# ---- asking once who the message is for ------------------------------------------------------------------------------
+
+
+def test_choosing_who_the_person_reports_to_marks_them_as_the_persons_own_change_with_undo(env):
+    _, cfg, store = env
+    with store.transaction() as tx:
+        lena = tx.create("person", {"full_name": "Lena Fictional"}, _PM).id
+    changeset = week_plan.set_report_to(store, cfg, lena)
+    assert week_plan.report_to(store.read(), cfg) == [lena]
+    entry = next(e for e in store.read().changes_of(changeset) if e["field"] == "stance")
+    assert (entry["actor"], entry["after"]) == ("pm", "report_to")
+    from engine.applier import undo
+
+    undo(store, changeset)
+    assert week_plan.report_to(store.read(), cfg) == []
+
+
+def test_the_person_cannot_be_the_one_they_report_to_and_a_stranger_is_refused(env):
+    _, cfg, store = env
+    with pytest.raises(StoreError, match="report"):
+        week_plan.set_report_to(store, cfg, me(cfg))
+    with pytest.raises(StoreError, match="report"):
+        week_plan.set_report_to(store, cfg, "PER-9999")
+
+
+def test_the_who_route_marks_a_person_or_says_nobody_and_both_can_be_taken_back(client):
+    http, store, _ = client
+    with store.transaction() as tx:
+        lena = tx.create("person", {"full_name": "Lena Fictional"}, _PM).id
+    asking = http.get("/api/brief", params={"form": "monday"}).json()["message"]
+    assert asking["state"] == "ask" and lena in [c["person"] for c in asking["choices"]]
+    nobody = http.post("/api/brief/message/for", json={"nobody": True})
+    assert nobody.status_code == 200 and nobody.json()["changeset"] is None
+    assert http.get("/api/brief", params={"form": "monday"}).json()["message"] is None
+    assert http.post("/api/brief/message/for", json={"nobody": False}).status_code == 200
+    assert http.get("/api/brief", params={"form": "monday"}).json()["message"]["state"] == "ask"
+    chosen = http.post("/api/brief/message/for", json={"person": lena})
+    assert chosen.status_code == 200 and chosen.json()["changeset"]
+    after = http.get("/api/brief", params={"form": "monday"}).json()["message"]
+    assert after["state"] == "none" and [p["person"] for p in after["to"]] == [lena]
+    assert http.post("/api/brief/message/for", json={"person": "PER-9999"}).status_code == 409
+    assert http.post("/api/brief/message/for", json={}).status_code == 422

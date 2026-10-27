@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
@@ -27,6 +27,12 @@ const quality = (over: Partial<View> = {}): View => ({
   counts: { person: "PER-1", present: 0, missed: 0, entered: 0, days: [] },
   replays: { count: 0, last_run: null },
   outcome: { promises_found: 0, promises_kept: 0, dismissed: 0, corrected: 0, review_seconds: 0, review_visits: 0, follow_ups_completed: 0, weeks: [] },
+  review: { median_seconds: null, days_reviewed: 0, total_seconds: 0, visits: 0, days: [] },
+  lost: { existed: 0, lost: 0, days: [], items: [] },
+  sources: { checked: 0, over_a_day: 0, silent: 0, days: [] },
+  sample: null,
+  sample_allowed: false,
+  missed_total: { present: 0, missed: 0, days: 0, messages: 0 },
   ...over,
 });
 
@@ -56,6 +62,25 @@ const FULL = quality({
     ],
   },
   replays: { count: 2, last_run: null },
+  review: {
+    median_seconds: 480,
+    days_reviewed: 3,
+    total_seconds: 1500,
+    visits: 12,
+    days: [
+      { day: "2026-10-19", seconds: 480, visits: 5 },
+      { day: "2026-10-18", seconds: 60, visits: 1 },
+      { day: "2026-10-17", seconds: 960, visits: 6 },
+    ],
+  },
+  lost: {
+    existed: 40,
+    lost: 1,
+    days: [{ day: "2026-10-18", existed: 40, lost: 1 }],
+    items: [{ id: "ACT-4", text: "Send the floor plan", day: "2026-10-18" }],
+  },
+  sources: { checked: 56, over_a_day: 4, silent: 1, days: [{ day: "2026-10-18", checked: 2, over_a_day: 1, silent: 1 }, { day: "2026-10-19", checked: 2, over_a_day: 0, silent: 0 }] },
+  missed_total: { present: 36, missed: 5, days: 2, messages: 2 },
   outcome: {
     promises_found: 9,
     promises_kept: 6,
@@ -93,7 +118,12 @@ test("the screen has a section for each measure and shows the window's dates", a
     "What the assistant's work came to",
     "Closes you didn't see",
     "Wrong endings",
+    "Promises that disappeared",
+    "Sources not read",
+    "Time looking its work over",
     "Promises the app missed",
+    "Messages you read yourself",
+    "Missed out of present, all together",
     "Missed something?",
     "Missed, declined and dropped",
     "Helpful and not helpful answers",
@@ -117,6 +147,83 @@ test("each measure is a number out of its denominator in words, never a bare per
   expect(within(section("quality-missed")).getByText("Casey Example, Oct 19 to Oct 25: said once.")).toBeInTheDocument();
   expect(within(section("quality-replays")).getByText("2 replays are kept.")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/\d\s?%/);
+});
+
+test("the gate instruments read as a number out of its denominator in words", async () => {
+  show(FULL);
+  await loaded();
+  expect(within(section("quality-lost")).getByText("1 of 40 promises disappeared with no ending anyone saw.")).toBeInTheDocument();
+  expect(within(section("quality-lost")).getByText("Oct 18: Send the floor plan")).toBeInTheDocument();
+  expect(within(section("quality-sources")).getByText("Checked 56 days of connected sources: 4 unread for more than a day, 1 of those with nothing on Today about it.")).toBeInTheDocument();
+  expect(within(section("quality-sources")).getByText("Oct 18: of 2 sources checked, 1 unread for more than a day and 1 with nothing on Today.")).toBeInTheDocument();
+  expect(within(section("quality-sources")).queryByText(/^Oct 19:/)).toBeNull();
+  expect(within(section("quality-review")).getByText("The middle of the 3 days you looked its work over was 8 min.")).toBeInTheDocument();
+  expect(within(section("quality-review")).getByText("Oct 17: 16 min in 6 visits.")).toBeInTheDocument();
+  expect(within(section("quality-total")).getByText("The assistant missed 5 of the 36 promises you counted, over 2 days and 2 messages.")).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/\d\s?%/);
+});
+
+const SAMPLE: View["sample"] = {
+  id: "SAMP-1",
+  drawn_at: "2026-10-19T08:00:00Z",
+  since: "2026-09-21",
+  until: "2026-10-19",
+  candidates: 120,
+  size: 2,
+  read: 1,
+  present: 3,
+  missed: 1,
+  items: [
+    { source: "SRC-10", title: "Re: proof pages", received_at: "2026-10-15T09:00:00Z", present: 3, missed: 1 },
+    { source: "SRC-11", title: "Venue booking", received_at: "2026-10-16T09:00:00Z", present: null, missed: null },
+  ],
+};
+
+test("without the person's consent the sample says nothing is drawn, and with it there is a button that draws one", async () => {
+  const user = userEvent.setup();
+  const calls = show(quality(), { "POST quality/sample": () => SAMPLE });
+  await loaded();
+  expect(within(section("quality-sample")).getByText("Allow the independent reading in Settings first. Nothing is drawn until you do.")).toBeInTheDocument();
+  expect(within(section("quality-sample")).queryByRole("button", { name: "Draw the sample" })).toBeNull();
+  cleanup();
+  const again = show(quality({ sample_allowed: true }), { "POST quality/sample": () => SAMPLE });
+  await loaded();
+  await user.click(within(section("quality-sample")).getByRole("button", { name: "Draw the sample" }));
+  expect(await screen.findByText("Drew 2 messages for you to read.")).toBeInTheDocument();
+  expect(again.some((c) => c.route === "POST quality/sample")).toBe(true);
+  expect(calls.some((c) => c.route === "POST quality/sample")).toBe(false);
+});
+
+test("the sample lists each message to read, and saving a message's two numbers posts them with an Undo", async () => {
+  const user = userEvent.setup();
+  const calls = show(quality({ sample: SAMPLE, sample_allowed: true }), {
+    "PUT quality/sample/SAMP-1/items/SRC-11": () => ({ source: "SRC-11", present: 2, missed: 0, previous: null }),
+    "POST quality/sample/SAMP-1/items/SRC-11/undo": () => ({ ok: "SRC-11" }),
+  });
+  await loaded();
+  const found = within(section("quality-sample"));
+  expect(found.getByText("You have read 1 of 2 messages. Of the 3 promises you found in them, the assistant missed 1.")).toBeInTheDocument();
+  expect(found.getByLabelText("Promises you found in Re: proof pages")).toHaveValue(3);
+  const save = found.getByRole("button", { name: "Save the count for Venue booking" });
+  expect(save).toBeDisabled();
+  await user.type(found.getByLabelText("Promises you found in Venue booking"), "2");
+  await user.type(found.getByLabelText("Of those, how many the assistant didn't have, in Venue booking"), "0");
+  await user.click(found.getByRole("button", { name: "Save the count for Venue booking" }));
+  expect(await screen.findByText("Saved: missed 0 of 2 in Venue booking.")).toBeInTheDocument();
+  expect(calls.find((c) => c.route === "PUT quality/sample/SAMP-1/items/SRC-11")?.body).toEqual({ present: 2, missed: 0 });
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST quality/sample/SAMP-1/items/SRC-11/undo")?.body).toEqual({ previous: null }));
+});
+
+test("more missed than found in a message is said at once and can't be saved", async () => {
+  const user = userEvent.setup();
+  show(quality({ sample: SAMPLE }));
+  await loaded();
+  const found = within(section("quality-sample"));
+  await user.type(found.getByLabelText("Promises you found in Venue booking"), "1");
+  await user.type(found.getByLabelText("Of those, how many the assistant didn't have, in Venue booking"), "3");
+  expect(found.getByRole("alert")).toHaveTextContent("The assistant can't have missed more than you found.");
+  expect(found.getByRole("button", { name: "Save the count for Venue booking" })).toBeDisabled();
 });
 
 test("the other measures read in the same plain style", async () => {
@@ -183,6 +290,11 @@ test("a screen with nothing to show says so in plain words in every section", as
   expect(within(section("quality-knowledge")).getByText(/No work was given what you'd taught the assistant/)).toBeInTheDocument();
   expect(within(section("quality-repeats")).getByText("You haven't corrected the assistant in this window.")).toBeInTheDocument();
   expect(within(section("quality-lacking")).getByText("The assistant hasn't said it lacked anything in this window.")).toBeInTheDocument();
+  expect(within(section("quality-lost")).getByText("No promise was open in this window.")).toBeInTheDocument();
+  expect(within(section("quality-sources")).getByText("No source was connected in this window.")).toBeInTheDocument();
+  expect(within(section("quality-review")).getByText("You haven't looked its work over in this window.")).toBeInTheDocument();
+  expect(within(section("quality-sample")).getByText("Allow the independent reading in Settings first. Nothing is drawn until you do.")).toBeInTheDocument();
+  expect(within(section("quality-total")).getByText("You haven't counted any promises in this window.")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/NaN|undefined|null/);
 });
 

@@ -4121,6 +4121,14 @@ class AiTierView(BaseModel):
         None, description="The stronger tier tried once more when the answer keeps failing the app's checks."
     )
     escalate_source: SettingLayer = Field(description="The layer that set `ai.tiers.<name>.escalate_to`.")
+    runs: int = Field(0, description="Calls made on the tier over the last `cost_days` days.")
+    unpriced_runs: int = Field(
+        0, description="Of those, calls whose cost isn't known, so the cost is the least it was."
+    )
+    cost_days: int = Field(7, description="The days the cost is worked out over (`ai.models.use_days`).")
+    cost_per_day_usd: float | None = Field(
+        None, description="What the tier's calls cost a day over those days; none when it had no calls."
+    )
 
 
 class PackTierPick(BaseModel):
@@ -6222,15 +6230,121 @@ class QualityOutcome(BaseModel):
 
 
 class ReviewTimeIn(BaseModel):
-    screen: Literal["review", "changes", "since"] = Field(
-        description="The screen that looks over the assistant's work: review (the review mode), changes (what changed) "
-        "or since (since yesterday)."
+    screen: Literal["review", "changes", "since", "today"] = Field(
+        description="The screen that looks over the assistant's work: review (the review mode), changes (what "
+        "changed), since (since yesterday) or today (the review pane opened on Today)."
     )
     seconds: int = Field(ge=0, le=86400, description="How long the screen was open and in view on this visit.")
 
 
 class ReviewTimeSaved(BaseModel):
     seconds: int = Field(description="The seconds recorded, held to the configured most for one visit; 0 when none.")
+
+
+class QualityReviewDay(BaseModel):
+    day: date = Field(description="The day, on the person's own clock.")
+    seconds: int = Field(description="Seconds the screens that look over the assistant's work were open and in view.")
+    visits: int = Field(description="How many visits those seconds were spread over.")
+
+
+class QualityReview(BaseModel):
+    """Review time a day over the window (design 6.32; the pass bar's median): each day with any review, and the median
+    of those days' totals. A day with none is not a day of review, so it is left out."""
+
+    median_seconds: int | None = Field(
+        None, description="The median of a day's review seconds over the days with any; none when no day has any."
+    )
+    days_reviewed: int = Field(description="How many days have any review time.")
+    total_seconds: int = Field(description="All the review seconds in the window.")
+    visits: int = Field(description="All the visits in the window.")
+    days: list[QualityReviewDay] = Field(description="Each day with review time, newest first.")
+
+
+class QualityLostItem(BaseModel):
+    id: str = Field(description="The promise's id.")
+    text: str = Field(description="The promise in its own words.")
+    day: date = Field(description="The day it vanished, on the person's own clock.")
+
+
+class QualityLostDay(BaseModel):
+    day: date
+    existed: int = Field(description="Promises that existed in the window, the same on every day.")
+    lost: int = Field(description="Promises that vanished that day with no ending anyone saw.")
+
+
+class QualityLost(BaseModel):
+    """Lost promises in the window (design 6.32): promises that existed and then vanished with no ending op, no person
+    action and no undo trail. `existed` is the denominator."""
+
+    existed: int = Field(description="Promises that were open at some time in the window.")
+    lost: int = Field(description="Of those, how many vanished with no ending anyone saw in the window.")
+    days: list[QualityLostDay] = Field(description="Each day a promise was lost, oldest first.")
+    items: list[QualityLostItem] = Field(description="The lost promises, newest first, at most twenty.")
+
+
+class QualitySourceDay(BaseModel):
+    day: date
+    checked: int = Field(description="Connected sources checked at the end of that day.")
+    over_a_day: int = Field(description="Of those, how many were unread for more than a day.")
+    silent: int = Field(description="Of those, how many Today had no line about.")
+
+
+class QualitySources(BaseModel):
+    """Sources not read (design 6.32): for each day, the connected sources checked, how many were unread for more than
+    a day and how many of those Today said nothing about. Counted in source-days."""
+
+    checked: int
+    over_a_day: int
+    silent: int
+    days: list[QualitySourceDay] = Field(description="Each day with a source connected, oldest first.")
+
+
+class QualitySampleItem(BaseModel):
+    source: str = Field(description="The message's id.")
+    title: str = Field(description="Its subject, for the person to find it in their own mail.")
+    received_at: datetime = Field(description="When it arrived.")
+    present: int | None = Field(None, description="The promises the person found in it; none until read.")
+    missed: int | None = Field(None, description="Of those, how many the app didn't have; none until read.")
+
+
+class QualitySample(BaseModel):
+    """The sample drawn for the person's own reading (design 6.32): the messages chosen and what was found in those
+    read so far. `size` is how many messages it holds, `candidates` how many the window had to draw from."""
+
+    id: str
+    drawn_at: datetime
+    since: date
+    until: date
+    candidates: int
+    size: int
+    read: int = Field(description="How many of its messages have been read.")
+    present: int = Field(description="Promises found in the messages read.")
+    missed: int = Field(description="Of those, how many the app didn't have.")
+    items: list[QualitySampleItem] = Field(description="The messages, oldest first.")
+
+
+class QualityMissedTotal(BaseModel):
+    """Missed out of present as the pass bar counts it: the person's daily counts and the messages they read from the
+    sample, added."""
+
+    present: int
+    missed: int
+    days: int = Field(description="Days with a daily count.")
+    messages: int = Field(description="Messages of the sample that were read.")
+
+
+class QualitySampleReadIn(BaseModel):
+    present: int = Field(ge=0, description="How many promises the person found in the message.")
+    missed: int = Field(ge=0, description="Of those, how many the app didn't have.")
+
+
+class QualitySampleReadSaved(BaseModel):
+    source: str
+    present: int
+    missed: int
+    previous: QualityCountBefore | None = Field(
+        None, description="What the message held before this save; none when it was not read. Undo takes it back."
+    )
 
 
 class QualityView(BaseModel):
@@ -6260,6 +6374,14 @@ class QualityView(BaseModel):
     counts: QualityCounts
     replays: QualityReplays
     outcome: QualityOutcome
+    review: QualityReview
+    lost: QualityLost
+    sources: QualitySources
+    sample: QualitySample | None = Field(
+        None, description="The latest sample drawn in the window, with what was found in it; none before one is drawn."
+    )
+    sample_allowed: bool = Field(False, description="`dispatch.knowledge.sample_consent`: a sample may be drawn.")
+    missed_total: QualityMissedTotal
 
 
 class OwnerNameView(BaseModel):
@@ -6711,6 +6833,15 @@ class ActApproveIn(BaseModel):
     acknowledged: list[str] = Field(default_factory=list)
 
 
+class DropNoteDone(BaseModel):
+    """POST /api/changesets/{id}/ops/{index}/release-with-note: the held drop was applied and a note was drafted for
+    each person who had been told. `changesets` are every change made, which Undo takes back together; `acts` are
+    the drafts, each waiting for the person's yes on its exact content."""
+
+    changesets: list[str]
+    acts: list[str]
+
+
 class ActSettleIn(BaseModel):
     """The person's answer for an act the app can't confirm went out, or one they carried out themselves: `sent` (it
     was sent) or `again` (send it again)."""
@@ -6859,10 +6990,14 @@ class BriefGoalsView(BaseModel):
 class BriefMessageView(BaseModel):
     """Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the
     assistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:
-    its `text`) or `kept` (the person copied it). `to` are the people it is for."""
+    its `text`), `kept` (the person copied it) or `ask` (nobody is marked as someone the person reports to, and they
+    haven't said nobody: `choices` are the people to pick from). `to` are the people it is for."""
 
-    state: Literal["none", "working", "needs_go", "draft", "kept"]
+    state: Literal["none", "working", "needs_go", "draft", "kept", "ask"]
     to: list[OwnerNameView]
+    choices: list[OwnerNameView] = Field(
+        default_factory=list, description="For `ask`: the people the person can pick as the one they report to."
+    )
     text: str | None = None
     estimate_usd: float | None = None
 
@@ -6893,6 +7028,28 @@ class BriefGoalsIn(BaseModel):
 
 class BriefGoalsKept(BaseModel):
     previous: list[str] = Field(description="The goals the week held before; sending them again is Undo.")
+
+
+class BriefMessageFor(BaseModel):
+    """POST /api/brief/message/for: who the Monday message is for, asked once. Give `person` (marked as someone the
+    person reports to) or `nobody` true (the briefing stops asking); `nobody` false takes that back."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    person: str | None = Field(None, description="The id of the person they report to.")
+    nobody: bool | None = Field(None, description="True: they report to nobody. False: ask again.")
+
+    @model_validator(mode="after")
+    def _one_answer(self) -> BriefMessageFor:
+        if (self.person is None) == (self.nobody is None):
+            raise ValueError("answer with a person or with nobody, not both and not neither")
+        return self
+
+
+class BriefMessageForSaved(BaseModel):
+    changeset: str | None = Field(
+        None, description="The change that marked the person, which Undo takes back; none when no person was marked."
+    )
 
 
 class BriefMessageAsk(BaseModel):

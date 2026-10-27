@@ -17,6 +17,8 @@ from api.schemas import (
     BriefGoalsView,
     BriefLineView,
     BriefMessageAsk,
+    BriefMessageFor,
+    BriefMessageForSaved,
     BriefMessageView,
     BriefSectionView,
     BriefView,
@@ -61,6 +63,7 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             message=BriefMessageView(
                 state=message.state,  # type: ignore[arg-type]
                 to=[OwnerNameView(person=p, name=people.name(p)) for p in message.to],
+                choices=[OwnerNameView(person=p, name=people.name(p)) for p in message.choices],
                 text=message.text,
                 estimate_usd=message.estimate_usd,
             )
@@ -104,6 +107,21 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         events.changed()
         worker.poke()
         return HandedOver(request=request)
+
+    @r.post("/brief/message/for")
+    def message_for(body: BriefMessageFor) -> BriefMessageForSaved:
+        """Answer, once, who the Monday message is for: mark a person as someone the person reports to (an ordinary
+        change with Undo), or say nobody, so the briefing stops asking. `nobody` false takes the last answer back."""
+        changeset = None
+        try:
+            if body.person is not None:
+                changeset = week_plan.set_report_to(store, cfg, body.person)
+            else:
+                week_plan.set_reports_to_nobody(store, cfg, worker.now(), bool(body.nobody))
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return BriefMessageForSaved(changeset=changeset)
 
     @r.post("/brief/message/copied")
     def message_copied() -> Ok:

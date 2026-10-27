@@ -169,29 +169,41 @@ def read_endings(cs: Any, ctx: Any) -> Any:
     return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
 
 
-def called_off_notices(view: Any, ctx: Any, action: Any) -> list[dict[str, Any]]:
-    """The one-line drafts, one to each person an action was already sent to, for the person to send: each is a
-    question of the kind that tells someone about an action, to someone told or chased, never to the person and never
-    to anyone they only watch or report to. Nothing is sent: a draft waits in To send."""
+def told_people(view: Any, cfg: Any, pm: str | None, action: Any) -> list[str]:
+    """The people an action was already sent to, in the order they were reached: told or chased, never the person and
+    never anyone they only watch or report to."""
     from engine.followups import UNTOLD_STANCES
     from engine.scope import stance_of
 
     data = action.data
     reached = [*(data.get("told") or {}), *(data.get("followed_up") or {})]
-    drafts = []
-    for person in dict.fromkeys(reached):
-        if person == ctx.people.pm or stance_of(view, ctx.cfg.steward, person) in UNTOLD_STANCES:
-            continue
-        item = " ".join(str(data["text"]).split())
-        drafts.append(
-            {
-                "to": person,
-                "title": ctx.cfg.language.messages.called_off_notice.format(item=item),
-                "kind": "action-notice",
-                "projects": [data["project"]] if data.get("project") else [],
-            }
-        )
-    return drafts
+    return [
+        person
+        for person in dict.fromkeys(reached)
+        if person != pm and stance_of(view, cfg.steward, person) not in UNTOLD_STANCES
+    ]
+
+
+def called_off_line(cfg: Any, action: Any) -> str:
+    """The one line for someone told about an action that is called off (`language.messages.called_off_notice`)."""
+    item = " ".join(str(action.data["text"]).split())
+    return cfg.language.messages.called_off_notice.format(item=item)
+
+
+def called_off_notices(view: Any, ctx: Any, action: Any) -> list[dict[str, Any]]:
+    """The one-line drafts, one to each person an action was already sent to, for the person to send: each is a
+    question of the kind that tells someone about an action, to someone told or chased, never to the person and never
+    to anyone they only watch or report to. Nothing is sent: a draft waits in To send."""
+    data = action.data
+    return [
+        {
+            "to": person,
+            "title": called_off_line(ctx.cfg, action),
+            "kind": "action-notice",
+            "projects": [data["project"]] if data.get("project") else [],
+        }
+        for person in told_people(view, ctx.cfg, ctx.people.pm, action)
+    ]
 
 
 def answer(store: Any, cfg: Any, changeset_id: str, index: int, ending: Answer, *, now: datetime | None = None) -> None:

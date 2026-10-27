@@ -1027,6 +1027,21 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 235. The gate's instruments matched to the drafted pass bar, and the designer's small open points (2026-10-28; roadmap A3, A5)
+
+| Where | Before | Now |
+|---|---|---|
+| Review time (6.32 "Measures") | Timed on three screens; Today's review pane not timed; no median | **Built** (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`): the review pane on Today is timed (screen `today`), and `GET /api/quality` gives each day's total and the median over the days with any |
+| Lost promises (6.32) | No counter | **Built** (`tests/test_gate_instruments.py`): promises that vanished with no ending op, no person action and no undo trail, out of promises that existed; the rule is in `engine/gate_measures.py::lost_measure` |
+| Sources not read (6.32) | No counter | **Built** (`tests/test_gate_instruments.py`): in source-days, connected sources unread for more than a day and those Today said nothing about |
+| The 50-message sample (6.32) | No instrument or procedure | **Built** (`tests/test_gate_instruments.py`, `Quality.test.tsx`): core record `gate_sample` (SAMP), setting `dispatch.knowledge.sample_consent` (off) and `sample_size` (50), `POST /api/quality/sample` and the person's counts per message; joins the daily counts in "Missed out of present, all together". Procedure: `docs/project/gate-sample-procedure.md` |
+| The Monday message (6.32) | With nobody marked as someone the person reports to, the section was absent | **Built** (`tests/test_brief.py`, `tests/test_brief_week.py`, `BriefCard.test.tsx`): the briefing asks once who it is for; marking someone is the person's own stance change with Undo; "I report to no one" stops the question in every week (`week_plan.reports_to_nobody_at`) |
+| Held drop (7.6, 6.12) | "Drop it" only | **Built** (`tests/test_drop_and_draft_note.py`, `TodayRecords.test.tsx`): "Drop it and draft the note" drops at once and drafts one note to each person told as an outward act that waits for the person's yes and goes only through the publisher; setting `language.messages.called_off_subject` |
+| AI tiers on Settings (7.9, B-11b) | No cost shown | **Built** (`tests/test_tier_costs.py`, `AiRouting.test.tsx`): each tier's cost per day over `ai.models.use_days`, with calls that had no price counted apart |
+| The day-30 scenario (6.22) | Seven inputs, 43% of them quiet | **Built** (`tests/test_pairs.py::test_the_scenarios_month_of_noise_follows_the_typical_weeks_shares`): a month of noise in the designer's typical-week shares, 86% quiet |
+
+The thresholds paragraph of 6.32 is unchanged; it waits for the owner's yes on the drafted pass bar.
+
 ## 234. The reviewer's second pass and the designer's answers F39 to F46 (2026-10-28; phase U; designed)
 
 | Where | Before | Now |

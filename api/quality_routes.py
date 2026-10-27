@@ -25,6 +25,10 @@ from api.schemas import (
     QualityEndingDay,
     QualityEndings,
     QualityKnowledgeUsed,
+    QualityLost,
+    QualityLostDay,
+    QualityLostItem,
+    QualityMissedTotal,
     QualityMissedWeek,
     QualityMissingGroup,
     QualityMissingWeek,
@@ -32,11 +36,19 @@ from api.schemas import (
     QualityOutcomeWeek,
     QualityRepeatWeek,
     QualityReplays,
+    QualityReview,
+    QualityReviewDay,
+    QualitySample,
+    QualitySampleItem,
+    QualitySampleReadIn,
+    QualitySampleReadSaved,
+    QualitySourceDay,
+    QualitySources,
     QualityView,
     ReviewTimeIn,
     ReviewTimeSaved,
 )
-from engine import gate_measures, outcome, quality
+from engine import gate_measures, gate_sample, outcome, quality
 from engine.config import Config
 from engine.names import People
 from engine.storage import Store, StoreError
@@ -72,6 +84,28 @@ def _outcome(view: Any, person: str | None, now: datetime, days: int, here: Any)
     )
 
 
+def _sample(found: gate_sample.SampleMeasure) -> QualitySample | None:
+    if found.id is None or found.drawn_at is None:
+        return None
+    return QualitySample(
+        id=found.id,
+        drawn_at=found.drawn_at,
+        since=found.since,
+        until=found.until,
+        candidates=found.candidates,
+        size=found.size,
+        read=found.read,
+        present=found.present,
+        missed=found.missed,
+        items=[
+            QualitySampleItem(
+                source=i.source, title=i.title, received_at=i.received_at, present=i.present, missed=i.missed
+            )
+            for i in found.items
+        ],
+    )
+
+
 def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
 
@@ -96,6 +130,10 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
         apart = quality.apart_per_week(view, now, days, here)
         answered = quality.answers_per_week(view, now, days, here)
         counted = gate_measures.counts_measure(view, person, span)
+        reviewed = gate_measures.review_measure(view, span, here)
+        vanished = gate_measures.lost_measure(view, view.ledger(kind="action"), span, here)
+        unread = gate_measures.sources_measure(view, cfg, span, here)
+        sampled = gate_sample.measure(view)
         return QualityView(
             answers=QualityAnswers(
                 helpful=sum(w.helpful for w in answered),
@@ -133,6 +171,36 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                 days=[QualityCountDay(day=d.day, present=d.present, missed=d.missed) for d in counted.days],
             ),
             replays=QualityReplays(count=gate_measures.replay_count(ws.root)),
+            review=QualityReview(
+                median_seconds=reviewed.median_seconds,
+                days_reviewed=reviewed.days_reviewed,
+                total_seconds=reviewed.total_seconds,
+                visits=reviewed.visits,
+                days=[QualityReviewDay(day=d.day, seconds=d.seconds, visits=d.visits) for d in reviewed.days],
+            ),
+            lost=QualityLost(
+                existed=vanished.existed,
+                lost=vanished.lost,
+                days=[QualityLostDay(day=d.day, existed=d.existed, lost=d.lost) for d in vanished.days],
+                items=[QualityLostItem(id=i.id, text=i.text, day=i.day) for i in vanished.items],
+            ),
+            sources=QualitySources(
+                checked=unread.checked,
+                over_a_day=unread.over_a_day,
+                silent=unread.silent,
+                days=[
+                    QualitySourceDay(day=d.day, checked=d.checked, over_a_day=d.over_a_day, silent=d.silent)
+                    for d in unread.days
+                ],
+            ),
+            sample=_sample(sampled),
+            sample_allowed=settings.sample_consent,
+            missed_total=QualityMissedTotal(
+                present=counted.present + sampled.present,
+                missed=counted.missed + sampled.missed,
+                days=counted.entered,
+                messages=sampled.read,
+            ),
             outcome=_outcome(view, person, now, days, here),
             days=days,
             min_corrections_per_week=settings.min_corrections_per_week,
@@ -242,5 +310,47 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
             raise HTTPException(status_code=409, detail=str(err)) from None
         events.changed()
         return Ok(ok=day.isoformat())
+
+    @r.post("/quality/sample")
+    def draw_sample() -> QualitySample:
+        """Draw the sample of messages for the person's own reading, from the quality window. Refused without their
+        consent (`dispatch.knowledge.sample_consent`), with no message to draw from, or when one was already drawn in
+        the window."""
+        try:
+            gate_sample.draw(store, cfg, worker.now())
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        found = _sample(gate_sample.measure(store.read()))
+        assert found is not None
+        return found
+
+    @r.put("/quality/sample/{sample}/items/{source}")
+    def read_sample_message(sample: str, source: str, body: QualitySampleReadIn) -> QualitySampleReadSaved:
+        """Save what the person found reading one message of the sample: how many promises it holds and how many of
+        those the app didn't have. Saving again corrects it. Returns what the message held before, which Undo takes."""
+        try:
+            previous = gate_sample.record_reading(store, sample, source, body.present, body.missed, now=worker.now())
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return QualitySampleReadSaved(
+            source=source,
+            present=body.present,
+            missed=body.missed,
+            previous=QualityCountBefore(**previous) if previous else None,
+        )
+
+    @r.post("/quality/sample/{sample}/items/{source}/undo")
+    def undo_sample_message(sample: str, source: str, body: QualityCountUndo) -> Ok:
+        """Undo a save: the message holds what it held before, or is unread."""
+        try:
+            gate_sample.restore_reading(
+                store, sample, source, body.previous.model_dump() if body.previous is not None else None
+            )
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return Ok(ok=source)
 
     return r

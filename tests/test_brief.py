@@ -759,12 +759,26 @@ def test_a_morning_without_confirmed_goals_carries_none(env):
     assert built(env, "morning").goals is None
 
 
-def test_the_message_section_exists_only_when_the_person_reports_to_someone(env):
+def test_the_message_section_asks_once_who_it_is_for_until_someone_is_marked_or_the_person_says_nobody(env):
     ws, cfg, store, clock = env
-    assert built(env, "monday").message is None
+    someone(store, "Quinn Fictional")
+    asking = built(env, "monday").message
+    assert asking.state == "ask" and asking.to == () and asking.choices, "the people to pick from, not the person"
+    assert me(cfg) not in asking.choices
     boss = someone(store, "Lena Fictional", stance="report_to")
     found = built(env, "monday")
     assert found.message.state == "none" and found.message.to == (boss,)
+
+
+def test_saying_nobody_ends_the_question_for_every_later_week_and_undo_asks_again(env):
+    from engine import week_plan
+
+    ws, cfg, store, clock = env
+    week_plan.set_reports_to_nobody(store, cfg, NOW, True)
+    assert built(env, "monday").message is None
+    assert built(env, "monday", NOW + timedelta(days=7)).message is None, "once, not once a week"
+    week_plan.set_reports_to_nobody(store, cfg, NOW, False)
+    assert built(env, "monday").message.state == "ask"
 
 
 # ---- the ten sample mornings, as cases of both fictional workspaces --------------------------------------------------

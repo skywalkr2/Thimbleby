@@ -37,7 +37,7 @@ FALSE_ALERT_CORRECTIONS = frozenset(
 #: The suggestion choices that say nothing needed doing.
 DISMISSING = ("leave", "keep")
 #: The screens that look over the assistant's work, as the screens name themselves when they record their time.
-SCREENS = ("review", "changes", "since")
+SCREENS = ("review", "changes", "since", "today")
 TAKEN_BACK = "taken back"
 
 _TIME = WriteContext(actor="pm", trust="trusted", op="review.time")

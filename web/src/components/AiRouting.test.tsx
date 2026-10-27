@@ -38,12 +38,29 @@ const kind = (name: string, label: string, over: Partial<S["AiWorkKindView"]> = 
   ...over,
 });
 
+test("each kind of model shows what it costs a day, and a tier with no calls says so", async () => {
+  server(
+    start({
+      tiers: [
+        { name: "routine", account: "main", escalate_to: "deep", escalate_source: "file", runs: 12, unpriced_runs: 2, cost_days: 7, cost_per_day_usd: 0.14 },
+        { name: "deep", account: "big", escalate_to: null, escalate_source: "default", runs: 0, unpriced_runs: 0, cost_days: 7, cost_per_day_usd: null },
+      ],
+    }),
+  );
+  renderApp(<AiRouting />);
+  const found = within(await screen.findByRole("heading", { name: "What each kind of model costs a day" }).then((h) => h.parentElement as HTMLElement));
+  expect(found.getByText(/about \$0\.14 a day over the last 7 days, from 12 calls\./)).toBeInTheDocument();
+  expect(found.getByText(/2 calls had no known price, so this is the least it cost\./)).toBeInTheDocument();
+  expect(found.getByText(/no calls in the last 7 days\./)).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/\d\s?%|NaN|undefined/);
+});
+
 function start(over: Partial<View> = {}): View {
   return {
     kinds: [kind("notes", "Notes"), kind("sort-mail", "Sort mail", { fits: [fit("routine", { skills: 0, measured: 0, runs: 0, passes: 0, cost_per_pass_usd: null, status: "not_measured" }), fit("deep", { skills: 0, measured: 0, runs: 0, passes: 0, cost_per_pass_usd: null, status: "not_measured" })] }), kind("ex/draft-chapter", "Draft chapter", { fits: [fit("routine", { measured: 0, runs: 0, passes: 0, status: "not_measured", cost_per_pass_usd: null }), fit("deep", { status: "stale" })] })],
     tiers: [
-      { name: "routine", account: "main", escalate_to: "deep", escalate_source: "file" },
-      { name: "deep", account: "big", escalate_to: null, escalate_source: "default" },
+      { name: "routine", account: "main", escalate_to: "deep", escalate_source: "file", runs: 12, unpriced_runs: 0, cost_days: 7, cost_per_day_usd: 0.14 },
+      { name: "deep", account: "big", escalate_to: null, escalate_source: "default", runs: 0, unpriced_runs: 0, cost_days: 7, cost_per_day_usd: null },
     ],
     rules: [{ task: "notes", input_chars_over: null, quoted_messages_over: 3, data_level: null, tier: "deep" }],
     rules_source: "file",

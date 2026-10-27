@@ -155,6 +155,7 @@ messages:
   nudge_overdue: "(it was due {date})"
   nudge_second_intro: "Checking in again on what I first asked on {date}:"
   called_off_notice: "No longer needed, thanks: {item}"
+  called_off_subject: "No longer needed"
   source_by_person: "{who}, {date}"
   source_input: "the {date} {what}"
   source_recorded: "recorded {date}"

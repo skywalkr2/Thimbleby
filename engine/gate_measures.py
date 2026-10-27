@@ -11,6 +11,10 @@ for the window, read from the records alone. Nothing here calls AI.
   to open in the ledger after that close. An ending undone and then reopened counts once.
 - Missed out of present: the person's own daily count (`promise_count`), summed over the window. The app never works
   it out.
+- Review time: the seconds the screens that look over the assistant's work were open and in view (Today's review pane
+  included), each day's total, and the median of those totals over the days with any.
+- Lost promises: promises that existed and then vanished with no ending anyone saw (see `lost_measure`).
+- Sources not read: connected sources unread for more than a day while Today said nothing (see `sources_measure`).
 - The replay set: how many replay files the workspace has. When the replays last ran is not recorded anywhere that
   tells them from the golden set's runs, so it isn't shown.
 
@@ -19,6 +23,8 @@ A day is a day on the person's own clock. The window is the configured number of
 
 from __future__ import annotations
 
+import json
+import statistics
 import typing
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -29,6 +35,7 @@ from typing import Any
 from engine import closes
 from engine.applier import DECLINED_REASON, ENDING_OPS
 from engine.names import People
+from engine.promises import is_promise
 from engine.storage import StoreError, WriteContext
 from engine.today import zone
 
@@ -73,6 +80,15 @@ def _moment(stamp: Any) -> datetime | None:
 def _day_of(stamp: Any, here: tzinfo) -> date | None:
     moment = _moment(stamp)
     return moment.astimezone(here).date() if moment is not None else None
+
+
+def end_of(day: date, here: tzinfo) -> datetime:
+    """The last second of a day on the person's own clock."""
+    return datetime.combine(day, time(23, 59, 59), tzinfo=here)
+
+
+def _days(win: Window) -> list[date]:
+    return [win.since + timedelta(days=n) for n in range((win.until - win.since).days + 1)]
 
 
 # ---- silent closes out of all closes ---------------------------------------------------------------------------------
@@ -277,6 +293,202 @@ def restore_count(store: Any, cfg: Any, day: date, previous: dict[str, int] | No
                 _COUNT,
                 read_version=current.version,
             )
+
+
+# ---- review time -----------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReviewDay:
+    day: date
+    seconds: int
+    visits: int
+
+
+@dataclass(frozen=True)
+class ReviewMeasure:
+    median_seconds: int | None  # None when no day has any review
+    days_reviewed: int
+    total_seconds: int
+    visits: int
+    days: list[ReviewDay] = field(default_factory=list)  # days with review time, newest first
+
+
+def review_measure(view: Any, win: Window, here: tzinfo) -> ReviewMeasure:
+    """Review time in the window: each `review_time` signal is one visit to a screen that looks over the assistant's
+    work (the review pane on Today, What changed, Since yesterday, the review mode), by the day it was recorded. The
+    median is of a day's total over the days with any visit: a day nobody reviewed is not a day of review, so counting
+    it as zero would let the figure pass by not looking."""
+    seconds: dict[date, int] = defaultdict(int)
+    visits: dict[date, int] = defaultdict(int)
+    for signal in view.list("signal"):
+        if signal.data["kind"] != "review_time":
+            continue
+        when = _moment(signal.data["at"])
+        try:
+            said = json.loads(signal.data.get("note") or "")
+        except ValueError:
+            continue
+        if when is None or not isinstance(said, dict) or not win.start <= when <= win.end:
+            continue
+        day = when.astimezone(here).date()
+        seconds[day] += int(said.get("seconds") or 0)
+        visits[day] += 1
+    days = [ReviewDay(d, seconds[d], visits[d]) for d in sorted(seconds, reverse=True)]
+    median = int(statistics.median(seconds.values())) if seconds else None
+    return ReviewMeasure(median, len(days), sum(seconds.values()), sum(visits.values()), days)
+
+
+# ---- lost promises ---------------------------------------------------------------------------------------------------
+
+#: The most lost promises listed by name.
+LOST_LISTED = 20
+
+
+@dataclass(frozen=True)
+class LostItem:
+    id: str
+    text: str
+    day: date
+
+
+@dataclass(frozen=True)
+class LostDay:
+    day: date
+    existed: int
+    lost: int
+
+
+@dataclass(frozen=True)
+class LostMeasure:
+    existed: int
+    lost: int
+    days: list[LostDay] = field(default_factory=list)  # days a promise was lost, oldest first
+    items: list[LostItem] = field(default_factory=list)  # newest first, at most `LOST_LISTED`
+
+
+def _accounted(entry: dict[str, Any]) -> bool:
+    """Whether the write that took a promise out of view is one somebody saw: a person's own action (a screen, a kept or
+    declined hold, an Undo) or an ending op (`ENDING_OPS`), whose change is on What changed with its Undo."""
+    return entry["actor"] == "pm" or str(entry["op"]).split("#", 1)[0] in _ENDING_NAMES
+
+
+def lost_measure(view: Any, ledger: list[dict[str, Any]], win: Window, here: tzinfo) -> LostMeasure:
+    """Lost promises out of promises that existed, read from the action ledger.
+
+    A *promise* is an action read as one (`promises.is_promise`). It *existed in the window* when it was open at some
+    time in it. It *vanished* when its status left open or its record was deleted, and it stays gone: a promise brought
+    back (an Undo, a reopening, an undelete) has not vanished. The
+    vanishing is *lost* when the write that did it is not accounted for: it was not the person's own action (the
+    ledger's actor is `pm`: a screen, a hold they kept, an Undo, a deletion they made) and it was not an ending op
+    (`action.close`, `action.drop`, `action.move`, `action.part`, `action.unhold`, the ledger's op name before `#`),
+    which is a change they can see and undo on What changed. A write by a sweep, a plugin or a status set by
+    another op is lost. The silent close is its own measure: an ending op the person hasn't seen is not lost, it is
+    silent. Each is counted by the day, on the person's clock, that it vanished."""
+    history: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for entry in ledger:
+        history[entry["record_id"]].append(entry)
+    existed = 0
+    lost_items: list[LostItem] = []
+    per_day: dict[date, int] = defaultdict(int)
+    for record in view.list("action", include_deleted=True):
+        if not is_promise(record.data) or not history.get(record.id):
+            continue
+        entries = history[record.id]
+        made = _moment(entries[0]["at"])
+        if made is None or made > win.end:
+            continue
+        closed: dict[str, Any] | None = None  # the write that took the status out of open, while it stands
+        deleted: dict[str, Any] | None = None  # the write that deleted the record, while it stands
+        for entry in entries:
+            if entry["field"] == "status":
+                closed = None if entry["after"] == "open" else (closed or entry)
+            elif entry["field"] is None and entry["version"] > 1:
+                deleted = None if deleted is not None else entry  # a delete, then an undelete, and so on
+        gone = sorted((e for e in (closed, deleted) if e is not None), key=lambda e: e["seq"])
+        vanished = _moment(gone[0]["at"]) if gone else None
+        if vanished is not None and vanished < win.start:
+            continue  # it was gone before the window began: not a promise of the window
+        existed += 1
+        if vanished is None or _accounted(gone[0]) or not win.start <= vanished <= win.end:
+            continue
+        day = vanished.astimezone(here).date()
+        per_day[day] += 1
+        lost_items.append(LostItem(record.id, str(record.data["text"]), day))
+    lost_items.sort(key=lambda i: (i.day, i.id), reverse=True)
+    return LostMeasure(
+        existed,
+        sum(per_day.values()),
+        [LostDay(d, existed, per_day[d]) for d in sorted(per_day)],
+        lost_items[:LOST_LISTED],
+    )
+
+
+# ---- sources not read ------------------------------------------------------------------------------------------------
+
+#: A source counts as unread when its last good read, or its first try when it never had one, is older than this.
+UNREAD_AFTER = timedelta(hours=24)
+
+
+@dataclass(frozen=True)
+class SourceDay:
+    day: date
+    checked: int
+    over_a_day: int
+    silent: int
+
+
+@dataclass(frozen=True)
+class SourcesMeasure:
+    checked: int  # source-days: each connected source on each day it was connected
+    over_a_day: int  # of those, the ones unread for more than a day
+    silent: int  # of those, the ones Today had no line about
+    days: list[SourceDay] = field(default_factory=list)  # days with a source connected, oldest first
+
+
+def coverage_line(last_outcome: str, read_at: datetime | None, now: datetime, stale_after_hours: int) -> str | None:
+    """What Today says about a source that is on, as the screen's coverage line does (`web/src/lib/coverage.ts`): that
+    it couldn't be read (its latest try failed or found no network), that it hasn't been read within the configured
+    hours, or that it isn't read yet; nothing for a source read lately."""
+    if last_outcome in ("failed", "offline"):
+        return "unread"
+    if read_at is not None:
+        return "stale" if now - read_at > timedelta(hours=stale_after_hours) else None
+    return "pending"
+
+
+def sources_measure(view: Any, cfg: Any, win: Window, here: tzinfo) -> SourcesMeasure:
+    """Sources unread for more than a day while Today showed no line, counted in source-days.
+
+    For each day of the window, at its last second (at the moment of the call for today), each source that is on and
+    had been tried by then is *checked*. It is *unread over a day* when its last good read (`ok` or `baseline`), or its
+    first try when it never had one, is more than `UNREAD_AFTER` before. It is *silent* when `coverage_line` would
+    have said nothing about it at that moment. The reads come from the watch runs on record; the stale hours and the
+    sources are as configured now, since a past setting is not kept."""
+    runs = {s.id: view.find("watch_run", {"source": s.id}) for s in cfg.watch.sources if s.enabled}
+    per_day: list[SourceDay] = []
+    for day in _days(win):
+        moment = min(end_of(day, here), win.end)
+        checked = over = silent = 0
+        for found in runs.values():
+            tried = [r for r in found if (_moment(r.data["started_at"]) or moment) <= moment]
+            if not tried:
+                continue
+            checked += 1
+            tried.sort(key=lambda r: str(r.data["started_at"]))
+            good = [r for r in tried if r.data["outcome"] in ("ok", "baseline")]
+            read_at = _moment(good[-1].data["started_at"]) if good else None
+            anchor = read_at or _moment(tried[0].data["started_at"])
+            if anchor is None or moment - anchor <= UNREAD_AFTER:
+                continue
+            over += 1
+            if coverage_line(tried[-1].data["outcome"], read_at, moment, cfg.watch.stale_after_hours) is None:
+                silent += 1
+        if checked:
+            per_day.append(SourceDay(day, checked, over, silent))
+    return SourcesMeasure(
+        sum(d.checked for d in per_day), sum(d.over_a_day for d in per_day), sum(d.silent for d in per_day), per_day
+    )
 
 
 # ---- the replay set --------------------------------------------------------------------------------------------------

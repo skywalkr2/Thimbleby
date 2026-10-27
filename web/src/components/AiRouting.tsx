@@ -81,6 +81,7 @@ function Part(props: { view: Routing; accounts: Account[]; kinds: Kind[] }) {
       <h3 id="ai-routing-title">{t("ai_routing.title")}</h3>
       <p className="hint">{t("ai_routing.intro")}</p>
       <RefreshedLines lines={refreshed.data?.lines ?? []} time={refreshed.data?.time ?? ""} />
+      <TierCosts view={view} />
       <Kinds view={view} model={model} />
       {view.tiers.length > 1 && <Escalation view={view} model={model} />}
       <Rules view={view} model={model} />
@@ -88,6 +89,30 @@ function Part(props: { view: Routing; accounts: Account[]; kinds: Kind[] }) {
         {t("ai_routing.spending", { amount: money(view.confirm_above_usd), limit: money(view.per_run_usd) })}
       </p>
     </section>
+  );
+}
+
+/** What each kind of model costs a day, from what its calls cost over the last few days: one line for each, never a bare
+ * figure, and a call with no known price said apart so the amount is read as the least it cost. */
+function TierCosts(props: { view: Routing }) {
+  const { t, tn } = useWords();
+  const tierName = useTierName();
+  const money = useSmallMoney();
+  return (
+    <div data-tier-costs="">
+      <h4>{t("ai_routing.cost.title")}</h4>
+      <p className="hint">{t("ai_routing.cost.hint")}</p>
+      <ul className="plain-list">
+        {props.view.tiers.map((x) => (
+          <li key={x.name} data-tier-cost={x.name}>
+            {x.cost_per_day_usd == null
+              ? t("ai_routing.cost.none", { work: tierName(x.name), days: x.cost_days })
+              : tn("ai_routing.cost.row", x.runs, { work: tierName(x.name), amount: money(x.cost_per_day_usd), days: x.cost_days })}
+            {x.unpriced_runs > 0 && <> {tn("ai_routing.cost.unpriced", x.unpriced_runs)}</>}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

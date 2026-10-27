@@ -1255,7 +1255,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         account and second try, the routing rules in the order they are checked, and the rules the measurements back."""
         from datetime import UTC
 
-        from engine.ai import matrix, suggest
+        from engine.ai import matrix, suggest, tier_costs
         from engine.ai.adapters import make_adapter
         from engine.skills import skills as skill_list
         from engine.tasks import default_tier
@@ -1331,12 +1331,17 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                         skills=[labels.get(i, i) for i in rule.skills],
                     )
                 )
+        costs = tier_costs.per_tier(store.read(), cfg_now, worker.now())
         tiers = [
             AiTierView(
                 name=name,
                 account=(tier.use.split("/", 1)[0] or None) if tier.use else None,
                 escalate_to=tier.escalate_to,
                 escalate_source=config_screens.source_of(cfg_now, f"ai.tiers.{name}.escalate_to"),
+                runs=costs[name].runs,
+                unpriced_runs=costs[name].unpriced,
+                cost_days=costs[name].days,
+                cost_per_day_usd=costs[name].per_day_usd,
             )
             for name, tier in ai.tiers.items()
             if "/" not in name

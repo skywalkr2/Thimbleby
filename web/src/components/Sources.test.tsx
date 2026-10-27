@@ -450,6 +450,33 @@ describe("adding a source", () => {
     expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
   });
 
+  test("adding another calendar from a signed-in service shows the add form and no sign-in return address anywhere", async () => {
+    const user = userEvent.setup();
+    const signedIn: S["SignInView"] = {
+      name: "demo/account",
+      label: "Demo service",
+      status: "signed_in",
+      ready: true,
+      callback: "http://localhost:8080/api/sign-ins/callback",
+      app: "add-on",
+      can_paste: true,
+      needs_secret: false,
+      set_aside: false,
+      several: false,
+      default_unusable: false,
+      can_act: false,
+      own_app_steps: [],
+      not_reading: [],
+    };
+    open([source("a")], { "GET sign-ins": () => [signedIn] });
+    await user.click(await screen.findByRole("button", { name: "Choose what to read from Demo service" }));
+    const form = await screen.findByRole("form", { name: "Add a connection" });
+    expect(form).toBeInTheDocument();
+    // Nothing on the screen is the registration's return address: it is only for someone making their own registration.
+    expect(screen.queryByLabelText("Address to allow")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/sign-ins\/callback|\/callback/);
+  });
+
   test("an add-on with several kinds offers just those", async () => {
     open([], {}, { add: { plugin: "demo", n: 1 } });
     const form = await screen.findByRole("form", { name: "Add a connection" });

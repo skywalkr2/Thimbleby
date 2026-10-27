@@ -183,6 +183,13 @@ export const api = {
   saveCount: (day: string, body: S["QualityCountIn"]) => call<S["QualityCountSaved"]>("PUT", `quality/counts/${id(day)}`, body),
   undoCount: (day: string, previous: S["QualityCountBefore"] | null) =>
     call<S["Ok"]>("POST", `quality/counts/${id(day)}/undo`, { previous } satisfies S["QualityCountUndo"]),
+  /** Draw the sample of messages to read on one's own (refused without consent, or when one was already drawn). */
+  drawSample: () => call<S["QualitySample"]>("POST", "quality/sample"),
+  /** Save, or correct, what the person found in one message of the sample: what Undo takes comes back as `previous`. */
+  readSampleMessage: (sample: string, source: string, body: S["QualitySampleReadIn"]) =>
+    call<S["QualitySampleReadSaved"]>("PUT", `quality/sample/${id(sample)}/items/${id(source)}`, body),
+  undoSampleMessage: (sample: string, source: string, previous: S["QualityCountBefore"] | null) =>
+    call<S["Ok"]>("POST", `quality/sample/${id(sample)}/items/${id(source)}/undo`, { previous } satisfies S["QualityCountUndo"]),
   missed: (text: string) => call<S["MissedSent"]>("POST", "missed", { text } satisfies S["MissedIn"]),
   applyProposal: (proposal: string, body: S["ProposalApply"]) =>
     call<S["SettingsSaved"]>("POST", `setting-proposals/${id(proposal)}/apply`, body),
@@ -236,6 +243,8 @@ export const api = {
   releaseAll: (cs: string) => call<S["AnswerGroupDone"]>("POST", `changesets/${id(cs)}/release-all`),
   release: (cs: string, index: number, person?: string) =>
     call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/release`, { person: person ?? null }),
+  /** "Drop it and draft the note": applies the held drop and drafts a note to each person who was told, for the person's yes. */
+  releaseWithNote: (cs: string, index: number) => call<S["DropNoteDone"]>("POST", `changesets/${id(cs)}/ops/${index}/release-with-note`),
   newPersonForm: (q: string) => call<S["NewPersonPrefillView"]>("GET", `questions/${id(q)}/new-person`),
   addNewPerson: (q: string, body: S["NewPersonIn"]) => call<S["NewPersonDone"]>("POST", `questions/${id(q)}/new-person`, body),
   projectPartOf: (cs: string, index: number, project: string) =>
@@ -426,6 +435,8 @@ export const api = {
   askBriefMessage: (body: S["BriefMessageAsk"]) => call<S["HandedOver"]>("POST", "brief/message", body),
   /** The person copied the message: the draft waiting is theirs as it is. */
   briefMessageCopied: () => call<S["Ok"]>("POST", "brief/message/copied"),
+  /** Answer, once, who the Monday message is for: a person marked as someone to report to, or nobody (false takes it back). */
+  briefMessageFor: (body: S["BriefMessageFor"]) => call<S["BriefMessageForSaved"]>("POST", "brief/message/for", body),
   /** The prep for a calendar entry, by rules: who is coming, what is open with each of them, the last time in touch. */
   meetingPrep: (entry: string) => call<S["MeetingPrepView"]>("GET", `meetings/${id(entry)}/prep`),
   /** Write down what happened at an entry, as the person's own words; no words says there is nothing to note. */

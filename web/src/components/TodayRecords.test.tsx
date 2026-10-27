@@ -138,6 +138,33 @@ test("a drop of something that reached someone keeps who was told off the line: 
   expect(row).not.toHaveTextContent("were told");
 });
 
+test("a drop of something that reached someone also offers to draft the note, which waits for the yes, and Undo takes both back", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([held({ ask: "drop", item: "Send the interior file", told: ["Robin Sample", "Casey Moor"], told_on: "2026-10-10" })], {
+    "POST changesets/CS-1/ops/0/release-with-note": () => ({ changesets: ["CS-1", "CS-20", "CS-21"], acts: ["XACT-1", "XACT-2"] }),
+    "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }),
+    "POST changesets/CS-20/undo": () => ({ restored: [0], skipped: [] }),
+    "POST changesets/CS-21/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  const row = await rowOf("Drop 'Send the interior file'?");
+  expect(within(row).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
+  await user.click(within(row).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop it and draft the note" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/release-with-note")).toBe(true));
+  expect(await screen.findByText("Dropped “Send the interior file”. A note to Robin Sample, Casey Moor is waiting for your yes.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-20/undo", "POST changesets/CS-21/undo", "POST changesets/CS-1/undo"]));
+});
+
+test("a drop nobody was told about has no note to draft", async () => {
+  const user = userEvent.setup();
+  show([held({ ask: "drop", item: "Confirm the seating plan", told: [] })]);
+  const row = await rowOf("Drop 'Confirm the seating plan'?");
+  const more = within(row).queryByRole("button", { name: /More actions for/ });
+  if (more) await user.click(more);
+  expect(screen.queryByRole("menuitem", { name: "Drop it and draft the note" })).toBeNull();
+});
+
 test.each([
   [{ ask: "close", item: "Send two spine options", record: "ACT-1", owners: ["Robin Sample"] } as S["HeldAsk"], "Close 'Send two spine options'?", "Close it", "Keep it open"],
   [{ ask: "drop", item: "Confirm the seating plan", record: "ACT-1", owners: ["Robin Sample"], told: [] } as S["HeldAsk"], "Drop 'Confirm the seating plan'?", "Drop it", "Keep it"],

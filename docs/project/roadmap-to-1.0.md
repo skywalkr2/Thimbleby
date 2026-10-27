@@ -360,7 +360,7 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
 `reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
 - [ ] [B-6b] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
   the other answer a visible button.
-  *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. Left: "Drop it and draft the note", which waits for the publisher (S1b).
+  *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. *Built (audit A5):* "Drop it and draft the note" (`tests/test_drop_and_draft_note.py`, `web/src/components/TodayRecords.test.tsx`).
 
 From the original designer's lessons of 2026-10-14:
 - [x] [B-6b] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
@@ -490,7 +490,7 @@ From the original designer's lessons of 2026-10-14:
   to whoever the person reports to as a draft of the core kind `monday-message` (estimated, held for the go, unreviewed
   until Copy) (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`). **Built (cleanup batch):** Send beside Copy when an account can act, drafting the message as an act through
   `POST /api/acts` for the person's yes (`tests/test_act_draft_api.py`, `web/src/components/BriefCard.test.tsx`).
-  **Left:** asking once who the message is for when nobody is marked (the section is absent).
+  **Built (audit A5):** asking once who the message is for when nobody is marked (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`).
 - [ ] [B-6b] **What the work version's screens show** (owner's screens, 2026-10-13; the screens hold real names, so only
   what they do is written here). *Built (B-6b), checked off in `roadmap-done.md`:* Follow-ups by person, or by project;
   Projects at a glance; links to the person's own pages; a meeting added in one line; never raw data on screen. Two
@@ -836,7 +836,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings
   screen with the tiers and their cost per day, and "Measure"). **B-11a built:** `engine/ai/presets.py`,
   `tests/test_tier_presets.py` (presets for the two services whose families are certain; effort reaches a service only
-  through its confirmed `effort_param` or `effort_option`, none set yet). *Left for B-11b:* the Settings screen,
+  through its confirmed `effort_param` or `effort_option`, none set yet). *Built for B-11b (audit A5):* each tier's cost per day on the Settings AI page (`tests/test_tier_costs.py`, `web/src/components/AiRouting.test.tsx`). *Left for B-11b:* the Settings screen's recommendation by cost per passing answer,
   "Measure", the model picker's role words (two examples now share "stronger"), effort in the pre-save account check,
   and confirming each service's effort parameter. *Found while confirming it (2026-10-21):* the recommended service is
   reached through its chat-format compatibility endpoint, which per its own documentation ignores `reasoning_effort`,
@@ -1272,12 +1272,19 @@ code. Nearly all is built or planned. What is left, in two batches:
 - [ ] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
   lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
   thresholds paragraph matched to the draft once the owner says yes.
+  *Built so far (2026-10-28):* the review pane on Today is timed and the median is given; lost promises, sources unread over a day
+  and the 50-message sample (setting, draw, the person's counts, `docs/project/gate-sample-procedure.md`) are counted with their
+  denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). *Left:* the thresholds
+  paragraph of design 6.32, which waits for the owner's yes.
 - [ ] [A4] The checklist's partials (C13, C15, C16, C23, C24, C29, C35, C36, C41, C43, C45) built or re-marked, with C21
   and C22 re-marked.
 - [ ] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
   lists moved into shipped data (full-read point 5); the Monday message asking once who it is for; "Drop it and draft the
   note"; P40 point 8 reproduced; B-11b's tiers with a cost per day. (S4's setup tick boxes for common areas: dropped, owner 2026-10-28; areas
   come only from the assistant's proposals, as design 7.8 says.)
+  *Built so far (2026-10-28):* the day-30 scenario in the typical-week shares (P5, `tests/test_pairs.py`); the Monday message asking once who it
+  is for; "Drop it and draft the note"; P40 point 8 reproduced with a test that passes (see `open-promises.md`); B-11b's cost per day
+  for each tier (`tests/test_tier_costs.py`). *Left:* the `language.*` word lists in shipped data.
 - Held, not dropped: `includes:` (P62, P39) with the next plugin API release; calendar create, move and cancel and the
   add-on channels with the add-on builders.
 

@@ -50,5 +50,24 @@ export function useHeldAnswers(changeset: string, index: number, held: S["HeldAs
       ],
     };
   }
-  return { title: heldTitle(held, t), primary: { label: words.primary, run: release }, other: { label: words.other, run: decline }, menu: [] };
+  // A drop of something that reached people can also draft the note to them, which waits for the person's yes.
+  const told = held.ask === "drop" ? (held.told ?? []) : [];
+  const dropAndNote = () =>
+    void act(
+      () => api.releaseWithNote(cs, index),
+      (done) => ({
+        message: done.acts.length > 0 ? t("queue.held.done_note", { what: held.item, names: told.join(", ") }) : t("queue.held.done", { what: held.item }),
+        undo: async () => {
+          // The drop and each draft come back together, the drafts first.
+          for (const made of done.changesets.slice(1)) await api.undo(made);
+          await api.undo(cs, [index]);
+        },
+      }),
+    );
+  return {
+    title: heldTitle(held, t),
+    primary: { label: words.primary, run: release },
+    other: { label: words.other, run: decline },
+    menu: told.length > 0 ? [{ id: "drop-note", label: t("queue.held.a.drop_note"), run: dropAndNote }] : [],
+  };
 }

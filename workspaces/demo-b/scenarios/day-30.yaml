@@ -12,6 +12,11 @@ input:
     From: Maya Lindqvist
 
     Which reviewers are getting advance copies? Also, Marlow is booked for the 24th, so please confirm the final files for it by the 20th.
+# The month's noise follows one ordinary working week of real input: about 31% version bumps in watched page trees (title
+# says "version"), 27% issue-tracker updates (`source: issues`), 22% edits on watched pages, 14% files saved into a shared
+# folder (`source: folder`) and 7% the person's own notes and pastes, and about 86% of it ends with nothing for the
+# person (`ops: []`). None of it may change the day-30 answer, so the expected numbers are the ones the shorter history
+# had; the shares are held by `tests/test_pairs.py::test_the_scenarios_month_of_noise_follows_the_typical_weeks_shares`.
 history:
 - input:
     received: '2026-10-12'
@@ -41,6 +46,22 @@ history:
           quote: I only hear about it afterwards
 - keep_all: true
 - input:
+    received: '2026-10-13'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.3
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Style guide, version 2.3
+
+      The version number moved from 2.2 to 2.3. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
     received: '2026-10-14'
     pasted: |-
       From: Corner Lamp Books newsletter
@@ -48,6 +69,38 @@ history:
       Autumn window displays are up, and the shop is open late on Thursdays.
     answer:
       summary: A shop newsletter; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-14'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-101
+      title: Proof queue ticket 101, updated
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Proof queue ticket 101
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-15'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: shop-page-1
+      title: Shop page 1, edited
+      change: changed
+      author: Theo Brandt
+    pasted: |-
+      Shop page 1
+
+      One word in the opening line was fixed. Nothing else on the page changed.
+    answer:
+      summary: A small edit to a page; nothing to record.
       ops: []
 - input:
     received: '2026-10-16'
@@ -82,9 +135,59 @@ history:
         quote: Marlow is our name for the second printing
   keep: true
 - input:
+    received: '2026-10-16'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.4
+      change: changed
+      author: Ines Duarte
+    pasted: |-
+      Style guide, version 2.4
+
+      The version number moved from 2.3 to 2.4. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-17'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-102
+      title: Proof queue ticket 102, updated
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Proof queue ticket 102
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-18'
+    project: PRJ-1
+    watched:
+      source: folder
+      key: reading-deck-1
+      title: Reading deck, saved again
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Reading deck
+
+      Saved again with the same slides (save 1).
+    answer:
+      summary: The deck was saved again with the same slides.
+      ops: []
+- input:
     received: '2026-10-19'
     project: PRJ-1
     watched:
+      source: folder
+      key: launch-plan
       title: Launch plan
       change: changed
       author: Maya Okafor
@@ -94,6 +197,86 @@ history:
       The reading is at the bookshop. Same text as last week, saved again.
     answer:
       summary: The file was saved again with the same words.
+      ops: []
+- input:
+    received: '2026-10-19'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.5
+      change: changed
+      author: Theo Brandt
+    pasted: |-
+      Style guide, version 2.5
+
+      The version number moved from 2.4 to 2.5. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-20'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-103
+      title: Proof queue ticket 103, updated
+      change: changed
+      author: Ines Duarte
+    pasted: |-
+      Proof queue ticket 103
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-21'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: shop-page-2
+      title: Shop page 2, edited
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Shop page 2
+
+      One word in the opening line was fixed. Nothing else on the page changed.
+    answer:
+      summary: A small edit to a page; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-22'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.6
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Style guide, version 2.6
+
+      The version number moved from 2.5 to 2.6. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-23'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-104
+      title: Proof queue ticket 104, updated
+      change: changed
+      author: Theo Brandt
+    pasted: |-
+      Proof queue ticket 104
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
       ops: []
 - input:
     received: '2026-10-24'
@@ -112,6 +295,38 @@ history:
         evidence:
           quote: shop walkthrough on Wednesday, October 28 at 2:00 pm UTC
 - input:
+    received: '2026-10-24'
+    project: PRJ-1
+    watched:
+      source: folder
+      key: reading-deck-2
+      title: Reading deck, saved again
+      change: changed
+      author: Ines Duarte
+    pasted: |-
+      Reading deck
+
+      Saved again with the same slides (save 2).
+    answer:
+      summary: The deck was saved again with the same slides.
+      ops: []
+- input:
+    received: '2026-10-25'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.7
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Style guide, version 2.7
+
+      The version number moved from 2.6 to 2.7. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
     received: '2026-10-27'
     project: PRJ-1
     pasted: |-
@@ -128,6 +343,118 @@ history:
         evidence:
           quote: shop walkthrough moved to Thursday, October 29 at 3:00 pm UTC
 - input:
+    received: '2026-10-27'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-105
+      title: Proof queue ticket 105, updated
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Proof queue ticket 105
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-28'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: shop-page-3
+      title: Shop page 3, edited
+      change: changed
+      author: Theo Brandt
+    pasted: |-
+      Shop page 3
+
+      One word in the opening line was fixed. Nothing else on the page changed.
+    answer:
+      summary: A small edit to a page; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-29'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.8
+      change: changed
+      author: Ines Duarte
+    pasted: |-
+      Style guide, version 2.8
+
+      The version number moved from 2.7 to 2.8. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-30'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-106
+      title: Proof queue ticket 106, updated
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Proof queue ticket 106
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-31'
+    project: PRJ-1
+    watched:
+      source: folder
+      key: reading-deck-3
+      title: Reading deck, saved again
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Reading deck
+
+      Saved again with the same slides (save 3).
+    answer:
+      summary: The deck was saved again with the same slides.
+      ops: []
+- input:
+    received: '2026-11-01'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.9
+      change: changed
+      author: Theo Brandt
+    pasted: |-
+      Style guide, version 2.9
+
+      The version number moved from 2.8 to 2.9. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-02'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-107
+      title: Proof queue ticket 107, updated
+      change: changed
+      author: Ines Duarte
+    pasted: |-
+      Proof queue ticket 107
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
     received: '2026-11-03'
     pasted: |-
       From: Harrowgate Print Works
@@ -135,6 +462,102 @@ history:
       Our holiday paper range is in. Ask for a sample book.
     answer:
       summary: A supplier promotion; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-03'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: shop-page-4
+      title: Shop page 4, edited
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Shop page 4
+
+      One word in the opening line was fixed. Nothing else on the page changed.
+    answer:
+      summary: A small edit to a page; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-04'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.10
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Style guide, version 2.10
+
+      The version number moved from 2.9 to 2.10. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-05'
+    project: PRJ-1
+    watched:
+      source: issues
+      key: ticket-108
+      title: Proof queue ticket 108, updated
+      change: changed
+      author: Theo Brandt
+    pasted: |-
+      Proof queue ticket 108
+
+      Status changed from open to in progress. No new comment.
+    answer:
+      summary: A ticket's status moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-06'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: style-guide
+      title: Style guide, version 2.11
+      change: changed
+      author: Ines Duarte
+    pasted: |-
+      Style guide, version 2.11
+
+      The version number moved from 2.10 to 2.11. The text of the guide is the same.
+    answer:
+      summary: A version number moved; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-07'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: shop-page-5
+      title: Shop page 5, edited
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Shop page 5
+
+      One word in the opening line was fixed. Nothing else on the page changed.
+    answer:
+      summary: A small edit to a page; nothing to record.
+      ops: []
+- input:
+    received: '2026-11-08'
+    project: PRJ-1
+    watched:
+      source: pages
+      key: shop-page-6
+      title: Shop page 6, edited
+      change: changed
+      author: Sam Rivera
+    pasted: |-
+      Shop page 6
+
+      One word in the opening line was fixed. Nothing else on the page changed.
+    answer:
+      summary: A small edit to a page; nothing to record.
       ops: []
 day1:
   allow: [event.add]  # the press booking is a real event

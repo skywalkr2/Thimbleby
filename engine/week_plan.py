@@ -161,10 +161,12 @@ class Message:
     """Where the Monday message stands. `state`: none (nobody has asked for it), working (queued or running),
     needs_go (held for the person's go, with the estimate when there is one), draft (a draft waits: `draft` is its
     version, `read_version` the version of that record, `text` its words) or kept (the person copied it: `text` is what
-    they kept). `to` are the people it is for."""
+    they kept), or ask (nobody is marked as someone the person reports to and they haven't said nobody: `choices`
+    are the people to pick from). `to` are the people it is for."""
 
     state: str
     to: tuple[str, ...]
+    choices: tuple[str, ...] = ()
     request: str | None = None
     draft: str | None = None
     read_version: int | None = None
@@ -172,12 +174,28 @@ class Message:
     estimate_usd: float | None = None
 
 
+def said_nobody(view: Any, person: str | None) -> bool:
+    """Whether the person said they report to nobody, in any week."""
+    return any(p.data.get("person") == person and p.data.get("reports_to_nobody_at") for p in view.list("week_plan"))
+
+
+def candidates(view: Any, cfg: Any) -> tuple[str, ...]:
+    """The people the person can pick as the one they report to: everyone but themself, by name."""
+    me = cfg.workspace.user.person
+    names = {p.id: str(p.data.get("full_name") or p.id) for p in view.list("person") if p.id != me}
+    return tuple(sorted(names, key=lambda i: (names[i].lower(), i)))
+
+
 def message_of(view: Any, cfg: Any, store: Any, now: datetime) -> Message | None:
-    """The message's state for this week, or None when the person reports to nobody (so no message is written)."""
+    """The message's state for this week. With nobody marked as someone the person reports to, the briefing asks once
+    who it is for (state `ask`), until the person marks someone or says nobody: then there is no message to write
+    (None)."""
     to = tuple(report_to(view, cfg))
-    if not to:
-        return None
     person = People(store, cfg).pm
+    if not to:
+        if said_nobody(view, person):
+            return None
+        return Message("ask", (), choices=candidates(view, cfg))
     week, _ = week_bounds(cfg, now.astimezone(zone(cfg)).date())
     plan = plan_of(view, person, week)
     if plan is None:
@@ -201,6 +219,37 @@ def message_of(view: Any, cfg: Any, store: Any, now: datetime) -> Message | None
     if kept is not None:
         return Message("kept", to, text=read_text(store, kept.data["sha256"]))
     return Message("none", to)
+
+
+def set_report_to(store: Any, cfg: Any, person_id: str) -> str:
+    """Mark someone as the person the user reports to: the person's own change of that person's stance, which an Undo
+    takes back. Returns the changeset. Refused for the person themself and for someone who isn't a person here."""
+    from engine.applier import apply_as_person
+
+    if person_id == cfg.workspace.user.person or store.read().get("person", person_id) is None:
+        raise StoreError("Pick someone else you report to: that isn't a person you can report to.")
+    return apply_as_person(
+        store, cfg, [{"op": "person.stance", "id": person_id, "stance": "report_to"}], "Marked who you report to"
+    )
+
+
+def set_reports_to_nobody(store: Any, cfg: Any, now: datetime, nobody: bool) -> None:
+    """Say the person reports to nobody, so the briefing stops asking who its message is for, or take that back. It is
+    the person's own choice about what the app offers; it changes nothing the assistant made."""
+    person = People(store, cfg).pm
+    week, _ = week_bounds(cfg, now.astimezone(zone(cfg)).date())
+    stamp = now.astimezone(UTC).isoformat() if nobody else None
+    with store.transaction() as tx:
+        if not nobody:
+            for p in tx.list("week_plan"):
+                if p.data.get("person") == person and p.data.get("reports_to_nobody_at"):
+                    tx.update("week_plan", p.id, {"reports_to_nobody_at": None}, _OFFER, read_version=p.version)
+            return
+        found = plan_of(tx, person, week)
+        if found is None:
+            tx.create("week_plan", {"person": person, "week": week.isoformat(), "reports_to_nobody_at": stamp}, _OFFER)
+        else:
+            tx.update("week_plan", found.id, {"reports_to_nobody_at": stamp}, _OFFER, read_version=found.version)
 
 
 def ask_for_message(store: Any, cfg: Any, now: datetime, note: str | None = None) -> str:

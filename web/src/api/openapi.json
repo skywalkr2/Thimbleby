@@ -4197,6 +4197,24 @@
             "description": "The short name of the account that does its work; none when unset.",
             "title": "Account"
           },
+          "cost_days": {
+            "default": 7,
+            "description": "The days the cost is worked out over (`ai.models.use_days`).",
+            "title": "Cost Days",
+            "type": "integer"
+          },
+          "cost_per_day_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the tier's calls cost a day over those days; none when it had no calls.",
+            "title": "Cost Per Day Usd"
+          },
           "escalate_source": {
             "description": "The layer that set `ai.tiers.<name>.escalate_to`.",
             "enum": [
@@ -4224,6 +4242,18 @@
             "description": "The tier's name in the settings; the screen words it.",
             "title": "Name",
             "type": "string"
+          },
+          "runs": {
+            "default": 0,
+            "description": "Calls made on the tier over the last `cost_days` days.",
+            "title": "Runs",
+            "type": "integer"
+          },
+          "unpriced_runs": {
+            "default": 0,
+            "description": "Of those, calls whose cost isn't known, so the cost is the least it was.",
+            "title": "Unpriced Runs",
+            "type": "integer"
           }
         },
         "required": [
@@ -5979,9 +6009,67 @@
         "title": "BriefMessageAsk",
         "type": "object"
       },
-      "BriefMessageView": {
-        "description": "Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the\nassistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:\nits `text`) or `kept` (the person copied it). `to` are the people it is for.",
+      "BriefMessageFor": {
+        "additionalProperties": false,
+        "description": "POST /api/brief/message/for: who the Monday message is for, asked once. Give `person` (marked as someone the\nperson reports to) or `nobody` true (the briefing stops asking); `nobody` false takes that back.",
         "properties": {
+          "nobody": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True: they report to nobody. False: ask again.",
+            "title": "Nobody"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the person they report to.",
+            "title": "Person"
+          }
+        },
+        "title": "BriefMessageFor",
+        "type": "object"
+      },
+      "BriefMessageForSaved": {
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change that marked the person, which Undo takes back; none when no person was marked.",
+            "title": "Changeset"
+          }
+        },
+        "title": "BriefMessageForSaved",
+        "type": "object"
+      },
+      "BriefMessageView": {
+        "description": "Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the\nassistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:\nits `text`), `kept` (the person copied it) or `ask` (nobody is marked as someone the person reports to, and they\nhaven't said nobody: `choices` are the people to pick from). `to` are the people it is for.",
+        "properties": {
+          "choices": {
+            "description": "For `ask`: the people the person can pick as the one they report to.",
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
           "estimate_usd": {
             "anyOf": [
               {
@@ -5999,7 +6087,8 @@
               "working",
               "needs_go",
               "draft",
-              "kept"
+              "kept",
+              "ask"
             ],
             "title": "State",
             "type": "string"
@@ -8225,6 +8314,31 @@
           "blocks"
         ],
         "title": "DocumentView",
+        "type": "object"
+      },
+      "DropNoteDone": {
+        "description": "POST /api/changesets/{id}/ops/{index}/release-with-note: the held drop was applied and a note was drafted for\neach person who had been told. `changesets` are every change made, which Undo takes back together; `acts` are\nthe drafts, each waiting for the person's yes on its exact content.",
+        "properties": {
+          "acts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Acts",
+            "type": "array"
+          },
+          "changesets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changesets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changesets",
+          "acts"
+        ],
+        "title": "DropNoteDone",
         "type": "object"
       },
       "DroppedQuestionView": {
@@ -20398,6 +20512,129 @@
         "title": "QualityKnowledgeUsed",
         "type": "object"
       },
+      "QualityLost": {
+        "description": "Lost promises in the window (design 6.32): promises that existed and then vanished with no ending op, no person\naction and no undo trail. `existed` is the denominator.",
+        "properties": {
+          "days": {
+            "description": "Each day a promise was lost, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityLostDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "existed": {
+            "description": "Promises that were open at some time in the window.",
+            "title": "Existed",
+            "type": "integer"
+          },
+          "items": {
+            "description": "The lost promises, newest first, at most twenty.",
+            "items": {
+              "$ref": "#/components/schemas/QualityLostItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lost": {
+            "description": "Of those, how many vanished with no ending anyone saw in the window.",
+            "title": "Lost",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "existed",
+          "lost",
+          "days",
+          "items"
+        ],
+        "title": "QualityLost",
+        "type": "object"
+      },
+      "QualityLostDay": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "existed": {
+            "description": "Promises that existed in the window, the same on every day.",
+            "title": "Existed",
+            "type": "integer"
+          },
+          "lost": {
+            "description": "Promises that vanished that day with no ending anyone saw.",
+            "title": "Lost",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "existed",
+          "lost"
+        ],
+        "title": "QualityLostDay",
+        "type": "object"
+      },
+      "QualityLostItem": {
+        "properties": {
+          "day": {
+            "description": "The day it vanished, on the person's own clock.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "id": {
+            "description": "The promise's id.",
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "description": "The promise in its own words.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "day"
+        ],
+        "title": "QualityLostItem",
+        "type": "object"
+      },
+      "QualityMissedTotal": {
+        "description": "Missed out of present as the pass bar counts it: the person's daily counts and the messages they read from the\nsample, added.",
+        "properties": {
+          "days": {
+            "description": "Days with a daily count.",
+            "title": "Days",
+            "type": "integer"
+          },
+          "messages": {
+            "description": "Messages of the sample that were read.",
+            "title": "Messages",
+            "type": "integer"
+          },
+          "missed": {
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "title": "Present",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present",
+          "missed",
+          "days",
+          "messages"
+        ],
+        "title": "QualityMissedTotal",
+        "type": "object"
+      },
       "QualityMissedWeek": {
         "description": "\"Missed one\" for one person in one week (design 6.32): how often they said the assistant missed something.",
         "properties": {
@@ -20713,6 +20950,322 @@
         "title": "QualityReplays",
         "type": "object"
       },
+      "QualityReview": {
+        "description": "Review time a day over the window (design 6.32; the pass bar's median): each day with any review, and the median\nof those days' totals. A day with none is not a day of review, so it is left out.",
+        "properties": {
+          "days": {
+            "description": "Each day with review time, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityReviewDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "days_reviewed": {
+            "description": "How many days have any review time.",
+            "title": "Days Reviewed",
+            "type": "integer"
+          },
+          "median_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The median of a day's review seconds over the days with any; none when no day has any.",
+            "title": "Median Seconds"
+          },
+          "total_seconds": {
+            "description": "All the review seconds in the window.",
+            "title": "Total Seconds",
+            "type": "integer"
+          },
+          "visits": {
+            "description": "All the visits in the window.",
+            "title": "Visits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days_reviewed",
+          "total_seconds",
+          "visits",
+          "days"
+        ],
+        "title": "QualityReview",
+        "type": "object"
+      },
+      "QualityReviewDay": {
+        "properties": {
+          "day": {
+            "description": "The day, on the person's own clock.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "seconds": {
+            "description": "Seconds the screens that look over the assistant's work were open and in view.",
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "visits": {
+            "description": "How many visits those seconds were spread over.",
+            "title": "Visits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "seconds",
+          "visits"
+        ],
+        "title": "QualityReviewDay",
+        "type": "object"
+      },
+      "QualitySample": {
+        "description": "The sample drawn for the person's own reading (design 6.32): the messages chosen and what was found in those\nread so far. `size` is how many messages it holds, `candidates` how many the window had to draw from.",
+        "properties": {
+          "candidates": {
+            "title": "Candidates",
+            "type": "integer"
+          },
+          "drawn_at": {
+            "format": "date-time",
+            "title": "Drawn At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "description": "The messages, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualitySampleItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missed": {
+            "description": "Of those, how many the app didn't have.",
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "description": "Promises found in the messages read.",
+            "title": "Present",
+            "type": "integer"
+          },
+          "read": {
+            "description": "How many of its messages have been read.",
+            "title": "Read",
+            "type": "integer"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "drawn_at",
+          "since",
+          "until",
+          "candidates",
+          "size",
+          "read",
+          "present",
+          "missed",
+          "items"
+        ],
+        "title": "QualitySample",
+        "type": "object"
+      },
+      "QualitySampleItem": {
+        "properties": {
+          "missed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Of those, how many the app didn't have; none until read.",
+            "title": "Missed"
+          },
+          "present": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The promises the person found in it; none until read.",
+            "title": "Present"
+          },
+          "received_at": {
+            "description": "When it arrived.",
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "source": {
+            "description": "The message's id.",
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "description": "Its subject, for the person to find it in their own mail.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "title",
+          "received_at"
+        ],
+        "title": "QualitySampleItem",
+        "type": "object"
+      },
+      "QualitySampleReadIn": {
+        "properties": {
+          "missed": {
+            "description": "Of those, how many the app didn't have.",
+            "minimum": 0.0,
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "description": "How many promises the person found in the message.",
+            "minimum": 0.0,
+            "title": "Present",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present",
+          "missed"
+        ],
+        "title": "QualitySampleReadIn",
+        "type": "object"
+      },
+      "QualitySampleReadSaved": {
+        "properties": {
+          "missed": {
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "title": "Present",
+            "type": "integer"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityCountBefore"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the message held before this save; none when it was not read. Undo takes it back."
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "present",
+          "missed"
+        ],
+        "title": "QualitySampleReadSaved",
+        "type": "object"
+      },
+      "QualitySourceDay": {
+        "properties": {
+          "checked": {
+            "description": "Connected sources checked at the end of that day.",
+            "title": "Checked",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "over_a_day": {
+            "description": "Of those, how many were unread for more than a day.",
+            "title": "Over A Day",
+            "type": "integer"
+          },
+          "silent": {
+            "description": "Of those, how many Today had no line about.",
+            "title": "Silent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "checked",
+          "over_a_day",
+          "silent"
+        ],
+        "title": "QualitySourceDay",
+        "type": "object"
+      },
+      "QualitySources": {
+        "description": "Sources not read (design 6.32): for each day, the connected sources checked, how many were unread for more than\na day and how many of those Today said nothing about. Counted in source-days.",
+        "properties": {
+          "checked": {
+            "title": "Checked",
+            "type": "integer"
+          },
+          "days": {
+            "description": "Each day with a source connected, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualitySourceDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "over_a_day": {
+            "title": "Over A Day",
+            "type": "integer"
+          },
+          "silent": {
+            "title": "Silent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checked",
+          "over_a_day",
+          "silent",
+          "days"
+        ],
+        "title": "QualitySources",
+        "type": "object"
+      },
       "QualityView": {
         "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly\nmissing-op list and \"Missed one\" for each person and week, over the configured window.",
         "properties": {
@@ -20745,6 +21298,9 @@
             "title": "Knowledge Used",
             "type": "array"
           },
+          "lost": {
+            "$ref": "#/components/schemas/QualityLost"
+          },
           "min_corrections_per_week": {
             "description": "The fewest corrections a week needs for its rate to show.",
             "title": "Min Corrections Per Week",
@@ -20757,6 +21313,9 @@
             },
             "title": "Missed",
             "type": "array"
+          },
+          "missed_total": {
+            "$ref": "#/components/schemas/QualityMissedTotal"
           },
           "missing": {
             "items": {
@@ -20778,11 +21337,34 @@
           "replays": {
             "$ref": "#/components/schemas/QualityReplays"
           },
+          "review": {
+            "$ref": "#/components/schemas/QualityReview"
+          },
+          "sample": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualitySample"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest sample drawn in the window, with what was found in it; none before one is drawn."
+          },
+          "sample_allowed": {
+            "default": false,
+            "description": "`dispatch.knowledge.sample_consent`: a sample may be drawn.",
+            "title": "Sample Allowed",
+            "type": "boolean"
+          },
           "since": {
             "description": "The first day of the window the gate-week measures cover.",
             "format": "date",
             "title": "Since",
             "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/QualitySources"
           },
           "until": {
             "description": "The last day of the window: today, on the person's own clock.",
@@ -20805,7 +21387,11 @@
           "endings",
           "counts",
           "replays",
-          "outcome"
+          "outcome",
+          "review",
+          "lost",
+          "sources",
+          "missed_total"
         ],
         "title": "QualityView",
         "type": "object"
@@ -23097,11 +23683,12 @@
       "ReviewTimeIn": {
         "properties": {
           "screen": {
-            "description": "The screen that looks over the assistant's work: review (the review mode), changes (what changed) or since (since yesterday).",
+            "description": "The screen that looks over the assistant's work: review (the review mode), changes (what changed), since (since yesterday) or today (the review pane opened on Today).",
             "enum": [
               "review",
               "changes",
-              "since"
+              "since",
+              "today"
             ],
             "title": "Screen",
             "type": "string"
@@ -32629,6 +33216,45 @@
         "summary": "Message Copied"
       }
     },
+    "/api/brief/message/for": {
+      "post": {
+        "description": "Answer, once, who the Monday message is for: mark a person as someone the person reports to (an ordinary\nchange with Undo), or say nobody, so the briefing stops asking. `nobody` false takes the last answer back.",
+        "operationId": "message_for_api_brief_message_for_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefMessageFor"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefMessageForSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Message For"
+      }
+    },
     "/api/brief/weekly/dismiss": {
       "post": {
         "description": "Dismiss the offer of this week's briefing: the morning brief stops offering it for the week. Undo is\nPOST /api/brief/weekly/undismiss.",
@@ -33399,6 +34025,55 @@
           }
         },
         "summary": "Release Op"
+      }
+    },
+    "/api/changesets/{cs_id}/ops/{index}/release-with-note": {
+      "post": {
+        "description": "\"Drop it and draft the note\": apply a held drop of an action that reached someone, and draft a note to each\nperson who was told, as an outward act (a message on the account that can carry it, else Copy) that waits for\nthe person's yes on its exact content. The copyable line a plain drop leaves is not made. Nothing is sent.",
+        "operationId": "release_with_note_api_changesets__cs_id__ops__index__release_with_note_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DropNoteDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Release With Note"
       }
     },
     "/api/changesets/{cs_id}/ops/{index}/undecline": {
@@ -38580,6 +39255,143 @@
           }
         },
         "summary": "Review Time"
+      }
+    },
+    "/api/quality/sample": {
+      "post": {
+        "description": "Draw the sample of messages for the person's own reading, from the quality window. Refused without their\nconsent (`dispatch.knowledge.sample_consent`), with no message to draw from, or when one was already drawn in\nthe window.",
+        "operationId": "draw_sample_api_quality_sample_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySample"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Draw Sample"
+      }
+    },
+    "/api/quality/sample/{sample}/items/{source}": {
+      "put": {
+        "description": "Save what the person found reading one message of the sample: how many promises it holds and how many of\nthose the app didn't have. Saving again corrects it. Returns what the message held before, which Undo takes.",
+        "operationId": "read_sample_message_api_quality_sample__sample__items__source__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sample",
+            "required": true,
+            "schema": {
+              "title": "Sample",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualitySampleReadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySampleReadSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Sample Message"
+      }
+    },
+    "/api/quality/sample/{sample}/items/{source}/undo": {
+      "post": {
+        "description": "Undo a save: the message holds what it held before, or is unread.",
+        "operationId": "undo_sample_message_api_quality_sample__sample__items__source__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sample",
+            "required": true,
+            "schema": {
+              "title": "Sample",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityCountUndo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Sample Message"
       }
     },
     "/api/questions/dropped": {

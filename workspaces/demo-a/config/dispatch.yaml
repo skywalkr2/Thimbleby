@@ -42,4 +42,6 @@ knowledge:
   new_terms_per_day: 3
   quality_window_days: 28
   review_visit_max_seconds: 1800   # the most seconds one visit to a review screen counts toward your review time
+  sample_consent: false           # whether a sample of messages may be drawn for your own reading
+  sample_size: 50                 # how many messages one sample holds
   min_corrections_per_week: 10

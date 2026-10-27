@@ -1127,6 +1127,46 @@ class PromiseCount(Record):
         return self
 
 
+class SampleItem(BaseModel):
+    """One message of a sample, and what the person found reading it on their own: how many promises it holds
+    (`present`) and how many of those the app didn't have (`missed`); both none until it is read."""
+
+    source: str = Field(description="The id of the message (a saved input).")
+    present: int | None = Field(None, ge=0, description="How many promises the person found in it; none until read.")
+    missed: int | None = Field(None, ge=0, description="Of those, how many the app didn't have; none until read.")
+    read_at: datetime | None = Field(None, description="When the person's count of it was last saved.")
+
+    @model_validator(mode="after")
+    def _read_whole(self) -> SampleItem:
+        if (self.present is None) != (self.missed is None):
+            raise ValueError("a message is read with both counts or with neither")
+        if self.present is not None and self.missed is not None and self.missed > self.present:
+            raise ValueError("the app can't have missed more promises than the person found")
+        return self
+
+
+class GateSample(Record):
+    """A sample of the messages the app read in the quality window, drawn once for the person to read on their own and
+    count the promises it missed (design 6.32, "Measures"). The person must have allowed it. The messages are chosen
+    by `seed` alone, so the same seed and the same messages give the same sample, and one sample is drawn for a window
+    so the choice isn't the person's. Only the counts in `items` change afterward."""
+
+    record_kind: ClassVar[str] = "gate_sample"
+    prefix: ClassVar[str] = "SAMP"
+    fixed_fields: ClassVar[tuple[str, ...]] = ("person", "drawn_at", "since", "until", "seed", "candidates", "size")
+
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person it was drawn for; none when the workspace names no person yet."
+    )
+    drawn_at: datetime = Field(description="When the sample was drawn.")
+    since: date = Field(description="The first day of the window it was drawn from, on the person's own clock.")
+    until: date = Field(description="The last day of that window.")
+    seed: str = Field(description="What chose the messages: the same seed over the same messages gives the same ones.")
+    candidates: int = Field(ge=0, description="How many messages the window held to draw from.")
+    size: int = Field(ge=1, description="How many messages the sample was set to hold.")
+    items: list[SampleItem] = Field(default_factory=list, description="The chosen messages, oldest first.")
+
+
 class WeekPlan(Record):
     """The person's own plan for one week (design 6.32, the Monday briefing): the goals they confirmed for it and the
     message to whoever they report to. One record for each person and week, made when the first goal is confirmed or
@@ -1152,6 +1192,11 @@ class WeekPlan(Record):
         None,
         description="When the person dismissed the offer of the week's briefing for this week, so the morning brief "
         "stops offering it; none while it is offered. Taking the dismissal back clears it.",
+    )
+    reports_to_nobody_at: datetime | None = Field(
+        None,
+        description="When the person said they report to nobody, so the Monday briefing stops asking who its message "
+        "is for in every week, not only this one; none while it is still asked. Taking it back clears it.",
     )
     message: Annotated[str | None, LongText("markdown")] = Field(
         None,
@@ -2579,6 +2624,7 @@ REGISTRY: dict[str, type[Record]] = {
         SettingChange,
         Look,
         PromiseCount,
+        GateSample,
         WeekPlan,
         AuditEntry,
         Answer,
@@ -2628,6 +2674,7 @@ AGENDA_REFERENCES = [
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
     "promise_count": [("person", "person")],
+    "gate_sample": [("person", "person"), ("items[].source", "source")],
     "week_plan": [("person", "person")],
     "copy": [("person", "person"), ("questions[]", "question"), ("actions[]", "action"), ("sent_source", "source")],
     "act": [

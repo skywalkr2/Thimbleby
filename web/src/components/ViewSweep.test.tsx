@@ -455,8 +455,8 @@ const fit = (tier: string, over: Partial<S["AiKindFit"]> = {}): S["AiKindFit"] =
 const aiRouting: S["AiRoutingView"] = {
   kinds: [{ name: "notes", label: "Notes", tier: "routine", default_tier: "routine", custom: false, source: "default", fits: [fit("routine"), fit("deep", { status: "stale" })], suggested_tier: null, suggestion_why_not: null }],
   tiers: [
-    { name: "routine", account: "main", escalate_to: "deep", escalate_source: "file" },
-    { name: "deep", account: "second", escalate_to: null, escalate_source: "default" },
+    { name: "routine", account: "main", escalate_to: "deep", escalate_source: "file", runs: 12, unpriced_runs: 0, cost_days: 7, cost_per_day_usd: 0.14 },
+    { name: "deep", account: "second", escalate_to: null, escalate_source: "default", runs: 0, unpriced_runs: 0, cost_days: 7, cost_per_day_usd: null },
   ],
   rules: [{ task: "notes", input_chars_over: null, quoted_messages_over: 3, data_level: null, tier: "deep" }],
   rules_source: "file",
@@ -773,6 +773,12 @@ test("Quality, with every measure filled, says names, dates and words", async ()
         { person: "PER-1", person_name: "Casey Example", week: "2026-10-12", week_end: "2026-10-18", count: 1 },
       ],
       replays: { count: 2, last_run: at("2026-10-09", 9) },
+      review: { median_seconds: 300, days_reviewed: 2, total_seconds: 600, visits: 3, days: [{ day: "2026-10-09", seconds: 300, visits: 2 }] },
+      lost: { existed: 12, lost: 0, days: [], items: [] },
+      sources: { checked: 4, over_a_day: 0, silent: 0, days: [] },
+      sample: null,
+      sample_allowed: false,
+      missed_total: { present: 0, missed: 0, days: 0, messages: 0 },
       outcome: {
         promises_found: 9,
         promises_kept: 6,

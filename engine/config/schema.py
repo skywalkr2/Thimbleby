@@ -1078,7 +1078,8 @@ class ModelSettings(ConfigModel):
         ge=1,
         le=90,
         description="How many days of the assistant's own use the cost change of a newer model is worked out from "
-        "(what the same work would have cost on it, per day).",
+        "(what the same work would have cost on it, per day), and the days each kind of model's cost a day is "
+        "shown over on Settings.",
     )
 
 
@@ -1408,6 +1409,19 @@ class KnowledgeSettings(ConfigModel):
         description="The most seconds one visit to a screen that looks over the assistant's work counts toward the "
         "time you spend reviewing. A screen left open for hours doesn't add more than this.",
     )
+    sample_consent: bool = Field(
+        False,
+        description="Whether you allow a sample of the messages the app read to be drawn for you to read on your own, "
+        "so the promises it missed can be counted. Nothing is drawn while this is off, and the sample stays on this "
+        "computer.",
+    )
+    sample_size: int = Field(
+        50,
+        ge=1,
+        le=500,
+        description="How many messages one sample for your own reading holds, drawn from the quality figures' days. "
+        "A window with fewer messages gives all of them.",
+    )
     min_corrections_per_week: int = Field(
         10,
         ge=1,
@@ -1735,6 +1749,12 @@ class MessageSettings(ConfigModel):
         "No longer needed, thanks: {item}",
         description="The one line drafted for someone who was already told about an action when it is called off, for "
         "you to send: {item} is the action. Nothing is sent by itself.",
+    )
+    called_off_subject: str = Field(
+        "No longer needed",
+        description="The subject of the note drafted for someone who was already told about an action when it is "
+        "dropped and you chose to draft the note. The note's body is the line above. Nothing is sent until you say "
+        "yes.",
     )
     source_by_person: str = Field(
         "{who}, {date}",

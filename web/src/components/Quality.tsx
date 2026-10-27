@@ -130,6 +130,115 @@ function CountForm(props: { view: View; focusFirst: boolean }) {
   );
 }
 
+function SampleRow(props: { sample: NonNullable<View["sample"]>; item: NonNullable<View["sample"]>["items"][number] }) {
+  const { t } = useWords();
+  const act = useAct();
+  const base = useId();
+  const { item, sample } = props;
+  const [present, setPresent] = useState(item.present == null ? "" : String(item.present));
+  const [missed, setMissed] = useState(item.missed == null ? "" : String(item.missed));
+  const [busy, setBusy] = useState(false);
+  // What the screen holds after a save or an Undo shows in the fields.
+  useEffect(() => {
+    setPresent(item.present == null ? "" : String(item.present));
+    setMissed(item.missed == null ? "" : String(item.missed));
+  }, [item.present, item.missed]);
+  const counted = whole(present);
+  const gone = whole(missed);
+  const tooMany = counted !== null && gone !== null && gone > counted;
+  const ready = counted !== null && gone !== null && !tooMany && !busy;
+  const subject = item.title;
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (counted === null || gone === null || !ready) return;
+    setBusy(true);
+    await act(
+      () => api.readSampleMessage(sample.id, item.source, { present: counted, missed: gone }),
+      (saved) => ({
+        message: t("quality.sample.saved", { missed: gone, present: counted, subject }),
+        undo: () => api.undoSampleMessage(sample.id, item.source, saved.previous ?? null),
+      }),
+    );
+    setBusy(false);
+  };
+  return (
+    <li data-sample-item={item.source}>
+      <form className={styles.form} onSubmit={(e) => void submit(e)}>
+        <p>{t("quality.sample.received", { subject, day: monthDay(localDate(new Date(item.received_at))) })}</p>
+        <div className="field">
+          <label htmlFor={`${base}-present`}>{t("quality.sample.present", { subject })}</label>
+          <input id={`${base}-present`} type="number" inputMode="numeric" min={0} step={1} value={present} onChange={(e) => setPresent(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor={`${base}-missed`}>{t("quality.sample.missed", { subject })}</label>
+          <input
+            id={`${base}-missed`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={missed}
+            aria-invalid={tooMany || undefined}
+            aria-describedby={tooMany ? `${base}-problem` : undefined}
+            onChange={(e) => setMissed(e.target.value)}
+          />
+        </div>
+        <div className={styles.act}>
+          <Button type="submit" aria-label={t("quality.sample.save_named", { subject })} disabled={!ready} reason={busy || tooMany ? undefined : t("quality.counts.why_disabled")}>
+            {t("quality.sample.save")}
+          </Button>
+        </div>
+        {tooMany && (
+          <p id={`${base}-problem`} className="problem-note" role="alert">
+            {t("quality.sample.too_many")}
+          </p>
+        )}
+      </form>
+    </li>
+  );
+}
+
+/** The independent reading: draw the sample once the person has allowed it, then read each message in one's own mail and
+ * enter what was found. */
+function Sample(props: { view: View }) {
+  const { t } = useWords();
+  const act = useAct();
+  const [busy, setBusy] = useState(false);
+  const { sample, sample_allowed: allowed } = props.view;
+  const draw = async () => {
+    setBusy(true);
+    await act(
+      () => api.drawSample(),
+      (drawn) => ({ message: t("quality.sample.drawn", { n: drawn.items.length }) }),
+    );
+    setBusy(false);
+  };
+  if (!sample) {
+    return allowed ? (
+      <>
+        <Empty text={t("quality.sample.empty")} />
+        <div className={styles.act}>
+          <Button variant="primary" onClick={() => void draw()} disabled={busy}>
+            {t(busy ? "quality.sample.drawing" : "quality.sample.draw")}
+          </Button>
+        </div>
+      </>
+    ) : (
+      <Empty text={t("quality.sample.not_allowed")} />
+    );
+  }
+  return (
+    <>
+      <p className={styles.sum}>{t("quality.sample.sum", { read: sample.read, size: sample.size, present: sample.present, missed: sample.missed })}</p>
+      <ul className={styles.list} aria-label={t("quality.sample.list")}>
+        {sample.items.map((item) => (
+          <SampleRow key={item.source} sample={sample} item={item} />
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export function Quality(props: { onBack: () => void }) {
   const { t, tn, has } = useWords();
   const page = useQuery({ queryKey: ["quality"], queryFn: api.quality });
@@ -223,6 +332,46 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
+            <Section id="quality-lost" title={t("quality.lost.title")} hint={t("quality.lost.hint")}>
+              {view.lost.existed === 0 ? (
+                <Empty text={t("quality.lost.empty")} />
+              ) : (
+                <>
+                  <p className={styles.sum}>{tn("quality.lost.sum", view.lost.existed, { lost: view.lost.lost })}</p>
+                  <Days label={t("quality.day_list")} rows={view.lost.days.map((d) => tn("quality.lost.day", d.existed, { day: monthDay(d.day), lost: d.lost }))} />
+                  <Days label={t("quality.lost.items")} rows={view.lost.items.map((i) => t("quality.lost.item", { day: monthDay(i.day), text: i.text }))} />
+                </>
+              )}
+            </Section>
+
+            <Section id="quality-sources" title={t("quality.sources.title")} hint={t("quality.sources.hint")}>
+              {view.sources.checked === 0 ? (
+                <Empty text={t("quality.sources.empty")} />
+              ) : (
+                <>
+                  <p className={styles.sum}>{tn("quality.sources.sum", view.sources.checked, { over: view.sources.over_a_day, silent: view.sources.silent })}</p>
+                  <Days
+                    label={t("quality.day_list")}
+                    rows={view.sources.days.filter((d) => d.over_a_day > 0).map((d) => tn("quality.sources.day", d.checked, { day: monthDay(d.day), over: d.over_a_day, silent: d.silent }))}
+                  />
+                </>
+              )}
+            </Section>
+
+            <Section id="quality-review" title={t("quality.review.title")} hint={t("quality.review.hint")}>
+              {view.review.days_reviewed === 0 || view.review.median_seconds == null ? (
+                <Empty text={t("quality.review.empty")} />
+              ) : (
+                <>
+                  <p className={styles.sum}>{tn("quality.review.sum", view.review.days_reviewed, { minutes: minutesOf(view.review.median_seconds) })}</p>
+                  <Days
+                    label={t("quality.day_list")}
+                    rows={view.review.days.map((d) => tn("quality.review.day", d.visits, { day: monthDay(d.day), minutes: minutesOf(d.seconds) }))}
+                  />
+                </>
+              )}
+            </Section>
+
             <Section id="quality-counts" title={t("quality.counts.title")} hint={t("quality.counts.hint")}>
               {view.counts.entered === 0 ? (
                 <Empty text={t("quality.counts.empty")} />
@@ -236,6 +385,20 @@ export function Quality(props: { onBack: () => void }) {
                 </>
               )}
               <CountForm view={view} focusFirst={arrived} />
+            </Section>
+
+            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")}>
+              <Sample view={view} />
+            </Section>
+
+            <Section id="quality-total" title={t("quality.total.title")} hint={t("quality.total.hint")}>
+              {view.missed_total.present === 0 ? (
+                <Empty text={t("quality.total.empty")} />
+              ) : (
+                <p className={styles.sum}>
+                  {tn("quality.total.sum", view.missed_total.present, { missed: view.missed_total.missed, days: view.missed_total.days, messages: view.missed_total.messages })}
+                </p>
+              )}
             </Section>
 
             <Section id="quality-missed" title={t("quality.missed.title")} hint={t("quality.missed.hint")}>

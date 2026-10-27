@@ -28,11 +28,12 @@ from api.schemas import (
     ActSendOptionsView,
     ActSettleIn,
     ActView,
+    DropNoteDone,
     FreeSlotsView,
     FreeSlotView,
 )
-from engine import act_accounts, acts, propose_times, reply_recipients
-from engine.applier import apply_as_person
+from engine import act_accounts, acts, endings, propose_times, reply_recipients
+from engine.applier import apply_as_person, release
 from engine.channels import COPY
 from engine.channels_mailbox import ANSWERS as MAILBOX_ANSWERS
 from engine.channels_mailbox import NO_PROPOSE
@@ -218,11 +219,10 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             out.propose_refusal = NO_PROPOSE if mailbox else None
         return out
 
-    @r.get("/acts/send-options")
-    def send_options() -> ActSendOptionsView:
-        """Whether a new message can be carried out after the person's yes, and through which account: the account
-        their latest act named when acting is on for it and a channel sends messages through it, else the only account
-        that can. Several that could and none chosen is no account: nothing is picked for the person."""
+    def chosen_account() -> str | None:
+        """The account a new message goes through after the person's yes: the account their latest act named when acting
+        is on for it and a channel sends messages through it, else the only account that can. Several that could and
+        none chosen is no account: nothing is picked for the person."""
         view = store.read()
 
         def can(account: str | None) -> bool:
@@ -233,10 +233,62 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
 
         picked = act_accounts.last_picked(view)
         able = [a.id for a in act_accounts.known(store, cfg) if can(a.id)]
-        chosen = picked if can(picked) else able[0] if len(able) == 1 else None
+        return picked if can(picked) else able[0] if len(able) == 1 else None
+
+    @r.get("/acts/send-options")
+    def send_options() -> ActSendOptionsView:
+        """Whether a new message can be carried out after the person's yes, and through which account: the account
+        their latest act named when acting is on for it and a channel sends messages through it, else the only account
+        that can. Several that could and none chosen is no account: nothing is picked for the person."""
+        chosen = chosen_account()
         if chosen is None:
             return ActSendOptionsView()
         return ActSendOptionsView(can_act=True, account=chosen, account_label=act_accounts.label_of(store, cfg, chosen))
+
+    @r.post("/changesets/{cs_id}/ops/{index}/release-with-note")
+    def release_with_note(cs_id: str, index: int) -> DropNoteDone:
+        """ "Drop it and draft the note": apply a held drop of an action that reached someone, and draft a note to each
+        person who was told, as an outward act (a message on the account that can carry it, else Copy) that waits for
+        the person's yes on its exact content. The copyable line a plain drop leaves is not made. Nothing is sent."""
+        found = store.read().get("changeset", cs_id)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"changeset {cs_id} doesn't exist")
+        if not 0 <= index < len(found.data["ops"]):
+            raise HTTPException(status_code=404, detail="that item isn't in the change")
+        held = found.data["ops"][index]
+        op = held["op"]
+        if held["status"] != "held" or op.get("op") != "action.drop":
+            raise HTTPException(status_code=409, detail="That isn't a drop waiting for you.")
+        action = store.read().get("action", op["id"])
+        told = endings.told_people(store.read(), cfg, People(store, cfg).pm, action) if action is not None else []
+        guard(lambda: release(store, cfg, cs_id, index, ws=ws, notices=False))
+        made: list[str] = []
+        changesets = [cs_id]
+        if action is not None and told:
+            account = chosen_account()
+            carrier = serving(account, "message", "send") if account else None
+            body = endings.called_off_line(cfg, action)
+            for person in told:
+                draft_op: dict[str, Any] = {
+                    "op": "act.draft",
+                    "channel": carrier[0] if carrier else COPY.name,
+                    "target": {
+                        "kind": "message",
+                        "action": "send",
+                        "recipients": [{"person": person, "kind": "email", "role": "to"}],
+                    },
+                    "parts": {"subject": cfg.language.messages.called_off_subject, "body": body},
+                }
+                if account:
+                    draft_op["account"] = account
+                try:
+                    cs = apply_as_person(store, cfg, [draft_op], "Drafted a note about a dropped action")
+                except (StoreError, ValueError):
+                    continue  # someone with no way to reach them gets no draft; the drop stands, with its Undo
+                changesets.append(cs)
+                made.append(store.read().get("changeset", cs).data["ops"][0]["records"][0]["id"])
+        events.changed()
+        return DropNoteDone(changesets=changesets, acts=made)
 
     @r.get("/acts/accounts")
     def accounts() -> ActAccountsView:

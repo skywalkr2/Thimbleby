@@ -424,6 +424,55 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
   );
 }
 
+/** Asked once, when nobody is marked as someone the person reports to: who the weekly message is for, or nobody. */
+function WhoFor(props: { message: NonNullable<Brief["message"]> }) {
+  const { t } = useWords();
+  const act = useAct();
+  const id = useId();
+  const [picked, setPicked] = useState("");
+  const choices = props.message.choices ?? [];
+  const mark = () => {
+    const chosen = choices.find((c) => c.person === picked);
+    if (!chosen) return;
+    void act(
+      () => api.briefMessageFor({ person: chosen.person }),
+      (result) => ({ message: t("brief.message.who_saved", { name: chosen.name }), undo: () => api.undo(result.changeset ?? "") }),
+    );
+  };
+  const nobody = () =>
+    void act(
+      () => api.briefMessageFor({ nobody: true }),
+      () => ({ message: t("brief.message.who_none_saved"), undo: () => api.briefMessageFor({ nobody: false }) }),
+    );
+  return (
+    <div className={styles.block} data-block="message" data-message-ask="">
+      <h3 className={styles.sub}>{t("brief.message.who_title")}</h3>
+      <p className="hint">{t("brief.message.who_hint")}</p>
+      <div className={styles.actions}>
+        {choices.length > 0 && (
+          <>
+            <label htmlFor={`${id}-who`} className="sr">
+              {t("brief.message.who_label")}
+            </label>
+            <select id={`${id}-who`} value={picked} onChange={(e) => setPicked(e.target.value)}>
+              <option value="">{t("brief.message.who_pick")}</option>
+              {choices.map((c) => (
+                <option key={c.person} value={c.person}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <Button variant="primary" disabled={!picked} reason={picked ? undefined : t("brief.message.who_why_disabled")} onClick={mark}>
+              {t("brief.message.who_save")}
+            </Button>
+          </>
+        )}
+        <Button onClick={nobody}>{t("brief.message.who_nobody")}</Button>
+      </div>
+    </div>
+  );
+}
+
 export function BriefCard(props: {
   workspace: string;
   onOpenRecord: (kind: string, id: string) => void;
@@ -506,7 +555,7 @@ export function BriefCard(props: {
           </Button>
         </div>
       </div>
-      {data.message && <Message message={data.message} />}
+      {data.message && (data.message.state === "ask" ? <WhoFor message={data.message} /> : <Message message={data.message} />)}
       {data.sections.map((section) => (
         <div key={section.key} className={styles.section} data-section={section.key}>
           <h3 className={styles.sub}>{heading(section.key, t)}</h3>

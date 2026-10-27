@@ -2159,6 +2159,25 @@ The person's own count for one day: how many promises they count on their own li
 | `missed` | int | required | Of those, how many the app didn't have. |
 | `at` | datetime | required | When the count was last saved. |
 
+### `gate_sample` (SAMP-n)
+
+A sample of the messages the app read in the quality window, drawn once for the person to read on their own and count the promises it missed (design 6.32, "Measures"). The person must have allowed it. The messages are chosen by `seed` alone, so the same seed and the same messages give the same sample, and one sample is drawn for a window so the choice isn't the person's. Only the counts in `items` change afterward.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `person` | str \| None | `None` | The person it was drawn for; none when the workspace names no person yet. |
+| `drawn_at` | datetime | required | When the sample was drawn. |
+| `since` | date | required | The first day of the window it was drawn from, on the person's own clock. |
+| `until` | date | required | The last day of that window. |
+| `seed` | str | required | What chose the messages: the same seed over the same messages gives the same ones. |
+| `candidates` | int | required | How many messages the window held to draw from. |
+| `size` | int | required | How many messages the sample was set to hold. |
+| `items` | list[SampleItem] | `[]` | The chosen messages, oldest first. |
+| `items[].source` | str | required | The id of the message (a saved input). |
+| `items[].present` | int \| None | `None` | How many promises the person found in it; none until read. |
+| `items[].missed` | int \| None | `None` | Of those, how many the app didn't have; none until read. |
+| `items[].read_at` | datetime \| None | `None` | When the person's count of it was last saved. |
+
 ### `week_plan` (WEEK-n)
 
 The person's own plan for one week (design 6.32, the Monday briefing): the goals they confirmed for it and the message to whoever they report to. One record for each person and week, made when the first goal is confirmed or the message is first asked for; the week is named by its first day. The goals are the person's own words and nothing but the person writes them. The message is a draft the assistant writes, unreviewed until the person copies it, and it is never sent from here.
@@ -2170,6 +2189,7 @@ The person's own plan for one week (design 6.32, the Monday briefing): the goals
 | `goals` | list[str] | `[]` | The goals the person confirmed for the week, in their own words, in the order they gave them, each one to 200 characters. Empty until they confirm some. |
 | `confirmed_at` | datetime \| None | `None` | When the goals were last confirmed; none until then. |
 | `offer_dismissed_at` | datetime \| None | `None` | When the person dismissed the offer of the week's briefing for this week, so the morning brief stops offering it; none while it is offered. Taking the dismissal back clears it. |
+| `reports_to_nobody_at` | datetime \| None | `None` | When the person said they report to nobody, so the Monday briefing stops asking who its message is for in every week, not only this one; none while it is still asked. Taking it back clears it. |
 | `message` | str \| None | `None` | The message to the person they report to, drafted from the week's records. It is long text: a draft waits for the person's review and is theirs once they copy it. |
 
 ### `audit_entry` (AUD-n)

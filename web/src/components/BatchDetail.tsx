@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useAct } from "../lib/act";
 import { api } from "../lib/api";
+import { useReviewTime } from "../lib/review-time";
 import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -16,6 +17,8 @@ import styles from "./BatchDetail.module.css";
 
 export function BatchDetail(props: { line: QueueLine; sendBack?: boolean }) {
   const { line } = props;
+  // The time the pane is open and in view is the time spent looking over the assistant's work (design 6.32, "Measures").
+  useReviewTime("today");
   const folded = line.kind === "batches";
   const parts = folded ? (line.parts ?? []) : [line];
   // Send back with a note, from the line's menu, is for the whole of one change: its note opens above the batch.

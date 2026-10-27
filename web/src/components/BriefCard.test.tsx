@@ -334,6 +334,39 @@ test("asking for the message says who it is for, queues it and says a draft will
   expect(await screen.findByText("Helper will draft it. A draft will wait for you to read.")).toBeInTheDocument();
 });
 
+const ASKING: Brief = {
+  ...MONDAY,
+  message: { state: "ask", to: [], choices: [{ person: "PER-8", name: "Avi Example" }, { person: "PER-9", name: "Lena Example" }] },
+};
+
+test("with nobody marked the briefing asks once who the message is for, and marking someone is one change with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = show(ASKING, {
+    "POST brief/message/for": () => ({ changeset: "CS-7" }),
+    "POST changesets/CS-7/undo": () => ({ reopened: 1 }),
+  }).calls;
+  expect(await screen.findByRole("heading", { name: "Who do you report to?" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Draft the message" })).toBeNull();
+  const save = screen.getByRole("button", { name: "This is who I report to" });
+  expect(save).toBeDisabled();
+  await user.selectOptions(screen.getByLabelText("The person you report to"), "Lena Example");
+  await user.click(screen.getByRole("button", { name: "This is who I report to" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST brief/message/for")?.body).toEqual({ person: "PER-9" }));
+  expect(await screen.findByText("Lena Example is who you report to. Your weekly message to them can be drafted here.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-7/undo")).toBe(true));
+});
+
+test("saying nobody stops the question, and Undo asks again", async () => {
+  const user = userEvent.setup();
+  const calls = show(ASKING, { "POST brief/message/for": () => ({ changeset: null }) }).calls;
+  await user.click(await screen.findByRole("button", { name: "I report to no one" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST brief/message/for")?.body).toEqual({ nobody: true }));
+  expect(await screen.findByText("Got it. You won't be asked again.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST brief/message/for").map((c) => c.body)).toEqual([{ nobody: true }, { nobody: false }]));
+});
+
 test("the unnamed assistant is your assistant", async () => {
   show({ ...MONDAY, message: { state: "working", to: [{ person: "PER-9", name: "Lena Example" }] } }, {}, { unnamed: true });
   expect(await screen.findByText("Your assistant is drafting it")).toBeInTheDocument();
