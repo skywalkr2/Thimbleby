@@ -109,8 +109,8 @@ test("night mode keeps its values and its filled, bordered, banded look", () => 
 
 test("a row's action is tonal unless the row is selected, and the selected row's is the filled one", () => {
   const css = read("ui/Row.module.css");
-  expect(css).toMatch(/\.actions :global\(\[data-variant="primary"\]:not\(:disabled\)\) \{[^}]*background: var\(--row-action-bg\)/);
-  expect(css).toMatch(/\.selected \.actions :global\(\[data-variant="primary"\]:not\(:disabled\)\) \{[^}]*background: var\(--row-action-strong-bg\)/);
+  expect(css).toMatch(/\.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-bg\)/);
+  expect(css).toMatch(/\.selected \.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-strong-bg\)/);
   expect(css).toMatch(/\.title \{[^}]*font-weight: var\(--row-title-weight\)/s);
   const light = tokens.slice(0, tokens.indexOf("/* ---------- Dark"));
   expect(light).toMatch(/--row-action-bg: var\(--accent-soft\)/);

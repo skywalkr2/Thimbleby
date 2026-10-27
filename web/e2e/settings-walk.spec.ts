@@ -24,6 +24,8 @@ test("every Settings page keeps the side bar, and the person can go back to any 
   test.setTimeout(180_000);
   await page.goto("?token=e2e-token#settings/you");
   await expect(bar(page).getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
+  // The Lists page is listed once the lists have loaded, so the names are read after it shows.
+  await expect(bar(page).getByRole("link", { name: "Lists", exact: true })).toBeVisible(LOADED);
   const names = (await bar(page).getByRole("link").allTextContents()).map((n) => n.trim());
   expect(names.length).toBeGreaterThan(4);
   expect(names).toContain("Connections");
