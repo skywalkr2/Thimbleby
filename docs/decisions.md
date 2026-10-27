@@ -18,7 +18,15 @@ Today; no "Treat as work" or "Treat as personal" for "Just me"; a wider "Just me
 skipped on Your promises; raw dates out of every title; the travel-clash wording in the brief; the setup guide link on You
 only; and the open wording rows of the earlier re-reviews. The owner also decided: removing a business after setup asks
 each time whether its projects and to-dos move to Personal or end with it, with Undo; a backup is made before a restore,
-before an add-on is installed or updated, and before a bulk change; the workspace keeps the person's name.
+before an add-on is installed or updated, and before a bulk change; the workspace keeps the person's name. The
+reviewer then answered the thirteen questions (recorded in the questions file) and those answers are built the same way:
+What changed is history (no action buttons, "Answer on Today", All by default, one summary line for what waits on Today);
+the quiet-day brief has no buttons for the other forms; Check now also sits on Came in when nothing arrived; one side
+filter on every list that can hold both sides, hidden with no side; setup's step is "What it's for"; an optional
+"Do some of these belong together?" line makes programs; a connection's data level follows the side it serves; notice
+formats are named apps from a shipped list outside the core's code, with a plain-text fallback; "Which model does what" is
+behind a closed disclosure on the AI page; Quality is headed "How {assistant} is doing"; Files has a details pane and
+Connections none.
 
 **Decided by:** the owner ("fix everything they previously said before going back to them"; build the clear items now;
 the three answers above). The sorting of requests into built, clear and questions is the main session's, from the audit.
