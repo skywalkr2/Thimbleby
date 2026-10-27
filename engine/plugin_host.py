@@ -200,6 +200,9 @@ class PluginHost:
 
         #: What a pack runs for the core (a handler, a validator, a Today line) is held to a time limit.
         self.pack_calls = PackCalls(lambda: float(self.cfg.steward.pack_call_limit_seconds))
+        from engine import addons
+
+        addons.activate(cfg.server.addons_dir)  # installed add-ons are found on the import path from here on
         self._discover(bundled)
         for name in cfg.workspace.plugins.enabled:
             self._load(name, set())

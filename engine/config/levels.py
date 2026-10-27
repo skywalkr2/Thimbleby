@@ -147,6 +147,7 @@ FILES_ONLY = (
     "server.mode",
     "server.base_path",
     "server.open_browser",
+    "server.addons_dir",
     "storage.export.every_minutes",
     "storage.export.commit",
     "storage.kept_secrets.keep_days",

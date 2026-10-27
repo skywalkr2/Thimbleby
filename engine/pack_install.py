@@ -53,13 +53,24 @@ class Installed:
 
 
 def target() -> Path:
-    """Where packs are installed: the app's own place for pure Python packages."""
-    return Path(sysconfig.get_paths()["purelib"])
+    """Where packs are installed: the add-ons folder on this computer, outside the app's own Python environment so
+    rebuilding that environment never removes them (`engine/addons.py`)."""
+    from engine import addons
+
+    return addons.site_folder()
 
 
 def library_target() -> Path:
-    """Where a library of compiled code goes: the app's own place for it (the same place on most computers)."""
-    return Path(sysconfig.get_paths()["platlib"])
+    """Where a library of compiled code goes: the same folder as the packs, which is on the import path whatever the
+    library holds."""
+    return target()
+
+
+def environment_places() -> list[Path]:
+    """The Python environment's own folders for packages: where add-ons were installed before they had a folder of
+    their own."""
+    paths = sysconfig.get_paths()
+    return list(dict.fromkeys(Path(paths[key]) for key in ("purelib", "platlib")))
 
 
 def supported() -> dict[Tag, int]:
@@ -430,6 +441,58 @@ def _release_libraries(pack: str, places: Sequence[Path]) -> None:
                 (folder / REQUIRED_BY).write_text("\n".join(sorted(users - {pack})) + "\n", encoding="utf-8")
             else:
                 _remove_files(folder, place)
+
+
+def move_old_installs(destination: Path | None = None, sources: Sequence[Path] | None = None) -> list[str]:
+    """Move each add-on and library this app installed into the Python environment's own folders (the earlier way) to
+    the add-ons folder, with its metadata, and take it out of the environment. Nothing the app didn't install is
+    touched. One already in the add-ons folder wins: the old copy is just removed. Returns "name version" for each one
+    moved, and moves nothing again on a second call."""
+    destination = destination or target()
+    moved = []
+    for source in sources if sources is not None else environment_places():
+        if not source.is_dir() or source.resolve() == destination.resolve():
+            continue
+        for folder in sorted(source.glob("*.dist-info")):
+            marker = folder / "INSTALLER"
+            try:
+                ours = marker.is_file() and marker.read_text(encoding="utf-8").strip() == INSTALLER
+            except OSError:
+                ours = False
+            if not ours or not (folder / "RECORD").is_file():
+                continue
+            if (destination / folder.name).exists():
+                _remove_files(folder, source)
+                continue
+            _copy_files(folder, source, destination)
+            _remove_files(folder, source)
+            name, _, version = folder.name.removesuffix(".dist-info").partition("-")
+            moved.append(f"{name} {version}")
+    return moved
+
+
+def _copy_files(folder: Path, source: Path, destination: Path) -> None:
+    """Copy the files a metadata folder's record lists, and the folder itself, from one place to another; a failure
+    takes back what was copied."""
+    record = (folder / "RECORD").read_text(encoding="utf-8")
+    paths = [row[0] for row in csv.reader(record.splitlines()) if row]
+    copied: list[Path] = []
+    try:
+        for relative in paths:
+            origin = (source / relative).resolve()
+            goal = destination / relative
+            if not origin.is_relative_to(source.resolve()) or not goal.resolve().is_relative_to(destination.resolve()):
+                continue
+            if origin.is_file():
+                goal.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(origin, goal)
+                copied.append(goal)
+        shutil.copytree(folder, destination / folder.name, dirs_exist_ok=True)
+    except OSError:
+        for path in copied:
+            path.unlink(missing_ok=True)
+        shutil.rmtree(destination / folder.name, ignore_errors=True)
+        raise
 
 
 def _remove_files(folder: Path, place: Path) -> None:

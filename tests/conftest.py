@@ -101,6 +101,23 @@ def _no_temp_folder_notice(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _own_addons_folder(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test installs an add-on into the person's real add-ons folder, or leaves one on the import path for the next
+    test: each starts with its own empty folder named by the setting's environment variable."""
+    import sys
+
+    from engine import addons
+
+    monkeypatch.setenv(addons.ENV_ADDONS_DIR, str(tmp_path_factory.mktemp("addons")))
+    monkeypatch.setattr(addons, "_active", None)
+    # A test never moves what an earlier install left in the environment running it.
+    monkeypatch.setattr("engine.pack_install.environment_places", lambda: [])
+    before = list(sys.path)
+    yield
+    sys.path[:] = before
+
+
+@pytest.fixture(autouse=True)
 def _no_product_feed(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests never read the product's own catalog feed over the network: the routes see a build without one, and a test
     of the feed itself reads `engine.shipped.product` directly."""

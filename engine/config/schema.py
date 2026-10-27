@@ -346,6 +346,13 @@ class ServerFile(FileModel):
         description="Open the app in this computer's browser when it starts (local mode only).",
         json_schema_extra={"advanced": True},
     )
+    addons_dir: str | None = Field(
+        None,
+        description="The folder on this computer where add-ons installed from the Add-ons screen are kept, outside "
+        "the app's own program files so updating the app never removes them. Empty means the app's own data place "
+        "for this computer's system. Changing it takes a restart.",
+        json_schema_extra={"advanced": True},
+    )
 
     @field_validator("base_path")
     @classmethod

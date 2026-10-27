@@ -4,3 +4,4 @@ host: 127.0.0.1
 port: 8765
 base_path: /
 open_browser: false   # open the app in this computer's browser when it starts
+addons_dir: null   # where add-ons installed from the Add-ons screen are kept (null: the app's data place)

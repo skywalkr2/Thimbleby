@@ -97,9 +97,11 @@ def check(plugin: Path | str, entry_path: Path | None = None) -> Report:
     """Check a pack, given its plugin folder (the one holding plugin.yaml) or an installed plugin's name."""
     from packaging.specifiers import InvalidSpecifier, SpecifierSet
 
+    from engine import addons
     from engine.plugin_api import PLUGIN_API_VERSION
     from engine.plugin_manifest import read_manifest
 
+    addons.activate()  # an add-on installed from the app is found on the import path
     report = Report()
     folder = Path(plugin).expanduser()
     installed = not (folder / "plugin.yaml").is_file()

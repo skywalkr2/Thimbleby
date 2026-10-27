@@ -329,7 +329,7 @@ def cmd_install(args: argparse.Namespace) -> int:
     """Install an add-on's package file into this copy of the app, with the same checks as the Add-ons screen's Install:
     pure Python, needs the app already has, nothing outside its own folders. Works the same for a source copy and an
     installed one, and `cockpit update` keeps it."""
-    from engine import pack_install
+    from engine import addons, pack_install
 
     path = args.file.expanduser()
     if not path.is_file():
@@ -341,6 +341,9 @@ def cmd_install(args: argparse.Namespace) -> int:
         # An install or an update changes what the app runs, so the workspace it is for is backed up first.
         ws = resolve(args.workspace)
         backup.backup_before(ws, ws.config())
+        addons.activate(ws.config().server.addons_dir)
+    else:
+        addons.activate()
     try:
         done = pack_install.install(path.read_bytes())
     except pack_install.InstallError as err:
