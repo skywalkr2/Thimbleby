@@ -1807,6 +1807,9 @@ mechanics.
 
 ## Not in 1.0
 
+- **"Add an area" on the Personal page** (owner, 2026-10-28, a possible item after 1.0): quick picks from the shipped
+  common-areas list (Home, Health, Money and the like), with Health and Money offering to be more private when added, for
+  a person who wants structure before the assistant proposes it. Setup still asks nothing about areas.
 - Hosted mode and sign-in (Part 11), and its end state: an organization install where members from the People list have
   roles, their own views and approvals by role (design 11.8; owner, 2026-10-13).
 - Social, email and newsletter channels.
