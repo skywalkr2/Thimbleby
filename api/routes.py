@@ -56,6 +56,7 @@ from api.schemas import (
     Created,
     DocumentBlock,
     DocumentView,
+    DropDone,
     EndingAnswer,
     EntryTodoMade,
     FieldView,
@@ -126,6 +127,7 @@ from api.schemas import (
     PersonView,
     PluginStatusView,
     ProjectEndingChoice,
+    ProjectEndingDone,
     ProjectEndingItem,
     ProjectEndingView,
     ProjectIn,
@@ -216,6 +218,7 @@ from engine.dispatcher import (
     undo_changeset,
     waits_on_first_go,
 )
+from engine.drop_notes import note_the_drops
 from engine.followups import (
     UNTOLD_STANCES,
     actions_to_send,
@@ -756,6 +759,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             about = view.get("action", line.actions[0]) if len(line.actions) == 1 else None
             return QueueLineView(
                 **data,
+                told_names=endings.told_names(view, cfg, people, about) if about is not None else [],
                 items=[shown(item) for item in line.items],
                 parts=[shown(part) for part in line.parts],
                 title=_title_view(line.title, people),
@@ -1677,13 +1681,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return Ok(ok=cs_id)
 
     @r.post("/changesets/{cs_id}/ops/{index}/ending")
-    def answer_ending(cs_id: str, index: int, body: EndingAnswer) -> Ok:
+    def answer_ending(cs_id: str, index: int, body: EndingAnswer) -> DropDone:
         """Answer "Done by <owner>, or no longer needed?" for an ending whose words only said it was closed: done
-        credits the owners, no longer needed credits nobody. Either applies at once, with Undo."""
+        credits the owners, no longer needed credits nobody. Either applies at once, with Undo. No longer needed for
+        an action that reached people also drafts a note to each, as an outward act that waits for the person's yes;
+        Undo takes the notes and the answer back together."""
         need("changeset", cs_id)
+        ops = store.read().get("changeset", cs_id).data["ops"]
+        record = ops[index]["op"].get("id") if 0 <= index < len(ops) else None
         guard(lambda: endings.answer(store, cfg, cs_id, index, body.ending))
+        drafted = note_the_drops(store, cfg, cs_id, [record] if body.ending == "called_off" and record else [])
         changed()
-        return Ok(ok=cs_id)
+        return DropDone(changeset=cs_id, drafts=drafted.changesets, acts=drafted.acts)
 
     @r.get("/changesets/{cs_id}/ops/{index}/project-ending")
     def project_ending(cs_id: str, index: int) -> ProjectEndingView:
@@ -1708,6 +1717,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             project_name=project.data["name"] if project is not None else found.project,
             index=found.index,
             items=[ProjectEndingItem(index=i.index, kind=i.kind, id=i.id, text=i.text) for i in found.items],
+            told_names=list(
+                dict.fromkeys(
+                    name
+                    for i in found.items
+                    if i.kind == "action" and (record := view.get("action", i.id)) is not None
+                    for name in endings.told_names(view, cfg, People(store, cfg), record)
+                )
+            ),
             left_open=[
                 LeftOpenItem(
                     kind=each.kind,
@@ -1722,16 +1739,28 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         )
 
     @r.post("/changesets/{cs_id}/ops/{index}/project-ending")
-    def choose_project_ending(cs_id: str, index: int, body: ProjectEndingChoice) -> Ok:
+    def choose_project_ending(cs_id: str, index: int, body: ProjectEndingChoice) -> ProjectEndingDone:
         """End the project and drop what is open on it except the items the person keeps (one Undo of the change takes
-        the ending back; kept items were never dropped), or keep the project and every item as they are."""
+        the ending back; kept items were never dropped), or keep the project and every item as they are. Ending it
+        also drafts one note to each person told about a dropped to-do, listing each of them, as an outward act that
+        waits for the person's yes; Undo takes the notes and the ending back together."""
+        from engine.drop_notes import DraftedNotes
+
         need("changeset", cs_id)
+        drafted = DraftedNotes()
         if body.end:
-            guard(lambda: endings.finish_ending(store, cfg, cs_id, index, body.keep, ws=ws))
+            dropped = guard(lambda: endings.finish_ending(store, cfg, cs_id, index, body.keep, ws=ws))
+            drafted = note_the_drops(store, cfg, cs_id, dropped)
         else:
             guard(lambda: endings.decline_ending(store, cs_id, index))
         changed()
-        return Ok(ok=cs_id)
+        people = People(store, cfg)
+        return ProjectEndingDone(
+            changeset=cs_id,
+            drafts=drafted.changesets,
+            acts=drafted.acts,
+            names=[people.name(person) for person in drafted.people],
+        )
 
     @r.post("/changesets/{cs_id}/ops/{index}/decline")
     def decline_op(cs_id: str, index: int) -> Ok:
@@ -2631,6 +2660,7 @@ def _op_view(
             op,
             reporter=o.get("reporter"),
             choice=any(p.get("check") == endings.CHOICE_CHECK for p in o.get("problems") or []),
+            cfg=cfg,
         )
     return OpView(
         index=o["index"],
@@ -2657,6 +2687,11 @@ def _nudge_view(n: Any, withheld: str | None = None) -> NudgeView:
         action_ids=n.action_ids,
         left_out=[LeftOutView(**vars(x)) for x in n.left_out],
     )
+
+
+def _told_names(store: Any, cfg: Any, people: People, action_id: str) -> list[str]:
+    found = store.read().get("action", action_id)
+    return endings.told_names(store.read(), cfg, people, found) if found is not None else []
 
 
 def _section(
@@ -2697,6 +2732,7 @@ def _section(
             links=a["links"],
             told=a["told"],
             told_days=a["told_days"],
+            told_names=_told_names(store, cfg, people, a["id"]),
             ready_since=a.get("ready_since"),
             followed_up=a["followed_up"],
             chases=a["chases"],

@@ -21,14 +21,20 @@ def _text(record: Any) -> str:
     return " ".join(str(data.get("text") or data.get("title") or "").split())
 
 
-def _told(view: Any, people: Any, record: Any) -> tuple[list[str], str | None]:
-    """The people an action or question already reached, and the earliest day they were told."""
+def _told(view: Any, people: Any, record: Any, cfg: Any = None) -> tuple[list[str], str | None]:
+    """The people an action or question already reached, and the earliest day they were told. For an action, given the
+    config, exactly the people a note about it goes to (`endings.told_people`): never the person themself nor anyone
+    they only watch or report to."""
     data = record.data
     if record.kind == "action":
         told = {
             **(data.get("told") or {}),
             **{p: (days or [None])[0] for p, days in (data.get("followed_up") or {}).items()},
         }
+        if cfg is not None:
+            from engine.endings import told_people
+
+            told = {p: told[p] for p in told_people(view, cfg, people.pm, record)}
         names = [people.name(p) for p in told]
         days = sorted(str(d) for d in told.values() if d)
         return names, days[0] if days else None
@@ -63,23 +69,27 @@ def _ending(people: Any, found: Any, op: dict[str, Any], reporter: str | None) -
 
 
 def describe(
-    view: Any, people: Any, op: dict[str, Any], *, reporter: str | None = None, choice: bool = False
+    view: Any, people: Any, op: dict[str, Any], *, reporter: str | None = None, choice: bool = False, cfg: Any = None
 ) -> dict[str, Any] | None:
     """The held op as a question, or None when it isn't one of the shaped holds: `ask` (close, date, owner, routing,
     drop, move or part), `item` (the words of what it is about), `value` (what it would change to), `from_value`
     (what it is now), `to_name`, `told` (people already reached) and `told_on`, and `quote` (the words the
     assistant rested it on). An ending of an action also says what the input says happened (see `_ending`);
     `reporter` is who said it. With `choice`, a close or a drop of an action is the one question "done by its owners, or
-    no longer needed?" (`ask` is `ending`), whatever op the assistant proposed."""
+    no longer needed?" (`ask` is `ending`), whatever op the assistant proposed, and it carries `told` and `told_on` like
+    a drop. With `cfg`, `told` is exactly the people a note about the action goes to."""
     name = op.get("op", "")
     quote = (op.get("evidence") or {}).get("quote")
     if choice and name in ("action.close", "action.drop"):
         found = view.get("action", op.get("id", ""))
         if found is None:
             return None
+        told, on = _told(view, people, found, cfg)
         return {
             "ask": ENDING,
             "item": _text(found),
+            "told": told,
+            "told_on": on,
             "quote": quote,
             **_ending(people, found, {"op": "action.close"}, reporter),
         }
@@ -162,7 +172,7 @@ def describe(
         found = view.get(kind, op.get("id", ""))
         if found is None:
             return None
-        told, on = _told(view, people, found)
+        told, on = _told(view, people, found, cfg)
         shown = {"ask": DROP, "item": _text(found), "told": told, "told_on": on, "quote": quote}
         return shown | _ending(people, found, op, reporter) if kind == "action" else shown
     return None

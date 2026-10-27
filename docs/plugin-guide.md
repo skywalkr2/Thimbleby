@@ -1695,6 +1695,7 @@ What the assistant proposed for one request, how it was checked and what was app
 | `problems` | list[dict[str, Any]] | `[]` | Problems that belong to the changeset as a whole rather than to one op. |
 | `trust` | Literal['trusted', 'untrusted'] | required | Whether the input it was made from was trusted; records its ops create carry the same mark. |
 | `reviewed` | bool | `False` | True once the person has looked at it and accepted it. |
+| `followups` | list[str] | `[]` | The ids of the changes made because of this one (the notes drafted to the people told about to-dos it dropped). Undo of the drops also takes back each of them whose act has not gone out. |
 | `run` | str \| None | `None` | The id of the AI run that produced it, if any. |
 | `action` | dict[str, Any] \| None | `None` | The person action this came from: its name, target and the choices the person made. |
 | `applied` | list[str] | `[]` | The ids of the knowledge entries the run said it applied, kept only when the run was given them (its knowledge log). A checked citation, never the model's say-so alone. |

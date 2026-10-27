@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from engine import patterns, repeats
+from engine import endings, patterns, repeats
 from engine.applier import _similar, apply_as_person
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.firm_due import firm_due
@@ -67,6 +67,8 @@ class OpenAction:
     owner_question: str | None = None
     #: An owner other than the person hasn't been told about it yet (design 6.10).
     to_send: bool = False
+    #: The people it reached (told or chased), as shown: who dropping it tells.
+    told_names: list[str] = field(default_factory=list)
     #: Its date is one the rules couldn't read for certain: it is shown to be checked and is never a deadline.
     due_check: bool = False
     #: How it repeats, when it does (`engine.repeats.view_of`).
@@ -199,6 +201,7 @@ def open_actions(
                 untouched_days=untouched if state == "stale" else None,
                 owner_question=asking_owner.get(a.id) if state == "no_owner" else None,
                 to_send=a.id in to_send,
+                told_names=endings.told_names(view, cfg, people, a),
                 due_check=bool(d.get("due_check")) and due is not None,
                 repeat=repeats.view_of(d.get("repeat")),
                 effort_minutes=d.get("effort_minutes"),

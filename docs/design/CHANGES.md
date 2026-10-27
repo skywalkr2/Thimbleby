@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 239. One way to drop a to-do that reached people (2026-10-28; owner; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Held drop (7.6) | "Drop it" (leaving a copyable line) and "Drop it and draft the note" in the menu | **Built** (`web/src/components/TodayRecords.test.tsx`, `tests/test_held_ask.py`): "Drop it and tell them" beside "Keep it" when people were told, plain "Drop it" otherwise |
+| Every other drop (6.33) | A copyable `action-notice` line for each person told | **Built** (`tests/test_drop_and_draft_note.py`, `tests/test_project_ending.py`, `tests/test_remove_side.py`, `OpenItems.test.tsx`, `TodayPromises.test.tsx`, `TodayTerms.test.tsx`, `BusinessSides.test.tsx`): the row's Drop, "No longer needed, tell them", a project ending and removing a business draft one note per person told, as acts waiting for the yes (`engine/drop_notes.py`) |
+| Undo (6.7) | The screen undid each draft, then the drop | **Built** (`tests/test_drop_and_draft_note.py`): a change records the notes drafted for its drops (`followups`), and undoing its drops takes back every note not yet approved, reporting any that stayed |
+
 ## 238. The gate week's pass bar, agreed (2026-10-28; roadmap A3, P65)
 
 | Where | Before | Now |

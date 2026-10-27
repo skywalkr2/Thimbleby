@@ -3,7 +3,8 @@
 The engine reads the words an ending quotes, not the model: delivery words close the action and credit its owners,
 words about learning it elsewhere or it no longer mattering call it off with nobody credited, and a bare "closed"
 asks "Done by <owner>, or no longer needed?", even from the person's own note. Each answer applies with Undo and
-records its signal; calling off what an owner was told about drafts one line for the person to send. Names, ids and
+records its signal; calling off what an owner was told about leaves no copyable line (the note to them is drafted as an
+outward act, see test_drop_and_draft_note). Names, ids and
 words come from the fixtures and the settings.
 """
 
@@ -253,7 +254,7 @@ def test_the_persons_own_close_on_a_screen_is_not_read_for_words(env):
 # ---- an owner who was told ------------------------------------------------------------------------------------------
 
 
-def test_calling_off_what_an_owner_was_told_drafts_one_line_and_sends_nothing(env):
+def test_calling_off_what_an_owner_was_told_leaves_no_copyable_line(env):
     _, cfg, store = env
     target = someone_elses(cfg)
     owner = target["owners"][0]["person"]
@@ -266,14 +267,10 @@ def test_calling_off_what_an_owner_was_told_drafts_one_line_and_sends_nothing(en
     cs_id, result = own_note(store, cfg, close_op(target["id"], CALLED_OFF))
     assert result == ["held"]  # the owner was already told: look at it first, as any drop of a told action
     release(store, cfg, cs_id, 0)
-    made = [q for q in store.read().list("question") if q.id not in before]
-    assert len(made) == 1
-    line = made[0].data
-    assert (line["to"], line["status"], line["kind"]) == (owner, "open", "action-notice")
-    assert line["title"] == cfg.language.messages.called_off_notice.format(item=target["text"])
-    assert line["sent_at"] is None  # nothing is sent by itself
+    assert data(store, target["id"])["status"] == "dropped"
+    assert {q.id for q in store.read().list("question")} == before  # no drop makes the one-line notice
     assert undo(store, cs_id).restored == [0]
-    assert store.read().get("question", made[0].id) is None  # Undo takes the draft away with it
+    assert data(store, target["id"])["status"] == "open"
 
 
 def test_an_owner_who_was_never_told_gets_no_line_and_neither_does_the_person(env):

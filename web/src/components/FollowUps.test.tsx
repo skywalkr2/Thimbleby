@@ -583,7 +583,7 @@ test("Drop on an action row asks why with the cursor in the field, acts at once 
   const calls = fakeApi({
     "GET followups": () => waitingSections(),
     "GET people": () => [],
-    "POST actions/ACT-1/drop": () => ({ changeset: "CS-9" }),
+    "POST actions/ACT-1/drop": () => ({ changeset: "CS-9", drafts: [], acts: [] }),
     "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
   });
   renderApp(<FollowUps />);

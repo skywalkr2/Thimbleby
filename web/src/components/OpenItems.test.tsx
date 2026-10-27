@@ -371,7 +371,7 @@ test("with a side the filters keep Project and No owner", async () => {
 
 test("Drop on a to-do asks why with the cursor in the field, acts at once and Undo takes it back", async () => {
   const user = userEvent.setup();
-  const calls = api({ "POST actions/A-1/drop": () => ({ changeset: "CS-9" }), "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }) });
+  const calls = api({ "POST actions/A-1/drop": () => ({ changeset: "CS-9", drafts: [], acts: [] }), "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }) });
   renderApp(<OpenItems />);
   const [first] = await rows();
   await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
@@ -386,6 +386,38 @@ test("Drop on a to-do asks why with the cursor in the field, acts at once and Un
   expect(await screen.findByText("Dropped.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
+});
+
+test("Drop on a to-do that reached people reads Drop it and tell them, says a note waits for the yes, and one Undo takes the note and the drop back", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    {
+      "POST actions/A-1/drop": () => ({ changeset: "CS-9", drafts: ["CS-10"], acts: ["XACT-1"] }),
+      "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
+      "POST changesets/CS-10/undo": () => ({ restored: [0], skipped: [] }),
+    },
+    { actions: [action("A-1", "Send the proof to the printer", { told_names: ["Robin Sample"] }), action("A-2", "Tidy the style sheet")] },
+  );
+  renderApp(<OpenItems />);
+  const [first, second] = await rows();
+  await user.click(within(second).getByRole("button", { name: /More actions for Tidy the style sheet/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
+  const plain = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
+  await user.type(plain, "x");
+  expect(within(plain.closest("form") as HTMLElement).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
+  expect(within(plain.closest("form") as HTMLElement).queryByRole("button", { name: "Drop it and tell them" })).toBeNull();
+  await user.keyboard("{Escape}");
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
+  const field = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
+  const form = field.closest("form") as HTMLElement;
+  expect(within(form).queryByRole("button", { name: "Drop it" })).toBeNull();
+  await user.type(field, "The index moved to the printer");
+  await user.click(within(form).getByRole("button", { name: "Drop it and tell them" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/A-1/drop")?.body).toEqual({ reason: "The index moved to the printer" }));
+  expect(await screen.findByText("Dropped. A note to Robin Sample is waiting for your yes.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-9/undo"]));
 });
 
 test("a to-do's menu has Change this, which posts the person's note about that action", async () => {

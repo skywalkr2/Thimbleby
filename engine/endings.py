@@ -165,20 +165,12 @@ def called_off_line(cfg: Any, action: Any) -> str:
     return cfg.language.messages.called_off_notice.format(item=item)
 
 
-def called_off_notices(view: Any, ctx: Any, action: Any) -> list[dict[str, Any]]:
-    """The one-line drafts, one to each person an action was already sent to, for the person to send: each is a
-    question of the kind that tells someone about an action, to someone told or chased, never to the person and never
-    to anyone they only watch or report to. Nothing is sent: a draft waits in To send."""
+def told_names(view: Any, cfg: Any, people: Any, action: Any) -> list[str]:
+    """The names, as shown, of the people an action reached (`told_people`): who "Drop it and tell them" writes to."""
     data = action.data
-    return [
-        {
-            "to": person,
-            "title": called_off_line(ctx.cfg, action),
-            "kind": "action-notice",
-            "projects": [data["project"]] if data.get("project") else [],
-        }
-        for person in told_people(view, ctx.cfg, ctx.people.pm, action)
-    ]
+    if not (data.get("told") or data.get("followed_up")):
+        return []
+    return [people.name(person) for person in told_people(view, cfg, people.pm, action)]
 
 
 def answer(store: Any, cfg: Any, changeset_id: str, index: int, ending: Answer, *, now: datetime | None = None) -> None:
@@ -440,10 +432,11 @@ def finish_ending(
     *,
     now: datetime | None = None,
     ws: Any = None,
-) -> None:
+) -> list[str]:
     """Confirm a project ending that waits for the person: the items in `keep` stay open (each is declined, and the
     choice is a signal), and the ending and every other drop apply, so one Undo of the change takes them back. With
-    the workspace given, an ending that drops many records makes a backup first (`storage.backups`)."""
+    the workspace given, an ending that drops many records makes a backup first (`storage.backups`). Returns the ids of
+    the actions it dropped."""
     from engine.applier import decline_held_many, release
 
     ending = _held_ending(store, changeset_id, index)
@@ -459,6 +452,7 @@ def finish_ending(
         decline_held_many(store, changeset_id, wanted, now=now)
     for position in [ending.index, *(item.index for item in ending.items if item.index not in wanted)]:
         release(store, cfg, changeset_id, position, now=now)
+    return [item.id for item in ending.items if item.kind == "action" and item.index not in wanted]
 
 
 def decline_ending(store: Any, changeset_id: str, index: int, *, now: datetime | None = None) -> None:

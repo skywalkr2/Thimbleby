@@ -1,5 +1,7 @@
 // Dropping an action that is no longer needed (design 6.8): the row menu's "Drop" asks why (the first field has the
-// cursor) and acts at once with Undo. A dropped action is never done or credited, and it leaves every list.
+// cursor) and acts at once with Undo. A dropped action is never done or credited, and it leaves every list. When the
+// action reached people, the one button reads "Drop it and tell them": it also drafts a note to each, which waits for
+// the person's yes, and Undo takes the notes and the drop back together.
 import { useId, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -8,12 +10,13 @@ import type { MenuAction } from "./RowMenu";
 
 /** The row menu's "Drop" entry for an action, and the small form it opens. `onClosed` runs when the form goes, so the row
  * can take focus back. */
-export function useDropAction(action: { id: string }, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
+export function useDropAction(action: { id: string; told_names?: string[] }, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
   const act = useAct();
   const id = useId();
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
+  const told = action.told_names ?? [];
   const close = () => {
     setAsking(false);
     setReason("");
@@ -29,7 +32,10 @@ export function useDropAction(action: { id: string }, onClosed?: () => void): { 
         if (!why) return;
         void act(
           () => api.dropAction(action.id, why),
-          (done) => ({ message: t("toast.action_dropped"), undo: () => api.undo(done.changeset) }),
+          (done) => ({
+            message: done.acts.length > 0 ? t("toast.action_dropped_note", { names: told.join(", ") }) : t("toast.action_dropped"),
+            undo: () => api.undo(done.changeset),
+          }),
         ).then((done) => done && close());
       }}
       onKeyDown={(e) => {
@@ -45,7 +51,7 @@ export function useDropAction(action: { id: string }, onClosed?: () => void): { 
           {t("action.cancel")}
         </button>
         <button type="submit" className="btn primary" disabled={!reason.trim()}>
-          {t("action.drop_go")}
+          {t(told.length > 0 ? "action.drop_go_tell" : "action.drop_go")}
         </button>
       </div>
     </form>

@@ -84,7 +84,8 @@ export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other:
         other: held.from_value ? t("queue.held.k.routing", { name: first(held.from_value) }) : t("queue.held.k.same"),
       };
     case "drop":
-      return { primary: t("queue.held.a.drop"), other: t("queue.held.k.drop") };
+      // A drop of something that reached people is the one path that also tells them.
+      return { primary: t(held.told && held.told.length > 0 ? "queue.held.a.drop_tell" : "queue.held.a.drop"), other: t("queue.held.k.drop") };
     case "move":
       return { primary: t("queue.held.a.move"), other: held.from_value ? t("queue.held.k.date", { date: day(held.from_value) }) : t("queue.held.k.move") };
     case "part":

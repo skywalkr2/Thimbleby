@@ -91,6 +91,50 @@ def test_ending_with_the_business_ends_its_projects_and_drops_its_open_to_dos_in
     assert view.get("project", side).data.get("status") != completed
 
 
+def test_ending_with_the_business_drafts_one_note_to_each_person_told_and_undo_takes_it_back(tmp_path):
+    ws, c, side, inside, todos = _world(tmp_path)
+    store = c.app.state.store
+    told = todos[:2]
+    with store.transaction() as tx:
+        who = next(o["person"] for o in tx.get("action", told[0]).data["owners"])
+        found = tx.get("person", who)
+        tx.update(
+            "person", who, {"how_to_reach": {"email": "told.person@example.com"}}, _PM, read_version=found.version
+        )
+        for action in told:
+            found = tx.get("action", action)
+            tx.update("action", action, {"told": {who: "2026-10-01"}}, _PM, read_version=found.version)
+    questions = {q.id for q in store.read().list("question")}
+    done = _remove(c, side, "end")
+    assert done.status_code == 200, done.text
+    body = done.json()
+    (act_id,) = body["acts"]
+    assert len(body["drafts"]) == 1 and len(body["names"]) == 1, "one note to the one person, however many to-dos"
+    assert {q.id for q in store.read().list("question")} == questions, "no copyable line"
+    shown = c.get(f"/api/acts/{act_id}").json()
+    assert shown["status"] == "draft"
+    lines = shown["parts"]["body"].splitlines()
+    assert len(lines) == 2
+    for action in told:
+        assert " ".join(store.read().get("action", action).data["text"].split()) in shown["parts"]["body"]
+    assert c.post(f"/api/changesets/{body['changeset']}/undo", json={"ops": None}).status_code == 200
+    view = store.read()
+    assert view.get("act", act_id) is None
+    assert [view.get("action", t).data["status"] for t in todos] == ["open"] * 3
+    assert _side_ids(c) == [side]
+
+
+def test_moving_to_personal_drafts_no_note_even_for_a_told_to_do(tmp_path):
+    ws, c, side, inside, todos = _world(tmp_path)
+    store = c.app.state.store
+    with store.transaction() as tx:
+        who = next(o["person"] for o in tx.get("action", todos[0]).data["owners"])
+        found = tx.get("action", todos[0])
+        tx.update("action", todos[0], {"told": {who: "2026-10-01"}}, _PM, read_version=found.version)
+    body = _remove(c, side, "personal").json()
+    assert body["drafts"] == [] and body["acts"] == [] and body["names"] == []
+
+
 def test_a_job_is_removed_the_same_way_and_the_other_sides_stay_in_order(tmp_path):
     ws, c = _fresh(tmp_path)
     job = _add_side(c, JOB_NAME, "job")

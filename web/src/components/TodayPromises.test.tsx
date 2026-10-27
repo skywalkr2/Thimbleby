@@ -197,7 +197,7 @@ test("New date opens a date picker with the cursor in it, and saving corrects th
 
 test("Drop asks why and drops it, and Look closer shows why the promise exists", async () => {
   const user = userEvent.setup();
-  const { calls } = show([chase()], { "POST actions/ACT-1/drop": () => ({ changeset: "CS-8" }) });
+  const { calls } = show([chase()], { "POST actions/ACT-1/drop": () => ({ changeset: "CS-8", drafts: [], acts: [] }) });
   const row = await rowOf(`Chase Robin Sample: Send the floor plan, due ${day("2026-10-13")}`);
   await menuOf(user, row);
   await user.click(screen.getByRole("menuitem", { name: "Look closer" }));
@@ -252,7 +252,7 @@ test("a close whose words only say closed is one question on the item: done by i
 
 test("Done by the owner answers the choice as done and says so, with Undo", async () => {
   const user = userEvent.setup();
-  const { calls } = show([closed()], { "POST changesets/CS-1/ops/0/ending": () => ({ ok: "CS-1" }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
+  const { calls } = show([closed()], { "POST changesets/CS-1/ops/0/ending": () => ({ changeset: "CS-1", drafts: [], acts: [] }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
   await user.click(within(await rowOf("Done by Robin Sample, or no longer needed? 'Send the floor plan'")).getByRole("button", { name: "Done by Robin Sample" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/0/ending")?.body).toEqual({ ending: "done" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
@@ -261,7 +261,7 @@ test("Done by the owner answers the choice as done and says so, with Undo", asyn
 
 test("No longer needed answers the choice as called off, from the menu, with Undo", async () => {
   const user = userEvent.setup();
-  const { calls } = show([closed()], { "POST changesets/CS-1/ops/0/ending": () => ({ ok: "CS-1" }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
+  const { calls } = show([closed()], { "POST changesets/CS-1/ops/0/ending": () => ({ changeset: "CS-1", drafts: [], acts: [] }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
   const row = await rowOf("Done by Robin Sample, or no longer needed? 'Send the floor plan'");
   await menuOf(user, row);
   await user.click(screen.getByRole("menuitem", { name: "No longer needed" }));
@@ -269,6 +269,22 @@ test("No longer needed answers the choice as called off, from the menu, with Und
   expect(await screen.findByText("No longer needed: 'Send the floor plan'")).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [0] }));
+});
+
+test("No longer needed for something that reached people reads No longer needed, tell them, names them in the toast, and Undo takes the note and the answer back", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([ending({ ask: "ending", quote: "mark it closed", told: ["Casey Moor"], told_on: "2026-10-10" })], {
+    "POST changesets/CS-1/ops/0/ending": () => ({ changeset: "CS-1", drafts: ["CS-30"], acts: ["XACT-1"] }),
+    "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }),
+    "POST changesets/CS-30/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  const row = await rowOf("Done by Robin Sample, or no longer needed? 'Send the floor plan'");
+  await menuOf(user, row);
+  expect(screen.queryByRole("menuitem", { name: "No longer needed" })).toBeNull();
+  await user.click(screen.getByRole("menuitem", { name: "No longer needed, tell them" }));
+  expect(await screen.findByText("No longer needed: 'Send the floor plan'. A note to Casey Moor is waiting for your yes.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-1/undo"]));
 });
 
 test("a promise said again with a new date keeps only the new words on the line; the earlier ones are for the inspector", async () => {

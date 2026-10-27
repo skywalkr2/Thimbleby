@@ -23,6 +23,7 @@ export function ProjectEndingDetail(props: { line: QueueLine }) {
   if (ending.isPending) return <Skeleton />;
   if (!ending.data) return <p className="hint">{t("queue.detail.gone")}</p>;
   const view = ending.data;
+  const told = view.told_names ?? [];
   const toggle = (i: number, on: boolean) => {
     const next = new Set(kept);
     if (on) next.add(i);
@@ -33,7 +34,10 @@ export function ProjectEndingDetail(props: { line: QueueLine }) {
   const end = () =>
     void act(
       () => api.chooseProjectEnding(cs, index, { end: true, keep: [...kept] }),
-      () => ({ message: t("project_ending.ended", { project: view.project_name }), undo: () => api.undo(cs) }),
+      (done) => ({
+        message: done.acts.length > 0 ? t("project_ending.ended_note", { project: view.project_name, names: done.names.join(", ") }) : t("project_ending.ended", { project: view.project_name }),
+        undo: () => api.undo(cs),
+      }),
     );
   const keepProject = () => {
     const indexes = [index, ...view.items.map((i) => i.index)];
@@ -52,6 +56,7 @@ export function ProjectEndingDetail(props: { line: QueueLine }) {
       {view.items.length > 0 && (
         <>
           <p className="hint">{t("project_ending.intro")}</p>
+          {told.length > 0 && <p className="hint">{t("project_ending.tell", { names: told.join(", ") })}</p>}
           <label className="check-line">
             <input type="checkbox" checked={all} onChange={(e) => setKept(e.target.checked ? new Set(view.items.map((i) => i.index)) : new Set())} />
             <span>{t("project_ending.keep_all")}</span>

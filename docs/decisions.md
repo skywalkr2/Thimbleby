@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: One way to drop a to-do that reached people: "Drop it and tell them"
+
+**Decided:** When people were told about a to-do, dropping it has one button, "Drop it and tell them", which drops it
+and drafts a note to each of them for the person's yes, sent only through the publisher. When nobody was told, it is
+plain "Drop it". This holds on the held line, the row's Drop, "No longer needed", a project ending and removing a
+business. The older copyable line is no longer made. The notes are linked to the drop, so Undo takes back every note
+not yet approved.
+
+**Decided by:** the owner ("for the drop bit yes go with your plan"), on the main session's proposal after the audit
+found two ways to do the same thing.
+
+**Why:** two buttons for one intent, one of which left a line to copy by hand, made the person choose how to be polite
+instead of whether to drop.
+
+**Impact:** Design 6.33 ("Already told"), 7.6 and 4.6 (`messages.called_off_notice`), roadmap A5's note. Change log:
+section 239.
+
 ## 2026-10-28: The gate week's pass bar is fixed and can only tighten
 
 **Decided:** The gate week is passed against the bar drafted before any result: lost promises 0, wrong silent closes 0,

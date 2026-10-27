@@ -359,8 +359,8 @@ Built keys:
   words ("sent", "finished", "it's in", "did it", "done") alone leave a close as done and credit its owners; call-off words
   ("moot", "covered by", "no longer needed", "we'll get it in", "will cover") alone make it a drop with the person's words as the
   reason; "closed" ("close", "closed", "close out") with neither, or both kinds together, asks "Done by <owner>, or no longer
-  needed?". Whole words, ignoring case; demo values in both fictional workspaces. `messages.called_off_notice` is the one line
-  drafted for someone who was already told about an action when it is called off.
+  needed?". Whole words, ignoring case; demo values in both fictional workspaces. `messages.called_off_notice` is the line
+  for each dropped action in the note drafted to someone who was already told about it ("Drop it and tell them", 6.33).
 - `language.messages.source_by_person`, `source_input`, `source_recorded` and `source_date_format`: how a history row's source is
   worded for readers (6.7): the one known person and the day, an input's title and day, or "recorded <day>"; `withheld_where`
   and `withheld_name` say why a message to someone else is not offered while it names the assistant; `undo_no_answer` is the

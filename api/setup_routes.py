@@ -45,7 +45,6 @@ from api.schemas import (
     AiTestResult,
     AiTierView,
     AiWorkKindView,
-    Applied,
     BackupFolderAdd,
     BusinessIn,
     BusinessState,
@@ -68,6 +67,7 @@ from api.schemas import (
     PackTiersView,
     PackTierView,
     PackTokenIn,
+    ProjectEndingDone,
     RestartAsked,
     SentFolderIn,
     SettingChangeView,
@@ -97,6 +97,8 @@ from engine import settings as config_screens
 from engine import sorting_rules as sorting
 from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource, WorkspaceFile
+from engine.drop_notes import dropped_actions, note_the_drops
+from engine.names import People
 from engine.sign_in_sources import accounts_of
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
@@ -470,17 +472,26 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return business_state()
 
     @r.post("/sides/{project}/remove")
-    def side_remove_after_setup(project: str, body: SideRemoveIn) -> Applied:
+    def side_remove_after_setup(project: str, body: SideRemoveIn) -> ProjectEndingDone:
         """Remove a side whenever the person asks, with what is filed under it moved to Personal or ended with it,
-        as one changeset with Undo. A removal that touches many records makes a backup first."""
+        as one changeset with Undo. A removal that touches many records makes a backup first. Ending it with the side
+        also drafts one note to each person told about a to-do it dropped, as an outward act that waits for the
+        person's yes; Undo takes the notes and the removal back together."""
         from engine import sides
 
         try:
             changeset = sides.remove_with_work(store, current(), project, body.where, ws=ws)
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+        drafted = note_the_drops(store, current(), changeset, dropped_actions(store, changeset))
         events.changed()
-        return Applied(changeset=changeset)
+        names = People(store, current())
+        return ProjectEndingDone(
+            changeset=changeset,
+            drafts=drafted.changesets,
+            acts=drafted.acts,
+            names=[names.name(person) for person in drafted.people],
+        )
 
     @r.post("/setup/sides/{project}/restore")
     def side_restore(project: str, body: SideRestoreIn) -> BusinessState:

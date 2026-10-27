@@ -4412,10 +4412,17 @@ engine, not the model, reads the exact words an ending quotes (`engine/endings.p
 - words that say nothing about an ending leave a done for the person's own action as it was, but a done that would
   credit someone else is held as the same one choice: crediting a person for work nobody did is the costly mistake
   (`tests/test_endings_need_delivery.py::test_a_done_that_would_credit_someone_else_with_no_word_of_delivery_asks_and_the_persons_own_does_not`).
-- **Already told:** calling off an action whose owner was told or chased drafts one line to them,
-  `language.messages.called_off_notice` ("No longer needed, thanks: <the action>"), as a question of kind `action-notice` in
-  To send for the person to copy and send; nothing goes out by itself, Undo takes the draft away with the drop, and nothing
-  is drafted to the person or to someone they only watch or report to.
+- **Already told** (owner, 2026-10-28; **built**): a drop of an action that reached people has one path, **Drop it and
+  tell them**. The person's drop (the held line, the row's Drop, "No longer needed", a project ending, removing a business)
+  drafts a note to each person told or chased, one note per person listing every dropped to-do they were told about, each
+  line `language.messages.called_off_notice` ("No longer needed, thanks: <the action>"). Each note is an outward act on
+  the account that can carry it, else Copy, that waits in Waiting to go out for the person's yes on its exact content
+  and goes only through the publisher (`engine/drop_notes.py`). The drafts are linked to the drop's change
+  (`followups`), so Undo of the drop takes back every note not yet approved and says which stayed. Nothing is drafted to
+  the person or to someone they only watch or report to, and no drop makes the older copyable line (a question of kind
+  `action-notice`, which old records keep). A drop of a told action from anywhere else is held for the person first
+  (`reached-confirm`), so it reaches these buttons (`tests/test_drop_and_draft_note.py`, `tests/test_held_ask.py`,
+  `tests/test_project_ending.py`, `tests/test_remove_side.py`).
 - **Moved into a meeting** (**built**): a call-off whose words hold one of `language.meeting_words` ("will cover", "in the
   planning sessions", "take it up") and name a meeting the workspace knows puts the action on that meeting's agenda,
   linked to it, in the same drop. The meeting is a calendar entry still ahead whose whole title the words hold (a title that

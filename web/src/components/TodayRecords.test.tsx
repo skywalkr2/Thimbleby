@@ -138,7 +138,7 @@ test("a drop of something that reached someone keeps who was told off the line: 
   expect(row).not.toHaveTextContent("were told");
 });
 
-test("a drop of something that reached someone also offers to draft the note, which waits for the yes, and Undo takes both back", async () => {
+test("a drop of something that reached someone is one answer, Drop it and tell them, which drafts the note that waits for the yes, and one Undo takes both back", async () => {
   const user = userEvent.setup();
   const { calls } = show([held({ ask: "drop", item: "Send the interior file", told: ["Robin Sample", "Casey Moor"], told_on: "2026-10-10" })], {
     "POST changesets/CS-1/ops/0/release-with-note": () => ({ changesets: ["CS-1", "CS-20", "CS-21"], acts: ["XACT-1", "XACT-2"] }),
@@ -147,22 +147,32 @@ test("a drop of something that reached someone also offers to draft the note, wh
     "POST changesets/CS-21/undo": () => ({ restored: [0], skipped: [] }),
   });
   const row = await rowOf("Drop 'Send the interior file'?");
-  expect(within(row).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
-  await user.click(within(row).getByRole("button", { name: /More actions for/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Drop it and draft the note" }));
+  // One drop button, no plain "Drop it" beside it and none in the menu; the other answer is to keep it open.
+  expect(within(row).queryByRole("button", { name: "Drop it" })).toBeNull();
+  expect(within(row).getByRole("button", { name: "Keep it" })).toBeInTheDocument();
+  const more = within(row).queryByRole("button", { name: /More actions for/ });
+  if (more) {
+    await user.click(more);
+    expect(screen.queryByRole("menuitem", { name: /Drop it/ })).toBeNull();
+    await user.keyboard("{Escape}");
+  }
+  await user.click(within(row).getByRole("button", { name: "Drop it and tell them" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/release-with-note")).toBe(true));
+  expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/release")).toBe(false);
   expect(await screen.findByText("Dropped “Send the interior file”. A note to Robin Sample, Casey Moor is waiting for your yes.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-20/undo", "POST changesets/CS-21/undo", "POST changesets/CS-1/undo"]));
+  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-1/undo"]));
 });
 
-test("a drop nobody was told about has no note to draft", async () => {
+test("a drop nobody was told about is just Drop it, with no note to tell anyone", async () => {
   const user = userEvent.setup();
   show([held({ ask: "drop", item: "Confirm the seating plan", told: [] })]);
   const row = await rowOf("Drop 'Confirm the seating plan'?");
+  expect(within(row).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: "Drop it and tell them" })).toBeNull();
   const more = within(row).queryByRole("button", { name: /More actions for/ });
   if (more) await user.click(more);
-  expect(screen.queryByRole("menuitem", { name: "Drop it and draft the note" })).toBeNull();
+  expect(screen.queryByRole("menuitem", { name: /tell them|draft the note/ })).toBeNull();
 });
 
 test.each([

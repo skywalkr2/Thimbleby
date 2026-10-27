@@ -20,8 +20,8 @@ function show() {
   return fakeApi({
     "GET setup/business": () => ({ business: true, name: SHOP, personal: "PRJ-personal", sides, chosen: "work" }),
     "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", SHOP), project("PRJ-day", DAY), project("PRJ-quotes", "Quotes", { parent: "PRJ-shop" })],
-    "POST sides/PRJ-shop/remove": () => ({ changeset: "CS-7" }),
-    "POST sides/PRJ-day/remove": () => ({ changeset: "CS-8" }),
+    "POST sides/PRJ-shop/remove": () => ({ changeset: "CS-7", drafts: [], acts: [], names: [] }),
+    "POST sides/PRJ-day/remove": () => ({ changeset: "CS-8", drafts: [], acts: [], names: [] }),
     "POST changesets/CS-7/undo": () => ({ restored: [0], skipped: [] }),
   });
 }
@@ -83,4 +83,20 @@ test("a refusal is said in words and nothing is announced as removed", async () 
   await user.click(within(ask).getByRole("button", { name: "Move them to Personal" }));
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.queryByText(/Removed Hale/)).toBeNull();
+});
+
+test("ending them with a side says a note waits for the yes, and one Undo takes the note and the removal back", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET setup/business": () => ({ business: true, name: SHOP, personal: "PRJ-personal", sides, chosen: "work" }),
+    "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", SHOP), project("PRJ-day", DAY)],
+    "POST sides/PRJ-day/remove": () => ({ changeset: "CS-8", drafts: ["CS-50"], acts: ["XACT-1"], names: ["Casey Moor"] }),
+    "POST changesets/CS-8/undo": () => ({ restored: [0], skipped: [] }),
+    "POST changesets/CS-50/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  renderApp(<BusinessSides />);
+  await user.click(within(await remove(user, DAY)).getByRole("button", { name: "End them with it" }));
+  expect(await screen.findByText(`Removed ${DAY}. Its projects and to-dos ended with it. A note to Casey Moor is waiting for your yes.`)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-8/undo"]));
 });

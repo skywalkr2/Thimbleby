@@ -33,11 +33,15 @@ export function useHeldAnswers(changeset: string, index: number, held: S["HeldAs
       () => ({ message: t("queue.held.kept", { what: held.item }), undo: () => api.undeclineOp(cs, index) }),
     );
   if (held.ask === "ending") {
+    const toldNames = held.told ?? [];
     const answer = (ending: "done" | "called_off") =>
       void act(
         () => api.endingAnswer(cs, index, ending),
-        () => ({
-          message: t(ending === "done" ? "queue.held.ending_done" : "queue.held.ending_off", { what: held.item, who: endingWho(held, t) }),
+        (done) => ({
+          message:
+            ending === "called_off" && done.acts.length > 0
+              ? t("queue.held.ending_off_note", { what: held.item, names: toldNames.join(", ") })
+              : t(ending === "done" ? "queue.held.ending_done" : "queue.held.ending_off", { what: held.item, who: endingWho(held, t) }),
           undo: () => api.undo(cs, [index]),
         }),
       );
@@ -45,29 +49,26 @@ export function useHeldAnswers(changeset: string, index: number, held: S["HeldAs
       title: heldTitle(held, t),
       primary: { label: words.primary, run: () => answer("done") },
       menu: [
-        { id: "called-off", label: t("queue.held.e.ending_off"), run: () => answer("called_off") },
+        { id: "called-off", label: t(toldNames.length > 0 ? "queue.held.e.ending_off_tell" : "queue.held.e.ending_off"), run: () => answer("called_off") },
         { id: "not-yet", label: words.other, run: decline },
       ],
     };
   }
-  // A drop of something that reached people can also draft the note to them, which waits for the person's yes.
+  // A drop of something that reached people is one answer, "Drop it and tell them": it drops the to-do and drafts a
+  // note to each person told, which waits for the person's yes. With nobody told it is just "Drop it".
   const told = held.ask === "drop" ? (held.told ?? []) : [];
-  const dropAndNote = () =>
+  const dropAndTell = () =>
     void act(
       () => api.releaseWithNote(cs, index),
       (done) => ({
         message: done.acts.length > 0 ? t("queue.held.done_note", { what: held.item, names: told.join(", ") }) : t("queue.held.done", { what: held.item }),
-        undo: async () => {
-          // The drop and each draft come back together, the drafts first.
-          for (const made of done.changesets.slice(1)) await api.undo(made);
-          await api.undo(cs, [index]);
-        },
+        undo: () => api.undo(cs, [index]),
       }),
     );
   return {
     title: heldTitle(held, t),
-    primary: { label: words.primary, run: release },
+    primary: { label: words.primary, run: told.length > 0 ? dropAndTell : release },
     other: { label: words.other, run: decline },
-    menu: told.length > 0 ? [{ id: "drop-note", label: t("queue.held.a.drop_note"), run: dropAndNote }] : [],
+    menu: [],
   };
 }

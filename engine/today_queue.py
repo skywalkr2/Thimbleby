@@ -411,6 +411,7 @@ def _everything(
                 outcome.get("op") or {},
                 reporter=outcome.get("reporter"),
                 choice=any(p.get("check") == endings.CHOICE_CHECK for p in outcome.get("problems") or []),
+                cfg=cfg,
             ),
             untrusted=cs.get("trust") == "untrusted",
             since=str(req.data.get("created_at") or ""),

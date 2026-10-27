@@ -479,8 +479,12 @@ export function SavedSide(props: {
       setAsking(false);
       await props.onChanged();
       push({
-        message: t(where === "personal" ? "settings.business.removed_move" : "settings.business.removed_end", { name: side.name, personal: t("sides.filter.personal") }),
+        message:
+          where === "end" && done.acts.length > 0
+            ? t("settings.business.removed_end_note", { name: side.name, names: done.names.join(", ") })
+            : t(where === "personal" ? "settings.business.removed_move" : "settings.business.removed_end", { name: side.name, personal: t("sides.filter.personal") }),
         undo: async () => {
+          // The one Undo also takes back the notes the ending drafted, while none has gone out.
           await api.undo(done.changeset);
           await props.onChanged();
         },

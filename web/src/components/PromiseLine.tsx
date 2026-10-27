@@ -30,7 +30,7 @@ export function usePromiseChoices(line: Line, onClosed?: () => void): PromiseCho
   const [dating, setDating] = useState(false);
   const [noting, setNoting] = useState(false);
   const action = line.kind === "promise" ? ((line.actions ?? [])[0] ?? "") : "";
-  const drop = useDropAction({ id: action }, onClosed);
+  const drop = useDropAction({ id: action, told_names: line.told_names }, onClosed);
   const correct = useCorrectPromise(action);
   const found = useQuery({ queryKey: ["promise", action], queryFn: () => api.promise(action), enabled: dating && !!action });
   if (line.kind !== "promise" || !action) return { primary: null, menu: [], form: null };

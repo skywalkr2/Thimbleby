@@ -340,7 +340,7 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
 `reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
 - [ ] [B-6b] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
   the other answer a visible button.
-  *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. *Built (audit A5):* "Drop it and draft the note" (`tests/test_drop_and_draft_note.py`, `web/src/components/TodayRecords.test.tsx`).
+  *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. *Built (audit A5, then one path on the owner's call 2026-10-28):* "Drop it and tell them" wherever a dropped to-do reached people, with the notes linked to the drop for Undo (`tests/test_drop_and_draft_note.py`, `web/src/components/TodayRecords.test.tsx`; change log 239).
   *Left:* a note box on "Keep it open" (design 7.6 says "Not built"); nothing else of this item.
 
 From the original designer's lessons of 2026-10-14:

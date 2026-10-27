@@ -154,7 +154,7 @@ test("the menu has No reply needed, Answered another way and Edit, and nothing e
 
 test("No reply needed drops it with the reason at once, and Undo brings it back", async () => {
   const user = userEvent.setup();
-  const calls = show([reply()], { "POST actions/ACT-1/drop": () => ({ changeset: "CS-2" }), "POST changesets/CS-2/undo": () => ({ restored: [0], skipped: [] }) });
+  const calls = show([reply()], { "POST actions/ACT-1/drop": () => ({ changeset: "CS-2", drafts: [], acts: [] }), "POST changesets/CS-2/undo": () => ({ restored: [0], skipped: [] }) });
   await menuOf(user, await rowOf());
   await user.click(screen.getByRole("menuitem", { name: "No reply needed" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/drop")?.body).toEqual({ reason: "No reply needed" }));

@@ -50,6 +50,7 @@ def _action(r: OpenAction) -> OpenActionView:
         untouched_days=r.untouched_days,
         owner_question=r.owner_question,
         to_send=r.to_send,
+        told_names=r.told_names,
         due_check=r.due_check,
         repeat=r.repeat,  # type: ignore[arg-type]
         effort_minutes=r.effort_minutes,

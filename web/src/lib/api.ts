@@ -89,7 +89,7 @@ export const api = {
   removeSide: (project: string) => call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/remove`),
   /** Removes a side whenever the person asks: what is filed under it moves to Personal or ends with it, as one change with Undo. */
   removeSideWithWork: (project: string, where: S["SideRemoveIn"]["where"]) =>
-    call<S["Applied"]>("POST", `sides/${id(project)}/remove`, { where } satisfies S["SideRemoveIn"]),
+    call<S["ProjectEndingDone"]>("POST", `sides/${id(project)}/remove`, { where } satisfies S["SideRemoveIn"]),
   /** Undo of removeSide: the side comes back with its projects, as `kind` at `position` among the sides. */
   restoreSide: (project: string, body: S["SideRestoreIn"]) =>
     call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/restore`, body),
@@ -323,7 +323,7 @@ export const api = {
   /** Keep this to-do and close the one it nearly repeats; `read_version` and `other_version` are the versions as read. */
   mergeActions: (keep: string, body: S["ActionMergeIn"]) => call<S["Applied"]>("POST", `actions/${id(keep)}/merge`, body),
   /** Drop an action that is no longer needed, with Undo. */
-  dropAction: (a: string, reason: string) => call<S["Applied"]>("POST", `actions/${id(a)}/drop`, { reason }),
+  dropAction: (a: string, reason: string) => call<S["DropDone"]>("POST", `actions/${id(a)}/drop`, { reason }),
   reviewReply: (a: string, body: S["ActionReplyIn"]) => call<S["Applied"]>("POST", `actions/${id(a)}/reply`, body),
   answeredAnotherWay: (a: string, body: S["AnsweredAnotherWayIn"]) => call<S["Applied"]>("POST", `replies/${id(a)}/answered`, body),
   /** Keep the drafted reply as the person copied it, so the message they send can be matched to it. */
@@ -352,11 +352,11 @@ export const api = {
   seriesPage: (series: string) => call<S["SeriesPageView"]>("GET", `series/${id(series)}/page`),
   recordPage: (kind: string, record: string) => call<S["RecordPageView"]>("GET", `record-pages/${id(record)}?kind=${id(kind)}`),
   /** The answer to "Done by <owner>, or no longer needed?": done credits the owners, called off credits nobody. */
-  endingAnswer: (cs: string, index: number, ending: "done" | "called_off") => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/ending`, { ending }),
+  endingAnswer: (cs: string, index: number, ending: "done" | "called_off") => call<S["DropDone"]>("POST", `changesets/${id(cs)}/ops/${index}/ending`, { ending }),
   /** A project ending that waits for the person: the open items it would drop, and what add-ons leave open. */
   projectEnding: (cs: string, index: number) => call<S["ProjectEndingView"]>("GET", `changesets/${id(cs)}/ops/${index}/project-ending`),
   /** End the project and drop the items not in `keep`, or (`end` false) keep the project and every item as they are. */
-  chooseProjectEnding: (cs: string, index: number, body: S["ProjectEndingChoice"]) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/project-ending`, body),
+  chooseProjectEnding: (cs: string, index: number, body: S["ProjectEndingChoice"]) => call<S["ProjectEndingDone"]>("POST", `changesets/${id(cs)}/ops/${index}/project-ending`, body),
   declineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/decline`),
   undeclineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/undecline`),
   addPerson: (body: S["PersonIn"]) => call<S["Created"]>("POST", "people", body),

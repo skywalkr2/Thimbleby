@@ -94,7 +94,7 @@ def test_one_undo_brings_the_ending_and_every_drop_back(env):
     assert store.read().get("project", PROJECT["id"]).data["status"] == PROJECT["status"]
 
 
-def test_an_action_told_to_someone_gets_a_called_off_note_drafted_not_sent(env):
+def test_an_action_told_to_someone_leaves_no_copyable_line_when_its_project_ends(env):
     cfg, store = env
     actions, _ = open_of(store)
     other = next(p["id"] for p in fixture_records(DEMO_B, "person") if p["id"] != PROJECT.get("owner"))
@@ -103,8 +103,8 @@ def test_an_action_told_to_someone_gets_a_called_off_note_drafted_not_sent(env):
         tx.update("action", actions[0], {"told": {other: "2026-10-01"}}, _TEST, read_version=cur.version)
     before = {q.id for q in store.read().list("question")}
     apply(store, cfg, [set_status(ending(cfg, store))], actor="pm")
-    new = [q for q in store.read().list("question") if q.id not in before]
-    assert any(q.data["kind"] == "action-notice" and q.data["to"] == other and q.data["status"] == "open" for q in new)
+    assert store.read().get("action", actions[0]).data["status"] == "dropped"
+    assert {q.id for q in store.read().list("question")} == before
 
 
 def test_a_paused_project_keeps_its_items_open(env):

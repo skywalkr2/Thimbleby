@@ -8316,6 +8316,36 @@
         "title": "DocumentView",
         "type": "object"
       },
+      "DropDone": {
+        "description": "A to-do dropped (POST /api/actions/{id}/drop) or answered as no longer needed: `changeset` is the drop. When it\nhad reached people, `drafts` are the changes that drafted a note to each of them and `acts` the notes, each\nwaiting in Waiting to go out for the person's yes on its exact content; Undo takes the drafts and the drop back\ntogether. Both are empty when nobody had been told.",
+        "properties": {
+          "acts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Acts",
+            "type": "array"
+          },
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "drafts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Drafts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changeset",
+          "drafts",
+          "acts"
+        ],
+        "title": "DropDone",
+        "type": "object"
+      },
       "DropNoteDone": {
         "description": "POST /api/changesets/{id}/ops/{index}/release-with-note: the held drop was applied and a note was drafted for\neach person who had been told. `changesets` are every change made, which Undo takes back together; `acts` are\nthe drafts, each waiting for the person's yes on its exact content.",
         "properties": {
@@ -10197,6 +10227,14 @@
               }
             ],
             "title": "Told Days"
+          },
+          "told_names": {
+            "description": "The people it reached (told or chased), as shown: who dropping it tells. Empty when nobody.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Told Names",
+            "type": "array"
           },
           "version": {
             "anyOf": [
@@ -15580,6 +15618,14 @@
             "title": "To Send",
             "type": "boolean"
           },
+          "told_names": {
+            "description": "The people it reached (told or chased), as shown: who dropping it tells. Empty when nobody.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Told Names",
+            "type": "array"
+          },
           "untouched_days": {
             "anyOf": [
               {
@@ -18475,6 +18521,44 @@
         "title": "ProjectEndingChoice",
         "type": "object"
       },
+      "ProjectEndingDone": {
+        "description": "POST /api/changesets/{id}/ops/{index}/project-ending, and POST /api/sides/{project}/remove: `changeset` is the\nending (or the removal that ended the side's projects). When it was confirmed and\ndropped items that reached people, `drafts` are the changes that drafted one note to each person told (`names`),\n`acts` the notes, each waiting in Waiting to go out for the person's yes; Undo takes the drafts and the ending back\ntogether. All are empty when the project was kept or nobody had been told.",
+        "properties": {
+          "acts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Acts",
+            "type": "array"
+          },
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "drafts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Drafts",
+            "type": "array"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changeset",
+          "drafts",
+          "acts",
+          "names"
+        ],
+        "title": "ProjectEndingDone",
+        "type": "object"
+      },
       "ProjectEndingItem": {
         "description": "One item a waiting project ending would drop: the held op's `index` and the item's own words. `other` is a\nchange an add-on made for the ending (its own record dropped, say), listed beside the core's items and kept the\nsame way.",
         "properties": {
@@ -18538,6 +18622,14 @@
           "project_name": {
             "title": "Project Name",
             "type": "string"
+          },
+          "told_names": {
+            "description": "The people told about any of the items, as shown: who gets one note, waiting for the person's yes, about the items they were told about that are dropped. Empty when nobody.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Told Names",
+            "type": "array"
           }
         },
         "required": [
@@ -22571,6 +22663,14 @@
               }
             ],
             "description": "The input the line is about."
+          },
+          "told_names": {
+            "description": "For a line about one action: the people it reached (told or chased), as shown, who dropping it tells. Empty when nobody.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Told Names",
+            "type": "array"
           },
           "travel_minutes": {
             "anyOf": [
@@ -30571,7 +30671,7 @@
     },
     "/api/actions/{action_id}/drop": {
       "post": {
-        "description": "Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves\nevery list. Records a dropped correction naming the change and run that made it, when there was one.",
+        "description": "Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves\nevery list. Records a dropped correction naming the change and run that made it, when there was one. When it\nhad reached people, a note to each is drafted as an outward act that waits for the person's yes; Undo takes\nthe notes and the drop back together.",
         "operationId": "drop_action_api_actions__action_id__drop_post",
         "parameters": [
           {
@@ -30599,7 +30699,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Applied"
+                  "$ref": "#/components/schemas/DropDone"
                 }
               }
             },
@@ -33675,7 +33775,7 @@
     },
     "/api/changesets/{cs_id}/ops/{index}/ending": {
       "post": {
-        "description": "Answer \"Done by <owner>, or no longer needed?\" for an ending whose words only said it was closed: done\ncredits the owners, no longer needed credits nobody. Either applies at once, with Undo.",
+        "description": "Answer \"Done by <owner>, or no longer needed?\" for an ending whose words only said it was closed: done\ncredits the owners, no longer needed credits nobody. Either applies at once, with Undo. No longer needed for\nan action that reached people also drafts a note to each, as an outward act that waits for the person's yes;\nUndo takes the notes and the answer back together.",
         "operationId": "answer_ending_api_changesets__cs_id__ops__index__ending_post",
         "parameters": [
           {
@@ -33712,7 +33812,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/DropDone"
                 }
               }
             },
@@ -33948,7 +34048,7 @@
         "summary": "Project Ending"
       },
       "post": {
-        "description": "End the project and drop what is open on it except the items the person keeps (one Undo of the change takes\nthe ending back; kept items were never dropped), or keep the project and every item as they are.",
+        "description": "End the project and drop what is open on it except the items the person keeps (one Undo of the change takes\nthe ending back; kept items were never dropped), or keep the project and every item as they are. Ending it\nalso drafts one note to each person told about a dropped to-do, listing each of them, as an outward act that\nwaits for the person's yes; Undo takes the notes and the ending back together.",
         "operationId": "choose_project_ending_api_changesets__cs_id__ops__index__project_ending_post",
         "parameters": [
           {
@@ -33985,7 +34085,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/ProjectEndingDone"
                 }
               }
             },
@@ -34065,7 +34165,7 @@
     },
     "/api/changesets/{cs_id}/ops/{index}/release-with-note": {
       "post": {
-        "description": "\"Drop it and draft the note\": apply a held drop of an action that reached someone, and draft a note to each\nperson who was told, as an outward act (a message on the account that can carry it, else Copy) that waits for\nthe person's yes on its exact content. The copyable line a plain drop leaves is not made. Nothing is sent.",
+        "description": "\"Drop it and tell them\": apply a held drop of an action that reached someone, and draft a note to each\nperson who was told, as an outward act (a message on the account that can carry it, else Copy) that waits for\nthe person's yes on its exact content. Nothing is sent.",
         "operationId": "release_with_note_api_changesets__cs_id__ops__index__release_with_note_post",
         "parameters": [
           {
@@ -42388,7 +42488,7 @@
     },
     "/api/sides/{project}/remove": {
       "post": {
-        "description": "Remove a side whenever the person asks, with what is filed under it moved to Personal or ended with it,\nas one changeset with Undo. A removal that touches many records makes a backup first.",
+        "description": "Remove a side whenever the person asks, with what is filed under it moved to Personal or ended with it,\nas one changeset with Undo. A removal that touches many records makes a backup first. Ending it with the side\nalso drafts one note to each person told about a to-do it dropped, as an outward act that waits for the\nperson's yes; Undo takes the notes and the removal back together.",
         "operationId": "side_remove_after_setup_api_sides__project__remove_post",
         "parameters": [
           {
@@ -42416,7 +42516,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Applied"
+                  "$ref": "#/components/schemas/ProjectEndingDone"
                 }
               }
             },

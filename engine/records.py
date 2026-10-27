@@ -1531,6 +1531,11 @@ class Changeset(Record):
         description="Whether the input it was made from was trusted; records its ops create carry the same mark."
     )
     reviewed: bool = Field(False, description="True once the person has looked at it and accepted it.")
+    followups: list[str] = Field(
+        default_factory=list,
+        description="The ids of the changes made because of this one (the notes drafted to the people told about "
+        "to-dos it dropped). Undo of the drops also takes back each of them whose act has not gone out.",
+    )
     run: str | None = Field(None, description="The id of the AI run that produced it, if any.")
     action: dict[str, Any] | None = Field(
         None, description="The person action this came from: its name, target and the choices the person made."

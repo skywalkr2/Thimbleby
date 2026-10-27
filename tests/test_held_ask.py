@@ -147,3 +147,27 @@ def test_a_held_move_says_the_date_it_has_now(env):
     asked = held_ask.describe(store.read(), people, op)
     assert asked["ask"] == "move" and asked["value"] == "2026-12-01"
     assert asked["from_value"] == (str(mine["due"]) if mine.get("due") else None)
+
+
+def test_a_held_asks_told_names_are_exactly_who_a_note_goes_to(env):
+    """The person themself and anyone they only watch are left out of `told`, for a drop and for the ending question."""
+    ws, cfg, store = env
+    action = OPEN[0]["id"]
+    me = People(store, cfg).pm
+    other = other_of(cfg)
+    watched = next(p.id for p in store.read().list("person") if p.id not in (me, other))
+    with store.transaction() as tx:
+        found = tx.get("person", watched)
+        tx.update("person", watched, {"stance": "watch"}, _TEST, read_version=found.version)
+        found = tx.get("action", action)
+        told = {me: NOW.date().isoformat(), other: NOW.date().isoformat(), watched: NOW.date().isoformat()}
+        tx.update("action", action, {"told": told}, _TEST, read_version=found.version)
+    view = store.read()
+    people = People(store, cfg)
+    names = [people.name(other)]
+    dropped = held_ask.describe(view, people, drop_op(action), cfg=cfg)
+    assert dropped["told"] == names
+    asked = held_ask.describe(view, people, {"op": "action.close", "id": action}, choice=True, cfg=cfg)
+    assert asked["ask"] == "ending" and asked["told"] == names and asked["told_on"] == NOW.date().isoformat()
+    # Without the config there is no stance to read, so nothing is left out.
+    assert len(held_ask.describe(view, people, drop_op(action))["told"]) == 3

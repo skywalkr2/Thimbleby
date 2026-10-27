@@ -17,6 +17,7 @@ from api.schemas import (
     Applied,
     ChangeIn,
     ChangeRequested,
+    DropDone,
     DroppedQuestionView,
     FoldIn,
     ListMergeIn,
@@ -34,6 +35,7 @@ from api.schemas import (
 from engine.applier import apply_as_person, fold_unowned
 from engine.config import Config
 from engine.corrections import CHANGEABLE, missed_one, request_change
+from engine.drop_notes import note_the_drops
 from engine.intake import IntakeError
 from engine.names import People
 from engine.next_steps import (
@@ -88,11 +90,17 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         return person_op({"op": "question.drop", "id": qid, "reason": body.reason}, "Dropped a question")
 
     @r.post("/actions/{action_id}/drop")
-    def drop_action(action_id: str, body: ActionDropIn) -> Applied:
+    def drop_action(action_id: str, body: ActionDropIn) -> DropDone:
         """Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves
-        every list. Records a dropped correction naming the change and run that made it, when there was one."""
+        every list. Records a dropped correction naming the change and run that made it, when there was one. When it
+        had reached people, a note to each is drafted as an outward act that waits for the person's yes; Undo takes
+        the notes and the drop back together."""
         need("action", action_id)
-        return person_op({"op": "action.drop", "id": action_id, "reason": body.reason}, "Dropped a to-do")
+        done = person_op({"op": "action.drop", "id": action_id, "reason": body.reason}, "Dropped a to-do")
+        drafted = note_the_drops(store, cfg, done.changeset, [action_id])
+        if drafted.changesets:
+            events.changed()
+        return DropDone(changeset=done.changeset, drafts=drafted.changesets, acts=drafted.acts)
 
     @r.post("/actions/{action_id}/reply")
     def review_reply(action_id: str, body: ActionReplyIn) -> Applied:

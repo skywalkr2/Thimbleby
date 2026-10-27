@@ -193,9 +193,6 @@ class Context:
     # (`endings.ENDING_HOOK` or `endings.DROP_HOOK`); and what each hook returned, so it is asked once for a change.
     hook_ops: dict[str, str] = field(default_factory=dict)
     hook_calls: dict[tuple[str, str], list[Any]] = field(default_factory=dict)
-    # Whether dropping an action drafts a one-line copyable notice for each person told about it. Off when the person
-    # chose to have a note drafted as an outward act instead.
-    notices: bool = True
 
 
 def _allowed(op: OpModel, ctx: Context) -> bool:
@@ -3753,9 +3750,6 @@ def _apply_op(
             moved = AgendaAddOp(event=op.event, series=op.series, action=op.id)
             by = ctx.people.pm if _persons_own(tx, ctx) else None
             made(*agenda_module.add(tx, moved, w, by=by, at=ctx.store.clock()))
-        for draft in endings.called_off_notices(tx, ctx, cur) if ctx.notices else []:
-            # Whoever was already told gets one line, drafted for the person to send; nothing goes out by itself.
-            made("question", tx.create("question", draft, w).id)
         if ctx.actor == "pm" and ctx.corrections:
             # Dropping a reply the assistant said was owed says none was: its own kind of correction.
             _record_dropped(
@@ -4205,11 +4199,9 @@ def release(
     now: datetime | None = None,
     ws: Workspace | None = None,
     instead: OpModel | None = None,
-    notices: bool = True,
 ) -> None:
     """Apply a held op, optionally saying who an unresolved name is. With `instead`, that op is applied in its place and
-    written into the changeset as the op that was applied. With `notices` off, a drop drafts no copyable line for the
-    people told (the person asked for a note as an outward act). With `ws`, the names in it are read in the
+    written into the changeset as the op that was applied. With `ws`, the names in it are read in the
     context of the input's saved text, as they were when the changeset was made. Saying who a name is also applies
     every other op of the changeset waiting on the same question, and records one signal."""
     now = now or datetime.now(UTC)
@@ -4224,9 +4216,7 @@ def release(
         others = [o["index"] for o in cs.data["ops"] if o["index"] != index and o["status"] == "held"]
         others = [i for i in others if cs.data["ops"][i].get("question") == qid]
     routed = {"question": qid, "person": person, "name": name} if person is not None and name is not None else None
-    _release_one(
-        store, cfg, changeset_id, index, person=person, now=now, ws=ws, routed=routed, instead=instead, notices=notices
-    )
+    _release_one(store, cfg, changeset_id, index, person=person, now=now, ws=ws, routed=routed, instead=instead)
     for other in others:
         _release_one(store, cfg, changeset_id, other, person=person, now=now, ws=ws)
 
@@ -4242,7 +4232,6 @@ def _release_one(
     ws: Workspace | None,
     routed: dict[str, Any] | None = None,
     instead: OpModel | None = None,
-    notices: bool = True,
 ) -> None:
     cs = store.read().get("changeset", changeset_id)
     if cs is None:
@@ -4270,9 +4259,7 @@ def _release_one(
         store, cfg, cs.data["request"], text, learns=request_learns(store, req.data) if req is not None else True
     )
     inputs = Inputs(cs.data["request"], req.data.get("source") if req else None, "", "", cs.data["trust"])
-    ctx = Context(
-        store, cfg, people, tuple(), inputs, confirmed_by_pm=True, reporter=outcome.get("reporter"), notices=notices
-    )
+    ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True, reporter=outcome.get("reporter"))
     refusals = store.plugins.validators(op)
     if refusals:
         raise StoreError("; ".join(refusals))
@@ -4620,7 +4607,25 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
         )
     if report.restored:
         store.plugins.publish("changeset.undone", {"id": changeset_id, "ops": report.restored}, follows=changeset_id)
+        _undo_followups(store, cs.data.get("followups") or [], outcomes, report)
     return report
+
+
+def _undo_followups(store: Store, followups: list[str], outcomes: list[dict[str, Any]], report: UndoReport) -> None:
+    """When the drops of a change no longer stand, the notes drafted because of them go too: each follow-up change is
+    undone, except one whose act has moved on (approved or sent), which stays and is reported as skipped."""
+    if not followups or any(o["status"] == "applied" and o["op"].get("op") == "action.drop" for o in outcomes):
+        return
+    if not any(
+        o["status"] == "undone" and o["op"].get("op") == "action.drop" and o["index"] in report.restored
+        for o in outcomes
+    ):
+        return
+    for followup in followups:
+        if store.read().get("changeset", followup) is None:
+            continue
+        for skipped in undo(store, followup).skipped:
+            report.skipped.append({**skipped, "changeset": followup})
 
 
 #: The person's answer to a routing question writes its choice onto the op's own record under this op name.

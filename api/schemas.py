@@ -78,6 +78,24 @@ class ProjectEndingView(BaseModel):
     index: int = Field(description="The held op that ends the project.")
     items: list[ProjectEndingItem]
     left_open: list[LeftOpenItem]
+    told_names: list[str] = Field(
+        default_factory=list,
+        description="The people told about any of the items, as shown: who gets one note, waiting for the person's "
+        "yes, about the items they were told about that are dropped. Empty when nobody.",
+    )
+
+
+class ProjectEndingDone(BaseModel):
+    """POST /api/changesets/{id}/ops/{index}/project-ending, and POST /api/sides/{project}/remove: `changeset` is the
+    ending (or the removal that ended the side's projects). When it was confirmed and
+    dropped items that reached people, `drafts` are the changes that drafted one note to each person told (`names`),
+    `acts` the notes, each waiting in Waiting to go out for the person's yes; Undo takes the drafts and the ending back
+    together. All are empty when the project was kept or nobody had been told."""
+
+    changeset: str
+    drafts: list[str]
+    acts: list[str]
+    names: list[str]
 
 
 class ProjectEndingChoice(BaseModel):
@@ -1012,6 +1030,10 @@ class FollowupAction(BaseModel):
     )
     told: str | None
     told_days: int | None
+    told_names: list[str] = Field(
+        default_factory=list,
+        description="The people it reached (told or chased), as shown: who dropping it tells. Empty when nobody.",
+    )
     ready_since: str | None = Field(
         None,
         description="For an action not yet told to this owner: the day it became ready to send them (a date): when "
@@ -2146,6 +2168,17 @@ class Applied(BaseModel):
     changeset: str
 
 
+class DropDone(BaseModel):
+    """A to-do dropped (POST /api/actions/{id}/drop) or answered as no longer needed: `changeset` is the drop. When it
+    had reached people, `drafts` are the changes that drafted a note to each of them and `acts` the notes, each
+    waiting in Waiting to go out for the person's yes on its exact content; Undo takes the drafts and the drop back
+    together. Both are empty when nobody had been told."""
+
+    changeset: str
+    drafts: list[str]
+    acts: list[str]
+
+
 class EntryTodoMade(BaseModel):
     """The to-do made from a calendar entry: its `action` and the `changeset` Undo takes."""
 
@@ -2985,6 +3018,11 @@ class QueueLineView(BaseModel):
     title: ItemTitle | None = Field(None, description="The input the line is about.")
     person: str | None = Field(None, description="Whom the line is about (send, nudge).")
     person_name: str | None = None
+    told_names: list[str] = Field(
+        default_factory=list,
+        description="For a line about one action: the people it reached (told or chased), as shown, who dropping it "
+        "tells. Empty when nobody.",
+    )
     project: str | None = None
     project_name: str | None = None
     parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
@@ -6437,6 +6475,10 @@ class OpenActionView(BaseModel):
     untouched_days: int | None = Field(None, description="For a stale one, the days nothing has changed on it.")
     to_send: bool = Field(
         False, description="An owner other than the person hasn't been told about it yet (design 6.10)."
+    )
+    told_names: list[str] = Field(
+        default_factory=list,
+        description="The people it reached (told or chased), as shown: who dropping it tells. Empty when nobody.",
     )
     due_check: bool | None = Field(
         None,
