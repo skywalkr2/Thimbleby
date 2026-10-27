@@ -490,6 +490,10 @@ test.describe("screen use and the shell", () => {
       expect(await narrowest()).toBeGreaterThanOrEqual(24);
       const spacing = (value: string) =>
         header.evaluate((h, v) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = v; }), value);
+      // A wider font leaves the row tight: the status chip gives up its age before anything is pushed past the window's edge.
+      await spacing("0.1em");
+      const tight = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
+      expect(tight.x + tight.width).toBeLessThanOrEqual(width);
       await spacing("0.25em");
       expect(await narrowest()).toBeGreaterThanOrEqual(24);
       // The assistant's line keeps its dot (or its icon when it needs a look), which says how it is.

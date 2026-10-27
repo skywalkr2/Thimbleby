@@ -735,7 +735,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(waiting.getByRole("button", { name: "Mark their work done" }).first()).toBeVisible();
     await checkAccessibility(page);
     // Undo puts it all back to send.
-    await page.getByRole("button", { name: "To send" }).click();
+    await page.getByRole("button", { name: "To send", exact: true }).click();
     await page.getByRole("button", { name: "Undo" }).last().click();
     await expect(card.getByRole("button", { name: "Copy message" }).first()).toBeVisible();
     expect(toSend((await getJson<Section[]>(page, "api/followups")).find((x) => x.person === target.person)!)).toEqual({ questions, actions });

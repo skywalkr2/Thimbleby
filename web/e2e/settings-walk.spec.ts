@@ -31,7 +31,8 @@ test("every Settings page keeps the side bar, and the person can go back to any 
   // The pages of basic settings come first, in plain words; Quality is in the person's menu, not here.
   expect(names.slice(0, 5)).toEqual(["You", "AI and spending", "Notices", "Backups", "Appearance"]);
   expect(names).not.toContain("Quality");
-  expect(names).not.toContain("Lists");
+  // This workspace has no side and has lists to show, so the Lists page is listed, after the pages of basic settings.
+  expect(names).toContain("Lists");
 
   for (const size of WIDTHS) {
     await page.setViewportSize(size);

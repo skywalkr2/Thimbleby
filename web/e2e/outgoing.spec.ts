@@ -34,7 +34,7 @@ test.describe("To send", () => {
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Waiting to go out/ })).toHaveCount(0);
     await page.goto("?token=e2e-token#work/outgoing");
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "To send", exact: true })).toHaveAttribute("aria-pressed", "true");
     expect(new URL(page.url()).hash).toBe("#work/followups");
 
     // One line for the message, with its state in words, and its detail beside it with the exact content and the target.

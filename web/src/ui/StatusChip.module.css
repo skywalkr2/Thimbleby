@@ -2,7 +2,7 @@
    show whole, and the chip never draws past its own box. */
 .chip {
   display: inline-flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 0 var(--space-2);
-  flex: 0 1 auto; min-width: 0; overflow: hidden;
+  flex: 0 1 auto; min-width: min-content; overflow: hidden;
   height: var(--btn-h-sm); padding: 0 var(--space-3);
   border: 0; border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text-muted);
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--btn-h-sm); font-weight: var(--weight-regular);

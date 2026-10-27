@@ -25,10 +25,10 @@
 
 /* A row's action is tonal by day and filled by night (tokens.css). The selected line's action is the one filled button of
    its list by day; the page's own main action (Hand something in) is not in a row. */
-.actions :global([data-variant="primary"]:not(:disabled)) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
-.actions :global([data-variant="primary"]:not(:disabled):hover) { background: var(--row-action-hover); border-color: var(--row-action-border); }
-.selected .actions :global([data-variant="primary"]:not(:disabled)) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
-.selected .actions :global([data-variant="primary"]:not(:disabled):hover) { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
+.actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
+.actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-hover); border-color: var(--row-action-border); }
+.selected .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
+.selected .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
 
 /* Phone: the pill sits above the title, and the actions stay at the right edge. */
 :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
