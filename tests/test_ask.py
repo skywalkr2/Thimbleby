@@ -262,7 +262,8 @@ def _screen_names():
     root = Path(__file__).resolve().parents[1] / "web" / "src"
     words = json.loads((root / "wording" / "en.json").read_text(encoding="utf-8"))
     keys = re.findall(r't\("(nav\.[a-z]+)"\)', (root / "shell" / "nav.ts").read_text(encoding="utf-8"))
-    names = [words[k] for k in keys if k != "nav.home"] + [words["nav.home"], words["quality.title"]]
+    # The quality screen's heading carries the assistant's name, so the guide names it by its plain word.
+    names = [words[k] for k in keys if k != "nav.home"] + [words["nav.home"], "Quality"]
     return sorted(set(names))
 
 

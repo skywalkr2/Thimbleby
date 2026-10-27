@@ -70,7 +70,8 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
     hash: "settings/ai",
     ready: async (page) => {
       await section(page, "AI accounts");
-      // Under the accounts: which model does what, with its lists and the routing rules.
+      // Under the accounts, behind a closed disclosure: which model does what, with its lists and the routing rules.
+      await page.getByText("Choose which account does each kind of work", { exact: true }).click();
       await expect(page.getByRole("heading", { level: 3, name: "Which model does what" })).toBeVisible(LOADED);
       await expect(page.getByRole("group", { name: "Rule 1" })).toBeVisible(LOADED);
     },

@@ -36,7 +36,7 @@ test("a kind of task the sheet doesn't name reads as the assistant's work, with 
 });
 
 test("work with no known kind or subject still says whose work it is", () => {
-  expect(titleWords({ ...base, kind: "task" }, t, has)).toBe("Work Helper started");
+  expect(titleWords({ ...base, kind: "task" }, t, has)).toBe("Something Helper started");
   expect(titleWords({ ...base, kind: "task", task: "notes" }, t, has)).toBe("Filing notes");
 });
 

@@ -909,6 +909,8 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width: 1024, height: 900 });
       await signIn(page, "settings/ai");
+      // Which model does what sits behind a closed disclosure on the AI page.
+      await page.getByText("Choose which account does each kind of work", { exact: true }).click();
       const part = page.getByRole("region", { name: "Which model does what" });
       await expect(part).toBeVisible();
       await expect(part.getByRole("group", { name: "Each kind of work" }).getByRole("combobox").first()).toBeVisible();
