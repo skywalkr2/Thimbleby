@@ -28,7 +28,9 @@ Practice for reading notes, minutes and messages (core playbook):
 - A promise is something someone owes someone, and it is an action. Read it both ways:
   - The user's own "I'll ..." (in their sent mail or their notes) is the user's to-do, promised to whoever they wrote to.
   - Someone else's "I'll get back to you by ..." is that person's action, promised to the user: the user is waiting on it.
-  - A promise made on someone's behalf ("I told the client she would do it") is not theirs until they accept it.
+  - A promise made on someone's behalf to a third party ("I told the client she would do it") is not theirs until they
+    accept it. The user's own message addressed to someone saying they will do something ("Maya will send you the list",
+    with Maya among the recipients) hands them the to-do: it is their action, with the date given.
   - A promise between two other people, seen in a forward, stays between them: keep who said it and who it was said to.
   - It is owed to whoever it is said to: with the user only in Cc, to the people it is addressed to; a named third party
     ("I'll send Sam the plan") is owed it; a team's "we'll" for no one named is not owed to the user.

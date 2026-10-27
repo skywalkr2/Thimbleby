@@ -138,6 +138,15 @@ def test_a_promise_is_owed_to_whoever_it_is_said_to(monkeypatch, case_id):
     assert run_edited(monkeypatch, DEMO_B, case_id).passed
 
 
+def test_the_users_own_message_hands_a_recipient_their_to_do_while_a_promise_to_a_third_party_waits_for_them():
+    """A promise made on someone's behalf to a third party is not theirs until they accept it; the user's own message
+    addressed to someone saying they will do something is that person's action (golden case first-name-in-thread,
+    learning pair promise-pair-06-volunteered)."""
+    playbook = resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8")
+    assert "on someone's behalf to a third party" in playbook and "is not theirs until they" in playbook
+    assert "hands them the to-do: it is their action" in playbook
+
+
 # ---- a moved promise from a quoted thread waits for the person's Keep --------------------------------------------
 
 
