@@ -28,10 +28,27 @@ import {
 import { useMoney, useSmallMoney } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { PackTiers } from "./PackTiers";
 import { RowMenu } from "./RowMenu";
 import styles from "./AiRouting.module.css";
 
 type Routing = S["AiRoutingView"];
+
+/** Which model does what and what each add-on's work uses, behind one closed disclosure on the AI page: a beginner picks an
+ * account and is done; the choice of which account does each kind of work is there for whoever wants it. */
+export function AiChoices() {
+  const { t } = useWords();
+  const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
+  // With no account there is nothing to choose between.
+  if (!accounts.data?.length) return null;
+  return (
+    <details className="more-options ai-choices">
+      <summary>{t("ai_routing.fold")}</summary>
+      <AiRouting />
+      <PackTiers level={3} />
+    </details>
+  );
+}
 
 export function AiRouting() {
   const { t } = useWords();

@@ -343,7 +343,7 @@ test.describe.serial("acceptance scenario", () => {
     // The sections are down the side; the first has the cursor in its first field, and nothing waits behind a Save button.
     const sections = page.getByRole("navigation", { name: "Settings sections" });
     await expect(sections.getByRole("link", { name: "You", exact: true })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("textbox", { name: "This workspace's name" })).toBeFocused();
+    await expect(page.getByRole("textbox", { name: "Your name" })).toBeFocused();
     // Quality is no longer in the list: it is "How the assistant is doing" in the person's menu.
     await expect(sections.getByRole("link", { name: "Quality" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
@@ -356,6 +356,9 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("searchbox", { name: "Search settings" }).fill("backup");
     await expect(page.getByRole("checkbox", { name: "Back up automatically" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "This workspace's name" })).toHaveCount(0);
+    // The setup guide link is on You only.
+    await expect(page.getByRole("button", { name: "Open the setup guide" })).toHaveCount(0);
+    await sections.getByRole("link", { name: "You", exact: true }).click();
     await page.getByRole("button", { name: "Open the setup guide" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await pressStart(page);

@@ -35,6 +35,7 @@ import {
   type Item,
 } from "../lib/settings";
 import {
+  entriesOf,
   isListed,
   navSections,
   sectionItems,
@@ -50,8 +51,8 @@ import { useSides } from "../lib/sides";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
-import { PackTiers } from "./PackTiers";
-import { AiRouting } from "./AiRouting";
+import { AiChoices } from "./AiRouting";
+import { MergedRow } from "./MergedRow";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
@@ -65,6 +66,7 @@ import { ReminderWhere } from "./ReminderWhere";
 import { RefreshedLines } from "./RefreshedLines";
 import { SettingRow } from "./SettingRow";
 import { SyncPanel } from "./SyncPanel";
+import { YourName } from "./YourName";
 import { ValueLists } from "./ValueLists";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
@@ -182,6 +184,8 @@ export function Settings(props: {
     queryKey: ["ai-accounts"],
     queryFn: api.aiAccounts,
   });
+  // The person's own name, on the You page: its row is there once this has answered, so the cursor waits for it.
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   // The add-ons that need keys: each gets password boxes in its own section.
   const keyed = useQuery({
     queryKey: ["addon-secrets"],
@@ -262,7 +266,9 @@ export function Settings(props: {
         ? !lists.isPending
         : section === "files"
           ? !forms.isPending
-          : true);
+          : section === "you"
+            ? !me.isPending
+            : true);
   useEffect(() => {
     if (!settled) return;
     const root = content.current;
@@ -420,6 +426,15 @@ export function Settings(props: {
     });
   };
 
+  /** Puts several settings of one row back to their defaults in one save, so one toast reads it back with its Undo. */
+  const resetMany = (items: Item[]) => {
+    for (const item of items) drop(item.key);
+    enqueue(async () => {
+      await save(items[0].key, { reset: items.map((i) => i.key) });
+      document.getElementById(`setting-${items[0].key}`)?.focus();
+    });
+  };
+
   // With one side, the words that mean it are named for it, by the name of its project.
   const sideLabel = (item: Item): string | undefined =>
     item.key === "workspace.project.side_words.business" && sides.length === 1
@@ -447,6 +462,25 @@ export function Settings(props: {
     );
   };
 
+  /** A list of settings as rows: a merged row (the working hours, the brief's times) stands for all of its settings. */
+  const rows = (items: Item[]) =>
+    entriesOf(items).map((entry) =>
+      entry.kind === "item" ? (
+        row(entry.item)
+      ) : (
+        <MergedRow
+          key={entry.id}
+          id={entry.id}
+          items={entry.items}
+          draftOf={draftOf}
+          onChange={edit}
+          commit={commit}
+          onReset={resetMany}
+          problems={problems}
+        />
+      ),
+    );
+
   /** The settings of one group, under its heading when there is a heading to show. */
   const group = (name: string, items: Item[], heading: boolean) => {
     const titleId = `settings-group-${name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
@@ -458,18 +492,19 @@ export function Settings(props: {
         aria-labelledby={heading ? titleId : undefined}
       >
         {heading && <h3 id={titleId}>{groupLabel(name, t, has)}</h3>}
-        {items.map(row)}
+        {rows(items)}
       </div>
     );
   };
 
   /** A page of settings: the rows the app places on it, with a heading for each group only where the page is the AI page
    * or an add-on's own. */
-  const form = (id: SettingsSection) => {
+  const form = (id: SettingsSection, lead?: ReactNode) => {
     const byTopic = topics(sectionItems(everything, id));
     const headings = id === "ai" || (id.startsWith("addon/") && byTopic.length > 1);
     return (
       <div className="settings-groups">
+        {lead}
         {byTopic.map((topic) => group(topic.group, topic.items, headings))}
       </div>
     );
@@ -550,7 +585,7 @@ export function Settings(props: {
           aria-label={label(s.id)}
         >
           <h3>{label(s.id)}</h3>
-          {s.items.map(row)}
+          {rows(s.items)}
         </section>
       ));
   };
@@ -571,8 +606,7 @@ export function Settings(props: {
             }}
             onCompare={props.onOpenCompare}
           />
-          <AiRouting />
-          <PackTiers level={3} />
+          <AiChoices />
           {form("ai")}
         </>
       );
@@ -601,7 +635,7 @@ export function Settings(props: {
     return (
       <>
         {heading(section)}
-        {form(section)}
+        {form(section, section === "you" ? <YourName /> : undefined)}
         {section === "appearance" && <PageLinks />}
         {section.startsWith("addon/") && (
           <AddonSecrets
@@ -630,17 +664,19 @@ export function Settings(props: {
     >
       <div className="heading">
         <h1 id="settings-title">{t("settings.title")}</h1>
-        <div className="acts">
-          <button
-            type="button"
-            className="btn"
-            onClick={() => props.onOpenGuide()}
-          >
-            {t("settings.open_guide")}
-          </button>
-        </div>
+        {section === "you" && !query.trim() && (
+          <div className="acts">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => props.onOpenGuide()}
+            >
+              {t("settings.open_guide")}
+            </button>
+          </div>
+        )}
       </div>
-      <p className="hint">{t("settings.intro")}</p>
+      <p className="settings-intro">{t("settings.intro")}</p>
       <div className="settings-layout">
         <div className="settings-side">
           <div className="field">

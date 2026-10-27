@@ -5,7 +5,8 @@ Every setting of the app's own files is one of these:
 - basic: on a page of Settings (You, AI and spending, Notices, Backups, Appearance, and Your business when there is
   one), named in `BASIC` with the page it is on;
 - advanced: behind Advanced, in one of eight plain topics, named in `ADVANCED` with its topic;
-- own part: listed for the screens that edit it in their own way (a key box, a list of records), never a row of its own;
+- own part: listed for the screens that edit it in their own way (a key box, a list of records, a home of its own on
+  another screen), never a row of its own;
 - internal: kept only in files, never listed on a screen: removed, automated, a word list or a number the program
   reads, an address, an id, a limit, a format version. Its key, schema and default stay, and it is settable in files,
   environment variables, flags and profiles.
@@ -26,15 +27,14 @@ from pydantic import BaseModel
 
 #: The page of each basic setting, in the order the page lists them.
 BASIC: dict[str, str] = {
-    "workspace.name": "you",
-    "workspace.assistant_name": "you",
     "workspace.user.timezone": "you",
     "workspace.language": "you",
+    "workspace.assistant_name": "you",
+    "workspace.name": "you",
     "ai.budgets.confirm_above_usd": "ai",
     "ai.budgets.per_day_usd": "ai",
     "ai.budgets.per_month_usd": "ai",
     "ui.notifications.enabled": "today",
-    "ui.notifications.browser": "today",
     "steward.reminders.working_first_day": "today",
     "steward.reminders.working_last_day": "today",
     "steward.reminders.working_start": "today",
@@ -97,7 +97,41 @@ OWN_PART = (
     "watch.acting",
     "workspace.project.sides",
     "steward.default_stance",
+    # Each has a home of its own: Add-ons, For developers (the catalog fields), Follow-ups, Message style (the greeting
+    # and the closing) and Knowledge, Glossary (the person's own words).
+    "workspace.plugins.catalog.enabled",
+    "workspace.plugins.catalog.shipped_feed",
+    "workspace.plugins.catalog.feeds",
+    "workspace.plugins.catalog.release_tokens",
+    "language.messages.greeting",
+    "language.messages.closing",
+    "language.known_terms",
 )
+
+#: Rows that edit several settings at once. Each is named by its first setting and lists all of them in the order the
+#: page or topic lists them; every one is still a setting with its own key, and each is counted once. A screen that
+#: has fewer than all of them on the page shows them as rows of their own. Where reminders go is one row too, edited by
+#: a part of its own (it is in the screen's list of own parts, so it is not drawn as a merged row).
+MERGED_ROWS: dict[str, tuple[str, ...]] = {
+    "steward.reminders.working_first_day": (
+        "steward.reminders.working_first_day",
+        "steward.reminders.working_last_day",
+        "steward.reminders.working_start",
+        "steward.reminders.working_end",
+    ),
+    "steward.brief.morning_from": (
+        "steward.brief.morning_from",
+        "steward.brief.evening_from",
+        "steward.brief.weekly_day",
+    ),
+    "steward.reminders.where": (
+        "steward.reminders.where",
+        "steward.reminders.where_account",
+    ),
+}
+
+#: Rows of a page that edit a record, not a setting (the person's own name, on their record), by page.
+RECORD_ROWS: dict[str, tuple[str, ...]] = {"you": ("person.full_name",)}
 
 #: Removed, automated and moved-without-a-home fields: kept only in files, with their key, schema and default.
 FILES_ONLY = (
@@ -237,15 +271,8 @@ FILES_ONLY = (
     "watch.versions.archive_folders",
     "watch.handled_rule_section",
     "watch.handled_keep_days",
-    # Moved to a screen that has no place for them yet: the catalog feeds (Add-ons, For developers), the message style
-    # (Follow-ups) and the glossary words (Knowledge).
-    "workspace.plugins.catalog.enabled",
-    "workspace.plugins.catalog.shipped_feed",
-    "workspace.plugins.catalog.feeds",
-    "workspace.plugins.catalog.release_tokens",
-    "language.messages.greeting",
-    "language.messages.closing",
-    "language.known_terms",
+    # Merged into the one notices switch, which stands for showing a notice in this browser too.
+    "ui.notifications.browser",
 )
 
 #: Fronts of dotted keys (a front matches a key equal to it or starting with it plus a dot) kept only in files.

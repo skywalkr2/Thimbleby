@@ -80,3 +80,32 @@ export function topics(items: Item[]): Topic[] {
   };
   return [...out].map(([group, list]) => ({ group, items: list })).sort((a, b) => rank(a.group) - rank(b.group));
 }
+
+/** Rows that edit several settings at once, by the id of the row: each keeps its own keys, and the app counts the row once.
+ * The first key is where the row sits on its page or topic. */
+export const MERGED_ROWS: Record<string, string[]> = {
+  working_hours: [
+    "steward.reminders.working_first_day",
+    "steward.reminders.working_last_day",
+    "steward.reminders.working_start",
+    "steward.reminders.working_end",
+  ],
+  brief_times: ["steward.brief.morning_from", "steward.brief.evening_from", "steward.brief.weekly_day"],
+};
+
+/** What a list of settings shows, in order: a setting as a row of its own, or a merged row. A row is merged only when every
+ * setting of it is in the list, so a page that holds some of them shows those as they are. */
+export type Entry = { kind: "item"; item: Item } | { kind: "merged"; id: string; items: Item[] };
+
+export function entriesOf(items: Item[]): Entry[] {
+  const byKey = new Map(items.map((i) => [i.key, i]));
+  const rows = Object.entries(MERGED_ROWS).filter(([, keys]) => keys.every((k) => byKey.has(k)));
+  const inRow = new Map(rows.flatMap(([id, keys]) => keys.map((k) => [k, id] as const)));
+  return items.flatMap((item): Entry[] => {
+    const id = inRow.get(item.key);
+    if (id === undefined) return [{ kind: "item", item }];
+    const keys = MERGED_ROWS[id];
+    // The row sits where its first setting sits; the others of it have no row of their own.
+    return item.key === keys[0] ? [{ kind: "merged", id, items: keys.map((k) => byKey.get(k)!) }] : [];
+  });
+}

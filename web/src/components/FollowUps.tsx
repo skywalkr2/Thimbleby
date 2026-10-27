@@ -43,6 +43,7 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 import { SideFilter } from "./SideFilter";
+import { MessageStyle } from "./MessageStyle";
 import { ActsList, actKey } from "./ToSendActs";
 import { OutgoingDetail } from "./OutgoingDetail";
 import { SentActs } from "./SentActs";
@@ -286,6 +287,7 @@ export function FollowUps(props: { compact?: boolean }) {
         </p>
       )}
       {!compact && !byProject && filter === "send" && acts.isSuccess && <SentActs />}
+      {!compact && !byProject && filter === "send" && <MessageStyle />}
     </section>
   );
 }

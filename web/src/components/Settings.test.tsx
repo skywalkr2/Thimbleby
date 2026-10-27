@@ -1111,7 +1111,7 @@ test("the notices switch is labelled in the words of what the person gets, and t
     AI_ROUTES,
   );
   renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  expect(await screen.findByRole("checkbox", { name: "Tell me when something needs me" })).toBeInTheDocument();
+  expect(await screen.findByRole("checkbox", { name: "Tell me when something needs me (in this browser)" })).toBeInTheDocument();
   expect(document.body.textContent ?? "").not.toMatch(/Turn on “/);
 });
 test("Advanced topics have plain names, in their order, and none is named after a group of the files", async () => {
@@ -1185,4 +1185,129 @@ test("with no side besides Personal the settings that name whose side a project 
   open();
   expect(await screen.findByText("The display name.")).toBeInTheDocument();
   expect(await screen.findByLabelText("Words that mean personal")).toBeInTheDocument();
+});
+
+// ---- Your name, one row for working hours and the brief's times, and the setup guide link (design 7.9) -------------------
+
+const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const TIMES = ["08:00", "09:00", "17:00", "17:30"];
+const hours = (over: Record<string, string> = {}) => [
+  item("steward.reminders.working_first_day", { group: "steward.reminders", type: "choice", options: DAYS, value: over.first ?? "monday", default: "monday" }),
+  item("steward.reminders.working_last_day", { group: "steward.reminders", type: "choice", options: DAYS, value: over.last ?? "friday", default: "friday" }),
+  item("steward.reminders.working_start", { group: "steward.reminders", type: "choice", options: TIMES, value: over.start ?? "09:00", default: "09:00", choices: "times_of_day" }),
+  item("steward.reminders.working_end", { group: "steward.reminders", type: "choice", options: TIMES, value: over.end ?? "17:30", default: "17:30", choices: "times_of_day" }),
+];
+const openToday = () => renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+
+test("You starts with Your name, the name on the person's record, saved through the person's route and read back with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS], {
+    "GET me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
+    "POST me": (body) => ({ person: "PER-1", full_name: (body as { full_name: string }).full_name }),
+  });
+  open();
+  const name = await screen.findByLabelText("Your name");
+  expect(name).toHaveValue("Sam Tester");
+  // It is the first row of the page, and the cursor is in it when the page opens.
+  expect(document.querySelector(".setting")).toContainElement(name);
+  await waitFor(() => expect(name).toHaveFocus());
+  await user.clear(name);
+  await user.type(name, "Sam  Q Tester");
+  await user.tab();
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST me")).toHaveLength(1));
+  expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Q Tester" });
+  // A name is the person's record, never a setting or the id.
+  expect(posted(calls)).toHaveLength(0);
+  expect(await screen.findByText("Your name is now Sam Q Tester.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST me")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST me")[1].body).toEqual({ full_name: "Sam Tester" });
+});
+
+test("a name another person already has is refused in the server's words, and what was typed stays", async () => {
+  const user = userEvent.setup();
+  api([...ITEMS], {
+    "GET me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
+    "POST me": () => new Refuse(409, "Ada Example is already someone else in People."),
+  });
+  open();
+  const name = await screen.findByLabelText("Your name");
+  await user.clear(name);
+  await user.type(name, "Ada Example");
+  await user.tab();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Ada Example is already someone else in People.");
+  expect(name).toHaveValue("Ada Example");
+});
+
+test("the working hours are one row with four choices, each saved as its own setting", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS, ...hours()]);
+  openToday();
+  const row = await screen.findByRole("group", { name: "Working hours" });
+  expect(within(row).getAllByRole("combobox").map((c) => c.getAttribute("aria-label"))).toEqual([
+    "Your working week starts on",
+    "Your working week ends on",
+    "Your working day starts at",
+    "Your working day ends at",
+  ]);
+  // One row stands for the four, and no row of their own is left behind.
+  expect(screen.getAllByLabelText("Your working week starts on")).toHaveLength(1);
+  expect(row.closest(".setting")).toBe(row);
+  await user.selectOptions(within(row).getByLabelText("Your working week ends on"), "thursday");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "steward.reminders.working_last_day": "thursday" } });
+  expect(Object.keys((posted(calls)[0] as { changes: object }).changes)).toHaveLength(1);
+});
+
+test("Reset on the working hours puts back only what was changed, in one save with one read-back", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS, ...hours({ last: "thursday", end: "16:00" }).map((i) => (i.key.endsWith("working_end") ? { ...i, options: [...TIMES, "16:00"] } : i))]);
+  openToday();
+  const row = await screen.findByRole("group", { name: "Working hours" });
+  expect(within(row).getByText("Changed")).toBeInTheDocument();
+  await user.click(within(row).getByRole("button", { name: "Reset: Working hours" }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ reset: ["steward.reminders.working_last_day", "steward.reminders.working_end"] });
+});
+
+test("a refused working day is told on the row and the choice stays as it was made", async () => {
+  const user = userEvent.setup();
+  api([...ITEMS, ...hours()], { "POST settings": () => new Refuse(400, "The working day must start before it ends.") });
+  openToday();
+  const row = await screen.findByRole("group", { name: "Working hours" });
+  await user.selectOptions(within(row).getByLabelText("Your working day starts at"), "17:30");
+  expect(await within(row).findByRole("alert")).toHaveTextContent("The working day must start before it ends.");
+});
+
+test("the brief's three times are one row behind Advanced, under Notices", async () => {
+  const user = userEvent.setup();
+  const calls = api([
+    ...ITEMS,
+    item("steward.brief.morning_from", { group: "steward.brief", basic: false, topic: "notices", type: "choice", options: ["06:00", "07:00"], value: "06:00", default: "06:00" }),
+    item("steward.brief.evening_from", { group: "steward.brief", basic: false, topic: "notices", type: "choice", options: ["17:00", "18:00"], value: "17:00", default: "17:00" }),
+    item("steward.brief.weekly_day", { group: "steward.brief", basic: false, topic: "notices", type: "choice", options: ["monday", "tuesday"], value: "monday", default: "monday" }),
+  ]);
+  renderApp(<Settings section="advanced" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  await user.click(await screen.findByRole("button", { name: "Notices" }));
+  const row = await screen.findByRole("group", { name: "When the brief shows" });
+  expect(within(row).getAllByRole("combobox")).toHaveLength(3);
+  await user.selectOptions(within(row).getByLabelText("The weekly briefing shows on"), "tuesday");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "steward.brief.weekly_day": "tuesday" } });
+});
+
+test("the setup guide link is on You only, and the intro is body text, not a grey hint", async () => {
+  const user = userEvent.setup();
+  const guide = vi.fn();
+  api([...ITEMS, ...hours()]);
+  const first = renderApp(<Settings section="you" onSection={() => undefined} onOpenGuide={guide} onChooseSource={() => undefined} />);
+  await user.click(await screen.findByRole("button", { name: "Open the setup guide" }));
+  expect(guide).toHaveBeenCalledTimes(1);
+  const intro = screen.getByText(/Each change is saved as you make it/);
+  expect(intro).not.toHaveClass("hint");
+  first.unmount();
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={guide} onChooseSource={() => undefined} />);
+  await screen.findByRole("group", { name: "Working hours" });
+  expect(screen.queryByRole("button", { name: "Open the setup guide" })).toBeNull();
+  expect(screen.getByText(/Each change is saved as you make it/)).not.toHaveClass("hint");
 });

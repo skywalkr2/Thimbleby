@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
-import { AiRouting } from "./AiRouting";
+import { AiChoices, AiRouting } from "./AiRouting";
 
 type View = S["AiRoutingView"];
 
@@ -115,6 +115,25 @@ test("each kind of work has a list of the models to pick from, named in plain wo
   expect(notes).toHaveValue("routine");
   expect(within(notes).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account"]);
   expect(screen.queryByText(/routine|deep|tier/i)).toBeNull();
+});
+
+test("on the AI page the choice of which account does each kind of work is behind a disclosure that starts closed", async () => {
+  const user = userEvent.setup();
+  server(start());
+  renderApp(<AiChoices />);
+  const fold = await screen.findByText("Choose which account does each kind of work");
+  const details = fold.closest("details") as HTMLDetailsElement;
+  expect(details.open).toBe(false);
+  expect(await screen.findByRole("heading", { name: "Which model does what", hidden: true })).not.toBeVisible();
+  await user.click(fold);
+  expect(details.open).toBe(true);
+  expect(await screen.findByRole("heading", { name: "Which model does what" })).toBeVisible();
+});
+
+test("the disclosure is not offered while no account is set up", async () => {
+  server(start(), { "GET ai/accounts": () => [] });
+  renderApp(<AiChoices />);
+  await waitFor(() => expect(screen.queryByText("Choose which account does each kind of work")).toBeNull());
 });
 
 test("nothing is shown while no account is set up", async () => {

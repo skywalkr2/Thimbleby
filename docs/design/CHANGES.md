@@ -1031,7 +1031,7 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| Settings (7.9) | The person's name, the catalog fields, the greeting and closing and the glossary files-only; Working hours as four rows; two notification switches; code words in hints; the setup guide link on every page | "Your name" on You; Add-ons › For developers, Follow-ups › Message style and Knowledge › Glossary; Working hours, the brief's times and notifications each one row; hints in plain words; the setup guide link on You only |
+| Settings (7.9) | The person's name, the catalog fields, the greeting and closing and the glossary files-only; Working hours as four rows; two notification switches; code words in hints; the setup guide link on every page; Which model does what open on the AI page | **Built** (`tests/test_settings_cut.py`, `web/src/components/Settings.test.tsx`, `DeveloperSettings.test.tsx`, `MessageStyle.test.tsx`, `Glossary.test.tsx`, `AiRouting.test.tsx`, `web/e2e/settings-walk.spec.ts`): "Your name" on You; Add-ons › For developers (the catalog switch, the app's own catalog's switch, more catalogs, access keys); You in the reviewer's order after Your name, Follow-ups › Message style and Knowledge › Glossary; Working hours, the brief's times and notifications each one row (20 basic rows, 23 with a business, 26 advanced); hints in plain words, checked; the setup guide link on You only and the intro as body text; Which model does what behind a closed "Choose which account does each kind of work" |
 | Toasts (7.7) | Every toast closed after a few seconds | A toast with Undo or another action stays until dismissed or replaced |
 | "Just me" (7.8) | Handled for you offered "Treat as work" | No side words for "Just me"; with sides, the side's name |
 | Today (7.7) | No count of what was handled | One quiet line with the count, opening Handled for you |
@@ -1465,7 +1465,7 @@ regeneration are finished once at the end). Answers are in `docs/project/plugin-
 
 The address of the product's own packs catalog is committed in `catalog/product.yaml`, so a run from a checkout and every
 release build list the add-ons with no setup, and it is no longer a person's setting: `workspace.plugins.catalog.shipped_feed`
-moves from Advanced to files only. A release build replaces the address only when a repository variable sets it. Tests and
+moves from Advanced to files only (shown again in Add-ons › For developers, change log 233). A release build replaces the address only when a repository variable sets it. Tests and
 the browser tests never read it over the network (`tests/conftest.py`, `tests/e2e_server.py`). Design 3.11 "Catalogs from the
 screen". Test: `tests/test_shipped.py::test_product_facts_come_from_the_shipped_catalog`.
 

@@ -26,6 +26,7 @@ import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
+import { Glossary } from "./Glossary";
 import { NarrowForm } from "./NarrowForm";
 import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -127,6 +128,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
           ))}
         </ul>
       )}
+      <Glossary />
     </section>
   );
 }

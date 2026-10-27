@@ -661,7 +661,7 @@ test.describe("screen use and the shell", () => {
     { name: "Rules review", hash: "records/rules-review" },
     { name: "Connections", hash: "settings/connections" },
     { name: "Add-ons", hash: "settings/addons" },
-    { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "This workspace's name" }) },
+    { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "Your name" }) },
     { name: "What each account can do", hash: "settings/ai-compare" },
     { name: "Quality", hash: "quality", field: (page) => page.locator("main form input[type=date]").first() },
     { name: "Handover", hash: "handover" },
@@ -849,7 +849,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page, "settings/you");
     const name = page.getByRole("textbox", { name: "This workspace's name" });
-    await expect(name).toBeFocused();
+    await expect(page.getByRole("textbox", { name: "Your name" })).toBeFocused();
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
     const before = await name.inputValue();
     await name.fill("Harbor workspace");

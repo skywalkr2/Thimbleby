@@ -1,5 +1,5 @@
 import type { S } from "./api";
-import { isListed, navSections, sectionItems, sectionOfItem, topics } from "./settings-sections";
+import { entriesOf, isListed, navSections, sectionItems, sectionOfItem, topics } from "./settings-sections";
 
 function item(key: string, page: S["SettingItem"]["page"], extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
   return {
@@ -117,4 +117,26 @@ test("the accounts the assistant may act on are a switch on each account, not a 
 test("a setting with no page is no row: it is kept in files", () => {
   expect(isListed(item("storage.export.commit", null))).toBe(false);
   expect(isListed(item("ui.theme", "appearance"))).toBe(true);
+});
+
+test("the four settings of the working hours, and the three of the brief's times, are one row each, where the first one sits", () => {
+  const hours = [
+    item("steward.reminders.working_first_day", "today"),
+    item("steward.reminders.working_last_day", "today"),
+    item("steward.reminders.working_start", "today"),
+    item("steward.reminders.working_end", "today"),
+  ];
+  const entries = entriesOf([item("ui.notifications.enabled", "today"), ...hours, item("steward.hold_outside_hours", "today")]);
+  expect(entries.map((e) => (e.kind === "item" ? e.item.key : `${e.id}:${e.items.length}`))).toEqual([
+    "ui.notifications.enabled",
+    "working_hours:4",
+    "steward.hold_outside_hours",
+  ]);
+  const brief = ["steward.brief.morning_from", "steward.brief.evening_from", "steward.brief.weekly_day"].map((k) => item(k, "advanced", { topic: "notices" }));
+  expect(entriesOf(brief).map((e) => e.kind)).toEqual(["merged"]);
+});
+
+test("a page that holds only some of a row's settings shows them as rows of their own", () => {
+  const some = [item("steward.reminders.working_first_day", "today"), item("steward.reminders.working_end", "today")];
+  expect(entriesOf(some).map((e) => e.kind)).toEqual(["item", "item"]);
 });

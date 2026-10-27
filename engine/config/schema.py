@@ -58,7 +58,7 @@ class UserSettings(ConfigModel):
     )
     timezone: str = Field(
         "UTC",
-        description="The time zone your own dates and times are read and shown in: pick the city nearest you.",
+        description="The time zone your own dates and times are read and shown in. Pick the city nearest you.",
         json_schema_extra={"choices": "time_zones"},
     )
     accounts: list[str] = Field(
@@ -173,11 +173,15 @@ class JobSettings(ConfigModel):
 
 
 class CatalogSettings(ConfigModel):
-    enabled: bool = Field(True, description="Show the packs catalog feeds list on the Add-ons screen.")
+    enabled: bool = Field(
+        True,
+        description="List the add-ons the catalogs offer on the Add-ons screen. Off hides the catalogs and what they "
+        "list.",
+    )
     shipped_feed: bool = Field(
         True,
-        description="Read the product's own catalog feed, which the maintainers set; kept in files only, for tests and "
-        "closed networks.",
+        description="Read the app's own catalog feed, which the maintainers set. Turn it off for a closed network or "
+        "to try your own catalog alone.",
         json_schema_extra={"enabled_by": "enabled"},
     )
     feeds: list[str] = Field(
@@ -198,7 +202,7 @@ class CatalogSettings(ConfigModel):
             "Read tokens for hosts that keep private packs' release files, by host name, as references "
             "(env:NAME or file:/path, never the token itself); sent only to that host when installing."
         ),
-        json_schema_extra={"advanced": True},
+        json_schema_extra={"advanced": True, "screen_edit": True},
     )
 
     @field_validator("release_tokens")
@@ -272,8 +276,8 @@ class WorkspaceFile(FileModel):
     language: str = Field(
         "en-US",
         pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
-        description="Which kind of English the assistant writes in for you: its spelling, punctuation and dates. The "
-        "app's own screens stay in English. A project may set its own.",
+        description="Which kind of English the assistant writes in for you, covering its spelling, punctuation and "
+        "dates. The app's own screens stay in English.",
         json_schema_extra={"choices": "languages"},
     )
     project: ProjectSettings = Field(default_factory=ProjectSettings, description="How a project's own record is kept.")
@@ -497,9 +501,9 @@ class FileLimits(ConfigModel):
 class SyncSettings(ConfigModel):
     folder: str = Field(
         "",
-        description="A folder a file-sync service keeps in step between your computers. After every change the "
-        "workspace is written there, one folder per project, readable in any editor. Empty: off. The workspace "
-        "itself must not be inside it.",
+        description="A folder a file-sync service keeps in step between your computers. After every change your data "
+        "is written there, readable in any editor. Leave it empty to turn this off. It must not be inside the "
+        "folder the app keeps its own data in.",
         json_schema_extra={"picker": "folder"},
     )
     watch_outside_edits: bool = Field(
@@ -897,13 +901,11 @@ class TaskBudget(ConfigModel):
 
 
 class Budgets(ConfigModel):
-    per_run_usd: float = Field(
-        0.25, ge=0, description="Never start one piece of work estimated to cost more than this."
-    )
+    per_run_usd: float = Field(0.25, ge=0, description="Never start one thing estimated to cost more than this.")
     confirm_unpriced: bool = Field(
         False,
-        description="Ask me before starting work whose cost can't be estimated (an account with no prices, such as a "
-        "subscription), too.",
+        description="Ask me before starting something whose cost can't be estimated (an account with no prices, such "
+        "as a subscription), too.",
         json_schema_extra={"advanced": True},
     )
     first_go: bool = Field(
@@ -915,13 +917,14 @@ class Budgets(ConfigModel):
     confirm_above_usd: float = Field(
         0.10,
         ge=0,
-        description="Ask me before starting work estimated to cost more than this; below it, work starts on its own.",
+        description="Ask me before the assistant starts something estimated to cost more than this. Below it, it "
+        "starts on its own.",
     )
     per_task: dict[str, TaskBudget] = Field(
         default_factory=dict, description="Limits for one kind of work, on top of the overall ones."
     )
-    per_day_usd: float = Field(2.0, ge=0, description="Stop starting new work for the day above this total.")
-    per_month_usd: float = Field(30.0, ge=0, description="Stop starting new work for the month above this total.")
+    per_day_usd: float = Field(2.0, ge=0, description="Stop starting anything new for the day above this total.")
+    per_month_usd: float = Field(30.0, ge=0, description="Stop starting anything new for the month above this total.")
     warn_at: float = Field(0.8, gt=0, le=1, description="Warn when this share of a budget is used.")
 
 
@@ -1033,7 +1036,8 @@ class EstimateSettings(ConfigModel):
 class ModelSettings(ConfigModel):
     follow_newest: bool = Field(
         True,
-        description="Move a tier to a newer model of the same family when one appears, after checking it",
+        description="When a newer version of a model you use appears, switch to it, after checking that it does the "
+        "job as well.",
     )
     check_every_days: int = Field(
         7,
@@ -1296,7 +1300,8 @@ class KnowledgeSettings(ConfigModel):
     learn: bool = Field(
         True,
         description="Whether the assistant looks at each correction you make (a send back, an undo, an edited "
-        "message) and proposes one lesson from it. Off: corrections are still recorded, and nothing is proposed.",
+        "message) and proposes one lesson from it. When this is off, corrections are still recorded and nothing is "
+        "proposed.",
     )
     learn_every_minutes: int = Field(
         30,
@@ -1316,8 +1321,8 @@ class KnowledgeSettings(ConfigModel):
         True,
         description="Whether a save that moves a dated record (a calendar entry's day or time, an action's due day) or "
         "replaces a fact makes one request to the assistant to bring what is tied to it in line. Changes to your own "
-        "items apply with Undo; anything someone was already sent gets a drafted correction that waits for you. Off: "
-        "nothing follows a move.",
+        "items apply with Undo; anything someone was already sent gets a drafted correction that waits for you. When "
+        "this is off, nothing follows a move.",
     )
     follow_on_max_tied: int = Field(
         20,
@@ -1336,9 +1341,9 @@ class KnowledgeSettings(ConfigModel):
     )
     check_on_switch: bool = Field(
         True,
-        description="Offer to check the assistant's work on the new choice, with its cost shown first, whenever you "
-        "change the account or model that does a kind of work. A check that finds problems comes to Today with a way "
-        "to switch back.",
+        description="Offer to check how the assistant does on the new choice, with its cost shown first, whenever you "
+        "change the account or model it uses for a kind of task. A check that finds problems comes to Today with a "
+        "way to switch back.",
     )
     new_terms_per_input: int = Field(
         3,
@@ -2474,8 +2479,8 @@ class BrandSettings(ConfigModel):
     )
     logo: str | None = Field(
         None,
-        description="An image shown in place of the monogram at the top left: a PNG, JPEG, WebP or SVG file in the "
-        "workspace's config folder, by name. Empty shows the workspace's initials.",
+        description="An image shown in place of the monogram at the top left. It is a PNG, JPEG, WebP or SVG file in "
+        "the app's configuration folder, by name. Leave it empty to show the initials.",
     )
 
     @field_validator("logo")
@@ -2522,9 +2527,9 @@ class NotificationQuietHours(ConfigModel):
 class NotificationsSettings(ConfigModel):
     enabled: bool = Field(
         False,
-        description="Tell me when something needs me. A notice goes out only for what Today's Decide group holds: a "
-        "decision waiting, work that stopped, a restart or a failing backup. Never for routine processing, and only "
-        "to you.",
+        description="A notice goes out when something needs you, such as a decision waiting, a task that stopped, a "
+        "restart or a failing backup. Never for routine processing, and only to you. It shows in this browser, on "
+        "the computer that runs the app, while the app is open there, once the browser has your permission.",
     )
     browser: bool = Field(
         True,
@@ -2541,8 +2546,8 @@ class NotificationsSettings(ConfigModel):
     )
     webhook_format: Literal["json", "plain"] = Field(
         "json",
-        description="What the address expects. json: a small JSON message with the text in it, which chat apps take. "
-        "plain: the text alone as the body, which push-notification topics take.",
+        description="What your address expects. Chat apps take a small message with the text in it; a push "
+        "notification topic takes the text alone.",
         json_schema_extra={"enabled_by": "webhook", "advanced": True},
     )
     quiet_hours: NotificationQuietHours = Field(
@@ -2682,13 +2687,13 @@ class UiFile(FileModel):
     )
     theme: Literal["system", "light", "dark"] = Field(
         "system",
-        description="Light or dark screens; system follows the computer's setting. Each person can change it for "
-        "their own device from the menu under their initials.",
+        description="Light or dark screens, or follow the computer's setting. Each person can change it for their own "
+        "device from the menu under their initials.",
     )
     density: Literal["comfortable", "compact"] = Field(
         "comfortable",
-        description="How much fits on screen: comfortable rows, or compact ones that show more at once. Each person "
-        "can change it for their own device; touch screens keep large targets either way.",
+        description="How much fits on screen. Comfortable rows, or compact ones that show more at once. Each person "
+        "can change it for their own device, and touch screens keep large targets either way.",
     )
 
     @field_validator("shortcuts")
@@ -3078,9 +3083,9 @@ class MailKinds(FileModel):
     enabled: bool = Field(
         True,
         description="Recognize bills and statements, orders, and shipping and delivery notices by rules, with no AI "
-        "run, from the first sign-in: such mail is never set aside, is not sorted by the assistant's sorting and is "
-        "handed to the assistant as work for the Personal project. It applies after the rules above, so a rule that "
-        "sets mail aside from a sender wins.",
+        "run, from the first sign-in. Such mail is never set aside, is not sorted by the assistant's sorting and is "
+        "handed to the assistant as something to do for your own life. It applies after the rules above, so a rule "
+        "that sets mail aside from a sender wins.",
     )
     bill: MailKind = _kind(
         "a bill or statement",
@@ -3178,11 +3183,12 @@ class WatchFile(FileModel):
     )
     sorting: Literal["ai", "rules"] = Field(
         "ai",
-        description="How mail that none of the rules above place is sorted. ai: one small, low-cost run reads only "
-        "each message's sender, subject line and the mail service's category (never the text) and says work, "
-        "personal, sales or notice; sales and notices are set aside, personal mail is handed in and filed under "
-        "the Personal project; unsure counts as work, so nothing is hidden on a guess. rules: no run; only the "
-        "rules set mail aside.",
+        description="How mail that none of the rules above place is sorted. With the assistant, one small, low-cost "
+        "run reads only each message's sender, subject line and the mail service's category (never the text) and says "
+        "whether it is for your job or business, personal, sales or a notice. Sales and notices are set aside and "
+        "personal mail is handed in and filed as personal. When it is unsure, the message is treated as for your job "
+        "or business, so nothing is hidden on a guess. With rules only, there is no run and only the rules set mail "
+        "aside.",
     )
     acting: list[str] = Field(
         default_factory=list,
@@ -3360,11 +3366,11 @@ class RemindersSettings(ConfigModel):
     )
     where: Literal["nowhere", "app", "calendar", "mail"] = Field(
         "nowhere",
-        description="Where a reminder reaches you when the app isn't open. nowhere: only on Today. app: an entry in "
-        "the app's own calendar with an alarm, which stays on this computer. calendar: an event with an alarm on "
-        "your own calendar at a signed-in calendar account. mail: a message to your own address at a mailbox "
-        "account. The last two are drafted for you to look at in Waiting to go out; a standing yes you give in "
-        "Settings lets them go without asking, and only that yes does.",
+        description="Where a reminder reaches you when the app isn't open. It can stay on Today only; be an entry in "
+        "the app's own calendar with an alarm, which stays on this computer; be an event with an alarm on your own "
+        "calendar at a signed-in calendar account; or be a message to your own address at a mailbox account. The "
+        "last two are drafted for you to look at in Waiting to go out, and a standing yes you give in Settings lets "
+        "them go without asking, and only that yes does.",
     )
     where_account: str = Field(
         "",
@@ -3509,8 +3515,8 @@ class MeetingSettings(ConfigModel):
         ge=1,
         le=168,
         description="How many hours before a calendar entry with other people on it its prep shows as a line on "
-        "Today: who is coming, what is open with each of them and when you were last in touch. The line goes when "
-        "the entry starts.",
+        "Today. It says who is coming, what is open with each of them and when you were last in touch. The line "
+        "goes when the entry starts.",
     )
     prep_min_open: int = Field(
         0,
@@ -3572,8 +3578,8 @@ class PeopleSettings(ConfigModel):
     )
     snooze_days: list[int] = Field(
         default_factory=lambda: [1, 3, 7, 14],
-        description="The days a line about a promise gone quiet can be snoozed for, offered as a list to pick from: "
-        "each is that many days from today, and the line comes back on that day.",
+        description="The days a line about a promise gone quiet can be snoozed for, offered as a list to pick from. "
+        "Each is that many days from today, and the line comes back on that day.",
     )
     date_words: list[str] = Field(
         default_factory=lambda: ["birthday", "anniversary"],

@@ -37,6 +37,7 @@ import { SecretField } from "./SecretField";
 import { AddonSecrets } from "./KeptSecrets";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
+import { DeveloperSettings } from "./DeveloperSettings";
 
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
@@ -74,6 +75,7 @@ export function Addons(props: { onBack?: () => void }) {
           <Loaded query={packs}>{(view) => <InstalledList items={view.installed} />}</Loaded>
         </TabPanel>
       </Tabs>
+      <DeveloperSettings />
     </section>
   );
 }

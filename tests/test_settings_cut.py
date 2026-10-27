@@ -17,6 +17,10 @@ WORDING = json.loads((Path(__file__).resolve().parents[1] / "web" / "src" / "wor
 #: What a label or a heading never names: a code prefix, an id, a key or a word of the files.
 FILE_WORDS = re.compile(r"^Ui |^Watch |^Steward |PRJ-|PER-|tasks\.|json|tier")
 MOST_LABEL = 60
+#: A code-like id in a hint: a word, a colon, then what it means ("ai: ...", "env:NAME"); a time or an address is not.
+CODE_ID = re.compile(r"\b[A-Za-z_]+:(?!//)")
+#: Words a "Just me" person never sees on a screen, in any case and in compounds such as the one for the data's home.
+JUST_ME_WORDS = re.compile(r"\b(work|project|stage|organization|owner|template)s?\b", re.I)
 PAGES = {"you", "ai", "today", "backups", "appearance", "business"}
 
 
@@ -28,15 +32,83 @@ def _shown():
 # ---- the walk: how many, and where ---------------------------------------------------------------
 
 
+def _rows(items, page):
+    """What a person counts on a page: one row for each setting, except that the settings of one merged row (working
+    hours, the brief's times) are one, plus the rows that edit a record instead of a setting."""
+    keys = [s.key for s in items if s.page == page]
+    merged = {key for row in levels.MERGED_ROWS.values() for key in row}
+    return (
+        len([k for k in keys if k not in merged])
+        + len([first for first, row in levels.MERGED_ROWS.items() if set(row) <= set(keys)])
+        + len(levels.RECORD_ROWS.get(page, ()))
+    )
+
+
 def test_the_settings_walk_counts_at_most_26_basic_and_30_advanced():
     shown = _shown()
-    basic = [s for s in shown if s.page in PAGES]
-    advanced = [s for s in shown if s.page == "advanced"]
-    without_business = [s for s in basic if s.page != "business"]
-    assert len(without_business) <= 23 and len(basic) <= 26, len(basic)
-    assert len(advanced) <= 30, len(advanced)
-    assert {s.topic for s in advanced} == set(levels.TOPICS)
-    assert all(s.topic is None for s in basic) and all(s.topic for s in advanced)
+    without_business = sum(_rows(shown, page) for page in PAGES - {"business"})
+    with_business = without_business + _rows(shown, "business")
+    advanced = _rows(shown, "advanced")
+    assert without_business <= 23 and with_business <= 26, (without_business, with_business)
+    assert advanced <= 30, advanced
+    # The name, the working hours and the one notices switch make room: 19 rows (where reminders go is one), 22 with a
+    # business, 26 behind Advanced.
+    assert (without_business, with_business, advanced) == (19, 22, 26)
+    assert {s.topic for s in shown if s.page == "advanced"} == set(levels.TOPICS)
+    assert all(s.topic is None for s in shown if s.page in PAGES)
+    assert all(s.topic for s in shown if s.page == "advanced")
+
+
+def test_working_hours_the_brief_times_and_where_reminders_go_are_one_row_each_and_keep_their_keys():
+    shown = {s.key: s for s in _shown()}
+    assert levels.MERGED_ROWS == {
+        "steward.reminders.working_first_day": (
+            "steward.reminders.working_first_day",
+            "steward.reminders.working_last_day",
+            "steward.reminders.working_start",
+            "steward.reminders.working_end",
+        ),
+        "steward.brief.morning_from": (
+            "steward.brief.morning_from",
+            "steward.brief.evening_from",
+            "steward.brief.weekly_day",
+        ),
+        "steward.reminders.where": ("steward.reminders.where", "steward.reminders.where_account"),
+    }
+    for first, row in levels.MERGED_ROWS.items():
+        # The settings of a row sit together, in order, on one page or topic, and each is still a setting of its own.
+        places = {(shown[k].page, shown[k].topic) for k in row}
+        assert len(places) == 1, first
+        order = [s.key for s in _shown() if s.key in row]
+        assert order == list(row)
+        assert all(shown[k].editable for k in row)
+
+
+def test_one_notices_switch_stands_for_the_notice_and_the_browser_and_both_stay_settable_in_files():
+    shown = {s.key: s for s in _shown()}
+    assert "ui.notifications.enabled" in shown and "ui.notifications.browser" not in shown
+    assert "ui.notifications.browser" in levels.FILES_ONLY
+    cfg = load_config(None, env={"COCKPIT__UI__NOTIFICATIONS__BROWSER": "false"})
+    assert cfg.ui.notifications.browser is False and cfg.sources["ui.notifications.browser"] == "env"
+
+
+def test_the_fields_that_have_a_home_now_are_listed_for_it_and_no_longer_only_in_files():
+    shown = {s.key: s for s in _shown()}
+    placed = (
+        "workspace.plugins.catalog.enabled",
+        "workspace.plugins.catalog.shipped_feed",
+        "workspace.plugins.catalog.feeds",
+        "workspace.plugins.catalog.release_tokens",
+        "language.messages.greeting",
+        "language.messages.closing",
+        "language.known_terms",
+    )
+    for key in placed:
+        assert key in levels.OWN_PART and key not in levels.FILES_ONLY, key
+        # Listed for the screen that edits it, saved through the settings, and never a row of a page of its own.
+        assert shown[key].page is None and shown[key].editable, key
+    # The shipped word list is the program's, not the person's: it stays in files.
+    assert "language.known_terms_shipped" in levels.FILES_ONLY
 
 
 def test_a_setting_is_basic_or_advanced_or_a_part_of_a_screen_or_kept_in_files():
@@ -47,6 +119,17 @@ def test_a_setting_is_basic_or_advanced_or_a_part_of_a_screen_or_kept_in_files()
     # What is kept only in files is not listed, whatever its kind.
     assert not set(levels.FILES_ONLY) & set(shown)
     assert all(s.basic == (s.page in PAGES) for s in shown.values())
+
+
+def test_you_lists_its_settings_in_the_reviewers_order_after_your_name():
+    # Your name (the person's record), then time zone, English spelling, the assistant's name, the workspace's name.
+    assert [s.key for s in _shown() if s.page == "you"] == [
+        "workspace.user.timezone",
+        "workspace.language",
+        "workspace.assistant_name",
+        "workspace.name",
+    ]
+    assert levels.RECORD_ROWS["you"] == ("person.full_name",)
 
 
 def test_the_pages_list_their_settings_in_the_order_the_pages_do():
@@ -89,6 +172,25 @@ def test_what_a_choice_offers_has_no_code_word_either():
             text = WORDING.get(f"settings.option.{s.key}.{option}")
             if text is not None:
                 assert not FILE_WORDS.search(text), text
+
+
+def _hints():
+    """The settings a person reads a hint for: a row of a page or a topic, other than a secret reference (its own box
+    explains the forms a reference takes, and the wording check exempts it) and the business page (shown only to a
+    person with a business)."""
+    return [s for s in _shown() if s.page and s.page != "business" and not s.secret and s.key not in levels.OWN_PART]
+
+
+def test_a_hint_names_no_code_like_id_and_no_word_of_the_files():
+    for s in _hints():
+        assert not CODE_ID.search(s.description), f"{s.key}: {s.description}"
+        assert not FILE_WORDS.search(s.description), f"{s.key}: {s.description}"
+
+
+def test_a_hint_never_says_work_project_stage_organization_owner_or_template():
+    for s in _hints():
+        found = JUST_ME_WORDS.search(s.description)
+        assert not found, f"{s.key} says {found.group(0)!r}: {s.description}"
 
 
 # ---- what leaves the screen keeps its key, schema and default ------------------------------------
@@ -279,3 +381,36 @@ def test_putting_a_value_setup_wrote_back_to_its_default_is_no_longer_set_up(tmp
     reset = c.post(f"{api}/settings", json={"reset": ["workspace.name"], "fingerprint": done.json()["fingerprint"]})
     assert reset.status_code == 200, reset.text
     assert _item(c, api, "workspace.name")["by_setup"] is False
+
+
+# ---- the fields that moved to a screen are saved from it -------------------------------------------
+
+
+def test_the_message_style_the_glossary_and_the_catalog_fields_are_saved_through_the_settings(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    fp = c.get(f"{api}/settings").json()["fingerprint"]
+    changes = {
+        "language.messages.greeting": "Hello {first_name},",
+        "language.messages.closing": "Best,",
+        "language.known_terms": ["acme", "zed"],
+        "workspace.plugins.catalog.enabled": False,
+        "workspace.plugins.catalog.shipped_feed": False,
+        "workspace.plugins.catalog.feeds": ["https" + "://catalog.example.com/packs.yaml"],
+        "workspace.plugins.catalog.release_tokens": {"packs.example.com": "env:PACK_READ_TOKEN"},
+    }
+    done = c.post(f"{api}/settings", json={"changes": changes, "fingerprint": fp})
+    assert done.status_code == 200, done.text
+    now = {i["key"]: i["value"] for i in c.get(f"{api}/settings").json()["items"]}
+    for key, value in changes.items():
+        assert now[key] == value, key
+    # A token is only ever a reference to where it is kept.
+    fp = done.json()["fingerprint"]
+    refused = c.post(
+        f"{api}/settings",
+        json={
+            "changes": {"workspace.plugins.catalog.release_tokens": {"packs.example.com": "abc123"}},
+            "fingerprint": fp,
+        },
+    )
+    assert refused.status_code in (400, 422), refused.text

@@ -33,8 +33,9 @@ test("every Settings page keeps the side bar, and the person can go back to any 
   // The pages of basic settings come first, in plain words; Quality is in the person's menu, not here.
   expect(names.slice(0, 5)).toEqual(["You", "AI and spending", "Notices", "Backups", "Appearance"]);
   expect(names).not.toContain("Quality");
-  // This workspace has no side and has lists to show, so the Lists page is listed, after the pages of basic settings.
+  // This workspace has no side and has lists to show, so the Lists page is listed, and there is no business page.
   expect(names).toContain("Lists");
+  expect(names).not.toContain("Your business");
 
   for (const size of WIDTHS) {
     await page.setViewportSize(size);
@@ -79,8 +80,17 @@ test("Connections, Add-ons and what each account can do open inside Settings", a
 // key, an id or a word of the files (the Settings cut).
 const FILE_WORDS = /^Ui |^Watch |^Steward |PRJ-|PER-|tasks\.|json|tier/;
 const MOST_LABEL = 60;
+// A hint never carries a code-like id ("ai: ...", "env:NAME") or a word a person with no work tool never sees.
+const CODE_ID = /\b[A-Za-z_]+:(?!\/\/)/;
+const JUST_ME_WORDS = /\b(work|project|stage|organization|owner|template)s?\b/i;
+// What a fresh workspace counts on its pages: the working hours and the one notices switch make room for Your name. Where
+// reminders go is one row, drawn by a part of its own that is no `.setting`.
+const BASIC_ROWS = 19;
+// Behind Advanced the chat or phone app's address is a box of its own beside its format row, so it is one row more than
+// the `.setting` rows.
+const ADVANCED_ROWS = 26;
 
-test("the settings walk counts at most 26 basic and 30 advanced settings, each labelled in plain words", async ({ page }) => {
+test("the settings walk counts 19 basic and 26 advanced rows, each labelled in plain words, with a hint in plain words", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/you");
@@ -88,6 +98,7 @@ test("the settings walk counts at most 26 basic and 30 advanced settings, each l
   const names = (await bar(page).getByRole("link").allTextContents()).map((n) => n.trim());
   const labels: string[] = [];
   const headings: string[] = [];
+  const hints: string[] = [];
   let basic = 0;
   for (const name of ["You", "AI and spending", "Notices", "Backups", "Appearance", "Your business"]) {
     if (!names.includes(name)) continue;
@@ -95,8 +106,24 @@ test("the settings walk counts at most 26 basic and 30 advanced settings, each l
     await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible(LOADED);
     basic += await page.locator(".setting").count();
     labels.push(...(await page.locator(".setting .setting-label").allTextContents()));
+    hints.push(...(await page.locator(".setting .setting-help .hint:not([id$='-default'])").allTextContents()));
     headings.push(...(await page.locator("main h2, main h3").allTextContents()));
+    // Your name is the first row of You; the setup guide link is on You only.
+    if (name === "You") {
+      await expect(page.locator(".setting").first().getByLabel("Your name")).toBeVisible(LOADED);
+      await expect(page.getByRole("button", { name: "Open the setup guide" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("button", { name: "Open the setup guide" })).toHaveCount(0);
+    }
+    // Working hours are one row on Notices.
+    if (name === "Notices") {
+      await expect(page.getByRole("group", { name: "Working hours" })).toHaveCount(1);
+      // Where reminders go loads by itself, so it is waited for before it is counted as the one row it is.
+      await expect(page.getByRole("heading", { level: 3, name: "Where reminders reach you when the app isn't open" })).toHaveCount(1, LOADED);
+      basic += 1;
+    }
   }
+  expect(basic).toBe(BASIC_ROWS);
   expect(basic).toBeLessThanOrEqual(26);
 
   await bar(page).getByRole("link", { name: "Advanced", exact: true }).click();
@@ -108,7 +135,10 @@ test("the settings walk counts at most 26 basic and 30 advanced settings, each l
     headings.push((await toggles.nth(n).textContent()) ?? "");
     if ((await toggles.nth(n).getAttribute("aria-expanded")) !== "true") await toggles.nth(n).click();
   }
-  expect(await page.locator(".settings-topic .setting").count()).toBeLessThanOrEqual(30);
+  await expect(page.locator(".settings-topic .notice-targets")).toHaveCount(1, LOADED);
+  expect((await page.locator(".settings-topic .setting").count()) + 1).toBe(ADVANCED_ROWS);
+  await expect(page.getByRole("group", { name: "When the brief shows" })).toHaveCount(1);
+  hints.push(...(await page.locator(".settings-topic .setting .setting-help .hint:not([id$='-default'])").allTextContents()));
   labels.push(...(await page.locator(".settings-topic .setting .setting-label").allTextContents()));
 
   for (const label of labels.map((l) => l.trim()).filter(Boolean)) {
@@ -116,6 +146,27 @@ test("the settings walk counts at most 26 basic and 30 advanced settings, each l
     expect(label, label).not.toMatch(FILE_WORDS);
   }
   for (const heading of headings.map((h) => h.trim()).filter(Boolean)) expect(heading, heading).not.toMatch(FILE_WORDS);
+  for (const hint of hints.map((h) => h.trim()).filter(Boolean)) {
+    expect(hint, hint).not.toMatch(CODE_ID);
+    expect(hint, hint).not.toMatch(FILE_WORDS);
+    expect(hint, hint).not.toMatch(JUST_ME_WORDS);
+  }
+});
+
+test("Add-ons holds the catalog settings in a closed section named For developers, and Knowledge holds the glossary", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("?token=e2e-token#settings/addons");
+  const fold = page.locator("details.developer-settings");
+  await expect(fold).toHaveCount(1, LOADED);
+  await expect(fold).not.toHaveAttribute("open", /.*/);
+  await fold.locator("summary").click();
+  await expect(page.getByLabel("List add-ons from catalogs")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Access keys for private downloads" })).toBeVisible();
+  await notWider(page, "Add-ons, For developers");
+  await page.goto("?token=e2e-token#records/knowledge");
+  await expect(page.getByRole("heading", { level: 2, name: "Glossary" })).toBeVisible(LOADED);
+  await expect(page.getByLabel("A word to add")).toBeVisible();
+  await notWider(page, "Knowledge");
 });
 
 test("How the assistant is doing is in the person's menu, and opens Quality without the Settings side bar", async ({ page }) => {

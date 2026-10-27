@@ -345,6 +345,9 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .setting { display: grid; gap: var(--space-1) var(--space-5); border-top: 1px solid var(--border); padding-top: var(--space-3); min-width: 0; }
 .setting-main { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
 .setting-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
+.settings-intro { max-width: var(--measure); }
+.merged-controls { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; }
+.merged-controls select { width: auto; max-width: 100%; }
 .setting-label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .setting-changed { font-size: var(--text-sm); color: var(--text-muted); white-space: nowrap; }
 .setting-changed .link-button { font-size: var(--text-sm); }

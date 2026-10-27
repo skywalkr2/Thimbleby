@@ -12,7 +12,7 @@ items the reviewer's own words settle are built now; thirteen points that read t
 no sentence of the reviewer's go to them as questions first (`docs/project/ui-ux-questions-2026-10-27.md`). Built now:
 "Your name" on You (the person record), Working hours as one row, one notifications switch, the brief's times as one row,
 Add-ons › For developers (the catalog fields), Follow-ups › Message style (greeting and closing), Knowledge › Glossary
-(`language.known_terms`), so those fields leave files-only; code words out of setting hints; toasts that carry an Undo
+(`language.known_terms`), so those fields leave files-only (the app's own catalog switch, `shipped_feed`, included, which the 2026-10-26 entry had kept in files); code words out of setting hints; toasts that carry an Undo
 stay until dismissed or replaced; rail links without an underline until hover in day mode; a handled-for-you count line on
 Today; no "Treat as work" or "Treat as personal" for "Just me"; a wider "Just me" check; "Hand something in" when mail was
 skipped on Your promises; raw dates out of every title; the travel-clash wording in the brief; the setup guide link on You
@@ -434,8 +434,10 @@ Change log: section 214.
 ## 2026-10-26: The add-ons catalog's address is the product's, not a setting
 
 **Decided:** The product's own packs catalog address is committed in `catalog/product.yaml` and always read; the person
-can't switch it off or change it on screen (the switch is kept in files only, for tests and closed networks). A team's own
-extra catalogs stay possible behind Advanced.
+can't change its address on screen, and the Add-ons screen offers no way to remove it from the list. Its switch,
+`workspace.plugins.catalog.shipped_feed`, was first kept in files only; the owner's instruction of 2026-10-27 (change log
+233) puts it in Add-ons › For developers, where a developer or a team can turn it off for a closed network. A team's own
+extra catalogs stay possible there too.
 
 **Decided by:** the owner ("The location of the add-ons should be hardcoded and in our own configuration, not the users
 control").
