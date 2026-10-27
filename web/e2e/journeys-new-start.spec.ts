@@ -112,15 +112,17 @@ test.describe.serial("journey: new start", () => {
     expect(existsSync(installed)).toBe(false);
     const before = await requests();
     expect(before.work).toBe(0);
-    // The row is one line and one button: it says the app restarts first, and the button adds it, restarts and opens the sign-in.
+    // The row is one line and one button: it says the app restarts first, and the button adds it and restarts.
     await expect(row.locator("[data-needs-addon]")).toContainText("The app restarts for a few seconds first");
     expect((await service()).authorizations).toBe(0);
     const appAddress = page.url();
-    // One click installs, turns on, restarts the app and then opens the service's sign-in in its own window; the setup
-    // screen stays where it is. The window is waited for before the click, since it opens after the restart.
-    const popupOpened = page.waitForEvent("popup", { timeout: 120_000 });
+    // One click installs, turns on and restarts the app; then "Sign in to Example mail" waits for the next click, which
+    // opens the service's sign-in in its own window (a window the app opened by itself would be blocked); the setup
+    // screen stays where it is.
     await row.getByRole("button", { name: /^Connect Example mail/ }).click();
-    const popup = await popupOpened;
+    const signInButton = main.getByRole("button", { name: "Sign in to Example mail", exact: true });
+    await expect(signInButton).toBeVisible({ timeout: 120_000 });
+    const [popup] = await Promise.all([page.waitForEvent("popup", { timeout: 60_000 }), signInButton.click()]);
     // It went into the throwaway place the app installs into, and the one restart happened on that click.
     expect(existsSync(installed)).toBe(true);
     expect(restarts()).toBe(1);
@@ -129,15 +131,19 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     // The service sends that window back to the app, which tells this screen how it went and closes the window.
     await popup.waitForEvent("close", { timeout: 60_000 }).catch(() => undefined);
-    await expect(row).toHaveAttribute("data-state", "ready", { timeout: 90_000 });
+    // The step now leads with the result, and the services list is folded behind "Connect another".
+    await expect(main.locator("[data-mail-result]")).toContainText("Example mail is connected.", { timeout: 90_000 });
     await expect(main.getByText(/Restart to finish connecting/)).toHaveCount(0);
+    await main.getByRole("button", { name: "Connect another" }).click();
+    await expect(row).toHaveAttribute("data-state", "ready");
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     // A page opened fresh after the restart resumes at this screen.
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await visit(page);
-    // Signed in once, nothing was asked of the assistant.
+    // Signed in once, nothing was asked of the assistant. A page opened fresh folds the list again.
+    await main.getByRole("button", { name: "Connect another" }).click();
     await expect(row).toHaveAttribute("data-signed-in", "");
     await expect(row).toContainText("Reading your mail and calendar.");
     await expect(row).not.toContainText("Sign in to start reading");

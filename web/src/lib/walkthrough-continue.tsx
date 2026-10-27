@@ -13,6 +13,8 @@ export interface ContinueSpec {
   disabled?: boolean;
   /** What is missing, said under the button while it is disabled. */
   why?: string;
+  /** The screen draws its own Continue higher up, so the walkthrough's own at the foot is left out (there is always one). */
+  inline?: boolean;
 }
 
 export type ContinueSlot = (spec: ContinueSpec | null) => void;

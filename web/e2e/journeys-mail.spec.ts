@@ -100,6 +100,8 @@ test.describe.serial("journey: mail", () => {
     // Signing in happens on the service's own page, which sends me back to the same screen. The service is asked once,
     // and the app proves the sign-in is its own. The answer's code and state are not left in the address.
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    await expect(main.locator("[data-mail-result]")).toContainText("Example mail is connected.");
+    await main.getByRole("button", { name: "Connect another" }).click();
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     // The row no longer says to sign in: it says who is signed in and what is read, and offers no Sign in.
     await expect(row).toHaveAttribute("data-signed-in", "");

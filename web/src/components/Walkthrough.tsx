@@ -72,7 +72,7 @@ export function Walkthrough(
   const register: ContinueSlot = useCallback((spec) => {
     const before = slot.current;
     slot.current = spec;
-    if (!before !== !spec || before?.disabled !== spec?.disabled || before?.why !== spec?.why || before?.label !== spec?.label) redraw();
+    if (!before !== !spec || before?.disabled !== spec?.disabled || before?.why !== spec?.why || before?.label !== spec?.label || before?.inline !== spec?.inline) redraw();
   }, []);
   const data = setup.data;
   // The screen the server named when this opened stays until the person moves: finishing a step must not move them on.
@@ -321,7 +321,12 @@ export function Walkthrough(
           {current === "ai" && <WelcomeAi local={data.local} done={aiDone} />}
           {current === "mail" && (
             <>
-              <WalkthroughMail onChooseSource={handlers.onChooseSource} onOpenAddons={props.onOpenAddons} />
+              <WalkthroughMail
+                onChooseSource={handlers.onChooseSource}
+                onOpenAddons={props.onOpenAddons}
+                onContinue={next ? () => void carryOn() : undefined}
+                continuing={busy}
+              />
               {hasMailSteps && <StepList include={(s) => s.group === "mail" && !!s.plugin && !s.sign_in} {...handlers} />}
             </>
           )}
@@ -351,7 +356,7 @@ export function Walkthrough(
                     {t("walkthrough.skip")}
                   </Button>
                 )}
-                {next && !(current === "mail" && here === "todo") && (
+                {next && !(current === "mail" && here === "todo") && !slot.current?.inline && (
                   <Button
                     variant="primary"
                     loading={busy}

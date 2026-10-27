@@ -166,7 +166,7 @@ const signIn = (name: string, over: Partial<S["SignInView"]> = {}): S["SignInVie
 const source = (id: string, label: string, over: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] => ({
   id,
   label,
-  connector: "x/y",
+  connector: "mail-addon/mail",
   connector_label: "",
   reads: ["mail"],
   enabled: true,
@@ -1441,7 +1441,7 @@ describe("Mail and calendar", () => {
   const row = async () => (await screen.findByText("Service mail-addon")).closest("li") as HTMLElement;
   const oneButton = "Connect Service mail-addon";
 
-  test("a service that is not installed: the row is one line and one button; one click installs, turns on, restarts, then opens the sign-in in its own window", async () => {
+  test("a service that is not installed: the row is one line and one button; one click installs, turns on, restarts, then waits for the person's own click to open the sign-in window", async () => {
     const user = userEvent.setup();
     const { calls, login } = service("none");
     open();
@@ -1456,6 +1456,13 @@ describe("Mail and calendar", () => {
     // Nothing restarts before the click.
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
     await user.click(within(mine).getByRole("button", { name: oneButton }));
+    // After the restart the sign-in is a button to press: a window the app opens by itself is blocked as a pop-up.
+    const signIn = await screen.findByRole("button", { name: "Sign in to Service mail-addon" }, { timeout: 3000 });
+    expect(signIn).toHaveClass("primary");
+    expect(signIn).toHaveFocus();
+    expect(opener).not.toHaveBeenCalled();
+    expect(popup.location.href).toBe("");
+    await user.click(signIn);
     await waitFor(() => expect(popup.location.href).toBe(login), { timeout: 3000 });
     const routesCalled = calls.map((c) => c.route);
     expect(routesCalled.indexOf("POST packs/mail-addon/install")).toBeLessThan(routesCalled.indexOf("POST packs/mail-addon/on"));
@@ -1505,13 +1512,14 @@ describe("Mail and calendar", () => {
     expect(opener).not.toHaveBeenCalled();
   });
 
-  test("a service installed but off: one click turns it on, with no install, then restarts and opens the sign-in", async () => {
+  test("a service installed but off: one click turns it on, with no install, then restarts and shows Sign in to it", async () => {
     const user = userEvent.setup();
     const { calls, login } = service("off");
     open();
     const mine = await row();
     expect(within(mine).getByText(/^You'll sign in on .* own page\./)).toBeInTheDocument();
     await user.click(within(mine).getByRole("button", { name: oneButton }));
+    await user.click(await screen.findByRole("button", { name: "Sign in to Service mail-addon" }, { timeout: 3000 }));
     await waitFor(() => expect(popup.location.href).toBe(login), { timeout: 3000 });
     expect(calls.some((c) => c.route === "POST packs/mail-addon/install")).toBe(false);
     expect(calls.some((c) => c.route === "POST packs/mail-addon/on")).toBe(true);
@@ -1626,8 +1634,11 @@ describe("Mail and calendar", () => {
   });
 
   test("once signed in the row says who and what is read, offers no Sign in, and no longer says to sign in", async () => {
+    const user = userEvent.setup();
     service("on", { signed: true });
     open();
+    // The services list is folded to one line once something is connected.
+    await user.click(await screen.findByRole("button", { name: "Connect another" }));
     const mine = await row();
     expect(await within(mine).findByText("Signed in as me@example.com")).toBeInTheDocument();
     expect(within(mine).getByText("Reading your mail and calendar.")).toBeInTheDocument();
@@ -1656,24 +1667,53 @@ describe("Mail and calendar", () => {
     expect(mine).not.toHaveAttribute("data-signed-in");
   });
 
-  test("after signing in it says what is read now and that what it reads waits for the first Go", async () => {
+  test("after signing in the step leads with the result: what is connected and read, that it waits for the first Go, one Continue and the list folded", async () => {
+    const user = userEvent.setup();
     service("on", { signed: true });
     open();
-    const mine = await row();
-    expect(within(mine).getByText("Signed in as me@example.com")).toBeInTheDocument();
-    const reading = await screen.findByText("Now reading");
-    const list = reading.closest("[data-reading]") as HTMLElement;
-    expect(within(list).getByText("Your inbox")).toBeInTheDocument();
-    expect(within(list).getByText("Your calendar")).toBeInTheDocument();
-    expect(within(list).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
+    const reading = await screen.findByText("Service mail-addon is connected.");
+    const block = reading.closest("[data-mail-result]") as HTMLElement;
+    // The result is the first thing in the step's body, ahead of the services list.
+    const step = block.closest(".mail-step") as HTMLElement;
+    expect(step.firstElementChild).toBe(block);
+    expect(within(block).getByText(/Helper is reading: Your inbox and Your calendar\./)).toBeInTheDocument();
+    expect(within(block).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
+    // Exactly one Continue, right under the result; the list is behind "Connect another" and shows when it is pressed.
+    expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
+    expect(block.contains(screen.getByRole("button", { name: "Continue" }))).toBe(true);
+    expect(screen.queryByText("Services you can connect")).toBeNull();
+    expect(screen.queryByText("Service mail-addon", { selector: "strong" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Connect another" }));
+    expect(await screen.findByText("Services you can connect")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Another mail or calendar" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
+  });
+
+  test("with nothing connected yet there is no result block and the services list is shown", async () => {
+    service("on");
+    open();
+    expect(await screen.findByText("Services you can connect")).toBeInTheDocument();
+    expect(screen.queryByText(/is connected\./)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Connect another" })).toBeNull();
+  });
+
+  test("the set-aside choice is one line with Change, which shows the switch in place", async () => {
+    const user = userEvent.setup();
+    service("on", { signed: true });
+    open();
+    const line = (await screen.findByText(/Newsletters, sales and mailing lists are set aside/)).closest("[data-set-aside-line]") as HTMLElement;
+    expect(screen.queryByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" })).toBeNull();
+    await user.click(within(line).getByRole("button", { name: "Change" }));
+    expect(await within(line).findByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" })).toBeInTheDocument();
+    expect(within(line).getByText(/not the message body/)).toBeInTheDocument();
   });
 
   test("with a side of work, each mailbox and calendar asks which it serves and saves the ticks as its sides", async () => {
     const user = userEvent.setup();
     service("on", { signed: true });
     let sources: Array<Record<string, unknown>> = [
-      { id: "s1", connector: "x/y", label: "Your inbox", settings: {} },
-      { id: "s2", connector: "x/y", label: "Your calendar", settings: {}, sides: ["PRJ-3"] },
+      { id: "s1", connector: "mail-addon/mail", label: "Your inbox", settings: {} },
+      { id: "s2", connector: "mail-addon/mail", label: "Your calendar", settings: {}, sides: ["PRJ-3"] },
     ];
     const first = sources;
     const saves: unknown[] = [];
@@ -1703,8 +1743,8 @@ describe("Mail and calendar", () => {
       },
     });
     open();
-    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
-    const calendar = screen.getByRole("group", { name: "Who is Your calendar for?" });
+    const inbox = await screen.findByRole("group", { name: "Your inbox: who is it for?" });
+    const calendar = screen.getByRole("group", { name: "Your calendar: who is it for?" });
     expect(within(inbox).getAllByRole("checkbox").map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
     // Nothing ticked is allowed; what a source already serves is shown ticked.
     expect(within(inbox).getAllByRole("checkbox").every((b) => !(b as HTMLInputElement).checked)).toBe(true);
@@ -1731,8 +1771,8 @@ describe("Mail and calendar", () => {
   function ticks(post: (body: { changes: { "watch.sources": Array<Record<string, unknown>> } }) => unknown) {
     service("on", { signed: true });
     const sources: Array<Record<string, unknown>> = [
-      { id: "s1", connector: "x/y", label: "Your inbox", settings: {} },
-      { id: "s2", connector: "x/y", label: "Your calendar", settings: {} },
+      { id: "s1", connector: "mail-addon/mail", label: "Your inbox", settings: {} },
+      { id: "s2", connector: "mail-addon/mail", label: "Your calendar", settings: {} },
     ];
     const state = { sources };
     const calls = fakeApi({
@@ -1779,7 +1819,8 @@ describe("Mail and calendar", () => {
       }
     });
     open();
-    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    await user.click(await screen.findByRole("button", { name: "Set them separately" }));
+    const inbox = await screen.findByRole("group", { name: "Your inbox: who is it for?" });
     await user.click(within(inbox).getByRole("checkbox", { name: "Personal" }));
     // The first save is still running: the other box is not greyed out and its tick is kept.
     expect(within(inbox).getByRole("checkbox", { name: EMPLOYER })).toBeEnabled();
@@ -1804,7 +1845,8 @@ describe("Mail and calendar", () => {
       }
     });
     open();
-    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    await user.click(await screen.findByRole("button", { name: "Set them separately" }));
+    const inbox = await screen.findByRole("group", { name: "Your inbox: who is it for?" });
     const personal = within(inbox).getByRole("checkbox", { name: "Personal" });
     await user.click(personal);
     await user.click(personal);
@@ -1819,10 +1861,11 @@ describe("Mail and calendar", () => {
     let fail = true;
     const { state } = ticks(async () => (fail ? new Refuse(500, "") : undefined));
     open();
-    const inbox = await screen.findByRole("group", { name: "Who is Your inbox for?" });
+    await user.click(await screen.findByRole("button", { name: "Set them separately" }));
+    const inbox = await screen.findByRole("group", { name: "Your inbox: who is it for?" });
     await user.click(within(inbox).getByRole("checkbox", { name: EMPLOYER }));
     const problem = await within(inbox).findByRole("alert");
-    expect(problem).toHaveTextContent(`Couldn't save ${EMPLOYER} for Your inbox.`);
+    expect(problem).toHaveTextContent(`Your inbox: couldn't save ${EMPLOYER}.`);
     expect(within(inbox).getByRole("checkbox", { name: EMPLOYER })).not.toBeChecked();
     fail = false;
     await user.click(within(problem).getByRole("button", { name: "Try again" }));
@@ -1836,6 +1879,7 @@ describe("Mail and calendar", () => {
     let fail = true;
     const { calls } = ticks(async () => (fail ? new Refuse(500, "") : undefined));
     open();
+    await user.click(await screen.findByRole("button", { name: "Change" }));
     const sorting = await screen.findByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" });
     await user.click(sorting);
     const problem = await screen.findByRole("alert");
@@ -1845,11 +1889,34 @@ describe("Mail and calendar", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
+  test("after a connect with a side of work the step asks once who they are for, and a tick saves to every source of the sign-in", async () => {
+    const user = userEvent.setup();
+    const saved: Array<Array<{ id: string; sides?: string[] }>> = [];
+    ticks(async (body) => void saved.push(body.changes["watch.sources"] as Array<{ id: string; sides?: string[] }>));
+    open();
+    const group = await screen.findByRole("group", { name: "Who are they for?" });
+    // One question for the whole sign-in, in the result block, with Personal and each side.
+    expect((group.closest("[data-mail-result]") as HTMLElement).firstElementChild).toBe(group.closest("section"));
+    expect(within(group).getAllByRole("checkbox").map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
+    expect(screen.queryByRole("group", { name: /: who is it for\?$/ })).toBeNull();
+    await user.click(within(group).getByRole("checkbox", { name: EMPLOYER }));
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect(saved[0].map((s) => s.sides)).toEqual([["PRJ-2"], ["PRJ-2"]]);
+    expect(await within(group).findByRole("status")).toHaveTextContent(`They're for ${EMPLOYER}.`);
+    // One way to ask for each source on its own.
+    await user.click(screen.getByRole("button", { name: "Set them separately" }));
+    expect(await screen.findByRole("group", { name: "Your inbox: who is it for?" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Your calendar: who is it for?" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Who are they for?" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set them separately" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
+  });
+
   test("with no side of work, the mailboxes are not asked which they serve", async () => {
     service("on", { signed: true });
     open();
-    await screen.findByText("Now reading");
-    expect(screen.queryByRole("group", { name: /serve\?$/ })).toBeNull();
+    await screen.findByText("Service mail-addon is connected.");
+    expect(screen.queryByRole("group")).toBeNull();
   });
 
   test("where the app can't restart itself the step says to close and start it, and offers no restart button", async () => {

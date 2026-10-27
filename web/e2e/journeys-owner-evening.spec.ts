@@ -124,13 +124,15 @@ test.describe.serial("journey: the owner's first evening", () => {
         },
       }),
     });
-    const popupOpened = page.waitForEvent("popup", { timeout: 120_000 });
     await row.getByRole("button", { name: /^Connect Example mail/ }).click();
-    const popup = await popupOpened;
+    const signInButton = main.getByRole("button", { name: "Sign in to Example mail", exact: true });
+    await expect(signInButton).toBeVisible({ timeout: 120_000 });
+    const [popup] = await Promise.all([page.waitForEvent("popup", { timeout: 60_000 }), signInButton.click()]);
     expect(restarts()).toBe(1);
     expect(page.url()).toBe(appAddress);
     await popup.waitForEvent("close", { timeout: 60_000 }).catch(() => undefined);
-    await expect(row).toHaveAttribute("data-state", "ready", { timeout: 90_000 });
+    await expect(main.locator("[data-mail-result]")).toContainText("Example mail is connected.", { timeout: 90_000 });
+    await main.getByRole("button", { name: "Connect another" }).click();
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
     await main.getByRole("button", { name: "Continue" }).click();
