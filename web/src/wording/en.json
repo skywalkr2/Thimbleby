@@ -204,7 +204,7 @@
   "changes.state.queued": "With {assistant}",
   "changes.state.running": "With {assistant}",
   "changes.state.review": "Review",
-  "changes.history.review": "Done, not yet checked",
+  "changes.history.review": "Not yet checked",
   "changes.state.needs_you": "Needs you",
   "changes.state.done": "Done",
   "changes.state.failed": "Stopped",

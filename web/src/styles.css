@@ -62,6 +62,8 @@ main p { max-width: var(--measure); }
 .line:last-child { border-bottom: 0; }
 .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); padding: var(--row-py) var(--row-px); }
 .row:has(> .kind) { grid-template-columns: var(--row-pill-w) minmax(0, 1fr) auto; }
+/* A pill in a row's pill column wraps inside the column rather than running over the title beside it. */
+.row:has(> .kind) > .kind { white-space: normal; max-width: 100%; }
 .row > .kind { justify-self: start; }
 .row.single { grid-template-columns: minmax(0, 1fr); }
 .row.pair { grid-template-columns: minmax(0, 1fr) auto; }

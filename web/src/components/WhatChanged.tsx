@@ -396,7 +396,7 @@ function useChangeSub(item: S["ChangeItem"]): string {
 }
 
 /** The word a row's state is written in: what happened, so a change the assistant finished and nobody has checked yet reads
- * "Done, not yet checked" and not as an instruction. */
+ * "Not yet checked" and not as an instruction. */
 function stateWord(item: S["ChangeItem"], gated: boolean): string {
   if (item.dismissed) return "changes.state.dismissed";
   if (gated) return "changes.state.cost_go";

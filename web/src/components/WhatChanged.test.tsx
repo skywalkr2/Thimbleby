@@ -658,11 +658,11 @@ describe("the history: rows are past tense, have no button, and keep their choic
     await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-2/undo")).toBe(true));
   });
 
-  test("a change the assistant finished and nobody has checked reads Done, not yet checked, and its line says what was done", async () => {
+  test("a change the assistant finished and nobody has checked reads Not yet checked, and its line says what was done", async () => {
     fakeApi({ "GET changes": () => [change("REQ-1")] });
     renderApp(<WhatChanged />);
     const row = await screen.findByRole("listitem", { name: "Email from the printer" });
-    expect(within(row).getByText("Done, not yet checked")).toBeInTheDocument();
+    expect(within(row).getByText("Not yet checked")).toBeInTheDocument();
     expect(within(row).queryByText("Review")).toBeNull();
     expect(within(row).getByText(/Recorded 1 thing/)).toBeInTheDocument();
   });
