@@ -40,8 +40,8 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
      for), B-11b's rest (the recommendation by cost per passing answer, "Measure", the model picker's role words, effort in the
      pre-save check, confirming each service's effort parameter), each fix checked on a low-cost model first, then the owner's
      re-run (B-10; P30 and P31 are the owner's captures and the learning-pair groups).
-  2. **The owner's checks and the gate week with its pass bar** (P65: drafted in `docs/project/gate-pass-bar-draft-2026-10-28.md`,
-     waiting for the owner's yes; the thresholds paragraph of design 6.32 is matched to it after that yes): the laptop and phone
+  2. **The owner's checks and the gate week with its pass bar** (P65: agreed by the owner 2026-10-28, `docs/project/gate-pass-bar-draft-2026-10-28.md`
+     and design 6.32; the week counts what the app sees, and more is expected from the testers after phase I): the laptop and phone
      exit checks (B-6a, B-6b), an add-on installed from a real release host (B-5), the app-password check (P67), the real-mail
      re-run (P46). The gate's instruments already count the pass bar's rows for lost promises, the 50-message sample, sources not read and review time (change log 235).
   3. **Phase S's leftovers**, the gate week showing which matter; those that need an add-on (calendar acts, the add-ons' channels,
@@ -299,7 +299,7 @@ changes above (the owner's review of the batched plan and calls on the designer'
 acceptance tests are built (stale approvals, a retry never sending twice, an uncertain answer never shown as sent, a withdrawn
 sign-in, outside content that tries to change a recipient: `tests/test_publisher.py`); the installers ship the mail and calendar
 add-ons ready to sign in (decided 2026-10-20, the I-1 item). **Still waiting for the owner's yes:** the numeric thresholds for
-"dependable" (the gate week's pass bar, P65, drafted in `docs/project/gate-pass-bar-draft-2026-10-28.md`), measured with
+"dependable" (the gate week's pass bar, P65, agreed in `docs/project/gate-pass-bar-draft-2026-10-28.md`), measured with
 denominators and a held-out set, with omissions found by an independent reading of a consented sample (built, A3).
 
 **The waves left** (waves 1 to 4 are in roadmap-done.md):
@@ -1292,14 +1292,13 @@ code. Nearly all is built or planned. What is left, in two batches:
   reviewer saw, "The notes list that the offsite is on a Friday.", is the stand-in answer's shape for a "Decided:" line in
   a document (`engine/ai/adapters/stand_in.py`): the line says no one chose, and the stand-in sets no speaker; a fact with
   a known speaker now reads "Pat says …" with its day.
-- [x] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
+- [x] [A3] The gate's instruments matched to the pass bar (P65): review time on Today's review pane, counters for
   lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
-  thresholds paragraph matched to the draft once the owner says yes.
+  thresholds paragraph matched to the bar, which the owner agreed on 2026-10-28.
   *Built so far (2026-10-28):* the review pane on Today is timed and the median is given; lost promises, sources unread over a day
   and the 50-message sample (setting, draw, the person's counts, `docs/project/gate-sample-procedure.md`) are counted with their
-  denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). *Not part of
-  the box, waiting for the owner's yes (P65):* the thresholds paragraph of design 6.32, matched to the drafted pass bar once the
-  owner says yes.
+  denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). The thresholds
+  paragraph of design 6.32 states the agreed bar (change log 238).
 - [ ] [A4] The checklist's partials (C13, C15, C16, C23, C24, C29, C35, C36, C41, C43, C45) built or re-marked, with C21
   and C22 re-marked. Built with tests (`docs/project/ui-review-status-2026-10-20.md`): C13, C15, C21, C22, C25, C36, C41, C45.
   Left, each re-marked with why: C16 (the rail's rows to `ui/Row`), C23 (two columns and inline validation in the forms),

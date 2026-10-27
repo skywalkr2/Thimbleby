@@ -21,4 +21,3 @@ Kept current by the build session; finished items leave the list.
 ## Later, nothing waits on these
 
 - **Your own AI re-run** of the test cases on your account, after the batch (the session gives the commands).
-- **The gate week's pass bar** (P65): drafted, `docs/project/gate-pass-bar-draft-2026-10-28.md`. Say yes or change a number before the gate week.

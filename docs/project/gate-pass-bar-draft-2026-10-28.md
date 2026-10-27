@@ -1,4 +1,4 @@
-# The gate week's pass bar: a draft for the owner's yes (P65, risk R10)
+# The gate week's pass bar (P65, risk R10): agreed by the owner, 2026-10-28
 
 Written before any results are known, as the designer asked (2026-10-28). The measures and the frozen week are already
 designed (design 6.32, "Measures"; built in `engine/gate_measures.py`, read from `GET /api/quality`). Design 6.32 says the
@@ -37,7 +37,8 @@ design already says.
   the expected end), the fixes land, and a new counted week runs.
 - The testers' run (phase I) starts only after a week passes, and the testers are held to the same bar for measures 1 to 4.
 
-## For the owner
+## Agreed
 
-Say yes, or change any number. The designer's view is welcome before the week starts. Once agreed, design 6.32 and risk
-R10 are updated to say the bar is fixed and can only tighten.
+The owner said yes to every number (2026-10-28), noting that their own work is still mostly in add-ons being built, so
+the week counts what the app sees, and that more is expected to show once the installers reach a few people (phase I).
+Design 6.32 and risk R10 now say the bar is fixed and can only tighten.

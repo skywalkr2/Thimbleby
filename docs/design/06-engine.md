@@ -4123,10 +4123,17 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   closes (built: the figure, `closes.measure`, and its section of the Quality screen, `web/src/components/Quality.test.tsx`); changed dates, cancellations, partial deliveries and
   owner changes handled; review time; sources not read; and "Missed one" per person per week, which should fall from week
   one to week two. Counts with their denominators; a held-out set; and a replay set where each real miss becomes a case
-  (starting state, the person's action, expected end). **The gate week's thresholds** are set from its two measured
-  days; the testers are held to those numbers for missed out of present, silent closes and wrong endings (per-tester
-  thresholds would move the bar to fit), counts that depend on how much mail a person gets are reported, not gated, and
-  the "Missed one" trend is the one measure only the testers have. **During the counted week, what is measured is
+  (starting state, the person's action, expected end). **The gate week's pass bar is fixed before any result**
+  (owner, 2026-10-28; `docs/project/gate-pass-bar-draft-2026-10-28.md`): lost promises 0, wrong silent closes 0, missed
+  out of present at most 1 in 10 (from "Missed something?" plus the 50-message sample), wrong endings at most 1 in 20,
+  wrong out of proposed at most 1 in 4, sources not read without a line 0, review time a median of at most 10 minutes a
+  day, and repeat corrections reported, not gated. The two measured days check the instruments and may only tighten a
+  bar to what they show, never loosen it. A failure of lost promises, silent closes or sources not read ends the week at
+  once; any other failure finishes the week, its misses become replay cases, and a new week runs. The testers are held to
+  the same bar for the first four measures (per-tester thresholds would move the bar to fit), counts that depend on how
+  much mail a person gets are reported, not gated, and the "Missed one" trend is the one measure only the testers have.
+  The owner's own week counts what the app sees; work done in tools no add-on reads yet is outside it, so the testers'
+  run after the installers (phase I) is where more is expected to show. **During the counted week, what is measured is
   frozen:** Today, the promise lines, the prompts and the model choices don't change, and fixes found go on a list and land
   after it; the one exception is anything that loses a promise or closes one wrongly, fixed at once with the day noted in
   the week's log so the measures before and after can be told apart.
@@ -4162,7 +4169,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   `::test_a_window_with_no_counts_is_zero_over_zero_and_the_counts_survive_export_and_import`; the screen:
   `web/src/components/Quality.test.tsx`. *Not built:* a record of when the replays last ran.
   **The instruments match the drafted pass bar** (`docs/project/gate-pass-bar-draft-2026-10-28.md`, roadmap A3; the
-  thresholds paragraph above is unchanged until the owner says yes). *Built:* **review time** counts the review pane on
+  pass bar above, agreed by the owner). *Built:* **review time** counts the review pane on
   Today (screen `today`, `BatchDetail.tsx`) with the others, and `GET /api/quality` gives each day's seconds and visits
   and the median of the daily totals over the days with any review; **lost promises** are promises (actions read as
   one) open in the window that left open (status) or were deleted, stay gone, and did so by a write that was neither the

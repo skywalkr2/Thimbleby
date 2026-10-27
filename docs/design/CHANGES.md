@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 238. The gate week's pass bar, agreed (2026-10-28; roadmap A3, P65)
+
+| Where | Before | Now |
+|---|---|---|
+| Measures (6.32) | The gate week's thresholds "set from its two measured days" | The bar fixed before any result: lost promises and silent closes 0, missed at most 1 in 10, wrong endings at most 1 in 20, wrong out of proposed at most 1 in 4, sources not read 0, review time a median of 10 minutes; the two days may only tighten it |
+| Risk R10 | "Not yet in force: the thresholds are an open owner decision" | The bar is in force and the testers wait for a passed week |
+
 ## 237. The second pass's leftovers, the reviewer's H1 to H8 and the checklist's partials (2026-10-28; phase U; roadmap A2, A2b, A4)
 
 | Where | Before | Now |

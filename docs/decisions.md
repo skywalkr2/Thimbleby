@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: The gate week's pass bar is fixed and can only tighten
+
+**Decided:** The gate week is passed against the bar drafted before any result: lost promises 0, wrong silent closes 0,
+missed out of present at most 1 in 10, wrong endings at most 1 in 20, wrong out of proposed at most 1 in 4, sources not
+read without a line 0, review time a median of at most 10 minutes a day, repeat corrections reported only. The two
+measured days check the instruments and may only tighten a bar. Design 6.32 said the thresholds were set from those
+two days; it now states the bar.
+
+**Decided by:** the owner ("for the gate week checks i agree with your proposal"), on the functional designer's point 2.
+
+**Why:** a bar set after the results can always be made to pass. The owner noted that their own work is still mostly in
+add-ons being built, so the week counts what the app sees, and that more is expected once the installers reach a few
+people; the testers are held to the same bar for the first four measures.
+
+**Impact:** Design 6.32, risk R10, roadmap A3 (ticked; its instruments were built with tests), P65 closed. Change log:
+section 238.
+
 ## 2026-10-28: The language word lists are shipped data; a setting replaces a list whole
 
 **Decided:** The 52 `language.*` word lists (words, phrases, patterns and the date reader's mappings) move out of the
