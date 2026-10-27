@@ -146,6 +146,14 @@ def test_a_mailbox_with_a_sent_folder_lists_the_persons_own_message_only_there(s
     assert taken["sent"] == [fake_services.SENT_SUBJECT] and fake_services.SENT_SUBJECT not in taken["mail"]
 
 
+def test_a_review_counts_only_the_items_that_hold_something_to_check():
+    from datetime import UTC, datetime
+
+    taken = fake_services.intake_items(datetime.now(UTC))
+    assert taken["mail_to_check"] and set(taken["mail_to_check"]) < set(taken["mail"])
+    assert taken["events_to_check"] and set(taken["events_to_check"]) < set(taken["events"])
+
+
 def test_the_mailbox_has_recent_and_old_items_in_the_shapes_the_assistant_reads():
     from datetime import UTC, datetime
 

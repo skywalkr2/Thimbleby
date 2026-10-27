@@ -123,7 +123,7 @@ test.describe.serial("journey: mail", () => {
     expect(recentMail.length).toBeGreaterThan(0);
     expect(recentNoted.length).toBeGreaterThan(0);
     expect(aside).toHaveLength(2);
-    const { mail, events, noted } = seen.intake_items;
+    const { mail, events, noted, mail_to_check: mailToCheck, events_to_check: eventsToCheck } = seen.intake_items;
     const handedIn = mail.length + events.length;
     expect(handedIn).toBeGreaterThan(recentMail.length + recentEvents.length);
     expect(noted).toHaveLength(0);
@@ -207,8 +207,10 @@ test.describe.serial("journey: mail", () => {
     const found = page.locator('[data-queue-line="intake_review"]');
     const inbox = found.filter({ hasText: "Your inbox" });
     const calendar = found.filter({ hasText: "Your calendar" });
-    await expect(inbox).toContainText(`Look over what was found in Your inbox: ${mail.length} items`, { timeout: 60_000 });
-    await expect(calendar).toContainText(`Look over what was found in Your calendar: ${events.length} items`, { timeout: 60_000 });
+    // Only what needs a look is counted: a thank-you, an agreement or a plain announcement is filed quietly.
+    const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+    await expect(inbox).toContainText(`Look over what was found in Your inbox: ${items(mailToCheck.length)}`, { timeout: 60_000 });
+    await expect(calendar).toContainText(`Look over what was found in Your calendar: ${items(eventsToCheck.length)}`, { timeout: 60_000 });
     await expect(found).toHaveCount(2);
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     await visit(page);

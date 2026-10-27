@@ -1245,6 +1245,8 @@ The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the des
 - [x] [U18] Row actions are tonal in both themes, only the selected line's filled. **Built:** `web/src/theme/dayMode.test.ts`,
   `web/e2e/today-review.spec.ts`.
 - [ ] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
+- [ ] [U20] A rail panel opened on a phone stays open when Today's data refreshes (the layout walk retries opening Came in;
+  trace whether the panel folds itself again and fix it if so).
 - [ ] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
   address (the reviewer's answer 10; owner, 2026-10-28).
 

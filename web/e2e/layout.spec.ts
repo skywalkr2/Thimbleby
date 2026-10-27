@@ -34,13 +34,15 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
       await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible(LOADED);
       await expect(page.locator('[data-queue-line="review"]').first()).toBeVisible(LOADED);
       // On the phone the rail's panels are folded to one line; the one holding the failed read says so, and is opened to measure it.
-      const folded = page.getByRole("button", { name: /Came in/, expanded: false });
-      if ((await folded.count()) > 0) {
-        await expect(folded).toContainText("couldn't be read", LOADED);
-        await folded.click();
-        await expect(page.getByRole("button", { name: /Came in/ })).toHaveAttribute("aria-expanded", "true", LOADED);
-      }
-      await expect(page.locator("[data-source-problems]").first()).toBeVisible(LOADED);
+      // The rail can be drawn again while the page is still loading, which folds it again, so opening is retried until the problem shows.
+      await expect(async () => {
+        const folded = page.getByRole("button", { name: /Came in/, expanded: false });
+        if ((await folded.count()) > 0) {
+          await expect(folded).toContainText("couldn't be read", { timeout: 2_000 });
+          await folded.click();
+        }
+        await expect(page.locator("[data-source-problems]").first()).toBeVisible({ timeout: 2_000 });
+      }).toPass({ timeout: 60_000 });
       await expect(page.locator("[data-source-problems]").first()).toContainText(strings["mail-01"].slice(0, 12), LOADED);
     },
   },

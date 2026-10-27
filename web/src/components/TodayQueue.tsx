@@ -107,7 +107,7 @@ export function TodayQueue(props: {
   // through, until the person moves on; a line the person settled here leaves at once. `frozen` is the keys on screen
   // while held, in order, and null while nothing holds the list, when it simply follows the data.
   const pointer = useRef(false);
-  const touched = useRef<string | null>(null);
+  const touched = useRef(new Set<string>());
   const known = useRef(new Map<string, QueueLine>());
   for (const line of lines) known.current.set(line.key, line);
   const [frozen, setFrozen] = useState<string[] | null>(null);
@@ -129,7 +129,7 @@ export function TodayQueue(props: {
   const live = new Map(lines.map((line) => [line.key, line]));
   const ghostable = (key: string) => {
     const old = known.current.get(key);
-    return !!old && key !== touched.current && !isHeld(old) && !isLearned(old);
+    return !!old && !touched.current.has(key) && !isHeld(old) && !isLearned(old);
   };
   // The keys on screen as of the last commit, which is what a hold keeps when the data changes under it.
   const shownKeys = useRef<string[]>([]);
@@ -164,6 +164,7 @@ export function TodayQueue(props: {
     let after = [...keys];
     if (!working.current.held || (frozen ?? shownKeys.current).length === 0) {
       setFrozen(null);
+      touched.current.clear();
     } else {
       const base = frozen ?? shownKeys.current;
       after = base.flatMap((key) => {
@@ -202,13 +203,13 @@ export function TodayQueue(props: {
     if (queue.data) onScreen.current = true;
   });
 
-  // What the person last acted on here is theirs: when it leaves the list it goes at once, not as a ghost.
+  // What the person acted on here while the list was held is theirs, however many lines in a row: when it leaves the list it goes at once, not as a ghost.
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : null;
       const row = target?.closest<HTMLElement>("[data-line-key]");
-      if (row && pane.current?.contains(row)) touched.current = row.dataset.lineKey ?? null;
-      else if (target?.closest("[data-queue-inspector]")) touched.current = props.selected?.key ?? null;
+      const key = row && pane.current?.contains(row) ? row.dataset.lineKey : target?.closest("[data-queue-inspector]") ? props.selected?.key : undefined;
+      if (key) touched.current.add(key);
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);

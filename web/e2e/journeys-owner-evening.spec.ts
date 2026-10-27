@@ -163,7 +163,8 @@ test.describe.serial("journey: the owner's first evening", () => {
     await main.getByLabel("Name").first().fill(friend);
     await main.getByLabel("How they relate to you").first().selectOption({ label: "my friend" });
     await main.getByRole("button", { name: "Add", exact: true }).first().click();
-    await expect(main.getByRole("listitem").filter({ hasText: friend })).toContainText("my friend");
+    // The people added so far are their own list; the suggestions above it may still show the same name for a moment.
+    await expect(main.getByRole("region", { name: "The people in your life" }).getByRole("listitem").filter({ hasText: friend })).toContainText("my friend");
     void personal;
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();

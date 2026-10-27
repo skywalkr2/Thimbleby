@@ -49,7 +49,16 @@ export interface SignInSeen {
   recent_items: { mail: string[]; events: string[]; noted: string[]; set_aside: string[] };
   /** What a quiet first read (the sources a sign-in starts) takes in: the work messages of the last 14 days and every event,
    * the mail the app sets aside by what the service says about it, and what is older than that, which it only notes. */
-  intake_items: { mail: string[]; events: string[]; noted: string[]; set_aside: string[]; sent: string[] };
+  intake_items: {
+    mail: string[];
+    events: string[];
+    /** The taken-in mail and events that hold something to look over: what a source's review line on Today counts. */
+    mail_to_check: string[];
+    events_to_check: string[];
+    noted: string[];
+    set_aside: string[];
+    sent: string[];
+  };
 }
 
 /** Collects what the browser reports as wrong while a journey runs; a journey ends by checking the list is empty. */

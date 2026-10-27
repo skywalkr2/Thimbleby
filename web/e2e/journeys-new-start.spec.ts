@@ -161,7 +161,7 @@ test.describe.serial("journey: new start", () => {
     expect(recentNoted.length).toBeGreaterThan(0);
     // The look back takes in the last 14 days of work mail and every event, so each is counted once below.
     // The sign-in also names the account's sent mail, which is read with the inbox and credited to me, with no folder chosen.
-    const { mail, events, noted, sent } = seen.intake_items;
+    const { mail, events, noted, sent, mail_to_check: mailToCheck, events_to_check: eventsToCheck } = seen.intake_items;
     expect(sent.length).toBeGreaterThan(0);
     const handedIn = mail.length + events.length + sent.length;
     expect(handedIn).toBeGreaterThan(recentMail.length + recentEvents.length);
@@ -303,11 +303,14 @@ test.describe.serial("journey: new start", () => {
     // 10. What was found is one line for each source, not a line for each item: none of the items' own review lines is on
     // Today until I open the list.
     const found = page.locator('[data-queue-line="intake_review"]');
-    await expect(found.filter({ hasText: "Your inbox" })).toContainText(`Look over what was found in Your inbox: ${mail.length} items`, {
-      timeout: 60_000,
-    });
+    // Only what needs a look is counted: a thank-you, an agreement or a plain announcement is filed quietly.
+    const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+    await expect(found.filter({ hasText: "Your inbox" })).toContainText(
+      `Look over what was found in Your inbox: ${items(mailToCheck.length)}`,
+      { timeout: 60_000 },
+    );
     await expect(found.filter({ hasText: "Your calendar" })).toContainText(
-      `Look over what was found in Your calendar: ${events.length} items`,
+      `Look over what was found in Your calendar: ${items(eventsToCheck.length)}`,
       { timeout: 60_000 },
     );
     // The sent mail is its own source, so it has its own line.

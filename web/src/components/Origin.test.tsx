@@ -43,6 +43,12 @@ const yours = (actions: S["FollowupAction"][], questions: S["FollowupQuestion"][
   { person: "PER-1", name: "Pat Example", is_pm: true, questions, actions, message: "", to_send: 0 },
 ];
 
+// The person's own to-dos are one line on Follow-ups, so an action's origin shows on a row waiting on someone else.
+const theirs = (actions: S["FollowupAction"][]): S["FollowupSection"][] => [
+  { person: "PER-2", name: "Robin Sample", is_pm: false, questions: [], actions, message: "", to_send: 0 },
+];
+const sentAction = (over: Partial<S["FollowupAction"]> = {}) => action({ told: "2026-10-09", told_days: 3, ...over });
+
 const saved: S["SourceView"] = {
   id: "SRC-3",
   title: "Email from the printer",
@@ -58,11 +64,13 @@ beforeEach(() => {
 });
 
 test("an action whose input has an address links to the page, with its real domain", async () => {
+  const user = userEvent.setup();
   fakeApi({
-    "GET followups": () => yours([action({ origin: { kind: "link", url: PAGE, source: "SRC-3" } })]),
+    "GET followups": () => theirs([sentAction({ origin: { kind: "link", url: PAGE, source: "SRC-3" } })]),
     "GET people": () => [],
   });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = (await screen.findByText("Approve the proof")).closest("li") as HTMLElement;
   const link = within(row).getByRole("link", { name: "Where it came from" });
   expect(link).toHaveAttribute("href", PAGE);
@@ -90,18 +98,21 @@ test("a decision whose input has no address opens the saved text in a dialog", a
 test("an item with only a change opens What changed on that change when this screen has no list", async () => {
   const user = userEvent.setup();
   fakeApi({
-    "GET followups": () => yours([action({ origin: { kind: "change", changeset: "CS-4", request: "REQ-4" } })]),
+    "GET followups": () => theirs([sentAction({ origin: { kind: "change", changeset: "CS-4", request: "REQ-4" } })]),
     "GET people": () => [],
   });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = (await screen.findByText("Approve the proof")).closest("li") as HTMLElement;
   await user.click(within(row).getByRole("button", { name: "Where it came from" }));
   expect(window.location.hash).toBe("#work/changed");
 });
 
 test("an item with no origin shows no link", async () => {
-  fakeApi({ "GET followups": () => yours([action()], [question()]), "GET people": () => [] });
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => theirs([sentAction()]), "GET people": () => [] });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   await screen.findByText("Approve the proof");
   expect(screen.queryByText("Where it came from")).toBeNull();
 });

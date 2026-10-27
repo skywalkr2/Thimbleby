@@ -765,6 +765,23 @@ test("a line settled elsewhere stays in place, struck through and muted, until t
   expect(row("send")).toBeInTheDocument();
 });
 
+test("lines the person settled one after another here all leave at once, only one settled elsewhere is a ghost", async () => {
+  const user = userEvent.setup();
+  const other: Line = line("send", { key: "send:PER-3", person: "PER-3", person_name: "Casey Moor", count: 1, questions: ["Q-3"], actions: [] });
+  let lines = [decision, review, send, other];
+  const { refresh } = show([], { "GET today/queue": () => lines });
+  await screen.findByText(/Look over 3 to-dos/);
+  await waitFor(() => expect(row("decision")).toHaveFocus());
+  // The person acts on the review line, then on the send line, before the data of the first has come back.
+  await user.click(row("review"));
+  await user.click(document.querySelector<HTMLElement>('[data-line-key="send:PER-2"]')!);
+  lines = [decision, other];
+  await refresh();
+  await waitFor(() => expect(document.querySelector('[data-queue-line="review"]')).toBeNull());
+  expect(document.querySelector('[data-line-key="send:PER-2"]')).toBeNull();
+  expect(document.querySelector("[data-ghost]")).toBeNull();
+});
+
 test("a ghost leaves when the cursor moves off it", async () => {
   const user = userEvent.setup();
   let lines = [decision, review, send];

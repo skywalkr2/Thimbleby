@@ -534,10 +534,17 @@ def recent_items(now: datetime, hours: int = 24) -> dict[str, list[str]]:
     }
 
 
+#: The work messages and events that hold nothing to check once read: a thank-you, a decision or agreement the assistant
+#: files as a fact, a plain announcement. A review on Today counts only what needs a look, so these are not counted.
+QUIET_MESSAGES = ("m-3",)
+QUIET_EVENTS = ("e-2", "e-3")
+
+
 def intake_items(now: datetime, days: int = 14) -> dict[str, list[str]]:
     """What a quiet first read takes in (a sign-in's sources): the work messages of the last `days` and every event,
     whatever its day; the mail the app sets aside by what the service says about it within those days; and the mail
-    older than that, which it only notes."""
+    older than that, which it only notes. `mail_to_check` and `events_to_check` are the taken-in items that hold
+    something to look over (the rest are filed quietly), which is what a source's review line on Today counts."""
     mail = messages(now)
     aside = [m for m in mail if m["bulk"] or {"promotions", "social", "forums"} & set(m["categories"])]
 
@@ -548,6 +555,10 @@ def intake_items(now: datetime, days: int = 14) -> dict[str, list[str]]:
         "mail": [m["subject"] for m in mail if within(m["received"]) and m not in aside],
         "set_aside": [m["subject"] for m in aside if within(m["received"])],
         "events": [e["title"] for e in events(now)],
+        "mail_to_check": [
+            m["subject"] for m in mail if within(m["received"]) and m not in aside and m["id"] not in QUIET_MESSAGES
+        ],
+        "events_to_check": [e["title"] for e in events(now) if e["id"] not in QUIET_EVENTS],
         "noted": [m["subject"] for m in mail if not within(m["received"])],
         "sent": [m["subject"] for m in sent_messages(now) if within(m["received"])],
     }
