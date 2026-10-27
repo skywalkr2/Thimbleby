@@ -125,7 +125,11 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
                     {message.unread && <span className="pill k-wait">{t("today.arrived.new")}</span>}
                     <span>{message.link ? <SafeLink label={message.title} url={message.link} /> : message.title}</span>
                   </div>
-                  {meta && <div className="tb-meta">{meta}</div>}
+                  {meta && (
+                    <div className="tb-meta" title={message.sender_address ?? undefined}>
+                      {meta}
+                    </div>
+                  )}
                 </div>
                 <time className="tb-when" dateTime={message.received}>
                   {received(message.received)}

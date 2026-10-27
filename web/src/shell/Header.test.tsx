@@ -82,11 +82,12 @@ test("a demo workspace shows the Demo chip, in words, and others don't", () => {
   expect(screen.getByText("Demo")).toBeInTheDocument();
 });
 
-test("the assistant's alive line is in the header beside the status chip", async () => {
+test("the assistant's line is a dot and its name in the header beside the status chip", async () => {
   show();
   const chip = await screen.findByRole("button", { name: /^App status: / });
   const alive = await screen.findByRole("button", { name: /^Helper/ });
-  expect(alive).toHaveTextContent("no tasks yet");
+  expect(alive).toHaveTextContent(/^Helper$/);
+  expect(alive.querySelector("[data-indicator]")).not.toBeNull();
   expect(alive.parentElement).toBe(chip.parentElement);
 });
 

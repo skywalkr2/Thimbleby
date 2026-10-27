@@ -8,8 +8,10 @@ decided here, all by rules over the records and the settings, with no AI:
 - **Reading.** Which accounts may read an area's material (its content levels, and the ones above it) and whether
   reading it sends anything away from this computer.
 - **Proposals.** When enough items filed under the personal project itself share a word, one area is offered for
-  them. Words are matched whole, case aside, and a word the language uses every day never counts. Nothing is moved
-  until the person says yes, and what they keep is their own edit, so a move is recorded as a correction.
+  them. Words are matched whole, case aside, and a word the language uses every day never counts. Only the items'
+  own subject is read: a question the app asks about a held item is its own wording, never a source of a name.
+  Nothing is moved until the person says yes, and what they keep is their own edit, so a move is recorded as a
+  correction.
 """
 
 from __future__ import annotations
@@ -175,6 +177,8 @@ def _own_items(view: Any, cfg: Any, personal: str) -> list[tuple[str, str, int, 
                 continue
             if kind == "fact" and record.id in replaced:
                 continue
+            if kind == "question" and data.get("resolves"):
+                continue  # the app's own question about a held item: its title is its wording, not the item's subject
             found.append((kind, record.id, record.version, str(data.get(field) or "")))
     return found
 
@@ -234,11 +238,11 @@ class Kept:
     started: str
 
 
-def keep(store: Any, cfg: Any, word: str) -> Kept:
+def keep(store: Any, cfg: Any, word: str, name: str | None = None) -> Kept:
     """Start the area offered for a word under the personal project and file its items under it, each filing the
     person's own edit of the item's project (so a move from the personal project is a correction the assistant learns
     from). Two changes, so the screen can undo both. Raises `StoreError` when the offer no longer stands or an item
-    changed since it was offered."""
+    changed since it was offered. `name` is the name the person chose for the area; the offer's own when it is empty."""
     from engine.applier import apply_as_person
     from engine.storage import StoreError
 
@@ -246,12 +250,15 @@ def keep(store: Any, cfg: Any, word: str) -> Kept:
     offer = find(view, cfg, word)
     if offer is None:
         raise StoreError("That offer no longer stands: fewer items share the word now, or the area is already there.")
+    chosen = " ".join((name or "").split()) or offer.name
+    if chosen.lower() in {str(p.data["name"]).strip().lower() for p in view.list("project")}:
+        raise StoreError(f"There is already a project called {chosen}.")
     personal = sides.personal_project(view, cfg)
     started = apply_as_person(
         store,
         cfg,
-        [{"op": "project.add", "name": offer.name, "parent": personal, "area": True}],
-        f"Started the area {offer.name}",
+        [{"op": "project.add", "name": chosen, "parent": personal, "area": True}],
+        f"Started the area {chosen}",
     )
     project = store.read().get("changeset", started).data["ops"][0]["records"][0]["id"]
     ops = [
@@ -263,5 +270,5 @@ def keep(store: Any, cfg: Any, word: str) -> Kept:
         }
         for kind, record_id, version, _ in offer.items
     ]
-    filed = apply_as_person(store, cfg, ops, f"Filed {len(ops)} items under the area {offer.name}")
+    filed = apply_as_person(store, cfg, ops, f"Filed {len(ops)} items under the area {chosen}")
     return Kept(project, filed, started)

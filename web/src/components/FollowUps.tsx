@@ -49,6 +49,7 @@ import { SentActs } from "./SentActs";
 import { FollowUpsByProject } from "./FollowUpsByProject";
 import { ReviewMode } from "./ReviewMode";
 import { CurrentCopy } from "./SameDocument";
+import { plainTitle } from "../lib/title-dates";
 
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
@@ -392,7 +393,7 @@ function FollowListRow(props: {
         {kind === "send" && (
           <div className="acts">
             <button type="button" className="btn primary" onClick={() => toDetail("primary")}>
-              {props.copied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
+              {props.copied ? t("followups.mark_sent") : t("followups.copy_message")}
             </button>
           </div>
         )}
@@ -552,7 +553,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
     <li className="child" data-row tabIndex={-1}>
       <div>
         <div className="title" id={titleId}>
-          <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
+          <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
           <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} />
         </div>
         <div className="meta">
@@ -741,7 +742,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const buttons = (
     <div className="acts">
       <button type="button" className="btn primary" onClick={primary}>
-        {copied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
+        {copied ? t("followups.mark_sent") : t("followups.copy_message")}
       </button>
       <RowMenu label={s.name} actions={menu} />
     </div>
@@ -808,7 +809,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 {actions.map((a) => (
                   <li key={a.id}>
                     <span className="title">
-                      <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
+                      <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
                     </span>
                     {(a.project_name || dueWords(a, t)) && (
                       <span className="meta">
@@ -1021,7 +1022,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
         ))}
         {actions.map((a) => (
           <li key={a.id}>
-            <span className="title">{a.text}</span>
+            <span className="title">{plainTitle(a.text, a.due)}</span>
             <span className="meta">
               {[
                 a.due ? t(a.due_check ? "op.meta.due_check" : a.due < today ? "followups.nudge.overdue" : "op.meta.due", { date: day(a.due) }) : "",
@@ -1213,7 +1214,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
         <div className="title">
-          <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
+          <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
           {a.on_hold || a.blocker ? <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
         </div>
         {(a.project_name || rest) && (

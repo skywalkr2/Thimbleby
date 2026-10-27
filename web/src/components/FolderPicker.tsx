@@ -75,7 +75,7 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
       {folders.data && (
         <>
           <p className="path" ref={heading} tabIndex={-1}>
-            {t("folders.here", { path: folders.data.path })}
+            {folders.data.home ? t("folders.home") : t("folders.here", { path: folders.data.path })}
           </p>
           <div className="row-end">
             <button

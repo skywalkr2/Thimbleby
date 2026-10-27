@@ -92,7 +92,7 @@ test("the screen has a section for each measure and shows the window's dates", a
     "Closes you didn't see",
     "Wrong endings",
     "Promises the app missed",
-    "Missed one",
+    "Missed something?",
     "Missed, declined and dropped",
     "Helpful and not helpful answers",
     "Replays",

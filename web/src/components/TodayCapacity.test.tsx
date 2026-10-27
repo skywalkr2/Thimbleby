@@ -148,6 +148,28 @@ test("a clash line names both meetings with their times and calendars and offers
   await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/not-now")?.body).toEqual({ key: "clash:a:b:2026-10-27" }));
 });
 
+test("a travel clash says how little time is between the meetings, how much is needed and between which places", async () => {
+  show([
+    line("clash", {
+      key: "clash:a:b:2026-10-27",
+      text: "Site visit",
+      other: "Supplier call",
+      state: "travel",
+      minutes: 30,
+      travel_minutes: 30,
+      place: "Room 4",
+      other_place: "Room 2",
+      due: "2026-10-27",
+      at: "2026-10-27T11:00:00+00:00",
+      starts: "2026-10-27T10:00:00+00:00",
+      ends: "2026-10-27T11:00:00+00:00",
+      other_starts: "2026-10-27T11:00:00+00:00",
+      other_ends: "2026-10-27T12:00:00+00:00",
+    }),
+  ]);
+  expect(await screen.findByText("Only 0 minutes between them; you need about 30 to get from Room 4 to Room 2")).toBeInTheDocument();
+});
+
 test("a suggestion has Not now in its menu, which puts it off with Undo; what is due has none", async () => {
   const user = userEvent.setup();
   const { calls } = show([line("stale", { key: "stale", count: 3, actions: ["A-1", "A-2", "A-3"], waiting_days: 40 }), capacity], {

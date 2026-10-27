@@ -1700,6 +1700,9 @@ class KnowsUnknown(BaseModel):
 
 class AreaKeep(BaseModel):
     word: str = Field(min_length=1, description="The word the offered area is for (the line's `subject`).")
+    name: str | None = Field(
+        None, description="The name the person chose for the area; the offered name (the line's `text`) when empty."
+    )
 
 
 class AreaKept(BaseModel):
@@ -2392,7 +2395,14 @@ class ArrivedView(BaseModel):
     snapshot: str
     source: str
     title: str
-    sender: str | None = None
+    sender: str | None = Field(
+        None,
+        description="Who it came from, as a name when the message gives one or the sender is a person on file, else "
+        "as written.",
+    )
+    sender_address: str | None = Field(
+        None, description="The sender's bare address when `sender` is shown as a name; for a tooltip."
+    )
     received: str = Field(description="ISO 8601 date-time with its offset.")
     unread: bool | None = None
     link: str | None = None
@@ -2830,6 +2840,15 @@ class QueueLineView(BaseModel):
     other_ends: str | None = Field(None, description="For a clash line: when the second meeting ends.")
     other_entry: str | None = Field(
         None, description="For a clash line: the calendar entry to open, when one is kept for the second meeting."
+    )
+    travel_minutes: int | None = Field(
+        None,
+        description="For a clash line where the meetings are in different places: the travel time the app asks for "
+        "between them, so the line can say how much time is between them and how much is needed.",
+    )
+    place: str | None = Field(None, description="For a travel clash line: where the first meeting is, when it says.")
+    other_place: str | None = Field(
+        None, description="For a travel clash line: where the second meeting is, when it says."
     )
     overdue: int | None = Field(
         None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
@@ -3776,6 +3795,7 @@ class FolderListView(BaseModel):
     parent: str | None = None
     folders: list[str]
     files: list[str] = Field(default_factory=list, description="With a file ending asked for: the files that match.")
+    home: bool = Field(False, description="The folder is the person's home folder, which the screen names in words.")
 
 
 class CloudFolderView(BaseModel):
@@ -3787,6 +3807,11 @@ class CloudFoldersView(BaseModel):
     """The cloud drives found on this computer, by name; never where they are."""
 
     folders: list[CloudFolderView]
+    names: list[str] = Field(
+        default_factory=list,
+        description="The names of every cloud drive the app looks for, found or not, in order, for a hint that says "
+        "where to pick a folder.",
+    )
     shown: ScreenText = Field(
         description='The folder made inside a drive, as plain names joined with arrows ("Backups › App").'
     )

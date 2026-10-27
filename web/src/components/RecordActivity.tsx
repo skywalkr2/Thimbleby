@@ -12,6 +12,7 @@ import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { OriginLink, hasOrigin } from "./Origin";
+import { plainTitle } from "../lib/title-dates";
 
 type Page = S["RecordPageView"];
 
@@ -71,7 +72,7 @@ export function RecordActivity(props: { page: Page }) {
               <Row
                 key={a.id}
                 pill={<Pill tone="neutral">{t("unfiled.kind.action")}</Pill>}
-                title={<a href={viewHref(recordView("action", a.id))}>{a.text}</a>}
+                title={<a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>}
                 meta={joined([
                   (a.owners ?? []).join(", "),
                   a.due && t("op.meta.due", { date: day(a.due) }),

@@ -1,7 +1,8 @@
-// The header's line that says the assistant is alive (design 7.1): its name, an icon and a few words, such as when it last
-// ran. It turns amber when work is held up and red when the assistant can't do its work, in the words and the icon as well
-// as the color. Its popover shows today's runs by account, what waits for the assistant and the order the accounts are
-// tried in. It sits beside the status chip, whose own states it reuses and does not repeat.
+// The header's line that says the assistant is alive (design 7.1): a dot and its name. The dot is the state; when work is
+// held up or the assistant can't do its work the dot is an icon of another shape (amber or red), so the color is never
+// alone, and the button's name says the state in words. Its popover says the last task and what is wrong, then today's
+// runs by account, what waits for the assistant and the order the accounts are tried in. It sits beside the status chip,
+// whose own states it reuses and does not repeat.
 import { useQuery } from "@tanstack/react-query";
 import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
 import { useAccountNames } from "../lib/account-names";
@@ -66,10 +67,11 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
   };
   return (
     <DialogTrigger>
-      <AriaButton className={styles.line} data-tone={tone} data-alive={kind}>
-        <span className={styles.name}>{t("alive.name")}</span>
-        <Icon name={ICON[tone]} size={16} label={t(`alive.icon.${tone}`)} />
-        <span className={styles.say}>{say}</span>
+      <AriaButton className={styles.line} data-tone={tone} data-alive={kind} aria-label={t("alive.line_named", { name: t("alive.name"), state: t(`alive.icon.${tone}`) })}>
+        {tone === "ok" ? <span className={styles.dot} data-indicator="" aria-hidden="true" /> : <Icon name={ICON[tone]} size={16} />}
+        <span className={styles.name} title={t("alive.name")}>
+          {t("alive.name")}
+        </span>
       </AriaButton>
       <Popover placement="bottom end" className={styles.popover}>
         <Dialog aria-label={t("alive.title")} className={styles.dialog}>
@@ -93,6 +95,10 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                   )}
                 </li>
               )}
+              <li className={styles.section} data-section="last">
+                <p className={styles.heading}>{t("alive.last")}</p>
+                <p className={styles.text}>{a.last_run_at ? wallWhen(a.last_run_at) : t("alive.last_none")}</p>
+              </li>
               <li className={styles.section} data-section="runs">
                 <p className={styles.heading}>{t("alive.runs")}</p>
                 {a.runs_today.length === 0 ? (

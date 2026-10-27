@@ -28,7 +28,6 @@ export function WelcomeBackup(props: { local: boolean }) {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const [path, setPath] = useState("");
-  const [label, setLabel] = useState("");
   const [checked, setChecked] = useState<S["FolderCheckView"] | null>(null);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,9 +72,8 @@ export function WelcomeBackup(props: { local: boolean }) {
     setProblem("");
     try {
       if (ownFolder) {
-        const saved = await api.saveBackupFolder({ path: path.trim(), label: label.trim(), fingerprint: settings.data.fingerprint });
+        const saved = await api.saveBackupFolder({ path: path.trim(), label: "", fingerprint: settings.data.fingerprint });
         setPath("");
-        setLabel("");
         setChecked(null);
         await afterSave(saved, { message: t("welcome.backup.saved", { path: path.trim() }) });
       } else {
@@ -177,12 +175,12 @@ export function WelcomeBackup(props: { local: boolean }) {
                 )}
               </div>
               <p className="hint" id="backup-path-hint">
-                {t("welcome.backup.path_hint")}
+                {!props.local
+                  ? t("welcome.backup.path_hint")
+                  : (drives.data?.names ?? []).length > 0
+                    ? t("welcome.backup.path_pick", { drives: (drives.data?.names ?? []).join(", ") })
+                    : t("welcome.backup.path_pick_plain")}
               </p>
-            </div>
-            <div className="field">
-              <label htmlFor="backup-label">{t("welcome.backup.label")}</label>
-              <input id="backup-label" type="text" value={label} autoComplete="off" onChange={(e) => setLabel(e.target.value)} />
             </div>
             <div role="status">
               {checked && (

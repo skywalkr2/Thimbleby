@@ -87,20 +87,32 @@ test("an area offered for items that share a word is started and filled with one
       return { restored: [0], skipped: [] };
     },
   });
-  expect(await screen.findByText("File 4 items under a new area, Dentist?")).toBeInTheDocument();
+  expect(await screen.findByText("Group 4 to-dos under a new area?")).toBeInTheDocument();
   expect(row("area")).toHaveTextContent("Book the dentist; Ask about the crown; Closed on Fridays");
-  await userEvent.click(within(row("area")).getByRole("button", { name: "Start Dentist" }));
+  expect(within(row("area")).getByLabelText("Name of the area")).toHaveValue("Dentist");
+  await userEvent.click(within(row("area")).getByRole("button", { name: "Start the area" }));
   await waitFor(() => expect(keep).toHaveBeenCalled());
-  expect(calls.find((c) => c.route === "POST areas/keep")?.body).toEqual({ word: "dentist" });
+  expect(calls.find((c) => c.route === "POST areas/keep")?.body).toEqual({ word: "dentist", name: "Dentist" });
   expect(await screen.findByText("Started Dentist and filed 4 items under it")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(undone).toEqual(["CS-2", "CS-1"]));
 });
 
+test("the name of an offered area is a field, and the area starts under the name typed", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([area], { "POST areas/keep": () => ({ project: "PRJ-9", filed: "CS-2", started: "CS-1" }) });
+  const field = await within(await screen.findByText("Group 4 to-dos under a new area?").then(() => row("area"))).findByLabelText("Name of the area");
+  await user.clear(field);
+  await user.type(field, "Teeth and health");
+  await user.click(within(row("area")).getByRole("button", { name: "Start the area" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST areas/keep")?.body).toEqual({ word: "dentist", name: "Teeth and health" }));
+  expect(await screen.findByText("Started Teeth and health and filed 4 items under it")).toBeInTheDocument();
+});
+
 test("an offered area can be put off with Not now, like any suggestion", async () => {
   const user = userEvent.setup();
   const { calls } = show([area], { "POST suggestions/not-now": () => ({ signal: "SIG-3" }) });
-  await screen.findByText("File 4 items under a new area, Dentist?");
+  await screen.findByText("Group 4 to-dos under a new area?");
   await user.click(within(row("area")).getByRole("button", { name: /More|menu/i }));
   await user.click(await screen.findByRole("menuitem", { name: "Not now" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/not-now")?.body).toEqual({ key: "area" }));

@@ -64,7 +64,7 @@ def build_records_router(cfg: Config, store: Store, events: Events, worker: Work
         """Keep the area offered for a word: start it under the personal project and file the items that share the
         word under it, as the person's own edits with Undo (two changes, filing first)."""
         try:
-            kept = areas.keep(store, cfg, body.word)
+            kept = areas.keep(store, cfg, body.word, body.name)
         except (StoreError, ValueError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         events.changed()

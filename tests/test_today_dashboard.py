@@ -8,6 +8,7 @@ import yaml
 
 from engine.config import load_config
 from engine.connectors import EventDetails, MessageDetails, Poll, SourceItem, checked_poll
+from engine.storage import WriteContext
 from tests.conftest import DEMO_B
 from tests.test_watch import NOW, reread
 
@@ -116,6 +117,38 @@ def test_what_came_in_is_newest_first_without_what_a_rule_closed(tmp_path):
         cfg, store, again = reread(tmp_path, ws, store, opened)
         assert again.new == [] and again.changed == []
         assert next(a for a in arrived(store, cfg, NOW).items if a.title == "Mail recent").unread is False
+    finally:
+        store.close()
+
+
+def test_a_sender_is_shown_as_a_name_with_the_address_kept_for_a_tooltip(tmp_path):
+    from engine.today import arrived
+    from engine.watch import refresh
+
+    hour = timedelta(hours=1)
+    known_address, named_address, lone_address = "kai.lund@example.com", "ren.ito@example.com", "stranger@example.com"
+    items = [
+        message("known", (NOW - 3 * hour).isoformat(), sender=known_address),
+        message("named", (NOW - 2 * hour).isoformat(), sender=f'"Ren Ito" <{named_address}>'),
+        message("lone", (NOW - hour).isoformat(), sender=lone_address),
+        message("plain", (NOW - hour / 2).isoformat(), sender="A Name"),
+    ]
+    ws, cfg, store = make(tmp_path, items)
+    try:
+        with store.transaction() as tx:
+            tx.create(
+                "person",
+                {"full_name": "Kai Lund", "how_to_reach": {"mail": known_address.upper()}},
+                WriteContext(actor="pm", trust="trusted", op="test.sender"),
+            )
+        refresh(ws, store, cfg, "s", NOW)
+        shown = {a.title: (a.sender, a.sender_address) for a in arrived(store, cfg, NOW).items}
+        assert shown == {
+            "Mail known": ("Kai Lund", known_address),
+            "Mail named": ("Ren Ito", named_address),
+            "Mail lone": (lone_address, None),
+            "Mail plain": ("A Name", None),
+        }
     finally:
         store.close()
 

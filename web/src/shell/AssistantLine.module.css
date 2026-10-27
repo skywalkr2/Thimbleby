@@ -1,20 +1,18 @@
-/* The assistant's line beside the status chip: its name, an icon and a few words, in the muted text color when all is
-   well, amber when work is held up and red when it can't work. The icon and the words always say it. When the header is
-   tight the words give way first; the icon always stays, so the line is never narrower than a target should be. */
+/* The assistant's line beside the status chip: a dot and its name, in the muted text color when all is well, amber when
+   work is held up and red when it can't work (an icon of another shape then, so the color is never alone). It is never
+   cut off by the row: the Ask field gives up its width first, and a long name is cut at a fixed length. */
 .line {
-  display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 1 auto;
-  min-width: calc(2 * var(--space-3) + 16px);
+  display: inline-flex; align-items: center; gap: var(--space-2); flex: none;
   height: var(--btn-h-sm); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-full); background: transparent;
   color: var(--text-muted); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm);
-  white-space: nowrap; cursor: pointer; overflow: hidden;
+  white-space: nowrap; cursor: pointer;
 }
 .line svg { flex: none; }
 .line:hover { background: var(--surface-sunk); }
-.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-semibold); color: var(--text); }
-.say { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.line[data-tone="warn"] .name, .line[data-tone="warn"] .say, .line[data-tone="warn"] svg { color: var(--warn); }
-.line[data-tone="bad"] .name, .line[data-tone="bad"] .say, .line[data-tone="bad"] svg { color: var(--danger); }
-.line[data-tone="warn"] .say, .line[data-tone="bad"] .say { font-weight: var(--weight-semibold); }
+.dot { width: 8px; height: 8px; flex: none; border-radius: var(--radius-full); background: var(--ok); }
+.name { min-width: 0; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-semibold); color: var(--text); }
+.line[data-tone="warn"] .name, .line[data-tone="warn"] svg { color: var(--warn); }
+.line[data-tone="bad"] .name, .line[data-tone="bad"] svg { color: var(--danger); }
 
 .popover { width: min(420px, calc(100vw - var(--space-4))); }
 .popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }

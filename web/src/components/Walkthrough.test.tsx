@@ -716,7 +716,13 @@ describe("each screen", () => {
     const just = await screen.findByRole("radio", { name: "Just me" });
     expect(just).toBeChecked();
     expect(just).toHaveFocus();
+    // Two large cards, each with its one-line description, as on the AI step; no bordered box with a legend in the border.
+    expect(just).toHaveAccessibleDescription("Your own to-dos, people and mail, nothing else.");
+    expect(just.closest("label")).toHaveClass("kind-card");
     const also = screen.getByRole("group", { name: "Also track" });
+    expect(also).toHaveClass("kind-card");
+    expect(also).toHaveAccessibleDescription("Work of yours that you keep apart: tick one or both.");
+    expect(also.tagName).not.toBe("FIELDSET");
     const boxes = within(also).getAllByRole("checkbox");
     expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["My job", "My own business"]);
     expect(boxes.every((b) => !(b as HTMLInputElement).checked)).toBe(true);
@@ -1262,16 +1268,18 @@ describe("Mail and calendar", () => {
   });
 
   const row = async () => (await screen.findByText("Service mail-addon")).closest("li") as HTMLElement;
-  const oneButton = "Add Service mail-addon and sign in — the app restarts for a moment";
+  const oneButton = "Connect Service mail-addon";
 
-  test("a service that is not installed: the row says it needs the add-on; one click installs, turns on, restarts, then opens the sign-in in its own window", async () => {
+  test("a service that is not installed: the row is one line and one button; one click installs, turns on, restarts, then opens the sign-in in its own window", async () => {
     const user = userEvent.setup();
     const { calls, login } = service("none");
     open();
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
     const mine = await row();
     expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
-    expect(within(mine).getByText(/needs the Service mail-addon add-on/)).toBeInTheDocument();
+    expect(within(mine).getByText("You'll sign in on account's own page. The app restarts for a few seconds first.")).toBeInTheDocument();
+    expect(within(mine).getAllByRole("button").map((b) => b.textContent)).toEqual(["Connect Service mail-addon"]);
+    for (const plumbing of [/Not on this computer/, /add-on/, /Made by/, /password/, /key/i]) expect(within(mine).queryByText(plumbing, { ignore: "details *" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
     // Nothing restarts before the click.
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
@@ -1318,7 +1326,7 @@ describe("Mail and calendar", () => {
     const { calls } = service("none", { canRestart: false });
     open();
     const mine = await row();
-    await user.click(within(mine).getByRole("button", { name: "Install and connect Service mail-addon" }));
+    await user.click(within(mine).getByRole("button", { name: oneButton }));
     await waitFor(() => expect(within(mine).getByText("Ready after the restart below.")).toBeInTheDocument());
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
     expect(screen.getByText(/Close and reopen the app/)).toBeInTheDocument();
@@ -1330,7 +1338,7 @@ describe("Mail and calendar", () => {
     const { calls, login } = service("off");
     open();
     const mine = await row();
-    expect(within(mine).getByText("Installed, but off.")).toBeInTheDocument();
+    expect(within(mine).getByText(/^You'll sign in on .* own page\./)).toBeInTheDocument();
     await user.click(within(mine).getByRole("button", { name: oneButton }));
     await waitFor(() => expect(popup.location.href).toBe(login), { timeout: 3000 });
     expect(calls.some((c) => c.route === "POST packs/mail-addon/install")).toBe(false);
@@ -1344,7 +1352,7 @@ describe("Mail and calendar", () => {
     const mine = await row();
     expect(within(mine).getByText("On. Sign in to start reading.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
-    expect(within(mine).queryByRole("button", { name: /Install|Turn on/ })).toBeNull();
+    expect(within(mine).queryByRole("button", { name: /^Connect Service/ })).toBeNull();
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
     await waitFor(() => expect(popup.location.href).toBe(login));
     expect(assign).not.toHaveBeenCalled();
@@ -1356,10 +1364,10 @@ describe("Mail and calendar", () => {
     open();
     const mine = await row();
     expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
-    expect(within(mine).getByText("Made by Example")).toBeInTheDocument();
-    // The reach details are not on the row until asked for, and they are in plain words.
+    // The reach details are not on the row until asked for, and they are in plain words; who made it is among them.
     const reach = within(mine).getByText("What it can access").closest("details")!;
     expect(reach).not.toHaveAttribute("open");
+    expect(within(reach).getByText("Made by Example")).toBeInTheDocument();
     expect(within(reach).getByText(/You sign in on the service's own page/)).toBeInTheDocument();
     expect(within(reach).getByText("Connects to: api.service.example.com")).toBeInTheDocument();
     for (const jargon of [/Signs in to/, /Internet:/, /Keys you provide/, /^account$/]) expect(mine.textContent).not.toMatch(jargon);
@@ -1565,7 +1573,7 @@ describe("Mail and calendar", () => {
       "GET status": () => statusFixture({ can_restart: false }),
     });
     open();
-    await user.click(await screen.findByRole("button", { name: "Turn on Service mail-addon" }));
+    await user.click(await screen.findByRole("button", { name: "Connect Service mail-addon" }));
     expect(await screen.findByText(/Close and reopen the app to finish adding the add-on/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
   });
@@ -1578,7 +1586,7 @@ describe("Mail and calendar", () => {
       "POST packs/mail-addon/install": () => new Refuse(409, "The release file could not be checked."),
     });
     open();
-    await user.click(await screen.findByRole("button", { name: "Install and connect Service mail-addon" }));
+    await user.click(await screen.findByRole("button", { name: "Connect Service mail-addon" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("The release file could not be checked.");
     expect(calls.some((c) => c.route === "POST packs/mail-addon/on")).toBe(false);
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();

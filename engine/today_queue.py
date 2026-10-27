@@ -274,6 +274,11 @@ class Line:
     other_starts: str | None = None
     other_ends: str | None = None
     other_entry: str | None = None
+    #: For a travel clash line, the travel time asked for between the two places (`travel_minutes`) and where each
+    #: meeting is (`place`, `other_place`).
+    travel_minutes: int | None = None
+    place: str | None = None
+    other_place: str | None = None
     #: For a date_reminder line: the dated fact it is about (`due` is its day, `state` its kind, `at` the reminder).
     fact: str | None = None
     #: For a pattern line, a stale line and the like: the choices the line offers, in order, as ids the screen words.
@@ -1501,6 +1506,9 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
                 at=clash.at.isoformat(),
                 entry=link[1] if link else None,
                 other_entry=other_link[1] if other_link else None,
+                travel_minutes=clash.travel if clash.state == "travel" else None,
+                place=clash.first.item.where if clash.state == "travel" else None,
+                other_place=clash.second.item.where if clash.state == "travel" else None,
                 source_name=_clash_source(clash.first, labels),
                 other_source_name=_clash_source(clash.second, labels),
                 starts=clash.first.start.astimezone(here).isoformat(),

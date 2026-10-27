@@ -183,7 +183,7 @@ test.describe("the phone's review mode", () => {
     await start.click();
     // One person at a time: their message, with its own Copy, and only Next in the bar.
     await expect(page.getByRole("textbox", { name: /^Message to / })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Copy message" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy message" }).last()).toBeVisible();
     const bar = page.getByRole("group", { name: "What to do with this one" });
     await expect(bar).toBeVisible();
     const box = (await bar.boundingBox())!;

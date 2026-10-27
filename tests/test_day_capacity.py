@@ -271,6 +271,13 @@ def test_clashes_after_today_include_too_little_travel_time_and_stop_at_the_days
         ("risk", "overlap", "Standup", "Review", day(1)),
         ("risk", "travel", "Site visit", "Supplier call", day(2)),
     ]
+    travel_line = next(x for x in lines if x.state == "travel")
+    assert (travel_line.travel_minutes, travel_line.place, travel_line.other_place) == (
+        travel,
+        "North office",
+        "South office",
+    )
+    assert next(x for x in lines if x.state == "overlap").travel_minutes is None
     in_brief = [x for s in brief.build(ws, store, cfg, NOW, "morning").sections for x in s.lines if x.kind == "clash"]
     assert [(x.state, x.minutes, x.day) for x in in_brief] == [("overlap", 15, day(1)), ("travel", travel - 10, day(2))]
 

@@ -265,7 +265,7 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
   // A meeting of a series shows how many open items wait for it, linking to the series' page; with none, nothing is said.
   const open = event.series && (event.open_items ?? 0) > 0 ? event.open_items! : 0;
   return (
-    <li className={props.past ? "tb-row past" : "tb-row"} ref={row} tabIndex={event.own ? -1 : undefined}>
+    <li className={props.past ? "tb-row stacked past" : "tb-row stacked"} ref={row} tabIndex={event.own ? -1 : undefined}>
       <span className="tb-when">{props.when}</span>
       <div className="tb-what">
         <div className="tb-title">

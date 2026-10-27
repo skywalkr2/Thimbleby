@@ -62,17 +62,25 @@ test("the folders backups already go to are listed", async () => {
   expect(await screen.findByText("Old drive: /mnt/first")).toBeInTheDocument();
 });
 
-test("Save sends the path, the name and the fingerprint, and says where backups will go", async () => {
+test("the folder step has no name field, and its hint names the cloud drives from the app's own list", async () => {
+  const user = userEvent.setup();
+  api({ "GET setup/backup-folders": () => ({ folders: [], names: ["Drive A", "Drive B"], shown: "Backups" }) });
+  open();
+  await folderBox(user);
+  expect(screen.queryByLabelText(/Name for this folder/)).toBeNull();
+  expect(await screen.findByText("Pick a folder in your cloud drive (Drive A, Drive B) or on a USB drive.")).toBeInTheDocument();
+});
+
+test("Save sends the path and the fingerprint, and says where backups will go", async () => {
   const user = userEvent.setup();
   const calls = api({ "POST setup/backup-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
   open();
   await user.type(await folderBox(user), "/mnt/new");
-  await user.type(screen.getByLabelText("Name for this folder (optional)"), "Cloud drive");
   await user.click(screen.getByRole("button", { name: "Back up now" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder")).toBe(true));
   expect(calls.find((c) => c.route === "POST setup/backup-folder")!.body).toEqual({
     path: "/mnt/new",
-    label: "Cloud drive",
+    label: "",
     fingerprint: "fp-1",
   });
   expect(await screen.findByText("Backups will go to /mnt/new.")).toBeInTheDocument();
@@ -101,9 +109,9 @@ test("an app that is not on this computer has no folder list to choose from", as
 test("choosing a folder: open folders, go up, use the one shown, and it is checked", async () => {
   const user = userEvent.setup();
   const calls = api({
-    "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["Documents", "Drive"] }),
+    "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["Documents", "Drive"], home: true }),
     [`GET setup/folders?path=${enc("/home/me/Drive")}`]: () => ({ path: "/home/me/Drive", parent: "/home/me", folders: ["Backups"] }),
-    [`GET setup/folders?path=${enc("/home/me")}`]: () => ({ path: "/home/me", parent: "/home", folders: ["Documents", "Drive"] }),
+    [`GET setup/folders?path=${enc("/home/me")}`]: () => ({ path: "/home/me", parent: "/home", folders: ["Documents", "Drive"], home: true }),
     [`GET setup/folders?path=${enc("/home/me/Drive/Backups")}`]: () => ({ path: "/home/me/Drive/Backups", parent: "/home/me/Drive", folders: [] }),
     [`GET setup/folder-check?path=${enc("/home/me/Drive/Backups")}`]: () => ({ path: "/home/me/Drive/Backups", ok: true, problem: null, free_mb: 500 }),
   });
@@ -112,12 +120,14 @@ test("choosing a folder: open folders, go up, use the one shown, and it is check
   const choose = await screen.findByRole("button", { name: "Choose…" });
   await user.click(choose);
   const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
-  expect(await within(dialog).findByText("You are in /home/me")).toBeInTheDocument();
+  // The chooser opens at the home folder, named in words rather than by its address.
+  expect(await within(dialog).findByText("Your home folder")).toBeInTheDocument();
+  expect(within(dialog).queryByText(/\/home\/me$/)).toBeNull();
   await user.click(within(dialog).getByRole("button", { name: "Drive" }));
   const here = await within(dialog).findByText("You are in /home/me/Drive");
   await waitFor(() => expect(here).toHaveFocus());
   await user.click(within(dialog).getByRole("button", { name: "Go up one folder" }));
-  expect(await within(dialog).findByText("You are in /home/me")).toBeInTheDocument();
+  expect(await within(dialog).findByText("Your home folder")).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Drive" }));
   await user.click(await within(dialog).findByRole("button", { name: "Backups" }));
   expect(await within(dialog).findByText("There are no folders here.")).toBeInTheDocument();

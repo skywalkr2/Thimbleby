@@ -600,6 +600,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         drives = cloud_folders.found(backups.cloud_folders, Path.home()) if local else []
         return CloudFoldersView(
             folders=[CloudFolderView(name=d.name, recommended=n == 0) for n, d in enumerate(drives)],
+            names=[d.name for d in backups.cloud_folders],
             shown=cloud_folders.shown(backups.cloud_path),
         )
 

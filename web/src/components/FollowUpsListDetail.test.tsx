@@ -76,7 +76,7 @@ describe("beside the list", () => {
     // The line says who, how many and holds Copy; nothing of the message.
     const robin = await line("Robin Sample");
     expect(robin).toHaveTextContent("1 to send");
-    expect(within(robin).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringMatching(/^Robin Sample/), "Copy 1"]);
+    expect(within(robin).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringMatching(/^Robin Sample/), "Copy message"]);
     expect(within(robin).queryByRole("textbox")).toBeNull();
     expect(screen.queryByText("Question for Robin Sample")).toBeNull();
   });
@@ -90,12 +90,12 @@ describe("beside the list", () => {
     const pane = await screen.findByRole("complementary", { name: "Robin Sample" });
     expect(within(pane).getByText("Question for Robin Sample")).toBeInTheDocument();
     expect(chosenId()).toBe("PER-2");
-    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy 1" }));
+    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy message" }));
     expect(await navigator.clipboard.readText()).toBe(sections[1].message);
     expect(within(await line("Robin Sample")).getByRole("button", { name: "Mark sent" })).toBeInTheDocument();
     expect(within(pane).getAllByRole("button", { name: "Mark sent" }).length).toBeGreaterThan(0);
     // Another person's line is not touched.
-    expect(within(await line("Casey Moor")).getByRole("button", { name: "Copy 1" })).toBeInTheDocument();
+    expect(within(await line("Casey Moor")).getByRole("button", { name: "Copy message" })).toBeInTheDocument();
   });
 
   test("Copy on a line whose detail is not shown shows the message first, with the cursor in it, and copies nothing", async () => {
@@ -103,7 +103,7 @@ describe("beside the list", () => {
     fakeApi(routes());
     renderApp(<FollowUps />);
     await screen.findByRole("complementary", { name: "Ana Person" });
-    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy 1" }));
+    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy message" }));
     const pane = await screen.findByRole("complementary", { name: "Casey Moor" });
     const box = within(pane).getByRole("textbox", { name: /Message to Casey Moor/ });
     await waitFor(() => expect(box).toHaveFocus());
@@ -120,7 +120,7 @@ describe("beside the list", () => {
     await screen.findByRole("complementary", { name: "Robin Sample" });
     await user.click(await line("Casey Moor"));
     await screen.findByRole("complementary", { name: "Casey Moor" });
-    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy 1" }));
+    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy message" }));
     expect(await navigator.clipboard.readText()).toBe(sections[1].message);
     expect(within(await line("Robin Sample")).getByRole("button", { name: "Mark sent" })).toBeInTheDocument();
     // The pane still shows the chosen line: copying at once did not move the choice.
@@ -133,7 +133,7 @@ describe("beside the list", () => {
     markMessageSeen("PER-3", "Hi Casey Moor,\n\nAn older question\n\nThanks!");
     renderApp(<FollowUps />);
     await screen.findByRole("complementary", { name: "Ana Person" });
-    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy 1" }));
+    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy message" }));
     const pane = await screen.findByRole("complementary", { name: "Casey Moor" });
     await waitFor(() => expect(within(pane).getByRole("textbox", { name: /Message to Casey Moor/ })).toHaveFocus());
     expect(await navigator.clipboard.readText()).toBe("");
@@ -153,7 +153,7 @@ describe("beside the list", () => {
     await user.click(await line("Robin Sample"));
     await screen.findByRole("complementary", { name: "Robin Sample" });
     await user.click(await line("Casey Moor"));
-    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy 1" }));
+    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy message" }));
     const pane = await screen.findByRole("complementary", { name: "Robin Sample" });
     await waitFor(() => expect(within(pane).getByRole("textbox", { name: /Message to Robin Sample/ })).toHaveFocus());
     expect(await navigator.clipboard.readText()).toBe("");
@@ -268,7 +268,7 @@ describe("review mode on a phone", () => {
     // The bar has Next only: nothing here is looked at and approved or sent back.
     const bar = screen.getByRole("group", { name: "What to do with this one" });
     expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Next"]);
-    await user.click(screen.getByRole("button", { name: "Copy message" }));
+    await user.click(screen.getAllByRole("button", { name: "Copy message" }).at(-1)!);
     expect(await navigator.clipboard.readText()).toBe(sections[0].message);
     expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
     await user.click(within(bar).getByRole("button", { name: "Next" }));

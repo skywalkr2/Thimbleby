@@ -95,6 +95,7 @@ class FolderList:
     parent: str | None
     folders: list[str] = field(default_factory=list)
     files: list[str] = field(default_factory=list)
+    home: bool = False  # the folder is the person's home folder, which the screen names in words
 
 
 # ---- steps -----------------------------------------------------------------------------------------------------------
@@ -524,7 +525,11 @@ def list_folders(raw: str | None, files: str | None = None) -> FolderList:
     except OSError as err:
         raise StoreError(f"that folder can't be opened: {err.strerror or err}") from None
     parent = str(folder.parent) if folder.parent != folder else None
-    return FolderList(str(folder), parent, names[:500], found[:500])
+    try:
+        at_home = folder == Path.home().resolve()
+    except (OSError, RuntimeError):
+        at_home = False
+    return FolderList(str(folder), parent, names[:500], found[:500], at_home)
 
 
 # ---- AI accounts -----------------------------------------------------------------------------------------------------

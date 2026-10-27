@@ -126,6 +126,12 @@ async function handIn(page: Page, c: Case) {
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
   const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
   await expect(detail).toBeVisible();
+  // A row inside the pane (a held item among them) uses the pane's full width: its words are never squeezed beside its buttons.
+  const paneWidth = (await detail.boundingBox())!.width;
+  for (const child of await detail.locator(".child").all()) {
+    const words = (await child.locator(":scope > div").first().boundingBox())!;
+    expect(words.width).toBeGreaterThan(paneWidth * 0.8);
+  }
   return detail;
 }
 
@@ -600,7 +606,7 @@ test.describe.serial("acceptance scenario", () => {
     // Text that would be markup if it were not escaped, added to what is shown.
     const hostile = `<img src=x onerror="window.pasted=1"> & "quoted"`;
     await box.fill(`${target!.message}\n\n${hostile}`);
-    await card.getByRole("button", { name: `Copy ${target!.to_send}` }).click();
+    await card.getByRole("button", { name: "Copy message" }).first().click();
     await expect(page.getByText("Copied", { exact: true })).toBeVisible();
 
     // A document (a rich text area) takes the formatting, and nothing in it is markup the person did not write.
@@ -667,7 +673,7 @@ test.describe.serial("acceptance scenario", () => {
       // The message is on screen before it is copied (design 7.5): choosing the person shows it; Copy puts it on the clipboard.
       await choose(s.name);
       await expect(pane.getByRole("textbox").first()).toBeVisible();
-      await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
+      await card.getByRole("button", { name: "Copy message" }).first().click();
       // Copy writes the formatted and the plain message together, which finishes a moment after the click.
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(s.message);
       const copied = await page.evaluate(() => navigator.clipboard.readText());
@@ -701,7 +707,7 @@ test.describe.serial("acceptance scenario", () => {
     const card = sectionOf(target.name);
     await choose(target.name);
     await expect(pane.getByRole("textbox").first()).toBeVisible();
-    await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
+    await card.getByRole("button", { name: "Copy message" }).first().click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(target.message);
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
@@ -729,7 +735,7 @@ test.describe.serial("acceptance scenario", () => {
     // Undo puts it all back to send.
     await page.getByRole("button", { name: "To send" }).click();
     await page.getByRole("button", { name: "Undo" }).last().click();
-    await expect(card.getByRole("button", { name: `Copy ${target.to_send}` })).toBeVisible();
+    await expect(card.getByRole("button", { name: "Copy message" }).first()).toBeVisible();
     expect(toSend((await getJson<Section[]>(page, "api/followups")).find((x) => x.person === target.person)!)).toEqual({ questions, actions });
   });
 

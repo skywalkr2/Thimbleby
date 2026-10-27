@@ -164,9 +164,23 @@ async function pick(user: User, name: string) {
   await user.click(await screen.findByRole("radio", { name: new RegExp(`^(Recommended\\s*)?${name}`) }));
 }
 
-/** Choose something under "Something else": open it first when it isn't open. */
+/** The line under Something else that holds each kind: the other services and a typed address, the apps, and what runs here. */
+const LINE_OF: Record<string, string> = {
+  "Service C": "Another service",
+  "Another service": "Another service",
+  "App A": "An app you're signed in to",
+  "App B": "An app you're signed in to",
+  "A server on this computer": "One on this computer",
+  "A command-line program": "One on this computer",
+};
+
+/** Choose something under "Something else": open it first when it isn't open, then the line that holds it. */
 async function pickElse(user: User, name: string) {
-  if (!screen.queryByRole("radio", { name: new RegExp(`^${name}`) })) await user.click(await screen.findByRole("radio", { name: /Something else/ }));
+  if (!screen.queryByRole("radio", { name: new RegExp(`^${name}`) })) {
+    if (!screen.queryByRole("button", { name: new RegExp(`^${LINE_OF[name]}`) })) await user.click(await screen.findByRole("radio", { name: /Something else/ }));
+    const line = await screen.findByRole("button", { name: new RegExp(`^${LINE_OF[name]}`) });
+    if (line.getAttribute("aria-expanded") !== "true") await user.click(line);
+  }
   await pick(user, name);
 }
 
@@ -217,25 +231,63 @@ test("the service the data recommends has the tag, the alternative is beside it,
   expect(screen.queryByText(/need a technical setup/)).toBeNull();
 });
 
-test("choosing Something else lists the other services, the apps and the rest, with a note that they need a technical setup", async () => {
+test("choosing Something else opens three lines, one note each, and each opens its own short list", async () => {
   const user = userEvent.setup();
   api();
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   expect(screen.getByRole("radio", { name: /Something else/ })).toBeChecked();
   expect(screen.getByText(/These need a technical setup/)).toBeInTheDocument();
-  expect(screen.getByRole("radio", { name: /Service C/ })).toBeInTheDocument();
-  const apps = screen.getByRole("group", { name: "Use an app you're signed in to" });
-  expect(within(apps).getByRole("radio", { name: /App A/ })).toBeInTheDocument();
-  expect(within(apps).getByRole("radio", { name: /App B/ })).toBeInTheDocument();
-  const more = screen.getByText("More options").closest("details")!;
-  expect(within(more).getByRole("radio", { name: /A server on this computer/, hidden: true })).toBeInTheDocument();
-  expect(within(more).getByRole("radio", { name: /Another service/, hidden: true })).toBeInTheDocument();
-  const inMore = within(more).getAllByRole("radio", { hidden: true }).map((r) => r.getAttribute("value"));
-  expect(inMore[inMore.length - 1]).toBe("runner");
-  // Choosing a card above closes it again.
+  const lines = screen.getAllByRole("button", { expanded: false }).filter((b) => b.classList.contains("else-line"));
+  expect(lines.map((b) => b.querySelector("strong")?.textContent)).toEqual(["Another service", "An app you're signed in to", "One on this computer"]);
+  expect(lines.map((b) => b.querySelector(".hint")?.textContent)).toEqual([
+    "Another company's AI, with a key you make.",
+    "An AI app already on this computer.",
+    "Runs here, so nothing leaves this computer.",
+  ]);
+  // Nothing is listed until a line is opened, and opening one closes the others.
+  expect(document.querySelector('input[name="ai-kind-else"]')).toBeNull();
+  await user.click(lines[0]);
+  const services = document.querySelector("#ai-else-service") as HTMLElement;
+  expect(within(services).getAllByRole("radio").map((r) => r.getAttribute("value"))).toEqual(["service-c", "other"]);
+  await user.click(lines[1]);
+  expect(document.querySelector("#ai-else-service")).toBeNull();
+  const apps = document.querySelector("#ai-else-app") as HTMLElement;
+  expect(within(apps).getAllByRole("radio").map((r) => r.getAttribute("value"))).toEqual(["app-a", "app-b"]);
+  await user.click(lines[2]);
+  const here = document.querySelector("#ai-else-computer") as HTMLElement;
+  expect(within(here).getAllByRole("radio").map((r) => r.getAttribute("value"))).toEqual(["local-box", "runner"]);
+  // Choosing a card above closes it all again.
   await user.click(screen.getByRole("radio", { name: /Service A/ }));
-  expect(screen.queryByRole("radio", { name: /Service C/ })).toBeNull();
+  expect(document.querySelector(".else-line")).toBeNull();
+});
+
+test("a note is one short line on its card, the whole note stays in the tooltip and shows once the kind is chosen", async () => {
+  const user = userEvent.setup();
+  const long = "Uses your Google account through its command-line tool. It refuses personal free accounts, so a key or a paid plan is needed. Its documentation says it asks before writing files or running commands; it names no option that stops it reading files.";
+  api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, note: long } : k)) });
+  open();
+  await user.click(await screen.findByRole("radio", { name: /Something else/ }));
+  await user.click(await screen.findByRole("button", { name: /^An app you're signed in to/ }));
+  const card = screen.getByRole("radio", { name: /App B/ }).closest("label") as HTMLElement;
+  const note = card.querySelector(".hint") as HTMLElement;
+  expect(note.textContent).toBe("Uses your Google account through its command-line tool.");
+  expect(note).toHaveAttribute("title", long);
+  expect(document.querySelector("[data-full-note]")).toBeNull();
+  await user.click(screen.getByRole("radio", { name: /App B/ }));
+  expect(document.querySelector("[data-full-note]")).toHaveTextContent(long);
+});
+
+test("the step shows no empty AI accounts block, and lists the accounts once there are some", async () => {
+  api();
+  const { unmount } = open();
+  await screen.findByRole("radio", { name: /Service A/ });
+  expect(screen.queryByRole("heading", { name: /AI accounts/ })).toBeNull();
+  expect(screen.queryByText("No AI account is set up yet.")).toBeNull();
+  unmount();
+  api({ "GET ai/accounts": () => [{ name: "service-a", label: "Service A account", kind: "service-a", adapter: "adapter-one", models: {}, used_for: ["routine"], backup_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 }] });
+  open();
+  expect(await screen.findByRole("heading", { name: /AI accounts/ })).toBeInTheDocument();
 });
 
 test("with nothing flagged in the data every service is offered directly, as before", async () => {
@@ -774,6 +826,7 @@ test("a server found on this computer is offered first, checked at once with no 
   });
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
+  await user.click(await screen.findByRole("button", { name: /^One on this computer/ }));
   expect(await screen.findByText("Found A server on this computer on this computer with 2 models. Nothing leaves this computer.")).toBeInTheDocument();
   expect(document.querySelector('input[name^="ai-kind"][value="local-box"]')).toBeNull();
   const use = screen.getByRole("button", { name: "Use it" });
@@ -806,6 +859,7 @@ test("a server found with no models says so, never \"0 models\"", async () => {
   api({ "GET ai/local": () => [{ endpoint: "local-box", name: "A server on this computer", models: [] }] });
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
+  await user.click(await screen.findByRole("button", { name: /^One on this computer/ }));
   expect(await screen.findByText(/Found A server on this computer on this computer, but it has no models yet/)).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 models?\b/);
 });

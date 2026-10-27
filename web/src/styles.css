@@ -119,6 +119,9 @@ main p { max-width: var(--measure); }
 .child .meta { color: var(--text-muted); font-size: var(--text-sm); }
 .child .reason { color: var(--warn); font-size: var(--text-sm); }
 .child.single { grid-template-columns: minmax(0, 1fr); }
+/* In the detail pane a row uses the pane's full width, with its buttons under its words, as Today's detail does. */
+.in-pane .child { grid-template-columns: minmax(0, 1fr); }
+.in-pane .child .acts { justify-content: flex-end; }
 .origin { font-size: var(--text-sm); }
 .name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .name p { margin: 0; }
@@ -398,6 +401,10 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .kind-card { border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: var(--space-3); background: var(--surface); cursor: pointer; }
 .kind-grid .kind-card { min-height: 64px; }
 .kind-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+/* The work question's two cards: Just me, and Also track with its tick boxes inside the card. */
+.work-cards { align-items: stretch; }
+.also-card { display: grid; align-content: start; gap: var(--space-2); min-width: 0; cursor: default; }
+.also-card .check-line { min-height: var(--btn-h-sm); }
 .found-local { border: 2px solid var(--accent); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-3); background: var(--accent-soft); display: grid; gap: var(--space-2); }
 .found-local p { margin: 0; font-weight: var(--weight-semibold); }
 .more-options { margin: var(--space-1) 0 var(--space-3); }
@@ -420,6 +427,12 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 /* The AI step for a first-timer: the recommended tag, the numbered steps, the check's line and the spending sentence. */
 .tag-recommended { margin: 0 0 var(--space-1); background: var(--ok-soft); color: var(--ok); }
 .else-list { display: grid; gap: var(--space-3); margin-top: var(--space-3); padding-left: var(--space-3); border-left: 2px solid var(--border); }
+/* The three lines under Something else: each a full-width button that opens its own short list. */
+.else-group { display: grid; gap: var(--space-2); min-width: 0; }
+.else-line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; min-height: 64px; padding: var(--space-3); text-align: left; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); cursor: pointer; }
+.else-line:hover { background: var(--surface-hover); }
+.else-line[aria-expanded="true"] { border-color: var(--accent); }
+.else-body { display: grid; gap: var(--space-3); padding-left: var(--space-3); min-width: 0; }
 .numbered-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .numbered-step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; }
 .step-number { display: inline-flex; align-items: center; justify-content: center; min-width: var(--space-6); min-height: var(--space-6); border-radius: var(--radius-full); background: var(--surface-sunk); font-weight: var(--weight-semibold); font-size: var(--text-sm); }
@@ -447,6 +460,12 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-agenda { margin: var(--space-1) 0 0; padding-left: var(--space-4); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .tb-when { flex: none; color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tb-row > .tb-when:first-child { flex-basis: 8.75rem; }
+/* A meeting in the rail: its time on one line and its title under it, across the whole row, with the menu at the end of the time. */
+.tb-row.stacked { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: var(--space-2); row-gap: 0; }
+.tb-row.stacked > .tb-when { grid-column: 1; grid-row: 1; }
+.tb-row.stacked > .tb-what { grid-column: 1 / -1; grid-row: 2; }
+.tb-row.stacked > button { grid-column: 2; grid-row: 1; }
+.tb-row.stacked > :not(.tb-when):not(.tb-what):not(button) { grid-column: 1 / -1; }
 .tb-row .pill { margin: 0 var(--space-2) 0 0; }
 .tb-row .tb-title .pill { margin: 0 0 0 var(--space-2); }
 .tb-row .answer-form { flex: 1 0 100%; }

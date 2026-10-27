@@ -216,8 +216,8 @@ export const api = {
       body: file,
     });
   },
-  /** Keep the area offered for a word: start it and file the items that share the word under it. */
-  keepArea: (word: string) => call<S["AreaKept"]>("POST", "areas/keep", { word }),
+  /** Keep the area offered for a word, under the name the person chose: start it and file the items that share the word under it. */
+  keepArea: (word: string, name?: string) => call<S["AreaKept"]>("POST", "areas/keep", { word, name: name || null }),
   looksGood: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/looks-good`),
   reopen: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/reopen`),
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),

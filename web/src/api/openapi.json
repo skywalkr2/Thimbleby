@@ -4614,6 +4614,18 @@
       },
       "AreaKeep": {
         "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name the person chose for the area; the offered name (the line's `text`) when empty.",
+            "title": "Name"
+          },
           "word": {
             "description": "The word the offered area is for (the line's `subject`).",
             "minLength": 1,
@@ -4679,7 +4691,20 @@
                 "type": "null"
               }
             ],
+            "description": "Who it came from, as a name when the message gives one or the sender is a person on file, else as written.",
             "title": "Sender"
+          },
+          "sender_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sender's bare address when `sender` is shown as a name; for a tooltip.",
+            "title": "Sender Address"
           },
           "snapshot": {
             "title": "Snapshot",
@@ -7014,6 +7039,14 @@
               "$ref": "#/components/schemas/CloudFolderView"
             },
             "title": "Folders",
+            "type": "array"
+          },
+          "names": {
+            "description": "The names of every cloud drive the app looks for, found or not, in order, for a hint that says where to pick a folder.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
             "type": "array"
           },
           "shown": {
@@ -9454,6 +9487,12 @@
             },
             "title": "Folders",
             "type": "array"
+          },
+          "home": {
+            "default": false,
+            "description": "The folder is the person's home folder, which the screen names in words.",
+            "title": "Home",
+            "type": "boolean"
           },
           "parent": {
             "anyOf": [
@@ -20963,6 +21002,18 @@
             "description": "For a clash line: the calendar entry to open, when one is kept for the second meeting.",
             "title": "Other Entry"
           },
+          "other_place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a travel clash line: where the second meeting is, when it says.",
+            "title": "Other Place"
+          },
           "other_source_name": {
             "anyOf": [
               {
@@ -21041,6 +21092,18 @@
               }
             ],
             "title": "Person Name"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a travel clash line: where the first meeting is, when it says.",
+            "title": "Place"
           },
           "places": {
             "description": "For a credential line: every place the same credential is used, in plain words.",
@@ -21414,6 +21477,18 @@
               }
             ],
             "description": "The input the line is about."
+          },
+          "travel_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line where the meetings are in different places: the travel time the app asks for between them, so the line can say how much time is between them and how much is needed.",
+            "title": "Travel Minutes"
           },
           "unpriced": {
             "default": 0,

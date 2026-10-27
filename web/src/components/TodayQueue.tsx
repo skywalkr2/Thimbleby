@@ -5,7 +5,7 @@
 // that has the cursor, and under itself below that. The list holds still while the person is working in it: new lines
 // wait behind "N new · Show", and a line settled somewhere else stays in place until the person moves on.
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day, sinceDay, wallTime } from "../lib/dates";
@@ -55,6 +55,7 @@ import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
 import { MadeBy } from "./MadeBy";
 import styles from "./Today.module.css";
+import { plainTitle } from "../lib/title-dates";
 
 export interface QueueHandlers {
   onOpenAiAccounts: () => void;
@@ -582,7 +583,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "who_is":
         return t("queue.who_is", { name: line.text ?? "" });
       case "owner":
-        return t("queue.owner", { text: line.text ?? "" });
+        return t("queue.owner", { text: plainTitle(line.text ?? "", line.due) });
       case "held":
         return line.held ? heldTitle(line.held, t) : t("queue.held");
       case "unfiled":
@@ -679,7 +680,7 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t(has(key) ? key : "queue.date_reminder", { text: line.text ?? "", date: day(line.due) });
       }
       case "area":
-        return tn("queue.area", line.count, { name: line.text ?? "" });
+        return tn("queue.area", line.count);
       case "reply":
         return replyTitle(line, t);
       case "sent_check":
@@ -749,11 +750,14 @@ function QueueRow(props: {
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
   const notNow = useNotNow();
   const quietRow = useQuietChoices(line);
+  // The offered area's name is a field the person may change before starting it.
+  const [areaName, setAreaName] = useState(line.text ?? "");
+  const areaNameId = useId();
   const keepArea = () =>
     void act(
-      () => api.keepArea(line.subject ?? ""),
+      () => api.keepArea(line.subject ?? "", areaName.trim()),
       (kept) => ({
-        message: tn("queue.area.kept", line.count, { name: line.text ?? "" }),
+        message: tn("queue.area.kept", line.count, { name: areaName.trim() || (line.text ?? "") }),
         undo: async () => {
           await api.undo(kept.filed);
           await api.undo(kept.started);
@@ -1039,10 +1043,17 @@ function QueueRow(props: {
         if (line.other_entry && open) ways.push({ id: "open-second", label: t("queue.clash.open_named", { name: line.other ?? "" }), run: () => open("event", line.other_entry ?? "") });
         ways.push({ id: "fine", label: t("queue.clash.fine"), run: () => notNow(line.key, t("queue.clash.fine_done")) });
         const [first, ...rest] = ways;
+        // The time between the meetings is what the travel time asked for less what falls short.
+        const needed = line.travel_minutes ?? 0;
+        const between = Math.max(0, needed - (line.minutes ?? 0));
+        const travel =
+          line.place && line.other_place
+            ? tn("queue.clash.meta.travel", between, { need: needed, from: line.place, to: line.other_place })
+            : tn("queue.clash.meta.travel_apart", between, { need: needed });
         return {
           pill: t("queue.pill.clash"),
           tone: "warn",
-          meta: line.state === "travel" ? tn("queue.clash.meta.travel", line.minutes ?? 0) : tn("queue.clash.meta.overlap", line.minutes ?? 0),
+          meta: line.state === "travel" ? travel : tn("queue.clash.meta.overlap", line.minutes ?? 0),
           primary: { label: first.label, run: first.run },
           menu: rest,
         };
@@ -1134,7 +1145,7 @@ function QueueRow(props: {
           pill: t("queue.pill.area"),
           tone: "neutral",
           meta: meta((line.names ?? []).join("; ")),
-          primary: { label: t("queue.area.keep", { name: line.text ?? "" }), run: keepArea },
+          primary: { label: t("queue.area.keep"), run: keepArea },
           menu: [],
         };
       case "reply":
@@ -1277,6 +1288,14 @@ function QueueRow(props: {
     >
       {line.kind === "reminder_digest" && <ReminderItems line={line} />}
       {line.kind === "reminder" && reminderRow.form}
+      {line.kind === "area" && (
+        <div className="answer-form">
+          <label className="hint" htmlFor={areaNameId}>
+            {t("queue.area.name")}
+          </label>
+          <input id={areaNameId} type="text" value={areaName} onChange={(e) => setAreaName(e.target.value)} />
+        </div>
+      )}
       {line.kind === "meeting_capture" && capturing && line.event && (
         <CaptureForm
           event={line.event}

@@ -43,7 +43,7 @@ test.describe("Late evening", () => {
     const sections = (await (await page.request.get("api/followups")).json()) as Section[];
     const target = sections.find((s) => !s.is_pm && s.to_send > 0 && s.actions.some((a) => a.told === null));
     expect(target, "someone with an action to send").toBeTruthy();
-    const { name, to_send: toSend } = target!;
+    const { name } = target!;
     const sent = target!.actions.filter((a) => a.told === null);
 
     await openView(page, "Follow-ups");
@@ -55,7 +55,7 @@ test.describe("Late evening", () => {
     // Choosing the person shows the message, Copy puts it on the clipboard, and Mark sent records it.
     await card.getByRole("button", { name: new RegExp(`^${name}`) }).click();
     await expect(page.locator("aside[data-detail-pane]").getByRole("textbox").first()).toBeVisible();
-    await card.getByRole("button", { name: `Copy ${toSend}` }).click();
+    await card.getByRole("button", { name: "Copy message" }).first().click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(sent[0].text);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${name}`)).toBeVisible();

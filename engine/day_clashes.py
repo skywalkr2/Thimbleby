@@ -23,7 +23,7 @@ from engine.today import zone
 class Found:
     """A clash: the two entries (`first` starts first), `state` (overlap or travel), `minutes` (how long they overlap,
     or how many minutes short the travel time is), and the day and moment the later one starts, on the person's
-    clock."""
+    clock. `travel` is the travel time the rules asked for between two places (the configured amount)."""
 
     first: Timed
     second: Timed
@@ -31,6 +31,7 @@ class Found:
     minutes: int
     day: date
     at: datetime
+    travel: int = 0
 
     @property
     def key(self) -> str:
@@ -81,5 +82,15 @@ def upcoming(store: Any, cfg: Any, now: datetime) -> list[Found]:
         later = second.start.astimezone(here)
         overlap = clash.overlap_minutes > 0
         minutes = clash.overlap_minutes if overlap else clash.travel_shortfall_minutes or 0
-        found.append(Found(first, second, "overlap" if overlap else "travel", round(minutes), later.date(), later))
+        found.append(
+            Found(
+                first,
+                second,
+                "overlap" if overlap else "travel",
+                round(minutes),
+                later.date(),
+                later,
+                round(settings.travel_minutes),
+            )
+        )
     return sorted(found, key=lambda f: (f.at, f.key))

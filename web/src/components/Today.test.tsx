@@ -267,6 +267,15 @@ test("a source not read lately is named where Today would say nothing needs you,
   expect(screen.queryByText(/Checked 1 connection/)).toBeNull();
 });
 
+test("a title leaves out the due day its meta line already shows, and writes any other date as a day", async () => {
+  const due = line("owner", { key: "question:Q-8", text: "Send the venue list by 2026-11-02.", due: "2026-11-02", question: "Q-8" });
+  const other = line("owner", { key: "question:Q-7", text: "Send the headcount by 2026-11-04.", due: "2026-11-06", question: "Q-7" });
+  show([due, other]);
+  await screen.findByText("Pick an owner for “Send the venue list.”");
+  expect(screen.getByText(/^Pick an owner for “Send the headcount by .*Nov 4.*\.”$/)).toBeInTheDocument();
+  expect(screen.queryByText(/2026-11/)).toBeNull();
+});
+
 test("a row names its project only when the screen holds more than one", async () => {
   const other = line("owner", { key: "question:Q-9", text: "Plan the launch", project: "PRJ-2", project_name: "Autumn book", question: "Q-9" });
   show([decision, other]);
@@ -901,6 +910,22 @@ test("the rail is at most three cards, Briefing, Schedule and Came in, and has n
     expect(screen.queryByRole("heading", { name: gone })).toBeNull();
   }
   expect(screen.queryByText("Nothing else needs you today")).toBeNull();
+});
+
+test("a message in the rail shows the sender's name only, with the address in the tooltip, and a meeting's title has the row under its time", async () => {
+  const address = "robin.sample@example.com";
+  const sent = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", sender_address: address, received: new Date().toISOString(), unread: true }], left_out: 0, set_aside: 0 });
+  show([decision], { "GET today/arrived": () => sent(), "GET today/agenda": () => [meeting()], "GET today/week": () => busyWeek });
+  const rail = await screen.findByRole("group", { name: RAIL });
+  await within(rail).findByText("Proof is ready");
+  const who = rail.querySelector<HTMLElement>('[data-col="arrived"] .tb-meta, .tb-meta[title]')!;
+  expect(who).toHaveTextContent(/^Robin Sample/);
+  expect(who).toHaveAttribute("title", address);
+  expect(rail).not.toHaveTextContent(address);
+  const title = await within(rail).findByText("Print sync");
+  expect(title.closest("li")).toHaveClass("stacked");
+  const row = title.closest("li")!;
+  expect(Array.from(row.children).map((c) => c.className.split(" ")[0]).slice(0, 2)).toEqual(["tb-when", "tb-what"]);
 });
 
 test("a card with nothing in it is not drawn: a rail with only mail has one card", async () => {

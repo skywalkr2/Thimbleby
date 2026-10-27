@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
+from email.utils import parseaddr
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -50,6 +51,9 @@ class Arrived:
     received: str
     unread: bool | None
     link: str | None
+    #: The bare address when `sender` is shown as a name (the name the message gives, or that of the person on file with
+    #: that address); none when the sender is all there is to show.
+    sender_address: str | None = None
 
 
 @dataclass
@@ -260,12 +264,35 @@ def _sort_key(item: AgendaItem, here: ZoneInfo) -> str:
         return item.start
 
 
+def _sender_shown(sender: str | None, known: dict[str, str]) -> tuple[str | None, str | None]:
+    """A sender as the screen shows it, and the address kept for a tooltip. A name the message gives, or the name of the
+    person on file with the address, is shown alone; a bare address no one is on file for is shown as it is."""
+    if not sender:
+        return sender, None
+    display, address = parseaddr(sender)
+    address = address.strip()
+    if "@" not in address:
+        return sender, None
+    name = " ".join(display.replace('"', "").split())
+    if name and "@" not in name:
+        return name, address
+    person = known.get(address.lower())
+    return (person, address) if person else (address, None)
+
+
 def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
     """Messages received within the configured hours, newest first, leaving out what a triage rule closed or set
     aside; each is counted. Set-aside mail counts only while it is in the Set aside folder, not once confirmed."""
     since = now - timedelta(hours=cfg.ui.today.mail_hours)
     found, left_out, set_aside = [], 0, 0
-    for snap in store.read().list("snapshot"):
+    view = store.read()
+    known = {
+        str(v).strip().lower(): str(p.data["full_name"])
+        for p in view.list("person")
+        for v in (p.data.get("how_to_reach") or {}).values()
+        if "@" in str(v)
+    }
+    for snap in view.list("snapshot"):
         data = snap.data
         message = data.get("message")
         if data.get("gone") or not message or not message.get("received"):
@@ -285,15 +312,17 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
         if data.get("closed_by"):
             left_out += 1
             continue
+        sender, address = _sender_shown(message.get("sender"), known)
         found.append(
             Arrived(
                 snapshot=snap.id,
                 source=data["source"],
                 title=data["title"],
-                sender=message.get("sender"),
+                sender=sender,
                 received=message["received"],
                 unread=message.get("unread"),
                 link=data.get("link"),
+                sender_address=address,
             )
         )
     found.sort(key=lambda a: moment(a.received), reverse=True)

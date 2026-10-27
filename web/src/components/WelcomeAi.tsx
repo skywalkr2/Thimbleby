@@ -24,6 +24,7 @@ import { AiAccounts } from "./AiAccounts";
 import { useSpendLine } from "./AiSpendLine";
 import { domainOf } from "./SafeText";
 import { Button } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 
 type Kind = S["EndpointView"];
@@ -47,6 +48,16 @@ const asksAddress = (kind: Kind) => takesAddress(kind) && kind.base_url === "";
 const isService = (kind: Kind) => kind.needs_key && kind.base_url !== "" && !kind.local;
 /** A command-line program the app knows how to start: the person names no command. */
 const isBuiltin = (kind: Kind) => (kind.program ?? "") !== "" && !takesAddress(kind);
+
+/** A kind's note as one short line: its first sentence, cut at a word when that is still long. The whole note stays in the
+ * tooltip, and under the choices once the kind is chosen. */
+const NOTE_MAX = 80;
+function shortNote(note: string): string {
+  const first = (note.split(/(?<=[.!?])\s/)[0] ?? note).trim();
+  if (first.length <= NOTE_MAX) return first;
+  const cut = first.slice(0, NOTE_MAX);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 1)).replace(/[,;:\s]+$/, "")}…`;
+}
 
 /** The three words a program's example models are offered by, in the order they are listed; the catalog says which example
  * is which, and the program's own name for one is only ever a hint. */
@@ -132,6 +143,8 @@ export function WelcomeAi(props: {
   const [workData, setWorkData] = useState<WorkData | null>(null);
   const [verdict, setVerdict] = useState<Verdict>({ state: "idle" });
   const [elseOpen, setElseOpen] = useState(false);
+  // Which of the three lines under Something else is open: null until one is pressed (the chosen kind's line is open then).
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [useForWork, setUseForWork] = useState(!props.done);
   const [customModel, setCustomModel] = useState(false);
   const [command, setCommand] = useState("");
@@ -590,6 +603,17 @@ export function WelcomeAi(props: {
   const more = [...others.filter((k) => takesAddress(k)), ...others.filter((k) => !takesAddress(k))];
   // Something else is open while the person chose it or one of the kinds under it.
   const elseShown = !gated || elseOpen || (!!kind && !featured.includes(kind)) || (found.data ?? []).some((s) => usingFound && kindId === s.endpoint);
+  // Under Something else, three lines, each opening its own short list: another service (a key, or an address), an app the
+  // person is signed in to, and one on this computer (a server found or started here, or a program given by its command).
+  const byAddress = (k: Kind) => asksAddress(k) && !k.local;
+  const onThisComputer = [...more.filter((k) => !byAddress(k) && takesAddress(k)), ...more.filter((k) => !byAddress(k) && !takesAddress(k))];
+  const elseGroups = [
+    { id: "service", kinds: [...restServices, ...more.filter(byAddress)] },
+    { id: "app", kinds: apps },
+    { id: "computer", kinds: onThisComputer },
+  ].filter((g) => g.kinds.length > 0 || (g.id === "computer" && (found.data ?? []).length > 0));
+  const chosenGroup = usingFound ? "computer" : (elseGroups.find((g) => !!kind && g.kinds.includes(kind))?.id ?? null);
+  const shownGroup = openGroup === null ? chosenGroup : openGroup || null;
 
   const spend = useSpendLine(guide);
   const hasSlot = useHasContinueSlot();
@@ -645,10 +669,37 @@ export function WelcomeAi(props: {
       <span>
         {e.recommended && guide && <span className="pill tag-recommended">{t("welcome.ai.recommended")}</span>}
         <strong>{e.name}</strong>
-        {e.note && <span className="hint block">{e.note}</span>}
+        {e.note && (
+          <span className="hint block" title={e.note}>
+            {shortNote(e.note)}
+          </span>
+        )}
       </span>
     </label>
   );
+
+  /** The servers found running on this computer, each with the button that uses it. */
+  const foundCards = (found.data ?? []).map((s) => {
+    const chosen = usingFound && kindId === s.endpoint;
+    return (
+      <div key={s.endpoint} className="found-local" data-chosen={chosen ? "true" : undefined}>
+        <p id={`ai-found-${s.endpoint}`}>
+          {s.models.length > 0 ? tn("welcome.ai.local_found", s.models.length, { name: s.name }) : t("welcome.ai.local_found_none", { name: s.name })}
+        </p>
+        <div className="inline-field">
+          <button type="button" className="btn primary" aria-pressed={chosen} aria-describedby={`ai-found-${s.endpoint}`} onClick={() => chooseFound(s.endpoint)}>
+            {t("welcome.ai.local_use")}
+          </button>
+          {chosen && (
+            <span className="pill">
+              <span aria-hidden="true">✓ </span>
+              {t("welcome.ai.chosen")}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  });
 
   const keyDomain = kind?.key_url ? domainOf(kind.key_url) : null;
 
@@ -901,39 +952,40 @@ export function WelcomeAi(props: {
                 </label>
               </div>
             )}
-            {elseShown && (
-              <div className={gated ? "else-list" : undefined}>
-                {gated && <p className="hint">{t("welcome.ai.else_technical")}</p>}
-                {(found.data ?? []).map((s) => {
-                  const chosen = usingFound && kindId === s.endpoint;
-                  return (
-                    <div key={s.endpoint} className="found-local" data-chosen={chosen ? "true" : undefined}>
-                      <p id={`ai-found-${s.endpoint}`}>
-                        {s.models.length > 0 ? tn("welcome.ai.local_found", s.models.length, { name: s.name }) : t("welcome.ai.local_found_none", { name: s.name })}
-                      </p>
-                      <div className="inline-field">
-                        <button
-                          type="button"
-                          className="btn primary"
-                          aria-pressed={chosen}
-                          aria-describedby={`ai-found-${s.endpoint}`}
-                          onClick={() => chooseFound(s.endpoint)}
-                        >
-                          {t("welcome.ai.local_use")}
-                        </button>
-                        {chosen && (
-                          <span className="pill">
-                            <span aria-hidden="true">✓ </span>
-                            {t("welcome.ai.chosen")}
-                          </span>
-                        )}
+            {elseShown && gated && (
+              <div className="else-list">
+                <p className="hint">{t("welcome.ai.else_technical")}</p>
+                {elseGroups.map((g) => (
+                  <div key={g.id} className="else-group" data-group={g.id}>
+                    <button
+                      type="button"
+                      className="else-line"
+                      aria-expanded={shownGroup === g.id}
+                      aria-controls={`ai-else-${g.id}`}
+                      onClick={() => setOpenGroup(shownGroup === g.id ? "" : g.id)}
+                    >
+                      <span>
+                        <strong>{t(`welcome.ai.else.${g.id}`)}</strong>
+                        <span className="hint block">{t(`welcome.ai.else.${g.id}_note`)}</span>
+                      </span>
+                      <Icon name={shownGroup === g.id ? "chevron-down" : "chevron"} size={16} />
+                    </button>
+                    {shownGroup === g.id && (
+                      <div id={`ai-else-${g.id}`} className="else-body">
+                        {g.id === "computer" && foundCards}
+                        {g.kinds.length > 0 && <div className="kinds kind-grid">{g.kinds.map(underElse)}</div>}
                       </div>
-                    </div>
-                  );
-                })}
-                {(gated ? restServices : services).length > 0 && (
-                  <div className="kinds kind-grid" ref={gated ? undefined : firstKind}>
-                    {(gated ? restServices : services).map(underElse)}
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {elseShown && !gated && (
+              <div>
+                {foundCards}
+                {services.length > 0 && (
+                  <div className="kinds kind-grid" ref={firstKind}>
+                    {services.map(underElse)}
                   </div>
                 )}
                 {apps.length > 0 && (
@@ -953,6 +1005,11 @@ export function WelcomeAi(props: {
                   </details>
                 )}
               </div>
+            )}
+            {kind?.note && shortNote(kind.note) !== kind.note && (
+              <p className="hint" data-full-note="">
+                {kind.note}
+              </p>
             )}
           </fieldset>
           {kind && (
@@ -1400,7 +1457,7 @@ export function WelcomeAi(props: {
       )}
       {guide && (
         <>
-          <AiAccounts local={props.local} level={4} />
+          {(accounts.data ?? []).length > 0 && <AiAccounts local={props.local} level={4} />}
           <div className="guide-test">
             <div role="status" aria-live="polite">
               {testing && <p className="hint">{t("welcome.ai.testing")}</p>}

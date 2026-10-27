@@ -268,6 +268,28 @@ def test_an_area_is_offered_once_enough_items_share_a_word_and_never_for_everyda
     assert (line.text, line.subject, line.count) == ("Dentist", "dentist", 4) and len(line.names) == 3
 
 
+def test_items_waiting_for_an_owner_never_offer_an_area_named_after_the_apps_own_line_title(env):
+    _, cfg, store = env
+    me = cfg.workspace.user.person
+    for text in ("Reserve the venue list", "Confirm the headcount", "Print the programs", "Order the badges"):
+        action = made_by_the_assistant(store, "action", text=text, owners=[], status="held", project=personal_of(cfg))
+        with store.transaction() as tx:
+            tx.create(
+                "question",
+                {
+                    "to": me,
+                    "title": f"Pick an owner: {text}",
+                    "kind": "routing",
+                    "options": [],
+                    "resolves": {"kind": "owner", "action": action},
+                    "projects": [personal_of(cfg)],
+                },
+                _ASSISTANT,
+            )
+    assert areas.proposals(store.read(), cfg) == []
+    assert [x for x in today_queue.queue(env[0], store, cfg, NOW) if x.kind == "area"] == []
+
+
 def test_three_items_are_too_few_and_the_setting_turns_the_offer_off(tmp_path):
     ws, cfg, store = build(tmp_path, COCKPIT__STEWARD__AREAS__PROPOSE_AFTER="4")
     try:
@@ -292,6 +314,16 @@ def test_an_item_already_in_an_area_or_finished_is_no_part_of_the_pattern(env):
         cur = tx.get("action", done)
         tx.update("action", done, {"status": "done"}, _TEST, read_version=cur.version)
     assert areas.proposals(store.read(), cfg) == []
+
+
+def test_the_person_may_name_the_area_and_a_name_already_a_project_is_refused(env):
+    _, cfg, store = env
+    _four_dentist_items(store, cfg)
+    taken = store.read().get("project", personal_of(cfg)).data["name"]
+    with pytest.raises(StoreError, match="already a project"):
+        areas.keep(store, cfg, "dentist", f"  {taken.upper()} ")
+    kept = areas.keep(store, cfg, "dentist", "Teeth  and health")
+    assert store.read().get("project", kept.project).data["name"] == "Teeth and health"
 
 
 def test_keeping_the_offer_starts_the_area_files_the_items_and_each_filing_is_a_correction(env):

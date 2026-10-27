@@ -442,8 +442,8 @@ test.describe("screen use and the shell", () => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page);
       const header = page.getByRole("banner");
-      // Everything sits on one row of 56px at every width. The assistant's line is beside the status chip from 1440px; below
-      // that its state is in the chip's popover.
+      // Everything sits on one row of 56px at every width. The assistant's line (a dot and its name) is beside the status chip
+      // from 1440px; below that its state is in the chip's popover.
       const beside = width >= 1440;
       expect((await header.boundingBox())!.height).toBe(56);
       const statusRow = header.getByRole("button", { name: /^App status: / });
@@ -462,12 +462,19 @@ test.describe("screen use and the shell", () => {
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
       const menu = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
       expect(menu.x + menu.width).toBeLessThanOrEqual(width);
+      if (width >= 1280) {
+        // Nothing in the status is cut off: the chip's word and the assistant's name (when it is there) show whole.
+        const cut = await header.evaluate((h) =>
+          Array.from(h.querySelectorAll<HTMLElement>("button[data-status] *, [data-alive] *")).filter((e) => e.scrollWidth > e.clientWidth + 1).length,
+        );
+        expect(cut).toBe(0);
+      }
       if (beside) {
-        // The assistant's line changes with what it says (a time, a paused account's name); a long one is cut short,
-        // never pushing the header's end past the window.
+        // The assistant's line is a dot and its name; a long name is cut at a fixed length, never pushing the header's end past
+        // the window, and nothing in the row is cut off by the window's edge from 1280px.
         await header.evaluate((h) => {
-          const say = h.querySelector<HTMLElement>("[data-alive] span:last-child");
-          if (say) say.textContent = "the assistant is paused on a rather long account name until Wednesday at 12:58 PM";
+          const name = h.querySelector<HTMLElement>("[data-alive] span:last-child");
+          if (name) name.textContent = "an assistant with a rather long name that someone chose";
         });
         const after = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
         expect(after.x + after.width).toBeLessThanOrEqual(width);
@@ -485,12 +492,12 @@ test.describe("screen use and the shell", () => {
         header.evaluate((h, v) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = v; }), value);
       await spacing("0.25em");
       expect(await narrowest()).toBeGreaterThanOrEqual(24);
-      // The assistant's line gives up its words first and keeps its icon, which says how it is.
+      // The assistant's line keeps its dot (or its icon when it needs a look), which says how it is.
       if (beside) {
-        const [line, icon] = await assistant.evaluate((e) => [e.getBoundingClientRect(), e.querySelector("svg")!.getBoundingClientRect()].map((r) => [r.left, r.right]));
-        expect(icon[1] - icon[0]).toBeGreaterThanOrEqual(16);
-        expect(icon[0]).toBeGreaterThanOrEqual(line[0]);
-        expect(icon[1]).toBeLessThanOrEqual(line[1]);
+        const [line, mark] = await assistant.evaluate((e) => [e.getBoundingClientRect(), e.querySelector("[data-indicator], svg")!.getBoundingClientRect()].map((r) => [r.left, r.right]));
+        expect(mark[1] - mark[0]).toBeGreaterThanOrEqual(8);
+        expect(mark[0]).toBeGreaterThanOrEqual(line[0]);
+        expect(mark[1]).toBeLessThanOrEqual(line[1]);
       }
       await spacing("");
     }

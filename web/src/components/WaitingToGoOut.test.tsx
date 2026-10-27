@@ -60,7 +60,7 @@ describe("the To send tab holds what waits to go out with the messages to send",
     expect(within(waiting).getByText("Message to Ana Example")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Waiting to go out" })).toBeInTheDocument();
     const row = await screen.findByRole("listitem", { name: "Robin Sample" });
-    expect(within(row).getByRole("button", { name: "Copy 1" })).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Copy message" })).toBeInTheDocument();
     // Both are in the one tab, and the act is the one chosen beside the list.
     expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByRole("complementary", { name: "Message to Ana Example" })).toBeInTheDocument();

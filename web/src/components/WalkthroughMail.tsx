@@ -274,11 +274,8 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
       )}
       {services.length > 0 && (
         <div className="field">
-          <p className="hint" id="mail-other">
-            {t("walkthrough.mail.other_hint")}
-          </p>
           <div className="row-end">
-            <button type="button" className="btn" aria-describedby="mail-other" onClick={() => props.onChooseSource(null)}>
+            <button type="button" className="btn" onClick={() => props.onChooseSource(null)}>
               {t("walkthrough.mail.other")}
             </button>
           </div>
@@ -359,7 +356,11 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   };
 
   const reads = service.reads.map((kind) => t(`walkthrough.mail.reads.${kind}`)).join(t("walkthrough.mail.reads_join"));
-  const reaches = serviceReachLines(service.what.reaches, t, tn);
+  // Who it signs in to, as the add-on names it; the add-on's own name when it names none.
+  const signsInTo = service.what.reaches.sign_ins[0] ?? service.name;
+  // The publisher and what it reaches are under "What it can access", with the number of keys it needs.
+  const reaches = [...(service.publisher ? [t("walkthrough.mail.publisher", { publisher: service.publisher })] : []), ...serviceReachLines(service.what.reaches, t, tn)];
+  const oneLine = (state === "not_installed" && service.installable) || state === "off";
   // Once the person has signed in, the row says so and what is read, and offers no Sign in.
   const signedIn = state === "ready" && props.signIns.length > 0 && props.signIns.every((item) => item.status === "signed_in");
   return (
@@ -375,7 +376,6 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
         <div className="text pack">
           <strong id={`${base}-name`}>{service.name}</strong>
           <span className="sub">{t("walkthrough.mail.reads_line", { reads })}</span>
-          {service.publisher && <span className="sub">{t("walkthrough.mail.publisher", { publisher: service.publisher })}</span>}
           {service.summary && <p className="pack-summary">{service.summary}</p>}
           <details className="more-options">
             <summary>{t("walkthrough.mail.reaches")}</summary>
@@ -385,21 +385,23 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               ))}
             </ul>
           </details>
-          <p className="sub" id={`${base}-state`}>
-            {state === "problem" && service.reason
-              ? t("walkthrough.mail.state.problem", { reason: service.reason })
-              : signedIn
-                ? t("walkthrough.mail.state.signed_in", { reads })
-                : t(`walkthrough.mail.state.${state}`)}
-          </p>
+          {/* Installing or turning on is one line and one button; the other states say where the service stands. */}
+          {oneLine ? (
+            <p className="hint" id={`${base}-state`} data-needs-addon="">
+              {t(oneClick ? "walkthrough.mail.signs_in" : "walkthrough.mail.signs_in_manual", { service: signsInTo })}
+            </p>
+          ) : (
+            <p className="sub" id={`${base}-state`}>
+              {state === "problem" && service.reason
+                ? t("walkthrough.mail.state.problem", { reason: service.reason })
+                : signedIn
+                  ? t("walkthrough.mail.state.signed_in", { reads })
+                  : t(`walkthrough.mail.state.${state}`)}
+            </p>
+          )}
           {problem && (
             <p className="problem-note" role="alert">
               {problem}
-            </p>
-          )}
-          {(state === "not_installed" || state === "off") && (
-            <p className="hint" data-needs-addon="">
-              {t(oneClick ? "walkthrough.mail.needs_addon_restart" : "walkthrough.mail.needs_addon", { name: service.name })}
             </p>
           )}
           {state === "ready" &&
@@ -418,11 +420,10 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               type="button"
               className="btn primary"
               disabled={busy || after}
-              aria-label={t(oneClick ? "walkthrough.mail.add_and_sign_in_named" : "walkthrough.mail.connect_named", { name: service.name })}
               aria-describedby={`${base}-state`}
               onClick={() => void connect()}
             >
-              {busy || after ? t("walkthrough.mail.connecting") : t(oneClick ? "walkthrough.mail.add_and_sign_in" : "walkthrough.mail.connect")}
+              {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
             </button>
           )}
           {state === "not_installed" && !service.installable && (
@@ -435,11 +436,10 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               type="button"
               className="btn primary"
               disabled={busy || after}
-              aria-label={t(oneClick ? "walkthrough.mail.add_and_sign_in_named" : "walkthrough.mail.turn_on_named", { name: service.name })}
               aria-describedby={`${base}-state`}
               onClick={() => void connect()}
             >
-              {busy || after ? t("walkthrough.mail.connecting") : t(oneClick ? "walkthrough.mail.add_and_sign_in" : "walkthrough.mail.turn_on")}
+              {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
             </button>
           )}
         </div>

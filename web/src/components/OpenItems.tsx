@@ -47,6 +47,7 @@ import { useReassign } from "./ReassignAction";
 import { dateAndTime, useRemindMe } from "./ReminderLine";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
+import { plainTitle } from "../lib/title-dates";
 
 type Tab = "actions" | "questions";
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -241,7 +242,7 @@ function ActionRow(props: { action: OpenAction }) {
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
-  const title = <NotesTitle notes={a.notes}>{a.text}</NotesTitle>;
+  const title = <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>;
   return (
     <Row
       ref={ref}

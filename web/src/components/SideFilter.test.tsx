@@ -259,7 +259,7 @@ test("Follow-ups has the same filter: the person's own rows go by side, and some
   expect(screen.getByText("Pick the family photo")).toBeInTheDocument();
   expect(screen.queryByText("Approve the invoice run")).toBeNull();
   // Robin's one message still covers both of the rows it was made from.
-  expect(screen.getByRole("button", { name: "Copy 2" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Copy message" })).toBeInTheDocument();
   await user.click(screen.getByRole("radio", { name: BUSINESS }));
   expect(await screen.findByText("Dana Sample")).toBeInTheDocument();
   expect(screen.getByText("Approve the invoice run")).toBeInTheDocument();

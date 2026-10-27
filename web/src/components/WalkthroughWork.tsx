@@ -130,37 +130,46 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
     >
       <fieldset className="field">
         <legend>{t("walkthrough.work.question")}</legend>
-        <label className="choice">
-          <input
-            type="radio"
-            name="work-choice"
-            checked={alone}
-            disabled={saved.length > 0}
-            onChange={chooseJustMe}
-          />
-          {t("walkthrough.work.choice.me")}
-        </label>
-        <fieldset className="field" data-also="">
-          <legend>{t("walkthrough.work.also")}</legend>
-          <label className="check-line">
+        <div className="kinds kind-grid work-cards">
+          <label className="radio kind-choice kind-card" data-card="me">
             <input
-              type="checkbox"
-              checked={jobTicked}
-              disabled={savedJobs.length > 0}
-              onChange={(e) => setJobOn(e.target.checked)}
+              type="radio"
+              name="work-choice"
+              checked={alone}
+              disabled={saved.length > 0}
+              aria-labelledby="work-me-title"
+              aria-describedby="work-me-note"
+              onChange={chooseJustMe}
             />
-            <span>{t("walkthrough.work.choice.job")}</span>
+            <span>
+              <strong id="work-me-title">{t("walkthrough.work.choice.me")}</strong>
+              <span className="hint block" id="work-me-note">
+                {t("walkthrough.work.choice.me_note")}
+              </span>
+            </span>
           </label>
-          <label className="check-line">
-            <input
-              type="checkbox"
-              checked={businessTicked}
-              disabled={savedBusinesses.length > 0}
-              onChange={(e) => toggleBusiness(e.target.checked)}
-            />
-            <span>{t("walkthrough.work.choice.business")}</span>
-          </label>
-        </fieldset>
+          <div className="kind-card also-card" role="group" aria-labelledby="work-also-title" aria-describedby="work-also-note" data-also="" data-chosen={alone ? undefined : "true"}>
+            <span>
+              <strong id="work-also-title">{t("walkthrough.work.also")}</strong>
+              <span className="hint block" id="work-also-note">
+                {t("walkthrough.work.also_note")}
+              </span>
+            </span>
+            <label className="check-line">
+              <input type="checkbox" checked={jobTicked} disabled={savedJobs.length > 0} onChange={(e) => setJobOn(e.target.checked)} />
+              <span>{t("walkthrough.work.choice.job")}</span>
+            </label>
+            <label className="check-line">
+              <input
+                type="checkbox"
+                checked={businessTicked}
+                disabled={savedBusinesses.length > 0}
+                onChange={(e) => toggleBusiness(e.target.checked)}
+              />
+              <span>{t("walkthrough.work.choice.business")}</span>
+            </label>
+          </div>
+        </div>
         {saved.length > 0 && <p className="hint">{t("walkthrough.work.stays")}</p>}
       </fieldset>
 

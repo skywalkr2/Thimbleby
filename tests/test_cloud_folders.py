@@ -129,6 +129,21 @@ def test_the_step_lists_the_drives_found_by_name_with_the_first_recommended_and_
     assert str(home) not in str(listed)
 
 
+def test_the_step_names_every_drive_it_looks_for_for_its_hint_and_the_picker_says_when_it_is_at_home(
+    tmp_path, monkeypatch
+):
+    home = tmp_path / "home"
+    with_home(monkeypatch, home)
+    (home / "Documents").mkdir()
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    # Every drive of the list is named, found or not, so the hint never hard-codes one.
+    assert c.get(f"{api}/setup/backup-folders").json()["names"] == [d.name for d in cfg.storage.backups.cloud_folders]
+    at_home = c.get(f"{api}/setup/folders").json()
+    assert at_home["home"] is True and "Documents" in at_home["folders"]
+    assert c.get(f"{api}/setup/folders", params={"path": str(home / "Documents")}).json()["home"] is False
+
+
 def test_with_no_drive_folder_the_list_is_empty(tmp_path, monkeypatch):
     with_home(monkeypatch, tmp_path / "empty-home")
     ws, cfg, store = make(tmp_path)

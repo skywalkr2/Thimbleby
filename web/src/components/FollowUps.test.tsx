@@ -16,6 +16,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 /** The detail pane beside the list: the chosen person's message and asks. */
 const findPane = () => screen.findByRole("complementary");
+/** The Copy under the message box: the last of the identical buttons on the screen (the line's and the detail's come first). */
+const underBox = () => screen.getAllByRole("button", { name: "Copy message" }).at(-1)!;
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
@@ -49,7 +51,9 @@ test("the PM comes first, then each person with Copy", async () => {
   const you = await screen.findByRole("listitem", { name: "You" });
   const robin = screen.getByRole("listitem", { name: "Robin Sample" });
   expect(you.compareDocumentPosition(robin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(within(robin).getByRole("button", { name: "Copy 2" })).toBeInTheDocument();
+  expect(within(robin).getByRole("button", { name: "Copy message" })).toBeInTheDocument();
+  expect(within(robin).queryByRole("button", { name: /^Copy \d/ })).toBeNull();
+  expect(within(robin).getByText("2 to send")).toBeInTheDocument();
   expect(within(you).queryByRole("button", { name: /^Copy/ })).toBeNull();
 });
 
@@ -68,7 +72,7 @@ test("Copy puts the edited message on the clipboard and changes nothing on the s
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   const box = screen.getByRole("textbox", { name: /Message to Robin Sample/ });
   await user.type(box, " PS");
-  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  await user.click(underBox());
   expect(await navigator.clipboard.readText()).toBe(sections[1].message + " PS");
   expect(await screen.findByText("Copied")).toBeInTheDocument();
   expect(posts(calls)).toHaveLength(0);
@@ -83,7 +87,7 @@ test("a message that still names the assistant shows why it is held back and can
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   expect(await screen.findByRole("alert")).toHaveTextContent(reason);
-  expect(screen.getByRole("button", { name: "Copy message" })).toBeDisabled();
+  expect(underBox()).toBeDisabled();
   expect(posts(calls)).toHaveLength(0);
 });
 
@@ -127,7 +131,7 @@ test("Copy puts the message on the clipboard formatted and plain together, and w
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   const box = screen.getByRole("textbox", { name: /Message to Robin Sample/ });
   await user.type(box, " <b>PS</b>");
-  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  await user.click(underBox());
   const [item] = await rich.read();
   expect(item["text/plain"]).toBe(sections[1].message + " <b>PS</b>");
   expect(item["text/html"]).toContain("<p>Hi Robin,</p>");
@@ -233,7 +237,7 @@ test("Copy on a closed card opens the message first and copies nothing, with the
   const user = userEvent.setup();
   const calls = fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: "Copy 2" }));
+  await user.click(within(await screen.findByRole("listitem", { name: "Robin Sample" })).getByRole("button", { name: "Copy message" }));
   const box = await screen.findByRole("textbox", { name: /Message to Robin Sample/ });
   expect(box).toHaveValue(sections[1].message);
   await waitFor(() => expect(box).toHaveFocus());
@@ -241,7 +245,7 @@ test("Copy on a closed card opens the message first and copies nothing, with the
   expect(screen.queryByText("Copied")).toBeNull();
   expect(posts(calls)).toHaveLength(0);
   // Only the message on screen is copied, and then the card offers Mark sent.
-  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  await user.click(screen.getAllByRole("button", { name: "Copy message" })[0]);
   expect(await navigator.clipboard.readText()).toBe(sections[1].message);
   expect(await screen.findByText("Copied")).toBeInTheDocument();
 });
@@ -251,10 +255,9 @@ test("after copying, the card's primary and the button under the box become Mark
   fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
-  await user.click(within(await findPane()).getByRole("button", { name: "Copy 2" }));
+  await user.click(within(await findPane()).getAllByRole("button", { name: "Copy message" })[0]);
   // The line, the detail's primary and the button under the box all say it now.
   expect(await screen.findAllByRole("button", { name: "Mark sent" })).toHaveLength(3);
-  expect(screen.queryByRole("button", { name: "Copy 2" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Copy message" })).toBeNull();
 });
 
@@ -264,7 +267,7 @@ test("Mark sent records the box's text and offers Undo", async () => {
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   await user.type(screen.getByRole("textbox", { name: /Message to Robin Sample/ }), " PS");
-  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  await user.click(underBox());
   await user.click((await screen.findAllByRole("button", { name: "Mark sent" }))[0]);
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/mark-sent")).toBe(true));
   expect(calls.find((c) => c.route === "POST followups/PER-2/mark-sent")!.body).toEqual({ text: sections[1].message + " PS" });
@@ -297,7 +300,7 @@ test("when the clipboard is blocked nothing is marked and the card keeps Copy", 
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
-  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  await user.click(underBox());
   expect(await screen.findByText(/blocked copying/)).toBeInTheDocument();
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
   expect(screen.queryByText(/Marked as sent/)).toBeNull();

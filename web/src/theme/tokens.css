@@ -62,7 +62,7 @@
   --bottombar-h: 64px;         /* phone bottom bar */
   --gutter: 24px;              /* between panes and grid columns */
   --page-pad: 24px;            /* inside the content area */
-  --rail-w: clamp(300px, 18vw, 420px);     /* Today context rail, list detail panes */
+  --rail-w: clamp(320px, 22vw, 440px);     /* Today context rail, list detail panes */
   --detail-w: clamp(420px, 26vw, 600px);   /* inspector pane (>= 1680px) and side drawers */
   --settings-nav-w: 220px;
   --field-max: 560px;          /* one text input; forms lay out in 2 columns of these when wide */

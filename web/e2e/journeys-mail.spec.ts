@@ -57,7 +57,7 @@ test.describe.serial("journey: mail", () => {
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).check();
-    await main.getByText("More options").click();
+    await main.getByRole("button", { name: /^Another service/ }).click();
     await main.getByLabel(/^Another service that speaks/).check();
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
