@@ -111,10 +111,18 @@ test.describe("A review happens on Today", () => {
       await note.fill("Ask me before adding this one.");
       const send = row.getByRole("button", { name: "Send back", exact: true });
       await expect(send).toBeEnabled();
-      await send.scrollIntoViewIfNeeded();
+      const window_ = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+      // The button can be brought whole into the window. The pane may still be settling after the note opens, so it is
+      // scrolled to and measured again until the layout holds still.
+      await expect
+        .poll(async () => {
+          await send.scrollIntoViewIfNeeded();
+          const b = (await send.boundingBox())!;
+          return b.y >= 0 && b.y + b.height <= window_.height;
+        })
+        .toBe(true);
       // The button is inside the window, in both directions, whole.
       const box = (await send.boundingBox())!;
-      const window_ = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(window_.width);
       expect(box.y).toBeGreaterThanOrEqual(0);
