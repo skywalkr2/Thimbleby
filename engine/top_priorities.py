@@ -113,7 +113,7 @@ def top_priorities(store: Any, cfg: Any, now: datetime) -> TopPriorities:
     reader = store.read()
     today = now.astimezone(zone(cfg)).date()
     window = cfg.ui.followups.action_due_within_days
-    at_risk = set(projects_at_risk(reader))
+    at_risk = set(projects_at_risk(reader, cfg))
     held_up = holds_up(reader, people)
     found: list[Line] = []
 

@@ -262,7 +262,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         lists = {v.data["name"]: v.data["values"] for v in store.read().list("value_list")}
         return {
             "project_status": list(lists.get("project-status", [])),
-            "projects": [p.id for p in store.read().list("project")],
+            "projects": list(sides.project_names(store.read(), current())),
+            # Personal and each job or business: groups that hold projects, picked from where a setting names a side.
+            "sides": sides.side_ids(store.read(), current()),
             # The people there are and the tiers the AI settings define: lists their own records and settings keep.
             "people": [p.id for p in store.read().list("person") if p.data.get("status", "active") != "left"],
             "tiers": list(current().ai.tiers),
@@ -399,6 +401,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     project=s.project,
                     kind=s.kind,
                     name=s.name,
+                    summary=(view.get("project", s.project).data.get("summary") or None),
                     removable=open_to_change and sides.removable_side(view, s.project),
                 )
                 for s in listed
@@ -406,11 +409,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             chosen=setup.work_choice(ws, now, view),
         )
 
-    def save_work(name: str, kind: str = "business") -> BusinessView:
+    def save_work(name: str, kind: str = "business", summary: str | None = None) -> BusinessView:
         from engine import sides
 
         try:
-            made = sides.set_business(ws, store, current(), name, kind=kind, env=dict(os.environ))
+            made = sides.set_business(ws, store, current(), name, kind=kind, summary=summary, env=dict(os.environ))
         except config_screens.SettingsConflict as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         except StoreError as err:
@@ -431,7 +434,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """Add a side beside the person's own life: makes its top-level project and appends it to `project.sides`
         with its kind (a business unless `kind` says job). A name a side already has is that side, and nothing
         changes. With Undo."""
-        return save_work(body.name, body.kind or "business")
+        return save_work(body.name, body.kind or "business", body.summary)
 
     @r.post("/setup/work")
     def work_save(body: WorkIn) -> BusinessState:
@@ -444,7 +447,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.choice == "work":
             if not (body.name or "").strip():
                 raise HTTPException(status_code=422, detail="Say what your work is called.")
-            save_work(body.name or "", body.kind or "business")
+            save_work(body.name or "", body.kind or "business", body.summary)
         elif sides.business_project(view, now) is not None:
             raise HTTPException(status_code=409, detail="Your work is already part of this; it stays.")
         else:

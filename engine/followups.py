@@ -175,7 +175,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     here = zone(cfg)
     held_up = holds_up(store.read(), people)
     pulled = _pulled(store.read(), cfg, today, held_up, people.pm)
-    projects = {p.id: p.data["name"] for p in store.read().list("project")}
+    projects = sides.project_names(reader, cfg)
     project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
     project_parents = {p.id: projects.get(p.data.get("parent") or "") for p in store.read().list("project")}
     by_person: dict[str, Section] = {}
@@ -230,6 +230,10 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                 "kind": d["kind"],
                 "status": d["status"],
                 "project_name": ", ".join(projects[p] for p in d.get("projects", []) if p in projects),
+                "side_name": ", ".join(
+                    n for p in d.get("projects", []) if (n := sides.side_name_of(reader, cfg, p)) is not None
+                )
+                or None,
                 "sent": sent.isoformat() if sent else None,
                 "followed_up": chased[-1] if chased else None,
                 "chases": len(chased),
@@ -278,6 +282,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                     "project": d.get("project"),
                     "project_name": projects.get(d.get("project"), ""),
                     "parent_name": project_parents.get(d.get("project")),
+                    "side_name": sides.side_name_of(view, cfg, d.get("project")),
                     "notes": d.get("notes") or None,
                     "links": project_links.get(d.get("project"), []),
                     "told": told,

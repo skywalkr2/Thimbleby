@@ -40,6 +40,7 @@ def _action(r: OpenAction) -> OpenActionView:
         due=r.due,  # type: ignore[arg-type]
         project=r.project,
         project_name=r.project_name,
+        side_name=r.side_name,
         parent_name=r.parent_name,
         notes=r.notes,
         since=r.since,

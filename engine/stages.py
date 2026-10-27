@@ -62,10 +62,11 @@ def record_title(record):
     return record.id
 
 
-def card_details(record, people, project_names):
+def card_details(record, people, project_names, side_names=None):
     """What a card on the stages board shows beside the title, from the fields the record has: the name of its first
     project, its owners as the workspace writes them, and its due date. A record without a field simply has none of it;
-    nothing here is specific to a kind of record."""
+    nothing here is specific to a kind of record. `project_names` holds real projects only; an item filed directly on a
+    side (`side_names`, by id) has no project and gives the side's name as `side_name` (design 6.32)."""
     data = record.data
     projects = data.get("projects")
     first = projects[0] if isinstance(projects, list) and projects else data.get("project")
@@ -81,6 +82,7 @@ def card_details(record, people, project_names):
     due = data.get("due")
     return {
         "project": project_names.get(first) if isinstance(first, str) else None,
+        "side_name": (side_names or {}).get(first) if isinstance(first, str) else None,
         "owners": shown,
         "due": due if isinstance(due, str) and due else None,
     }

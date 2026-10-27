@@ -113,12 +113,16 @@ def value_rank(view: Any, name: str, value: str | None) -> int:
     return next((i for i, v in enumerate(values) if v.casefold() == key), len(values)) if key else len(values)
 
 
-def projects_at_risk(view: Any) -> list[str]:
-    """The ids of the projects whose status means at risk, by the status's meaning, not its wording."""
+def projects_at_risk(view: Any, cfg: Any) -> list[str]:
+    """The ids of the projects whose status means at risk, by the status's meaning, not its wording. A side is a group,
+    never a project (design 6.32), so it is never at risk."""
+    from engine.sides import side_ids
+
+    groups = set(side_ids(view, cfg))
     return [
         p.id
         for p in view.list("project")
-        if describe(view, "project-status", p.data.get("status")).meaning == "at_risk"
+        if p.id not in groups and describe(view, "project-status", p.data.get("status")).meaning == "at_risk"
     ]
 
 

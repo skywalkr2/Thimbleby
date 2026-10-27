@@ -197,12 +197,12 @@ def test_ranking_reads_the_meaning_so_an_added_value_ranks_where_its_meaning_say
 def test_the_at_risk_line_counts_projects_by_meaning_not_by_the_words_at_risk(env):
     _, cfg, store = env
     project = fixture_records(DEMO_B, "project")[0]["id"]
-    assert project not in projects_at_risk(store.read())
+    assert project not in projects_at_risk(store.read(), cfg)
     _add(store, cfg, value="Wobbly", meaning="at_risk")
     rec = store.read().get("project", project)
     with store.transaction() as tx:
         tx.update("project", project, {"status": "Wobbly"}, _PM, read_version=rec.version)
-    assert project in projects_at_risk(store.read())
+    assert project in projects_at_risk(store.read(), cfg)
 
 
 def test_completed_follows_the_done_meaning_so_an_added_finished_value_completes_a_project(api):

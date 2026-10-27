@@ -26,6 +26,7 @@ from api.schemas import (
     WeekWaitingView,
 )
 from engine import schedule as schedule_module
+from engine import sides
 from engine.config import Config
 from engine.names import People, render_owner
 from engine.storage import Store
@@ -65,7 +66,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         the next days after the lines."""
         reader = store.read()
         people = People(store, cfg)
-        projects = {p.id: p.data["name"] for p in reader.list("project")}
+        projects = sides.project_names(reader, cfg)
         found = top_priorities(store, cfg, worker.now())
         lines = []
         for line in found.lines:
@@ -80,6 +81,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     text=line.text,
                     project=line.project,
                     project_name=projects.get(line.project or ""),
+                    side_name=sides.side_name_of(reader, cfg, line.project),
                     due=line.due,
                     days=line.days,
                     action=line.action,
@@ -106,6 +108,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     due=c.due,
                     project=c.project,
                     project_name=projects.get(c.project or ""),
+                    side_name=sides.side_name_of(reader, cfg, c.project),
                     owners=owner_ids(people, c.owners),
                     mine=c.mine,
                 )
@@ -118,7 +121,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """This week, from today through the configured last working day: what is due, who is waiting on the person and
         the meetings to hold, across projects."""
         people = People(store, cfg)
-        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        projects = sides.project_names(store.read(), cfg)
         found = this_week(store, cfg, worker.now())
         return ThisWeekView(
             first=found.first,
@@ -130,6 +133,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     due=d.due,
                     project=d.project,
                     project_name=projects.get(d.project or ""),
+                    side_name=sides.side_name_of(store.read(), cfg, d.project),
                     owners=owner_ids(people, d.owners),
                     mine=d.mine,
                     kind=d.kind,

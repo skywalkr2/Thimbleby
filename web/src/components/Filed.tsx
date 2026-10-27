@@ -10,10 +10,15 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 type Filed = S["FiledView"];
 
 /** "Filed under <project>: it names <word>", or "it's from <domain>" when the sender's domain, or the source it was read
- * from, placed it. */
+ * from, placed it. A side is a group, not a project, so an item filed on one reads "Filed in <side>, not in a project". */
 export function filedWords(filed: Filed, t: T): string {
+  const from = filed.by === "domain" || filed.by === "source";
+  if (filed.side_name) {
+    const vars = { side: filed.side_name, word: filed.word ?? "" };
+    return from ? t("filed.from_side", vars) : t("filed.names_side", vars);
+  }
   const vars = { project: filed.project_name, word: filed.word ?? "" };
-  return filed.by === "domain" || filed.by === "source" ? t("filed.from", vars) : t("filed.names", vars);
+  return from ? t("filed.from", vars) : t("filed.names", vars);
 }
 
 /** The sides an item can move to: a side to pick when there are several, none to pick from when there is one (it moves in a

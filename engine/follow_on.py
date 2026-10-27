@@ -548,7 +548,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
             "# Practice\n" + _guidance(kind),
             learned.stable,
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store),
+            "# Projects\n" + _projects(store, cfg),
         )
         if part.strip()
     )

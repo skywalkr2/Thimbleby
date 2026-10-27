@@ -745,7 +745,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         people = People(store, cfg)
         view = store.read()
-        projects = {p.id: p.data["name"] for p in view.list("project")}
+        projects = sides.project_names(view, cfg)
         parents = {p.id: projects.get(p.data.get("parent") or "") for p in view.list("project")}
         here = zone(cfg)
 
@@ -766,6 +766,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 person_name=people.name(line.person) if line.person else None,
                 project_name=projects.get(line.project or ""),
                 parent_name=parents.get(line.project or ""),
+                side_name=sides.side_name_of(view, cfg, line.project),
                 notes=(about.data.get("notes") or None) if about is not None else None,
                 side=sides.side_of_line(view, cfg, line),
                 made_by=line_maker.of_line(view, line, here),
@@ -1309,14 +1310,20 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/stages/records")
     def stage_records() -> list[StageView]:
+        from engine import sides
+
         result = []
         people = People(store, cfg)
-        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        projects = sides.project_names(store.read(), cfg)
+        groups = sides.side_names(store.read(), cfg)
         for kind in store.plugins.stages.types:
             if "/" in kind and not store.plugins.active(kind.split("/")[0]):
                 continue
             for record in store.read().list(kind):
-                result.append(StageView(**record_status(store, record), **card_details(record, people, projects)))
+                if kind == "project" and record.id in groups:
+                    continue  # a side is a group, never a card on a board of projects
+                card = card_details(record, people, projects, groups)
+                result.append(StageView(**record_status(store, record), **card))
         return sorted(result, key=lambda view: (view.record.kind, view.title.casefold(), view.record.id))
 
     @r.post("/stages/move")
@@ -1325,8 +1332,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         cs = guard(lambda: move_stage(store, op))
         record = store.read().get(body.record.kind, body.record.id)
         changed()
-        projects = {p.id: p.data["name"] for p in store.read().list("project")}
-        card = card_details(record, People(store, cfg), projects)
+        from engine import sides
+
+        projects = sides.project_names(store.read(), cfg)
+        card = card_details(record, People(store, cfg), projects, sides.side_names(store.read(), cfg))
         return StageMoved(changeset=cs, stages=StageView(**record_status(store, record), **card))
 
     @r.get("/stages/requests")
@@ -1425,7 +1434,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/notes")
     def notes() -> list[NoteView]:
         """Every filed note, newest first, with the project it was filed under (if any)."""
-        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        from engine import sides
+
+        projects = sides.project_names(store.read(), cfg)
         filed: dict[str, str] = {}
         for entry in store.read().ledger(kind="note"):
             filed.setdefault(entry["record_id"], str(entry["at"]))
@@ -1435,6 +1446,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 text=n.data["text"],
                 project=n.data.get("project"),
                 project_name=projects.get(n.data.get("project")),
+                side_name=sides.side_name_of(store.read(), cfg, n.data.get("project")),
                 created_at=filed.get(n.id),
                 trust=n.data.get("trust", "trusted"),
             )
@@ -1491,11 +1503,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/changes")
     def changes() -> list[ChangeItem]:
+        from engine import sides
         from engine.titles import head_of, subject_of, title_for
         from engine.today_queue import request_project, watched_kinds
 
         people = People(store, cfg)
-        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        projects = sides.project_names(store.read(), cfg)
         sources = {s.id: s.data for s in store.read().list("source")}
         to_send = actions_to_send(store, cfg)
         kinds = watched_kinds(store.read())
@@ -2316,8 +2329,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         seen = counts(view)["projects"]
         done = cfg.workspace.project.completed_status.strip().casefold()
         meant = {p.id: describe(view, "project-status", p.data.get("status")) for p in view.list("project")}
+        groups = set(sides.side_ids(view, cfg))
         return [
             ProjectView(
+                side=p.id in groups,
                 parent=p.data.get("parent"),
                 language=language_for(view, cfg.workspace.language, p),
                 language_own=bool(p.data.get("language")),
@@ -2357,7 +2372,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 raise HTTPException(status_code=409, detail=why)
         from engine import sides
 
-        why = sides.no_target_problem(store.read(), cfg, prj, changes)
+        why = sides.side_field_problem(store.read(), cfg, prj, changes) or sides.no_target_problem(
+            store.read(), cfg, prj, changes
+        )
         if why:
             raise HTTPException(status_code=409, detail=why)
         unknown = sorted(set(changes.get("content_levels") or []) - set(cfg.ai.content_levels))
@@ -2396,9 +2413,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/projects/{prj}/role")
     def set_project_role(prj: str, body: ProjectRoleIn) -> Applied:
         """The person's own part in a project, with Undo."""
+        from engine import sides
         from engine.applier import apply_as_person
 
         need("project", prj)
+        if sides.is_side(store.read(), cfg, prj):
+            raise HTTPException(status_code=409, detail=sides.SIDE_IS_SETTINGS)
         person = cfg.workspace.user.person
         if person is None:
             raise HTTPException(status_code=409, detail="Say who you are before setting your part in a project.")
@@ -2409,7 +2429,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.post("/projects/{prj}/remove")
     def remove_project(prj: str) -> Ok:
+        from engine import sides
+
         need("project", prj)
+        if sides.is_side(store.read(), cfg, prj):
+            raise HTTPException(status_code=409, detail=sides.SIDE_IS_SETTINGS)
         guard(lambda: _remove(store, "project", prj))
         changed()
         return Ok(ok=prj)
@@ -2578,6 +2602,13 @@ def _shown_value(store: Store, value: Any) -> Any:
     return display_name(target.data) or value if target is not None else value
 
 
+def _side_name(store: Store, cfg: Config | None, project_id: str | None) -> str | None:
+    """The side's name when an item is filed directly on a side (design 6.32), else none."""
+    from engine import sides
+
+    return sides.side_name_of(store.read(), cfg, project_id) if cfg is not None else None
+
+
 def _op_view(
     o: dict[str, Any],
     store: Store,
@@ -2613,12 +2644,14 @@ def _op_view(
             meta["owners"] = [people.owner(x) for x in d.get("owners", [])]
             meta["due"] = d.get("due")
             meta["project"] = projects.get(d.get("project"))
+            meta["side_name"] = _side_name(store, cfg, d.get("project"))
             meta["action_status"] = d.get("status")
             meta["to_send"] = rec.id in (to_send or ())
         if kind == "question":
             meta["to"] = people.name(d.get("to"))
         if kind == "note":
             meta["project"] = projects.get(d.get("project"))
+            meta["side_name"] = _side_name(store, cfg, d.get("project"))
         if kind == "fact" and d.get("basis") == "said" and d.get("said_by"):
             meta["said_by"] = people.name(d["said_by"])
             meta["as_of"] = str(d["as_of"]) if d.get("as_of") else None
@@ -2637,6 +2670,7 @@ def _op_view(
         meta["to"] = _named(people, op.get("to"))
     elif op["op"] == "note":
         meta["project"] = projects.get(op.get("project"))
+        meta["side_name"] = _side_name(store, cfg, op.get("project"))
     if op["op"] == "record.set":
         meta["field"] = op["field"]
         meta["value"] = _shown_value(store, op["value"])
@@ -2727,6 +2761,7 @@ def _section(
             due=a["due"],
             due_check=a["due_check"],
             project_name=a["project_name"],
+            side_name=a.get("side_name"),
             parent_name=a.get("parent_name"),
             notes=a.get("notes"),
             links=a["links"],
@@ -2776,6 +2811,7 @@ def _followup_question(
         kind=q["kind"],
         status=q["status"],
         project_name=q["project_name"],
+        side_name=q.get("side_name"),
         sent=q["sent"],
         followed_up=q["followed_up"],
         chases=q["chases"],

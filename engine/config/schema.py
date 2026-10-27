@@ -103,13 +103,13 @@ class ProjectSettings(ConfigModel):
         description="The project that holds the person's own life (family, home, friends): what names only people on "
         "the personal side, and, while no business is set, everything filed under no project, goes there. Made when "
         "the workspace is set up; empty means none, and items stay unfiled.",
-        json_schema_extra={"choices": "projects"},
+        json_schema_extra={"choices": "sides"},
     )
     business: str | None = Field(
         None,
         description="The older form of the sides list, for one business or job: read as one entry of kind business in "
         "the sides list, whatever else that holds. Use the sides list instead.",
-        json_schema_extra={"choices": "projects"},
+        json_schema_extra={"choices": "sides"},
     )
     personal_data_level: Literal["open", "internal", "restricted"] = Field(
         "restricted",
@@ -2792,7 +2792,7 @@ class WatchSource(ConfigModel):
         description="The sides of your work this source serves, as the top-level projects that hold them (your own "
         "life included): one side files what it hands in there when the people it names don't place it; several "
         "narrow the choice to them. Empty means not said.",
-        json_schema_extra={"choices": "projects"},
+        json_schema_extra={"choices": "sides"},
     )
     first_run: Literal["intake", "baseline", "recent", "all"] = Field(
         "intake",

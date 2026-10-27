@@ -44,6 +44,8 @@ SPAN_RULE = (
     "This is part of a longer text: paragraphs p{first} to p{last}. Revise only these; account for each of them, and "
     "use only their ids."
 )
+#: The heading over the sides in a packet: groups that hold projects, never projects (design 6.32).
+SIDES_HEADING = "Sides (groups, not projects; file to a side only when no project fits):"
 ADD_RULE = "Write only the new part, which goes {place}. Don't repeat any of the text that is already there."
 
 QUESTIONS_RULE = (
@@ -166,7 +168,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             "# Open actions\n" + _open_actions(store, people, out),
             "# Open questions\n" + _open_questions(store, people, out),
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store, people.pm, reach),
+            "# Projects\n" + _projects(store, cfg, people.pm, reach),
         )
         if part.strip()
     )
@@ -507,7 +509,7 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
             "# Open actions\n" + _open_actions(store, people),
             "# Open questions\n" + _open_questions(store, people),
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store, people.pm),
+            "# Projects\n" + _projects(store, cfg, people.pm),
         )
         if part.strip()
     )
@@ -1058,17 +1060,20 @@ def _value_lists(store: Store) -> str:
     )
 
 
-def _projects(store: Store, pm: str | None = None, reach: frozenset[str] | None = None) -> str:
+def _projects(store: Store, cfg: Config, pm: str | None = None, reach: frozenset[str] | None = None) -> str:
     """The projects, each with its links and, when it isn't one the person runs, the person's part in it, so a project
-    they only watch gets facts, not actions or questions to others, from the first answer. With a `reach` (the
-    projects a draft about an area may draw on), only those are listed."""
+    they only watch gets facts, not actions or questions to others, from the first answer. The sides are listed apart,
+    as groups that hold projects, never as projects (design 6.32). With a `reach` (the projects a draft about an area
+    may draw on), only those are listed."""
+    from engine import sides
     from engine.scope import DEFAULT_ROLE, role_of
 
     view = store.read()
     lines = []
+    groups = sides.side_names(view, cfg)
     for p in view.list("project"):
         d = p.data
-        if reach is not None and p.id not in reach:
+        if p.id in groups or (reach is not None and p.id not in reach):
             continue
         links = "; ".join(f"{link['label']}: {link['url']}" for link in d.get("links", []))
         role = role_of(view, p.id, pm)
@@ -1076,4 +1081,8 @@ def _projects(store: Store, pm: str | None = None, reach: frozenset[str] | None 
         lines.append(
             f"- {p.id} | {d['name']}" + (f" | links: {links}" if links else "") + (part if role != DEFAULT_ROLE else "")
         )
-    return "\n".join(lines) or "(none)"
+    shown = "\n".join(lines) or "(none)"
+    kept = [f"- {i} | {name}" for i, name in groups.items() if reach is None or i in reach]
+    if kept:
+        shown += f"\n\n{SIDES_HEADING}\n" + "\n".join(kept)
+    return shown

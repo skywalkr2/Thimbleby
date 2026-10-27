@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from engine import endings, patterns, repeats
+from engine import endings, patterns, repeats, sides
 from engine.applier import _similar, apply_as_person
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.firm_due import firm_due
@@ -77,6 +77,8 @@ class OpenAction:
     effort_minutes: int | None = None
     #: When the person asked to be reminded of it, on their own clock.
     remind_at: datetime | None = None
+    #: The side it is filed on directly, when it is in a side and in no project of it (design 6.32).
+    side_name: str | None = None
 
 
 @dataclass
@@ -96,6 +98,8 @@ class OpenQuestion:
     chases: int = 0
     held_until: str | None = None
     origin: dict[str, Any] | None = None
+    #: The sides it is filed on directly, by name and joined with commas, apart from the projects.
+    side_name: str | None = None
 
 
 def _day(stamp: str | None, here: Any) -> date | None:
@@ -123,6 +127,7 @@ def open_actions(
     view = store.read()
     people = People(store, cfg)
     projects = {p.id: p.data for p in view.list("project")}
+    names = sides.project_names(view, cfg)
     changed = view.last_changes("action")
     created = view.creators("action")
     stale_after = cfg.ui.today.stale_after_days
@@ -147,7 +152,6 @@ def open_actions(
             hold, blocker = None, None  # it waits on the person themselves: their own to-do, not blocked
         due = date.fromisoformat(str(d["due"])) if d.get("due") else None
         project = projects.get(d.get("project") or "")
-        parent = projects.get((project or {}).get("parent") or "")
         owners = [
             OwnerName(
                 o["person"],
@@ -192,8 +196,9 @@ def open_actions(
                 owners=owners,
                 due=due.isoformat() if due else None,
                 project=d.get("project"),
-                project_name=(project or {}).get("name", ""),
-                parent_name=(parent or {}).get("name"),
+                project_name=names.get(d.get("project") or "", ""),
+                parent_name=names.get((project or {}).get("parent") or ""),
+                side_name=sides.side_name_of(view, cfg, d.get("project")),
                 notes=d.get("notes") or None,
                 since=(_day(created[a.id][1], here) or today).isoformat() if a.id in created else "",
                 on_hold=hold["waiting_for"] if hold else None,
@@ -257,7 +262,7 @@ def open_questions(store: Any, cfg: Any, today: date) -> list[OpenQuestion]:
     here = zone(cfg)
     view = store.read()
     people = People(store, cfg)
-    projects = {p.id: p.data["name"] for p in view.list("project")}
+    projects = sides.project_names(view, cfg)
     created = view.creators("question")
     rows: list[OpenQuestion] = []
     for q in view.list("question"):
@@ -289,6 +294,10 @@ def open_questions(store: Any, cfg: Any, today: date) -> list[OpenQuestion]:
                 to_name=people.name(d["to"]),
                 project_name=", ".join(projects[p] for p in d.get("projects", []) if p in projects),
                 projects=[p for p in d.get("projects", []) if p in projects],
+                side_name=", ".join(
+                    n for p in d.get("projects", []) if (n := sides.side_name_of(view, cfg, p)) is not None
+                )
+                or None,
                 since=began.isoformat() if began else "",
                 waiting_days=max(0, (today - last_word).days) if last_word and state == "waiting" else None,
                 chases=len(chased),

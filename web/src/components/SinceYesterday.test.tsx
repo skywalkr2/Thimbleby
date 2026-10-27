@@ -244,6 +244,16 @@ test("a sender's domain that filed an item is said as where it is from", async (
   expect(rows()[0]).toHaveTextContent("Filed under Business: it's from example.com");
 });
 
+test("an item filed on a side reads as in the side and in no project", async () => {
+  open([
+    entry({ ...ADDED_BY_WORDS, filed: { ...FILED, side_name: "Business" } }),
+    entry({ ...ADDED_BY_WORDS, ref: "changeset:CS-9:1", filed: { ...FILED, by: "domain", word: "example.com", side_name: "Business" } }),
+  ]);
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  expect(rows()[0]).toHaveTextContent("Filed in Business, not in a project: it names Salt Orchard");
+  expect(rows()[1]).toHaveTextContent("Filed in Business, not in a project: it's from example.com");
+});
+
 test("Move edits the item's project as the person, says so with Undo, and the row no longer says why", async () => {
   const user = userEvent.setup();
   const { calls } = open([ADDED_BY_WORDS], {

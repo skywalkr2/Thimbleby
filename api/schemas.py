@@ -633,6 +633,11 @@ class OpMeta(BaseModel):
     owners: list[str] = []
     due: str | None = None
     project: str | None = None
+    side_name: str | None = Field(
+        None,
+        description="The side it is filed on directly, when it is in a side and in no project of it; its project "
+        "name is then empty.",
+    )
     action_status: str | None = None
     to_send: bool | None = Field(
         None,
@@ -975,6 +980,11 @@ class FollowupQuestion(BaseModel):
     kind: str
     status: Literal["open", "sent"]
     project_name: str | None = Field(None, description="The projects it is about, by name, joined with commas.")
+    side_name: str | None = Field(
+        None,
+        description="The side it is filed on directly, when it is in a side and in no project of it; its project "
+        "name is then empty.",
+    )
     sent: str | None = Field(description="The day it was first sent; chases never change it.")
     followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
     chases: int = Field(0, description="How many times the person was chased about it after it was sent.")
@@ -1023,6 +1033,11 @@ class FollowupAction(BaseModel):
         "never overdue or chased by it.",
     )
     project_name: str
+    side_name: str | None = Field(
+        None,
+        description="The side it is filed on directly, when it is in a side and in no project of it; its project "
+        "name is then empty.",
+    )
     parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
     notes: str | None = Field(None, description="Its notes, which the screen shows on hover and on a phone.")
     links: list[Link] = Field(
@@ -1310,6 +1325,11 @@ class ProjectView(BaseModel):
         "done.",
     )
     no_end: bool = Field(False, description="The personal project or an area: ongoing, so it has no target day.")
+    side: bool = Field(
+        False,
+        description="Personal or another side: a group that holds projects, never a project itself. A screen lists "
+        "its projects under it, and shows only its name, other names and description.",
+    )
 
 
 class NoteView(BaseModel):
@@ -1317,6 +1337,11 @@ class NoteView(BaseModel):
     text: str
     project: str | None
     project_name: str | None
+    side_name: str | None = Field(
+        None,
+        description="The side it is filed on directly, when it is in a side and in no project of it; its project "
+        "name is then empty.",
+    )
     created_at: str | None = Field(None, description="When the note was filed, from the first record of it.")
     trust: Literal["trusted", "untrusted"]
 
@@ -1516,6 +1541,9 @@ class StageView(BaseModel):
     checks: list[StageCheckView]
     ready: bool
     project: str | None = Field(None, description="The name of the item's first project, when it has one.")
+    side_name: str | None = Field(
+        None, description="The side the item's first project field names, when that is a side and no project."
+    )
     owners: list[str] = Field(default_factory=list, description="The item's owners, in the workspace's owner format.")
     due: str | None = Field(None, description="The item's due date, when it has one.")
 
@@ -1555,15 +1583,20 @@ class FiledView(BaseModel):
     """Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the
     signal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;
     `alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under
-    `project_name`. `move_options` lists every other side it can move to (Personal first), each by its top project and
-    name; `move_to` and `move_to_name` name the one when there is exactly one (a one-click move) and are empty when
-    there are several, which the person picks from. The item moves to a side in one step: POST /api/records/edit with
-    `{field: id}` (a list for `projects`) and `read_version` set to `version`. Absent once the item is anywhere else."""
+    `project_name`; `side_name` is that name again when the project is a side (a group, not a project), so it reads
+    "filed in <side>, not in a project". `move_options` lists every other side it can move to (Personal first), each
+    by its top project and name; `move_to` and `move_to_name` name the one when there is exactly one (a one-click
+    move) and are empty when there are several, which the person picks from. The item moves to a side in one step:
+    POST /api/records/edit with `{field: id}` (a list for `projects`) and `read_version` set to `version`. Absent once
+    the item is anywhere else."""
 
     by: Literal["source", "domain", "alias", "name", "word"]
     word: str | None = None
     project: str
     project_name: str
+    side_name: str | None = Field(
+        None, description="The same name when the project is a side, a group rather than a project."
+    )
     move_to: str | None = None
     move_to_name: str | None = None
     move_options: list[FiledMove] = Field(default_factory=list)
@@ -3025,6 +3058,11 @@ class QueueLineView(BaseModel):
     )
     project: str | None = None
     project_name: str | None = None
+    side_name: str | None = Field(
+        None,
+        description="The side it is filed on directly, when it is in a side and in no project of it; its project "
+        "name is then empty.",
+    )
     parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
     notes: str | None = Field(
         None,
@@ -5620,6 +5658,12 @@ class BusinessIn(BaseModel):
         description="What the side is: a job (the person works for someone) or a business of their own; empty means "
         "a business.",
     )
+    summary: str | None = Field(
+        None,
+        max_length=2000,
+        description="What the business or job is, in a sentence or two: kept as the side's description. It is never "
+        "made into a project; the side's projects are named apart.",
+    )
 
 
 class BusinessView(BaseModel):
@@ -5639,6 +5683,7 @@ class SideView(BaseModel):
     project: str
     kind: Literal["job", "business"]
     name: str
+    summary: str | None = Field(None, description="The side's description, when it has one.")
     removable: bool = Field(
         False,
         description="Setup is not finished and nothing is filed under the side or its projects, so setup can take it "
@@ -5681,6 +5726,11 @@ class WorkIn(BaseModel):
     )
     kind: Literal["job", "business"] | None = Field(
         None, description="With `work`: whether it is a job or a business of their own; empty means a business."
+    )
+    summary: str | None = Field(
+        None,
+        max_length=2000,
+        description="With `work`: what the work is, kept as the side's description and never made into a project.",
     )
 
 
@@ -6482,6 +6532,11 @@ class OpenActionView(BaseModel):
     due: date | None = None
     project: str | None = None
     project_name: str = ""
+    side_name: str | None = Field(
+        None,
+        description="The side it is filed on directly, when it is in a side and in no project of it; its project "
+        "name is then empty.",
+    )
     parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
     notes: str | None = Field(None, description="Its notes, which the screen shows on hover.")
     since: str = Field("", description="The day it was made, as an ISO date.")
@@ -6569,6 +6624,10 @@ class OpenQuestionView(BaseModel):
     to: str = Field(description="The person it waits on, as an id.")
     to_name: str
     project_name: str = ""
+    side_name: str | None = Field(
+        None,
+        description="The sides it is filed on directly, by name and joined with commas, apart from its projects.",
+    )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
     since: str = Field("", description="The day it was sent, else the day it was made, as an ISO date.")
     waiting_days: int | None = Field(None, description="For one that was sent, the days since the last word to them.")
@@ -6612,6 +6671,9 @@ class PriorityLineView(BaseModel):
     text: str = Field(description="The one thing's own words; for a person line, the person's name.")
     project: str | None = None
     project_name: str | None = None
+    side_name: str | None = Field(
+        None, description="The side it is filed on directly, when it is in a side and in no project of it."
+    )
     due: date | None = None
     days: int | None = None
     action: str | None = None
@@ -6639,6 +6701,9 @@ class ComingView(BaseModel):
     due: date
     project: str | None = None
     project_name: str | None = None
+    side_name: str | None = Field(
+        None, description="The side it is filed on directly, when it is in a side and in no project of it."
+    )
     owners: list[OwnerNameView] = Field(default_factory=list)
     mine: bool = False
 
@@ -6662,6 +6727,9 @@ class WeekDueView(BaseModel):
     due: date
     project: str | None = None
     project_name: str | None = None
+    side_name: str | None = Field(
+        None, description="The side it is filed on directly, when it is in a side and in no project of it."
+    )
     owners: list[OwnerNameView] = Field(default_factory=list)
     mine: bool = False
     kind: Literal["due", "lead", "setup", "hold"] = "due"

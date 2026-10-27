@@ -82,6 +82,82 @@ def no_target_problem(view: Any, cfg: Any, project_id: str | None, fields: dict[
     return None
 
 
+#: The fields a side keeps: it is a group with a name, other names, a description, pages, labels and the data level of
+#: its material, and nothing else a project has (design 6.32, "A side is a group, never a project").
+SIDE_FIELDS = frozenset({"name", "aliases", "summary", "links", "tags", "content_levels", "data_level"})
+#: Why a side can't be ended, given a part, or removed the way a project is.
+SIDE_IS_SETTINGS = "That's one of your sides: change it in Settings."
+#: What a refused side field is called in the refusal.
+_SIDE_FIELD_WORDS = {
+    "target": "target day",
+    "status": "status",
+    "phase": "phase",
+    "priority": "priority",
+    "owner": "owner",
+    "group": "group",
+    "parent": "place inside another project",
+    "area": "area setting",
+    "language": "language",
+    "budget_usd": "budget",
+}
+
+
+def is_side(view: Any, cfg: Any, project_id: str | None) -> bool:
+    """Whether a project id is a side's anchor (Personal or another side that still stands)."""
+    return bool(project_id) and project_id in side_ids(view, cfg)
+
+
+def project_names(view: Any, cfg: Any) -> dict[str, str]:
+    """The name of every real project by id: the projects a person works in, never a side (a side is a group, design
+    6.32). The one place a name lookup for items is made."""
+    groups = set(side_ids(view, cfg))
+    return {p.id: str(p.data.get("name") or "") for p in view.list("project") if p.id not in groups}
+
+
+def side_names(view: Any, cfg: Any) -> dict[str, str]:
+    """The name of every side by id, Personal first."""
+    return {
+        i: str(record.data.get("name") or "")
+        for i in side_ids(view, cfg)
+        if (record := view.get("project", i)) is not None
+    }
+
+
+def side_name_of(view: Any, cfg: Any, project_id: str | None) -> str | None:
+    """The side's name when the id is a side's anchor, else none."""
+    if not project_id or project_id not in side_ids(view, cfg):
+        return None
+    record = view.get("project", project_id)
+    return str(record.data.get("name") or "") if record is not None else None
+
+
+def _text(value: Any) -> str:
+    """A field's value as text, so a date held as a date and the same day sent as text count as equal."""
+    return "" if value is None else str(value)
+
+
+def _empty(value: Any) -> bool:
+    return value is None or value == "" or value == [] or value is False
+
+
+def side_field_problem(view: Any, cfg: Any, project_id: str | None, fields: dict[str, Any]) -> str | None:
+    """Why a change can't be made to a side's anchor, or None. A side keeps only `SIDE_FIELDS`; any other field given a
+    value it doesn't already have is refused, so a change that leaves what is stored as it is, or clears it, passes (an
+    anchor stored before a side was a group keeps what it holds, and no screen shows it)."""
+    if not is_side(view, cfg, project_id):
+        return None
+    record = view.get("project", project_id)
+    held = record.data if record is not None else {}
+    refused = [
+        _SIDE_FIELD_WORDS.get(name, name.replace("_", " "))
+        for name, value in fields.items()
+        if name not in SIDE_FIELDS and not _empty(value) and _text(value) != _text(held.get(name))
+    ]
+    if not refused:
+        return None
+    return f"A side is a group, not a project, so it has no {', '.join(refused)}."
+
+
 @dataclass(frozen=True)
 class SideInfo:
     """A side besides Personal: the id of its top `project`, what it is (`kind`: job or business) and its `name`."""
@@ -591,11 +667,12 @@ def _sender_relation(
 
 def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | None:
     """What an item says about why it was filed, for its line and its page: the signal and the word, domain or source,
-    the project it was filed under and its name, every other side it can move to (`move_options`: the top project and
-    name of each, Personal first) and the one it moves to in a single step when there is exactly one (`move_to`), with
-    the field that holds its project and the version to read. None when people placed it or nobody did, when the
-    project it was filed under is gone, and once the item is anywhere else: the line goes when the person moves it, and
-    comes back with Undo."""
+    the project it was filed under and its name (`side_name` too when that project is a side's anchor, so a screen says
+    "in <side>, not in a project" rather than naming the side as a project), every other side it can move to
+    (`move_options`: the top project and name of each, Personal first) and the one it moves to in a single step when
+    there is exactly one (`move_to`), with the field that holds its project and the version to read. None when people
+    placed it or nobody did, when the project it was filed under is gone, and once the item is anywhere else: the line
+    goes when the person moves it, and comes back with Undo."""
     found = record.data.get("filed_by")
     if not isinstance(found, dict) or found.get("by") == "people":
         return None
@@ -614,6 +691,7 @@ def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | 
         "word": found.get("word"),
         "project": project.id,
         "project_name": str(project.data.get("name") or ""),
+        "side_name": side_name_of(view, cfg, project.id),
         "move_to": options[0]["project"] if len(options) == 1 else None,
         "move_to_name": options[0]["name"] if len(options) == 1 else None,
         "move_options": options,
@@ -648,12 +726,20 @@ class Business:
 
 
 def set_business(
-    ws: Any, store: Any, cfg: Any, name: str, *, kind: str = "business", env: dict[str, str] | None = None
+    ws: Any,
+    store: Any,
+    cfg: Any,
+    name: str,
+    *,
+    kind: str = "business",
+    summary: str | None = None,
+    env: dict[str, str] | None = None,
 ) -> Business:
     """Add a side: make a top-level project with that name and append it to `project.sides` with its kind (a job or a
-    business), as the person's own change with Undo. A name a side already has is that side, and nothing changes. A
-    side whose project was since undone or removed is made again. Raises `StoreError` in plain words for a name another
-    live project has, a kind that isn't one, or no name."""
+    business), as the person's own change with Undo. A name a side already has is that side, and only a new `summary`
+    (what the side is, kept as the anchor's description and never made into a project) changes it. A side whose project
+    was since undone or removed is made again. Raises `StoreError` in plain words for a name another live project has,
+    a kind that isn't one, or no name."""
     from engine import settings as config_screens
     from engine.applier import apply_as_person
 
@@ -664,9 +750,17 @@ def set_business(
         raise StoreError(f"A side is a {' or a '.join(SIDE_KINDS)}.")
     view = store.read()
     listed = side_list(view, cfg)
+    summary = " ".join((summary or "").split()) or None
     if same := next((s for s in listed if s.name == name), None):
-        return Business(same.project, False, None, same.kind)
-    changeset = apply_as_person(store, cfg, [{"op": "project.add", "name": name}], "Added the business")
+        held = view.get("project", same.project)
+        if summary is None or held is None or (held.data.get("summary") or "") == summary:
+            return Business(same.project, False, None, same.kind)
+        op = {"op": "record.set", "kind": "project", "id": same.project, "field": "summary", "value": summary}
+        return Business(same.project, False, apply_as_person(store, cfg, [op], f"Described {name}"), same.kind)
+    add: dict[str, Any] = {"op": "project.add", "name": name}
+    if summary is not None:
+        add["summary"] = summary
+    changeset = apply_as_person(store, cfg, [add], "Added the business")
     made = next(p for p in store.read().list("project") if p.data["name"] == name)
     entries = [{"project": s.project, "kind": s.kind} for s in listed]
     config_screens.save(
@@ -775,7 +869,9 @@ def remove_with_work(store: Any, cfg: Any, project_id: str, where: str, *, ws: A
             if not project_ended(view, pid)
         ]
     # Ending a side is no comment on the assistant's work, so its drops write no correction.
-    return apply_as_person(store, cfg, ops, f"Removed {side.name}", all_or_nothing=True, corrections=False)
+    return apply_as_person(
+        store, cfg, ops, f"Removed {side.name}", all_or_nothing=True, corrections=False, side_removal=True
+    )
 
 
 def restore_side(

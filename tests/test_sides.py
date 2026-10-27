@@ -206,9 +206,10 @@ def test_the_settings_offer_the_projects_to_pick_from_and_an_undone_business_cou
     assert shown["workspace.project.business"]["page"] == "business"
     assert (
         shown["workspace.project.business"]["type"] == "choice"
-        and shown["workspace.project.business"]["choices"] == "projects"
+        and shown["workspace.project.business"]["choices"] == "sides"
     )
-    assert set(shown["workspace.project.business"]["options"]) == {p.id for p in store.read().list("project")}
+    # A side is a group: the setting picks from the sides, never from every project.
+    assert set(shown["workspace.project.business"]["options"]) == set(sides.side_ids(store.read(), ws.config(env={})))
     assert client.post(f"/api/changesets/{made['changeset']}/undo", json={}).status_code == 200
     assert sides.business_project(store.read(), ws.config(env={})) is None
     remade = client.post("/api/setup/business", json={"name": BUSINESS_NAME}).json()
@@ -638,7 +639,9 @@ def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_
         "business": True,
         "name": BUSINESS_NAME,
         "personal": personal_id,
-        "sides": [{"project": business, "kind": "business", "name": BUSINESS_NAME, "removable": False}],
+        "sides": [
+            {"project": business, "kind": "business", "name": BUSINESS_NAME, "summary": None, "removable": False}
+        ],
         "chosen": "work",
     }
     lines = {line["key"]: line for line in client.get("/api/today/queue").json()}

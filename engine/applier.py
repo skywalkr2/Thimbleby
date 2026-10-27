@@ -189,6 +189,9 @@ class Context:
     # Whether the person's own drop writes the correction a drop is. Off for a choice made on a suggestion line, which
     # records its own signal and says nothing about the assistant's work.
     corrections: bool = True
+    # Whether the change is the person removing a side (`sides.remove_with_work`), the one change that moves or ends a
+    # side's anchor; every other change to it is limited to what a side keeps (design 6.32).
+    side_removal: bool = False
     # The ops an add-on's project-ending or drop hook added to this change, by `endings.hook_key`, with what each is for
     # (`endings.ENDING_HOOK` or `endings.DROP_HOOK`); and what each hook returned, so it is asked once for a change.
     hook_ops: dict[str, str] = field(default_factory=dict)
@@ -618,9 +621,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if isinstance(op, RecordEditOp):
             why = edit_problem(ctx.store, view, op)
             if not why and op.record.kind == "project":
-                from engine import sides
-
-                why = sides.no_target_problem(view, ctx.cfg, op.record.id, dict(op.fields))
+                why = (
+                    None if ctx.side_removal else sides.side_field_problem(view, ctx.cfg, op.record.id, dict(op.fields))
+                ) or sides.no_target_problem(view, ctx.cfg, op.record.id, dict(op.fields))
             if why:
                 refuse(i, "targets", why)
         if isinstance(op, RecordSetOp):
@@ -629,8 +632,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no {op.kind} {op.id}")
             elif op.field not in SETTABLE[op.kind]:
                 refuse(i, "targets", f"{op.kind}.{op.field} can't be changed this way")
-            elif op.kind == "project" and _no_target(view, ctx.cfg, op):
-                refuse(i, "targets", _no_target(view, ctx.cfg, op))
+            elif op.kind == "project" and (why := _project_set_problem(view, ctx, op)):
+                refuse(i, "targets", why)
             elif op.kind == "person" and _side_problem(view, ctx.cfg, op):
                 refuse(i, "targets", _side_problem(view, ctx.cfg, op))
             elif op.kind == "action" and op.field == "due" and target.data.get("status") not in ("open", "held"):
@@ -697,13 +700,17 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             for child in op.children:
                 if view.get("project", child) is None:
                     refuse(i, "targets", f"there is no project {child}")
+                elif child in sides.side_ids(view, ctx.cfg):
+                    refuse(i, "targets", sides.SIDE_IS_SETTINGS)
                 elif child in above:
                     refuse(i, "targets", f"{child} can't go inside a project that is inside it")
             if len(set(op.children)) != len(op.children):
                 refuse(i, "targets", "a project is named twice in children")
         if isinstance(op, ProjectRoleOp):
             who = ctx.people.resolve(op.person)
-            if who.status != "ok":
+            if sides.is_side(view, ctx.cfg, op.project):
+                refuse(i, "targets", sides.SIDE_IS_SETTINGS)
+            elif who.status != "ok":
                 refuse(i, "targets", f"{op.person} isn't one known person, so a role can't be set for them")
         # a question or report from a run that never searched: is it already answered by what the workspace knows?
         asked = _asked_subject(op, name)
@@ -1798,10 +1805,13 @@ def _side_problem(view: Any, cfg: Any, op: Any) -> str | None:
     return sides.person_write(view, cfg, {op.field: op.value})[1] if op.field in ("side", "sides") else None
 
 
-def _no_target(view: Any, cfg: Any, op: Any) -> str | None:
-    from engine import sides
-
-    return sides.no_target_problem(view, cfg, op.id, {op.field: op.value})
+def _project_set_problem(view: Any, ctx: Context, op: Any) -> str | None:
+    """Why a `record.set` can't change a project's field: a side keeps only what a group has (design 6.32), and the
+    personal project and areas have no target day."""
+    fields = {op.field: op.value}
+    return (
+        None if ctx.side_removal else sides.side_field_problem(view, ctx.cfg, op.id, fields)
+    ) or sides.no_target_problem(view, ctx.cfg, op.id, fields)
 
 
 def edit_problem(store: Store, view: Any, op: Any) -> str | None:
@@ -4789,10 +4799,12 @@ def apply_as_person(
     *,
     all_or_nothing: bool = False,
     corrections: bool = True,
+    side_removal: bool = False,
 ) -> str:
     """Apply ops the person made on screen (an edit, a review's choices) as theirs. Returns the changeset id. `note` is
     words the person wrote with the change, which an op may quote as its evidence. With `all_or_nothing`, one op the
-    applier refuses leaves every op of the change unapplied. With `corrections` off, a drop writes no correction."""
+    applier refuses leaves every op of the change unapplied. With `corrections` off, a drop writes no correction.
+    `side_removal` marks the person removing a side, the one change that may move or end a side's anchor."""
     from engine.names import People
     from engine.ops import CHANGESET
 
@@ -4812,6 +4824,7 @@ def apply_as_person(
         confirmed_by_pm=True,
         actor="pm",
         corrections=corrections,
+        side_removal=side_removal,
     )
     cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": True}, all_or_nothing=all_or_nothing)
     refused = [o for o in store.read().get("changeset", cs_id).data["ops"] if o["status"] == "refused"]

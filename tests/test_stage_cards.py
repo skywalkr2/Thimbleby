@@ -25,15 +25,27 @@ def test_a_record_with_the_fields_shows_them_the_way_the_workspace_writes_them()
         PEOPLE,
         PROJECTS,
     )
-    assert card == {"project": "Lighthouse", "owners": ["Ada Example (Harbor)", "Bo Example"], "due": "2026-11-02"}
+    assert card == {
+        "project": "Lighthouse",
+        "side_name": None,
+        "owners": ["Ada Example (Harbor)", "Bo Example"],
+        "due": "2026-11-02",
+    }
 
 
 def test_a_single_project_or_owner_field_is_read_too():
     card = card_details(stored(project="P-1", owner="PER-2"), PEOPLE, PROJECTS)
-    assert card == {"project": "Harbor refit", "owners": ["Bo Example"], "due": None}
+    assert card == {"project": "Harbor refit", "side_name": None, "owners": ["Bo Example"], "due": None}
 
 
 def test_a_record_without_the_fields_has_none_and_a_missing_project_is_left_out():
-    assert card_details(stored(), PEOPLE, PROJECTS) == {"project": None, "owners": [], "due": None}
+    assert card_details(stored(), PEOPLE, PROJECTS) == {"project": None, "side_name": None, "owners": [], "due": None}
     assert card_details(stored(projects=["P-9"]), PEOPLE, PROJECTS)["project"] is None
     assert card_details(stored(due=""), PEOPLE, PROJECTS)["due"] is None
+
+
+def test_a_record_filed_directly_on_a_side_has_no_project_and_names_the_side():
+    sides_by_id = {"P-9": "Home"}
+    card = card_details(stored(project="P-9"), PEOPLE, PROJECTS, sides_by_id)
+    assert card["project"] is None and card["side_name"] == "Home"
+    assert card_details(stored(project="P-1"), PEOPLE, PROJECTS, sides_by_id)["side_name"] is None

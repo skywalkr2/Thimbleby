@@ -28,7 +28,7 @@ from api.schemas import (
     SettingProposalView,
     SettingsSaved,
 )
-from engine import answer_feedback, conversation
+from engine import answer_feedback, conversation, sides
 from engine import settings as config_screens
 from engine.config import Config
 from engine.names import People
@@ -148,7 +148,7 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         changeset = view.get("changeset", q.data["changeset"]) if q.data.get("changeset") else None
         if changeset is not None:
             people = People(store, cfg)
-            projects = {p.id: p.data["name"] for p in view.list("project")}
+            projects = sides.project_names(view, cfg)
             ops = [
                 _op_view(o, store, people, projects, cfg)
                 for o in changeset.data["ops"]

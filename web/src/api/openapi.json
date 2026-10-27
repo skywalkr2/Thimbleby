@@ -6254,6 +6254,19 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the business or job is, in a sentence or two: kept as the side's description. It is never made into a project; the side's projects are named apart.",
+            "title": "Summary"
           }
         },
         "required": [
@@ -7329,6 +7342,18 @@
               }
             ],
             "title": "Project Name"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it.",
+            "title": "Side Name"
           },
           "text": {
             "title": "Text",
@@ -9288,7 +9313,7 @@
         "type": "object"
       },
       "FiledView": {
-        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;\n`alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under\n`project_name`. `move_options` lists every other side it can move to (Personal first), each by its top project and\nname; `move_to` and `move_to_name` name the one when there is exactly one (a one-click move) and are empty when\nthere are several, which the person picks from. The item moves to a side in one step: POST /api/records/edit with\n`{field: id}` (a list for `projects`) and `read_version` set to `version`. Absent once the item is anywhere else.",
+        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`source`: the watched source it was read from, `word` its label; `domain`: the sender's mail domain;\n`alias`, `name`: a project's alias or name; `word`: a configured side word) and `word` what matched, under\n`project_name`; `side_name` is that name again when the project is a side (a group, not a project), so it reads\n\"filed in <side>, not in a project\". `move_options` lists every other side it can move to (Personal first), each\nby its top project and name; `move_to` and `move_to_name` name the one when there is exactly one (a one-click\nmove) and are empty when there are several, which the person picks from. The item moves to a side in one step:\nPOST /api/records/edit with `{field: id}` (a list for `projects`) and `read_version` set to `version`. Absent once\nthe item is anywhere else.",
         "properties": {
           "by": {
             "enum": [
@@ -9345,6 +9370,18 @@
           "project_name": {
             "title": "Project Name",
             "type": "string"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The same name when the project is a side, a group rather than a project.",
+            "title": "Side Name"
           },
           "version": {
             "title": "Version",
@@ -10202,6 +10239,18 @@
             "description": "Which side the action is on, from its project: the id of that side's top project (the personal project's or another side's), or none for neither (the screen's side filter shows such rows under every choice).",
             "title": "Side"
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
+            "title": "Side Name"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -10413,6 +10462,18 @@
             ],
             "description": "Which side the question is on, from its project: the id of that side's top project (the personal project's or another side's), or none for neither (the screen's side filter shows such rows under every choice).",
             "title": "Side"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
+            "title": "Side Name"
           },
           "status": {
             "enum": [
@@ -14556,6 +14617,18 @@
             ],
             "title": "Project Name"
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
+            "title": "Side Name"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -15209,6 +15282,18 @@
             "description": "For a fact that is one person's word: their name, so the row reads 'Pat says \u2026', not as settled.",
             "title": "Said By"
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
+            "title": "Side Name"
+          },
           "stance": {
             "anyOf": [
               {
@@ -15640,6 +15725,18 @@
             ],
             "description": "How it repeats, when it does, said back from data."
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
+            "title": "Side Name"
+          },
           "since": {
             "default": "",
             "description": "The day it was made, as an ISO date.",
@@ -15987,6 +16084,18 @@
             },
             "title": "Projects",
             "type": "array"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sides it is filed on directly, by name and joined with commas, apart from its projects.",
+            "title": "Side Name"
           },
           "since": {
             "default": "",
@@ -18428,6 +18537,18 @@
             "title": "Send",
             "type": "integer"
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it.",
+            "title": "Side Name"
+          },
           "text": {
             "description": "The one thing's own words; for a person line, the person's name.",
             "title": "Text",
@@ -19314,6 +19435,12 @@
             ],
             "title": "Role",
             "type": "string"
+          },
+          "side": {
+            "default": false,
+            "description": "Personal or another side: a group that holds projects, never a project itself. A screen lists its projects under it, and shows only its name, other names and description.",
+            "title": "Side",
+            "type": "boolean"
           },
           "spent_usd": {
             "default": 0.0,
@@ -22522,6 +22649,18 @@
             ],
             "description": "Which side the line is on, from its project: the id of that side's top project (the personal project's or another side's), or none for neither (the screen's side filter shows such lines under every choice).",
             "title": "Side"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
+            "title": "Side Name"
           },
           "snooze_days": {
             "description": "For a quiet_promise line: the days it can be snoozed for, each with the day it comes back (POST /api/quiet-promises/{id}/snooze, taken back by POST /api/suggestions/not-now/{signal}/undo).",
@@ -26191,6 +26330,18 @@
             "description": "Setup is not finished and nothing is filed under the side or its projects, so setup can take it back out.",
             "title": "Removable",
             "type": "boolean"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side's description, when it has one.",
+            "title": "Summary"
           }
         },
         "required": [
@@ -27690,6 +27841,18 @@
           },
           "record": {
             "$ref": "#/components/schemas/RecordReference"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side the item's first project field names, when that is a side and no project.",
+            "title": "Side Name"
           },
           "stages": {
             "items": {
@@ -30464,6 +30627,18 @@
             ],
             "title": "Project Name"
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it.",
+            "title": "Side Name"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -30553,6 +30728,19 @@
             ],
             "description": "What the work is called (an employer or a business); needed for `work`, ignored for `me`.",
             "title": "Name"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `work`: what the work is, kept as the side's description and never made into a project.",
+            "title": "Summary"
           }
         },
         "required": [

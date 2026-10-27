@@ -4383,6 +4383,8 @@
   "since.unseen_close": "You haven't seen this close",
   "filed.names": "Filed under {project}: it names {word}",
   "filed.from": "Filed under {project}: it's from {word}",
+  "filed.names_side": "Filed in {side}, not in a project: it names {word}",
+  "filed.from_side": "Filed in {side}, not in a project: it's from {word}",
   "filed.move": "Move to {project}",
   "filed.move_choose": "Move to…",
   "filed.moved": "Moved to {project}.",
