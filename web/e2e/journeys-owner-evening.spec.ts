@@ -146,7 +146,8 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toBeVisible();
     // The choice opens right there with the usual name first (an add-on's mail can't list its folders), and Cancel leaves it.
     await main.getByRole("button", { name: "Choose the Sent folder" }).click();
-    await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent");
+    // The list waits for the add-on's answer about its folders, which takes longer while the first run is working.
+    await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent", { timeout: 20_000 });
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
     await main.getByRole("button", { name: "Cancel" }).click();
     await main.getByRole("button", { name: "Continue" }).click();
