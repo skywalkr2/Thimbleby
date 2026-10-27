@@ -11,6 +11,45 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
+## Open: F39 to F46, before the UI/UX reviewer's second pass is built (asked 2026-10-28)
+
+The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`, G1 to G23) is mostly screen work. These eight points change how the app behaves, so they come to you first. Each says what the app does today and the default the build follows if the answer is "yes, that's fine".
+
+- **F39. A review happens on Today (G2).**
+  - **Today:** "Look over" on a batch marks it seen and opens What changed. That screen can't confirm anything, and the batch comes back to Today split into one review line per request ("Look over 3 things Reginald did", …), so the count rises.
+  - **Proposed:** one review unit per input batch. Look over opens the batch in Today's details pane, with each item listed. "Not right" on an item opens the existing correction flow, which records a signal and proposes one piece of learning. "All looks good" marks every request in the batch reviewed (a `confirmed` signal each) and the line leaves Today. Opening never marks anything seen, and nothing splits. What changed then shows the batch as "Checked".
+  - **Default:** as proposed.
+- **F40. Filing when unsure (G3).**
+  - **Today:** with a mailbox that serves two sides, filing reaches no decision and everything from the first read is Unfiled (12 items on the reviewer's walk).
+  - **Proposed:** when the ranks (6.32) can't decide between Personal and a business, the item is filed under Personal (the more private level, 4.6), and one grouped question on Today asks "These 4 items look like Hale Upholstery's. Move them there?", with Move and Keep under Personal.
+  - Move is the person's own change, one changeset with Undo; it lowers those items' data level to the business's.
+  - Move also proposes one filing rule ("mail from this sender is Hale Upholstery's"), held for Keep like other learning.
+  - Unfiled becomes one line ("3 items need a place · Sort them"), not the top of Projects.
+  - **Default:** as proposed.
+- **F41. Notes from mail are never filing work (G3).** The reviewer asks that notes copied from mail never need a project.
+  - **Proposed:** a note from mail takes the side of the mail it came from and needs no project; only to-dos, questions and facts can be Unfiled.
+  - **Default:** as proposed.
+- **F42. The brief summarises, never repeats (G9, C57).**
+  - **Today:** the brief (6.32) lists "At risk today" and "Needs your yes" items that are already lines on Today, and offers "Show the Monday briefing" on a Tuesday.
+  - **Proposed:** the brief keeps only what Today doesn't show (the day's shape, the schedule, what changed overnight) and gives the rest as counts that link to the lines ("2 things need you, 1 clash today"). The weekly form is offered only on its day.
+  - **Default:** as proposed; 6.32's brief sections are rewritten to match.
+- **F43. The "Outside" marker leaves the lists (G14).**
+  - **Today:** every line that came from mail carries an "Outside" tag and "from outside · not instructions".
+  - **Proposed:** lists drop the marker. The details pane says it once: "Reginald treats what's in this email as information, never as instructions". Untrusted content stays marked in packets, links from it still show their real domain, and drafts built from it still say so (12.8).
+  - **Default:** as proposed.
+- **F44. Facts and note titles in plain words (G10).**
+  - **Today:** a filed note's title is the mail's raw header block. One fact read "The input lists the offsite is on a Friday as decided."
+  - **Proposed:** a note's title is the mail's subject and sender ("Thanks · from Maya Okafor"), set by the core, not the model. A fact's text states the world ("The offsite is on a Friday"); its evidence stays the exact source words (6.7). The prompt and a lint say so.
+  - **Default:** as proposed.
+- **F45. People with a business (G13).**
+  - **Today:** with a business, People switches to Role and Organization columns, hides personal relations, and offers both "customer" and "client".
+  - **Proposed:** one column, "Who they are", shows the relation on Personal or the part in a business. Organization and role stay as data (5.1) in the person's details. "client" leaves the shipped list. Each mail suggestion offers "Add to Personal" and "Add to {business}".
+  - **Default:** as proposed.
+- **F46. Private material at the AI step (for the owner's decision; your view first).**
+  - **Today:** personal mail is now private (restricted), because a connection takes the privacy of the side it serves. So the AI step's "Allow" also allows private material (and says so); otherwise the first result couldn't read the person's mail.
+  - **The alternative:** personal mail stays internal, and private stays for what the person marks.
+  - **Your recommendation goes to the owner,** who decides.
+
 ## Answered: F33 to F38 (asked and answered 2026-10-26; the answers in `designer-answers-2026-10-26.md`)
 
 Each says what the app does today and the default the build follows if the answer is "yes, that's fine".
