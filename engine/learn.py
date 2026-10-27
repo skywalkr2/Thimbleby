@@ -60,7 +60,9 @@ KIND_WORDS = {
     "answered_assistant": "The person answered a question the assistant asked them; the note is their answer.",
     "dropped": "The person dropped a question or an action: it is no longer needed. That is not a mistake of the "
     "assistant's by itself, so it teaches nothing unless the note, the person's own reason, gives a reason that holds "
-    'beyond this item; then the lesson is about that reason, never "don\'t file this".',
+    'beyond this item; then the lesson is about that reason, never "don\'t file this". A note that says why such '
+    "work ends (it is covered elsewhere, called off, done by someone else) or that it should have ended earlier is "
+    "such a reason: propose the narrow lesson of what words end it and how.",
     "reworded": "The person reworded a question the assistant filed; the note is the new wording.",
     "held_declined": "The person declined a change the assistant had held for them: it was not theirs, or not a "
     "promise, so that change was the mistake. The note below names the change they declined, not what they want; "

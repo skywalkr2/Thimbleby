@@ -695,6 +695,7 @@ def test_the_packet_says_what_each_of_the_three_kinds_teaches(env):
     dropped = packet_of(env, "dropped", "The venue changed, so nothing is needed for any hall.")
     assert "no longer needed" in dropped and "not a mistake of the assistant's by itself" in dropped
     assert 'never "don\'t file this"' in dropped
+    assert "covered elsewhere, called off, done by someone else" in dropped, "a reason that ends such work teaches"
     assert "<note>\nThe venue changed, so nothing is needed for any hall.\n</note>" in dropped, "their own words"
     assert "failed to find it" not in dropped and "relevance or routing" not in dropped
 
