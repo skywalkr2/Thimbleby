@@ -224,7 +224,8 @@ time. These rules hold for the main session and every subagent.
   projects, value lists, accounts, models, folders. A text setting names its list with `json_schema_extra={"choices": …}`.
 - Reversible actions act at once with an undo toast; only send, publish, post and spending above the configured amount confirm.
 - No hard-coded user-facing text: everything comes from the wording sheet and config. No internal terms on screen.
-- Keyboard and phone both work; WCAG 2.2 AA; status never by color alone.
+- The keyboard works and narrow windows work (no sideways scroll; columns stack); WCAG 2.2 AA; status never by color
+  alone. Phone-specific polish and phone review passes wait for a hosted install (owner, 2026-10-28).
 - No screen is ever wider than the window (owner): no sideways scroll bar at any window width; columns wrap, stack or
   shrink instead. A browser test checks every main screen at several widths.
 - Never render raw HTML; links from untrusted content show their real domain. The API client is generated from OpenAPI.

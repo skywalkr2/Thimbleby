@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Narrow windows yes, phone polish later
+
+**Decided:** Until there is a hosted install people would open on a phone, screens keep working in narrow windows (no
+sideways scroll, columns stack, checked at narrow widths as now) but get no phone-specific polish or phone review
+passes, and the owner is not asked about phone widths. The installers are Windows and macOS only.
+
+**Decided by:** the owner ("we dont have iphone installers or apks on the installer list plan"; chose narrow windows only).
+
+**Why:** the local app answers only on the person's own computer, so in 1.0 a phone reaches it only through a hosted
+install; narrow windows on a computer still need the layout rules.
+
+**Impact:** CLAUDE.md's UI rule; reviews and captures (P77) use narrow desktop widths instead of phone passes.
+Change log: none.
+
 ## 2026-10-28: A side is a group that holds projects, never a project
 
 **Decided:** Personal and each job or business are groups. They hold projects, people and items not in any project;
