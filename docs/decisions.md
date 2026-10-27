@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Setup's mail step leads with what was just connected
+
+**Decided:** After a service connects in setup, the step shows that result first, with one "who is it for" question
+for the whole sign-in, the set-aside choice as one line, and Continue; the other services fold away. After an add-on's
+restart, signing in is a button.
+
+**Decided by:** the owner ("it feels tacked on and not part of the critical path"; chose the proposed layout).
+
+**Why:** the questions about what was just connected sat below the list of services, out of view.
+
+**Impact:** Design 7.8; P74 done. Change log: section 241.
+
 ## 2026-10-28: The guided mailbox, and setup stays setup
 
 **Decided:** Setup's mail step and Settings › Connections offer the common mail services by name for connecting a

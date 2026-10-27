@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 241. Setup's mail step leads with what was just connected (2026-10-28; owner's run; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Mail step after a connect (7.8) | Per-source questions and the set-aside switch far below the services | **Built** (`web/src/components/Walkthrough.test.tsx`): the result first, one question per sign-in, the set-aside line with Change, one Continue, the services under "Connect another" |
+| Sign-in after an add-on's restart (7.8) | Opened by itself and blocked as a pop-up | **Built** (`Walkthrough.test.tsx`): a "Sign in to <service>" button |
+
 ## 240. The guided mailbox, and setup stays setup (2026-10-28; owner's first run; built)
 
 | Where | Before | Now |
