@@ -81,3 +81,31 @@ every title, the travel-clash wording, the setup guide link on You only, and the
     Files and Connections don't. Still wanted?
     - a) Yes. *(Our default.)*
     - b) No, they read fine as lists.
+
+## The reviewer's answers (2026-10-27)
+
+The reviewer answered in words; each is mapped to its choice here.
+
+1. **a**, no action buttons. The held block shows at the pane's full width as information ("Waiting for you · Would drop
+   a to-do", the quote, Show source) with one link, "Answer on Today". Undo stays in the row's menu (it corrects history).
+2. **b**: open on All, newest first; "Needs attention" is dropped (its items live on Today).
+3. **b**, as one line: no row each, but one summary line at the top, "2 things wait for you on Today · Open Today".
+4. **a** without the menu: on a quiet day the "Show the evening wrap-up" and "Show the week" buttons are hidden; the brief
+   shows by itself at its time.
+5. **b**: on Today too, in the Came in card, as a quiet text button, also when nothing came in (above all just after
+   connecting mail). Connections keeps its own.
+6. **a**, with detail: on every list that can hold both sides (Today, What changed, Handled for you, Follow-ups, To-dos,
+   People, Files), the same control in the same place; hidden entirely when there is no side.
+7. **"What it's for"**: the question reads "What will you use it for?" with "Just my own life", "My life and my job", "My
+   life and my own business". The ban on "Work" applies to the screens after "Just me" is chosen.
+8. **Yes, optional programs only**: after the jobs, clients or orders, one optional line, "Do some of these belong
+   together? Give the group a name", skipped by default; no group named, no program made, and the word "program" never
+   shows.
+9. **a**, with detail: not asked in setup. The level follows the side picked for the mailbox (Personal: the private
+   level; a business: that business's level), shown and changeable on the connection's row in Settings.
+10. **b**: a shipped list with the app names people recognise, plus "Something else (plain text)". The names live in a
+    data file outside the core's code, as the boundary rule asks.
+11. **a**: behind a closed "Choose which account does each kind of work" on the AI page.
+12. **a**: "How Reginald is doing", from the assistant's name.
+13. Files: **a**, a details pane (a preview, where it came from, what refers to it). Connections: **b**, no pane; each
+    connection is a row in Settings that opens in place.
