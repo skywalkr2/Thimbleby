@@ -29,9 +29,10 @@ Practice for reading notes, minutes and messages (core playbook):
   - The user's own "I'll ..." (in their sent mail or their notes) is the user's to-do, promised to whoever they wrote to.
   - Someone else's "I'll get back to you by ..." is that person's action, promised to the user: the user is waiting on it.
   - A promise made on someone's behalf to a third party ("I told the client she would do it") is not theirs until they
-    accept it. The user's own message addressed to someone saying they will do something ("Maya will send you the list",
-    with Maya among the recipients) hands them the to-do: it is their action, with the date given.
-  - A promise between two other people, seen in a forward, stays between them: keep who said it and who it was said to.
+    accept it. The user's own message addressed to someone saying they will do something ("Sam will send you the plan",
+    with Sam among the recipients) hands them the to-do: it is their action, with the date given.
+  - A promise between two other people, seen in a forward, stays between them: it is still an action, owned by whoever
+    made it and promised to whoever it was said to, never the user's own to-do.
   - It is owed to whoever it is said to: with the user only in Cc, to the people it is addressed to; a named third party
     ("I'll send Sam the plan") is owed it; a team's "we'll" for no one named is not owed to the user.
 - Take the date from the words, as written, including a leading "on", "by" or "due" and a day of the month ("due Oct
@@ -43,7 +44,8 @@ Practice for reading notes, minutes and messages (core playbook):
   - quoted history, a signature or slogan, a forward, a template and example wording, which are never new;
   - a hope, a maybe, a suggestion ("we should"), a question ("could I send it Friday instead?"), an offer ("I can send
     it if you need it") or a refusal ("I can't promise an answer");
-  - sarcasm and jokes, a request nobody accepted, and a promise to hold something back.
+  - sarcasm and jokes, a request the user made that nobody accepted, and a promise to hold something back. A request
+    made of the user ("I've asked you to check the figures by the 3rd") is the user's to-do, with its date.
 - Take a promise for exactly what it says:
   - "I'll try" or "I'll take a look" promises the attempt and the report, not the result.
   - A promise with a condition waits on hold for it ("once the keys arrive"); a date tied to a meeting follows the

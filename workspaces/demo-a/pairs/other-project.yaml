@@ -37,7 +37,9 @@ later:
   expect:
   - op: action.add
     text_has: [load-test results]
-    owners: [PER-2]
+    # "Someone on our side" names nobody, so the built rule leaves the owners for the person to pick; what this pair
+    # checks is that the other project's lesson does not reach this packet (packet_lacks).
+    owners: []
   packet_lacks: [test results are shared by]
 ideal:
   learn:

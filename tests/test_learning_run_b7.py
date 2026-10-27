@@ -147,6 +147,17 @@ def test_the_users_own_message_hands_a_recipient_their_to_do_while_a_promise_to_
     assert "hands them the to-do: it is their action" in playbook
 
 
+def test_a_forwarded_promise_a_request_of_the_user_and_an_undated_move_each_say_what_to_record():
+    """A forwarded promise between two others is still their action; a request made of the user is the user's to-do; a
+    move with no new day asks whoever decides (learning pairs promise-pair-07-forwarded, over-application and
+    another-teams-rows-naming-ours)."""
+    prompt = resources.files("engine.prompts").joinpath("notes.md").read_text(encoding="utf-8")
+    playbook = resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8")
+    assert "it is still an action, owned by whoever" in playbook
+    assert "A request\n    made of the user" in playbook and "is the user's to-do, with its date" in playbook
+    assert "give no new\n  day" in prompt and "ask whoever decides that action's date" in prompt
+
+
 # ---- a moved promise from a quoted thread waits for the person's Keep --------------------------------------------
 
 
