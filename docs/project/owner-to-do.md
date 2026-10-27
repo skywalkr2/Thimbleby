@@ -4,6 +4,13 @@ Kept current by the build session; finished items leave the list.
 
 ## Today (2026-10-28)
 
+0. **Start from scratch after the sides batch lands** (the session says when it is pushed):
+   `cd ~/dev/Thimbleby && git pull && uv sync --inexact && npm --prefix web ci && npm --prefix web run build`, then
+   `uv run cockpit init ~/Thimbleby-try6` and `uv run cockpit serve -w ~/Thimbleby-try6` (keep try5 as it is). Check:
+   the business step asks "What is it?" apart from its projects; the business opens as a group (no target date,
+   status or role); choosing where something belongs is business, then project; Google connects with no key; the
+   project page's "What Reginald knows" is one line while nothing is known.
+
 1. **Ready to test (pushed 2026-10-28, commit 61f1f8b, CI green):**
    `cd ~/dev/Thimbleby && git pull && uv sync --inexact && npm --prefix web ci && npm --prefix web run build`, then
    `uv run cockpit init ~/Thimbleby-try5` and `uv run cockpit serve -w ~/Thimbleby-try5`. You should see:
