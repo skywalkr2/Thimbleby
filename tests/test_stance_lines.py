@@ -180,6 +180,18 @@ def test_a_proposal_names_a_real_person_other_than_the_one_who_asks_and_quotes_t
     assert statuses == ["refused"] and "isn't in the input" in reasons(store, cs_id)[0]
 
 
+def test_a_proposed_stance_they_already_count_as_is_refused_so_the_correction_teaches_something_else(env):
+    """With no stance of their own, someone counts as the workspace's default; proposing that, or the stance already
+    set, changes nothing (learning pair rejected-ask)."""
+    _, cfg, store = env
+    them = other(cfg)
+    cs_id, statuses = proposal(env, stance_op(env, cfg.steward.default_stance))
+    assert statuses == ["refused"] and "changes nothing" in reasons(store, cs_id)[0]
+    set_stance(store, them, "watch")
+    cs_id, statuses = proposal(env, stance_op(env, "watch"))
+    assert statuses == ["refused"] and "already counts as watch" in reasons(store, cs_id)[0]
+
+
 def test_the_persons_own_note_sets_a_stance_at_once(env):
     _, cfg, store = env
     own = source(store, kind="note:action", trust="trusted")

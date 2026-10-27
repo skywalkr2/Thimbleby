@@ -38,7 +38,8 @@ first:
     id: ACT-101
   expect_proposal:
   - op: lesson.add
-    text_has: [cancel|called off|drop]
+    # "call" also meets a lesson in another tense ("calls an action off"), the same rule in other words.
+    text_has: [cancel|called off|drop|call]
   keep: true
 later:
   received: '2026-11-09'

@@ -675,6 +675,17 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no person {op.id}")
             elif op.id == ctx.people.pm:
                 refuse(i, "targets", "a stance is toward someone else, never yourself")
+            elif ctx.actor != "pm" and not ctx.confirmed_by_pm:
+                from engine.scope import stance_of
+
+                # A proposed stance they already have changes nothing, so it is never what a correction teaches.
+                if stance_of(view, ctx.cfg.steward, op.id) == op.stance:
+                    refuse(
+                        i,
+                        "targets",
+                        f"{op.id} already counts as {op.stance}, so this changes nothing: teach what the correction "
+                        "says another way",
+                    )
         if isinstance(op, ProjectAddOp):
             taken = {p.data["name"].strip().lower() for p in view.list("project")}
             if op.name.strip().lower() in taken:
