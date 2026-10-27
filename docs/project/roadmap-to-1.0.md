@@ -1263,6 +1263,12 @@ code. Nearly all is built or planned. What is left, in two batches:
 - [ ] [A2] The second pass's leftovers: notes stored before today re-titled once (no raw headers anywhere); U20; the
   "From an email" note at a link to open and a payment; "Stale" and "On hold" replaced everywhere (G21); no "Outside" tag
   on meeting-prep lines (G14); U15 with a job and a business (two sides).
+- [ ] [A2b] The reviewer's check of the fixes (`reviews/ui-ux-2026-10/validate-82d24cc/`, 2026-10-28): G1 to G4 fixed,
+  both personas finish setup alone, no Today action raised the count; phase U can close. Backlog H1 to H8: the "since
+  yesterday" line folded into the review lines (H1); "Not looked at before" said once (H2); "Leave both empty to keep it to
+  your own life" (H3); no raw dates in the review's items and facts that say who said them (H4); no stray "·" on the
+  Personal page (H5); "might be" Hale Upholstery's (H6); a quick second tick queued, not dropped, and a failed tick named
+  with Try again (H7); the last message matching the final state of the ticks (H8).
 - [ ] [A3] The gate's instruments matched to the drafted pass bar (P65): review time on Today's review pane, counters for
   lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
   thresholds paragraph matched to the draft once the owner says yes.
