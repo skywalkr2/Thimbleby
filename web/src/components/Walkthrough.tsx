@@ -22,6 +22,7 @@ import { StepList, WorkspaceStep } from "./Welcome";
 import { WalkthroughWelcome } from "./WalkthroughWelcome";
 import { WalkthroughPeople } from "./WalkthroughPeople";
 import { WorkStep } from "./WalkthroughWork";
+import { AddConnection } from "./Sources";
 import { WalkthroughMail } from "./WalkthroughMail";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
@@ -35,8 +36,11 @@ export interface Handlers {
   onChooseSource: (plugin: string | null) => void;
 }
 
+/** What the screen is given: adding a connection happens inside the step itself, so it asks for no way to leave. */
+type Given = Omit<Handlers, "onChooseSource">;
+
 export function Walkthrough(
-  props: Handlers & {
+  props: Given & {
     /** Open at this screen, when a line elsewhere sent the person to a step; `n` tells one request from the next. */
     at?: { screen: Screen; n: number } | null;
     /** Finish later was chosen, and kept. */
@@ -57,6 +61,8 @@ export function Walkthrough(
   const requested = useRef(0);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  // The form that adds a connection, shown in the step's own place while it is open, then back to the step.
+  const [adding, setAdding] = useState<{ plugin: string | null } | null>(null);
   // On a phone the list of steps is behind a Steps button; this is whether it is showing.
   const [listOpen, setListOpen] = useState(false);
   // What Continue does on this screen, as the screen says (see `useContinue`): kept in a ref and only drawn again when what
@@ -243,7 +249,7 @@ export function Walkthrough(
     onOpenPeople: props.onOpenPeople,
     onOpenAddons: props.onOpenAddons,
     onHandIn: props.onHandIn,
-    onChooseSource: props.onChooseSource,
+    onChooseSource: (plugin: string | null) => setAdding({ plugin }),
   };
 
   return (
@@ -306,13 +312,16 @@ export function Walkthrough(
           </h2>
           <p className={styles.why}>{t(`walkthrough.why.${current}`)}</p>
           <div className={styles.body}>
+          {adding && <AddConnection plugin={adding.plugin} onClose={() => setAdding(null)} />}
+          {!adding && (
+          <>
           {current === "welcome" && <WalkthroughWelcome />}
           {current === "you" && <WorkspaceStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "work" && <WorkStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "ai" && <WelcomeAi local={data.local} done={aiDone} />}
           {current === "mail" && (
             <>
-              <WalkthroughMail onChooseSource={props.onChooseSource} onOpenAddons={props.onOpenAddons} />
+              <WalkthroughMail onChooseSource={handlers.onChooseSource} onOpenAddons={props.onOpenAddons} />
               {hasMailSteps && <StepList include={(s) => s.group === "mail" && !!s.plugin && !s.sign_in} {...handlers} />}
             </>
           )}
@@ -320,6 +329,8 @@ export function Walkthrough(
           {current === "backup" && <WelcomeBackup local={data.local} />}
           {current === "people" && <WalkthroughPeople />}
           {current === "done" && <DoneScreen go={go} {...handlers} />}
+          </>
+          )}
           {problem && (
             <p className="problem-note" role="alert">
               {problem}

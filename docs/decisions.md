@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: The guided mailbox, and setup stays setup
+
+**Decided:** Setup's mail step and Settings › Connections offer the common mail services by name for connecting a
+mailbox with an app password, from shipped data, with their steps and the server details filled in; the calendar's
+private address is offered once the mail is connected. "Another mail or calendar" opens inside setup, never in the
+full app. A private add-on's Connect asks for the access key in plain words and offers the app-password mailbox.
+
+**Decided by:** the owner (the app-password way, 2026-10-26; app passwords confirmed on their own Gmail; "You
+shouldn't see the full desktop until wizard setup is completed", 2026-10-28).
+
+**Why:** the owner's first run hit a raw download error, then the full app, then a button that did nothing.
+
+**Impact:** Design 7.8 and 4.6; open promises P67 and P73 done. Change log: section 240.
+
 ## 2026-10-28: A listed pack installs with no access key; the catalog keeps its package
 
 **Decided:** A pack whose own repository is private is still installed from the Add-ons screen and setup with no

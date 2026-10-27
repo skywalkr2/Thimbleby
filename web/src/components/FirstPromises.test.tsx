@@ -418,7 +418,7 @@ describe("in the walkthrough", () => {
     });
     renderApp(
       <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
-        <Walkthrough at={null} onOpenPeople={noop} onOpenAddons={noop} onHandIn={noop} onChooseSource={noop} onFinishLater={noop} onDone={noop} />
+        <Walkthrough at={null} onOpenPeople={noop} onOpenAddons={noop} onHandIn={noop} onFinishLater={noop} onDone={noop} />
       </RestartProvider>,
     );
     return calls;

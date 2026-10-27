@@ -32,7 +32,7 @@ def screen(tmp_path, monkeypatch):
     def download(url, sha, token=None, client=None):
         tokens.append(token)
         if token != TOKEN:
-            raise pack_install.NeedsToken("the release file couldn't be read: it may be private")
+            raise pack_install.NeedsToken("this add-on's download is private")
         return data
 
     monkeypatch.setattr(pack_install, "download", download)
@@ -208,3 +208,73 @@ def test_saving_a_read_token_can_be_undone_through_the_settings(screen):
     )
     assert undone.status_code == 200, undone.text
     assert load_config(ws.config_dir, env={}).workspace.plugins.catalog.release_tokens == {}
+
+
+@pytest.fixture
+def moved(tmp_path, monkeypatch):
+    """A catalog kept from before: its entry names a release address that no longer answers, while the catalog read
+    again names the new one. Counts each re-read and each download."""
+    data = wheel()
+    sha = hashlib.sha256(data).hexdigest()
+    old = RELEASE
+    new = RELEASE.replace("pack-0.1.0", "pack-0.1.1")
+    seen = {"refreshed": 0, "downloads": [], "fresh_works": True}
+
+    def entry(url):
+        return packs.Entry(id="packdemo", name="Pack demo", release={"url": url, "sha256": sha})
+
+    def read_feeds(urls, *a, refresh=False, **k):
+        seen["refreshed"] += 1 if refresh else 0
+        return [packs.Feed(u, [entry(new if refresh else old)]) for u in urls]
+
+    def download(url, expected, token=None, client=None):
+        seen["downloads"].append(url)
+        if url == old or not seen["fresh_works"]:
+            raise pack_install.NeedsToken(
+                "this add-on's download is private, so it needs an access key, or its address is wrong"
+            )
+        return data
+
+    monkeypatch.setattr(packs, "read_feeds", read_feeds)
+    monkeypatch.setattr(pack_install, "download", download)
+    place = tmp_path / "site"
+    place.mkdir()
+    monkeypatch.setattr(pack_install, "target", lambda: place)
+    ws, cfg, store = make(tmp_path)
+    store.close()
+    c, api = start(ws, cfg)
+    c.post(f"{api}/packs/catalogs", json={"address": CATALOG, "fingerprint": fingerprint(c, api)})
+    seen["refreshed"] = 0
+    return c, api, seen, old, new
+
+
+def test_a_release_that_moved_since_the_catalog_was_kept_is_found_by_reading_the_catalog_once_more(moved):
+    c, api, seen, old, new = moved
+    done = c.post(f"{api}/packs/packdemo/install")
+    assert done.status_code == 200, done.text
+    assert seen["downloads"] == [old, new]  # the kept entry failed, the fresh one was tried once
+    assert seen["refreshed"] == 1
+
+
+def test_when_the_fresh_release_fails_too_it_says_so_in_plain_words_after_one_re_read_only(moved):
+    c, api, seen, old, new = moved
+    seen["fresh_works"] = False
+    refused = c.post(f"{api}/packs/packdemo/install")
+    assert refused.status_code == 409 and refused.headers["X-Cockpit-Needs"] == "read-token"
+    assert "access key" in refused.json()["detail"] and "release file" not in refused.json()["detail"]
+    assert seen["downloads"] == [old, new] and seen["refreshed"] == 1  # never a loop
+
+
+def test_a_release_that_did_not_change_is_not_tried_again(moved, monkeypatch):
+    c, api, seen, old, new = moved
+    monkeypatch.setattr(
+        packs,
+        "read_feeds",
+        lambda urls, *a, refresh=False, **k: [
+            packs.Feed(u, [packs.Entry(id="packdemo", name="Pack demo", release={"url": old, "sha256": "0" * 64})])
+            for u in urls
+        ],
+    )
+    refused = c.post(f"{api}/packs/packdemo/install")
+    assert refused.status_code == 409 and refused.headers["X-Cockpit-Needs"] == "read-token"
+    assert seen["downloads"] == [old]

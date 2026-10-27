@@ -224,7 +224,6 @@ const handlers = () => ({
   onOpenPeople: vi.fn(),
   onOpenAddons: vi.fn(),
   onHandIn: vi.fn(),
-  onChooseSource: vi.fn(),
   onOpenSources: vi.fn(),
   onFinishLater: vi.fn(),
   onDone: vi.fn(),
@@ -567,7 +566,7 @@ describe("a way back to the step", () => {
     expect(within(item).getByText("Done")).toBeInTheDocument();
   });
 
-  test("Connect one on the mail step leaves for Sources, and Back to setup returns to the mail step", async () => {
+  test("Connect one on the mail step opens the form inside the step, in the wizard's own frame with none of the app's navigation, and cancelling comes back to the step", async () => {
     const user = userEvent.setup();
     started("mail");
     renderApp(<App rc={rcFixture()} />);
@@ -575,10 +574,17 @@ describe("a way back to the step", () => {
     const connect = await screen.findByRole("button", { name: "Connect one" });
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
     await user.click(connect);
-    const back = await screen.findByRole("button", { name: "Back to setup" });
-    await user.click(back);
-    expect(await screenTitle()).toHaveTextContent("Mail and calendar");
+    const form = await screen.findByRole("form", { name: "Add a connection" });
+    // Still setup: never the app's side bar, header or Settings menu, and no way back to leave for.
+    expect(screen.getByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Views" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Settings sections" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Back to setup" })).toBeNull();
+    expect(await screenTitle()).toHaveTextContent("Mail and calendar");
+    await user.click(within(form).getByRole("button", { name: "Cancel" }));
+    expect(await screen.findByRole("button", { name: "Connect one" })).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Views" })).toBeNull();
   });
 
   test("How to get it leaves for the Add-ons screen, and Back to setup returns to the mail step", async () => {
@@ -1880,10 +1886,59 @@ describe("Mail and calendar", () => {
     expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
   });
 
+  test("a private download says so in plain words, asks for the access key right there, keeps it for that release's host, and offers the mailbox with an app password instead", async () => {
+    const user = userEvent.setup();
+    let given = false;
+    const calls = fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({ enabled: true, feeds: [], available: [available("mail-addon", { release_host: "files.example.com" })], installed: [] }),
+      "POST packs/mail-addon/install": () =>
+        given
+          ? { name: "mail-addon", version: "1.0.0", needs_restart: true }
+          : new Refuse(409, "This add-on's download is private, so it needs an access key, or its address is wrong.", { "X-Cockpit-Needs": "read-token" }),
+      "POST packs/mail-addon/token": () => ((given = true), { changes: [], fingerprint: "fp-2", needs_restart: false }),
+      "GET watch/mail-services": () => [
+        { id: "svc", name: "Example Mail", user_hint: "", app_password_steps: ["Make one."], app_password_page: "", calendar_steps: [] },
+      ],
+    });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Connect Service mail-addon" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("This add-on is kept private. Paste the access key you were given for it, then try again.");
+    for (const plumbing of [/release/i, /token/i, /the place it is kept/i]) expect(alert).not.toHaveTextContent(plumbing);
+    // The key is asked for right here, with the cursor in it.
+    const box = await screen.findByLabelText("Access key");
+    expect(box).toHaveFocus();
+    await user.type(box, "pasted-key-value");
+    await user.click(screen.getByRole("button", { name: "Save access key" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST packs/mail-addon/token")).toBe(true));
+    expect(calls.find((c) => c.route === "POST packs/mail-addon/token")!.body).toMatchObject({ token: "pasted-key-value" });
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST packs/mail-addon/install")).toHaveLength(2));
+  });
+
+  test("with a private download refused, Or connect your mailbox with an app password goes to the guided mailbox", async () => {
+    const user = userEvent.setup();
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({ enabled: true, feeds: [], available: [available("mail-addon", { release_host: "files.example.com" })], installed: [] }),
+      "POST packs/mail-addon/install": () => new Refuse(409, "private", { "X-Cockpit-Needs": "read-token" }),
+      "GET watch/mail-services": () => [
+        { id: "svc", name: "Example Mail", user_hint: "", app_password_steps: ["Make one."], app_password_page: "", calendar_steps: [] },
+      ],
+    });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Connect Service mail-addon" }));
+    await user.click(await screen.findByRole("button", { name: "Or connect your mailbox with an app password" }));
+    expect(await screen.findByLabelText("Mail service")).toHaveFocus();
+  });
+
   test("an add-on that reads no mail or calendar is not offered, and another mail or calendar opens the core's forms", async () => {
     const user = userEvent.setup();
     fakeApi({
       ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET watch/kinds": () => [],
+      "GET watch/authors": () => [],
       "GET packs": () => ({
         enabled: true,
         feeds: [],
@@ -1895,20 +1950,25 @@ describe("Mail and calendar", () => {
         installed: [],
       }),
     });
-    const { onChooseSource } = open();
+    open();
     expect(await screen.findByText("Service mail-addon")).toBeInTheDocument();
     expect(screen.queryByText("Service other-addon")).toBeNull();
     expect(screen.queryByText("Service no-sign-in-addon")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Another mail or calendar" }));
-    expect(onChooseSource).toHaveBeenCalledWith(null);
+    // The form opens inside the step, which comes back when it is cancelled.
+    const form = await screen.findByRole("form", { name: "Add a connection" });
+    expect(screen.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeInTheDocument();
+    await user.click(within(form).getByRole("button", { name: "Cancel" }));
+    expect(await screen.findByText("Service mail-addon")).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
   });
 
   test("with no service listed and nothing read the step is one sentence and one button, and the way out is the step's own skip", async () => {
     const user = userEvent.setup();
-    fakeApi(routes({}, CORE.map((c) => step(c)), { step: "mail" }));
-    const { onChooseSource } = open();
+    fakeApi({ ...routes({}, CORE.map((c) => step(c)), { step: "mail" }), "GET watch/kinds": () => [], "GET watch/authors": () => [] });
+    open();
     expect(
-      await screen.findByText("Mail and calendar sign-in comes with an add-on that isn't installed yet. You can connect a mail folder or a calendar link now, or skip this and hand things in by pasting."),
+      await screen.findByText("Mail and calendar sign-in comes with an add-on that isn't installed yet. You can connect your mailbox or a calendar link now, or skip this and hand things in by pasting."),
     ).toBeInTheDocument();
     // The old second sentence, and the mail-sorting choices that mean nothing before any mail is read, are not there.
     expect(screen.queryByText(/No services listed/)).toBeNull();
@@ -1917,7 +1977,7 @@ describe("Mail and calendar", () => {
     const buttons = within(document.querySelector<HTMLElement>("[data-mail-none]")!).getAllByRole("button");
     expect(buttons.map((b) => b.textContent)).toEqual(["Connect one"]);
     await user.click(buttons[0]);
-    expect(onChooseSource).toHaveBeenCalledWith(null);
+    expect(await screen.findByRole("form", { name: "Add a connection" })).toBeInTheDocument();
   });
 
   test("a service the app can't install from here points to the Add-ons screen", async () => {

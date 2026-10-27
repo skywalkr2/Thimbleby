@@ -62,6 +62,7 @@ stale_after_hours: 36   # hours without a good read before Today names a source 
 default_data_level: internal   # how sensitive a watched source's items are when nothing else says
 connector_data_levels: {mailbox: restricted}   # per kind of source; a source's own data_level wins over this
 sent_folder_names: [Sent, Sent Items, Sent Mail, Sent Messages, INBOX.Sent]   # names tried for the sent folder when the server marks none
+mail_services_extra: []   # mail services of your own for connecting a mailbox with an app password; one with a shipped id replaces it
 set_aside_defaults: true   # mailing lists and promotions are set aside with no AI run
 sorting: ai   # a low-cost run sorts the mail the rules cannot place, from sender, subject and category only
 versions:   # copies of one document in a watched folder: only the newest counts

@@ -10,3 +10,5 @@ sources.advice.check_sign_in_method: "The service has turned off this way of rea
 sources.advice.retry_later: "The service is busy. It is tried again on its schedule."
 sources.advice.check_secure_connection: "The service wants a secure connection, which this one isn't using. Check the server and port in this connection's settings (Change, on Connections)."
 sources.advice.review_server_message: "Read what the service said, then check the user name and password in this connection's settings (Change, on Connections). It is read again on its next turn."
+sources.advice.service_app_password: "Follow the steps for {service} above to make an app password, then paste it here. Your usual password won't work for this."
+sources.guide.failed: "Couldn't connect to {service}: {what}"

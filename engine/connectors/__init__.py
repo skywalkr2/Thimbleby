@@ -530,7 +530,14 @@ def _core() -> dict[str, Connector]:
         "calendar": Connector(
             "calendar", "A calendar (its private link)", CalendarSettings, read_calendar, True, reads="calendar"
         ),
-        "mailbox": Connector("mailbox", "A mail folder", MailboxSettings, read_mailbox, network=True, reads="mail"),
+        "mailbox": Connector(
+            "mailbox",
+            "Your mailbox (address and app password)",
+            MailboxSettings,
+            read_mailbox,
+            network=True,
+            reads="mail",
+        ),
         "fake": Connector("fake", "A stand-in source for tests", FakeSettings, _read_fake, test_only=True),
     }
 

@@ -102,6 +102,7 @@ export const api = {
     call<S["LookBackView"]>("GET", `watch/${id(source)}/look-back?days=${days}`),
   lookBack: (source: string, days: number) => call<S["LookBackView"]>("POST", `watch/${id(source)}/look-back`, { days }),
   watchKinds: () => call<S["WatchKindView"][]>("GET", "watch/kinds"),
+  mailServices: () => call<S["MailServiceView"][]>("GET", "watch/mail-services"),
   watchAuthors: () => call<S["WatchAuthorOption"][]>("GET", "watch/authors"),
   addSource: (body: S["WatchSourceIn"]) => call<S["SettingsSaved"]>("POST", "watch/sources", body),
   changeSource: (src: string, body: S["WatchSourceChange"]) =>

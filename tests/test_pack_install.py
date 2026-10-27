@@ -101,8 +101,10 @@ def test_the_download_must_match_the_checksum_and_a_token_stays_with_its_host():
     with pytest.raises(InstallError, match="checksum"):
         pack_install.download(RELEASE, "0" * 64, client=client)
     refused = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
-    with pytest.raises(InstallError, match="read token"):
+    with pytest.raises(InstallError, match="access key") as private:
         pack_install.download(RELEASE, "0" * 64, client=refused)
+    for plumbing in ("release file", "read token", "the place it is kept"):
+        assert plumbing not in str(private.value)  # a person reads this: no internal terms
 
 
 def test_the_install_route_uses_the_catalog_entry(tmp_path, monkeypatch):

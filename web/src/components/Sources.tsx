@@ -20,6 +20,8 @@ import { useWords } from "../lib/wording";
 import { LookBack } from "./LookBack";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
+import { firstField } from "../lib/cursor";
+import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns } from "./SignIns";
@@ -139,6 +141,17 @@ export function Sources(props: {
     setAnnounce(new Set(sources.data.filter((s) => s.failures >= 1).map((s) => s.id)));
   }
   const addButton = "source-add-button";
+  // Pressing the button always opens the form, scrolled into view with the cursor in its first field: one already open is
+  // kept as it is, with what was typed in it, and gets the cursor.
+  const openAdd = () => {
+    const open = form?.type === "add" ? document.querySelector<HTMLElement>("form[data-add-connection]") : null;
+    if (!open) {
+      setForm({ type: "add", plugin: null });
+      return;
+    }
+    open.scrollIntoView?.({ block: "nearest" });
+    (firstField(open) ?? open.querySelector<HTMLElement>("h3"))?.focus({ preventScroll: true });
+  };
   const closeAdd = () => {
     setForm(null);
     restoreFocus(() => document.getElementById(addButton));
@@ -153,7 +166,7 @@ export function Sources(props: {
             id={addButton}
             className="btn primary"
             aria-expanded={form?.type === "add"}
-            onClick={() => setForm({ type: "add", plugin: null })}
+            onClick={openAdd}
           >
             {t("sources.add")}
           </button>
@@ -372,6 +385,12 @@ const CALENDAR_COLORS = ["blue", "teal", "green", "orange", "red", "pink", "purp
 /** The mailbox settings that name a folder of the mailbox. */
 const FOLDER_SETTINGS = ["sent_folder", "archive_folder"];
 
+/** The form that adds a connection, for a screen that isn't Connections (setup's own frame). Kinds are read here. */
+export function AddConnection(props: { plugin: string | null; onClose: () => void }) {
+  const kinds = useQuery({ queryKey: ["watch-kinds"], queryFn: api.watchKinds });
+  return <SourceForm mode={{ type: "add", plugin: props.plugin }} kinds={kinds.data} kindsFailed={kinds.isError} onClose={props.onClose} />;
+}
+
 type Mode = { type: "add"; plugin: string | null } | { type: "change"; source: Source };
 
 /** The form for adding a source or changing one: the kind (adding only), a name, how often, a project (adding only)
@@ -399,6 +418,9 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [picked, setPicked] = useState<string | null>(null);
   const chosen = source ? source.connector : (picked ?? (available.length === 1 ? available[0].name : ""));
   const kind = (props.kinds ?? []).find((k) => k.name === chosen);
+  // A mailbox connected through one of the mail services by name takes its own two fields, so the full form steps aside.
+  const [guide, setGuide] = useState("");
+  const guided = adding && chosen === "mailbox" && guide !== "" && guide !== OTHER_MAILBOX;
 
   const [label, setLabel] = useState(source?.label ?? "");
   const [every, setEvery] = useState(String(source?.every_minutes ?? 60));
@@ -611,6 +633,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     <form
       ref={formEl}
       className="panel source-form"
+      data-add-connection={adding ? "" : undefined}
       aria-labelledby={titleId}
       onSubmit={(e) => {
         e.preventDefault();
@@ -665,7 +688,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           )}
         </fieldset>
       )}
-      {kind && (
+      {adding && chosen === "mailbox" && <MailServiceConnect onPick={setGuide} onConnected={props.onClose} />}
+      {kind && !guided && (
         <>
           <div className="field">
             <label htmlFor={`${base}-label`}>{t("sources.field.label")}</label>
@@ -806,9 +830,11 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         <button type="button" className="btn quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </button>
-        <button type="submit" className="btn primary" disabled={!ready}>
-          {t(busy ? "sources.saving" : adding ? "sources.save_add" : "sources.save_change")}
-        </button>
+        {!guided && (
+          <button type="submit" className="btn primary" disabled={!ready}>
+            {t(busy ? "sources.saving" : adding ? "sources.save_add" : "sources.save_change")}
+          </button>
+        )}
       </div>
     </form>
   );

@@ -18,6 +18,8 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { addonOfSignIn } from "./SignIns";
 import { Icon } from "../ui/Icon";
+import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
+import { ReadToken } from "./ReadToken";
 
 type Pack = S["PackView"];
 type Installed = S["InstalledPackView"];
@@ -39,6 +41,8 @@ export interface Service {
   reason: string;
   /** The app can install it from here (the add-on is listed with a release it understands). */
   installable: boolean;
+  /** Where its download is kept, when the catalog says: a private one needs an access key for it. */
+  releaseHost: string | null;
   what: S["PackSummary"];
 }
 
@@ -67,6 +71,7 @@ export function servicesFrom(available: Pack[], installed: Installed[]): Service
       reads: pack.what.reads ?? [],
       ...stateOf(here),
       installable: !!pack.installable,
+      releaseHost: pack.release_host ?? null,
       what: pack.what,
     });
   }
@@ -80,6 +85,7 @@ export function servicesFrom(available: Pack[], installed: Installed[]): Service
       reads: item.what.reads ?? [],
       ...stateOf(item),
       installable: false,
+      releaseHost: null,
       what: item.what,
     });
   }
@@ -259,6 +265,8 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const sources = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const business = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const mailServices = useQuery({ queryKey: ["mail-services"], queryFn: api.mailServices });
+  const hasMailGuide = (mailServices.data?.length ?? 0) > 0;
 
   // After the app comes back the add-ons that were waiting for it are running: read their state again.
   useEffect(() => {
@@ -288,6 +296,7 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
                 signIns={(signIns.data ?? []).filter((s) => addonOfSignIn(s.name) === service.id)}
                 onOpenAddons={props.onOpenAddons}
                 canRestart={canRestart}
+                canUseMailbox={hasMailGuide}
               />
             ))}
           </ul>
@@ -331,6 +340,8 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
           )}
         </div>
       )}
+      {/* The common mail services by name: the steps for an app password, then only an address and that password. */}
+      <MailServiceConnect selectId={MAIL_GUIDE_PICK} onPick={(id) => id === OTHER_MAILBOX && props.onChooseSource(null)} />
       {services.length > 0 && (
         <div className="field">
           <div className="row-end">
@@ -369,8 +380,11 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
   );
 }
 
+/** The id of the mail service pick list, which a refused download sends the cursor to. */
+const MAIL_GUIDE_PICK = "mail-service-pick";
+
 /** One service: what it reads, where it stands and the one button for the next thing to do. */
-function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: () => void; canRestart: boolean }) {
+function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: () => void; canRestart: boolean; canUseMailbox: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
   const restart = useRestart();
@@ -378,6 +392,9 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState(false);
+  // A private download: its refusal says an access key would fix it, so the key is asked for here; once kept, Try again.
+  const [needsKey, setNeedsKey] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
   // The person's click on the one button is the say-so for the restart; after it the sign-in opens by itself.
   const [after, setAfter] = useState(false);
   const base = `service-${service.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
@@ -393,6 +410,8 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   const connect = async () => {
     setBusy(true);
     setProblem("");
+    setNeedsKey(false);
+    setKeySaved(false);
     try {
       if (service.state === "not_installed") await api.installPack(service.id);
       // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
@@ -408,7 +427,11 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
     } catch (err) {
       setAfter(false);
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
-      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      if (err instanceof ApiError && err.needs === "read-token" && service.releaseHost) {
+        // In plain words, with the key asked for here; the server's own sentence isn't shown.
+        setNeedsKey(true);
+        setProblem(t("walkthrough.mail.private"));
+      } else setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
     } finally {
       setBusy(false);
     }
@@ -462,6 +485,40 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
             <p className="problem-note" role="alert">
               {problem}
             </p>
+          )}
+          {needsKey && service.releaseHost && (
+            <>
+              <ReadToken
+                plain
+                pack={{ id: service.id, name: service.name }}
+                base={base}
+                host={service.releaseHost}
+                onSaved={() => {
+                  setNeedsKey(false);
+                  setProblem("");
+                  setKeySaved(true);
+                }}
+              />
+              {props.canUseMailbox && (
+                <div>
+                  <button
+                    type="button"
+                    className="btn quiet"
+                    onClick={() => document.getElementById(MAIL_GUIDE_PICK)?.focus()}
+                  >
+                    {t("walkthrough.mail.or_mailbox")}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          {keySaved && (
+            <div role="status">
+              <p className="sub">{t("walkthrough.mail.key_saved")}</p>
+              <button type="button" className="btn primary" disabled={busy} onClick={() => void connect()}>
+                {t("action.try_again")}
+              </button>
+            </div>
           )}
           {state === "ready" &&
             props.signIns.map((item, i) => (

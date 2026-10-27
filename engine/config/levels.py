@@ -282,6 +282,8 @@ FILES_ONLY = (
     # apps are entries of a file.
     "ui.notifications.webhook_format",
     "ui.notifications.apps_extra",
+    # Mail services of the person's own for the guided mailbox step; the shipped ones are a file.
+    "watch.mail_services_extra",
 )
 
 #: Fronts of dotted keys (a front matches a key equal to it or starting with it plus a dot) kept only in files.

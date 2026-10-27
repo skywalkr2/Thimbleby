@@ -13916,6 +13916,55 @@
         "title": "MailFoldersView",
         "type": "object"
       },
+      "MailServiceView": {
+        "description": "A mail service offered by name for connecting a mailbox with an app password: what to show, and the steps.",
+        "properties": {
+          "app_password_page": {
+            "description": "The service's own page for making one; empty when it has none.",
+            "title": "App Password Page",
+            "type": "string"
+          },
+          "app_password_steps": {
+            "description": "Plain lines, in order, on making an app password.",
+            "items": {
+              "type": "string"
+            },
+            "title": "App Password Steps",
+            "type": "array"
+          },
+          "calendar_steps": {
+            "description": "Plain lines on finding the private address of the service's calendar; empty when it has none.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Calendar Steps",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "user_hint": {
+            "description": "One line on what to type as the user name.",
+            "title": "User Hint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "user_hint",
+          "app_password_steps",
+          "app_password_page",
+          "calendar_steps"
+        ],
+        "title": "MailServiceView",
+        "type": "object"
+      },
       "MeIn": {
         "additionalProperties": false,
         "properties": {
@@ -30058,6 +30107,18 @@
             "title": "Secrets",
             "type": "object"
           },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mailbox: a mail service from GET /api/watch/mail-services. Its server, port and sent folder are filled in, so only the address and the app password are given; the sign-in is tried before anything is saved, and a refusal is said in words that name the service's steps. Not given together with a host or port.",
+            "title": "Service"
+          },
           "settings": {
             "additionalProperties": true,
             "description": "Its settings, by field (nested as objects).",
@@ -44411,6 +44472,29 @@
           }
         },
         "summary": "Watch Kinds"
+      }
+    },
+    "/api/watch/mail-services": {
+      "get": {
+        "description": "The mail services offered by name for connecting a mailbox with an app password: the shipped list, then the\nworkspace's own (`watch.mail_services_extra`), each with its plain steps.",
+        "operationId": "watch_mail_services_api_watch_mail_services_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MailServiceView"
+                  },
+                  "title": "Response Watch Mail Services Api Watch Mail Services Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Watch Mail Services"
       }
     },
     "/api/watch/sorting": {

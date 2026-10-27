@@ -60,6 +60,7 @@ from api.schemas import (
     FolderListView,
     LocalServerView,
     MailFoldersView,
+    MailServiceView,
     MeIn,
     MeView,
     Ok,
@@ -91,7 +92,7 @@ from api.schemas import (
     WatchSourceIn,
     WorkIn,
 )
-from engine import act_accounts, audit, kept_secrets, references, setup, sides, templates
+from engine import act_accounts, audit, kept_secrets, mail_services, references, setup, sides, templates
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
@@ -816,7 +817,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         base = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")[:40] or "source"
         return base if base not in taken else next(f"{base}-{n}" for n in range(2, 999) if f"{base}-{n}" not in taken)
 
-    def default_sent(new: dict[str, Any], taken: set[str]) -> dict[str, Any] | None:
+    def default_sent(new: dict[str, Any], taken: set[str], listed: Any = None) -> dict[str, Any] | None:
         """The source that also reads the sent folder of a mailbox being connected, so promises made in mail the person
         sent are found with no folder to choose: the folder the server marks as sent mail, else one of the usual names.
         None when the mailbox is read already, the person isn't known (their sent mail can't be credited to them yet),
@@ -828,7 +829,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if taken_folders(settings):
             return None  # the mailbox is read already: a folder the person took out or left out isn't brought back
         try:
-            listed = list_folders(settings)
+            listed = listed or list_folders(settings)
         except ConnectorError:
             return None
         folder = find_sent(listed, current().watch.sent_folder_names)
@@ -836,6 +837,44 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return None
         wanted = sent_source(new, folder, f"{new['label']} ({folder})")
         return {"id": unused_id(wanted["label"], taken | {new["id"]}), **wanted}
+
+    @r.get("/watch/mail-services")
+    def watch_mail_services() -> list[MailServiceView]:
+        """The mail services offered by name for connecting a mailbox with an app password: the shipped list, then the
+        workspace's own (`watch.mail_services_extra`), each with its plain steps."""
+        return [
+            MailServiceView(
+                id=s.id,
+                name=s.name,
+                user_hint=s.user_hint,
+                app_password_steps=s.app_password_steps,
+                app_password_page=s.page_url,
+                calendar_steps=s.calendar_steps,
+            )
+            for s in mail_services.offered(current())
+        ]
+
+    def tried_sign_in(service: Any, settings: dict[str, Any]) -> Any:
+        """The folders of a mailbox connected through a mail service, which tries its sign-in. A refusal is a 400 in
+        words: what the server said and, for a sign-in it did not accept, the steps of the service picked."""
+        from engine import watch
+        from engine.connectors import ConnectorError
+        from engine.connectors.mailbox import MailboxSettings, list_folders
+
+        try:
+            return list_folders(MailboxSettings.model_validate(settings))
+        except ConnectorError as err:
+            what = err.detail or err.kind
+            what = what if what.endswith((".", "!", "?")) else what + "."
+            advice = (
+                watch.advice_sentence("sources.advice.service_app_password")
+                if err.kind == "auth"
+                else watch.advice_for(err.kind, err.advice_key)
+            )
+            said = watch.advice_sentence("sources.guide.failed").format(service=service.name, what=what)
+            raise HTTPException(
+                status_code=400, detail=f"{said} {advice.format(service=service.name)}".strip()
+            ) from None
 
     @r.post("/watch/sources")
     def watch_add(body: WatchSourceIn) -> SettingsSaved:
@@ -847,7 +886,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         sources = sources_now()
         taken = {s["id"] for s in sources}
         source_id = unused_id(body.label or body.connector, taken)
-        given, to_keep = with_secrets(body.connector, source_id, body.settings, body.secrets, body.settings)
+        service = None
+        supplied = body.settings
+        if body.service:
+            service = mail_services.find(current(), body.service)
+            if service is None:
+                raise HTTPException(status_code=404, detail=f"There is no mail service called {body.service}.")
+            if body.connector != "mailbox":
+                raise HTTPException(status_code=400, detail="A mail service is for a mailbox.")
+            if "host" in supplied or "port" in supplied:
+                raise HTTPException(status_code=400, detail="Pick a mail service or give the server, not both.")
+            supplied = mail_services.settings_for(service, supplied)
+        given, to_keep = with_secrets(body.connector, source_id, supplied, body.secrets, body.settings)
         settings = checked_source(body.connector, given)
         new = {
             "id": source_id,
@@ -868,9 +918,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             # With nothing beside the person's own life, a new connection serves it, so it takes that side's level.
             new["sides"] = [own]
         fresh = keep_all(to_keep, f"source:{source_id}")
+        listed = None
+        if service is not None:
+            # The sign-in is tried before anything is saved, so a refusal is said here, naming the service's steps.
+            try:
+                listed = tried_sign_in(service, settings)
+            except HTTPException:
+                for path in fresh:
+                    path.unlink(missing_ok=True)
+                raise
         sent = None
         if with_sent and body.connector == "mailbox" and not body.author and current().workspace.user.person:
-            sent = default_sent(new, taken)
+            sent = default_sent(new, taken, listed)
         added = [new, *([sent] if sent else [])]
         try:
             done = saved(save({"watch.sources": [*sources, *added]}, [], body.fingerprint, allow=("watch.sources",)))

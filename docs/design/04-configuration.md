@@ -696,6 +696,10 @@ week" runs through, holidays, and per-team non-working days).
   /api/notifications/app`), `apps_extra` (empty; the person's own entries, each `{id, name, shape, where}`, an entry with a
   shipped id replacing it; files-only) and `webhook_format` (`json`, a small message with the text under `text` and `content`;
   or `plain`, the text alone as the body; read when no app is picked, and files-only now);
+- `watch.mail_services_extra` (files only; empty): the person's own entries for the guided mailbox, added to the shipped
+  list `engine/defaults/mail_services.yaml` (an entry with a shipped id replaces it). Each is `{id, name, imap_host,
+  imap_port, user_hint, app_password_steps, app_password_page, calendar_steps, sent_folder}`; the page is written without
+  its scheme (7.8, "The guided mailbox").
 - `quiet_hours` (`{start: "21:00", end: "07:00"}`, on the person's clock): nothing is sent in them, and what came up goes
   out once when they end;
 - `retry_minutes` (10): the wait before a note that could not be delivered is tried again;

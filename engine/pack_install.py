@@ -41,7 +41,7 @@ class InstallError(Exception):
 
 
 class NeedsToken(InstallError):
-    """The release file can't be read without a read token for the place it is kept (or the one given doesn't work)."""
+    """The download can't be read without an access key for the place it is kept (or the one given doesn't work)."""
 
 
 @dataclass
@@ -123,8 +123,7 @@ def download(url: str, expected_sha256: str, token: str | None = None, client: A
         with client.stream("GET", url, headers=headers) as response:
             if response.status_code in (401, 403, 404):
                 raise NeedsToken(
-                    "the release file couldn't be read: it may be private, so the app needs a read token for the "
-                    "place it is kept, or the address is wrong"
+                    "this add-on's download is private, so it needs an access key, or its address is wrong"
                 )
             if response.status_code >= 400:
                 raise InstallError(f"the release host answered {response.status_code}; try again later")

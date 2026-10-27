@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 240. The guided mailbox, and setup stays setup (2026-10-28; owner's first run; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup's mail step and Connections (7.8) | "A mail folder" with server, port and password typed by hand | **Built** (`tests/test_mail_services.py`, `MailServiceConnect.test.tsx`, `Sources.test.tsx`): "Your mailbox (address and app password)", a service picked by name from shipped data, its steps, two fields, the sign-in tried first, the calendar offered after |
+| "Another mail or calendar" in setup (7.8) | Opened Settings › Connections in the full app | **Built** (`App.test.tsx`, `Walkthrough.test.tsx`): opens inside the step |
+| "Add a connection" (7.0) | No effect while the form was open | **Built** (`Sources.test.tsx`): always opens the form with the cursor in its first field |
+| Installing a private add-on (7.8) | Raw "release file … read token" text; a stale catalog kept failing | **Built** (`tests/test_catalog_screen.py`, `tests/test_pack_install.py`, `Walkthrough.test.tsx`): plain words, the key field in place, the mailbox offered; one re-read of the catalog before refusing |
+
 ## 239. One way to drop a to-do that reached people (2026-10-28; owner; built)
 
 | Where | Before | Now |

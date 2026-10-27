@@ -1,0 +1,73 @@
+# The mail services offered by name when a person connects a mailbox with an app password (design 6.33, "Guided mailbox
+# step"). Each entry:
+#   id:                   what a setting or a connection names the service by (`watch.mail_services_extra`, `service`).
+#   name:                 what the screen shows.
+#   imap_host, imap_port: the incoming mail server, filled in for the person.
+#   user_hint:            one line on what to type as the user name.
+#   app_password_steps:   short plain lines, in order, on making an app password in the service.
+#   app_password_page:    the service's own page for making one, as a web address without its https:// start (the app
+#                         adds it and shows the page with its real domain).
+#   calendar_steps:       optional lines on finding the private address of the service's calendar, offered once the
+#                         mailbox is connected.
+#   sent_folder:          optional, the usual name of the service's sent folder.
+# The core's code and wording never name a service: they read this file, and a workspace adds entries of its own
+# (`watch.mail_services_extra`; an entry with a shipped id replaces it). Only services whose server and app-password
+# steps are documented by the service itself are listed; "Another mailbox" (typing the server by hand) is always offered.
+services:
+  - id: gmail
+    name: Gmail
+    imap_host: imap.gmail.com
+    imap_port: 993
+    user_hint: Your full Gmail address.
+    app_password_steps:
+      - Open your Google Account and go to Security. Turn on 2-Step Verification if it is off.
+      - Open the app passwords page (the link below).
+      - Type any name for it, such as Assistant, and choose Create.
+      - Copy the 16-letter password Google shows you. You will not see it again.
+      - Paste it in the app password box here. The spaces in it don't matter.
+    app_password_page: myaccount.google.com/apppasswords
+    calendar_steps:
+      - Open Google Calendar on a computer and find the calendar in the list on the left.
+      - Open its menu and choose Settings and sharing.
+      - Scroll to Integrate calendar and copy the Secret address in iCal format.
+      - Paste it here. Anyone with that address can read the calendar, so keep it to yourself.
+    sent_folder: "[Gmail]/Sent Mail"
+  - id: yahoo
+    name: Yahoo Mail
+    imap_host: imap.mail.yahoo.com
+    imap_port: 993
+    user_hint: Your full Yahoo address.
+    app_password_steps:
+      - Open your Yahoo account's security page (the link below) and turn on two-step verification if it is off.
+      - Choose Generate app password, or App passwords.
+      - Type any name for it, such as Assistant, and choose Generate.
+      - Copy the password Yahoo shows you.
+      - Paste it in the app password box here.
+    app_password_page: login.yahoo.com/account/security
+    sent_folder: Sent
+  - id: icloud
+    name: iCloud Mail
+    imap_host: imap.mail.me.com
+    imap_port: 993
+    user_hint: Your full iCloud address.
+    app_password_steps:
+      - Open your Apple Account page (the link below), sign in, and turn on two-factor authentication if it is off.
+      - Choose Sign-In and Security, then App-Specific Passwords.
+      - Choose Generate an app-specific password and type any name for it, such as Assistant.
+      - Copy the password Apple shows you.
+      - Paste it in the app password box here.
+    app_password_page: account.apple.com/account/manage
+    sent_folder: Sent Messages
+  - id: fastmail
+    name: Fastmail
+    imap_host: imap.fastmail.com
+    imap_port: 993
+    user_hint: Your full Fastmail address.
+    app_password_steps:
+      - Open your Fastmail settings (the link below) and go to Privacy and Security, then Integrations.
+      - Choose New app password and type any name for it, such as Assistant.
+      - Allow it to read mail, and choose Generate password.
+      - Copy the password Fastmail shows you.
+      - Paste it in the app password box here.
+    app_password_page: app.fastmail.com/settings/
+    sent_folder: Sent

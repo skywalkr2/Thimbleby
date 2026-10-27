@@ -154,7 +154,7 @@ Besides what you hand in, the assistant can keep reading places for you: a folde
 folder. Each is a source, with how often it is read. A source's first read only notes what is there;
 after that, anything new, changed or gone is handed in for the assistant to read, marked as outside content. A
 calendar is read through its private address (most calendar services offer one in their sharing settings), and the
-events in the coming weeks are followed: a moved meeting or a new invitation comes in as a change. A mail folder is
+events in the coming weeks are followed: a moved meeting or a new invitation comes in as a change. Your mailbox is
 read over IMAP with an app password from your mail service; messages are never marked as read or changed. Addresses
 and passwords are kept outside your settings, as environment variables or files on this computer. Rules can set
 aside changes that don't matter, such as a spacing fix or a change made by your own account; they are listed under

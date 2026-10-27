@@ -47,10 +47,13 @@ def _saved(ws: Workspace, cfg: Config) -> Config:
         return cfg
 
 
-def entry_in(ws: Workspace, cfg: Config, pack_id: str) -> packs.Entry:
-    """The catalog entry for an add-on, from the catalogs as the settings list them now."""
+def entry_in(ws: Workspace, cfg: Config, pack_id: str, *, refresh: bool = False) -> packs.Entry:
+    """The catalog entry for an add-on, from the catalogs as the settings list them now; `refresh` reads them again
+    instead of using what was kept."""
     settings = _saved(ws, cfg).workspace.plugins.catalog
-    feeds = packs.read_feeds(packs.feed_urls(_saved(ws, cfg), product()), ws.private_dir, settings.refresh_hours)
+    feeds = packs.read_feeds(
+        packs.feed_urls(_saved(ws, cfg), product()), ws.private_dir, settings.refresh_hours, refresh=refresh
+    )
     for feed in feeds:
         for entry in feed.entries:
             if entry.id == pack_id:
@@ -202,12 +205,15 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             raise HTTPException(
                 status_code=409, detail=f"{entry.name} has no release the app can install: {entry.install}"
             )
-        host_name = urlsplit(entry.release.url).hostname or ""
-        ref = _saved(ws, cfg).workspace.plugins.catalog.release_tokens.get(host_name)
-        try:
+
+        def fetch(current: packs.Entry) -> tuple[bytes, list[bytes]]:
+            """The release and the libraries that fit this computer, downloaded and checked."""
+            assert current.release is not None
+            host_name = urlsplit(current.release.url).hostname or ""
+            ref = _saved(ws, cfg).workspace.plugins.catalog.release_tokens.get(host_name)
             token = resolve_secret(ref) if ref else None
-            chosen = pack_install.select(entry.release.libraries)
-            data = pack_install.download(entry.release.url, entry.release.sha256, token)
+            chosen = pack_install.select(current.release.libraries)
+            data = pack_install.download(current.release.url, current.release.sha256, token)
             # A read token goes only to the release's own host, never to another host a library is kept on.
             blobs = [
                 pack_install.download(
@@ -215,6 +221,21 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 )
                 for lib in chosen
             ]
+            return data, blobs
+
+        try:
+            try:
+                data, blobs = fetch(entry)
+            except pack_install.NeedsToken:
+                # The catalog is kept for a while: when the release can't be reached or read, the catalog is read once
+                # more, and a release that changed since is tried once. Never more than that.
+                try:
+                    fresh = entry_in(ws, cfg, pack_id, refresh=True)
+                except HTTPException:
+                    fresh = None
+                if fresh is None or fresh.release is None or fresh.release == entry.release:
+                    raise
+                data, blobs = fetch(fresh)
             # An install or an update changes what the app runs, so a backup comes first; without one nothing changes.
             backup.backup_before(ws, backup.live(ws, cfg))
             done = pack_install.install(data, None, blobs)
@@ -223,7 +244,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         except SecretError:
             raise HTTPException(
                 status_code=409,
-                detail=f"The read token for {host_name} isn't available, so the release file can't be read.",
+                detail="The access key saved for this add-on isn't available, so its download can't be read.",
                 headers={NEEDS: "read-token"},
             ) from None
         except pack_install.NeedsToken as err:

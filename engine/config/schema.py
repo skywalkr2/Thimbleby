@@ -3057,6 +3057,44 @@ class MailKinds(FileModel):
     )
 
 
+class MailService(ConfigModel):
+    id: str = Field(
+        "",
+        min_length=1,
+        description="What a setting or a connection names the service by; an entry with a shipped id replaces it.",
+    )
+    name: str = Field("", min_length=1, description="The service's name as the screen shows it.")
+    imap_host: str = Field("", min_length=1, description="The name of the service's incoming mail server.")
+    imap_port: int = Field(993, ge=1, le=65535, description="The number the incoming mail server listens on.")
+    user_hint: str = Field("", description="One line on what to type as the user name, such as the full address.")
+    app_password_steps: list[str] = Field(
+        default_factory=list, description="Short plain lines, in order, on making an app password in the service."
+    )
+    app_password_page: str = Field(
+        "",
+        description="The service's own page for making an app password, as a web address without its https:// start "
+        "(the app adds it); empty when there is none.",
+    )
+    calendar_steps: list[str] = Field(
+        default_factory=list,
+        description="Short plain lines, in order, on finding the private address of the service's calendar; empty "
+        "when the service has none to give.",
+    )
+    sent_folder: str | None = Field(None, description="The usual name of the service's sent folder, when it has one.")
+
+    @field_validator("app_password_page")
+    @classmethod
+    def _page_without_scheme(cls, value: str) -> str:
+        if "://" in value or any(c.isspace() for c in value):
+            raise ValueError("give the page as a web address without its https:// start, such as example.com/page")
+        return value
+
+    @property
+    def page_url(self) -> str:
+        """The page as a secure web address, or empty."""
+        return f"https://{self.app_password_page}" if self.app_password_page else ""
+
+
 class WatchFile(FileModel):
     sources: list[WatchSource] = Field(default_factory=list, description="The places the assistant keeps reading.")
     triage: list[TriageRule] = Field(
@@ -3069,6 +3107,12 @@ class WatchFile(FileModel):
         "server doesn't mark which folder holds sent mail. The folder the server marks always comes first. A mailbox "
         "connected for the first time also reads its sent folder, found this way.",
         json_schema_extra={"internal": True},
+    )
+    mail_services_extra: list[MailService] = Field(
+        default_factory=list,
+        description="Mail services of your own to pick from when connecting a mailbox with an app password, each with "
+        "its name, its mail server and the steps for making an app password. An entry with a shipped service's id "
+        "replaces it.",
     )
     set_aside_defaults: bool = Field(
         True,

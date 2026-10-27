@@ -961,6 +961,11 @@ def advice_for(kind: str, advice_key: str | None = None) -> str:
     return WHAT_TO_DO.get(kind, "")
 
 
+def advice_sentence(key: str) -> str:
+    """One sentence of the advice sheet by its wording key; empty when there is none."""
+    return _advice().get(key, "")
+
+
 def _problem(what: str, advice: str) -> str:
     """What went wrong and what to do, as sentences (no second full stop when the words already end one)."""
     what = what if what.endswith((".", "!", "?")) else what + "."

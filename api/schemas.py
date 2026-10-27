@@ -5762,6 +5762,19 @@ class DataFileSaved(BaseModel):
 # ---- adding watched sources ------------------------------------------------------------------------------------------
 
 
+class MailServiceView(BaseModel):
+    """A mail service offered by name for connecting a mailbox with an app password: what to show, and the steps."""
+
+    id: str
+    name: str
+    user_hint: str = Field(description="One line on what to type as the user name.")
+    app_password_steps: list[str] = Field(description="Plain lines, in order, on making an app password.")
+    app_password_page: str = Field(description="The service's own page for making one; empty when it has none.")
+    calendar_steps: list[str] = Field(
+        description="Plain lines on finding the private address of the service's calendar; empty when it has none."
+    )
+
+
 class WatchKindView(BaseModel):
     """A kind of source the assistant can keep reading, with the form its settings take."""
 
@@ -5796,6 +5809,12 @@ class WatchSourceIn(BaseModel):
         "Required when several are signed in; the only one is used when it is left out.",
     )
     color: CalendarColor | None = Field(None, description="For a calendar: the color of its mark on the schedule.")
+    service: str | None = Field(
+        None,
+        description="For a mailbox: a mail service from GET /api/watch/mail-services. Its server, port and sent folder "
+        "are filled in, so only the address and the app password are given; the sign-in is tried before anything is "
+        "saved, and a refusal is said in words that name the service's steps. Not given together with a host or port.",
+    )
     settings: dict[str, Any] = Field(default_factory=dict, description="Its settings, by field (nested as objects).")
     secrets: dict[str, str] = Field(
         default_factory=dict,

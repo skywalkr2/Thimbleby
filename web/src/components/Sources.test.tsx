@@ -289,6 +289,58 @@ describe("adding a source", () => {
     expect(within(form).getByLabelText("About folder")).toBeInTheDocument();
   });
 
+  test("the plain mailbox offers the mail services by name: one picked shows its steps and two fields with the cursor in the address; Another mailbox shows the full form", async () => {
+    const user = userEvent.setup();
+    const mailbox = kind("mailbox", "Plain mailbox", null, [field("host", "text"), field("user", "text"), field("password", "text", { secret: true })]);
+    const { calls } = open([], {
+      "GET watch/kinds": () => [...KINDS, mailbox],
+      "GET watch/mail-services": () => [
+        { id: "svc-a", name: "Example Mail", user_hint: "Your full address.", app_password_steps: ["Make one."], app_password_page: "", calendar_steps: [] },
+      ],
+      "GET setup": () => ({ local: true }),
+    });
+    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    const form = await screen.findByRole("form", { name: "Add a connection" });
+    // Other kinds show no mail services.
+    await user.click(within(form).getByRole("radio", { name: "A folder" }));
+    expect(within(form).queryByLabelText("Mail service")).toBeNull();
+    await user.click(within(form).getByRole("radio", { name: "Plain mailbox" }));
+    await user.selectOptions(await within(form).findByLabelText("Mail service"), "svc-a");
+    expect(within(form).getByText("Make one.")).toBeInTheDocument();
+    expect(within(form).getByLabelText("Your address")).toHaveFocus();
+    expect(within(form).getByLabelText("App password")).toBeInTheDocument();
+    expect(within(form).queryByLabelText("About host")).toBeNull();
+    expect(within(form).queryByRole("button", { name: "Add" })).toBeNull();
+    await user.selectOptions(within(form).getByLabelText("Mail service"), "other");
+    expect(within(form).getByLabelText("About host")).toBeInTheDocument();
+    expect(within(form).queryByLabelText("Your address")).toBeNull();
+    expect(calls.some((c) => c.route === "POST watch/sources")).toBe(false);
+  });
+
+  test("Add a connection always opens the form and puts the cursor in its first field, also when the form is already open", async () => {
+    const user = userEvent.setup();
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    open([source("a")], {}, { add: { plugin: null, n: 1 } });
+    const form = await screen.findByRole("form", { name: "Add a connection" });
+    // The cursor was moved on from the form (to the screen's heading) before the button is pressed.
+    screen.getByRole("heading", { level: 1, name: "Connections" }).focus();
+    scrolled.mockClear();
+    await user.click(screen.getByRole("button", { name: "Add a connection" }));
+    expect(await screen.findByRole("form", { name: "Add a connection" })).toBe(form);
+    await waitFor(() => expect(within(form).getAllByRole("radio")[0]).toHaveFocus());
+    expect(scrolled).toHaveBeenCalled();
+  });
+
+  test("nothing is shown of the form until the button is pressed", async () => {
+    const user = userEvent.setup();
+    open([source("a")]);
+    await screen.findByRole("listitem", { name: "Source a" });
+    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Add a connection" }));
+    expect(await screen.findByRole("form", { name: "Add a connection" })).toBeInTheDocument();
+  });
+
   test("a kind whose first read only notes what is there says so, read from how the kind starts, not its name", async () => {
     const user = userEvent.setup();
     open([]);

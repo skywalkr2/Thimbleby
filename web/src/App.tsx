@@ -332,10 +332,6 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             setView("today");
             setHandIn(true);
           })}
-          onChooseSource={(plugin) => {
-            setFromSetup(true);
-            openAddSource(plugin);
-          }}
           onFinishLater={() => setView("today")}
           onDone={() => {
             setView("today");
