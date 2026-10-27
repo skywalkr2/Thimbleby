@@ -31,6 +31,7 @@ import { useChangeThis, type ChangeKind } from "./ChangeThis";
 import { PromiseWhy } from "./PromiseWhy";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SideFilter } from "./SideFilter";
+import { onSide, useSideFilter, useSideOf } from "../lib/sides";
 import { Highlighted } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
@@ -127,8 +128,12 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   // A run waiting for a go (a stage's, or the first one) is a line on Today, not history: it is counted in the line at the
   // top, and its plain request row would only offer a retry.
   const waitingGo = new Set(stageToday.waiting.map((w) => w.request.id));
+  // The shared side filter narrows the rows: a change on no side shows under every choice.
+  const side = useSideFilter();
+  const sideOf = useSideOf();
   const rows = (changes.data ?? []).filter(
     (c) =>
+      onSide(sideOf(c.project), side.choice) &&
       (intake !== null ? c.intake === intake : shown?.has(c.id)) &&
       !waitingGo.has(c.id) &&
       !(c.first_go && !c.dismissed && c.state === "needs_you") &&
@@ -215,7 +220,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           </button>
         </p>
       ) : rows.length === 0 ? (
-        <p className="empty">{t("changes.empty")}</p>
+        <p className="empty">{side.choice !== "all" && (changes.data ?? []).length > 0 ? t("sides.empty.changes", { side: side.named }) : t("changes.empty")}</p>
       ) : (
         <ListDetail
           title={selected ? changeTitle(selected, t, has) : ""}
@@ -680,7 +685,7 @@ const CHANGEABLE: ChangeKind[] = ["action", "question", "decision", "event", "fa
 const PROMISE_OPS = new Set(["action.add", "action.close", "action.drop", "action.move", "action.part", "action.news"]);
 
 /** What changed's one link for a held item: the item is answered on its line on Today, so here it is information and this
- * opens that line. A held item with no line on Today (its change was dismissed) has no link. */
+ * opens that line. Every held item has its line, so a missing one (the queue not loaded yet) shows no link for now. */
 function HeldOnToday(props: { changeset: string; op: number; question?: string }) {
   const queue = useQueue();
   const all = queue.data ?? [];

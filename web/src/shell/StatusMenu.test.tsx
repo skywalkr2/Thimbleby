@@ -273,7 +273,7 @@ test("requests waiting for an internet connection show on the chip and in the po
   const dialog = await open(user);
   const line = dialog.querySelector('[data-state="network"]') as HTMLElement;
   expect(line).toHaveTextContent(/^Internet connection2 requests have been waiting for an internet connection since \w{3}, \w{3} \d{1,2}, \d{1,2}:05/);
-  expect(line).toHaveTextContent("Work resumes when your internet connection returns. Nothing is lost, and retry attempts aren't used up.");
+  expect(line).toHaveTextContent("Things carry on when your internet connection returns. Nothing is lost, and retry attempts aren't used up.");
   expect(line.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
 });
 

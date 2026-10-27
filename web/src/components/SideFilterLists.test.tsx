@@ -224,3 +224,42 @@ test("What changed has the control beside its heading for a person with a side, 
   await screen.findByRole("heading", { name: "What changed" });
   await waitFor(() => expect(group()).toBeNull());
 });
+
+const changeOn = (id: string, title: string, projectId: string | null): S["ChangeItem"] => ({
+  id,
+  version: 1,
+  dismissed: false,
+  stage_task: false,
+  first_go: false,
+  refused: false,
+  state: "done",
+  waiting: null,
+  created_at: "2026-10-09T14:00:00Z",
+  note: null,
+  source: null,
+  source_title: title,
+  changeset: null,
+  project: projectId,
+});
+
+test("What changed shows a side's own changes and those on no side, and an empty side says so", async () => {
+  const user = userEvent.setup();
+  // The chosen change also shows in the detail pane, so a title may be on screen twice.
+  const shown = (text: string) => screen.queryAllByText(text).length > 0;
+  fakeApi({
+    ...changesRoutes,
+    ...withSide,
+    "GET changes": () => [changeOn("REQ-1", "Water the beans", "PRJ-garden"), changeOn("REQ-2", "Quote the sofa", "PRJ-quotes"), changeOn("REQ-3", "Renew the licence", null)],
+  });
+  renderApp(<WhatChanged />);
+  await waitFor(() => expect(shown("Water the beans")).toBe(true));
+  expect(shown("Quote the sofa")).toBe(true);
+  await user.click(screen.getByRole("radio", { name: "Personal" }));
+  await waitFor(() => expect(shown("Quote the sofa")).toBe(false));
+  expect(shown("Water the beans")).toBe(true);
+  expect(shown("Renew the licence")).toBe(true);
+  await user.click(screen.getByRole("radio", { name: SHOP_NAME }));
+  await waitFor(() => expect(shown("Quote the sofa")).toBe(true));
+  expect(shown("Water the beans")).toBe(false);
+  expect(shown("Renew the licence")).toBe(true);
+});

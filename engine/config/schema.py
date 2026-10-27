@@ -2658,7 +2658,12 @@ class UiFile(FileModel):
         le=1200,
         description="Below this width the screen uses the phone layout: one pane and a bottom bar.",
     )
-    toast_seconds: float = Field(7, ge=0, description="How long an undo toast stays; 0 keeps toasts until dismissed.")
+    toast_seconds: float = Field(
+        7,
+        ge=0,
+        description="How long a plain message stays on screen; a message with Undo or another button stays until "
+        "dismissed or replaced, and 0 keeps every message until dismissed.",
+    )
     links: list[dict[str, str]] = Field(
         default_factory=list,
         max_length=12,

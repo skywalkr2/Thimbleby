@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
 import { panelView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { needsAttention } from "../components/WhatChanged";
 import { useTodayCount } from "../lib/today";
 import { useSides } from "../lib/sides";
 import { recordView } from "../lib/views";
@@ -34,12 +33,11 @@ export interface NavModel {
   bottom: NavEntry[];
 }
 
-/** How many things wait: changes that need a look, and follow-ups still to send. Null until the queries have answered. */
-export function useCounts(): { changed: number | null; followups: number | null } {
-  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
+/** How many things wait: follow-ups still to send. Null until the query has answered. What changed is the history and has
+ * no count; what waits for the person is counted on Today. */
+export function useCounts(): { followups: number | null } {
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   return {
-    changed: changes.data ? changes.data.filter(needsAttention).length : null,
     followups: followups.data ? followups.data.reduce((n, s) => n + s.to_send, 0) : null,
   };
 }
@@ -74,7 +72,7 @@ export function useNav(): NavModel {
     justMe,
     workTitle: t(justMe ? "nav.work.just_me" : "nav.work"),
     work: [
-      { view: "work/changed", label: t("nav.changed"), icon: "inbox", count: some(counts.changed) },
+      { view: "work/changed", label: t("nav.changed"), icon: "inbox" },
       { view: "work/handled", label: t("nav.handled"), icon: "archive" },
       { view: "work/followups", label: t("nav.followups"), icon: "send", count: some(counts.followups) },
       { view: "work/open", label: t("nav.open"), icon: "check" },

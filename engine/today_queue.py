@@ -452,10 +452,12 @@ def _everything(
         lines.append(line)
     lines = move_groups.group(reader, people, zone(cfg), lines, Line)
 
-    # Decide: held items with no question (they wait for the person's yes), and runs waiting for a go.
+    # Decide: held items with no question (they wait for the person's yes), and runs waiting for a go. A held item has
+    # its line whatever became of the request that made it, a dismissed one included: Today's line is the only place
+    # to answer it.
     for cs_id, cs in changesets.items():
         req = by_changeset.get(cs_id)
-        if req is None or req.data.get("dismissed") or req.id in hidden:
+        if req is None or req.id in hidden:
             continue
         # A project ending read from an input is one line with its drops inside it, not a line for each item.
         winding = endings.held_endings(reader, cs_id, cs.get("ops", []))
@@ -1195,7 +1197,7 @@ def _everything(
                 else None,
                 did=_did(reader, shown[0]) if len(shown) == 1 and shown[0].get("status") == "applied" else None,
                 deciding=[waiting[i] for i in sorted(waiting)],
-                project=_request_project(reader, req, cs),
+                project=request_project(reader, req, cs),
                 request=req.id,
                 changeset=d["changeset"],
                 outcome=outcome,
@@ -1774,7 +1776,7 @@ def _one_text(reader: Any, action_id: str) -> str | None:
     return str(action.data["text"]) if action is not None and action.data.get("text") else None
 
 
-def _request_project(reader: Any, req: Any, changeset: dict[str, Any]) -> str | None:
+def request_project(reader: Any, req: Any, changeset: dict[str, Any]) -> str | None:
     """The one project a request's work is about, for its line's tag: the project the person named for it, else the
     project of what it is about, else the source's only one, else the one project every change it made names. None when
     it is about none or several."""

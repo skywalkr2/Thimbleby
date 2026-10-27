@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { project } from "../lib/records-fixtures";
@@ -92,8 +92,9 @@ test("a plugin panel is the current view when its address is", async () => {
 test("counts show where they help and an empty count shows nothing", async () => {
   show();
   const changed = await screen.findByRole("link", { name: /^What changed/ });
-  await within(changed).findByText("2");
-  expect(screen.getByRole("link", { name: /^Follow-ups/ })).toHaveTextContent("3");
+  await waitFor(() => expect(screen.getByRole("link", { name: /^Follow-ups/ })).toHaveTextContent("3"));
+  // What changed is the history: what waits is counted on Today, so it has no count even when the screen lists changes.
+  expect(changed).toHaveTextContent(/^What changed$/);
   // Today counts its own lines (the queue's and the add-ons'), the same number its heading gives; the views with no count
   // have none.
   await within(screen.getByRole("link", { name: /^Today/ })).findByText("4");

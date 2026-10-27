@@ -3936,6 +3936,7 @@
   "sides.empty.people": "Nobody on the {side} side.",
   "sides.empty.files": "No files on the {side} side.",
   "sides.empty.handled": "Nothing handled on the {side} side.",
+  "sides.empty.changes": "Nothing changed on the {side} side.",
   "queue.act.file_them": "File them",
   "queue.act.look_closer": "Look closer",
   "queue.held.q.close": "Close '{item}'?",

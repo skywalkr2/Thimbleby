@@ -633,7 +633,7 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   `send_back` s, `copy` c, `edit` e, `move` m (opens the stage menu of the card or row that has the cursor), `undo` u, `hand_in` n, `help` ?, `ask` /, `next_pane` ], `previous_pane` [. The last two
   move between the panes of a screen (7.7).
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
-- `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
+- `toast_seconds` (7; how long a plain message stays: a toast with Undo or another button stays until dismissed or replaced; 0 keeps every toast until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
 - `handled_group` (`kind`): how Handled for you groups what it lists to start with, `kind` (what the item is: bills,
   orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled) or
@@ -1038,7 +1038,7 @@ the last `undo_grace_minutes` that names it, before or after, keeps it, and a se
 reference typed in) keeps it for good. The backup key is exempt. The worker sweeps every few minutes
 (`engine/kept_secrets.py`). *Built so far:* all of the above (`tests/test_kept_secrets_cleanup.py`,
 `web/src/components/Sources.test.tsx` (the removal line)). *Left:* a secret kept before this index existed isn't listed, so
-it is never swept; with `ui.toast_seconds` at 0 an Undo toast can outlast the grace.
+it is never swept; an Undo toast can outlast the grace, since it stays until dismissed or replaced.
 
 Each of these small files is written whole (a temporary file replaced over the old one), so a reader never finds half of
 one, and a change that reads, changes and writes one holds that file's lock, so changes made at the same moment (request

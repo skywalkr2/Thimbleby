@@ -447,6 +447,53 @@ def test_every_held_op_has_a_line_on_today_whatever_holds_it(api):
     assert len(keys) == len(set(keys))
 
 
+def test_a_held_op_keeps_its_line_on_today_when_its_hand_in_is_dismissed(api):
+    """Dismissing a hand-in sets its request aside; what the assistant held from it still waits for the person, and
+    Today's line is the only place to answer, so every held op keeps a line whatever happened to the hand-in."""
+    from engine.storage import WriteContext
+
+    client, base, worker = api
+    store = client.app_store
+    person = fixture_records(DEMO_B, "person")[2]
+    raw = "The Harvest " + "Fair needs a plan. Call me on 555 0100."
+    ops = [
+        {"op": "project.add", "name": "Harvest " + "Fair"},
+        {
+            "op": "person.contact",
+            "person": person["id"],
+            "kind": "phone",
+            "value": "555 0100",
+            "evidence": {"quote": "Call me on 555 0100"},
+        },
+    ]
+    set_responder(lambda task: json.dumps({"summary": "Done.", "ops": ops}))
+    request = client.post(f"{base}/handin", json={"note": "", "pasted": raw}).json()["request"]
+    assert worker.run_pending() == 1
+    held = _held_ops(store)
+    assert held, "the hand-in holds something for the person"
+    assert [h for h in held if not _has_a_line(client.get(f"{base}/today/queue").json(), *h)] == []
+
+    # The request stops on a later try (the only states a hand-in can be dismissed in), still holding its changeset.
+    found = store.read().get("request", request)
+    with store.transaction() as tx:
+        tx.update(
+            "request",
+            request,
+            {"state": "needs_you", "waiting": "Stopped on a later try"},
+            WriteContext(actor="engine", trust="trusted", op="test.queue"),
+            read_version=found.version,
+        )
+    found = store.read().get("request", request)
+    assert found.data["changeset"]
+    done = client.post(f"{base}/requests/{request}/dismiss", json={"read_version": found.version})
+    assert done.status_code == 200
+    assert store.read().get("request", request).data["dismissed"] is True
+    lines = client.get(f"{base}/today/queue").json()
+    assert [h for h in held if not _has_a_line(lines, *h)] == []
+    keys = [line["key"] for line in lines]
+    assert len(keys) == len(set(keys))
+
+
 def test_no_line_key_repeats_when_mail_was_handled_and_its_count_is_not_a_line_of_the_queue(tmp_path):
     """The count of what was handled for the person is a quiet line of the rail; the queue holds only what they do, so
     handled mail adds no line and repeats no key."""

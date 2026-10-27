@@ -69,7 +69,7 @@ test("held work is a line that starts with the restart and counts the waiting re
   show([line("restart", { count: 3 })]);
   const row = await screen.findByRole("region", { name: "Restart needed" });
   expect(row).toHaveTextContent("Restart to resume 3 waiting tasks");
-  expect(row).toHaveTextContent("Work will resume after you restart the app.");
+  expect(row).toHaveTextContent("Anything the assistant does waits until you restart the app.");
 });
 
 test("one waiting request is said in the singular", async () => {
@@ -102,7 +102,7 @@ test("a paused account is a line that names the account, the reset time and the 
   const { onOpenAiAccounts } = show([paused({ count: 2 })]);
   const row = await screen.findByRole("region", { name: "Paused account" });
   expect(row).toHaveTextContent(/Pick another account, or wait: main's limit resets at 3:30\s?PM \(2 requests waiting\)/);
-  expect(row).toHaveTextContent("Work resumes when the limit resets.");
+  expect(row).toHaveTextContent("The assistant carries on when the limit resets.");
   expect(row.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   await user.click(within(row).getByRole("button", { name: "Open AI accounts" }));
   expect(onOpenAiAccounts).toHaveBeenCalledTimes(1);
@@ -127,7 +127,7 @@ test("work waiting for an internet connection is one line that starts with check
   show([line("offline", { key: "offline", waiting_since: `${localDate(new Date())}T14:05:00-05:00`, count: 3 })]);
   const row = await screen.findByRole("region", { name: "No internet connection" });
   expect(row).toHaveTextContent(/^No internet connectionCheck your internet connection: 3 tasks have been waiting since 2:05\s?PM/);
-  expect(row).toHaveTextContent("Work resumes when your internet connection returns.");
+  expect(row).toHaveTextContent("The assistant carries on when your internet connection returns.");
   expect(row.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   expect(within(row).queryByRole("button")).toBeNull();
 });

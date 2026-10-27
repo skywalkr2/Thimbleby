@@ -1469,7 +1469,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/changes")
     def changes() -> list[ChangeItem]:
         from engine.titles import head_of, subject_of, title_for
-        from engine.today_queue import watched_kinds
+        from engine.today_queue import request_project, watched_kinds
 
         people = People(store, cfg)
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
@@ -1539,6 +1539,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     changeset=view,
                     mail_item=mail.get((watched.get("source"), watched.get("key"))) if watched else None,
                     intake=d.get("intake"),
+                    project=request_project(store.read(), req, cs.data if cs is not None else {}),
                     title=_title_view(
                         title_for(
                             d,

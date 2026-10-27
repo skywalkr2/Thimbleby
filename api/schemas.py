@@ -832,6 +832,12 @@ class ChangeItem(BaseModel):
         description="The id of the newly added source whose first read (or look further back) took this in, so its "
         "results can be listed together.",
     )
+    project: str | None = Field(
+        None,
+        description="The one project the request's work is about (the project named for it, else that of what it is "
+        "about, else its source's only one, else the one its changes name); none when it is about none or several, so "
+        "the side filter shows it under every choice.",
+    )
 
 
 class UndoReport(BaseModel):

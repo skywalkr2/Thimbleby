@@ -13,6 +13,9 @@ function Pusher(props: { undo?: () => void }) {
       <button type="button" onClick={() => push({ message: "Fixed", action: { label: "Start", run: () => undefined } })}>
         fixed
       </button>
+      <button type="button" onClick={() => push({ message: "Plain" })}>
+        plain
+      </button>
       <button type="button" onClick={undoLast}>
         undo last
       </button>
@@ -84,12 +87,12 @@ test("a toast goes by itself after its time, unless the pointer is on it", async
       <Pusher />
     </ToastProvider>,
   );
-  act(() => screen.getByRole("button", { name: "fixed" }).click());
-  expect(within(region()).getByText("Fixed")).toBeInTheDocument();
+  act(() => screen.getByRole("button", { name: "plain" }).click());
+  expect(within(region()).getByText("Plain")).toBeInTheDocument();
   act(() => {
     vi.advanceTimersByTime(2100);
   });
-  expect(within(region()).queryByText("Fixed")).toBeNull();
+  expect(within(region()).queryByText("Plain")).toBeNull();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -158,6 +161,44 @@ test("a repeated message without its own wording says how many times", async () 
   expect(within(region()).getByText("Reviewed and filed. (2 times)")).toBeInTheDocument();
 });
 
+test("a toast with Undo or another action stays past its time until it is dismissed, and a note with no action still goes", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }));
+  render(
+    <ToastProvider seconds={2}>
+      <Pusher undo={() => undefined} />
+    </ToastProvider>,
+  );
+  act(() => screen.getByRole("button", { name: "fixed" }).click());
+  act(() => screen.getByRole("button", { name: "push" }).click());
+  act(() => screen.getByRole("button", { name: "plain" }).click());
+  act(() => {
+    vi.advanceTimersByTime(60000);
+  });
+  expect(within(region()).getByText("Fixed")).toBeInTheDocument();
+  expect(within(region()).getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  expect(within(region()).queryByText("Plain")).toBeNull();
+  act(() => within(region()).getAllByRole("button", { name: "Dismiss" })[0].click());
+  expect(within(region()).getAllByRole("button", { name: "Dismiss" })).toHaveLength(1);
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+test("toasts that stay do not pile up: a fourth replaces the oldest of three", async () => {
+  vi.useFakeTimers();
+  render(
+    <ToastProvider seconds={2}>
+      <Pusher undo={() => undefined} />
+    </ToastProvider>,
+  );
+  for (let i = 0; i < 5; i++) act(() => screen.getByRole("button", { name: "push" }).click());
+  act(() => {
+    vi.advanceTimersByTime(60000);
+  });
+  expect(within(region()).getAllByRole("button", { name: "Undo" })).toHaveLength(3);
+  vi.useRealTimers();
+});
+
 test("reduced motion does not keep a toast longer: it goes after its time like any other", async () => {
   vi.useFakeTimers();
   vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }));
@@ -166,11 +207,11 @@ test("reduced motion does not keep a toast longer: it goes after its time like a
       <Pusher />
     </ToastProvider>,
   );
-  act(() => screen.getByRole("button", { name: "fixed" }).click());
+  act(() => screen.getByRole("button", { name: "plain" }).click());
   act(() => {
     vi.advanceTimersByTime(2100);
   });
-  expect(within(region()).queryByText("Fixed")).toBeNull();
+  expect(within(region()).queryByText("Plain")).toBeNull();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -182,22 +223,22 @@ test("a toast waits while the pointer or the cursor is on it, and goes once both
       <Pusher />
     </ToastProvider>,
   );
-  act(() => screen.getByRole("button", { name: "fixed" }).click());
-  const toast = within(region()).getByText("Fixed").parentElement!;
+  act(() => screen.getByRole("button", { name: "plain" }).click());
+  const toast = within(region()).getByText("Plain").parentElement!;
   act(() => {
     toast.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
   });
   act(() => {
     vi.advanceTimersByTime(5000);
   });
-  expect(within(region()).getByText("Fixed")).toBeInTheDocument();
+  expect(within(region()).getByText("Plain")).toBeInTheDocument();
   act(() => {
     toast.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
   });
   act(() => {
     vi.advanceTimersByTime(2100);
   });
-  expect(within(region()).queryByText("Fixed")).toBeNull();
+  expect(within(region()).queryByText("Plain")).toBeNull();
   vi.useRealTimers();
 });
 

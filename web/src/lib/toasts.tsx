@@ -207,13 +207,15 @@ function ToastView(props: { toast: Toast; seconds: number; onDismiss: () => void
   const { seconds, onDismiss } = props;
   const { count } = props.toast;
   const held = over || within;
-  // Reduced motion means no animation, not longer messages: the time is the setting's, and it starts again when the
-  // message is pushed once more.
+  // A message that offers something to do (Undo or another action) stays until it is dismissed or replaced, so it can be
+  // reached by keyboard or after a pause; a plain note goes after the setting's time. Reduced motion means no animation,
+  // not longer messages, and the time starts again when the message is pushed once more.
+  const offers = props.toast.undoTokens.length > 0 || !!props.toast.action || (props.toast.more ?? []).length > 0;
   useEffect(() => {
-    if (held || seconds <= 0) return;
+    if (held || offers || seconds <= 0) return;
     const timer = window.setTimeout(onDismiss, seconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [held, seconds, onDismiss, count]);
+  }, [held, offers, seconds, onDismiss, count]);
   const actions = [props.toast.action, ...(props.toast.more ?? [])].filter((a): a is NonNullable<typeof a> => !!a);
   const message =
     count > 1 ? (props.toast.many ? props.toast.many(count) : t("toast.repeated", { message: props.toast.message, n: count })) : props.toast.message;
