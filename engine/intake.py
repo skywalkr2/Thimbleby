@@ -20,6 +20,7 @@ from typing import Any
 from engine import audience
 from engine.config import Config
 from engine.config.schema import ReportedSpeech
+from engine.html_text import as_text
 from engine.language_words import language_words
 from engine.names import People
 from engine.storage import Store, WriteContext
@@ -49,7 +50,7 @@ def hand_in(
     project: str | None = None,
     cfg: Config | None = None,
 ) -> HandedIn:
-    note, pasted = note.strip(), pasted.strip()
+    note, pasted = note.strip(), as_text(pasted).strip()
     if not note and not pasted:
         raise IntakeError("Nothing to hand in: add a note or paste something.")
     if project is not None and store.read().get("project", project) is None:

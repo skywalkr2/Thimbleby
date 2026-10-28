@@ -1,9 +1,10 @@
 # Known terms: names that mean the same thing everywhere, so the assistant never asks what they mean (design 6.22). It
-# holds only unmistakable names: countries, time zones, the names a mail program gives its folders, and widely used
-# services. Short abbreviations are left off on purpose, since two to four letters often mean something particular where
-# a person works (the glossary is where a workspace records such a meaning). Written for the core, by hand, not taken
-# from any outside list. Case is ignored and whole words are matched. The setting `language.known_terms_shipped` turns
-# the whole list off; `language.known_terms` adds a workspace's own words.
+# holds unmistakable names: countries, time zones, the names a mail program gives its folders, widely used services, the
+# names of common file types, and everyday abbreviations a mail carries. Other short abbreviations, state and province
+# codes among them (an address is recognized as a whole instead), are left off on purpose, since two to four letters often mean something particular where a person works
+# (the glossary is where a workspace records such a meaning). Written for the core, by hand, not taken from any outside
+# list. Case is ignored and whole words are matched. The setting `language.known_terms_shipped` turns the whole list off;
+# `language.known_terms` adds a workspace's own words.
 countries: [
   usa, uk, uae, america, canada, mexico, brazil, argentina, chile, colombia, peru, england, scotland, wales, ireland,
   france, germany, spain, italy, portugal, netherlands, belgium, switzerland, austria, sweden, norway, denmark, finland,
@@ -27,4 +28,11 @@ services: [
   skype, discord, dropbox, box, notion, trello, asana, jira, confluence, salesforce, hubspot, shopify, paypal, stripe,
   venmo, netflix, spotify, uber, airbnb, ebay, etsy, wikipedia, chrome, firefox, safari, edge,
   wordpress, mailchimp, canva, figma, evernote, zapier, docusign, quickbooks, xero,
+]
+file_types: [
+  pdf, doc, docx, xls, xlsx, ppt, pptx, csv, txt, rtf, odt, ods, html, htm, xml, json, zip, jpg, jpeg, png, gif, bmp,
+  tif, tiff, heic, svg, mp3, mp4, mov, wav, ics,
+]
+mail_abbreviations: [
+  faq, eta, rsvp, asap, fyi, tbd, tbc, tba, eod, aka, etc, zip, us, eu, am, pm, ok, fwd, cc, bcc,
 ]

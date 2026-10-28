@@ -23,7 +23,7 @@ from tests.test_learn_input import NOW, asked
 
 CASE_IDS = ("common-words-raise-no-term-question", "acronym-with-local-meaning-on-file-is-never-asked")
 #: Short abbreviations that often mean something particular where a person works.
-AMBIGUOUS = ("hr", "pr", "qa", "it", "id", "pa", "ceo", "cfo", "cto", "kpi", "roi", "pto", "api", "pdf", "url", "faq")
+AMBIGUOUS = ("hr", "pr", "qa", "it", "ceo", "cfo", "cto", "kpi", "roi", "pto", "api", "url")
 
 
 @pytest.fixture
@@ -95,16 +95,29 @@ def test_a_term_the_person_dropped_is_never_raised_again_whatever_the_day_or_the
 
 def test_the_shipped_list_holds_only_unmistakable_names():
     data = new_terms.load_yaml(new_terms.KNOWN_TERMS_FILE.read_text(encoding="utf-8"))
-    assert set(data) == {"countries", "time_zones", "mail_folders", "services"}
+    assert set(data) == {
+        "countries",
+        "time_zones",
+        "mail_folders",
+        "services",
+        "file_types",
+        "mail_abbreviations",
+    }
     shipped = new_terms.shipped_known()
     assert not [word for word in AMBIGUOUS if word in shipped]
     assert {"usa", "utc", "inbox", "github"} <= shipped
 
 
-def test_a_short_acronym_with_a_local_meaning_is_asked_unless_the_glossary_has_it(env):
+def test_a_bare_state_code_in_a_note_is_asked_since_it_may_mean_something_here(env):
     _, _, store = env
     (qid,) = scan_at(env, "Ask the PA to book the room.")
     assert new_terms.term_of(store.read().get("question", qid)) == "PA"
+
+
+def test_a_short_acronym_with_a_local_meaning_is_asked_unless_the_glossary_has_it(env):
+    _, _, store = env
+    (qid,) = scan_at(env, "Ask the BKR to book the room.")
+    assert new_terms.term_of(store.read().get("question", qid)) == "BKR"
 
 
 @pytest.mark.parametrize("template", [DEMO_A, DEMO_B])
@@ -120,7 +133,7 @@ def test_the_negative_cases_pass_in_both_workspaces_and_fail_when_the_rule_is_br
     assert not broken.passed and broken.forbidden == ["term_question=True"]
     # Without the glossary entry on file, the acronym is asked about and the case fails.
     unfiled = run_edited(monkeypatch, template, local, given=[])
-    assert not unfiled.passed and unfiled.forbidden == ["term_question=PA"]
+    assert not unfiled.passed and unfiled.forbidden == ["term_question=BKR"]
 
 
 def test_a_question_about_a_word_is_never_a_top_priority(env):

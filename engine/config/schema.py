@@ -2019,6 +2019,24 @@ class LanguageFile(FileModel):
         "Words that match a new-term pattern but are everyday abbreviations, never suggested as new "
         "terms. Case is ignored."
     )
+    address_patterns: list[str] | None = word_list(
+        "Patterns (regular expressions) for a postal address in an input: a street and number, a city with its "
+        "region and postal code, or a city and region. `{region}`, `{postal}` and `{country}` stand for the lists "
+        "below. The words inside an address found by one of them are never suggested as new terms. A pattern "
+        "that names a list with nothing in it is left out."
+    )
+    address_regions: list[str] | None = word_list(
+        "The codes a state, province or other region has in an address (written as is, capitals matter). Used "
+        "where an address pattern says `{region}`."
+    )
+    address_postal_codes: list[str] | None = word_list(
+        "Patterns (regular expressions) for the postal codes of the countries addresses are read in. Used where an "
+        "address pattern says `{postal}`."
+    )
+    address_countries: list[str] | None = word_list(
+        "The names a country has on the last line of an address (written as is, capitals matter). Used where an "
+        "address pattern says `{country}`."
+    )
     known_terms_shipped: bool = Field(
         True,
         description="Never ask what an unmistakable name means: the core's list of country names, time zone names, "
@@ -2166,12 +2184,23 @@ class LanguageFile(FileModel):
         "longer note, or one with a link, is handed in as the person's own words.",
     )
 
-    @field_validator("title_skip", "new_term_patterns", "version_patterns")
+    @field_validator("title_skip", "new_term_patterns", "version_patterns", "address_postal_codes")
     @classmethod
     def _patterns_compile(cls, value: list[str] | None) -> list[str] | None:
         for pattern in value or []:
             try:
                 re.compile(pattern)
+            except re.error as exc:
+                raise ValueError(f"{pattern!r} is not a regular expression: {exc}") from exc
+        return value
+
+    @field_validator("address_patterns")
+    @classmethod
+    def _address_patterns_compile(cls, value: list[str] | None) -> list[str] | None:
+        for pattern in value or []:
+            filled = re.sub(r"\{(?:region|postal|country)\}", "(?:x)", pattern)
+            try:
+                re.compile(filled)
             except re.error as exc:
                 raise ValueError(f"{pattern!r} is not a regular expression: {exc}") from exc
         return value

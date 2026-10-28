@@ -6,8 +6,8 @@ given:
 - kind: glossary_entry
   id: GLOSS-90
   fields:
-    text: 'PA: the person who books the rooms'
-    term: PA
+    text: 'BKR: the person who books the rooms'
+    term: BKR
     meaning: the person who books the rooms
     confidence: confirmed
     origin: person
@@ -18,12 +18,12 @@ given:
 pasted: |-
   From: Kofi Mensah-Hale
 
-  Please ask the PA to book the meeting room for Thursday afternoon.
+  Please ask the BKR to book the meeting room for Thursday afternoon.
 forbid:
-- term_question: PA
+- term_question: BKR
 - op: glossary.add
 allow:
 - fact
 stub_answer:
-  summary: A request to ask whoever books rooms; the word PA is already in the glossary.
+  summary: A request to ask whoever books rooms; the word BKR is already in the glossary.
   ops: []

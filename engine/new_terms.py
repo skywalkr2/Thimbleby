@@ -5,13 +5,13 @@ box. The day's term questions reach Today as one line that opens them together (
 is not knowledge, so nothing is proposed for the knowledge tabs; only the person's answer becomes a glossary term, as
 their own words (`keep_answer`).
 
-What looks like a term is set by patterns in the language settings. Never asked about: the words in
-`language.new_term_ignore`, the core's list of well-known words (`language.known_terms_shipped`) and the person's own
-(`language.known_terms`), the names of the configured sources and connectors, a word the glossary, the people, the
-projects, the organizations or the teams already have, and a term the person already dismissed or was already asked
-about. A term question the person dropped is a term never raised again in this workspace. Mail the app sorted as
-automatic, bulk or set aside raises none. At most `dispatch.knowledge.new_terms_per_input` are asked for one input
-and `dispatch.knowledge.new_terms_per_day` in one day.
+What looks like a term is set by patterns in the language settings. Never asked about: the words inside a web or mail
+address or a postal address (`engine/addresses.py`), the words in `language.new_term_ignore`, the core's list of
+well-known words (`language.known_terms_shipped`) and the person's own (`language.known_terms`), the names of the
+configured sources and connectors, a word the glossary, the people, the projects, the organizations or the teams
+already have, and a term the person already dismissed or was already asked about. A term question the person dropped is
+a term never raised again in this workspace. Mail the app sorted as automatic, bulk or set aside raises none. At most
+`dispatch.knowledge.new_terms_per_input` are asked for one input and `dispatch.knowledge.new_terms_per_day` in one day.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-from engine import knowledge
+from engine import addresses, knowledge
 from engine.automatic_mail import classify_automatic
 from engine.config import Config
 from engine.language_words import language_words
@@ -46,16 +46,19 @@ _STATUSES = ("active", "proposed")
 _OPEN = ("open", "sent")
 
 
-def candidates(text: str, patterns: list[str], ignore: list[str]) -> list[tuple[str, str]]:
+def candidates(
+    text: str, patterns: list[str], ignore: list[str], postal: list[str] | None = None
+) -> list[tuple[str, str]]:
     """The terms in a text that match one of the patterns, each once (case ignored) in the order they first appear,
-    with the line each was found on. Quoted lines, web and mail addresses, the first part of a record id, and the words
-    in `ignore` are left out."""
+    with the line each was found on. Quoted lines, web and mail addresses, postal addresses (found by the patterns in
+    `postal`, which may run over two lines), the first part of a record id, and the words in `ignore` are left out."""
     skipped = {word.lower() for word in ignore}
     found: list[tuple[int, int, str, str]] = []
-    for number, line in enumerate(text.splitlines()):
+    lines = text.splitlines()
+    for number, (line, shown) in enumerate(zip(lines, addresses.blank(text, postal or []).splitlines(), strict=True)):
         if line.lstrip().startswith(_QUOTED):
             continue
-        clean = _ADDRESSES.sub(lambda m: " " * len(m.group(0)), line)
+        clean = _ADDRESSES.sub(lambda m: " " * len(m.group(0)), shown)
         for pattern in patterns:
             for match in re.finditer(pattern, clean):
                 word = match.group(0)
@@ -213,7 +216,10 @@ def scan(store: Any, cfg: Config, request_id: str, text: str, now: datetime, *, 
     before = raised_terms(view)
     chosen: list[tuple[str, str]] = []
     for word, line in candidates(
-        text, language_words(cfg.language, "new_term_patterns"), language_words(cfg.language, "new_term_ignore")
+        text,
+        language_words(cfg.language, "new_term_patterns"),
+        language_words(cfg.language, "new_term_ignore"),
+        addresses.address_patterns(cfg.language),
     ):
         key = _key(word)
         if key in known or key in before:

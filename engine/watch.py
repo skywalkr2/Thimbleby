@@ -32,6 +32,7 @@ from pydantic import ValidationError
 from engine import audience, entry_rules, version_choices, versions
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.extract.attached import with_files_read
+from engine.html_text import as_text
 from engine.language_words import language_words
 from engine.names import People
 from engine.own_accounts import own_names
@@ -413,11 +414,15 @@ def _compare(
         if before is not None and before.data.get("deleted"):
             continue  # the person had its content deleted; only its marker is kept, so it isn't handed in again
         details = _details(item)
-        if before is not None and before.data["content_hash"] == digest:
-            if any(before.data.get(k) != v for k, v in details.items()):
-                # Only what it is changed (a message was opened, say): kept for Today, nothing to read again.
+        if before is not None and _same_words(ws, before, item.text, digest):
+            # Only what it is changed (a message was opened, say): kept for Today, nothing to read again. The text
+            # saved before markup was turned into text is the same words, so its hash moves to the new one.
+            kept_now = {**details, "content_hash": digest}
+            if before.data["content_hash"] != digest:
+                _keep_text(ws, item.text)  # the hash moves to text that must be there for the next comparison
+            if any(before.data.get(k) != v for k, v in kept_now.items()):
                 with store.transaction() as tx:
-                    tx.update("snapshot", before.id, details, _WATCHER, read_version=before.version)
+                    tx.update("snapshot", before.id, kept_now, _WATCHER, read_version=before.version)
             continue
         change = "new" if before is None else "changed"
         old = _read_text(ws, before.data["content_hash"]) if before is not None else None
@@ -906,6 +911,15 @@ def _waiting_for(tx: Any, source: str, key: str) -> list[Any]:
         if watched and watched["source"] == source and watched["key"] == key:
             found.append(request)
     return sorted(found, key=lambda r: str(r.data["created_at"]))
+
+
+def _same_words(ws: Any, before: Any, text: str, digest: str) -> bool:
+    """Whether an item read again says what was saved: the same hash, or saved text that was markup and reads as this
+    text."""
+    if before.data["content_hash"] == digest:
+        return True
+    saved = _read_text(ws, before.data["content_hash"])
+    return bool(saved) and as_text(saved) == text
 
 
 def _keep_text(ws: Any, text: str) -> str:

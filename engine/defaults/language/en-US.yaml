@@ -129,8 +129,28 @@ title_skip: [(hi|hello|hey|dear|good (morning|afternoon|evening)|greetings)\b,
   '-{2,}|_{2,}|>']
 # Patterns (regular expressions) for words that look like a system name or an acronym; matched as written.
 new_term_patterns: ['\b[A-Z]{2,}[0-9]*\b', '\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b']
-# Everyday abbreviations that match those patterns and are never suggested as new terms.
-new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB, PS, URGENT, NOTE, UPDATE, REMINDER]
+# Everyday abbreviations that match those patterns and are never suggested as new terms, and the status words the app writes itself in calendar text.
+new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB, PS, URGENT, NOTE, UPDATE, REMINDER, CONFIRMED, TENTATIVE, CANCELLED]
+
+# Postal addresses, so the words inside one (a street direction, a state code) are never taken for terms. The patterns
+# use {region}, {postal} and {country}, filled from the three lists after them: a street line and a city line (on one
+# line or two), a city with its region and postal code, a city and region, a post office box.
+address_patterns: [
+  '\b\d{1,6}[ \t]+[^\n]{1,80}?(?:\n[ \t]*[^\n]{1,60}?)?[ \t,]+(?:{region})[ \t]+(?:{postal})\b(?:[ \t,]*\n?[ \t]*(?:{country})(?!\w))?',
+  '\b[A-Z][A-Za-z.''-]+(?:[ \t]+[A-Z][A-Za-z.''-]+){0,3},?[ \t]+(?:{region})[ \t]+(?:{postal})\b(?:[ \t,]*\n?[ \t]*(?:{country})(?!\w))?',
+  '\b[A-Z][a-z.''-]+(?:[ \t]+[A-Z][a-z.''-]+){0,3},[ \t]+(?:{region})\b(?![ \t]+[a-z])(?:[ \t,]*\n?[ \t]*(?:{country})(?!\w))?',
+  '\bP\.?O\.?[ \t]+Box[ \t]+\d+\b',
+]
+# The codes of the states, districts and territories of the United States, its military mail codes, and the provinces and
+# territories of Canada.
+address_regions: [
+  AL, AK, AZ, AR, CA, CO, CT, DE, DC, FL, GA, HI, ID, IL, IN, IA, KS, KY, LA, ME, MD, MA, MI, MN, MS, MO, MT, NE, NV, NH,
+  NJ, NM, NY, NC, ND, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY, AS, GU, MP, PR, VI, AA, AE, AP,
+  AB, BC, MB, NB, NL, NS, NT, NU, "ON", PE, QC, SK, YT,
+]
+# United States ZIP codes (with the four-digit extension) and Canadian postal codes.
+address_postal_codes: ['\d{5}(?:-\d{4})?', '[A-Z]\d[A-Z][ \t]?\d[A-Z]\d']
+address_countries: [USA, US, U.S.A., U.S., United States of America, United States, Canada]
 
 # Reported speech: how a typed note that repeats someone else's words is recognized.
 reported_speech:

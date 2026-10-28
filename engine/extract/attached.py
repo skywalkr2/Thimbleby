@@ -1,4 +1,7 @@
-"""The files a source item carries, read as text and added to the item's own text.
+"""The text of a source item as the app reads it: its own words as plain text, with the files it carries read as text
+and added after them. This is the one place the text of every watched item passes before it is compared, stored or
+handed to the assistant, so markup that came in a part labeled as plain text (or in a description) is turned into text
+here (`engine/html_text.py`) and nothing after it ever sees a tag.
 
 A connector hands files as bytes and never parses them; the core reads each with its readers (a plugin's reader for
 the type first), cuts the text at the configured size with a mark, and appends it after the item's text, one block per
@@ -15,6 +18,7 @@ from typing import Any
 from engine.connectors import SourceItem
 from engine.extract import Unsupported, health, read_file
 from engine.extract.core import ExtractError
+from engine.html_text import as_text
 from engine.storage import WriteContext
 
 _FLAGGER = WriteContext(actor="watcher", trust="trusted", op="watch.unsupported_file")
@@ -22,7 +26,11 @@ MB = 1024 * 1024
 
 
 def with_files_read(ws: Any, store: Any, cfg: Any, item: SourceItem, where: str) -> SourceItem:
-    """The item with its files' text added after its own and its files taken out (they are read now, once)."""
+    """The item with its own text as plain text, its files' text added after it and its files taken out (they are
+    read now, once)."""
+    text = as_text(item.text)
+    if text != item.text:
+        item = replace(item, text=text)
     if not item.files:
         return item
     limits = cfg.storage.files
