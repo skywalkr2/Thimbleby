@@ -21,6 +21,8 @@
 | `appendix/sweep-settings.md` | Sweep 4, in full: every Settings section and control, plus the admin screens |
 | `appendix/auto-checks.md` | The automatic checks run on every screen opened, with each hit |
 | `shots/<sweep>/<name>.jpg` | 381 screenshots: every one a finding cites. Each name matches the appendix |
+| `visual/README.md` | The visual review: a score for every screen, shared component fixes (VC01 to VC13), findings by screen (VS01 to VS19), six mockups with before and after, visual exit criteria E9 to E12 |
+| `visual/appendix/`, `visual/mockups/`, `visual/before-after/` | The three visual reviews in full, the mockup pages and their renders, and side-by-side images of today's screen and the mockup |
 
 **Source ids:**
 - In the appendices: `S-` setup, `D-` daily use, `B-F` business, `T-` Settings.
@@ -37,7 +39,7 @@
   - **Sides don't work:** the side filter changes nothing, and people and connections can't be given a side.
   - **Reviews still bounce around:** a review sends the person away, multiplies lines, or doesn't remove what was rejected.
   - **Saves race:** quick changes are lost.
-- **Night mode looks finished everywhere,** and nothing scrolls sideways at phone width except one edge case (Y04). The visual system is not the problem now. The problem is what the screens say and do.
+- **Night mode works everywhere,** and nothing scrolls sideways at phone width except one edge case (Y04). The colours, type and tokens are sound, but the screens are not yet laid out like a modern app: the separate visual review in `visual/README.md` scores them 2.6 out of 5 on average and sets its own exit criteria (E9 to E12).
 
 **Counts after merging:**
 
