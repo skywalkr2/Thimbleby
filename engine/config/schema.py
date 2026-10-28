@@ -3044,7 +3044,7 @@ class VersionFamilies(FileModel):
 class AutomatedMail(FileModel):
     set_aside: bool = Field(
         True,
-        description="Set aside automated notices into the Automated notices section, with no AI run: a one-time "
+        description="Set aside automated notices into the Automated notices section, with no AI run, such as a one-time "
         "code, a sign-in alert or a security notice from a no-reply address, and bulk mail from an automated "
         "sender or in the mail service's updates category. It applies after the rules above, so a rule that "
         "keeps mail from a sender wins.",
