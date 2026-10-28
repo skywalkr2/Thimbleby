@@ -10,12 +10,12 @@ Where **Done when** is blank, the README's Fix for that item is the bar: a brows
 
 | ID | Sev | Area | Title | Sources | Done when | Status | Commit | Test | Checked |
 |---|---|---|---|---|---|---|---|---|---|
-| X01 | P0 | Data and trust | Quick changes are silently lost | T-P0-1, S-P0-1 | three edits within a second, on any settings page and on the side boxes, all persist after a reload (guard 4). | To do | | | |
+| X01 | P0 | Data and trust | Quick changes are silently lost | T-P0-1, S-P0-1 | three edits within a second, on any settings page and on the side boxes, all persist after a reload (guard 4). | Fixed (X01's Settings-page loss didn't reproduce in 20 browser runs; the reproduced loss was in saves that read settings first) | b3d4e0a | Walkthrough.test.tsx (quick ticks), MessageStyle.test.tsx, e2e/quick-edits.spec.ts (guard) | |
 | X02 | P0 | Data and trust | Setup can't be left while a step is missing | S-P0-3 | the skip-everything journey reloads Today three times and stays there. | To do | | | |
 | X03 | P0 | Data and trust | "Paste a list" saves junk as people, and setup can't remove anyone | S-P0-2; also B-F41 and S-P2-15 | a test pastes those lines and gets two people with relations, and no junk. | To do | | | |
 | X04 | P0 | Data and trust | Backups has no backup folder, no Back up now and no restore | T-P0-2, T-P2-9 | a journey sets a folder in Settings, backs up, restores, and sees the result on screen. | To do | | | |
-| X05 | P0 | Data and trust | "Choose what to read" makes duplicate sources that multiply items | T-P1-13 | adding the same folder twice is refused, and a nonsense folder is refused with a plain reason. | To do | | | |
-| X06 | P0 | Data and trust | An unsent to-do shows as "Sent today", and settles its own follow-up | D-P1-3 | a test makes a to-do for someone else and checks it is under To send only, until Mark sent moves it. | To do | | | |
+| X05 | P0 | Data and trust | "Choose what to read" makes duplicate sources that multiply items | T-P1-13 | adding the same folder twice is refused, and a nonsense folder is refused with a plain reason. | Fixed (existing twins aren't merged; the folder box is still typed, see notes) | b3d4e0a | tests/test_source_folders_once.py, e2e/journeys-mail.spec.ts J2c | |
+| X06 | P0 | Data and trust | An unsent to-do shows as "Sent today", and settles its own follow-up | D-P1-3 | a test makes a to-do for someone else and checks it is under To send only, until Mark sent moves it. | Fixed (design 6.33: an untold to-do is only to send; a promise is never to send) | b3d4e0a | tests/test_untold_todo_one_state.py | |
 | X07 | P1 | Setup | "Your promises" says nothing was found when something was | S-P1-1, D-P2-19, S-P2-11, S-P2-12 |  | To do | | | |
 | X08 | P1 | Setup | A mailbox, calendar or folder is added without a check, then fails with the wrong reason | S-P1-2, T-P1-14 |  | To do | | | |
 | X09 | P1 | Setup | "Another mail or calendar" and "Add a connection" read like an admin console | S-P1-3, S-P1-4, D-P1-23, T-P2-15, T-P2-11 |  | To do | | | |
