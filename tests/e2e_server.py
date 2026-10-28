@@ -12,9 +12,11 @@ folder off and on, for the step about having none.
 from __future__ import annotations
 
 import argparse
+import atexit
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -287,7 +289,11 @@ def main() -> None:
         time_machine.travel(moment, tick=True).start()
     stress = layout_strings() if args.layout_stress else {}
 
-    tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
+    # One folder per port, cleared when the next app on that port starts, so stopped runs leave at most one behind.
+    tmp = Path(tempfile.gettempdir()) / f"cockpit-e2e-port-{args.port}"
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True)
+    atexit.register(shutil.rmtree, tmp, ignore_errors=True)
     if args.just_me:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
