@@ -779,13 +779,91 @@ describe("each screen", () => {
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     // The question names the business as it is typed.
-    const works = await screen.findByLabelText(`What does ${SHOP} work on?`);
+    const works = await screen.findByLabelText(`Which projects does ${SHOP} have?`);
     await user.click(works);
     await user.paste(`- ${WORKS_ON[0]}\n${WORKS_ON[1]}\n\n2. ${WORKS_ON[2]}\n${WORKS_ON[1]}`);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: SHOP, kind: "business" }]);
     expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: what the business is goes in its own box and is kept as its description; only the projects list becomes projects", async () => {
+    const user = userEvent.setup();
+    const sentence = `${SHOP} is an independent shop.`;
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    // A separate, optional box asks what it is, above the list of its projects.
+    const about = await screen.findByLabelText(`What is ${SHOP}?`);
+    const list = screen.getByLabelText(`Which projects does ${SHOP} have?`);
+    expect(about.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(about).not.toBeRequired();
+    await user.type(about, sentence);
+    await user.click(list);
+    await user.paste(`${WORKS_ON[0]}\n${WORKS_ON[1]}`);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: SHOP, kind: "business", summary: sentence }]);
+    // The description never becomes a project.
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.slice(0, 2).map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: a business with only a description and no projects can go on", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        { "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }) },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
+    // No description, no list: the business is saved with its name alone, and nothing is added as a project.
+    expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: SHOP, kind: "business" }]);
+    expect(calls.some((c) => c.route === "POST projects")).toBe(false);
+  });
+
+  test("Work: a saved business has its own description box above the box for more projects, and a changed description is saved on the business", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith([{ ...side("PRJ-3", "business", SHOP, true), summary: "An old sentence." }]),
+          "POST projects/PRJ-3": () => ({ ok: true }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
+        { step: "work" },
+      ),
+    );
+    open();
+    const about = await screen.findByLabelText(`What is ${SHOP}?`);
+    expect(about).toHaveValue("An old sentence.");
+    const more = screen.getByLabelText(`Add more projects to ${SHOP}`);
+    expect(about.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.clear(about);
+    await user.type(about, "A new sentence.");
+    await user.click(more);
+    await user.paste(WORKS_ON[0]);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST projects")).toBe(true));
+    expect(calls.filter((c) => c.route === "POST projects/PRJ-3").map((c) => c.body)).toEqual([{ summary: "A new sentence." }]);
+    expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual([{ name: WORKS_ON[0], parent: "PRJ-3" }]);
   });
 
   test("Work: after what a business works on there is one closed line to group some of them; with no group named nothing is grouped and the word program never shows", async () => {
@@ -803,7 +881,7 @@ describe("each screen", () => {
     open();
     await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
-    await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
+    await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
     await user.paste(WORKS_ON.join("\n"));
     const line = screen.getByText("Do some of these belong together? Give the group a name");
     expect(line.closest("details")).not.toHaveAttribute("open");
@@ -829,7 +907,7 @@ describe("each screen", () => {
     open();
     await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
-    await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
+    await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
     await user.paste(WORKS_ON.join("\n"));
     await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
     // No tick boxes before the group has a name.
@@ -865,7 +943,7 @@ describe("each screen", () => {
     open();
     await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
-    await user.click(await screen.findByLabelText(`What does ${SHOP} work on?`));
+    await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
     await user.paste(WORKS_ON.join("\n"));
     await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
     await user.type(screen.getByLabelText("Group name"), "Trade customers");
@@ -925,7 +1003,7 @@ describe("each screen", () => {
     const names = screen.getAllByLabelText("What is your business called?");
     expect(names).toHaveLength(2);
     await user.type(names[1], STUDIO);
-    await user.click(await screen.findByLabelText(`What does ${STUDIO} work on?`));
+    await user.click(await screen.findByLabelText(`Which projects does ${STUDIO} have?`));
     await user.paste(WORKS_ON[0]);
     // Each extra business can be taken out again before it is saved.
     expect(screen.getByRole("button", { name: `Remove this business: ${STUDIO}` })).toBeInTheDocument();

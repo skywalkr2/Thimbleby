@@ -132,6 +132,39 @@ test("the project form offers Inside (never itself), Language with the inherited
   expect(calls.find((c) => c.route === "POST projects/PRJ-2")?.body).toMatchObject({ parent: null, language: "en-AU", budget_usd: 120.5 });
 });
 
+test("a new project is inside a side: the choice is grouped by side with no None, and the only side is chosen already", async () => {
+  const user = userEvent.setup();
+  const calls = api([project("PRJ-firm", "Orchard Press", { side: true }), project("PRJ-book", "The spring catalog", { parent: "PRJ-firm" })], { "POST projects": () => ({ id: "PRJ-new" }) });
+  renderApp(<Projects />);
+  await user.click(await screen.findByRole("button", { name: "Add a project" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a project" });
+  const inside = await within(dialog).findByRole("combobox", { name: "Inside" });
+  await waitFor(() => expect(inside).toHaveValue("PRJ-firm"));
+  const group = within(inside).getByRole("group", { name: "Orchard Press" });
+  expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["Orchard Press", "The spring catalog"]);
+  expect(within(inside).queryByRole("option", { name: "None" })).toBeNull();
+  await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Autumn list");
+  await user.click(within(dialog).getByRole("button", { name: "Add a project" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects")?.body).toMatchObject({ name: "Autumn list", parent: "PRJ-firm" });
+});
+
+test("with several sides a new project waits for the person to say which side, and offers no None", async () => {
+  const user = userEvent.setup();
+  api([project("PRJ-me", "Personal", { side: true, no_end: true }), project("PRJ-firm", "Orchard Press", { side: true })]);
+  renderApp(<Projects />);
+  await user.click(await screen.findByRole("button", { name: "Add a project" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a project" });
+  const inside = await within(dialog).findByRole("combobox", { name: "Inside" });
+  await waitFor(() => expect(within(inside).getAllByRole("group")).toHaveLength(2));
+  expect(inside).toHaveValue("");
+  expect(within(inside).queryByRole("option", { name: "None" })).toBeNull();
+  await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Autumn list");
+  expect(within(dialog).getByRole("button", { name: "Add a project" })).toBeDisabled();
+  await user.selectOptions(inside, "PRJ-firm");
+  expect(within(dialog).getByRole("button", { name: "Add a project" })).toBeEnabled();
+});
+
 test("a project with no project around it names the workspace as what an empty language follows", async () => {
   const user = userEvent.setup();
   api([]);

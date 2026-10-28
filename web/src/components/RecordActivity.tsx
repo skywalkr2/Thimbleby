@@ -6,6 +6,7 @@ import { type S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { forMeeting } from "../lib/meetings";
 import { useFieldLabel } from "../lib/records";
+import { usePlaceText } from "../lib/place";
 import { useSaid } from "../lib/repeat";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -47,6 +48,7 @@ const joined = (parts: ReactNode[]): ReactNode =>
 export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
   const { t, tn, has } = useWords();
   const factLine = useFactLine();
+  const place = usePlaceText();
   const { page } = props;
   const showOpen = props.part !== "rest";
   const showRest = props.part !== "open";
@@ -82,7 +84,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
                 meta={joined([
                   (a.owners ?? []).join(", "),
                   a.due && t("op.meta.due", { date: day(a.due) }),
-                  page.kind !== "project" && a.project_name,
+                  page.kind !== "project" && place({ name: a.project_name, side: a.side_name }),
                   a.series && a.series_title && <MeetingLabel key="m" series={a.series} title={a.series_title} on={a.meeting_on} />,
                   hasOrigin(a.origin) && <OriginLink key="o" origin={a.origin} inline />,
                 ])}
@@ -134,7 +136,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
                   (c.done_by ?? []).length ? t("record.done_by", { names: (c.done_by ?? []).join(", ") }) : t("record.closed"),
                   c.reported_by && t("record.reported_by", { name: c.reported_by }),
                   c.done_on && monthDay(c.done_on),
-                  page.kind !== "project" && c.project_name,
+                  page.kind !== "project" && place({ name: c.project_name, side: c.side_name }),
                 ])}
               />
             ))}

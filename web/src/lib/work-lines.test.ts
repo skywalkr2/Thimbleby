@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { workLines } from "./work-lines";
+import { sideSummary, workLines } from "./work-lines";
 
 describe("workLines", () => {
   test("one name to a line, blank lines dropped", () => {
@@ -22,5 +22,15 @@ describe("workLines", () => {
 
   test("nothing typed is nothing", () => {
     expect(workLines("  \n \n")).toEqual([]);
+  });
+});
+
+describe("sideSummary", () => {
+  it("keeps a sentence as one tidy line and never splits it", () => {
+    expect(sideSummary("  An independent   publishing\nimprint.  ")).toBe("An independent publishing imprint.");
+  });
+
+  it("is empty when nothing was written", () => {
+    expect(sideSummary(" \n ")).toBe("");
   });
 });

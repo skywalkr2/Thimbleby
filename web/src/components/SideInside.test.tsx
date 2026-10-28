@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
@@ -8,7 +9,7 @@ import { RecordPage } from "./RecordPage";
 // Personal's page and each side's page (design 6.32, 7.8): the top project says what is inside it, and never calls itself a
 // project; for a person with no side beside Personal no word of the page is about projects, stages or owners.
 
-const PERSONAL = project("PRJ-personal", "Personal", { no_end: true });
+const PERSONAL = project("PRJ-personal", "Personal", { no_end: true, side: true });
 const AREA = project("PRJ-area", "Home", { parent: "PRJ-personal", no_end: true, open_actions: 2, open_questions: 1 });
 const SIDE = { project: "PRJ-side", kind: "business" as const, name: "Orchard Press" };
 const BOOK = project("PRJ-book", "The spring catalog", { parent: "PRJ-side", open_actions: 3 });
@@ -40,11 +41,11 @@ const page = (id: string, name: string): S["RecordPageView"] => ({
   activity: [],
 });
 
-function show(id: string, name: string, sides: Array<typeof SIDE>) {
+function show(id: string, name: string, sides: Array<typeof SIDE>, fields: Record<string, unknown> = {}, extra: Record<string, (body: unknown) => unknown> = {}) {
   // With no side the workspace holds Personal and what is inside it; with a side, that side and its project too.
-  const projects = [PERSONAL, AREA, ...(sides.length ? [OTHER, project(SIDE.project, SIDE.name), BOOK] : [])];
-  fakeApi({
-    [`GET record?kind=project&id=${id}`]: () => ({ kind: "project", id, version: 2, fields: { id, name }, long_text: [] }),
+  const projects = [PERSONAL, AREA, ...(sides.length ? [OTHER, project(SIDE.project, SIDE.name, { side: true, summary: "An independent publishing imprint.", aliases: ["Orchard"] }), BOOK] : [])];
+  const calls = fakeApi({
+    [`GET record?kind=project&id=${id}`]: () => ({ kind: "project", id, version: 2, fields: { id, name, ...fields }, long_text: [] }),
     "GET kinds/project": () => ({ kind: "project", fields: [] }),
     [`GET record-pages/${id}?kind=project`]: () => page(id, name),
     [`GET projects/${id}/knows`]: () => knows(id, name),
@@ -56,8 +57,10 @@ function show(id: string, name: string, sides: Array<typeof SIDE>) {
     [`GET plugin-actions?kind=project&id=${id}`]: () => [],
     [`GET task-kinds?kind=project&id=${id}`]: () => [],
     "GET setup/business": () => ({ business: sides.length > 0, name: sides[0]?.name ?? null, personal: PERSONAL.id, sides, chosen: null }),
+    ...extra,
   });
   renderApp(<RecordPage kind="project" id={id} onBack={() => {}} />);
+  return calls;
 }
 
 test("with no side besides Personal its page lists its areas, with what is open in each, and calls nothing a project", async () => {
@@ -111,4 +114,42 @@ test("a project that is not the top of a side lists nothing inside it", async ()
   await screen.findByRole("heading", { level: 1, name: OTHER.name });
   expect(screen.queryByRole("region", { name: "Areas" })).toBeNull();
   expect(screen.queryByRole("region", { name: "Projects" })).toBeNull();
+});
+
+test("a side's Edit details is a small drawer with only Name, Other names and Description, never the project form", async () => {
+  const user = userEvent.setup();
+  show(SIDE.project, SIDE.name, [SIDE]);
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  const drawer = await screen.findByRole("dialog", { name: `Edit ${SIDE.name}` });
+  expect(within(drawer).getByRole("textbox", { name: "Name" })).toHaveValue(SIDE.name);
+  expect(within(drawer).getByRole("textbox", { name: /Other names/ })).toHaveValue("Orchard");
+  expect(within(drawer).getByRole("textbox", { name: "Description" })).toHaveValue("An independent publishing imprint.");
+  // The first field has the cursor.
+  await waitFor(() => expect(within(drawer).getByRole("textbox", { name: "Name" })).toHaveFocus());
+  for (const projectOnly of [/Target/, /Status/, /Phase/, /Priority/, /Group/, /Owner/, /Your role/, /Inside/, /Language/, /Budget/]) {
+    expect(within(drawer).queryByLabelText(projectOnly)).toBeNull();
+  }
+  expect(screen.queryByRole("dialog", { name: "Edit project" })).toBeNull();
+});
+
+test("saving a side's details sends only its name, other names and description", async () => {
+  const user = userEvent.setup();
+  const calls = show(SIDE.project, SIDE.name, [SIDE], {}, { [`POST projects/${SIDE.project}`]: () => ({ ok: true }) });
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  const drawer = await screen.findByRole("dialog", { name: `Edit ${SIDE.name}` });
+  const description = within(drawer).getByRole("textbox", { name: "Description" });
+  await user.clear(description);
+  await user.type(description, "A small publisher.");
+  await user.click(within(drawer).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === `POST projects/${SIDE.project}`)).toBe(true));
+  expect(calls.find((c) => c.route === `POST projects/${SIDE.project}`)?.body).toEqual({ name: SIDE.name, aliases: ["Orchard"], summary: "A small publisher." });
+});
+
+test("a side's Details list shows no project-only rows, only its name, other names and description", async () => {
+  show(SIDE.project, SIDE.name, [SIDE], { status: "Open", phase: "Drafting", owner: "PER-1", role: "run", language: "en-US", summary: "An independent publishing imprint.", aliases: ["Orchard"] });
+  const details = await screen.findByRole("region", { name: "Details" });
+  expect(await within(details).findByText("An independent publishing imprint.")).toBeInTheDocument();
+  expect(within(details).queryByText("Open")).toBeNull();
+  expect(within(details).queryByText("Drafting")).toBeNull();
+  expect(within(details).queryByText("PER-1")).toBeNull();
 });

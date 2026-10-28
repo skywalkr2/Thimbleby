@@ -202,9 +202,9 @@ test("a change's line says what was done, as what it was, not as a count of thin
   expect(await screen.findByText(/Added 3 to-dos, Asked 1 question, Filed 1 note, Helper did 1 thing/)).toBeInTheDocument();
 });
 
-function noteChange(project: string | null): S["ChangeItem"] {
+function noteChange(project: string | null, side_name: string | null = null): S["ChangeItem"] {
   const base = change("REQ-9");
-  const op = { ...base.changeset!.ops[0], op: "note", title: "A thought", evidence: null, meta: { owners: [], project } };
+  const op = { ...base.changeset!.ops[0], op: "note", title: "A thought", evidence: null, meta: { owners: [], project, side_name } };
   return { ...base, changeset: { ...base.changeset!, ops: [op] } };
 }
 
@@ -231,6 +231,21 @@ test("a filed note says which project it went under", async () => {
   fakeApi({ "GET changes": () => [noteChange("A project")] });
   renderApp(<WhatChanged />);
   expect(await screen.findByText("Filed a note under A project")).toBeInTheDocument();
+});
+
+test("a note filed on a side and in none of its projects says so, never that it went under a project", async () => {
+  fakeApi({ "GET changes": () => [noteChange(null, "Orchard Press")] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Filed a note in Orchard Press, not in a project")).toBeInTheDocument();
+  expect(screen.queryByText(/under Orchard Press/)).toBeNull();
+});
+
+test("an action filed on a side shows the side as not in a project in its meta line", async () => {
+  const base = change("REQ-9");
+  const op = { ...base.changeset!.ops[0], op: "action.add", title: "Send the proof", evidence: null, meta: { owners: ["Robin Sample"], project: null, side_name: "Orchard Press", action_status: "open" } };
+  fakeApi({ "GET changes": () => [{ ...base, changeset: { ...base.changeset!, ops: [op] } }] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Robin Sample · Orchard Press: not in a project")).toBeInTheDocument();
 });
 
 test("a filed note with no project says so", async () => {

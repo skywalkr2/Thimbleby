@@ -5,6 +5,7 @@ import { useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
+import { PlaceOptions } from "./PlaceOptions";
 import { ProjectDrawer } from "./ProjectForm";
 
 /** The choice that opens the add form; no project id can look like it. */
@@ -45,11 +46,7 @@ export function ProjectPicker(props: {
         onChange={(e) => (e.target.value === ADD ? setAdding(true) : props.onChange(e.target.value))}
       >
         <option value="">{props.empty ?? t("project.choose")}</option>
-        {rows.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
+        <PlaceOptions projects={rows} />
         <option value={ADD}>{t("project.add_option")}</option>
       </select>
       {adding && <ProjectDrawer onClose={close} onSaved={(projectId) => props.onChange(projectId)} />}

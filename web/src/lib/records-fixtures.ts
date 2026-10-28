@@ -6,6 +6,7 @@ export const project = (id: string, name: string, extra: Partial<S["ProjectView"
   name,
   group: null,
   no_end: false,
+  side: false,
   status: null,
   phase: null,
   target: null,

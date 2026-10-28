@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { projectChoices } from "../lib/project-choices";
+import { PlaceOptions } from "./PlaceOptions";
 import { useRowKeys } from "../lib/keys";
 import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
@@ -226,11 +227,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
           </label>
           <select id={`${ids}-into`} autoFocus value={into} onChange={(e) => setInto(e.target.value)}>
             <option value="">{t("project_item.choose")}</option>
-            {choices.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
+            <PlaceOptions projects={projects.data ?? []} asParent />
           </select>
           <div className="row-end">
             <button type="button" className="btn quiet" onClick={close}>

@@ -48,6 +48,8 @@ export function RecordsTable<T>(props: {
   /** The row's menu, at the end (a row has no primary button when a click on it opens its pane). */
   actions?: (row: T) => ReactNode;
   actionsHeader?: string;
+  /** What a group's heading shows in place of its plain title (a link, say); a group that has one is headed even alone. */
+  groupHead?: (group: TableGroup<T>) => ReactNode | undefined;
 }) {
   const { t } = useWords();
   const narrow = useIsNarrow();
@@ -98,10 +100,10 @@ export function RecordsTable<T>(props: {
         </thead>
         {props.groups.map((group) => (
           <tbody key={group.id} aria-label={group.title}>
-            {props.groups.length > 1 && (
+            {(props.groups.length > 1 || props.groupHead?.(group) !== undefined) && (
               <tr className={styles.group}>
                 <th colSpan={span} scope="colgroup">
-                  {group.title} <span className={styles.groupCount}>· {group.rows.length}</span>
+                  {props.groupHead?.(group) ?? group.title} <span className={styles.groupCount}>· {group.rows.length}</span>
                 </th>
               </tr>
             )}

@@ -9,7 +9,7 @@ import { useAct } from "../lib/act";
 import { whenText as when } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { startCursor } from "../lib/cursor";
-import { projectChoices } from "../lib/project-choices";
+import { PlaceOptions } from "./PlaceOptions";
 import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
@@ -521,7 +521,6 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   })();
 
   const everyOptions = [...new Set([...EVERY_CHOICES, Number(every)])].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
-  const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
   // A kind from an add-on that signs in as the person has a list of accounts to read: the only one is chosen already,
   // and with several one must be chosen. The source's own account stays in the list when it was signed out since.
   const accountList = kind?.accounts ?? null;
@@ -720,16 +719,12 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               {t(kind.first_run === "intake" ? "sources.first_read_intake" : "sources.first_read_noted")}
             </p>
           )}
-          {adding && choices.length > 0 && (
+          {adding && (projects.data ?? []).length > 0 && (
             <div className="field">
               <label htmlFor={`${base}-project`}>{t(justMe ? "sources.field.area" : "sources.field.project")}</label>
               <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
                 <option value="">{t(justMe ? "sources.field.no_area" : "sources.field.no_project")}</option>
-                {choices.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
+                <PlaceOptions projects={projects.data ?? []} />
               </select>
             </div>
           )}

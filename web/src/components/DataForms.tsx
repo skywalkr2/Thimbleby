@@ -8,7 +8,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { firstField } from "../lib/cursor";
 import { problemText } from "../lib/problem";
-import { projectChoices } from "../lib/project-choices";
+import { PlaceOptions } from "./PlaceOptions";
 import { addonLabel, changedValues, type Draft } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -41,7 +41,6 @@ export function DataForms(props: { level?: 2 | 3 }) {
   // Nothing to show until some add-on offers a form.
   if (!forms.data || forms.data.length === 0) return null;
   const Heading = props.level === 2 ? "h2" : "h3";
-  const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
   return (
     <section className="panel-section" aria-labelledby={`${base}-title`}>
       <div className="heading">
@@ -50,16 +49,12 @@ export function DataForms(props: { level?: 2 | 3 }) {
         </Heading>
       </div>
       <p className="hint">{t("dataform.intro")}</p>
-      {choices.length > 0 && (
+      {(projects.data ?? []).length > 0 && (
         <div className="field">
           <label htmlFor={`${base}-project`}>{t("dataform.project")}</label>
           <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)} aria-describedby={`${base}-project-hint`}>
             <option value="">{t("dataform.no_project")}</option>
-            {choices.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
+            <PlaceOptions projects={projects.data ?? []} />
           </select>
           <p className="hint" id={`${base}-project-hint`}>
             {t("dataform.project_hint")}

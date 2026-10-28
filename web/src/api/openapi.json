@@ -7429,6 +7429,18 @@
             "description": "Name of the person who said it was done.",
             "title": "Reported By"
           },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it.",
+            "title": "Side Name"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -15542,6 +15554,18 @@
               }
             ],
             "title": "Series Title"
+          },
+          "side_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side it is filed on directly, when it is in a side and in no project of it.",
+            "title": "Side Name"
           },
           "text": {
             "title": "Text",

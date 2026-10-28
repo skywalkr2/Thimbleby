@@ -7,11 +7,14 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useFirstField } from "../lib/focus";
 import { languageChoices, languageLabel } from "../lib/languages";
+import { placeGroups } from "../lib/project-choices";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { Field, list } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
+import { PlaceOptions } from "./PlaceOptions";
+import { SideDrawer } from "./SideForm";
 import { ValueSelect } from "./ValueSelect";
 
 /** The value lists a project's fields take their choices from. */
@@ -26,7 +29,16 @@ const PROJECT_LISTS = {
 const ROLES = ["run", "design", "watch"] as const;
 type Role = (typeof ROLES)[number];
 
+/** The form for a project, or the small one for a side, which is a group and has no project fields. */
 export function ProjectDrawer(props: {
+  project?: S["ProjectView"];
+  onClose: () => void;
+  onSaved?: (id: string, name: string) => void;
+}) {
+  return props.project?.side ? <SideDrawer side={props.project} onClose={props.onClose} onSaved={props.onSaved} /> : <ProjectFormDrawer {...props} />;
+}
+
+function ProjectFormDrawer(props: {
   project?: S["ProjectView"];
   onClose: () => void;
   onSaved?: (id: string, name: string) => void;
@@ -52,13 +64,29 @@ export function ProjectDrawer(props: {
   const [budget, setBudget] = useState(p?.budget_usd != null ? String(p.budget_usd) : "");
   const [role, setRole] = useState<Role>(p?.role ?? "run");
   const key = p?.id ?? "new";
-  const others = (all.data ?? []).filter((x) => x.id !== p?.id);
+  // What it can be inside: every side and project except itself and what is inside it.
+  const inItself = new Set<string>(p ? [p.id] : []);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const x of all.data ?? []) {
+      if (!x.parent || !inItself.has(x.parent) || inItself.has(x.id)) continue;
+      inItself.add(x.id);
+      grew = true;
+    }
+  }
+  const others = (all.data ?? []).filter((x) => !inItself.has(x.id));
+  // A project is inside a side (design 6.32): a new one must say which, and the only side is chosen already.
+  const sides = placeGroups(all.data ?? [], (a, b) => `${a} › ${b}`).groups;
+  const lonely = sides.length === 1 ? sides[0].id : "";
+  const placed = !p || sides.some((g) => g.projects.some((c) => c.id === p.id));
+  const inside = parent || (!p ? lonely : "");
+  const mustChoose = sides.length > 0 && placed && inside === "";
   // An empty language means it follows the project it is inside, so that one's language is what the box suggests.
-  const inherited = others.find((x) => x.id === parent)?.language ?? (p && !p.language_own ? p.language : "");
+  const inherited = others.find((x) => x.id === inside)?.language ?? (p && !p.language_own ? p.language : "");
   const budgetNumber = budget.trim() === "" ? null : Number(budget);
   const save = async () => {
     const body = {
-      parent: parent || null,
+      parent: inside || null,
       language: language.trim() || null,
       budget_usd: budgetNumber,
       name: name.trim(),
@@ -119,7 +147,7 @@ export function ProjectDrawer(props: {
   };
   const dirty =
     p === undefined
-      ? [name, aliases, status, phase, group, priority, target, owner, summary, parent, language, budget].some((v) => v !== "")
+      ? [name, aliases, status, phase, group, priority, target, owner, summary, language, budget].some((v) => v !== "") || inside !== lonely
       : name !== p!.name ||
         aliases !== (p!.aliases ?? []).join(", ") ||
         status !== (p!.status ?? "") ||
@@ -129,12 +157,12 @@ export function ProjectDrawer(props: {
         target !== (p!.target ?? "") ||
         owner !== (p!.owner ?? "") ||
         summary !== (p!.summary ?? "") ||
-        parent !== (p!.parent ?? "") ||
+        inside !== (p!.parent ?? "") ||
         language !== (p!.language_own ? p!.language : "") ||
         budget !== (p!.budget_usd != null ? String(p!.budget_usd) : "") ||
         role !== p!.role;
   const formId = `project-form-${key}`;
-  const invalid = !name.trim() || (budgetNumber !== null && !(budgetNumber >= 0));
+  const invalid = !name.trim() || mustChoose || (budgetNumber !== null && !(budgetNumber >= 0));
   return (
     <Drawer
       open
@@ -150,7 +178,7 @@ export function ProjectDrawer(props: {
             type="submit"
             form={formId}
             disabled={invalid}
-            reason={t(!name.trim() ? "setup.name_missing" : "setup.budget_invalid")}
+            reason={t(!name.trim() ? "setup.name_missing" : mustChoose ? "setup.inside_missing" : "setup.budget_invalid")}
           >
             {t(p ? "setup.save" : "setup.add_project")}
           </Button>
@@ -209,13 +237,9 @@ export function ProjectDrawer(props: {
       )}
       <div className="field">
         <label htmlFor={`jw-${key}`}>{t("setup.inside")}</label>
-        <select id={`jw-${key}`} value={parent} onChange={(e) => setParent(e.target.value)}>
-          <option value="">{t("setup.inside_none")}</option>
-          {others.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.name}
-            </option>
-          ))}
+        <select id={`jw-${key}`} value={inside} required={mustChoose} onChange={(e) => setParent(e.target.value)}>
+          {mustChoose ? <option value="" disabled>{t("setup.inside_choose")}</option> : (sides.length === 0 || !placed) && <option value="">{t("setup.inside_none")}</option>}
+          <PlaceOptions projects={others} asParent />
         </select>
       </div>
       <div className="field">

@@ -1135,6 +1135,16 @@ test("an item with no project is gathered under No project, after the projects",
   expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "No project"]);
 });
 
+test("an item filed on a side and in none of its projects is grouped as the side, not in a project, never as a project", async () => {
+  const user = userEvent.setup();
+  const onSide = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "", side_name: "Orchard Press" }] }, sections[0]];
+  fakeApi({ "GET followups": () => onSide, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("radio", { name: "By project" }));
+  const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
+  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Orchard Press: not in a project"]);
+});
+
 test("a row's Open goes to that person's group, on the list that holds what is waiting on them", async () => {
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => byProject, "GET people": () => [] });

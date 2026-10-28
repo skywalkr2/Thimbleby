@@ -79,6 +79,13 @@ def page(
             names[key] = display_name(target.data) if target is not None else ""
         return names[key]
 
+    def place(project_id: str | None) -> tuple[str | None, str | None]:
+        """The project's name and, when it is a side (a group, design 6.32), the side's name instead, never both."""
+        if not project_id:
+            return None, None
+        side = sides.side_name_of(view, cfg, project_id) if cfg is not None else None
+        return (None, side) if side is not None else (name_of("project", project_id), None)
+
     def removed(ref_kind: str, ref_id: str) -> bool:
         """Whether the record a reference names is gone (only a reference that doesn't block deleting can be)."""
         target = view.get(ref_kind, ref_id, include_deleted=True)
@@ -132,7 +139,8 @@ def page(
                 "due": str(a.data["due"]) if a.data.get("due") else None,
                 "owners": [owner_of(o) for o in a.data.get("owners") or []],
                 "project": a.data.get("project"),
-                "project_name": name_of("project", a.data["project"]) if a.data.get("project") else None,
+                "project_name": place(a.data.get("project"))[0],
+                "side_name": place(a.data.get("project"))[1],
                 "origin": action_origin[a.id],
                 **meeting(a.data),
             }
@@ -151,7 +159,7 @@ def page(
             }
             for q in questions
         ],
-        "completed_actions": _completed(view, kind, record_id, name_of),
+        "completed_actions": _completed(view, kind, record_id, name_of, place),
         "facts": facts_about(view, kind, record_id),
         "fact_source": fact_source(view, record) if kind == "fact" else None,
         "filed": sides.filed_view(view, cfg, kind, record) if cfg is not None else None,
@@ -239,7 +247,7 @@ def _meeting(view: Any, data: dict[str, Any], today: date | None, here: ZoneInfo
     }
 
 
-def _completed(view: Any, kind: str, record_id: str, name_of: Any) -> list[dict[str, Any]]:
+def _completed(view: Any, kind: str, record_id: str, name_of: Any, place: Any = None) -> list[dict[str, Any]]:
     """The finished actions credited to this person (or in this project, or to this organization's people), newest
     first, each with who did the work and who said it was done. The one who only reported it is not credited."""
     if kind not in ("person", "project", "organization"):
@@ -259,12 +267,17 @@ def _completed(view: Any, kind: str, record_id: str, name_of: Any) -> list[dict[
             for row in view.ledger(kind="action", record_id=a.id)
             if row["field"] == "status" and row["after"] == "done"
         ]
+        if place is not None:
+            project_name, side_name = place(d.get("project"))
+        else:
+            project_name, side_name = (name_of("project", d["project"]) if d.get("project") else None), None
         found.append(
             {
                 "id": a.id,
                 "text": d["text"],
                 "project": d.get("project"),
-                "project_name": name_of("project", d["project"]) if d.get("project") else None,
+                "project_name": project_name,
+                "side_name": side_name,
                 "done_by": [name_of("person", p) for p in d.get("done_by") or []],
                 "reported_by": name_of("person", d["reported_by"]) if d.get("reported_by") else None,
                 "done_on": str(closed[-1]["at"])[:10] if closed else None,

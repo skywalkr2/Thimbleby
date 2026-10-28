@@ -42,6 +42,7 @@ import { HoldNote, useHold } from "./OnHold";
 import styles from "./OpenItems.module.css";
 import { OriginLink } from "./Origin";
 import { useHandToAssistant } from "./HandToAssistant";
+import { usePlaceText } from "../lib/place";
 import { ProjectTag } from "./ProjectTag";
 import { NotesTitle } from "./ActionNotes";
 import { useReassign } from "./ReassignAction";
@@ -68,7 +69,7 @@ export function OpenItems() {
   const questions = (items.data?.questions ?? []).filter((q) => onSide(sideOf((q.projects ?? [])[0]), side.choice));
 
   const projectName = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? actions.find((a) => a.project === id)?.project_name ?? id;
-  const projectChoices = [...new Set(tab === "actions" ? actions.map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
+  const projectChoices = [...new Set(tab === "actions" ? actions.filter((a) => !a.side_name).map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
     .map((id) => ({ id, name: projectName(id) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const personChoices = [
@@ -184,6 +185,7 @@ function join(parts: Array<ReactNode | null | undefined | false | "">): ReactNod
 
 function ActionRow(props: { action: OpenAction }) {
   const { t, tn } = useWords();
+  const place = usePlaceText();
   const act = useAct();
   const noted = useNoted();
   const a = props.action;
@@ -243,7 +245,7 @@ function ActionRow(props: { action: OpenAction }) {
         {t("repeat.mark")}
       </span>
     ),
-    a.project_name && <ProjectTag key="p" name={a.project_name} parent={a.parent_name} />,
+    place({ name: a.project_name, side: a.side_name, parent: a.parent_name }) && <ProjectTag key="p" name={a.project_name} side={a.side_name} parent={a.parent_name} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
@@ -313,6 +315,7 @@ function pillOf(a: OpenAction, t: T): ReactNode {
 
 function QuestionRow(props: { question: OpenQuestion }) {
   const { t, tn } = useWords();
+  const place = usePlaceText();
   const q = props.question;
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const focus = () => ref.current?.focus();
@@ -342,7 +345,7 @@ function QuestionRow(props: { question: OpenQuestion }) {
     q.since && t("open.q.since", { date: monthDay(q.since) }),
     q.waiting_days != null && tn("open.q.days", q.waiting_days),
     q.chases > 0 && tn("open.q.chases", q.chases),
-    q.project_name && <ProjectTag key="p" name={q.project_name} parent={null} />,
+    place({ name: q.project_name, side: q.side_name }) && <ProjectTag key="p" name={q.project_name} side={q.side_name} />,
   ]);
   return (
     <Row

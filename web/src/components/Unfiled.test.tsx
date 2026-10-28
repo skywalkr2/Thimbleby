@@ -74,6 +74,21 @@ test("with nothing unfiled the group isn't there, so no zero is ever shown", asy
   expect(screen.queryByText(/0 items/)).toBeNull();
 });
 
+test("File under… groups the places by side: the side's own choice is not in a project, and filing there says so", async () => {
+  const user = userEvent.setup();
+  const firm = project("PRJ-firm", "Orchard Press", { side: true });
+  const book = project("PRJ-book", "The spring catalog", { parent: "PRJ-firm" });
+  const calls = api({ "GET projects": () => [firm, book] });
+  renderApp(<Unfiled />);
+  const rows = within(await opened(user)).getAllByRole("listitem");
+  await user.click(within(rows[1]).getByRole("button", { name: "File under…" }));
+  const picker = within(rows[1]).getByRole("combobox", { name: /File under: Send the proof/ });
+  await waitFor(() => expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a project", "In Orchard Press, not in a project", "The spring catalog", "Add a project…"]));
+  await user.selectOptions(picker, "PRJ-firm");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST unfiled/file")?.body).toMatchObject({ project: "PRJ-firm" }));
+  expect(await screen.findByText("Filed 1 item in Orchard Press, not in a project.")).toBeInTheDocument();
+});
+
 test("File under… offers the projects and ends with Add a project…; choosing one files the item at once, with Undo", async () => {
   const user = userEvent.setup();
   const calls = api();

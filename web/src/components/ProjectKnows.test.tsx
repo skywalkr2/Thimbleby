@@ -8,7 +8,8 @@ import { ProjectKnows } from "./ProjectKnows";
 
 // What the assistant knows about a project (design 7.18), on its page: where its inputs come from and the last of each,
 // its facts with who they rest on and when (answer 29), the terms used there, who answers what, and what is still unknown
-// with the question asked for it. One row per thing; every section says so in plain words when it is empty.
+// with the question asked for it. One row per thing; a part with nothing in it is not shown, and a page with nothing in any
+// of them says so in one plain line.
 
 type View = S["ProjectKnowsView"];
 
@@ -64,7 +65,10 @@ test("a section for each part, headed by what the assistant knows, each row one 
   expect(await screen.findByRole("heading", { level: 2, name: "What Helper knows" })).toBeInTheDocument();
   await section("Sources");
   const titles = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-  expect(titles).toEqual(["Who reads it", "Sources", "Facts", "Terms used here", "Who answers what", "Still unknown"]);
+  expect(titles).toEqual(["Sources", "Facts", "Terms used here", "Who answers what", "Still unknown"]);
+  // Who reads it is one plain line under the heading, not a part of its own.
+  expect(screen.queryByRole("region", { name: "Who reads it" })).toBeNull();
+  expect(screen.getByText("Who reads it:", { exact: false })).toBeInTheDocument();
 });
 
 test("each source says how many inputs it gave and the last one, which opens", async () => {
@@ -151,13 +155,19 @@ test("what is still unknown lists only what a question was asked about, with who
   expect(unknown.textContent).not.toContain("Nobody has been asked");
 });
 
-test("a project nothing is known about says so in plain words in every section", async () => {
+test("a project nothing is known about shows no empty part, only one line that says so and who reads it", async () => {
   show(knows());
-  expect(await within(await section("Sources")).findByText("Nothing has come in about this project yet.")).toBeInTheDocument();
-  expect(within(await section("Facts")).getByText("No facts are recorded for this project yet.")).toBeInTheDocument();
-  expect(within(await section("Terms used here")).getByText("No terms are used here yet.")).toBeInTheDocument();
-  expect(within(await section("Who answers what")).getByText("No one is named for any kind of question here yet.")).toBeInTheDocument();
-  expect(within(await section("Still unknown")).getByText("Nothing is unknown right now.")).toBeInTheDocument();
+  expect(await screen.findByText("Helper doesn't know anything here yet; it learns from what comes in and what you tell it.")).toBeInTheDocument();
+  expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+  expect(screen.queryByText(/Nothing has come in|No facts are recorded|No terms are used|No one is named|Nothing is unknown/)).toBeNull();
+  expect(screen.getByText("Who reads it:", { exact: false })).toBeInTheDocument();
+});
+
+test("only the parts that have something are shown, and the line saying nothing is known goes away", async () => {
+  show(knows({ terms: [{ id: "GLOSS-1", term: "Bleed", meaning: "the part trimmed off", confidence: "confirmed" }] }));
+  await section("Terms used here");
+  expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Terms used here"]);
+  expect(screen.queryByText(/doesn't know anything here yet/)).toBeNull();
 });
 
 test("a load that fails says so with Try again", async () => {
@@ -171,26 +181,25 @@ test("a load that fails says so with Try again", async () => {
   expect(await section("Sources")).toBeInTheDocument();
 });
 
-test("the page says in words which accounts read the project and whether anything leaves the computer", async () => {
+test("the page says in one line which accounts read the project and whether anything leaves the computer", async () => {
   show(knows({ area: true, reading: { state: "local", levels: ["private"], readers: [{ account: "localbox", name: "Local server", leaves: false }] } }));
-  const part = await section("Who reads it");
-  expect(within(part).getByText("An area of your life: it never finishes, so it has no end day and is never behind.")).toBeInTheDocument();
-  expect(within(part).getByText("Read by Local server, which runs on this computer: nothing from it leaves this computer.")).toBeInTheDocument();
-  expect(within(part).getByText("Its material is marked private.")).toBeInTheDocument();
-  expect(within(part).getByText("Runs on this computer")).toBeInTheDocument();
+  const line = (await screen.findByText("Who reads it:", { exact: false })).closest("p")!;
+  expect(line).toHaveTextContent("Read by Local server, which runs on this computer: nothing from it leaves this computer.");
+  expect(line).toHaveTextContent("Its material is marked private.");
+  expect(screen.getByText("An area of your life: it never finishes, so it has no end day and is never behind.")).toBeInTheDocument();
+  // One line, not a card with a list of accounts.
+  expect(line.closest("ul")).toBeNull();
+  expect(screen.queryByRole("list")).toBeNull();
 });
 
 test("an account that sends what it reads away is named as such, and no account at all says nothing is sent", async () => {
   show(knows({ reading: { state: "away", levels: [], readers: [{ account: "hosted", name: "Hosted service", leaves: true }] } }));
-  const part = await section("Who reads it");
-  expect(within(part).getByText("Read by Hosted service. What it reads is sent away from this computer to reach it.")).toBeInTheDocument();
-  expect(within(part).getByText("Sent away from this computer")).toBeInTheDocument();
+  expect(await screen.findByText("Read by Hosted service. What it reads is sent away from this computer to reach it.", { exact: false })).toBeInTheDocument();
 });
 
 test("when no account may read it, the page says nothing from it is sent anywhere", async () => {
   show(knows({ reading: { state: "none", levels: ["private"], readers: [] } }));
-  const part = await section("Who reads it");
-  expect(within(part).getByText("No AI account of yours may read this, so nothing from it is sent anywhere.")).toBeInTheDocument();
+  expect(await screen.findByText("No AI account of yours may read this, so nothing from it is sent anywhere.", { exact: false })).toBeInTheDocument();
 });
 
 test("a fact from mail with a local address shows a short label, never the full address, and an outside link its real domain", async () => {

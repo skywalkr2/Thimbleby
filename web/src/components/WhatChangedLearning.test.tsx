@@ -121,6 +121,17 @@ test("This doesn't apply here narrows the entry by leaving a project out, at onc
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-9/undo"));
 });
 
+test("This doesn't apply here never offers a side as a project to leave out", async () => {
+  const user = userEvent.setup();
+  show([change("REQ-1", { applied: [entry()] })], { "GET projects": () => [project("PRJ-side", "Orchard Press", { side: true }), project("PRJ-1", "Spring launch", { parent: "PRJ-side" })] });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: `More actions for ${RULE}` }));
+  await user.click(screen.getByRole("menuitem", { name: "This doesn't apply here" }));
+  const pick = await screen.findByRole("combobox", { name: "Stop using this for" });
+  await waitFor(() => expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toContain("Spring launch"));
+  expect(within(pick).queryByRole("option", { name: "Orchard Press" })).toBeNull();
+});
+
 test("This doesn't apply here can retire the entry instead, with Undo", async () => {
   const user = userEvent.setup();
   const calls = show([change("REQ-1", { applied: [entry()] })], { "POST knowledge/LES-3/retire": () => ({ changeset: "CS-9" }) });

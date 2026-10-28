@@ -1620,6 +1620,9 @@ class OpenAction(BaseModel):
     owners: list[str] = Field(default_factory=list, description="The owners, written in the workspace's owner format.")
     project: str | None = None
     project_name: str | None = None
+    side_name: str | None = Field(
+        None, description="The side it is filed on directly, when it is in a side and in no project of it."
+    )
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
     series: str | None = Field(None, description="The series of meetings it is for, when it is on one.")
     series_title: str | None = None
@@ -1648,6 +1651,9 @@ class CompletedAction(BaseModel):
     text: str
     project: str | None = None
     project_name: str | None = None
+    side_name: str | None = Field(
+        None, description="The side it is filed on directly, when it is in a side and in no project of it."
+    )
     done_by: list[str] = Field(default_factory=list, description="Names of the people who did the work.")
     reported_by: str | None = Field(None, description="Name of the person who said it was done.")
     done_on: str | None = Field(None, description="The day it was closed, YYYY-MM-DD.")

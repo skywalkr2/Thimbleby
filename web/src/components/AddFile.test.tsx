@@ -99,7 +99,7 @@ test("what is typed goes with the file as the kind's details", async () => {
   const calls = fakeApi(routes({ [route]: () => ({ id: "FILE-1", name: "hello.txt" }) }));
   renderApp(<AddFile onClose={onClose} />);
   await user.selectOptions(await screen.findByRole("combobox", { name: "What it's for" }), "demo/report");
-  await user.selectOptions(screen.getByRole("combobox", { name: /Project/ }), "P-1");
+  await user.selectOptions(screen.getByRole("combobox", { name: /Where does it belong/ }), "P-1");
   await user.upload(fileInput(), text());
   await user.type(screen.getByRole("textbox", { name: "Title" }), "Harbor notes");
   await user.type(screen.getByRole("spinbutton", { name: /Pages/ }), "12");
@@ -191,4 +191,15 @@ test("the dialog opens with the cursor in its first field, the file to choose", 
   const dialog = await screen.findByRole("dialog");
   await waitFor(() => expect(dialog.contains(document.activeElement) && document.activeElement !== dialog).toBe(true));
   expect(["INPUT", "SELECT", "TEXTAREA"]).toContain(document.activeElement?.tagName);
+});
+
+test("where a file belongs is grouped by side: the side's own choice first, then its projects, a side never a project", async () => {
+  const side = { id: "P-side", name: "Orchard Press", side: true } as S["ProjectView"];
+  const book = { id: "P-book", name: "The spring catalog", parent: "P-side" } as S["ProjectView"];
+  fakeApi(routes({ "GET projects": () => [side, book] }));
+  renderApp(<AddFile onClose={() => undefined} />);
+  const where = await screen.findByRole("combobox", { name: /Where does it belong/ });
+  const group = await within(where).findByRole("group", { name: "Orchard Press" });
+  expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog"]);
+  expect(within(where).getAllByRole("option").map((o) => o.textContent)).not.toContain("Orchard Press");
 });

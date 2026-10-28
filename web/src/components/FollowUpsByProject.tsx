@@ -32,19 +32,24 @@ function waiting(days: number | null, chase: boolean, w: Words): string {
   return w.tn(chase ? "followups.waiting_pill.chase" : "followups.waiting_pill", days);
 }
 
+/** Where an item is for grouping: its project, or the side it is filed on directly as "<side>: not in a project". */
+function placeOf(project: string | null | undefined, side: string | null | undefined, w: Words): string {
+  return project || (side ? w.t("side.not_in_project", { side }) : "");
+}
+
 function itemsOf(section: Section, w: Words): Array<[string, Item]> {
   const base = { person: section.person, name: section.name, mine: section.is_pm };
   const out: Array<[string, Item]> = [];
   for (const q of section.questions) {
     const state = section.is_pm ? w.t("followups.by_project.yours") : q.status === "sent" ? waiting(q.waiting_days ?? 0, q.chase_due, w) : waiting(null, false, w);
-    out.push([q.project_name ?? "", { ...base, id: q.id, title: q.title, state, kind: "question", origin: q.origin }]);
+    out.push([placeOf(q.project_name, q.side_name, w), { ...base, id: q.id, title: q.title, state, kind: "question", origin: q.origin }]);
   }
   for (const q of section.later ?? []) {
-    out.push([q.project_name ?? "", { ...base, id: q.id, title: q.title, state: w.t("followups.by_project.later"), kind: "question", origin: q.origin }]);
+    out.push([placeOf(q.project_name, q.side_name, w), { ...base, id: q.id, title: q.title, state: w.t("followups.by_project.later"), kind: "question", origin: q.origin }]);
   }
   for (const a of section.actions) {
     const state = section.is_pm ? w.t("followups.by_project.yours") : waiting(a.told_days, a.chase_due, w);
-    out.push([a.project_name ?? "", { ...base, id: a.id, title: a.text, state, kind: "action", origin: a.origin }]);
+    out.push([placeOf(a.project_name, a.side_name, w), { ...base, id: a.id, title: a.text, state, kind: "action", origin: a.origin }]);
   }
   return out;
 }

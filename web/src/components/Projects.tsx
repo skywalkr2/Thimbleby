@@ -1,8 +1,9 @@
-// Projects (design 7.13, 7.14): the portfolio as a table, grouped by the configured grouping, with what the assistant filed
-// under no project gathered above it and the finished ones under Completed at the end (kept, with their group, never
-// removed). A row, Enter on it or its name opens the detail pane beside the table (over it when the priority columns would
-// not fit, a drawer on a narrower window); the name's link is the project's page for a new tab. Adding and editing happen in a
-// drawer.
+// Projects (design 7.13, 7.14): the portfolio as a table, with what the assistant filed under no project gathered above it
+// and the finished ones under Completed at the end (kept, with their group, never removed). With sides, each side is a
+// heading (a link to its page, never a row, with no Edit or Remove) and its projects sit under it; the counts are projects
+// only (design 6.32). With none, the table is grouped by the configured grouping. A row, Enter on it or its name opens the
+// detail pane beside the table (over it when the priority columns would not fit, a drawer on a narrower window); the name's
+// link is the project's page for a new tab. Adding and editing happen in a drawer.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
@@ -28,17 +29,39 @@ type Project = S["ProjectView"];
 
 /** The projects in groups: each configured group in turn, those with none, and last the finished ones. A project inside
  * another that is also listed follows it right away, whatever group it has itself; what is inside that follows in turn. */
-export function groupProjects(projects: Project[], labels: { none: string; open: string; completed: string }): TableGroup<Project>[] {
-  const byName = (a: Project, b: Project) => a.name.localeCompare(b.name);
-  const nest = (set: Project[]): Project[] => {
-    const ids = new Set(set.map((p) => p.id));
-    const inside = (parent: string) => set.filter((p) => p.parent === parent).sort(byName);
-    const walk = (p: Project, seen: Set<string>): Project[] => (seen.has(p.id) ? [] : [p, ...inside(p.id).flatMap((c) => walk(c, new Set([...seen, p.id])))]);
-    // A project listed with the one it is inside is not a top row of its own (a cycle keeps every project listed once).
-    const listed = set.filter((p) => !p.parent || !ids.has(p.parent) || p.parent === p.id).sort(byName).flatMap((p) => walk(p, new Set()));
-    const shown = new Set(listed.map((p) => p.id));
-    return [...listed, ...set.filter((p) => !shown.has(p.id)).sort(byName)];
+const byName = (a: Project, b: Project) => a.name.localeCompare(b.name);
+
+/** The projects of a set in reading order: a project inside another that is also in the set follows it right away. */
+function nest(set: Project[]): Project[] {
+  const ids = new Set(set.map((p) => p.id));
+  const inside = (parent: string) => set.filter((p) => p.parent === parent).sort(byName);
+  const walk = (p: Project, seen: Set<string>): Project[] => (seen.has(p.id) ? [] : [p, ...inside(p.id).flatMap((c) => walk(c, new Set([...seen, p.id])))]);
+  // A project listed with the one it is inside is not a top row of its own (a cycle keeps every project listed once).
+  const listed = set.filter((p) => !p.parent || !ids.has(p.parent) || p.parent === p.id).sort(byName).flatMap((p) => walk(p, new Set()));
+  const shown = new Set(listed.map((p) => p.id));
+  return [...listed, ...set.filter((p) => !shown.has(p.id)).sort(byName)];
+}
+
+/** The projects under their sides (design 6.32): a side is the heading of its group, never a row, in the order the workspace
+ * lists the sides; projects on no side follow, and the finished ones are last under Completed. */
+export function groupBySide(projects: Project[], labels: { loose: string; completed: string }): TableGroup<Project>[] {
+  const sides = projects.filter((p) => p.side);
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  const sideOf = (p: Project, seen: Set<string> = new Set()): string | null => {
+    const parent = p.parent ? byId.get(p.parent) : undefined;
+    if (!parent || seen.has(p.id)) return null;
+    return parent.side ? parent.id : sideOf(parent, new Set([...seen, p.id]));
   };
+  const live = projects.filter((p) => !p.side && !p.completed);
+  const groups: TableGroup<Project>[] = sides.map((s) => ({ id: `side:${s.id}`, title: s.name, rows: nest(live.filter((p) => sideOf(p) === s.id)) }));
+  const rest = nest(live.filter((p) => !sideOf(p)));
+  if (rest.length) groups.push({ id: "loose", title: labels.loose, rows: rest });
+  const done = projects.filter((p) => !p.side && p.completed).sort(byName);
+  if (done.length) groups.push({ id: "completed", title: labels.completed, rows: done });
+  return groups;
+}
+
+export function groupProjects(projects: Project[], labels: { none: string; open: string; completed: string }): TableGroup<Project>[] {
   const live = projects.filter((p) => !p.completed);
   const liveById = new Map(live.map((p) => [p.id, p]));
   // A project is in the group of the top project it is inside (a cycle stops at the first project seen twice).
@@ -70,7 +93,10 @@ export function Projects() {
   const [chosen, setChosen] = useState<string | null>(null);
   const all = projects.data ?? [];
   const selected = all.find((p) => p.id === chosen) ?? null;
-  const byId = new Map(all.map((p) => [p.id, p]));
+  // A side is a group: it is no project to list, count, pick or edit here, so what is inside it is looked up among projects.
+  const real = all.filter((p) => !p.side);
+  const sides = new Map(all.filter((p) => p.side).map((p) => [p.id, p]));
+  const byId = new Map(real.map((p) => [p.id, p]));
 
   const menu = (p: Project): MenuAction[] => [
     { id: "edit", label: t("setup.edit"), run: () => setEditing(p) },
@@ -139,14 +165,22 @@ export function Projects() {
                 ),
               }}
               columns={columns}
-              groups={groupProjects(all, { none: t("projects.group.none"), open: t("projects.group.open"), completed: t("projects.group.completed") })}
+              groups={
+                sides.size > 0
+                  ? groupBySide(all, { loose: t("projects.group.loose"), completed: t("projects.group.completed") })
+                  : groupProjects(real, { none: t("projects.group.none"), open: t("projects.group.open"), completed: t("projects.group.completed") })
+              }
+              groupHead={(g) => {
+                const side = g.id.startsWith("side:") ? sides.get(g.id.slice(5)) : undefined;
+                return side ? <a href={viewHref(recordView("project", side.id))}>{side.name}</a> : undefined;
+              }}
               rowKey={(p) => p.id}
               selected={chosen}
               onSelect={(p) => setChosen(p.id)}
               actionsHeader={t("people.col.actions")}
               actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
             />
-            <p className="hint">{tn("projects.count", all.length)}</p>
+            <p className="hint">{tn("projects.count", real.length)}</p>
           </>
         )}
       </ListDetail>

@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { projectChoices } from "../lib/project-choices";
+import { PlaceOptions } from "./PlaceOptions";
 import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -54,7 +54,6 @@ export function HandIn(props: { onClose: () => void }) {
   const [project, setProject] = useState("");
   const { justMe } = useSides();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
   const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const first = useRef<HTMLTextAreaElement>(null);
@@ -206,11 +205,7 @@ export function HandIn(props: { onClose: () => void }) {
             onChange={(e) => setProject(e.target.value)}
           >
             <option value="">{t("handin.project.none")}</option>
-            {choices.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
+            <PlaceOptions projects={projects.data ?? []} />
           </select>
           <span id="handin-project-hint" className="hint">
             {t("handin.project_hint")}

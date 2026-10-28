@@ -25,13 +25,13 @@ export function useFile() {
   const act = useAct();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   return async (items: Item[], project: string) => {
-    const name = projects.data?.find((p) => p.id === project)?.name ?? "";
-    // A project just added is not in the list the picker saw yet, so its name is looked for again.
-    const where = name || (await api.projects()).find((p) => p.id === project)?.name || "";
+    // A project just added is not in the list the picker saw yet, so it is looked for again.
+    const found = projects.data?.find((p) => p.id === project) ?? (await api.projects()).find((p) => p.id === project);
+    const where = found?.name ?? "";
     return act(
       () => api.fileUnfiled({ project, items: items.map((i) => ({ kind: i.kind, id: i.id, read_version: i.version })) }),
       (done) => ({
-        message: tn("unfiled.filed", items.length, { project: where }),
+        message: found?.side ? tn("unfiled.filed_side", items.length, { project: where }) : tn("unfiled.filed", items.length, { project: where }),
         undo: async () => {
           const report = await api.undo(done.changeset);
           if (!report.restored.length) throw new Error("not undone");

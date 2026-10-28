@@ -78,7 +78,7 @@ test("the day and the repeat are said back, the person is the default owner, and
   const who = screen.getByRole("combobox", { name: "Who does it" });
   await waitFor(() => expect(who).toHaveValue("P-1"));
   await user.selectOptions(who, "P-2");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Project (optional)" }), "PRJ-1");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Where does it belong? (optional)" }), "PRJ-1");
   expect(calls.some((c) => c.route === "POST todos")).toBe(false);
   await user.click(screen.getByRole("button", { name: "Add" }));
   await waitFor(() => expect(sent(calls)).toEqual({ text: "Send the weekly update", owners: ["P-2"], when: "Friday", project: "PRJ-1", repeat: "every Friday" }));
@@ -214,11 +214,11 @@ test("with no side besides Personal the form has no project to choose, and with 
   const first = renderApp(<OpenItems />);
   await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
   await screen.findByRole("textbox", { name: "What to do" });
-  await waitFor(() => expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("combobox", { name: /Where does it belong/ })).toBeNull());
   expect(screen.getByRole("combobox", { name: "Who does it" })).toBeInTheDocument();
   first.unmount();
   api([], { "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-side", kind: "business", name: "Orchard Press" }], chosen: "work" }) });
   renderApp(<OpenItems />);
   await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
-  expect(await screen.findByRole("combobox", { name: /Project/ })).toBeInTheDocument();
+  expect(await screen.findByRole("combobox", { name: /Where does it belong/ })).toBeInTheDocument();
 });

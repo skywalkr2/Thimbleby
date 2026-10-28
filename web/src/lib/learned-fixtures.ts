@@ -27,10 +27,11 @@ export function learnedLine(over: Partial<S["LearnedLine"]> = {}): S["LearnedLin
   return { signal: "SIG-1", kind: "sent_back", changeset: "CS-1", refs: ["CS-1"], state: "proposed", proposal: proposal(), ...over };
 }
 
-export function project(id: string, name: string): S["ProjectView"] {
+export function project(id: string, name: string, extra: Partial<S["ProjectView"]> = {}): S["ProjectView"] {
   return {
     id,
     no_end: false,
+    side: false,
     name,
     group: null,
     language: "en-US",
@@ -46,6 +47,7 @@ export function project(id: string, name: string): S["ProjectView"] {
     status: null,
     summary: null,
     target: null,
+    ...extra,
   };
 }
 

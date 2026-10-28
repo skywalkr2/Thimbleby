@@ -25,6 +25,7 @@ function file(id: string, name: string, extra: Partial<S["FileView"]> = {}): S["
 
 const project: S["ProjectView"] = {
   no_end: false,
+  side: false,
   id: "P-1",
   name: "Harbor project",
   group: null,
@@ -56,6 +57,18 @@ const proposal = (summary: string): S["ActionProposalView"] => ({
   choices: [],
   notes: [],
   expires_at: "2026-10-09T15:00:00Z",
+});
+
+test("a file filed on a side and in none of its projects says it is in the side, not in a project", async () => {
+  fakeApi({
+    "GET files": () => [file("FILE-3", "plan.txt", { project: "P-side" })],
+    "GET projects": () => [{ ...project, id: "P-side", name: "Orchard Press", side: true }],
+    "GET plugin-actions": () => [],
+    "GET plugin-actions?kind=file&id=FILE-3": () => [],
+  });
+  renderApp(<Files />);
+  const row = await screen.findByRole("listitem", { name: "plan.txt" });
+  expect(within(row).getByText(/In Orchard Press, not in a project · Added /)).toBeInTheDocument();
 });
 
 test("one row per file, with its facts in words and Open as the one primary action", async () => {

@@ -32,7 +32,7 @@ import { useChangeThis, type ChangeKind } from "./ChangeThis";
 import { PromiseWhy } from "./PromiseWhy";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SideFilter } from "./SideFilter";
-import { onSide, useSideFilter, useSideOf } from "../lib/sides";
+import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
 import { Highlighted } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
@@ -731,7 +731,8 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
 
   const labelOf = useFieldLabel();
   const factLine = useFactLine();
-  const meta = metaLine(op, t, labelOf);
+  const { justMe } = useSides();
+  const meta = metaLine(op, t, labelOf, !justMe);
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
@@ -888,7 +889,10 @@ function ReleaseAll(props: { cs: S["ChangesetView"] }) {
 function opLabel(op: S["OpView"], t: T, has: (key: string) => boolean): string {
   // Before it is decided an op is only what would happen ("Would close a to-do"); done is said once it is.
   const word = op.status === "held" && has(`op.would.${op.op}`) ? "op.would" : "op";
-  if (op.op === "note") return op.meta.project ? t(`${word}.note.under`, { project: op.meta.project }) : t(`${word}.note.none`);
+  if (op.op === "note") {
+    if (op.meta.project) return t(`${word}.note.under`, { project: op.meta.project });
+    return op.meta.side_name ? t(`${word}.note.in_side`, { side: op.meta.side_name }) : t(`${word}.note.none`);
+  }
   return t(`${word}.${op.op}`);
 }
 
@@ -898,14 +902,17 @@ function setValue(value: unknown): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? day(text) : text;
 }
 
-function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string): string {
+function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string, place: boolean): string {
   const bits: string[] = [];
   const m = op.meta;
   if (m.owners?.length) bits.push(m.owners.join(", "));
   if (m.to_send) bits.push(t("action.to_send"));
   if (m.to) bits.push(t("op.meta.to", { name: m.to }));
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
-  if (m.project && op.op !== "note") bits.push(m.project);
+  if (op.op !== "note") {
+    if (m.project) bits.push(m.project);
+    else if (m.side_name && place) bits.push(t("side.not_in_project", { side: m.side_name }));
+  }
   if (m.field) bits.push(t("op.meta.set", { field: labelOf(m.field), value: setValue(m.value) }));
   if (m.said_by && m.as_of) bits.push(day(m.as_of));
   if (m.role) bits.push(t("op.meta.role", { role: t(`role.${m.role}`) }));

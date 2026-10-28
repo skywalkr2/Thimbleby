@@ -11,6 +11,7 @@ const project = (id: string, name: string, extra: Partial<S["ProjectView"]> = {}
   id,
   name,
   no_end: false,
+  side: false,
   group: null,
   status: null,
   phase: null,
@@ -129,7 +130,7 @@ test("Private is sent with the person's own note too", async () => {
 
 test("the project choice starts at not sure, lists every project with sub-projects after their parent, and sends none", async () => {
   const { user, calls } = await setup();
-  const choice = screen.getByLabelText("Which project is this about?");
+  const choice = screen.getByLabelText("Where does it belong?");
   expect(choice).toHaveValue("");
   expect(choice).toHaveAccessibleDescription("Helps Helper file things in the right place.");
   await waitFor(() =>
@@ -149,7 +150,7 @@ test("the project choice starts at not sure, lists every project with sub-projec
 
 test("a chosen project is sent by its id, and choosing not sure again takes it back", async () => {
   const { user, calls } = await setup();
-  const choice = screen.getByLabelText("Which project is this about?");
+  const choice = screen.getByLabelText("Where does it belong?");
   await screen.findByRole("option", { name: "Harbor › Lighthouse" });
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.selectOptions(choice, "Harbor › Lighthouse");

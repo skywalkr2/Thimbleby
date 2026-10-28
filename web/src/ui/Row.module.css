@@ -5,6 +5,14 @@
   border-bottom: 1px solid var(--border); background: var(--surface); list-style: none; margin: 0;
 }
 .row:last-child { border-bottom: 0; }
+/* On a record page a list whose rows hold no pill at all drops the empty pill column, so its titles start at the left edge
+   (a list with any pill keeps the column, so its titles still line up). Written with no more weight than the rules above so
+   the phone layouts below still win. */
+:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row { grid-template-columns: minmax(0, 1fr) auto; }
+:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .pill { display: none; }
+:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .main { grid-column: 1; }
+:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .actions { grid-column: 2; }
+:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .extra { grid-column: 1 / -1; }
 .row:hover { background: var(--surface-hover); }
 .row:focus { outline: none; }
 .row:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }

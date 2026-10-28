@@ -392,7 +392,7 @@ describe("adding a source", () => {
     await user.clear(screen.getByLabelText("About options.depth"));
     await user.type(screen.getByLabelText("About options.depth"), "3");
     await user.selectOptions(screen.getByLabelText("How often to read"), "15");
-    await user.selectOptions(await screen.findByLabelText("Project (optional)"), "p1");
+    await user.selectOptions(await screen.findByLabelText("Where does it belong? (optional)"), "p1");
     await user.click(screen.getByRole("button", { name: "Add connection" }));
     await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
     expect(post(calls, "POST watch/sources")).toEqual({

@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
 import { day, wallTime } from "../lib/dates";
+import { usePlaceText } from "../lib/place";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed } from "./RailPanel";
@@ -45,6 +46,7 @@ function whenOf(m: Week["meetings"][number], t: T): string {
  * too, for where the schedule above already lists them. */
 export function WeekBody(props: { week: Week; listed?: ReadonlySet<string> }) {
   const { t, tn } = useWords();
+  const place = usePlaceText();
   const { week } = props;
   const meetings = week.meetings.filter((m) => !props.listed?.has(m.snapshot));
   if (week.due.length === 0 && week.waiting.length === 0 && meetings.length === 0) return <Empty text={t("today.week.empty", { date: day(week.last) })} />;
@@ -61,7 +63,7 @@ export function WeekBody(props: { week: Week; listed?: ReadonlySet<string> }) {
                 <div className="tb-what">
                   <div className="tb-title">{plainTitle(item.text, item.due)}</div>
                   <div className="tb-meta">
-                    {[item.kind === "hold" ? t("today.week.hold") : null, item.project_name, item.mine ? t("today.priorities.yours") : (item.owners ?? []).map((o) => o.name).join(", ")].filter(Boolean).join(" · ")}
+                    {[item.kind === "hold" ? t("today.week.hold") : null, place({ name: item.project_name, side: item.side_name }), item.mine ? t("today.priorities.yours") : (item.owners ?? []).map((o) => o.name).join(", ")].filter(Boolean).join(" · ")}
                   </div>
                 </div>
               </li>

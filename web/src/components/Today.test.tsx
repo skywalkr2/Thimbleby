@@ -979,6 +979,16 @@ test("a review line and a send line carry their project's tag when the screen ho
   expect(within(row("send")).getByText("Autumn book")).toBeInTheDocument();
 });
 
+test("a line filed on a side and in none of its projects carries the side as not in a project, never as a project", async () => {
+  show([
+    { ...review, project: "PRJ-1", project_name: "Spring book" },
+    { ...send, project: "PRJ-side", project_name: null, side_name: "Orchard Press" },
+  ]);
+  await screen.findByText("Look over 3 to-dos Helper added");
+  expect(within(row("send")).getByText("Orchard Press: not in a project")).toBeInTheDocument();
+  expect(within(row("send")).queryByText("Orchard Press")).toBeNull();
+});
+
 test("a review line with a project alone on the screen has no tag", async () => {
   show([{ ...review, project: "PRJ-1", project_name: "Spring book" }]);
   await screen.findByText("Look over 3 to-dos Helper added");

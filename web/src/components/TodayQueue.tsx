@@ -1211,7 +1211,7 @@ function QueueRow(props: {
   // A suggestion can be put off until something about it changes; what is due cannot.
   const menu: MenuAction[] = SUGGESTION_KINDS.has(line.kind) ? [...d.menu, { id: "not-now", label: t("queue.notnow"), run: () => notNow(line.key) }] : d.menu;
   useRowKeys(ref, { toggle: props.beside ? choose : opens ? () => select(!open) : undefined });
-  const project = props.mixed && line.project_name ? <ProjectTag name={line.project_name} parent={line.parent_name} className={styles.tag} /> : null;
+  const project = props.mixed && (line.project_name || line.side_name) ? <ProjectTag name={line.project_name} parent={line.parent_name} side={line.side_name} className={styles.tag} /> : null;
   const onClick = (event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest("button, a, input, textarea, select, [role='menuitem']")) return;
     if (props.beside) select(true);

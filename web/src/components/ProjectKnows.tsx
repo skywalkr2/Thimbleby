@@ -1,7 +1,8 @@
 // What the assistant knows about a project (design 7.18), on the project's page: where its inputs come from and the last
 // one from each, its facts with who they rest on and when (answer 29: the source label, "Inferred" and Confirm it), the
 // glossary terms used there, who answers what, and what is still unknown with the question asked for it. It reads, and the
-// one thing it changes is a fact the person confirms. Every row is one thing; a section with nothing says so in words.
+// one thing it changes is a fact the person confirms. Every row is one thing; a part with nothing in it is not shown, and a
+// page with nothing in any part says so in one line. Who reads it is one plain line, never a part of its own.
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -20,48 +21,41 @@ import { OriginLink } from "./Origin";
 const KINDS = ["pasted", "email", "calendar", "change", "note", "task"];
 const FIELDS = ["status", "phase", "target", "owner", "summary"] as const;
 
-function Part(props: { id: string; title: string; empty: string; count: number; children: ReactNode }) {
+function Part(props: { id: string; title: string; count: number; children: ReactNode }) {
+  if (props.count === 0) return null;
   return (
     <section aria-labelledby={props.id} className="record-section">
       <div className="heading">
         <h3 id={props.id}>{props.title}</h3>
-        {props.count > 0 && <span className="hint">{props.count}</span>}
+        <span className="hint">{props.count}</span>
       </div>
-      {props.count === 0 ? <p className="empty">{props.empty}</p> : <ul className="queue">{props.children}</ul>}
+      <ul className="queue">{props.children}</ul>
     </section>
   );
 }
 
 /** Which accounts may read the project's material, and whether reading it sends anything away from this computer (design
- * 6.32). It says so in words, and each account says where it runs, so nothing rests on a color. */
+ * 6.32): one plain line in words, with the accounts named in it, so nothing rests on a color. */
 function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
   const { t } = useWords();
   const { reading } = props;
   const names = reading.readers.map((r) => r.name).join(", ");
   const summary = reading.state === "none" ? t("knows.reading.none") : t(reading.state === "local" ? "knows.reading.local" : "knows.reading.away", { names });
   return (
-    <section aria-labelledby="knows-reading" className="record-section" data-reading={reading.state}>
-      <div className="heading">
-        <h3 id="knows-reading">{t("knows.reading")}</h3>
-      </div>
+    <>
       {props.area && <p className="hint">{t("knows.area")}</p>}
-      <p>{summary}</p>
-      {reading.levels.length > 0 && <p className="hint">{t("knows.reading.levels", { levels: reading.levels.join(", ") })}</p>}
-      {reading.readers.length > 0 && (
-        <ul className="queue">
-          {reading.readers.map((r) => (
-            <Row key={r.account} title={r.name} meta={t(r.leaves ? "knows.reading.sent_away" : "knows.reading.on_this_computer")} />
-          ))}
-        </ul>
-      )}
-    </section>
+      <p data-reading={reading.state}>
+        <strong>{t("knows.reading")}:</strong> {summary}
+        {reading.levels.length > 0 && ` ${t("knows.reading.levels", { levels: reading.levels.join(", ") })}`}
+      </p>
+    </>
   );
 }
 
-function Sources(props: { rows: S["KnowsSource"][]; plain: boolean }) {
+function Sources(props: { rows: S["KnowsSource"][] }) {
   const { t, tn } = useWords();
   return (
-    <Part id="knows-sources" title={t("knows.sources")} empty={t(props.plain ? "knows.sources.empty.plain" : "knows.sources.empty")} count={props.rows.length}>
+    <Part id="knows-sources" title={t("knows.sources")} count={props.rows.length}>
       {props.rows.map((s) => (
         <Row
           key={s.key}
@@ -75,11 +69,11 @@ function Sources(props: { rows: S["KnowsSource"][]; plain: boolean }) {
   );
 }
 
-function Facts(props: { rows: S["KnowsFact"][]; plain: boolean }) {
+function Facts(props: { rows: S["KnowsFact"][] }) {
   const { t } = useWords();
   const line = useFactLine();
   return (
-    <Part id="knows-facts" title={t("knows.facts")} empty={t(props.plain ? "knows.facts.empty.plain" : "knows.facts.empty")} count={props.rows.length}>
+    <Part id="knows-facts" title={t("knows.facts")} count={props.rows.length}>
       {props.rows.map((f) => (
         <Row
           key={f.id}
@@ -95,7 +89,7 @@ function Facts(props: { rows: S["KnowsFact"][]; plain: boolean }) {
 function Terms(props: { rows: S["KnowsTerm"][] }) {
   const { t } = useWords();
   return (
-    <Part id="knows-terms" title={t("knows.terms")} empty={t("knows.terms.empty")} count={props.rows.length}>
+    <Part id="knows-terms" title={t("knows.terms")} count={props.rows.length}>
       {props.rows.map((x) => (
         <Row
           key={x.id}
@@ -111,7 +105,7 @@ function Terms(props: { rows: S["KnowsTerm"][] }) {
 function Routing(props: { rows: S["KnowsRouting"][] }) {
   const { t } = useWords();
   return (
-    <Part id="knows-routing" title={t("knows.routing")} empty={t("knows.routing.empty")} count={props.rows.length}>
+    <Part id="knows-routing" title={t("knows.routing")} count={props.rows.length}>
       {props.rows.map((r) => (
         <Row
           key={r.id}
@@ -128,7 +122,7 @@ function Routing(props: { rows: S["KnowsRouting"][] }) {
 function Unknown(props: { rows: S["KnowsUnknown"][] }) {
   const { t } = useWords();
   return (
-    <Part id="knows-unknown" title={t("knows.unknown")} empty={t("knows.unknown.empty")} count={props.rows.length}>
+    <Part id="knows-unknown" title={t("knows.unknown")} count={props.rows.length}>
       {props.rows.map((u) => {
         const q = u.question;
         const field = u.field && FIELDS.includes(u.field) ? u.field : null;
@@ -152,11 +146,13 @@ function Unknown(props: { rows: S["KnowsUnknown"][] }) {
 }
 
 /** `plain` is for Personal when the person has no side beside it: the parts about who answers what, the terms used and what
- * is still unknown about its status, phase, target day and owner are left out, and the empty parts speak plainly. */
+ * is still unknown are left out. A part with nothing in it is never shown. */
 export function ProjectKnows(props: { id: string; plain?: boolean }) {
   const { t } = useWords();
   const knows = useQuery({ queryKey: ["project-knows", props.id], queryFn: () => api.projectKnows(props.id) });
   const data = knows.data;
+  // Nothing in any part: one line instead of a row of empty ones.
+  const nothing = !!data && data.sources.length + data.facts.length + (props.plain ? 0 : data.terms.length + data.routing.length + data.unknown.length) === 0;
   return (
     <section aria-labelledby="knows-title" className="record-section" data-project-knows="">
       <div className="heading">
@@ -167,8 +163,9 @@ export function ProjectKnows(props: { id: string; plain?: boolean }) {
       {data && (
         <>
           <Reading reading={data.reading} area={data.area} />
-          <Sources rows={data.sources} plain={!!props.plain} />
-          <Facts rows={data.facts} plain={!!props.plain} />
+          {nothing && <p className="empty">{t("knows.nothing_yet")}</p>}
+          <Sources rows={data.sources} />
+          <Facts rows={data.facts} />
           {!props.plain && (
             <>
               <Terms rows={data.terms} />

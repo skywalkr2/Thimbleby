@@ -266,6 +266,13 @@ def main() -> None:
         "work words; /__e2e/just-me says what was seeded",
     )
     parser.add_argument(
+        "--plain-stages",
+        action="store_true",
+        help="leave the stage list as the files hold it (no stage that starts work), so a side added while the app "
+        "runs is taken in at once: a changed setting that was also given as a flag waits for a restart and holds back "
+        "the rest",
+    )
+    parser.add_argument(
         "--clock-at",
         metavar="MOMENT",
         help="start the clock at this ISO 8601 moment in UTC (for example 2026-10-21T00:30:00Z); it keeps ticking",
@@ -307,13 +314,14 @@ def main() -> None:
         "storage.backups.targets": [{"path": str(tmp / "offsite"), "label": "test folder"}],
         # Backups only on request, so the browser tests see the state before the first one.
         "storage.backups.automatic": False,
+    }
+    if not args.plain_stages:
         # A stage that starts work when entered, so the browser tests can exercise waiting for the go.
-        "stages.types.project.stages": [
+        flags["stages.types.project.stages"] = [
             {"id": "planned", "label": "Planned"},
             {"id": "active", "label": "In progress", "starts": ["notes"]},
             {"id": "complete", "label": "Complete"},
-        ],
-    }
+        ]
     if stress:
         flags["storage.backups.automatic"] = False
         flags["watch.sources"] = LAYOUT_SOURCES

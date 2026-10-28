@@ -367,6 +367,24 @@ test("with a side the filters keep Project and No owner", async () => {
   expect(within(screen.getByRole("combobox", { name: "State" })).getByRole("option", { name: "No owner" })).toBeInTheDocument();
 });
 
+const BUSINESS = () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-side", kind: "business", name: "Orchard Press" }], chosen: "work" });
+
+test("a to-do filed on a side and in none of its projects shows the side as not in a project, and the project filter lists real projects only", async () => {
+  const user = userEvent.setup();
+  api(
+    { "GET setup/business": BUSINESS, "GET projects": () => [project("PRJ-personal", "Personal", { side: true }), project("PRJ-side", "Orchard Press", { side: true }), project("PRJ-1", "Harbor", { parent: "PRJ-side" })] },
+    { actions: [action("A-1", "Send the proof"), action("A-2", "Tidy the shelf", { project: "PRJ-side", project_name: "", side_name: "Orchard Press" })], questions: [] },
+  );
+  renderApp(<OpenItems />);
+  const [first, second] = await rows();
+  expect(first).toHaveTextContent("Harbor");
+  expect(second).toHaveTextContent("Orchard Press: not in a project");
+  const choice = screen.getByRole("combobox", { name: "Project" });
+  expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor"]);
+  await user.selectOptions(choice, "PRJ-1");
+  expect(await rows()).toHaveLength(1);
+});
+
 // ---- the to-do row's own acts: Drop, Change this, a reminder, a hold, what is learned (moved here with the row) ---------------
 
 test("Drop on a to-do asks why with the cursor in the field, acts at once and Undo takes it back", async () => {

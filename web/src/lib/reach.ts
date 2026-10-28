@@ -95,7 +95,8 @@ export function useReachNames() {
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   return {
-    projectList: projects.data ?? [],
+    // A side is a group, never a project to name in a scope.
+    projectList: (projects.data ?? []).filter((p) => !p.side),
     names: {
       projects: new Map((projects.data ?? []).map((p) => [p.id, p.name])),
       people: new Map((people.data ?? []).map((p) => [p.id, p.name])),

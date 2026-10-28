@@ -16,6 +16,7 @@ const words: TableWords = {
   notSent: "Not sent yet",
   noLink: "—",
   overdue: (d) => `${d} · overdue`,
+  side: (name) => `${name}: not in a project`,
   due_day: (iso) => `D(${iso})`,
   asked_day: (iso) => `A(${iso})`,
 };
@@ -86,6 +87,16 @@ test("actions go by due date with the overdue first and undated last; questions 
 test("only what the message holds is in the tables: told actions and sent questions are left out, and an empty kind has no table", () => {
   const found = tablesOf(section([action("A1", "Told", "2026-10-20", { told: "2026-10-01" })], [question("Q1", "Sent", "2026-10-01", { status: "sent" })]), words, TODAY);
   expect(found).toEqual([]);
+});
+
+test("an item filed on a side and in no project names the side as not in a project, never as a project", () => {
+  const found = tablesOf(
+    section([action("A1", "One", null, { project_name: "", side_name: "Orchard Press" })], [question("Q1", "Which?", "2026-10-10", { project_name: "", side_name: "Orchard Press" })]),
+    words,
+    TODAY,
+  );
+  expect(found[0].rows[0][0].text).toBe("Orchard Press: not in a project");
+  expect(found[1].rows[0][0].text).toBe("Orchard Press: not in a project");
 });
 
 test("the project is on every row and the fill-in column is last, widest, tinted in the HTML and holds nothing", () => {

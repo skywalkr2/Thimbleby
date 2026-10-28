@@ -33,6 +33,7 @@ import { NoteBox, useNoted } from "./NoteBox";
 import { NudgeLeftOut } from "./NudgeLeftOut";
 import { OriginLink } from "./Origin";
 import { OutsideStep } from "./OutsideStep";
+import { usePlaceText } from "../lib/place";
 import { ProjectTag } from "./ProjectTag";
 import { useReassign } from "./ReassignAction";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -561,10 +562,11 @@ function dueWords(a: S["FollowupAction"], t: T): string {
 /** An ask that is an action says its project first, as a tag with the project it is part of when there is one, then `rest`. */
 function ActionMeta(props: { a: S["FollowupAction"]; rest: string }) {
   const { a, rest } = props;
+  const where = usePlaceText()({ name: a.project_name, parent: a.parent_name, side: a.side_name });
   return (
     <>
-      {a.project_name && <ProjectTag name={a.project_name} parent={a.parent_name} />}
-      {a.project_name && rest && " · "}
+      {where && <ProjectTag name={a.project_name} parent={a.parent_name} side={a.side_name} />}
+      {where && rest && " · "}
       {rest}
     </>
   );
@@ -647,6 +649,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     notSent: t("followups.table.not_sent"),
     noLink: t("followups.table.no_link"),
     overdue: (date) => t("followups.table.overdue", { date }),
+    side: (side) => t("side.not_in_project", { side }),
     due_day: day,
     asked_day: monthDay,
   };
@@ -792,7 +795,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                     <span className="title">
                       <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
                     </span>
-                    {(a.project_name || dueWords(a, t)) && (
+                    {(a.project_name || a.side_name || dueWords(a, t)) && (
                       <span className="meta">
                         <ActionMeta a={a} rest={dueWords(a, t)} />
                       </span>
@@ -1198,7 +1201,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
           <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
           {a.on_hold || a.blocker ? <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
         </div>
-        {(a.project_name || rest) && (
+        {(a.project_name || a.side_name || rest) && (
           <div className="meta">
             <ActionMeta a={a} rest={rest} />
           </div>

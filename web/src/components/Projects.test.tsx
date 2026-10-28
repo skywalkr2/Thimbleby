@@ -417,3 +417,55 @@ test("the personal project and an area offer no target date in their form, and a
   const harbor = await edit(user, "Harbor");
   expect(within(harbor).getByLabelText("Target date")).toBeInTheDocument();
 });
+
+const PERSONAL = project("PRJ-personal", "Personal", { side: true, no_end: true });
+const FIRM = project("PRJ-firm", "Orchard Press", { side: true });
+const BOOK = project("PRJ-book", "The spring catalog", { parent: "PRJ-firm", owner_name: "Ana Person" });
+const CHAPTER = project("PRJ-chapter", "Cover art", { parent: "PRJ-book" });
+const HOME = project("PRJ-home", "Home", { parent: "PRJ-personal", no_end: true });
+
+test("a side is a heading with its projects under it, never a row, and the count is projects only", async () => {
+  api([PERSONAL, HOME, FIRM, BOOK, CHAPTER]);
+  renderApp(<Projects />);
+  await row("The spring catalog");
+  const bodies = screen.getAllByRole("rowgroup").filter((g) => g.tagName === "TBODY");
+  expect(bodies.map((b) => b.getAttribute("aria-label"))).toEqual(["Personal", "Orchard Press"]);
+  // The side's heading names it and links to its page; it is not a row of the table.
+  const firm = bodies[1];
+  expect(within(firm).getByRole("columnheader", { name: /Orchard Press/ })).toBeInTheDocument();
+  expect(within(firm).getByRole("link", { name: "Orchard Press" }).getAttribute("href")).toMatch(/#records\/project\/PRJ-firm$/);
+  expect(within(firm).getAllByRole("row").filter((r) => r.hasAttribute("data-row"))).toHaveLength(2);
+  expect(within(firm).getByRole("link", { name: "The spring catalog" })).toBeInTheDocument();
+  expect(within(firm).getByRole("link", { name: "Cover art" })).toBeInTheDocument();
+  // Nothing says the project is inside the side it is already listed under, but a project inside a project does.
+  expect(await row("The spring catalog")).not.toHaveTextContent("inside Orchard Press");
+  expect(await row("Cover art")).toHaveTextContent("inside The spring catalog");
+  // Three projects (Home, the catalog, the cover art): the two sides are not counted.
+  expect(screen.getByText("3 projects")).toBeInTheDocument();
+});
+
+test("a side's heading has no Edit or Remove; only a project's row has a menu", async () => {
+  api([FIRM, BOOK]);
+  renderApp(<Projects />);
+  const tr = await row("The spring catalog");
+  expect(within(tr).getByRole("button", { name: /More actions for The spring catalog/ })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /More actions for Orchard Press/ })).toBeNull();
+  expect(screen.getAllByRole("button", { name: /More actions for/ })).toHaveLength(1);
+});
+
+test("a side with no project yet is still a heading, and a project on no side follows the sides", async () => {
+  api([FIRM, project("PRJ-loose", "Left over")]);
+  renderApp(<Projects />);
+  await row("Left over");
+  const bodies = screen.getAllByRole("rowgroup").filter((g) => g.tagName === "TBODY");
+  expect(bodies.map((b) => b.getAttribute("aria-label"))).toEqual(["Orchard Press", "Other projects"]);
+  expect(screen.getByText("1 project")).toBeInTheDocument();
+});
+
+test("a finished project stays under Completed after the sides", async () => {
+  api([FIRM, BOOK, project("PRJ-old", "Wrapped", { parent: "PRJ-firm", completed: true, status: "Done" })]);
+  renderApp(<Projects />);
+  await row("Wrapped");
+  const bodies = screen.getAllByRole("rowgroup").filter((g) => g.tagName === "TBODY");
+  expect(bodies.map((b) => b.getAttribute("aria-label"))).toEqual(["Orchard Press", "Completed"]);
+});

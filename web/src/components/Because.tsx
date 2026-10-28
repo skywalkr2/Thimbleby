@@ -71,7 +71,7 @@ function AppliedItem(props: { entry: Entry }) {
 function candidates(entry: Entry, all: S["ProjectView"][]): S["ProjectView"][] {
   const scope = entry.applies_to;
   if (!scope) return [];
-  return all.filter((p) => narrowedWithout(scope, p.id) !== null && (scope.scope !== "projects" || (scope.projects ?? []).includes(p.id)));
+  return all.filter((p) => !p.side && narrowedWithout(scope, p.id) !== null && (scope.scope !== "projects" || (scope.projects ?? []).includes(p.id)));
 }
 
 function NotHere(props: { entry: Entry; onClose: () => void }) {

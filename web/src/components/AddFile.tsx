@@ -12,6 +12,7 @@ import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
+import { PlaceOptions } from "./PlaceOptions";
 import { Skeleton } from "../ui/Skeleton";
 
 const DEFAULT_KIND = "attachment";
@@ -129,11 +130,7 @@ export function AddFile(props: { onClose: () => void }) {
             </label>
             <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
               <option value="">{t("addfile.no_project")}</option>
-              {(projects.data ?? []).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              <PlaceOptions projects={projects.data ?? []} />
             </select>
           </div>
           )}

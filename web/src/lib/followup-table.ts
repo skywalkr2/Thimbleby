@@ -39,6 +39,8 @@ export interface TableWords {
   notSent: string;
   noLink: string;
   overdue: (date: string) => string;
+  /** How an item filed on a side and in no project of it reads in the Project column: "<side>: not in a project". */
+  side: (name: string) => string;
   /** "Fri, Oct 23" */
   due_day: (iso: string) => string;
   /** "Oct 10" */
@@ -66,7 +68,7 @@ export function tablesOf(section: S["FollowupSection"], w: TableWords, today: st
       rows: actions.map((a) => {
         const late = !!a.due && a.due.slice(0, 10) < today;
         return [
-          { text: a.project_name },
+          { text: a.project_name || (a.side_name ? w.side(a.side_name) : "") },
           { text: a.text },
           { text: !a.due ? "" : late ? w.overdue(w.due_day(a.due)) : w.due_day(a.due), overdue: late },
           { text: "", links: a.links },
@@ -84,7 +86,7 @@ export function tablesOf(section: S["FollowupSection"], w: TableWords, today: st
       columns: [w.project, w.question, w.asked, w.link, w.answer],
       fill: 4,
       rows: questions.map((q) => [
-        { text: q.project_name ?? "" },
+        { text: q.project_name || (q.side_name ? w.side(q.side_name) : "") },
         { text: q.title },
         { text: q.sent ? w.asked_day(q.sent) : w.notSent },
         { text: "", links: q.links },

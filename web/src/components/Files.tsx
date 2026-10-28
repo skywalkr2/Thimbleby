@@ -39,6 +39,8 @@ export function Files() {
   const [adding, setAdding] = useState(false);
   const addButton = useRef<HTMLButtonElement>(null);
   const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
+  // A file filed on a side and in none of its projects is "in <side>, not in a project", never in a project.
+  const sides = new Set((projects.data ?? []).filter((p) => p.side).map((p) => p.id));
   const side = useSideFilter();
   const sideOf = useSideOf();
   const everything = files.data ?? [];
@@ -75,7 +77,7 @@ export function Files() {
         title={selected?.name ?? ""}
         onClose={choice.close}
         fit={FILES_FIT}
-        detail={selected ? <FileDetail file={selected} project={selected.project ? names.get(selected.project) : undefined} earlier={everything.find((f) => f.id === selected.replaces)?.name} /> : null}
+        detail={selected ? <FileDetail file={selected} project={selected.project ? names.get(selected.project) : undefined} side={!!selected.project && sides.has(selected.project)} earlier={everything.find((f) => f.id === selected.replaces)?.name} /> : null}
       >
         {files.isPending ? (
           <Skeleton />
@@ -93,7 +95,7 @@ export function Files() {
         ) : (
           <ul className="queue">
             {shown.map((file) => (
-              <FileRow key={file.id} file={file} project={file.project ? names.get(file.project) : undefined} choice={choice} />
+              <FileRow key={file.id} file={file} project={file.project ? names.get(file.project) : undefined} side={!!file.project && sides.has(file.project)} choice={choice} />
             ))}
           </ul>
         )}
@@ -111,7 +113,7 @@ export function Files() {
   );
 }
 
-function FileRow(props: { file: S["FileView"]; project?: string; choice: ListChoice }) {
+function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean; choice: ListChoice }) {
   const { t } = useWords();
   const size = useSize();
   const { file, choice } = props;
@@ -126,7 +128,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; choice: ListCho
   }));
   const facts = [
     size(file.size),
-    ...(props.project ? [t("files.in_project", { project: props.project })] : []),
+    ...(props.project ? [props.side ? t("place.in_side", { side: props.project }) : t("files.in_project", { project: props.project })] : []),
     t("files.added_on", { when: day(file.added_at) }),
   ];
   return (
@@ -161,7 +163,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; choice: ListCho
 
 /** The details of one file: a preview, where it came from and what refers to it. Nothing is drawn as a page: a picture is
  * shown as a picture, text as plain text, and anything else is only offered to open. */
-function FileDetail(props: { file: S["FileView"]; project?: string; earlier?: string }) {
+function FileDetail(props: { file: S["FileView"]; project?: string; side?: boolean; earlier?: string }) {
   const { t } = useWords();
   const size = useSize();
   const { file } = props;
@@ -169,7 +171,7 @@ function FileDetail(props: { file: S["FileView"]; project?: string; earlier?: st
   const facts: Array<[string, string]> = [
     [t("files.detail.kind"), file.kind_label],
     [t("files.detail.size"), size(file.size)],
-    ...(props.project ? ([[t("files.detail.project"), props.project]] as Array<[string, string]>) : []),
+    ...(props.project ? ([[t("files.detail.project"), props.side ? t("files.detail.side_value", { side: props.project }) : props.project]] as Array<[string, string]>) : []),
   ];
   return (
     <>

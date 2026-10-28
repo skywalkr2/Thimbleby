@@ -1,7 +1,8 @@
 // The question of setup that asks what it is for (design 7.8): "Your own life is always included. Also keep track of:", then
 // two tick boxes, A job and My own business, either or both, or neither for the person's own life alone, in one plain
 // control with no frame. A job asks the employer's name and shows the notice about reading work mail; a business asks its
-// name and what it works on (jobs, clients or orders, typed or pasted, each becoming a project inside it), then one
+// name, what it is (one or two sentences, kept as the side's description, never a project) and which projects it has (one to
+// a line, typed or pasted, each becoming a project inside it; either box may be left empty), then one
 // optional, closed line, "Do some of these belong together?": a group name, and once it is named each job gets a tick box
 // "in <group>". The group is a project inside the business and the ticked jobs are inside it; a group named with nothing
 // ticked holds Continue back and says so, so a typed name is never lost without a word. "Add another business" repeats it.
@@ -16,13 +17,13 @@ import { problemText } from "../lib/problem";
 import { useToasts } from "../lib/toasts";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
-import { insideLines, workLines } from "../lib/work-lines";
+import { insideLines, sideSummary, workLines } from "../lib/work-lines";
 import { Skeleton } from "../ui/Skeleton";
 
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
 type Group = { name: string; picked: string[] };
-type Draft = { key: number; name: string; lines: string; group: Group };
+type Draft = { key: number; name: string; about: string; lines: string; group: Group };
 const noGroup = (): Group => ({ name: "", picked: [] });
 
 /** The work question. In the walkthrough its Continue saves the answer and moves on (`useContinue`); in the setup list it
@@ -38,11 +39,13 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   const [jobName, setJobName] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [more, setMore] = useState<Record<string, string>>({});
+  // What a saved business is, once the person has changed it; untouched, the box shows what is saved.
+  const [moreAbout, setMoreAbout] = useState<Record<string, string>>({});
   const [moreGroup, setMoreGroup] = useState<Record<string, Group>>({});
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const counter = useRef(0);
-  const blank = (): Draft => ({ key: ++counter.current, name: "", lines: "", group: noGroup() });
+  const blank = (): Draft => ({ key: ++counter.current, name: "", about: "", lines: "", group: noGroup() });
 
   const answered = state.data?.chosen ?? null;
   const saved: Side[] = state.data?.sides ?? [];
@@ -54,12 +57,13 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   const alone = !jobTicked && !businessTicked;
   const needJobName = jobTicked && savedJobs.length === 0;
   const named = drafts.filter((d) => d.name.trim() !== "");
-  const unnamedWithLines = drafts.some((d) => d.name.trim() === "" && workLines(d.lines).length > 0);
+  const unnamedWithLines = drafts.some((d) => d.name.trim() === "" && (workLines(d.lines).length > 0 || sideSummary(d.about) !== ""));
+  const aboutChanged = (s: Side) => s.project in moreAbout && sideSummary(moreAbout[s.project]) !== (s.summary ?? "");
   const needBusinessName = businessTicked && savedBusinesses.length === 0 && named.length === 0;
 
   const hasNew =
     (needJobName && jobName.trim() !== "") ||
-    (businessTicked && (named.length > 0 || savedBusinesses.some((s) => workLines(more[s.project] ?? "").length > 0)));
+    (businessTicked && (named.length > 0 || savedBusinesses.some((s) => workLines(more[s.project] ?? "").length > 0 || aboutChanged(s))));
   // Nothing to save when the answer stands: Just me again, or nothing new under the sides there already are.
   const changed = alone ? saved.length === 0 && answered !== "me" : hasNew;
   // A group named with none of its jobs ticked would make nothing: Continue waits until one is ticked or the name is cleared.
@@ -114,11 +118,16 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         }
         if (businessTicked) {
           for (const draft of named) {
-            const made = await api.addSide({ name: draft.name.trim(), kind: "business" });
+            const summary = sideSummary(draft.about);
+            const made = await api.addSide({ name: draft.name.trim(), kind: "business", ...(summary ? { summary } : {}) });
             await addLines(made.project, draft.lines, draft.group);
             setDrafts((all) => all.filter((d) => d.key !== draft.key));
           }
           for (const side of savedBusinesses) {
+            if (aboutChanged(side)) {
+              await api.editProject(side.project, { summary: sideSummary(moreAbout[side.project]) || null });
+              setMoreAbout((all) => Object.fromEntries(Object.entries(all).filter(([id]) => id !== side.project)));
+            }
             const text = more[side.project] ?? "";
             if (workLines(text).length === 0) continue;
             await addLines(side.project, text, moreGroup[side.project]);
@@ -148,6 +157,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
     if (on && drafts.length === 0 && savedBusinesses.length === 0) setDrafts([blank()]);
   };
   const draftName = (key: number, name: string) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, name } : d)));
+  const draftAbout = (key: number, about: string) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, about } : d)));
   const draftLines = (key: number, lines: string) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, lines } : d)));
   const draftGroup = (key: number, group: Group) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, group } : d)));
   const rows = savedBusinesses.length + drafts.length;
@@ -237,6 +247,19 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
       {businessTicked &&
         savedBusinesses.map((side) => (
           <div className="field" key={side.project} data-more-for={side.project}>
+            <div className="field">
+              <label htmlFor={`work-about-${side.project}`}>{t("walkthrough.work.about", { name: side.name })}</label>
+              <textarea
+                id={`work-about-${side.project}`}
+                rows={2}
+                value={side.project in moreAbout ? moreAbout[side.project] : (side.summary ?? "")}
+                aria-describedby="work-about-hint"
+                onChange={(e) => setMoreAbout((all) => ({ ...all, [side.project]: e.target.value }))}
+              />
+              <p className="hint" id="work-about-hint">
+                {t("walkthrough.work.about_hint")}
+              </p>
+            </div>
             <label htmlFor={`work-more-${side.project}`}>{t("walkthrough.work.more_works_on", { name: side.name })}</label>
             <textarea
               id={`work-more-${side.project}`}
@@ -276,6 +299,19 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                 />
                 <p className="hint" id={`${id}-name-hint`}>
                   {t("walkthrough.work.business_name_hint")}
+                </p>
+              </div>
+              <div className="field">
+                <label htmlFor={`${id}-about`}>{label ? t("walkthrough.work.about", { name: label }) : t("walkthrough.work.about_unnamed")}</label>
+                <textarea
+                  id={`${id}-about`}
+                  rows={2}
+                  value={draft.about}
+                  aria-describedby={`${id}-about-hint`}
+                  onChange={(e) => draftAbout(draft.key, e.target.value)}
+                />
+                <p className="hint" id={`${id}-about-hint`}>
+                  {t("walkthrough.work.about_hint")}
                 </p>
               </div>
               <div className="field">

@@ -18,6 +18,12 @@ export function workLines(text: string): string[] {
   return names;
 }
 
+/** What a person wrote to say what a business is: its words on one line with the spaces tidied, or nothing when it is empty.
+ * It is kept as the side's description and never split into lines or made into projects. */
+export function sideSummary(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 /** The projects a side holds, one line each, as the screens that list a side show them: a group is its name with the jobs
  * inside it in brackets (`group` words that), a job under the side is its name. Only the two levels setup makes. */
 export function insideLines(

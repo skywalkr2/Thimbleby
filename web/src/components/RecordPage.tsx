@@ -108,6 +108,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     ? inReadingOrder(
         Object.entries(data.fields)
           // The id of the input an item came from is shown as its "Where it came from" link instead.
+          .filter(([name]) => !isSide || SIDE_FIELDS.has(name))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
@@ -237,6 +238,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     </section>
   );
 }
+
+/** What a side keeps (a side is a group, not a project): the rest of a project's fields are not listed on its page. */
+const SIDE_FIELDS = new Set<string>(["name", "aliases", "summary", "links", "tags", "content_levels", "data_level"]);
 
 /** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
 const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda", "captured_at"]);

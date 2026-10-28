@@ -276,3 +276,24 @@ def test_the_settings_that_name_sides_pick_from_the_sides_only(app):
     business = shown["workspace.project.business"]
     assert business["choices"] == "sides" and set(business["options"]) == {personal, side}
     assert project not in business["options"]
+
+
+def test_a_record_page_names_a_side_apart_from_the_project_on_its_open_and_finished_actions(app):
+    client, ws, store = app
+    side = business_of(client)
+    with store.transaction() as tx:
+        other = tx.create("person", {"full_name": "Casey Example"}, _PM).id
+        project = tx.create("project", {"name": OTHER_NAME, "parent": side}, _PM).id
+        owners = [{"person": other}]
+        loose = tx.create("action", {"text": "Do the side thing", "owners": owners, "project": side}, _PM)
+        inside = tx.create("action", {"text": "Do the project thing", "owners": owners, "project": project}, _PM)
+        finished = {"status": "done", "done_by": [other]}
+        done = tx.create("action", {"text": "Did it", "owners": owners, "project": side, **finished}, _PM)
+        worked = tx.create("action", {"text": "Did more", "owners": owners, "project": project, **finished}, _PM)
+    shown = client.get(f"/api/record-pages/{other}", params={"kind": "person"}).json()
+    opened = {a["id"]: a for a in shown["open_actions"]}
+    assert opened[loose.id]["project_name"] is None and opened[loose.id]["side_name"] == BUSINESS_NAME
+    assert opened[inside.id]["project_name"] == OTHER_NAME and opened[inside.id]["side_name"] is None
+    closed = {a["id"]: a for a in shown["completed_actions"]}
+    assert closed[done.id]["project_name"] is None and closed[done.id]["side_name"] == BUSINESS_NAME
+    assert closed[worked.id]["project_name"] == OTHER_NAME and closed[worked.id]["side_name"] is None
