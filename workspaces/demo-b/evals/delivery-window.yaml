@@ -1,5 +1,5 @@
 id: delivery-window
-title: 'An estimated delivery window becomes a fact and a calendar entry spanning it'
+title: 'An estimated delivery window becomes one delivery entry spanning it'
 skills: [dates, structured-answers]
 received: '2026-10-09'
 pasted: 'From: orders@shop.example.com
@@ -15,28 +15,26 @@ pasted: 'From: orders@shop.example.com
 
   Thank you for ordering.'
 expect:
-- op: fact
-  text_has:
-  - bookmarks
 - op: event.add
   text_has:
   - bookmarks
   start: '2026-10-20'
   end: '2026-10-22'
+  delivery:
+    status: on_its_way
+    dated: true
 forbid:
+- op: action.add
 - op: question.add
 stub_answer:
   summary: The bookmark order will arrive between October 20 and October 22.
   ops:
-  - op: fact
-    text: The printed bookmarks are expected to be delivered between Oct 20 and Oct 22.
-    project: PRJ-1
-    evidence:
-      quote: 'Estimated delivery: Tuesday, October 20 - Thursday, October 22'
   - op: event.add
     title: Printed bookmarks delivered
     start: '2026-10-20'
     end: '2026-10-22'
     project: PRJ-1
+    delivery:
+      status: on_its_way
     evidence:
       quote: 'Estimated delivery: Tuesday, October 20 - Thursday, October 22'

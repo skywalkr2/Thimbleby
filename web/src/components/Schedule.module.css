@@ -24,6 +24,7 @@
 .what { flex: 1 1 8rem; min-width: 0; display: grid; gap: var(--space-1); }
 .title { font-weight: var(--weight-semibold); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .struck { text-decoration: line-through; }
+.status { margin-left: var(--space-2); }
 .meta { color: var(--text-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .from { font-weight: var(--weight-medium); }
 /* A calendar's color: a small round mark beside its name. The name is always there, so the mark is never the only sign. */

@@ -637,10 +637,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/today/agenda")
     def today_agenda() -> list[AgendaItemView]:
         """Events from watched calendars, then the app's own calendar entries, on today and the next configured days,
-        in the person's time zone."""
+        in the person's time zone. Last come the deliveries with no date yet, which are on no day (`days` is empty)."""
         from engine import today
 
-        return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, worker.now())]
+        return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, worker.now(), undated=True)]
 
     @r.get("/today/agenda-span")
     def today_agenda_span() -> AgendaSpanView:

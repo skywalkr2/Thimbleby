@@ -6,6 +6,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
 import { addDays, day, wallTime } from "../lib/dates";
+import { deliveryDetails, deliveryRange, deliveryStatusWord } from "../lib/deliveries";
 import { typing } from "../lib/keys";
 import { eventPageView, recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -42,6 +43,7 @@ function EntryRow(props: { entry: Entry; source: string | undefined; color: stri
   const { t } = useWords();
   const { entry } = props;
   const href = viewHref(entry.own ? recordView("event", entry.snapshot) : entry.entry ? recordView("event", entry.entry) : eventPageView(entry.snapshot, entry.start));
+  const status = deliveryStatusWord(entry, t);
   const from = entry.own ? t("today.agenda.own") : props.source ? t("schedule.from_source", { source: props.source }) : t("schedule.from_source_unknown");
   return (
     <li className={entry.own ? `${styles.entry} ${styles.own}` : styles.entry} data-source={entry.own ? "own" : entry.source}>
@@ -52,8 +54,16 @@ function EntryRow(props: { entry: Entry; source: string | undefined; color: stri
           <span className={entry.cancelled ? styles.struck : undefined}>
             <a href={href}>{entry.title}</a>
           </span>
+          {status && (
+            <Pill tone={entry.delivery?.status === "arrived" ? "ok" : "neutral"} className={styles.status}>
+              {status}
+            </Pill>
+          )}
         </div>
         {entry.where && <div className={styles.meta}>{entry.where}</div>}
+        {entry.delivery && (
+          <div className={styles.meta}>{[deliveryRange(entry, t), ...deliveryDetails(entry, t)].filter(Boolean).join(" · ")}</div>
+        )}
         <div className={styles.meta}>
           {!entry.own && props.color && <span className={styles.mark} data-color={props.color} aria-hidden="true" />}
           <span className={styles.from}>{from}</span>

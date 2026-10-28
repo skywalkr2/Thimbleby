@@ -1795,6 +1795,29 @@ class AgendaItem(BaseModel):
         return {k: v for k, v in data.items() if v is not None}
 
 
+#: How far a delivery has got, in order; a later mail never moves it back.
+DELIVERY_STATUSES = ("on_its_way", "out_for_delivery", "arrived")
+
+
+class Delivery(BaseModel):
+    """What makes a calendar entry a delivery: the order and the parcel it is about, and how far it has got. Later
+    mails about the same order or tracking number update the one entry (`event.add` with a `delivery`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    order: str | None = Field(None, max_length=80, description="The order number, as the mail gives it.")
+    tracking: str | None = Field(None, max_length=80, description="The tracking number, as the mail gives it.")
+    carrier: str | None = Field(None, max_length=80, description="Who carries it, as the mail gives it.")
+    status: Literal["on_its_way", "out_for_delivery", "arrived"] = Field(
+        "on_its_way", description="How far it has got; it only moves forward."
+    )
+    dated: bool = Field(
+        True,
+        description="Whether the mail gave a date or window. False for a delivery with no date yet: its entry sits on "
+        'the day the mail came and shows under the schedule\'s "On its way", not on a day.',
+    )
+
+
 class CalendarEntry(Record):
     """Something dated in the app's own calendar: a day or a moment, or a range of days or moments. Added by
     `event.add` from what came in, and by plugins and the person later; never written to a calendar service."""
@@ -1834,6 +1857,10 @@ class CalendarEntry(Record):
     )
     notes: list[str] = Field(
         default_factory=list, description="What had to be guessed in reading it (a time zone, a repeat rule)."
+    )
+    delivery: Delivery | None = Field(
+        None,
+        description="For a parcel or order on its way: its order, tracking number, carrier and how far it has got.",
     )
     plain: bool = Field(
         False,

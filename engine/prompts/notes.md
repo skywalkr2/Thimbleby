@@ -191,13 +191,17 @@ How to answer:
 - Never invent dates. A date only goes in an op if the input gives it. When the input gives it relative to a day
   ("by Friday", "next Tuesday", "tomorrow", "end of the week"), turn it into the calendar date, counted from the day the
   input was received, which the request states, not from today's date, and quote the relative words as the evidence.
+  A day the input gives by month and day with no year ("Oct 30", "Nov 5") is written "--MM-DD" ("--10-30"): never
+  choose a year yourself; the app gives it the year a reader would. Add "past": true when the words say it already
+  happened ("delivered Oct 25").
 - When the input names a real event with a date or a range of dates (a meeting, a launch, a delivery window, an
   appointment, something shipping or arriving), also add an "event.add" for the event beside any fact or action, with
   the same quoted words and the dates as the input gives them (a range's last day as "end"). Never add a calendar entry
   for an action's own due date or for a deadline: that date goes on the action.
 - When the input states a full date, with its year, for a renewal, an expiry, a warranty's end, a deadline or the day a
   bill is due, record a "fact" with "on" (that date) and "on_kind" (renewal, expiry, warranty, deadline or bill), and
-  quote the words that give the date exactly. A date with no year, or one you would have to work out, is not recorded.
+  quote the words that give the date exactly. A day with no year is written "--MM-DD" as above; a date you would
+  have to work out is not recorded.
   For a bill record the day only: never an amount owed or a balance.
 - Bills, orders and deliveries in mail are tracked for the user, in the Personal project, never treated as sales:
   - A bill or statement with a payment due: one "action.add" owned by the user, its text starting "Pay" and naming who
@@ -205,14 +209,22 @@ How to answer:
     "due_words" copied from the bill. Only that amount: never a balance, a total owed to date, an account number or
     any bank detail. A statement with nothing to pay and no due day records nothing.
     The to-do's due day is the record of the bill's day: add no "fact" with "on_kind": "bill" beside it.
-  - An order confirmation: one "action.add" owned by the user, "Watch for the <shop> order of <what>", with
-    "waiting_for": "the order to arrive" and the expected delivery day in "due_words" when the mail gives one. When it
-    also gives a return-by day, add a "fact" with "on" and "on_kind": "deadline" for that day, quoting its words.
-  - A shipping or delivery notice for an order the list of open actions already watches: never a second action for
-    it. A new expected day moves that action ("action.move"); "delivered" closes it ("action.close") with the words
-    that say so; "shipped" with no new day is "action.news" on it. Only a notice with no matching action in the list
-    adds the watch described for an order.
-  - A confirmation of a payment already made, or a notice with nothing to pay, watch or move, records nothing.
+  - An order confirmation, a shipping notice or a delivery notice: no action. One "event.add" in the Personal project
+    titled "<shop> delivery: <what>" with "delivery" holding what the mail gives: "order" (the order number),
+    "tracking" (the tracking number), "carrier", and "status" ("on_its_way"; "out_for_delivery" when the mail says
+    so; "arrived" when it says the parcel was delivered). Its "start" and "end" are the delivery day or window as the
+    mail gives it ("Delivery: Oct 30-Nov 5" is "--10-30" to "--11-05"); with no day given, leave "start" out. Add this
+    "event.add" for every such mail, even when the list already has an entry for the order: the app joins mails about
+    the same order or parcel into one entry. Quote the words that give the day, or the order or tracking number when
+    there is no day. When the mail also gives a return-by day, add a "fact" with "on" and "on_kind": "deadline" for
+    that day, quoting its words.
+  - A to-do only when the mail asks the user to do something for the delivery: sign for it, pick it up somewhere, pay
+    a fee, fix the address. Then one "action.add" owned by the user, its text starting with what to do, beside the
+    "event.add".
+  - A "Watch for the <shop> order" action already in the list of open actions (made before deliveries were entries):
+    a mail saying that order was delivered closes it ("action.close") with the words that say so, beside the
+    "event.add".
+  - A confirmation of a payment already made, or a notice with nothing to pay or to track, records nothing.
 - When the input is about a piece of work that no project in the projects list covers, and it names that work as
   something with its own plan, owner or schedule, propose it with "project.add", its "name" as the input writes it and
   the words that name it as the evidence, and file the rest of the answer with no project. It waits for the user, who may add it, say it is part of an existing

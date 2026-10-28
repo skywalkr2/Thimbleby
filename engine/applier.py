@@ -21,6 +21,7 @@ from engine import (
     acts,
     audience,
     decision_lines,
+    deliveries,
     draft_checks,
     endings,
     id_words,
@@ -44,6 +45,7 @@ from engine.check_text import numbered_questions, quoted_passages, without_links
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
+from engine.dates import MonthDay, is_month_day, resolve_range, with_year
 from engine.intake import is_reported, source_text
 from engine.language_words import language_words
 from engine.learning import request_learns
@@ -207,6 +209,49 @@ def _allowed(op: OpModel, ctx: Context) -> bool:
 # ---- checks ----------------------------------------------------------------------------------------------------------
 
 
+def _received_day(ctx: Context, view: Any, now: datetime | None) -> date:
+    """The day the input came, which a date with no year is read from: its source's received day, else the day its
+    request was made. With no request to date it (the person's own edit), the person's today."""
+    from engine.facts import received_on
+
+    here = zone(ctx.cfg)
+    found = received_on(view, ctx.inputs.request, ctx.inputs.source, here)
+    return found if found is not None else local_day(now or datetime.fromisoformat(ctx.store.clock()), here)
+
+
+def with_years(cs: ChangesetIn, ctx: Context, now: datetime | None = None) -> ChangesetIn:
+    """Each date an op gives as a month and day with no year (`--MM-DD`) becomes a full date (`engine/dates.py`): the
+    next such day on or after the day the input came, or the latest on or before it when the op says the input reports
+    it as already happened (`past`). A range's end is the first such day on or after its start. It covers `event.add`
+    and `event.set` (start, end), `action.add`, `action.move` and `action.unhold` (due) and `fact` (on). The same
+    changeset always gives the same result, so a check and the apply that follows see the same ops, and the record and
+    the ledger always hold full dates."""
+    view = ctx.store.read()
+    ops = list(cs.ops)
+    received: date | None = None
+    for i, op in enumerate(ops):
+        if isinstance(op, (EventAddOp, EventSetOp)):
+            if not any(v is not None and is_month_day(v) for v in (op.start, op.end)):
+                continue
+            received = received or _received_day(ctx, view, now)
+            start, end = op.start, op.end
+            if isinstance(op, EventSetOp) and start is None:
+                # A new end alone is read from the start the entry already has.
+                kept = view.get("event", op.id)
+                start = kept.data["start"] if kept is not None else None
+            first, last = resolve_range(start, end, received, past=op.past)
+            if isinstance(op, EventSetOp) and op.start is None:
+                first = None
+            ops[i] = op.model_copy(update={"start": first, "end": last})
+        elif isinstance(op, (ActionAddOp, ActionMoveOp, ActionUnholdOp)) and isinstance(op.due, MonthDay):
+            received = received or _received_day(ctx, view, now)
+            ops[i] = op.model_copy(update={"due": with_year(op.due, received, past=op.past)})
+        elif isinstance(op, FactOp) and isinstance(op.on, MonthDay):
+            received = received or _received_day(ctx, view, now)
+            ops[i] = op.model_copy(update={"on": with_year(op.on, received, past=op.past)})
+    return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
+
+
 def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
     """A promise said again with a date outside the merge window is a move of the open promise, never a second one
     (design 6.33): each such `action.add` becomes an `action.move` on the open promise, with the new words and quote.
@@ -256,7 +301,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
 
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    cs = endings.wind_down(endings.read_endings(restatements(cs, ctx), ctx), ctx)
+    cs = endings.wind_down(endings.read_endings(restatements(with_years(cs, ctx), ctx), ctx), ctx)
     problems, cs, made = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
@@ -489,7 +534,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         for project in _projects_of(op):
             if view.get("project", project) is None:
                 refuse(i, "targets", f"there is no project {project}")
-        if isinstance(op, EventAddOp) and (why := entry_problem(op.start, op.end)) is not None:
+        if isinstance(op, EventAddOp) and op.start is not None and (why := entry_problem(op.start, op.end)) is not None:
             refuse(i, "targets", f"calendar entry {op.title!r}: {why}")
         if isinstance(op, EventAddOp) and op.series is not None and view.get("series", op.series) is None:
             refuse(i, "targets", f"there is no series {op.series}")
@@ -1019,7 +1064,7 @@ def _fact_problem(op: FactOp, ctx: Context) -> str | None:
     if op.on is not None:
         from engine.dated_facts import states_the_day
 
-        if not states_the_day(ctx.cfg, op.evidence.quote, op.on):
+        if not states_the_day(ctx.cfg, op.evidence.quote, op.on) and not _states_without_year(ctx, op):
             return f"the quote doesn't state {op.on.isoformat()} as a full date; quote the words that give the day"
     if op.said_by is None:
         return None
@@ -1028,6 +1073,20 @@ def _fact_problem(op: FactOp, ctx: Context) -> str | None:
     if ctx.people.resolve(op.said_by).status != "ok":
         return f"{op.said_by} isn't one known person, so the fact can't be said by them"
     return None
+
+
+def _states_without_year(ctx: Context, fact: FactOp) -> bool:
+    """Whether the fact's quote states its day by month and day with no year, and the year it was given is the one the
+    rule gives that month and day from the day the input came (`with_years`): the next such day or the latest before
+    it. A year the assistant chose itself is not."""
+    from engine.document_dates import yearless_days
+
+    received = _received_day(ctx, ctx.store.read(), None)
+    for month, day in yearless_days(fact.evidence.quote):
+        md = MonthDay(month, day)
+        if fact.on in (with_year(md, received), with_year(md, received, past=True)):
+            return True
+    return False
 
 
 def _about_problem(about: str, ctx: Context, view: Any) -> str | None:
@@ -1956,7 +2015,7 @@ def apply_changeset(
     fails on any op, none is grouped."""
     now = now or datetime.now(UTC)
     ctx.run = run
-    cs = endings.wind_down(endings.read_endings(restatements(cs, ctx), ctx), ctx)
+    cs = endings.wind_down(endings.read_endings(restatements(with_years(cs, ctx, now), ctx), ctx), ctx)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
     today = now.date()
@@ -3273,6 +3332,7 @@ def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:
     """Why each op would be refused if the changeset applied now, by op index: the checks, then a trial apply in
     order (later ops see what earlier ones made). Nothing is kept and no event is published."""
     found: dict[int, str] = {}
+    cs = with_years(cs, ctx)
     for p in check(cs, ctx):
         if p.severity == "refuse" and p.op is not None:
             found.setdefault(p.op, p.message)
@@ -3592,10 +3652,24 @@ def _apply_op(
             "evidence": ev,
             "trust": trust,
         }
+        if op.delivery is not None:
+            received = _received_day(ctx, tx, None)
+            kept = deliveries.match(tx.list("event"), op.delivery.order, op.delivery.tracking)
+            if kept is not None:
+                # A later mail about the same order or parcel: the entry already there changes, never a second one.
+                changes = deliveries.merged(kept, op, received)
+                if changes.keys() & {"start", "end", "delivery"}:
+                    changes |= {"evidence": ev, "source": source}
+                tx.update("event", kept.id, changes, w, read_version=kept.version)
+                made("event", kept.id)
+                return touched, None
+            data |= deliveries.new_entry(op, received)
         made("event", tx.create("event", data, w).id)
     elif isinstance(op, EventSetOp):
         cur = tx.get("event", op.id)
         moved = {k: v for k, v in (("start", op.start), ("end", op.end)) if v is not None}
+        if cur.data.get("delivery") and moved:
+            moved["delivery"] = {**cur.data["delivery"], "dated": True}  # a time the person or the input gives dates it
         tx.update("event", op.id, moved, w, read_version=cur.version)
         made("event", op.id)
         for action_id in follow_event(tx, op.id, w):

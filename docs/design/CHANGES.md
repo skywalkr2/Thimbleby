@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 245. Deliveries are schedule entries, and a date with no year takes a reader's year (2026-10-28; owner's first evening; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Orders and deliveries (6.32) | An order or shipping mail became a "Watch for the order" to-do; a window with no year was dropped | **Built** (`tests/test_deliveries.py`, `demo-b` cases `order-confirmation-is-a-delivery-entry`, `shipping-notice-moves-the-same-delivery`, `delivery-window-with-no-year`, `handed-to-carrier-with-no-day`): one entry per parcel with order, tracking, carrier and status; later mails move or narrow it; a to-do only when the mail asks the person to act |
+| Dates (6.7) | A day with no year was not recorded | **Built** (`tests/test_dates.py`): `--MM-DD` and `past` on event, action and fact ops; the applier gives the year from the day the input came |
+| Schedule (7.x) | A delivery showed as a plain entry | **Built** (`web/src/components/ScheduleDeliveries.test.tsx`): its range, carrier and tracking number, "On its way" for undated ones, "Arrived" in words |
+
 ## 244. Word questions only about real unknown words; HTML turned into text on the way in (2026-10-28; owner's first evening; built)
 
 | Where | Before | Now |

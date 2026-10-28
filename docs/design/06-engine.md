@@ -3973,16 +3973,19 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   "Pay the <sender> bill, <amount to pay>", due on the bill's due day, so the reminder the rules propose for a due day
   follows (held for the person's yes, as every reminder is): the amount to pay as the bill states it, never a balance, an
   account number or a bank link, and a statement with nothing to pay and no due day records nothing. An *order
-  confirmation* becomes one to-do that is something to watch for, "Watch for the <shop> order of <what>", on hold
-  ("waiting for the order to arrive") and due on the expected delivery day when the mail gives one, plus a dated fact for the
-  return-by day when it gives one. A *shipping or delivery notice* never makes a second one: it moves the watched order
-  (a new expected day), closes it ("delivered") or is news on it ("shipped" with no new day); only a notice with no matching
-  open to-do makes the watch. These use ops that exist (`action.add`, `action.move`, `action.close`, `action.news`, `fact`);
-  nothing in the plugin API changed. On the Set aside tab of Handled for you (7.20) a row offers *Treat as work*, and in its menu *Treat as
+  confirmation*, *shipping notice* or *delivery notice* is a delivery, never a to-do (owner, 2026-10-28): one calendar
+  entry, "<shop> delivery: <what>", carrying the order number, tracking number, carrier and a status (on its way, out for
+  delivery, arrived), on the delivery day or across the window the mail gives, and listed under "On its way" while no day
+  is known. Every such mail adds the entry again and the applier joins it to the one already there, by tracking number,
+  or by order number when one side has no tracking number (two tracking numbers are two parcels): the later mail moves
+  or narrows the dates, the status only moves forward, Undo restores the entry. A to-do is added only when the mail asks
+  the person to act (sign, pick up, pay a fee, fix the address); a return-by day is a dated fact. A day the mail gives
+  with no year takes the year a reader would, worked out by the app from the day the mail came (decisions, 2026-10-28).
+  `event.add` gained `delivery` and the `--MM-DD` day form, and `past` marks a day the input says already happened. On the Set aside tab of Handled for you (7.20) a row offers *Treat as work*, and in its menu *Treat as
   personal* (handed in for the Personal project), *Always set aside mail like this* (a rule for the sender) and *Open the
   message*, each recording a signal; there is no "Keep it set aside", because leaving a mail there is the confirmation.
-  Golden set: `bill-statement-becomes-a-reminder`, `order-confirmation-is-watched-until-it-arrives`,
-  `shipping-notice-updates-the-watched-order` and `not-work-one-time-code` in `workspaces/demo-b/evals/`.
+  Golden set: `bill-statement-becomes-a-reminder`, `order-confirmation-is-a-delivery-entry`, `shipping-notice-moves-the-same-delivery`, `delivery-window-with-no-year`, `handed-to-carrier-with-no-day`,
+  `delivery-window` and `not-work-one-time-code` in `workspaces/demo-b/evals/`.
 - **One Today:** a bill due Friday sits beside a work deadline, tagged by its area.
 
 ### Dependability, from the designer's answers (2026-10-19)

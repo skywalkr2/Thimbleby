@@ -16,33 +16,36 @@ class DateFinding:
     reason: str
 
 
+_MONTHS = {
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
+}
+
+
 def _parse_date(words: str, locale: str) -> tuple[date | None, str]:
-    months = {
-        "jan": 1,
-        "january": 1,
-        "feb": 2,
-        "february": 2,
-        "mar": 3,
-        "march": 3,
-        "apr": 4,
-        "april": 4,
-        "may": 5,
-        "jun": 6,
-        "june": 6,
-        "jul": 7,
-        "july": 7,
-        "aug": 8,
-        "august": 8,
-        "sep": 9,
-        "sept": 9,
-        "september": 9,
-        "oct": 10,
-        "october": 10,
-        "nov": 11,
-        "november": 11,
-        "dec": 12,
-        "december": 12,
-    }
+    months = _MONTHS
     try:
         if re.fullmatch(r"\d{4}-\d{1,2}-\d{1,2}", words):
             year, month, day = map(int, words.split("-"))
@@ -234,3 +237,25 @@ def find_dates(text: str, received: datetime, tz: tzinfo, locale: str) -> list[D
         else finding
         for finding in findings
     ]
+
+
+_YEARLESS = (
+    rf"(?<![\w/.])(?:(?P<m1>{_MONTH})\s+(?P<d1>\d{{1,2}})(?:st|nd|rd|th)?|"
+    rf"(?P<d2>\d{{1,2}})(?:st|nd|rd|th)?\s+(?P<m2>{_MONTH}))(?!,?\s+\d{{4}})(?![\w/]|\.\d)"
+)
+
+
+def yearless_days(text: str) -> list[tuple[int, int]]:
+    """Every month and day a text states by the month's name with no year after it ("Dec 1", "1st December"), as
+    (month, day) in the order it states them. A date with a year, a numeric date and an impossible day are not
+    included: only the words' own month and day, never a year worked out."""
+    found = []
+    for match in re.finditer(_YEARLESS, text, re.IGNORECASE):
+        month = _MONTHS.get((match["m1"] or match["m2"]).rstrip(".").casefold())
+        day = int(match["d1"] or match["d2"])
+        try:
+            date(2000, month, day)
+        except (TypeError, ValueError):
+            continue
+        found.append((month, day))
+    return found

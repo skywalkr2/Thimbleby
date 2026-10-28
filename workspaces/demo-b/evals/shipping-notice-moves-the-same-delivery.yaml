@@ -1,0 +1,44 @@
+id: shipping-notice-moves-the-same-delivery
+title: 'A shipping notice for an order already on the schedule moves that same entry and adds its tracking number'
+skills: [dates, evidence]
+received: '2026-10-30'
+given:
+- kind: event
+  id: EVT-91
+  fields:
+    title: 'Corner Goods delivery: desk lamp'
+    start: '2026-11-03'
+    delivery:
+      order: '4471'
+      status: on_its_way
+      dated: true
+pasted: |-
+  From: Corner Goods <shipping@shop.example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Your order 4471 has shipped
+
+  Your desk lamp has shipped with Fastline. Tracking number 9Z4471. Estimated delivery: November 5, 2026.
+expect:
+- op: event.add
+  start: '2026-11-05'
+  delivery:
+    order: '4471'
+    tracking: 9Z4471
+    carrier: Fastline
+    status: on_its_way
+forbid:
+- op: action.add
+- op: question.add
+stub_answer:
+  summary: The desk lamp is now expected on November 5.
+  ops:
+  - op: event.add
+    title: 'Corner Goods delivery: desk lamp'
+    start: '2026-11-05'
+    delivery:
+      order: '4471'
+      tracking: 9Z4471
+      carrier: Fastline
+      status: on_its_way
+    evidence:
+      quote: 'Estimated delivery: November 5, 2026.'

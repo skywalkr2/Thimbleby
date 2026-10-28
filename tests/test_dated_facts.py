@@ -145,11 +145,23 @@ def test_the_setting_turns_the_offer_off_and_the_fact_is_kept_all_the_same(tmp_p
 def test_a_quote_that_does_not_state_the_day_is_refused(env):
     _, outcomes = apply(env, [fact_op(quote="Your plan renews soon.")], raw="Your plan renews soon.")
     assert outcomes[0]["status"] == "refused" and "full date" in outcomes[0]["reason"]
-    # A date with no year, or a different day than the one written beside it, is no full date either.
-    _, outcomes = apply(env, [fact_op(quote="Renews on December 15.")], raw="Renews on December 15.")
-    assert outcomes[0]["status"] == "refused"
+    # A different day than the one written beside it is no full date either.
     _, outcomes = apply(env, [fact_op(on="2026-12-16")])
     assert outcomes[0]["status"] == "refused"
+
+
+def test_a_day_stated_with_no_year_takes_the_year_a_person_would_and_no_other(env):
+    quote = "Renews on December 15."
+    # The day the input came is 19 October, so the next 15 December is this year's.
+    _, outcomes = apply(env, [fact_op(quote=quote, on="--12-15")], raw=quote)
+    assert outcomes[0]["status"] == "applied"
+    assert env[2].read().get("fact", outcomes[0]["records"][0]["id"]).data["on"] == RENEWAL.isoformat()
+    # The same day with the year already written is accepted when it is the year the rule gives, and refused when the
+    # assistant chose another.
+    _, outcomes = apply(env, [fact_op(quote=quote)], raw=quote)
+    assert outcomes[0]["status"] == "applied"
+    _, outcomes = apply(env, [fact_op(quote=quote, on="2027-12-15")], raw=quote)
+    assert outcomes[0]["status"] == "refused" and "full date" in outcomes[0]["reason"]
 
 
 def test_a_day_without_its_kind_is_refused(env):

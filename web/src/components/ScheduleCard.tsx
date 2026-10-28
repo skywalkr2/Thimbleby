@@ -7,6 +7,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime } from "../lib/dates";
+import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
 import { useWords } from "../lib/wording";
 import { AgendaItems } from "./AgendaList";
 import { useChangeThis } from "./ChangeThis";
@@ -57,7 +58,7 @@ export function groupByDay(events: Event[], today: string): DayGroup[] {
 }
 
 function whenText(event: Event, date: string, t: T): string {
-  if (event.all_day) return t("today.agenda.all_day");
+  if (event.all_day) return deliveryRange(event, t) ?? t("today.agenda.all_day");
   const startDay = event.start.slice(0, 10);
   const endDay = event.end?.slice(0, 10);
   if (date > startDay) {
@@ -83,9 +84,11 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
   const events = agenda.data ?? [];
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   const groups = groupByDay(events, today);
+  // Deliveries with no date yet are on no day: they are listed under "On its way" at the card's end.
+  const onItsWay = events.filter(isOnItsWay);
   const count = events.filter((e) => !e.cancelled && e.days.includes(today)).length;
   const settled = !agenda.isPending && !watch.isPending;
-  const drawn = agenda.isError || groups.length > 0 || sourceState.problems.length > 0 || !!sourceState.button;
+  const drawn = agenda.isError || groups.length > 0 || onItsWay.length > 0 || sourceState.problems.length > 0 || !!sourceState.button;
   const dayLabel = (date: string) => (date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date));
   const summary = count > 0 ? tn("today.agenda.count", count) : "";
 
@@ -109,7 +112,7 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
         <Skeleton />
       ) : agenda.isError ? (
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
-      ) : groups.length === 0 ? (
+      ) : groups.length === 0 && onItsWay.length === 0 ? (
         sourceState.problems.length > 0 ? (
           <div className="tb-empty">
             <p>{t("today.agenda.not_read")}</p>
@@ -119,43 +122,57 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
           <Empty inline text={span.data ? t("today.agenda.empty", { start: day(span.data.first), end: day(span.data.last) }) : t("today.agenda.empty_today")} button={sourceState.button} />
         ) : null
       ) : (
-        groups.map((group) => {
-          const headId = `agenda-day-${group.date}`;
-          // On today's list, a line marks where the day has got to: after what has ended, before what is still to come.
-          const ended = (e: Event) => new Date(e.end ?? e.start).getTime() <= now.getTime();
-          const rows: Array<Event | "now"> = [...group.events];
-          if (group.date === today) {
-            const timed = group.events.filter((e) => !e.all_day && !e.own);
-            if (timed.length > 0) {
-              const upcoming = timed.find((e) => !ended(e));
-              rows.splice(upcoming ? rows.indexOf(upcoming) : group.events.filter((e) => !e.own).length, 0, "now");
+        <>
+          {groups.map((group) => {
+            const headId = `agenda-day-${group.date}`;
+            // On today's list, a line marks where the day has got to: after what has ended, before what is still to come.
+            const ended = (e: Event) => new Date(e.end ?? e.start).getTime() <= now.getTime();
+            const rows: Array<Event | "now"> = [...group.events];
+            if (group.date === today) {
+              const timed = group.events.filter((e) => !e.all_day && !e.own);
+              if (timed.length > 0) {
+                const upcoming = timed.find((e) => !ended(e));
+                rows.splice(upcoming ? rows.indexOf(upcoming) : group.events.filter((e) => !e.own).length, 0, "now");
+              }
             }
-          }
-          return (
-            <div key={group.date} className="tb-group">
-              <h3 id={headId} className="tb-group-head">
-                {dayLabel(group.date)}
+            return (
+              <div key={group.date} className="tb-group">
+                <h3 id={headId} className="tb-group-head">
+                  {dayLabel(group.date)}
+                </h3>
+                <ul className="tb-list" aria-labelledby={headId}>
+                  {rows.map((row, i) =>
+                    row === "now" ? (
+                      <li key="now" className="now-line">
+                        <span>{t("today.agenda.now", { time: time(now) })}</span>
+                      </li>
+                    ) : (
+                      <AgendaRow
+                        key={`${row.snapshot}:${i}`}
+                        event={row}
+                        when={whenText(row, group.date, t)}
+                        past={group.date === today && !row.all_day && !row.own && ended(row)}
+                        source={sourceName(row.source)}
+                      />
+                    ),
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+          {onItsWay.length > 0 && (
+            <div className="tb-group">
+              <h3 id="agenda-on-its-way" className="tb-group-head">
+                {t("today.agenda.on_its_way")}
               </h3>
-              <ul className="tb-list" aria-labelledby={headId}>
-                {rows.map((row, i) =>
-                  row === "now" ? (
-                    <li key="now" className="now-line">
-                      <span>{t("today.agenda.now", { time: time(now) })}</span>
-                    </li>
-                  ) : (
-                    <AgendaRow
-                      key={`${row.snapshot}:${i}`}
-                      event={row}
-                      when={whenText(row, group.date, t)}
-                      past={group.date === today && !row.all_day && !row.own && ended(row)}
-                      source={sourceName(row.source)}
-                    />
-                  ),
-                )}
+              <ul className="tb-list" aria-labelledby="agenda-on-its-way">
+                {onItsWay.map((row, i) => (
+                  <AgendaRow key={`${row.snapshot}:${i}`} event={row} when={t("today.agenda.delivery.no_date")} past={false} source="" />
+                ))}
               </ul>
             </div>
-          );
-        })
+          )}
+        </>
       )}
     </RailPanel>
   );
@@ -256,7 +273,8 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
         run: () => void act(() => api.entryTodo(offer.entry), (made) => ({ message: t("today.agenda.todo_added", { what: offer.text }), undo: () => api.undo(made.changeset) })),
       }
     : null;
-  const meta = [event.where, event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
+  const meta = [event.where, ...deliveryDetails(event, t), event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
+  const status = deliveryStatusWord(event, t);
   // A meeting of a series shows how many open items wait for it, linking to the series' page; with none, nothing is said.
   const open = event.series && (event.open_items ?? 0) > 0 ? event.open_items! : 0;
   return (
@@ -274,6 +292,11 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
               event.title
             )}
           </span>
+          {status && (
+            <Pill tone={event.delivery?.status === "arrived" ? "ok" : "neutral"} className="pill-gap">
+              {status}
+            </Pill>
+          )}
           {open > 0 && event.series && (
             <>
               {" · "}

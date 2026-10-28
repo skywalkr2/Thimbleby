@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { ApiError, api, type S } from "../lib/api";
+import { deliveryLines, type Delivery } from "../lib/deliveries";
 import { resolveOffers, usePluginActions, useTaskKinds, type Offer } from "../lib/plugin-actions";
 import { usePluginRun } from "../lib/plugin-run";
 import { problemText } from "../lib/problem";
@@ -112,7 +113,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
-          .map(([name, value]) => ({ name, lines: detailLines(name, value, info.get(name), names) }))
+          .map(([name, value]) => ({
+            name,
+            // A delivery is said in words (its status, carrier and numbers), never as the stored object.
+            lines: kind === "event" && name === "delivery" ? deliveryLines(value as Delivery | null, t) : detailLines(name, value, info.get(name), names),
+          }))
           .filter((row) => row.lines.length > 0),
       )
     : [];

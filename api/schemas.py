@@ -2469,6 +2469,22 @@ class AgendaSpanView(BaseModel):
     last: date
 
 
+class DeliveryView(BaseModel):
+    """What makes an own calendar entry a delivery: the parcel or order and how far it has got."""
+
+    order: str | None = Field(None, description="The order number, as the mail gave it.")
+    tracking: str | None = Field(None, description="The tracking number, as the mail gave it.")
+    carrier: str | None = Field(None, description="Who carries it, as the mail gave it.")
+    status: Literal["on_its_way", "out_for_delivery", "arrived"] = Field(
+        "on_its_way", description="How far it has got; it only moves forward."
+    )
+    dated: bool = Field(
+        True,
+        description="Whether a date or window is known. When false the entry is on no day: show it under an "
+        "'On its way' heading, not on a day.",
+    )
+
+
 class AgendaItemView(BaseModel):
     """An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days."""
 
@@ -2509,6 +2525,11 @@ class AgendaItemView(BaseModel):
         default_factory=list,
         description="What is to be taken up at this meeting: its own agenda items and, for the next meeting of a "
         "series, the series' agenda after them.",
+    )
+    delivery: DeliveryView | None = Field(
+        None,
+        description="For an own entry that is a parcel or order on its way: its order, tracking number, carrier and "
+        "status. One whose `dated` is false has no days (`days` is empty) and is shown under 'On its way'.",
     )
 
 

@@ -40,6 +40,9 @@ class AgendaItem:
     open_items: int = 0  # for such a meeting: how many open actions and questions sit on it
     todo_offer: str | None = None  # a plain entry whose title reads as a task: the to-do it is offered as, in its words
     agenda: list[dict[str, Any]] = field(default_factory=list)  # what is to be taken up at it (engine/agenda.py)
+    delivery: dict[str, Any] | None = (
+        None  # an own entry for a parcel or order: order, tracking, carrier, status, dated
+    )
 
 
 @dataclass
@@ -77,12 +80,19 @@ def agenda_span(cfg: Any, now: datetime) -> tuple[date, date]:
 
 
 def agenda(
-    store: Any, cfg: Any, now: datetime, through: date | None = None, start: date | None = None
+    store: Any,
+    cfg: Any,
+    now: datetime,
+    through: date | None = None,
+    start: date | None = None,
+    *,
+    undated: bool = False,
 ) -> list[AgendaItem]:
     """Events on today and the configured days after it (or every day from `start` through `through`), earliest first;
     all-day ones first on their day. The app's own calendar entries follow the connected calendars' events, in start
     order, each on every day it covers. Counts that look ahead (open items on a series) count from today, not
-    `start`."""
+    `start`. A delivery with no date yet is on no day: it is left out, or, with `undated`, listed last with no days
+    (the Today card shows those under "On its way")."""
     here = zone(cfg)
     today = now.astimezone(here).date()
     first = start or today
@@ -128,7 +138,7 @@ def agenda(
                 )
             )
     found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
-    return [*found, *_own_entries(store, days, here, today)]
+    return [*found, *_own_entries(store, days, here, today, undated)]
 
 
 def event_dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
@@ -166,9 +176,16 @@ def _dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
     ]
 
 
-def _own_entries(store: Any, days: list[date], here: ZoneInfo, today: date) -> list[AgendaItem]:
+def _on_its_way(data: dict[str, Any]) -> bool:
+    """Whether an own entry is a delivery with no date yet and not arrived: it is on no day."""
+    delivery = data.get("delivery")
+    return bool(delivery) and not delivery.get("dated", True) and delivery.get("status") != "arrived"
+
+
+def _own_entries(store: Any, days: list[date], here: ZoneInfo, today: date, undated: bool = False) -> list[AgendaItem]:
     """The app's own calendar entries that overlap the listed days, earliest first. A range counts every day from its
-    start to its end, both included; an entry with no time of day is all-day."""
+    start to its end, both included; an entry with no time of day is all-day. A delivery with no date yet is on no day:
+    left out, or, with `undated`, listed after the others with no days."""
     found = []
     view = store.read()
     for entry in view.list("event"):
@@ -182,8 +199,11 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo, today: date) -> l
             continue
         all_day = not isinstance(start, datetime)
         first, last = local_day(start, here), local_day(end, here)
-        on = [d for d in days if first <= d <= last]
-        if not on:
+        waiting = _on_its_way(data)
+        if waiting and not undated:
+            continue
+        on = [] if waiting else [d for d in days if first <= d <= last]
+        if not on and not waiting:
             continue
         found.append(
             AgendaItem(
@@ -201,9 +221,10 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo, today: date) -> l
                 series=data.get("series"),
                 open_items=_open_on(view, entry, today, here) if data.get("series") else 0,
                 agenda=agenda_module.for_entry(view, entry, today, here),
+                delivery=data.get("delivery"),
             )
         )
-    return sorted(found, key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
+    return sorted(found, key=lambda a: (a.days[0] if a.days else date.max, not a.all_day, _sort_key(a, here), a.title))
 
 
 def _open_on(view: Any, entry: Any, today: date, here: ZoneInfo) -> int:

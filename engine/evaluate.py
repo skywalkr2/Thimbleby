@@ -22,10 +22,12 @@ An expected `action.move`, `action.part` or `action.news` names the action's `id
 `text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title), and
 an expected `fact` may name `as_of`, or `on` and `on_kind` (the day of a dated fact and what kind of day it is); an
 ending or a repeat that waits only for the person's Keep counts as made, for what a case expects and for what it
-forbids. An expected `text.draft` (the prose of a draft task, filed as a pending draft) may name the `field` it is
-for and `text_has` (words in the drafted text). A case that names `handed_over` (`action`, an open action among its
-starting records, and a `note`) starts from the person handing that action to the assistant, as the button on its row
-does, with no input handed in; its `stub_answer` holds the prose as `draft`, and no ops. A case may name the
+forbids. An expected `event.add` may name `delivery` (`order`, `tracking`, `carrier`, `status` and `dated`, as stored
+on the entry it made: each one it states must match). An expected `text.draft` (the prose of a draft task, filed as a
+pending draft) may name the `field` it is for and `text_has` (words in the drafted text). A case that names
+`handed_over` (`action`, an open action among its starting records, and a `note`) starts from the person handing that
+action to the assistant, as the button on its row does, with no input handed in; its `stub_answer` holds the prose as
+`draft`, and no ops. A case may name the
 `project` its input is about (as the person does when handing it in), or give `watched` (title, change, author,
 by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a held op (`held:
 <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A case may forbid a
@@ -812,8 +814,22 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             and _same_time(entry["start"], e.get("start", entry["start"]))
             and _same_time(entry.get("end"), e["end"] if "end" in e else entry.get("end"))
             and entry.get("project") == e.get("project", entry.get("project"))
+            and _delivery_matches(entry.get("delivery"), e.get("delivery"))
         )
     return op == "note"
+
+
+def _delivery_matches(kept: dict[str, Any] | None, expected: dict[str, Any] | None) -> bool:
+    """Whether a stored delivery has what a case expects of it: each of order, tracking and carrier it states (trimmed,
+    capitals ignored) and its status and `dated`, read from the stored entry. A case that states none checks none."""
+    if not expected:
+        return True
+    if kept is None:
+        return False
+    return all(
+        (_squeezed(kept.get(k)) == _squeezed(v)) if k in ("order", "tracking", "carrier") else kept.get(k) == v
+        for k, v in expected.items()
+    )
 
 
 def _unexpected_ops(

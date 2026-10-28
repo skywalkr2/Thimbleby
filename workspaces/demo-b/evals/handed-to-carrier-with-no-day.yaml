@@ -1,0 +1,33 @@
+id: handed-to-carrier-with-no-day
+title: 'A parcel handed to its carrier with no day yet is a delivery with no date, never a to-do'
+skills: [evidence]
+received: '2026-10-27'
+pasted: |-
+  From: Market Square <notices@market.example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Your package is now with its carrier!
+
+  Your item, a signed first edition of a mystery novel, is on its way.
+  Carrier: Fastline. Tracking number: FL77004512.
+expect:
+- op: event.add
+  text_has:
+  - novel
+  delivery:
+    tracking: FL77004512
+    status: on_its_way
+    dated: false
+forbid:
+- op: action.add
+- op: question.add
+stub_answer:
+  summary: The novel is on its way with Fastline.
+  ops:
+  - op: event.add
+    title: 'Market Square delivery: signed first edition novel'
+    delivery:
+      tracking: FL77004512
+      carrier: Fastline
+      status: on_its_way
+    evidence:
+      quote: 'Tracking number: FL77004512.'

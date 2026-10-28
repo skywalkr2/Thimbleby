@@ -1800,6 +1800,12 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `attendees[].response` | str \| None | `None` | Their answer to the invitation, as the calendar says it (accepted, tentative, declined...). |
 | `response` | str \| None | `None` | The person's own answer to the invitation, when the attendee list holds them. |
 | `notes` | list[str] | `[]` | What had to be guessed in reading it (a time zone, a repeat rule). |
+| `delivery` | Delivery \| None | see below | For a parcel or order on its way: its order, tracking number, carrier and how far it has got. |
+| `delivery.order` | str \| None | `None` | The order number, as the mail gives it. |
+| `delivery.tracking` | str \| None | `None` | The tracking number, as the mail gives it. |
+| `delivery.carrier` | str \| None | `None` | Who carries it, as the mail gives it. |
+| `delivery.status` | Literal['on_its_way', 'out_for_delivery', 'arrived'] | `'on_its_way'` | How far it has got; it only moves forward. |
+| `delivery.dated` | bool | `True` | Whether the mail gave a date or window. False for a delivery with no date yet: its entry sits on the day the mail came and shows under the schedule's "On its way", not on a day. |
 | `plain` | bool | `False` | Nobody else is invited and it has no description, so the rules kept it without the assistant reading it. A plain entry whose title starts with a task verb is offered as a to-do, and one whose title names a known person or a promise's words is linked to them. |
 | `people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The known people its title names, linked by rule when it is plain. |
 | `agenda` | list[AgendaItem] | `[]` | What is to be taken up at it, each item linked to the action, question or note it came from; added by `agenda.add`. |
@@ -2696,7 +2702,8 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `text` | str | required | A verb that does something, e.g. 'Send the final file to the printer'. |
 | `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the user to say who. |
-| `due` | date \| None | `None` | The day it is due, if one is stated. |
+| `due` | DayOrMonthDay \| None | `None` | The day it is due, if one is stated: YYYY-MM-DD, or --MM-DD when it has no year. |
+| `past` | bool | `False` | True only when the input says the day in `due` already happened, so a day with no year takes the latest such day before the input came. |
 | `due_words` | str \| None | `None` | The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The rules read the date from them, and their date wins over `due`. |
 | `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
@@ -2762,7 +2769,8 @@ The input says an open action's date changed: give the new date's exact words, o
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the open action whose date changed. |
 | `due_words` | str \| None | `None` | The exact words of the new date, copied from the input ('next Tuesday'). |
-| `due` | date \| None | `None` | The new date, when there are no words to read it from. |
+| `due` | DayOrMonthDay \| None | `None` | The new date, when there are no words to read it from: YYYY-MM-DD, or --MM-DD when it has no year. |
+| `past` | bool | `False` | True only when the input says the day in `due` already happened (a day with no year). |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -2825,7 +2833,8 @@ Take an action off hold when the input says the thing it was waiting for has hap
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the action that is on hold and no longer waits. |
 | `due_words` | str \| None | `None` | The exact words of its new date, when the input gives one ('by Monday'). |
-| `due` | date \| None | `None` | Its new date, when there are no words to read it from. |
+| `due` | DayOrMonthDay \| None | `None` | Its new date, when there are no words to read it from: YYYY-MM-DD, or --MM-DD when it has no year. |
+| `past` | bool | `False` | True only when the input says the day in `due` already happened (a day with no year). |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -2858,14 +2867,20 @@ Answer the user's question from the material given: the user guide, the settings
 
 ### `event.add`
 
-A date or a range of dates the input gives for something (a delivery window, a deadline, an appointment, a launch), in the app's own calendar. Beside the fact or action it belongs to, with the same quoted words. Dates only as the input states them; evidence is required.
+A date or a range of dates the input gives for something (a delivery window, a deadline, an appointment, a launch), in the app's own calendar. Beside the fact or action it belongs to, with the same quoted words. Dates only as the input states them; evidence is required. A parcel or order on its way carries `delivery`: the entry shows its range, carrier and tracking number, and a later mail about the same order or tracking number updates that entry (a new window, out for delivery, arrived) instead of adding another.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `title` | str | required | What happens on that date, in a few words. |
-| `start` | str | required | The day it starts, written YYYY-MM-DD, or a date-time with its offset when the input gives a time. |
+| `start` | str \| None | `None` | The day it starts, written YYYY-MM-DD, or --MM-DD when the input gives the month and day with no year (the app works out the year; never guess it), or a date-time with its offset when the input gives a time. Leave out only for a delivery whose input gives no date yet. |
 | `end` | str \| None | `None` | The last day of a range (or the end time), in the same form as start; leave out for one day. |
+| `past` | bool | `False` | True only when the input says the date already happened, so a day with no year takes the latest such day before the input came, not the next one. |
+| `delivery` | DeliveryIn \| None | see below | For a parcel or order on its way (shipped, out for delivery, delivered); leave out otherwise. |
+| `delivery.order` | str \| None | `None` | The order number, exactly as the input writes it. |
+| `delivery.tracking` | str \| None | `None` | The tracking number, exactly as the input writes it. |
+| `delivery.carrier` | str \| None | `None` | Who carries it, as the input names them. |
+| `delivery.status` | Literal['on_its_way', 'out_for_delivery', 'arrived'] | `'on_its_way'` | on_its_way for shipped or in transit, out_for_delivery for out for delivery today, arrived for a mail that says it was delivered. An entry's status only moves forward. |
 | `project` | str \| None | `None` | Project id, if the entry belongs to one. |
 | `series` | str \| None | `None` | The id of the series this entry is an instance of, if any. |
 | `evidence` | EvidenceIn | required | The exact words from the input that give the date. |
@@ -2879,8 +2894,9 @@ Move a calendar entry that is in the list: a new start, a new end, or both, when
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the calendar entry that moves. |
-| `start` | str \| None | `None` | The new start, written YYYY-MM-DD, or a date-time with its offset when the input gives a time; leave out when the start doesn't change. |
+| `start` | str \| None | `None` | The new start, written YYYY-MM-DD, or --MM-DD when the input gives the month and day with no year (the app works out the year; never guess it), or a date-time with its offset when the input gives a time; leave out when the start doesn't change. |
 | `end` | str \| None | `None` | The new end (the last day or moment), in the same form as start; leave out when the end doesn't change. |
+| `past` | bool | `False` | True only when the input says the new time already happened, so a day with no year takes the latest such day before the input came, not the next one. |
 | `evidence` | EvidenceIn | required | The exact words from the input that give the new time. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -2908,7 +2924,8 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `about` | str \| None | `None` | The id of the record the fact is about, when it is about one to-do, question, person, organization or other record listed in the material (a fact about a project goes in `project`). The record's page shows the fact and a run working on that record reads it. An id that names no record is refused. |
 | `reaches_children` | bool | `False` | True only for a fact about a project that holds for every project inside it too (a fact about a series that is true of each of its books); needs the project. Left false, it is about that project alone. |
-| `on` | date \| None | `None` | For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, written YYYY-MM-DD, only when the input states a full date for it (its year included). Never worked out from other words and never guessed: with no full date, leave it out. A bill is a reminder only; never record an amount owed or a balance. |
+| `on` | DayOrMonthDay \| None | `None` | For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, written YYYY-MM-DD, or --MM-DD when the input gives the month and day with no year (the app works out the year from the day the input came; never work it out yourself). Never worked out from other words and never guessed: with no date at all, leave it out. A bill is a reminder only; never record an amount owed or a balance. |
+| `past` | bool | `False` | True only when the input says the day in `on` already happened, so a day with no year takes the latest such day before the input came, not the next one. |
 | `on_kind` | Literal['deadline', 'renewal', 'expiry', 'warranty', 'bill'] \| None | `None` | With `on`: deadline, renewal, expiry, warranty (its end) or bill (a payment's due day). |
 
 ### `file.add`

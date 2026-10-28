@@ -24,6 +24,7 @@ from pydantic import (
 )
 from pydantic.json_schema import SkipJsonSchema
 
+from engine.dates import DayOrMonthDay, parse_month_day
 from engine.id_words import KNOWLEDGE_KINDS, named, named_one_of, named_text_of
 from engine.records import ActTemplate, FiledBy, RefTo, Scope, canonical_time, entry_problem
 
@@ -150,30 +151,91 @@ class FactOp(OpModel):
         description="True only for a fact about a project that holds for every project inside it too (a fact about a "
         "series that is true of each of its books); needs the project. Left false, it is about that project alone.",
     )
-    on: date | None = Field(
+    on: DayOrMonthDay | None = Field(
         None,
         description="For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, written "
-        "YYYY-MM-DD, only when the input states a full date for it (its year included). Never worked out from other "
-        "words and never guessed: with no full date, leave it out. A bill is a reminder only; never record an amount "
-        "owed or a balance.",
+        "YYYY-MM-DD, or --MM-DD when the input gives the month and day with no year (the app works out the year from "
+        "the day the input came; never work it out yourself). Never worked out from other words and never guessed: "
+        "with no date at all, leave it out. A bill is a reminder only; never record an amount owed or a balance.",
+    )
+    past: bool = Field(
+        False,
+        description="True only when the input says the day in `on` already happened, so a day with no year takes the "
+        "latest such day before the input came, not the next one.",
     )
     on_kind: Literal["deadline", "renewal", "expiry", "warranty", "bill"] | None = Field(
         None, description="With `on`: deadline, renewal, expiry, warranty (its end) or bill (a payment's due day)."
     )
 
 
+class DeliveryIn(BaseModel):
+    """What the input says about a parcel or order on its way. Give whichever of order number and tracking number the
+    input has, exactly as written: a later mail about the same order or tracking number updates the entry already
+    there, never a second one."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    order: str | None = Field(None, max_length=80, description="The order number, exactly as the input writes it.")
+    tracking: str | None = Field(
+        None, max_length=80, description="The tracking number, exactly as the input writes it."
+    )
+    carrier: str | None = Field(None, max_length=80, description="Who carries it, as the input names them.")
+    status: Literal["on_its_way", "out_for_delivery", "arrived"] = Field(
+        "on_its_way",
+        description="on_its_way for shipped or in transit, out_for_delivery for out for delivery today, arrived for a "
+        "mail that says it was delivered. An entry's status only moves forward.",
+    )
+
+    @field_validator("order", "tracking", "carrier")
+    @classmethod
+    def _trimmed(cls, value: str | None) -> str | None:
+        return (value.strip() or None) if value is not None else None
+
+
+def _entry_time_text(value: str | None) -> str | None:
+    """A calendar entry's start or end as it is kept: a month and day with no year as `--MM-DD` (the applier gives it
+    its year), anything else in its one canonical form. Raises ValueError for what is neither."""
+    if value is None:
+        return None
+    text = value.strip()
+    found = parse_month_day(text)
+    if found is not None:
+        return str(found)
+    if (why := entry_problem(text, None)) is not None:
+        raise ValueError(why)
+    return canonical_time(text)
+
+
+_YEARLESS = "--MM-DD when the input gives the month and day with no year (the app works out the year; never guess it)"
+
+
 class EventAddOp(OpModel):
     """A date or a range of dates the input gives for something (a delivery window, a deadline, an appointment, a
     launch), in the app's own calendar. Beside the fact or action it belongs to, with the same quoted words. Dates only
-    as the input states them; evidence is required."""
+    as the input states them; evidence is required. A parcel or order on its way carries `delivery`: the entry shows
+    its range, carrier and tracking number, and a later mail about the same order or tracking number updates that
+    entry (a new window, out for delivery, arrived) instead of adding another."""
 
     op: Literal["event.add"]
     title: str = Field(min_length=1, description="What happens on that date, in a few words.")
-    start: str = Field(
-        description="The day it starts, written YYYY-MM-DD, or a date-time with its offset when the input gives a time."
+    start: str | None = Field(
+        None,
+        description="The day it starts, written YYYY-MM-DD, or "
+        + _YEARLESS
+        + ", or a date-time with its offset when the input gives a time. Leave out only for a delivery whose input "
+        "gives no date yet.",
     )
     end: str | None = Field(
         None, description="The last day of a range (or the end time), in the same form as start; leave out for one day."
+    )
+    past: bool = Field(
+        False,
+        description="True only when the input says the date already happened, so a day with no year takes the latest "
+        "such day before the input came, not the next one.",
+    )
+    delivery: DeliveryIn | None = Field(
+        None,
+        description="For a parcel or order on its way (shipped, out for delivery, delivered); leave out otherwise.",
     )
     project: str | None = Field(None, description="Project id, if the entry belongs to one.")
     series: Annotated[str | None, RefTo("series")] = Field(
@@ -184,12 +246,15 @@ class EventAddOp(OpModel):
     @field_validator("start", "end")
     @classmethod
     def _readable(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        text = value.strip()
-        if (why := entry_problem(text, None)) is not None:
-            raise ValueError(why)
-        return canonical_time(text)
+        return _entry_time_text(value)
+
+    @model_validator(mode="after")
+    def _dated(self) -> EventAddOp:
+        if self.start is None and self.delivery is None:
+            raise ValueError("give the day it starts")
+        if self.start is None and self.end is not None:
+            raise ValueError("give the day it starts as well as the day it ends")
+        return self
 
 
 class EventSetOp(OpModel):
@@ -202,25 +267,26 @@ class EventSetOp(OpModel):
     id: Annotated[str, RefTo("event")] = Field(description="The id of the calendar entry that moves.")
     start: str | None = Field(
         None,
-        description="The new start, written YYYY-MM-DD, or a date-time with its offset when the input gives a time; "
-        "leave out when the start doesn't change.",
+        description="The new start, written YYYY-MM-DD, or "
+        + _YEARLESS
+        + ", or a date-time with its offset when the input gives a time; leave out when the start doesn't change.",
     )
     end: str | None = Field(
         None,
         description="The new end (the last day or moment), in the same form as start; leave out when the end doesn't "
         "change.",
     )
+    past: bool = Field(
+        False,
+        description="True only when the input says the new time already happened, so a day with no year takes the "
+        "latest such day before the input came, not the next one.",
+    )
     evidence: EvidenceIn = Field(description="The exact words from the input that give the new time.")
 
     @field_validator("start", "end")
     @classmethod
     def _readable(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        text = value.strip()
-        if (why := entry_problem(text, None)) is not None:
-            raise ValueError(why)
-        return canonical_time(text)
+        return _entry_time_text(value)
 
     @model_validator(mode="after")
     def _moves_something(self) -> EventSetOp:
@@ -348,7 +414,14 @@ class ActionAddOp(OpModel):
         description="The people who do it, each by name or id; empty if nobody is named. A name that isn't one "
         "known person waits for the user to say who.",
     )
-    due: date | None = Field(None, description="The day it is due, if one is stated.")
+    due: DayOrMonthDay | None = Field(
+        None, description="The day it is due, if one is stated: YYYY-MM-DD, or --MM-DD when it has no year."
+    )
+    past: bool = Field(
+        False,
+        description="True only when the input says the day in `due` already happened, so a day with no year takes the "
+        "latest such day before the input came.",
+    )
     due_words: str | None = Field(
         None,
         max_length=120,
@@ -456,7 +529,14 @@ class ActionUnholdOp(OpModel):
     due_words: str | None = Field(
         None, max_length=120, description="The exact words of its new date, when the input gives one ('by Monday')."
     )
-    due: date | None = Field(None, description="Its new date, when there are no words to read it from.")
+    due: DayOrMonthDay | None = Field(
+        None,
+        description="Its new date, when there are no words to read it from: YYYY-MM-DD, or --MM-DD when it has no "
+        "year.",
+    )
+    past: bool = Field(
+        False, description="True only when the input says the day in `due` already happened (a day with no year)."
+    )
     evidence: EvidenceIn | None = Field(
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
@@ -505,7 +585,14 @@ class ActionMoveOp(OpModel):
     due_words: str | None = Field(
         None, max_length=120, description="The exact words of the new date, copied from the input ('next Tuesday')."
     )
-    due: date | None = Field(None, description="The new date, when there are no words to read it from.")
+    due: DayOrMonthDay | None = Field(
+        None,
+        description="The new date, when there are no words to read it from: YYYY-MM-DD, or --MM-DD when it has no "
+        "year.",
+    )
+    past: bool = Field(
+        False, description="True only when the input says the day in `due` already happened (a day with no year)."
+    )
     evidence: EvidenceIn | None = Field(
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )

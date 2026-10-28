@@ -2106,6 +2106,17 @@
             "title": "Days",
             "type": "array"
           },
+          "delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an own entry that is a parcel or order on its way: its order, tracking number, carrier and status. One whose `dated` is false has no days (`days` is empty) and is shown under 'On its way'."
+          },
           "end": {
             "anyOf": [
               {
@@ -8182,6 +8193,66 @@
           "text"
         ],
         "title": "DatedView",
+        "type": "object"
+      },
+      "DeliveryView": {
+        "description": "What makes an own calendar entry a delivery: the parcel or order and how far it has got.",
+        "properties": {
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who carries it, as the mail gave it.",
+            "title": "Carrier"
+          },
+          "dated": {
+            "default": true,
+            "description": "Whether a date or window is known. When false the entry is on no day: show it under an 'On its way' heading, not on a day.",
+            "title": "Dated",
+            "type": "boolean"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The order number, as the mail gave it.",
+            "title": "Order"
+          },
+          "status": {
+            "default": "on_its_way",
+            "description": "How far it has got; it only moves forward.",
+            "enum": [
+              "on_its_way",
+              "out_for_delivery",
+              "arrived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tracking": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The tracking number, as the mail gave it.",
+            "title": "Tracking"
+          }
+        },
+        "title": "DeliveryView",
         "type": "object"
       },
       "DocumentBlock": {
@@ -24582,6 +24653,17 @@
             },
             "title": "Days",
             "type": "array"
+          },
+          "delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an own entry that is a parcel or order on its way: its order, tracking number, carrier and status. One whose `dated` is false has no days (`days` is empty) and is shown under 'On its way'."
           },
           "end": {
             "anyOf": [
@@ -44094,7 +44176,7 @@
     },
     "/api/today/agenda": {
       "get": {
-        "description": "Events from watched calendars, then the app's own calendar entries, on today and the next configured days,\nin the person's time zone.",
+        "description": "Events from watched calendars, then the app's own calendar entries, on today and the next configured days,\nin the person's time zone. Last come the deliveries with no date yet, which are on no day (`days` is empty).",
         "operationId": "today_agenda_api_today_agenda_get",
         "responses": {
           "200": {

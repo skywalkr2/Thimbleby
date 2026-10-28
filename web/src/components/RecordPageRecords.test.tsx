@@ -296,6 +296,32 @@ test("an entry with nobody on it has no list of people, and one the person organ
   expect(within(section).queryByText(/Your answer/)).toBeNull();
 });
 
+test("a delivery entry's page says its status, carrier and numbers in words, never the stored object", async () => {
+  const delivery = { order: "ORD-4471-20", tracking: "TRK000123456", carrier: "Example Freight", status: "out_for_delivery", dated: true };
+  api("event", "EVT-8", { title: "Parcel from the corner shop", start: "2030-03-08", end: "2030-03-10", delivery }, page({ kind: "event", id: "EVT-8", name: "Parcel from the corner shop" }), {
+    "GET plugin-actions?kind=event&id=EVT-8": () => [],
+    "GET task-kinds?kind=event&id=EVT-8": () => [],
+  });
+  const first = renderApp(<RecordPage kind="event" id="EVT-8" onBack={() => {}} />);
+  const details = (await screen.findByRole("heading", { name: "Details" })).closest("section") as HTMLElement;
+  const row = (await within(details).findByText("Delivery")).closest("div") as HTMLElement;
+  expect(row).toHaveTextContent("Out for delivery");
+  expect(row).toHaveTextContent("Carried by Example Freight");
+  expect(row).toHaveTextContent("Tracking TRK000123456");
+  expect(row).toHaveTextContent("Order ORD-4471-20");
+  expect(details).not.toHaveTextContent(/\[object|\{|out_for_delivery|Dated/);
+  first.unmount();
+  // One with no date yet says so, and an arrived one says Arrived.
+  api("event", "EVT-9", { title: "Order shipped", start: "2030-03-01", delivery: { ...delivery, carrier: null, tracking: null, status: "on_its_way", dated: false } }, page({ kind: "event", id: "EVT-9", name: "Order shipped" }), {
+    "GET plugin-actions?kind=event&id=EVT-9": () => [],
+    "GET task-kinds?kind=event&id=EVT-9": () => [],
+  });
+  renderApp(<RecordPage kind="event" id="EVT-9" onBack={() => {}} />);
+  const waiting = (await screen.findByRole("heading", { name: "Details" })).closest("section") as HTMLElement;
+  expect(await within(waiting).findByText("On its way")).toBeInTheDocument();
+  expect(waiting).toHaveTextContent("No date yet");
+});
+
 const FILED = {
   by: "alias" as const,
   word: "RTE",
