@@ -251,12 +251,13 @@ test.describe.serial("journey: new start", () => {
     const mine = promises.locator("li", { hasText: "Send the venue list." });
     await expect(mine).toHaveCount(1);
     await expect(mine).toContainText("You owe this");
-    await expect(mine).toContainText(`From: “${promiseLine}”`);
+    // The quote is shown with its date in words (batch 3), though the evidence kept is the exact line.
+    await expect(mine).toContainText(`From: “${info.people[0]} will send the venue list by Mon, Nov 2.”`);
     // The promise that is only in the mail I sent is found too, though no folder was chosen.
     const fromSent = promises.locator("li", { hasText: "Send the revised budget." });
     await expect(fromSent).toHaveCount(1);
     await expect(fromSent).toContainText("You owe this");
-    await expect(fromSent).toContainText(`From: “${sentLine}”`);
+    await expect(fromSent).toContainText(`From: “${info.people[0]} will send the revised budget by Thu, Nov 5.”`);
     await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toHaveCount(0);
     // Nobody else owes anything yet, so there is no follow-up to copy.
     await expect(main.getByRole("region", { name: "One follow-up is ready" })).toHaveCount(0);

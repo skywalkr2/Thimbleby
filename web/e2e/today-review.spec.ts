@@ -135,7 +135,7 @@ test.describe("A review happens on Today", () => {
     });
   }
 
-  test("at 390px every queue title shows at least 25 characters, with the actions under it", async ({ page }) => {
+  test("at 390px every queue title shows at least 25 characters, with several actions under it and a lone one beside it", async ({ page }) => {
     await serve(page, () => lines);
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);
@@ -146,7 +146,7 @@ test.describe("A review happens on Today", () => {
       els.map((row) => {
         const title = row.querySelector<HTMLElement>("div[class*='title']");
         const actions = row.querySelector<HTMLElement>("div[class*='actions']");
-        if (!title) return { kind: row.getAttribute("data-queue-line"), chars: 0, under: false, wide: false };
+        if (!title) return { kind: row.getAttribute("data-queue-line"), chars: 0, under: false, wide: false, several: false };
         const box = title.getBoundingClientRect();
         const range = document.createRange();
         const walker = document.createTreeWalker(title, NodeFilter.SHOW_TEXT);
@@ -164,6 +164,7 @@ test.describe("A review happens on Today", () => {
         return {
           kind: row.getAttribute("data-queue-line"),
           chars,
+          several: row.querySelectorAll("div[class*='actions'] > [data-variant]").length > 1,
           under: !!a && a.top >= box.bottom - 1,
           wide: !!a && a.width >= row.getBoundingClientRect().width * 0.8,
         };
@@ -171,15 +172,22 @@ test.describe("A review happens on Today", () => {
     );
     for (const line of shown) {
       expect(line.chars, JSON.stringify(shown)).toBeGreaterThanOrEqual(25);
-      expect(line.under, `${line.kind}: its actions sit under its title`).toBe(true);
-      expect(line.wide, `${line.kind}: its actions are at full width`).toBe(true);
+      // Sweep batch V1 (ui/Row): several actions go under the title at full width; a lone action stays at the right edge
+      // beside it, and the title keeps at least 25 characters either way.
+      if (line.several) {
+        expect(line.under, `${line.kind}: its actions sit under its title`).toBe(true);
+        expect(line.wide, `${line.kind}: its actions are at full width`).toBe(true);
+      } else {
+        expect(line.under, `${line.kind}: a lone action stays beside its title`).toBe(false);
+      }
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
+  // Sweep batch V1: a row's action is never filled, even on the line with the cursor; the cursor shows as the focus ring on the row.
   for (const scheme of ["light", "dark"] as const) {
-    test(`in ${scheme} mode a row's action is tonal, and only the line with the cursor has the filled one`, async ({ page }) => {
+    test(`in ${scheme} mode no row's action is filled, and only the line with the cursor shows the focus ring`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await serve(page, () => lines);
       await page.setViewportSize({ width: 1280, height: 900 });
@@ -190,7 +198,7 @@ test.describe("A review happens on Today", () => {
       // The cursor starts on the first line.
       await expect(rows.first()).toBeFocused();
       const found = await page.evaluate(() => {
-        const probe = (property: "backgroundColor" | "color", value: string) => {
+        const probe = (property: "backgroundColor" | "boxShadow", value: string) => {
           const el = document.createElement("div");
           el.style[property] = value;
           document.body.append(el);
@@ -198,28 +206,22 @@ test.describe("A review happens on Today", () => {
           el.remove();
           return out;
         };
-        const buttons = [...document.querySelectorAll<HTMLElement>("[data-queue-line]")].map((row) => row.querySelector<HTMLElement>("[data-key='primary']"));
+        const all = [...document.querySelectorAll<HTMLElement>("[data-queue-line]")];
+        const buttons = all.map((row) => row.querySelector<HTMLElement>("[data-key='primary']"));
         return {
           filled: probe("backgroundColor", "var(--accent)"),
-          tonal: probe("backgroundColor", "var(--row-action-bg)"),
-          tonalText: probe("color", "var(--row-action-text)"),
-          deep: probe("backgroundColor", "var(--brand-900)"),
-          light: probe("color", "var(--brand-200)"),
+          surface: probe("backgroundColor", "var(--surface)"),
+          ring: probe("boxShadow", "inset 0 0 0 2px var(--focus-ring)"),
           backgrounds: buttons.map((b) => (b ? getComputedStyle(b).backgroundColor : null)),
-          texts: buttons.map((b) => (b ? getComputedStyle(b).color : null)),
+          rowRings: all.map((row) => getComputedStyle(row).boxShadow),
         };
       });
       const withButton = found.backgrounds.filter((b) => b !== null);
       expect(withButton.length).toBeGreaterThan(2);
-      expect(withButton.filter((b) => b === found.filled), JSON.stringify(found)).toHaveLength(1);
-      expect(withButton.filter((b) => b === found.tonal)).toHaveLength(withButton.length - 1);
-      expect(found.tonal).not.toBe(found.filled);
-      // The tonal ones are the deep fill with the light brand text by night, the soft fill with the accent's text by day.
-      expect(found.texts[found.backgrounds.findIndex((b) => b === found.tonal)]).toBe(found.tonalText);
-      if (scheme === "dark") {
-        expect(found.tonal).toBe(found.deep);
-        expect(found.tonalText).toBe(found.light);
-      }
+      expect(withButton.filter((b) => b === found.filled), JSON.stringify(found)).toHaveLength(0);
+      expect(withButton.filter((b) => b === found.surface), JSON.stringify(found)).toHaveLength(withButton.length);
+      expect(found.rowRings[0], JSON.stringify(found)).toBe(found.ring);
+      expect(found.rowRings.slice(1).filter((b) => b === found.ring)).toHaveLength(0);
       await page.unrouteAll({ behavior: "ignoreErrors" });
     });
   }

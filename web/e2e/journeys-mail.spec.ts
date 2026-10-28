@@ -363,7 +363,7 @@ test.describe.serial("journey: mail", () => {
 
     // A saved message from that account: its page offers Move to.
     await openMessage();
-    await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+    await page.locator("[data-page-header]").getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Move to…" }).click();
 
     // The account's own folders are a list to pick from, with the nested one by its whole path, never a box to type in; the
@@ -415,7 +415,7 @@ test.describe.serial("journey: mail", () => {
     // Label picks from the account's labels the same way.
     await dismissToasts(page);
     await openMessage();
-    await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+    await page.locator("[data-page-header]").getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Label…" }).click();
     const labelForm = page.locator('[data-act-form="label"]');
     const labels = labelForm.getByRole("combobox", { name: "Label" });

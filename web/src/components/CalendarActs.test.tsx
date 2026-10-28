@@ -214,7 +214,7 @@ describe("in Waiting to go out", () => {
     show(drafted({ action: "create", title: "Review the proofs", start: START, end: END, alarm_minutes: 15, calendar: "own", account: "demo-service:pat@example.com", account_label: "Demo service (pat@example.com)" }));
     const pane = await screen.findByRole("complementary");
     expect(within(pane).getByText("Title: Review the proofs")).toBeInTheDocument();
-    expect(within(pane).getByText(`When: ${START} to ${END}`)).toBeInTheDocument();
+    expect(within(pane).getByText("When: Mon, Nov 2, 9:00 AM to Mon, Nov 2, 10:00 AM")).toBeInTheDocument();
     expect(within(pane).getByText("Alarm: 15 minutes before")).toBeInTheDocument();
     expect(within(pane).getByText("Calendar: your own calendar on Demo service (pat@example.com)")).toBeInTheDocument();
     expect(within(pane).getByRole("button", { name: "Approve and send" })).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe("in Waiting to go out", () => {
   test("a move says which event and the new time, and a cancel says it calls the event off", async () => {
     show(drafted({ action: "move", start: "2026-11-03T14:00:00+00:00", end: "2026-11-03T15:00:00+00:00", about: [event] }));
     const pane = await screen.findByRole("complementary", { name: "Move Planning session" });
-    expect(within(pane).getByText("New time: 2026-11-03T14:00:00+00:00 to 2026-11-03T15:00:00+00:00")).toBeInTheDocument();
+    expect(within(pane).getByText("New time: Tue, Nov 3, 2:00 PM to Tue, Nov 3, 3:00 PM")).toBeInTheDocument();
     expect(within(pane).getAllByText(/Planning session/).length).toBeGreaterThan(0);
   });
 

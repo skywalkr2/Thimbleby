@@ -58,9 +58,9 @@ describe("the detail", () => {
     const list = within(pane).getByRole("region", { name: "The messages" });
     expect(within(list).getByText("This changes 3 messages.")).toBeInTheDocument();
     expect(within(list).getAllByRole("listitem").map((x) => x.textContent)).toEqual([
-      "sender1@example.com: Subject 1, 2026-10-01",
-      "sender2@example.com: Subject 2, 2026-10-02",
-      "sender3@example.com: Subject 3, 2026-10-03",
+      "sender1@example.com: Subject 1, Thu, Oct 1",
+      "sender2@example.com: Subject 2, Fri, Oct 2",
+      "sender3@example.com: Subject 3, Sat, Oct 3",
     ]);
     expect(within(pane).getByText("Folder: Projects")).toBeInTheDocument();
     expect(within(pane).queryByRole("region", { name: "What will go" })).toBeNull(); // a mailbox act has no words of its own
@@ -77,9 +77,9 @@ describe("the detail", () => {
     show([answer("propose", { proposed_start: "2026-11-03T14:00:00+00:00", proposed_end: "2026-11-03T15:00:00+00:00" })]);
     const pane = await screen.findByRole("complementary", { name: "Answer to Planning session: propose another time" });
     const event = within(pane).getByRole("region", { name: "The event" });
-    expect(within(event).getByText(/The invitation: Planning session, 2026-11-02T09:00:00\+00:00 to 2026-11-02T10:00:00\+00:00/)).toBeInTheDocument();
+    expect(within(event).getByText(/The invitation: Planning session, Mon, Nov 2, 9:00 AM to Mon, Nov 2, 10:00 AM/)).toBeInTheDocument();
     expect(within(event).getByText("Your answer: propose another time")).toBeInTheDocument();
-    expect(within(event).getByText("Proposed time: 2026-11-03T14:00:00+00:00 to 2026-11-03T15:00:00+00:00")).toBeInTheDocument();
+    expect(within(event).getByText("Proposed time: Tue, Nov 3, 2:00 PM to Tue, Nov 3, 3:00 PM")).toBeInTheDocument();
     expect(within(pane).getByText("To: The Organizer, organizer@example.com")).toBeInTheDocument();
   });
 
@@ -99,7 +99,7 @@ describe("the detail", () => {
     ]);
     const pane = await screen.findByRole("complementary", { name: "Event on your calendar: Review" });
     expect(within(pane).getByText("Title: Review")).toBeInTheDocument();
-    expect(within(pane).getByText("When: 2026-11-05T10:00:00+00:00 to 2026-11-05T11:00:00+00:00")).toBeInTheDocument();
+    expect(within(pane).getByText("When: Thu, Nov 5, 10:00 AM to Thu, Nov 5, 11:00 AM")).toBeInTheDocument();
     expect(within(pane).getByText("Alarm: 15 minutes before")).toBeInTheDocument();
   });
 
@@ -121,8 +121,8 @@ describe("the detail", () => {
     await user.click(await screen.findByRole("button", { name: "Copy" }));
     await waitFor(async () => expect(await navigator.clipboard.readText()).toContain("Archive 2 messages"));
     const text = await navigator.clipboard.readText();
-    expect(text).toContain("sender1@example.com: Subject 1, 2026-10-01");
-    expect(text).toContain("sender2@example.com: Subject 2, 2026-10-02");
+    expect(text).toContain("sender1@example.com: Subject 1, Thu, Oct 1");
+    expect(text).toContain("sender2@example.com: Subject 2, Fri, Oct 2");
   });
 
   test("the confirm for a change to the mail says what it does and that it can be taken back", async () => {

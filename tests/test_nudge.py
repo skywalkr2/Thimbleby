@@ -12,6 +12,7 @@ import pytest
 from engine.followups import FollowUpError, mark_followed_up, mark_sent, sections, unmark_followed_up
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
+from engine.written_dates import day_words
 from tests.conftest import DEMO_B, fixture_records
 
 NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
@@ -62,7 +63,7 @@ def test_a_nudge_lists_what_is_due_numbered_with_the_first_date_and_asks_for_the
     nudge = sec.nudge
     assert nudge is not None and nudge.round == 1
     words = cfg.language.messages
-    sent_on = (NOW - timedelta(days=wait + 2)).date().strftime(words.date_format)
+    sent_on = day_words((NOW - timedelta(days=wait + 2)).date(), words.date_format)
     lines = nudge.text.splitlines()
     assert lines[0] == words.greeting.format(first_name=editor()["full_name"].split()[0])
     assert sent_on in nudge.text
@@ -89,7 +90,7 @@ def test_an_overdue_due_date_is_said_as_a_fact(env):
     nudge = section(store, cfg, NOW).nudge
     assert nudge is not None and action["id"] in nudge.action_ids
     words = cfg.language.messages
-    assert words.nudge_overdue.format(date=past.strftime(words.date_format)) in nudge.text
+    assert words.nudge_overdue.format(date=day_words(past, words.date_format)) in nudge.text
 
 
 def test_marking_a_nudge_sent_restarts_the_wait_and_keeps_when_it_was_first_asked(env):

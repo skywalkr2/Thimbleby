@@ -145,7 +145,7 @@ describe("where reminders reach you", () => {
       }),
     );
     renderApp(<ReminderWhere />);
-    expect(await screen.findByText(/Reminders go without asking, your mail, at Work mail, since 2026-10-22/)).toBeInTheDocument();
+    expect(await screen.findByText(/Reminders go without asking, your mail, at Work mail, since Thu, Oct 22/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Stop sending without asking" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST reminders/yes/end")).toBe(true));
     await userEvent.click(await screen.findByRole("button", { name: /Undo/ }));

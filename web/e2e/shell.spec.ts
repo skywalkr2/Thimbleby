@@ -930,7 +930,8 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       return help.y > field.y + field.height - 1 && sections.y + sections.height < field.y + 1;
     };
     await expect.poll(stacked).toBe(true);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // The window width settles with the layout (a scroll bar or a late reflow can show for a frame after the resize).
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
   test("Settings on a phone: no sideways scroll, and the rows keep their one button", async ({ page }) => {
