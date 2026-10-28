@@ -179,7 +179,8 @@ test.describe('"Just me" sees no work words', () => {
       if (words.length > 0) found.push(`Welcome: ${words.join(", ")}`);
       await start.click();
     }
-    const steps: Array<[string, string]> = [
+    // The last screen is "Done" once every counted step is, and "Where things stand" before that.
+    const steps: Array<[string, string | RegExp]> = [
       ["you", "You"],
       ["work", "What it's for"],
       ["ai", "Your AI account"],
@@ -187,13 +188,13 @@ test.describe('"Just me" sees no work words', () => {
       ["promises", "Your promises"],
       ["backup", "Backups"],
       ["people", "People"],
-      ["done", "Done"],
+      ["done", /^(Done|Where things stand)$/],
     ];
     for (const [id, title] of steps) {
       await page.locator(`nav button[data-screen="${id}"]`).click();
-      await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible(LOADED);
+      await expect(page.getByRole("heading", { level: 2, name: title, exact: typeof title === "string" })).toBeVisible(LOADED);
       const words = workWordsIn(await settledText(page));
-      if (words.length > 0) found.push(`${title}: ${words.join(", ")}`);
+      if (words.length > 0) found.push(`${id}: ${words.join(", ")}`);
     }
     expect(found).toEqual([]);
   });
