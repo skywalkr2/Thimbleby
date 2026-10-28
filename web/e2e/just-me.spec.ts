@@ -197,6 +197,10 @@ test.describe('"Just me" sees no work words', () => {
       if (words.length > 0) found.push(`${id}: ${words.join(", ")}`);
     }
     expect(found).toEqual([]);
+    // Leave setup as a person would: a setup left partway through opens again where it was on the next visit, and the
+    // tests after this one start from Today.
+    await page.getByRole("button", { name: "Finish later", exact: true }).click();
+    await expect(page.locator("[data-walkthrough]")).toHaveCount(0, LOADED);
   });
 
   test("no form, menu, Knowledge, Quality, Ask or record page shows them", async ({ page }) => {

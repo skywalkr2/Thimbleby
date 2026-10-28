@@ -198,7 +198,8 @@ test.describe("the visual system", () => {
     await expect(toast).toBeVisible();
     // The window was just resized: wait for the navigation to have moved to the bottom bar, then read both boxes in one frame.
     const views = page.getByRole("navigation", { name: "Views" });
-    await expect.poll(async () => (await views.boundingBox())!.y).toBeGreaterThan(HEIGHT / 2);
+    // While it moves it may be off the page for a frame: no box yet counts as not there.
+    await expect.poll(async () => (await views.boundingBox())?.y ?? -1).toBeGreaterThan(HEIGHT / 2);
     await expect
       .poll(async () => {
         const bar = (await views.boundingBox())!;
