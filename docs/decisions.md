@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Addresses are read whole, and HTML becomes text where it comes in
+
+**Decided:** The term scan recognizes a postal address as one thing, by formats kept as language data, and asks
+about nothing inside it; file types and everyday mail abbreviations join the shipped known words, while a bare state
+code outside an address can still be asked. Text that arrives as HTML, from any source, is turned into plain text
+where every watched item and paste enters, before it is compared, stored or handed in.
+
+**Decided by:** the owner ("it doesnt know state codes in addresses - so its not seeing addresses properly"; the
+screenshot of "What does PDF / MO / PA mean here?" with a quoted HTML table).
+
+**Why:** the questions came from a mailing address, a calendar entry's place and a mail whose plain-text part held
+HTML.
+
+**Impact:** design 6.22 and 6.5; four language lists (`address_patterns`, `address_regions`, `address_postal_codes`,
+`address_countries`) with demo values in both workspaces; P89 done. Change log: section 244.
+
 ## 2026-10-28: A date without a year takes the year the way a person would
 
 **Decided:** A date written without a year ("Oct 30-Nov 5", "Friday the 7th", "Jan 3") is read the way a person

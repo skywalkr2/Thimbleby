@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 244. Word questions only about real unknown words; HTML turned into text on the way in (2026-10-28; owner's first evening; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Term questions (6.22) | "What does PDF / MO / PA mean here?" from file types and state codes in addresses | **Built** (`tests/test_term_markup_addresses.py`): an address is recognized whole and nothing in it is asked; file types and mail abbreviations are known words; a bare code outside an address can still be asked |
+| Incoming text (6.5) | A plain-text part holding HTML was stored and quoted with its tags | **Built** (`tests/test_term_markup_addresses.py`): every watched item and paste is turned into plain text where it enters; text saved as markup before is not handed in again |
+
 ## 243. Add-ons in their own folder; People can be passed (2026-10-28; owner's first evening; built)
 
 | Where | Before | Now |
