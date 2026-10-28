@@ -55,3 +55,6 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -n auto"  # parallel (pytest-xdist); add -n0 to run one test with a debugger or print output
+# A full run makes several gigabytes of throwaway workspaces: keep only the failed tests' ones, from the last run.
+tmp_path_retention_policy = "failed"
+tmp_path_retention_count = 1
