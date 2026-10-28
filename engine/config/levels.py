@@ -61,6 +61,8 @@ ADVANCED: dict[str, str] = {
     "storage.sync.shared": "backups",
     "ui.brand.color": "appearance",
     "ui.brand.logo": "appearance",
+    "ui.schedule.day_starts": "appearance",
+    "ui.schedule.day_ends": "appearance",
     "dispatch.knowledge.learn": "learns",
     "dispatch.knowledge.follow_on": "learns",
     "dispatch.knowledge.check_on_switch": "learns",
@@ -359,6 +361,7 @@ INTERNAL = (
 GROUPS_IN_FILES = (
     "ui.today",
     "ui.followups",
+    "ui.schedule",
     "ui.walkthrough",
     "ui.series",
     "ui.feedback_to",

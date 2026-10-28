@@ -2308,6 +2308,37 @@ DEFAULT_SHORTCUTS = {
 }
 
 
+class ScheduleSettings(ConfigModel):
+    week_starts_on: Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] = Field(
+        "monday", description="The first day of a week on the calendar page. Its Week and Month views begin on it."
+    )
+    day_starts: str = Field(
+        "07:00",
+        description="The first hour the calendar page's time grid shows. An entry before it is still shown, because "
+        "the grid grows to include it.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    day_ends: str = Field(
+        "19:00",
+        description="The last hour the calendar page's time grid shows. An entry after it is still shown, because "
+        "the grid grows to include it.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    month_entries: int = Field(
+        3,
+        ge=1,
+        le=10,
+        description="How many entries a day in the calendar page's Month view lists before it says how many more there "
+        "are.",
+    )
+
+    @model_validator(mode="after")
+    def _grid_runs_forward(self) -> ScheduleSettings:
+        if self.day_starts >= self.day_ends:
+            raise ValueError("the time grid must start before it ends")
+        return self
+
+
 class TodaySettings(ConfigModel):
     mail_hours: int = Field(
         24, ge=1, le=336, description="How far back, in hours, Today's list of what came in reaches."
@@ -2320,8 +2351,8 @@ class TodaySettings(ConfigModel):
         3,
         ge=1,
         le=7,
-        description="How many days the schedule screen shows at once: side by side on a wide window, one under "
-        "another on a narrow one.",
+        description="How many days the schedule gives when a request names no number of days; the calendar page "
+        "always names its own.",
     )
     stale_after_days: int = Field(
         21,
@@ -2747,6 +2778,10 @@ class UiFile(FileModel):
 
     today: TodaySettings = Field(
         default_factory=TodaySettings, description="What Today's agenda and its list of what came in cover."
+    )
+    schedule: ScheduleSettings = Field(
+        default_factory=ScheduleSettings,
+        description="What the calendar page shows, its week, its hours and its months.",
     )
     followups: FollowupsSettings = Field(
         default_factory=FollowupsSettings,

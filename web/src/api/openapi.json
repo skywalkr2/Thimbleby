@@ -25397,6 +25397,18 @@
       "ScheduleEntryView": {
         "description": "One entry on one day of the schedule: the agenda item and the part of it that falls on that day.",
         "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a due date: the id of the to-do, whose page is at GET /api/records/{id}. `snapshot` is the same id.",
+            "title": "Action"
+          },
           "agenda": {
             "description": "What is to be taken up at this meeting: its own agenda items and, for the next meeting of a series, the series' agenda after them.",
             "items": {
@@ -25481,6 +25493,18 @@
             "description": "For an event read from a connected calendar: the id of the calendar entry kept for this date (its page shows who is asked), when there is one.",
             "title": "Entry"
           },
+          "kind": {
+            "default": "event",
+            "description": "What the entry is: an event of a connected calendar, an entry of the app's own calendar, a parcel or order (an own entry with `delivery`), or the due date of one of the person's own open to-dos.",
+            "enum": [
+              "event",
+              "own",
+              "delivery",
+              "due"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "link": {
             "anyOf": [
               {
@@ -25516,6 +25540,18 @@
             ],
             "description": "The series this date or entry is one meeting of, when it is.",
             "title": "Series"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side's top project the entry is on; none for neither. The screen's side filter shows an entry with none under every choice.",
+            "title": "Side"
           },
           "slot": {
             "description": "Where it sits in its day: with the all-day entries at the top, or among the timed ones in time order. An entry with no time of day, or one that goes on through the whole day, is all-day.",
@@ -25597,17 +25633,58 @@
             "title": "First",
             "type": "string"
           },
+          "grid_ends": {
+            "description": "The last time of day the time grid shows (`ui.schedule.day_ends`).",
+            "title": "Grid Ends",
+            "type": "string"
+          },
+          "grid_starts": {
+            "description": "The first time of day the time grid shows (`ui.schedule.day_starts`).",
+            "title": "Grid Starts",
+            "type": "string"
+          },
+          "month_entries": {
+            "description": "How many entries a day lists in the month view (`ui.schedule.month_entries`).",
+            "title": "Month Entries",
+            "type": "integer"
+          },
+          "on_its_way": {
+            "description": "The parcels and orders with no date yet: on no day, so listed apart.",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleEntryView"
+            },
+            "title": "On Its Way",
+            "type": "array"
+          },
           "today": {
             "description": "The person's today, so a screen can mark it and return to it.",
             "format": "date",
             "title": "Today",
             "type": "string"
+          },
+          "week_starts_on": {
+            "description": "The first day of a week, Monday as 0 (`ui.schedule.week_starts_on`).",
+            "title": "Week Starts On",
+            "type": "integer"
+          },
+          "work_days": {
+            "description": "The days of the working week, Monday as 0 through Sunday as 6, from `steward.reminders.working_first_day` and `working_last_day`.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Work Days",
+            "type": "array"
           }
         },
         "required": [
           "today",
           "first",
-          "days"
+          "days",
+          "work_days",
+          "week_starts_on",
+          "grid_starts",
+          "grid_ends",
+          "month_entries"
         ],
         "title": "ScheduleView",
         "type": "object"
@@ -42895,7 +42972,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "maximum": 14,
+                  "maximum": 42,
                   "minimum": 1,
                   "type": "integer"
                 },

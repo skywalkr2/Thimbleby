@@ -209,7 +209,7 @@ build it now, without dragging).
 **Why:** the schedule showed three days at a time, too little to plan a week.
 
 **Impact:** Design 7.x (the calendar page), the roadmap (before the gate week, after the owner's first-evening fixes).
-Change log: none.
+Change log: section 252.
 
 ## 2026-10-28: Narrow windows yes, phone polish later
 

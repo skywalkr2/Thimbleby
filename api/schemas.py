@@ -2582,6 +2582,21 @@ class ScheduleEntryView(AgendaItemView):
         description="When it ends, as a date-time on the person's clock, when that is on this day; none for an entry "
         "that goes on past it or names no end.",
     )
+    kind: Literal["event", "own", "delivery", "due"] = Field(
+        "event",
+        description="What the entry is: an event of a connected calendar, an entry of the app's own calendar, a parcel "
+        "or order (an own entry with `delivery`), or the due date of one of the person's own open to-dos.",
+    )
+    side: str | None = Field(
+        None,
+        description="The id of the side's top project the entry is on; none for neither. The screen's side filter "
+        "shows an entry with none under every choice.",
+    )
+    action: str | None = Field(
+        None,
+        description="For a due date: the id of the to-do, whose page is at GET /api/records/{id}. `snapshot` is the "
+        "same id.",
+    )
 
 
 class ScheduleDayView(BaseModel):
@@ -2628,6 +2643,20 @@ class ScheduleView(BaseModel):
     today: date = Field(description="The person's today, so a screen can mark it and return to it.")
     first: date
     days: list[ScheduleDayView]
+    on_its_way: list[ScheduleEntryView] = Field(
+        default_factory=list,
+        description="The parcels and orders with no date yet: on no day, so listed apart.",
+    )
+    work_days: list[int] = Field(
+        description="The days of the working week, Monday as 0 through Sunday as 6, from "
+        "`steward.reminders.working_first_day` and `working_last_day`."
+    )
+    week_starts_on: int = Field(description="The first day of a week, Monday as 0 (`ui.schedule.week_starts_on`).")
+    grid_starts: str = Field(description="The first time of day the time grid shows (`ui.schedule.day_starts`).")
+    grid_ends: str = Field(description="The last time of day the time grid shows (`ui.schedule.day_ends`).")
+    month_entries: int = Field(
+        description="How many entries a day lists in the month view (`ui.schedule.month_entries`)."
+    )
 
 
 class ArrivedView(BaseModel):

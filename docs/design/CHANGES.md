@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 252. The schedule is a calendar page: Day, Work week, Week and Month, with the side filter, due dates and an entry's details beside it (2026-10-28; P86)
+
+| Where | Before | Now |
+|---|---|---|
+| The schedule screen (7.7) | A run of three days side by side, no week or month view, an entry a link to its page | Day, Work week, Week and Month (keys 1 to 4, remembered per browser), a time grid with an hour column and an all-day strip, overlapping entries side by side, a line for now, a month of six weeks with "N more", arrows and Today by the view's unit. Built: `web/src/components/ScheduleViews.test.tsx`, `web/src/lib/calendar.test.ts` |
+| An entry (7.7) | A row with a link; its words under it | A button that opens its details beside the calendar (a pane from 1024px, the whole screen with Back below it; Escape returns the cursor): when, where, its calendar or "The app's own calendar", its side, a delivery's tracking, carrier, status and range, and Open. Built: `ScheduleViews.test.tsx` ("beside the calendar…", "on a narrow window the details take the screen…") |
+| Sides on the schedule (6.32, 7.7) | The schedule ignored the side filter | Each entry carries `side` (its project's, or for a connected event its calendar's one side; none for neither) and the toolbar's side filter narrows them; an entry on no side shows under every choice. Built: `tests/test_schedule.py::test_an_entry_carries_the_side_of_its_project_and_an_event_the_side_its_calendar_serves`, `ScheduleViews.test.tsx` ("a side narrows the entries…") |
+| Due dates (7.7) | Not on the schedule | Each open to-do the person owns with a firm due date and not on hold is an all-day entry on its day (`kind: due`, linking to the to-do). A calendar entry made as a to-do's reminder (`reminder` on an entry) is an own entry and is shown as one; a reminder time (`remind_at`) on a to-do or a dated fact is a Today line, not a dated calendar record, and is not drawn. Built: `tests/test_schedule.py::test_a_due_date_is_an_all_day_entry_on_its_day_linking_to_its_to_do` |
+| `GET /api/schedule` (9) | Up to 14 days; entries with `slot`, `begins`, `ends` | Up to 42 days (six weeks, 43 refused); each entry also has `kind`, `side` and `action`; the answer carries `on_its_way` (parcels with no date yet) and the settings the grid reads. Built: `tests/test_schedule.py::test_the_route_gives_six_weeks_the_kinds_the_settings_and_refuses_more` |
+| Settings (4.0) | `ui.today.schedule_days` said how many days the screen showed | New `ui.schedule`: `week_starts_on`, `day_starts`, `day_ends`, `month_entries` (the two hours in Settings under Appearance, More settings; the others kept in files; demo values in both workspaces); the work week is the existing `steward.reminders.working_first_day` to `working_last_day`; `schedule_days` is only the default for a request that names no days |
+| Narrow windows (7.0) | The days stacked | Week and Work week show Day when the calendar has less than 736px or 544px of room; Month cells become a count and dots; no sideways scroll |
+
 ## 251. The steward's remaining items, group two: what a stale act changed, several messages at once, events on a connected calendar, who reads an area, forward-to through mail, the box on every record (2026-10-28; S1b, S4, S5)
 
 | Where | Before | Now |

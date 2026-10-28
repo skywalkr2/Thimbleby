@@ -1,6 +1,6 @@
 // Reacting to the window's width. The phone layout follows the workspace's setting (`narrow_below_px`, and the page's
 // `data-narrow` attribute the styles key off); other widths use media queries directly.
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, type RefObject } from "react";
 
 function matches(query: string): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(query).matches;
@@ -41,4 +41,21 @@ export function useNarrow(px: number): boolean {
     document.documentElement.toggleAttribute("data-narrow", narrow);
   }, [narrow]);
   return narrow;
+}
+
+/** The width of an element, kept up to date, for a screen whose layout depends on the room it has rather than the window's
+ * (the calendar, with its sidebar and pane). Null while the width isn't known: nothing measured yet, or no layout at all. */
+export function useWidth(ref: RefObject<HTMLElement | null>): number | null {
+  const [width, setWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => setWidth(el.clientWidth > 0 ? el.clientWidth : null);
+    read();
+    if (typeof ResizeObserver !== "function") return;
+    const watch = new ResizeObserver(read);
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [ref]);
+  return width;
 }

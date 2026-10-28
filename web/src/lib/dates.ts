@@ -88,3 +88,38 @@ export function weekday(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return weekdayFormat.format(new Date(y, m - 1, d));
 }
+
+const fullDayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+const monthDayLongFormat = new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric" });
+const monthDayYearFormat = new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" });
+const monthYearFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
+
+const dateOf = (iso: string): Date => {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
+/** A day in full, "Tuesday, October 27, 2026", for the heading of a one-day view. */
+export function fullDay(iso: string): string {
+  return fullDayFormat.format(dateOf(iso));
+}
+
+/** A day as its month and day in full, "October 27", for the start of a range. */
+export function monthDayLong(iso: string): string {
+  return monthDayLongFormat.format(dateOf(iso));
+}
+
+/** A day as its month, day and year in full, "November 1, 2026", for the end of a range. */
+export function monthDayYear(iso: string): string {
+  return monthDayYearFormat.format(dateOf(iso));
+}
+
+/** The month of a day with its year, "October 2026", for the heading of a month. */
+export function monthYear(iso: string): string {
+  return monthYearFormat.format(dateOf(iso));
+}
+
+/** The day of the month, as a number, for a cell of a month. */
+export function dayOfMonth(iso: string): number {
+  return dateOf(iso).getDate();
+}

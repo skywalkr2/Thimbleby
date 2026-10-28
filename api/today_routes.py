@@ -28,6 +28,7 @@ from api.schemas import (
 from engine import schedule as schedule_module
 from engine import sides
 from engine.config import Config
+from engine.config.schema import WEEKDAYS
 from engine.names import People, render_owner
 from engine.storage import Store
 from engine.this_week import this_week
@@ -37,7 +38,15 @@ from engine.workspace import Workspace
 
 
 def _entry_view(entry: schedule_module.Entry) -> ScheduleEntryView:
-    return ScheduleEntryView(**vars(entry.item), slot=entry.slot, begins=entry.begins, ends=entry.ends)
+    return ScheduleEntryView(
+        **vars(entry.item),
+        slot=entry.slot,
+        begins=entry.begins,
+        ends=entry.ends,
+        kind=entry.kind,
+        side=entry.side,
+        action=entry.action,
+    )
 
 
 def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
@@ -175,6 +184,12 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 )
                 for d in found
             ],
+            on_its_way=[_entry_view(e) for e in schedule_module.on_its_way(store, cfg, now)],
+            work_days=schedule_module.work_days(cfg),
+            week_starts_on=WEEKDAYS.index(cfg.ui.schedule.week_starts_on),
+            grid_starts=cfg.ui.schedule.day_starts,
+            grid_ends=cfg.ui.schedule.day_ends,
+            month_entries=cfg.ui.schedule.month_entries,
         )
 
     @r.get("/schedule/events/{snapshot}")

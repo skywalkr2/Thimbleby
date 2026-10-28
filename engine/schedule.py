@@ -10,11 +10,15 @@ from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+from engine.config.schema import WEEKDAYS
 from engine.connectors import moment
-from engine.today import AgendaItem, agenda, event_dates, zone
+from engine.sides import side_of_item, watch_source_side
+from engine.today import AgendaItem, agenda, event_dates, todo, zone
 
-#: The most days one request may ask for.
-MOST_DAYS = 14
+#: The most days one request may ask for: six weeks, what a month view needs.
+MOST_DAYS = 42
+
+Kind = Literal["event", "own", "delivery", "due"]
 
 
 @dataclass
@@ -27,6 +31,9 @@ class Entry:
     slot: Literal["all_day", "timed"]
     begins: str | None = None
     ends: str | None = None
+    kind: Kind = "event"
+    side: str | None = None
+    action: str | None = None  # for a due date: the to-do it is the date of
 
 
 @dataclass
@@ -34,6 +41,34 @@ class Day:
     date: date
     all_day: list[Entry] = field(default_factory=list)
     timed: list[Entry] = field(default_factory=list)
+
+
+def _kind(item: AgendaItem) -> Kind:
+    if item.delivery is not None:
+        return "delivery"
+    return "own" if item.own else "event"
+
+
+def _side(view: Any, cfg: Any, item: AgendaItem) -> str | None:
+    """The side an entry is on: that of the project of the entry the app keeps for it, else, for an event of a connected
+    calendar, the one side its watched source serves. None when it is on no side (shown under every choice)."""
+    kept = item.snapshot if item.own else item.entry
+    record = view.get("event", kept) if kept else None
+    if record is not None and (side := side_of_item(view, cfg, record)):
+        return side
+    return watch_source_side(view, cfg, item.source) if item.source else None
+
+
+def _due_items(store: Any, cfg: Any, now: datetime, first: date, through: date) -> list[tuple[AgendaItem, str]]:
+    """The open to-dos the person owns that fall due from `first` through `through`, each as an all-day agenda item on
+    its day with the to-do's id. A to-do on hold, or one whose date is still to be checked, is not a deadline yet."""
+    found = []
+    for t in todo(store, cfg, now):
+        if t.due is None or t.due_check or t.on_hold or not first <= t.due <= through:
+            continue
+        item = AgendaItem(t.action, "", t.text, t.due.isoformat(), None, True, None, None, False, days=[t.due])
+        found.append((item, t.action))
+    return found
 
 
 def _local(value: str, here: ZoneInfo) -> datetime | None:
@@ -74,18 +109,49 @@ def schedule(store: Any, cfg: Any, now: datetime, start: date | None = None, day
     count = max(1, min(MOST_DAYS, days if days is not None else cfg.ui.today.schedule_days))
     through = first + timedelta(days=count - 1)
     items = agenda(store, cfg, now, through=through, start=first)
+    view = store.read()
+    sides = {id(item): _side(view, cfg, item) for item in items}
+    due = _due_items(store, cfg, now, first, through)
+    for item, action in due:
+        record = view.get("action", action)
+        sides[id(item)] = side_of_item(view, cfg, record) if record is not None else None
+    actions = {id(item): action for item, action in due}
     out = []
     for n in range(count):
         day = Day(first + timedelta(days=n))
-        for item in items:
+        for item in [*items, *(i for i, _ in due)]:
             if day.date in item.days:
                 entry = _entry(item, day.date, here)
+                entry.side = sides[id(item)]
+                if id(item) in actions:
+                    entry.kind, entry.action = "due", actions[id(item)]
+                else:
+                    entry.kind = _kind(item)
                 (day.all_day if entry.slot == "all_day" else day.timed).append(entry)
-        # Connected calendars' all-day entries come before the app's own; each group keeps the agenda's order.
-        day.all_day.sort(key=lambda e: e.item.own)
+        # Connected calendars' all-day entries come before the app's own, and due dates last; each group keeps the
+        # agenda's order.
+        day.all_day.sort(key=lambda e: (e.kind == "due", e.item.own))
         day.timed.sort(key=lambda e: (_at(e, day.date, here), e.item.title.casefold()))
         out.append(day)
     return out
+
+
+def work_days(cfg: Any) -> list[int]:
+    """The days of the working week, Monday as 0, from the configured first day through the last (a week that runs past
+    Sunday wraps round to Monday)."""
+    rules = cfg.steward.reminders
+    first, last = WEEKDAYS.index(rules.working_first_day), WEEKDAYS.index(rules.working_last_day)
+    return [d % 7 for d in range(first, last + 1 + (7 if last < first else 0))]
+
+
+def on_its_way(store: Any, cfg: Any, now: datetime) -> list[Entry]:
+    """The deliveries with no date yet: on no day, so the schedule lists them apart."""
+    view = store.read()
+    return [
+        Entry(item, "all_day", kind="delivery", side=_side(view, cfg, item))
+        for item in agenda(store, cfg, now, undated=True)
+        if item.delivery is not None and not item.days
+    ]
 
 
 @dataclass

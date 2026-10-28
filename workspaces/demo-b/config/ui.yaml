@@ -11,6 +11,7 @@ handled_rows_shown: 25   # how many rows a group shows before Show more
 feedback_problem_days: 3   # how far back Send feedback offers to add failed work
 feedback_problem_max: 20   # the most failures it offers to add
 today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, schedule_days: 2, stale_after_days: 21, fold_batches_after_days: 3, top_priorities_lines: 4, top_priorities_ahead_days: 10}   # what Today's agenda and what came in cover
+schedule: {week_starts_on: sunday, day_starts: "08:00", day_ends: "18:00", month_entries: 4}   # the calendar page: its week, its hours and its months
 followups: {action_due_within_days: 5, undated_after_days: 10, question_after_days: 3, second_nudge_items: 2, escalate_after_chases: 2}   # when a sent item is due a follow-up
 walkthrough: {first_promises: 3, suggested_people: 5, not_people_addresses: [info, support, sales, billing], not_people_names: [team, support, bank, store]}   # how many promises the first-result screen shows; how many people the people step suggests, and the address and name words that are never a person
 series: {usually_with_share: 0.5, usually_with_min_meetings: 2, usually_with_max: 6}   # who a series is "usually with" on its page

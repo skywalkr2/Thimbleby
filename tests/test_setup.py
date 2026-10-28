@@ -113,8 +113,9 @@ def test_the_appearance_page_holds_light_or_dark_and_density_and_the_brand_is_in
     found = settings.describe(cfg)
     # The brand is on the page too, in its closed "More settings" fold, never listed again under Advanced.
     assert {s.key for s in found if s.page == "appearance" and not s.advanced} == {"ui.theme", "ui.density"}
-    assert {s.key for s in found if s.page == "appearance" and s.advanced} == {"ui.brand.color", "ui.brand.logo"}
-    assert {s.key for s in found if s.topic == "appearance"} == {"ui.brand.color", "ui.brand.logo"}
+    more = {"ui.brand.color", "ui.brand.logo", "ui.schedule.day_starts", "ui.schedule.day_ends"}
+    assert {s.key for s in found if s.page == "appearance" and s.advanced} == more
+    assert {s.key for s in found if s.topic == "appearance"} == more
 
 
 def test_saves_in_a_row_each_use_the_fingerprint_the_one_before_answered_with(tmp_path):

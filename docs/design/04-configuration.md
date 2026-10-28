@@ -667,10 +667,16 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `handled_rows_shown` (25): how many rows a group on Handled for you draws before "Show more" (7.20). Advanced.
 - `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add
   (7, Help); the app keeps five times that many app errors in the workspace's private folder (`problems.jsonl`).
-- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (6: today and the six days after; 0 is today only), `schedule_days` (3; 1 to 7): how many days the schedule screen shows at once (7.7), and
+- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (6: today and the six days after; 0 is today only), `schedule_days` (3; 1 to 7): how many days the schedule gives when a request names none (7.7; the calendar page always names its own), and
   `stale_after_days` (21; 0 is off): the person's own undated to-do nothing has changed for this long is stale, and Today has one
   line for them (6.9); `top_priorities_lines` (5): the most lines Top priorities lists on Today, the rest counted; and
   `top_priorities_ahead_days` (14; 0 leaves it out): the days ahead whose dated to-dos follow its lines (7.7).
+- `schedule`: what the calendar page shows (7.7): `week_starts_on` (monday): the first day of a week in the Week and Month
+  views; `day_starts` (07:00) and `day_ends` (19:00), both picked from a list of times: the hours of the time grid, which
+  grows to hold an entry outside them; and `month_entries` (3; 1 to 10): the entries a day lists in Month before "N more".
+  The working days of the Work week view are `steward.reminders.working_first_day` and `working_last_day` (Monday to
+  Friday). `day_starts` and `day_ends` are in Settings under Appearance, in More settings; the other two are kept in files
+  (the Settings cut allows 30 rows there); demo values in both fictional workspaces.
 - `followups`: when something sent to a person is due a follow-up, one rule that Today, Follow-ups and Top priorities all read (6.9).
   `question_after_days` (4): a question with no reply after this many days; `action_due_within_days` (7): a told action
   whose own due date is this near or past (an action on hold is never chased); `undated_after_days` (14): a told action with

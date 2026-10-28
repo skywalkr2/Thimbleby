@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { addDays, monthDay } from "../lib/dates";
+import { fullDay, monthDay } from "../lib/dates";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { Schedule } from "./Schedule";
 import { TodayRail } from "./TodayRail";
@@ -107,21 +108,36 @@ test("a delivery that has arrived says Arrived in words, and one out for deliver
 });
 
 test("the schedule screen shows a delivery's range, carrier, tracking number and Arrived in words", async () => {
-  const entry = (extra: Partial<S["ScheduleEntryView"]>, date: string): S["ScheduleEntryView"] => ({
+  window.localStorage.setItem("cockpit:schedule-view", "day");
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }));
+  const entry = (date: string): S["ScheduleEntryView"] => ({
     ...parcel("Parcel from the corner shop", { status: "arrived" }),
     slot: "all_day",
     days: [date],
-    ...extra,
+    kind: "delivery",
   });
-  const days = [TODAY, addDays(TODAY, 1), addDays(TODAY, 2)].map((date) => ({ date, all_day: date === FIRST ? [entry({}, date)] : [], timed: [] }));
   fakeApi({
-    "GET schedule": () => ({ today: TODAY, first: TODAY, days }),
+    "GET schedule": (_body, query) => ({
+      today: FIRST,
+      first: query?.get("from") ?? FIRST,
+      days: [{ date: query?.get("from") ?? FIRST, all_day: [entry(query?.get("from") ?? FIRST)], timed: [] }],
+      on_its_way: [],
+      work_days: [0, 1, 2, 3, 4],
+      week_starts_on: 0,
+      grid_starts: "07:00",
+      grid_ends: "19:00",
+      month_entries: 3,
+    }),
     "GET watch": () => [],
   });
   renderApp(<Schedule />);
-  const row = (await screen.findByText("Parcel from the corner shop")).closest("li") as HTMLElement;
-  expect(row).toHaveTextContent(`${monthDay(FIRST)} – ${monthDay(LAST)}`);
-  expect(row).toHaveTextContent(CARRIER);
-  expect(row).toHaveTextContent(`Tracking ${TRACKING}`);
-  expect(row).toHaveTextContent("Arrived");
+  await screen.findByRole("heading", { level: 2, name: fullDay(FIRST) });
+  const chip = await screen.findByRole("button", { name: /Parcel from the corner shop/ });
+  expect(chip).toHaveTextContent("Arrived");
+  await userEvent.click(chip);
+  const pane = await screen.findByRole("dialog");
+  expect(pane).toHaveTextContent(`${monthDay(FIRST)} – ${monthDay(LAST)}`);
+  expect(pane).toHaveTextContent(CARRIER);
+  expect(pane).toHaveTextContent(`Tracking ${TRACKING}`);
+  expect(pane).toHaveTextContent("Arrived");
 });

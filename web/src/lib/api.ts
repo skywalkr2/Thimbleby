@@ -441,7 +441,10 @@ export const api = {
   pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),
   agenda: () => call<S["AgendaItemView"][]>("GET", "today/agenda"),
   /** A run of days from a day (today when none), each with its all-day and timed entries. */
-  schedule: (from: string | null) => call<S["ScheduleView"]>("GET", from ? `schedule?from=${id(from)}` : "schedule"),
+  schedule: (from: string | null, days?: number) => {
+    const query = [from ? `from=${id(from)}` : "", days ? `days=${days}` : ""].filter(Boolean).join("&");
+    return call<S["ScheduleView"]>("GET", query ? `schedule?${query}` : "schedule");
+  },
   /** What a connected calendar says about one event the app keeps no entry for; `start` picks the date of a repeating one. */
   scheduleEvent: (snapshot: string, start?: string) => call<S["ConnectedEventView"]>("GET", `schedule/events/${id(snapshot)}${start ? `?start=${id(start)}` : ""}`),
   agendaSpan: () => call<S["AgendaSpanView"]>("GET", "today/agenda-span"),
