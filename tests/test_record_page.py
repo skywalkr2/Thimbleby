@@ -372,3 +372,26 @@ def test_a_saved_messages_page_loads_read_only_and_a_calendar_entrys_page_loads_
     # A calendar entry's page loads as before, and keeps the fields it could already edit.
     assert client.get("/api/record", params={"kind": "event", "id": entry}).status_code == 200
     assert any(f["editable"] for f in client.get("/api/kinds/event").json()["fields"])
+
+
+def test_the_persons_own_page_leaves_out_a_question_about_a_stopped_connection(api):
+    client, store = api
+    me = next(p for p in store.read().list("person") if p.id == "PER-1")
+    ctx = WriteContext(actor="watcher", trust="trusted", op="test.record-page")
+    with store.transaction() as tx:
+        stopped = tx.create(
+            "question",
+            {
+                "to": me.id,
+                "title": "A connection can't be read",
+                "kind": "decision",
+                "resolves": {"kind": "watch", "source": "gone"},
+            },
+            ctx,
+        ).id
+        asked = tx.create("question", {"to": me.id, "title": "Which paper?", "kind": "decision"}, ctx).id
+    page = client.get(f"/api/record-pages/{me.id}", params={"kind": "person"}).json()
+    ids = {q["id"] for q in page["open_questions"]}
+    assert asked in ids and stopped not in ids
+    # What happened to the stopped connection's question is not listed either.
+    assert all(e["id"] != stopped for e in page["activity"])

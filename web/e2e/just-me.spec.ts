@@ -298,4 +298,50 @@ test.describe('"Just me" sees no work words', () => {
 
     expect(found).toEqual([]);
   });
+
+  // Where something waits, the side menu says so (a sheet on a phone), and one group is shown in place (design 7.1, 7.5).
+  test("the menu counts what waits, and Follow-ups with one group shows its items in place, at 1440 and at a phone width", async ({ page }) => {
+    for (const size of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      await go(page, "work/open");
+      await heading(page, "To-dos and questions");
+      // At a phone width the menu is the sheet behind the work button.
+      if (size.width < 1024) await page.getByRole("button", { name: "Your day", exact: true }).click();
+      const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ waiting on you$/ });
+      await expect(entry).toBeVisible(LOADED);
+      // The figure is drawn and the words are the link's name; nothing waits on What changed here, so it has no count.
+      await expect(entry.locator('[class*="count"]')).toHaveText(/^\d+$/);
+      await expect(page.getByRole("link", { name: /^Handled for you(?!,)/ })).toBeVisible();
+      if (size.width < 1024) await page.keyboard.press("Escape");
+
+      // The one group on Follow-ups is the person's own: its questions stand in place, with no list and no pane beside it.
+      await go(page, "work/followups");
+      await heading(page, "Follow-ups");
+      const place = page.locator("[data-in-place]");
+      await expect(place).toBeVisible(LOADED);
+      await expect(place.getByRole("heading", { level: 2, name: "You", exact: true })).toBeVisible();
+      await expect(place.getByText(seeded.question.title)).toBeVisible();
+      await expect(page.locator("[data-detail-pane]")).toHaveCount(0);
+      await expect(page.getByRole("listitem", { name: "You", exact: true })).toHaveCount(0);
+      // Nothing is wider than the window.
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      expect(wide).toBe(false);
+      const box = await place.boundingBox();
+      expect(box && box.x + box.width <= size.width).toBe(true);
+    }
+  });
+
+  test("the person's own page says You and what waits for them, and never describes them as someone else", async ({ page }) => {
+    const me = (await (await page.request.get("api/me")).json()) as { person: string; full_name: string };
+    await go(page, `records/person/${encodeURIComponent(me.person)}`);
+    await expect(page.getByRole("heading", { level: 1, name: `You · ${me.full_name}` })).toBeVisible(LOADED);
+    await expect(page.getByRole("heading", { level: 3, name: "Your details" })).toBeVisible(LOADED);
+    const text = await settledText(page);
+    for (const words of [/You asked/, /Open with/, /No contact on file/, /Who they are to you/, /Name verified/, /Track only/]) {
+      expect(text).not.toMatch(words);
+    }
+  });
 });

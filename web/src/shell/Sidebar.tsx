@@ -11,6 +11,7 @@ import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { Tooltip } from "../ui/Tooltip";
 import { useNav, type NavEntry } from "./nav";
+import { NavCount, navName } from "./NavCount";
 import styles from "./Sidebar.module.css";
 
 const KEY = "cockpit:sidebar";
@@ -48,11 +49,12 @@ function Entry(props: { entry: NavEntry; current: View; rail: boolean; sub?: boo
       href={viewHref(entry.view)}
       className={[styles.entry, props.sub ? styles.sub : ""].filter(Boolean).join(" ")}
       aria-current={props.current === entry.view ? "page" : undefined}
+      aria-label={entry.count ? navName(entry) : undefined}
       data-view={entry.view}
     >
       {entry.icon ? <Icon name={entry.icon} /> : <span className={styles.glyph} aria-hidden="true">{entry.glyph}</span>}
       <span className={styles.label}>{entry.label}</span>
-      {entry.count ? <span className={styles.count}>{entry.count}</span> : null}
+      <NavCount entry={entry} className={styles.count} />
     </Link>
   );
   return props.rail ? <Tooltip text={entry.label} placement="right">{link}</Tooltip> : link;

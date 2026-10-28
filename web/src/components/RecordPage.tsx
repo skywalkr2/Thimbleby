@@ -66,6 +66,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const questionFields = record.data?.fields;
   // A question or decision waiting on the person is answered on Today; the page links to its line there.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  // The page of the person themselves reads as theirs: "You", their own details and what waits for them, and none of what
+  // describes someone else to them (who they are to you, when you were last in touch, what you asked them).
+  const isSelf = kind === "person" && !!me.data?.person && me.data.person === id;
   const waitingOnYou = kind === "question" && questionFields?.status === "open" && !!me.data?.person && questionFields?.to === me.data.person;
   const questionMenu = useQuestionMenu(
     { id, title: String(questionFields?.title ?? ""), text: String(questionFields?.text ?? "") },
@@ -111,6 +114,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           // The id of the input an item came from is shown as its "Where it came from" link instead.
           .filter(([name]) => !isSide || SIDE_FIELDS.has(name))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
+          // The app's own bookkeeping about a person, and how someone relates to you, are not the person's details about themselves.
+          .filter(([name]) => !(isSelf && SELF_HIDDEN.has(name)))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
           .map(([name, value]) => ({
@@ -122,7 +127,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       )
     : [];
   // The record's name, never its id: the page says it (a person is named by their full name).
-  const heading = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
+  const name = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
+  const heading = isSelf ? t("record.you_named", { name }) : name;
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
@@ -133,7 +139,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       </div>
       <div className="heading">
         <div>
-          {!isSide && <span className="kind k-review">{justMe && kind === "project" ? t("record.kind.area") : readableTail(kind)}</span>}
+          {!isSide && !isSelf && <span className="kind k-review">{justMe && kind === "project" ? t("record.kind.area") : readableTail(kind)}</span>}
           <h1 id="record-title">{heading}</h1>
         </div>
         {data && (
@@ -176,9 +182,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {kind === "event" && <MeetingPrep entry={id} title={heading} />}
-          {kind === "person" && <PersonMemory person={id} />}
+          {kind === "person" && !isSelf && <PersonMemory person={id} />}
           {/* What is open comes first, then the conversation, then what finished and the history. */}
-          {page.data && <RecordActivity page={page.data} part="open" />}
+          {page.data && <RecordActivity page={page.data} part="open" self={isSelf} />}
           {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
           {page.data && <RecordActivity page={page.data} part="rest" />}
           {kind === "project" && <SideInside id={id} />}
@@ -198,7 +204,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           <OriginLink origin={data.origin} />
           <section aria-labelledby="record-details">
             <div className="heading">
-              <h3 id="record-details">{t("record.details")}</h3>
+              <h3 id="record-details">{t(isSelf ? "record.details_you" : "record.details")}</h3>
               {(drawer || offered.length > 0) && !editing && (
                 <button type="button" className="btn" ref={editButton} onClick={() => setEditing(true)}>
                   {t("record.edit")}
@@ -233,7 +239,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               </dl>
             )}
           </section>
-          {kind === "person" && (
+          {kind === "person" && !isSelf && (
             <StancePicker person={id} version={data.version} stance={data.fields.stance} trackOnly={data.fields.track_only === true} />
           )}
           </aside>
@@ -246,6 +252,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 
 /** What a side keeps (a side is a group, not a project): the rest of a project's fields are not listed on its page. */
 const SIDE_FIELDS = new Set<string>(["name", "aliases", "summary", "links", "tags", "content_levels", "data_level"]);
+
+/** What a person's page leaves out when the person is the one the app is for. */
+const SELF_HIDDEN = new Set<string>(["name_verified", "track_only", "status", "relation"]);
 
 /** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
 const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda", "captured_at"]);

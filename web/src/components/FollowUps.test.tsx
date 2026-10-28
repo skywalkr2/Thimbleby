@@ -16,6 +16,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 /** The detail pane beside the list: the chosen person's message and asks. */
 const findPane = () => screen.findByRole("complementary");
+/** The one group shown in place of a list and a pane: its items, with the group's name as their heading. */
+const findInPlace = async () => {
+  await screen.findByRole("heading", { name: /./, level: 2 });
+  return document.querySelector<HTMLElement>("[data-in-place]")!;
+};
 /** The Copy under the message box: the last of the identical buttons on the screen (the line's and the detail's come first). */
 const underBox = () => screen.getAllByRole("button", { name: "Copy message" }).at(-1)!;
 
@@ -361,11 +366,10 @@ test("the default view hides what was already sent; Waiting on them shows it, on
   expect(screen.queryByText("Is the index final?")).toBeNull();
   expect(screen.queryByRole("button", { name: /Copy/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Waiting on them" }));
-  // The line says who and how many; the detail beside it has one line for each.
-  const card = screen.getByRole("listitem", { name: "Robin Sample" });
-  expect(within(card).getByText("2 waiting")).toBeInTheDocument();
-  expect(within(card).getByText("waiting 2 days")).toBeInTheDocument();
-  const rows = within(await findPane())
+  // With one person waiting there is nothing to choose between: their name heads one line for each, in place.
+  expect(await screen.findByRole("heading", { name: "Robin Sample", level: 2 })).toBeInTheDocument();
+  expect(screen.queryByRole("complementary")).toBeNull();
+  const rows = within(await findInPlace())
     .getAllByRole("listitem")
     .filter((li) => li.classList.contains("child"));
   expect(rows).toHaveLength(2);
@@ -513,13 +517,11 @@ test("a waiting pill says how long, and says follow up in words as well as color
   fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
-  const pane = await findPane();
+  const pane = await findInPlace();
   const calm = within(pane).getByText("waiting 3 days");
   expect(calm).toHaveAttribute("data-tone", "need");
   const late = within(pane).getByText("waiting 6 days · follow up");
   expect(late).toHaveAttribute("data-tone", "danger");
-  // The person's line carries the longest wait.
-  expect(within(screen.getByRole("listitem", { name: "Robin Sample" })).getByText("waiting 6 days · follow up")).toHaveAttribute("data-tone", "danger");
 });
 
 test("one day of waiting is singular, in the pill and with follow up", async () => {
@@ -531,7 +533,7 @@ test("one day of waiting is singular, in the pill and with follow up", async () 
   fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
-  const pane = await findPane();
+  const pane = await findInPlace();
   expect(within(pane).getByText("waiting 1 day")).toHaveAttribute("data-tone", "need");
   expect(within(pane).getByText("waiting 1 day · follow up")).toHaveAttribute("data-tone", "danger");
   expect(document.body).not.toHaveTextContent("1 days");
@@ -801,7 +803,8 @@ test("a link to a person's group opens the list that shows them, with the cursor
     message: "",
     to_send: 0,
   };
-  fakeApi({ "GET followups": () => [...sections, waiting], "GET people": () => [] });
+  const alsoWaiting: S["FollowupSection"] = { ...waiting, person: "PER-4", name: "Sam Sample", questions: [{ ...waiting.questions[0], id: "Q-6", title: "Is the jacket proof back?" }] };
+  fakeApi({ "GET followups": () => [...sections, waiting, alsoWaiting], "GET people": () => [] });
   renderApp(<FollowUps />);
   await screen.findByRole("button", { name: /^Robin Sample/ });
   expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
@@ -934,9 +937,8 @@ test("Later lists the questions held for a meeting or a day, per person, and To 
   expect(await screen.findByRole("button", { name: /^Robin Sample/ })).toHaveTextContent("1 to send");
   expect(screen.queryByText("Is the index final?")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Later" }));
-  const card = screen.getByRole("listitem", { name: "Robin Sample" });
-  expect(within(card).getByText("2 for later")).toBeInTheDocument();
-  const rows = within(await findPane())
+  // One person holds all that is for later, so their items stand in place.
+  const rows = within(await findInPlace())
     .getAllByRole("listitem")
     .filter((li) => li.parentElement?.tagName === "UL");
   expect(rows[0]).toHaveTextContent(/Is the index final\?/);
@@ -1100,7 +1102,7 @@ const byProject: S["FollowupSection"][] = [
   sections[0],
   {
     ...sections[1],
-    questions: [{ ...sections[1].questions[0], status: "sent", waiting_days: 5, chase_due: true, project_name: "Cover" }],
+    questions: [{ ...sections[1].questions[0], project_name: "Cover" }],
     actions: [{ ...sections[1].actions[0], project_name: "Book" }],
   },
 ];
@@ -1120,19 +1122,42 @@ test("a switch groups the open items by project, each saying who it is with and 
   expect(within(book).getByText("You · Yours")).toBeInTheDocument();
   expect(within(book).getByText("Robin Sample · To send")).toBeInTheDocument();
   await user.click(within(list).getByRole("listitem", { name: "Cover" }));
-  expect(within(await screen.findByRole("complementary", { name: "Cover" })).getByText("Robin Sample · waiting 5 days · follow up")).toBeInTheDocument();
-  // The by-person filters are not shown for a grouping they don't apply to.
-  expect(screen.queryByRole("group", { name: "Show" })).toBeNull();
+  expect(within(await screen.findByRole("complementary", { name: "Cover" })).getByText("Robin Sample · To send")).toBeInTheDocument();
+  // The same To send / Later / Waiting on them switch as by person stays, and it picks the rows each project holds.
+  expect(screen.getByRole("group", { name: "Show" })).toBeInTheDocument();
 });
 
-test("an item with no project is gathered under No project, after the projects", async () => {
+test("by project the To send, Later and Waiting on them switch stays and picks the rows each project lists", async () => {
+  const user = userEvent.setup();
+  const waiting = structuredClone(byProject);
+  waiting[1].questions = [{ ...waiting[1].questions[0], status: "sent", sent: "2026-10-12", waiting_days: 5, chase_due: true, project_name: "Cover" }];
+  waiting[1].later = [{ ...waiting[1].questions[0], id: "Q-8", title: "Is the jacket final?", status: "open", held_until: "2026-11-02", project_name: "Jacket" }];
+  fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("radio", { name: "By project" }));
+  expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+  // Only Book holds anything to send: with one group its items are shown in place.
+  expect(await screen.findByRole("heading", { name: "Book", level: 2 })).toBeInTheDocument();
+  expect(screen.queryByRole("list", { name: "Open follow-ups by project" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Waiting on them" }));
+  const cover = await screen.findByRole("heading", { name: "Cover", level: 2 });
+  expect(cover).toBeInTheDocument();
+  expect(screen.getByText("Robin Sample · waiting 5 days · follow up")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Later" }));
+  expect(await screen.findByRole("heading", { name: "Jacket", level: 2 })).toBeInTheDocument();
+  expect(screen.getByText("Robin Sample · Later")).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "By project" })).toBeChecked();
+});
+
+test("an item with no project is gathered under Not in a project, after the projects, never under No project", async () => {
   const user = userEvent.setup();
   const loose = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "" }] }, sections[0]];
   fakeApi({ "GET followups": () => loose, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("radio", { name: "By project" }));
   const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
-  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "No project"]);
+  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Not in a project"]);
+  expect(screen.queryByText("No project")).toBeNull();
 });
 
 test("an item filed on a side and in none of its projects is grouped as the side, not in a project, never as a project", async () => {
@@ -1145,11 +1170,76 @@ test("an item filed on a side and in none of its projects is grouped as the side
   expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Orchard Press: not in a project"]);
 });
 
-test("a row's Open goes to that person's group, on the list that holds what is waiting on them", async () => {
+test("by project the lines are grouped by side first, each side under its name, then by project", async () => {
   const user = userEvent.setup();
-  fakeApi({ "GET followups": () => byProject, "GET people": () => [] });
+  const orchard = { project: "PRJ-orchard", kind: "business", name: "Orchard Press" };
+  const mixed: S["FollowupSection"][] = [
+    {
+      ...sections[1],
+      questions: [{ ...sections[1].questions[0], project_name: "Cider", side: "PRJ-orchard" }],
+      actions: [
+        { ...sections[1].actions[0], project_name: "Garden", side: "PRJ-personal" },
+        { ...sections[1].actions[0], id: "ACT-3", text: "Pick the apples", project_name: "", side_name: "Orchard Press", side: "PRJ-orchard" },
+      ],
+    },
+  ];
+  fakeApi({
+    "GET followups": () => mixed,
+    "GET people": () => [],
+    "GET setup/business": () => ({ business: true, name: orchard.name, personal: "PRJ-personal", sides: [orchard], chosen: "work" }),
+    "GET projects": () => [],
+  });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("radio", { name: "By project" }));
+  // Personal first, then the side; each side's projects under its own heading, the one in none of them last.
+  const personal = await screen.findByRole("list", { name: "Personal" });
+  expect(within(personal).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Garden"]);
+  const side = screen.getByRole("list", { name: "Orchard Press" });
+  expect(within(side).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Cider", "Orchard Press: not in a project"]);
+  const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+  expect(headings.indexOf("Personal")).toBeLessThan(headings.indexOf("Orchard Press"));
+  expect(screen.queryByText("No project")).toBeNull();
+});
+
+test("with only one group its items show in place, not as a list beside a pane that holds everything", async () => {
+  const decision: S["FollowupSection"] = {
+    ...sections[0],
+    questions: [{ ...sections[1].questions[0], id: "Q-4", title: "Which printer do we use?", kind: "decision", about: null }],
+    actions: [],
+  };
+  fakeApi({ "GET followups": () => [decision], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  expect(await screen.findByRole("heading", { name: "You", level: 2 })).toBeInTheDocument();
+  expect(await screen.findByText("Which printer do we use?")).toBeInTheDocument();
+  // No list of one line, and no pane.
+  expect(screen.queryByRole("listitem", { name: "You" })).toBeNull();
+  expect(screen.queryByRole("complementary")).toBeNull();
+  expect(document.querySelector("[data-in-place]")).not.toBeNull();
+});
+
+test("a link to the only group's items puts the cursor on its heading", async () => {
+  const waiting: S["FollowupSection"] = { ...waitingSections()[0] };
+  fakeApi({ "GET followups": () => [waiting], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByText(/Nothing left to send/);
+  const { reveal } = await import("../lib/reveal");
+  act(() => {
+    expect(reveal("person", "PER-2")).toBe(true);
+  });
+  const heading = await screen.findByRole("heading", { name: "Robin Sample", level: 2 });
+  await waitFor(() => expect(heading).toHaveFocus());
+});
+
+test("a row's Open goes to that person's group, on the list that holds what is waiting on them", async () => {
+  const user = userEvent.setup();
+  const sent = structuredClone(byProject);
+  sent[1].questions = [{ ...sent[1].questions[0], status: "sent", sent: "2026-10-12", waiting_days: 5, chase_due: true }];
+  sent[1].actions = [];
+  sent[1].to_send = 0;
+  fakeApi({ "GET followups": () => sent, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("radio", { name: "By project" }));
+  await user.click(screen.getByRole("button", { name: "Waiting on them" }));
   await user.click((await screen.findAllByRole("button", { name: "Open Robin Sample's follow-ups" }))[0]);
   expect(screen.getByRole("radio", { name: "By person" })).toBeChecked();
   expect(await screen.findByRole("heading", { name: "Robin Sample" })).toBeInTheDocument();

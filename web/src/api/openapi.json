@@ -13834,6 +13834,22 @@
         "title": "LookBackView",
         "type": "object"
       },
+      "LookedAt": {
+        "additionalProperties": false,
+        "properties": {
+          "screen": {
+            "const": "handled",
+            "description": "The screen the person opened; what came before now is no longer new.",
+            "title": "Screen",
+            "type": "string"
+          }
+        },
+        "required": [
+          "screen"
+        ],
+        "title": "LookedAt",
+        "type": "object"
+      },
       "MadeBy": {
         "description": "Who made the item a Today line is about (design 7.7). `kind`: the assistant's run, a rule (`rule`) or the\nperson's own entry, which the screen says nothing about. `state`: suggested (waits for the person's yes) or added\n(applied, with Undo). `source` is the input it came from; `answered` how the person answered a suggestion;\n`inferred` that the assistant worked it out rather than being told.",
         "properties": {
@@ -26368,6 +26384,26 @@
         "title": "SetupView",
         "type": "object"
       },
+      "SideCount": {
+        "properties": {
+          "count": {
+            "description": "How many wait on that side, counting what is on no side too (it shows on every side).",
+            "title": "Count",
+            "type": "integer"
+          },
+          "side": {
+            "description": "The id of the side's top project.",
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "count"
+        ],
+        "title": "SideCount",
+        "type": "object"
+      },
       "SideRemoveIn": {
         "additionalProperties": false,
         "description": "Remove a side after setup: what happens to the projects and to-dos filed under it.",
@@ -29864,6 +29900,57 @@
           "applicable"
         ],
         "title": "VersionsView",
+        "type": "object"
+      },
+      "WaitingCount": {
+        "description": "How many things wait on one screen: all of them, and for each side the ones that show under its tab.",
+        "properties": {
+          "sides": {
+            "description": "One entry for each side the person has, Personal first; empty with no side beside Personal.",
+            "items": {
+              "$ref": "#/components/schemas/SideCount"
+            },
+            "title": "Sides",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total"
+        ],
+        "title": "WaitingCount",
+        "type": "object"
+      },
+      "WaitingCounts": {
+        "description": "What waits for the person on each screen that lists it, for the side menu and the side tabs.",
+        "properties": {
+          "changed": {
+            "$ref": "#/components/schemas/WaitingCount",
+            "description": "What changed: finished work not yet checked."
+          },
+          "followups": {
+            "$ref": "#/components/schemas/WaitingCount",
+            "description": "Follow-ups: what is ready to send."
+          },
+          "handled": {
+            "$ref": "#/components/schemas/WaitingCount",
+            "description": "Handled for you: what was handled since the person last opened it."
+          },
+          "open": {
+            "$ref": "#/components/schemas/WaitingCount",
+            "description": "To-dos and questions: what waits on the person themselves."
+          }
+        },
+        "required": [
+          "changed",
+          "followups",
+          "open",
+          "handled"
+        ],
+        "title": "WaitingCounts",
         "type": "object"
       },
       "WalkthroughIn": {
@@ -44701,6 +44788,64 @@
           }
         },
         "summary": "Versions Same"
+      }
+    },
+    "/api/waiting": {
+      "get": {
+        "description": "How many things wait on each screen that lists them: What changed (finished work not yet checked),\nFollow-ups (ready to send), To-dos and questions (waiting on the person) and Handled for you (handled since the\nperson last opened it). Each carries a count for every side, which includes what is on no side.",
+        "operationId": "counts_api_waiting_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitingCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Counts"
+      }
+    },
+    "/api/waiting/looked": {
+      "post": {
+        "description": "The person opened a screen: what came before now stops counting as new there.",
+        "operationId": "looked_api_waiting_looked_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookedAt"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Looked"
       }
     },
     "/api/watch": {

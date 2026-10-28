@@ -2154,6 +2154,16 @@ When a person last opened the list of what changed since yesterday: everything m
 | `person` | str \| None | `None` | The person who looked; none when the workspace names no person yet. |
 | `at` | datetime | required | The moment the list was drawn that the person then opened. |
 
+### `screen_look` (SLOOK-n)
+
+When a person last opened a screen that lists what the app did without them, so a count of what is new there means what came after that moment. One record for each person and screen; it only ever moves forward, and nothing but opening the screen writes it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `person` | str \| None | `None` | The person who looked; none when the workspace names no person yet. |
+| `screen` | str | required | The screen that was opened, by its name in the app. |
+| `at` | datetime | required | The moment the screen was opened. |
+
 ### `promise_count` (PCNT-n)
 
 The person's own count for one day: how many promises they count on their own list that day (`present`) and how many of those the app didn't have (`missed`). Entered on the Quality screen and kept as the person typed it; the app never works it out. One record for each person and day, and saving the day again corrects it.

@@ -5028,6 +5028,40 @@ class SinceYesterdayView(BaseModel):
     entries: list[SinceEntryView]
 
 
+class SideCount(BaseModel):
+    side: str = Field(description="The id of the side's top project.")
+    count: int = Field(
+        description="How many wait on that side, counting what is on no side too (it shows on every side)."
+    )
+
+
+class WaitingCount(BaseModel):
+    """How many things wait on one screen: all of them, and for each side the ones that show under its tab."""
+
+    total: int
+    sides: list[SideCount] = Field(
+        default_factory=list,
+        description="One entry for each side the person has, Personal first; empty with no side beside Personal.",
+    )
+
+
+class WaitingCounts(BaseModel):
+    """What waits for the person on each screen that lists it, for the side menu and the side tabs."""
+
+    changed: WaitingCount = Field(description="What changed: finished work not yet checked.")
+    followups: WaitingCount = Field(description="Follow-ups: what is ready to send.")
+    open: WaitingCount = Field(description="To-dos and questions: what waits on the person themselves.")
+    handled: WaitingCount = Field(description="Handled for you: what was handled since the person last opened it.")
+
+
+class LookedAt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    screen: Literal["handled"] = Field(
+        description="The screen the person opened; what came before now is no longer new."
+    )
+
+
 class SinceSeen(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

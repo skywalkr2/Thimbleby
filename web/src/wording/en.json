@@ -5563,5 +5563,22 @@
   "unfiled.filed_side.other": "Filed {n} items in {project}, not in a project.",
   "files.detail.side_value": "{side}, not in a project",
   "knows.nothing_yet": "{assistant} doesn't know anything here yet; it learns from what comes in and what you tell it.",
-  "knows.nothing_yet.unnamed": "Your assistant doesn't know anything here yet; it learns from what comes in and what you tell it."
+  "knows.nothing_yet.unnamed": "Your assistant doesn't know anything here yet; it learns from what comes in and what you tell it.",
+  "record.you_named": "You · {name}",
+  "record.details_you": "Your details",
+  "record.open_you": "What's waiting for you",
+  "record.questions_you": "Questions for you",
+  "nav.count.today.one": "{n} thing needs you",
+  "nav.count.today.other": "{n} things need you",
+  "nav.count.changed.one": "{n} change not yet checked",
+  "nav.count.changed.other": "{n} changes not yet checked",
+  "nav.count.handled.one": "{n} new since you last looked",
+  "nav.count.handled.other": "{n} new since you last looked",
+  "nav.count.followups.one": "{n} follow-up to send",
+  "nav.count.followups.other": "{n} follow-ups to send",
+  "nav.count.open.one": "{n} waiting on you",
+  "nav.count.open.other": "{n} waiting on you",
+  "followups.by_project.unplaced": "Not in a project",
+  "sides.filter.waiting.one": "{n} waiting",
+  "sides.filter.waiting.other": "{n} waiting"
 }

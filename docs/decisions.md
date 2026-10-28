@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Where something waits, the app says so; one group shows in place; the person's own page is theirs
+
+**Decided:** Every side-menu entry with something waiting for the person shows its count, from one answer (`GET
+/api/waiting`): What changed counts finished work not yet checked, Follow-ups what is ready to send, To-dos and
+questions what waits on the person (their own to-dos and any with no owner, not on hold, and the questions put to them)
+and Handled for you what was handled since the person last left that screen; each side's tab says how many wait in it,
+counting what is on no side under every side. The last-left time is a core record, `screen_look`, one for each person
+and screen. A count is read in words by a screen reader and a screen with nothing waiting has no badge. Follow-ups shows a
+single group's items in place; by project it groups by side, then project, keeps the To send, Later and Waiting on them
+tabs and says "<side>: not in a project", never "No project"; a question the app asks about a stopped connection is a
+line on Today and never a follow-up. The person's own page reads as theirs ("You", "Your details", "What's waiting for
+you", "Questions for you").
+
+**Decided by:** the owner ("there needs to be indication on the sides where there is things for the user to review", "this
+is not laid out well", "another problematic screen that needs work"); the choices above of what each count holds were made
+by the builder and are for review.
+
+**Why:** a person had to go looking for what waited; one group was drawn as a list of one line beside a panel that held
+everything; the app's own questions and bookkeeping showed on their own page as things they had asked themselves.
+
+**Impact:** design 7.1, 7.5, 7.14 and 5.1 (one core record, so the plugin guide is regenerated); no new setting; tested
+with P88, P90 and P92. Change log: section 246.
+
 ## 2026-10-28: The Knowledge screen is what Reginald has learned about how you work, and where you control it
 
 **Decided:** The Knowledge screen reads, top to bottom:

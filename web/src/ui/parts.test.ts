@@ -24,3 +24,19 @@ test("the shared styles hold no older pill or tabs rules", () => {
   const css = readFileSync(join(root, "styles.css"), "utf-8");
   expect(css).not.toMatch(/(^|\n)\.pill(?![-\w])|\.tabs(?![-\w])/);
 });
+
+// A row's title wraps to every line it needs; it is never cut to a number of lines (a long to-do is read whole), and the
+// title button and the detail's state line let their row and pane grow with the words.
+test("a row's title is never clamped to a number of lines", () => {
+  const css = readFileSync(join(root, "ui", "Row.module.css"), "utf-8");
+  const title = css.match(/\n\.title \{[^}]*\}/)?.[0] ?? "";
+  expect(title).not.toBe("");
+  expect(title).not.toMatch(/line-clamp|overflow: hidden/);
+});
+
+test("the title button grows with its words and the detail's menu shares the state's line", () => {
+  const css = readFileSync(join(root, "styles.css"), "utf-8");
+  expect(css.match(/\n\.expander \{[^}]*\}/)?.[0]).toMatch(/display: block/);
+  expect(css.match(/\n\.expander \{[^}]*\}/)?.[0]).not.toMatch(/(?<!min-)height: \d/);
+  expect(css.match(/\n\.detail-top \{[^}]*\}/)?.[0]).not.toMatch(/flex-wrap: wrap/);
+});

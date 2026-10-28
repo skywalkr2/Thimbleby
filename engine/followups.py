@@ -32,6 +32,10 @@ TOLD_FIELDS = ("text", "due", "told")
 #: Questions that hold an item until the PM says who: answered on the item itself.
 ROUTING = ("held-op", "owner")
 
+#: Questions the app asks about its own connections (a source that can't be read): a decision about the app, never a
+#: follow-up, so Follow-ups leaves them out. Today shows them as the line for the stopped source.
+ABOUT_THE_APP = ("watch",)
+
 
 def follow_up_due(
     cfg: Config,
@@ -203,6 +207,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             continue
         if (d.get("resolves") or {}).get("kind") in ROUTING:
             continue  # answered where the item waits (What changed), so it isn't shown twice
+        if (d.get("resolves") or {}).get("kind") in ABOUT_THE_APP:
+            continue  # about a stopped connection: it is a line on Today, not a follow-up
         if out_of_reach("question", q.id, d["title"], d, d["to"]):
             continue
         row_side = sides.side_of_item(reader, cfg, q)

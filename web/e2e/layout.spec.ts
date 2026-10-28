@@ -169,6 +169,42 @@ test.describe("no screen is wider than the window", () => {
     expect(wide).toEqual([]);
   });
 
+  test("a change's row grows with its title, and the detail's menu stays on the line of its state", async ({ page }) => {
+    test.setTimeout(120_000);
+    for (const size of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      await page.goto("?token=e2e-token");
+      await page.evaluate(() => {
+        window.location.hash = "work/changed";
+      });
+      await heading(page, "What changed");
+      await expect(page.locator("ol.queue:not(.detail-queue) > li.line .expander").first()).toBeVisible(LOADED);
+      // Each row is as tall as its title and what is under it: no line is cut by a row that keeps one height.
+      const rows = await page.evaluate(() =>
+        Array.from(document.querySelectorAll("ol.queue:not(.detail-queue) > li.line")).map((li) => {
+          const row = li.querySelector(".row") as HTMLElement;
+          const title = li.querySelector(".expander") as HTMLElement;
+          return { line: li.getBoundingClientRect().height, title: title.getBoundingClientRect().height, scroll: row.scrollHeight, shown: row.clientHeight };
+        }),
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.line).toBeGreaterThanOrEqual(row.title);
+        expect(row.scroll).toBeLessThanOrEqual(row.shown + 1);
+      }
+      if (size.width < 1024) continue;
+      // The first row's detail stands beside the list: its menu is on the line its state begins, never alone beneath it.
+      const pane = page.locator("[data-detail-pane]");
+      await expect(pane).toBeVisible(LOADED);
+      const state = await pane.locator(".detail-state .kind").boundingBox();
+      const menu = await pane.locator(".detail-top .acts button").first().boundingBox();
+      expect(state && menu && Math.abs(menu.y - state.y) < 24).toBe(true);
+    }
+  });
+
   test("no screen nests more than two levels of bordered containers", async ({ page }) => {
     test.setTimeout(120_000);
     // A container is bordered when all four of its sides show a border; a control, a key cap, a table cell or a picture is not a

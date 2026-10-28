@@ -6,6 +6,10 @@ import styles from "./SegmentedControl.module.css";
 export interface SegmentOption<T extends string> {
   value: T;
   label: string;
+  /** How many wait under this choice; shown after the name, with nothing shown for none. */
+  count?: number;
+  /** What the count says in words, for the screen reader ("3 waiting"). */
+  countWords?: string;
 }
 
 export function SegmentedControl<T extends string>(props: {
@@ -29,8 +33,13 @@ export function SegmentedControl<T extends string>(props: {
       className={[styles.track, props.className ?? ""].filter(Boolean).join(" ")}
     >
       {props.options.map((o) => (
-        <ToggleButton key={o.value} id={o.value} className={styles.segment}>
+        <ToggleButton key={o.value} id={o.value} className={styles.segment} aria-label={o.count ? `${o.label}, ${o.countWords ?? o.count}` : undefined}>
           {o.label}
+          {o.count ? (
+            <span className={styles.count} aria-hidden="true">
+              {o.count}
+            </span>
+          ) : null}
         </ToggleButton>
       ))}
     </ToggleButtonGroup>

@@ -6,10 +6,10 @@ import { EVENTS_PATH } from "./api";
 
 export type LiveState = "connecting" | "live" | "offline";
 
-const CHANGES = ["changes", "source", "auto-closed", "request-accounts", "asks", "plugin-today", "stages", "status", "jobs", "today", "text-review", "learned"];
+const CHANGES = ["changes", "waiting", "source", "auto-closed", "request-accounts", "asks", "plugin-today", "stages", "status", "jobs", "today", "text-review", "learned"];
 /** What was learned: the card lines, the review lists and Today's lines for them. */
 const LEARNING = ["learned", "proposals", "catch-up", "changes", "today", "record"];
-const FOLLOWUPS = ["followups", "today", "status", "plugin-today", "changes"];
+const FOLLOWUPS = ["followups", "waiting", "today", "status", "plugin-today", "changes"];
 const FILES = ["files", "text", "working-copies", "text-review", "file-kinds", "changes", "record", "plugin-today"];
 const PLUGIN = ["plugin-today", "panels", "panel-rows", "panel-document", "record", "kind", "stages", "plugin-actions", "text", "working-copies", "today", "changes"];
 
@@ -29,10 +29,10 @@ const AFFECTS: Record<string, string[]> = {
   action: FOLLOWUPS,
   fact: ["notes", "changes", "today", "record", "projects"],
   note: ["notes", "changes", "today", "record", "projects"],
-  person: ["people", "followups", "today", "me", "setup", "organizations", "record"],
+  person: ["people", "followups", "waiting", "today", "me", "setup", "organizations", "record"],
   team: ["people", "organizations", "followups", "record"],
   organization: ["organizations", "people", "record"],
-  project: ["projects", "followups", "today", "stages", "panels", "setup", "record", "notes"],
+  project: ["projects", "followups", "waiting", "today", "stages", "panels", "setup", "record", "notes"],
   // What waits to go out (a message, an entry, a file): its screen, Today's lines for it and what changed.
   act: ["acts", "changes", "status"],
   file: FILES,
@@ -42,15 +42,17 @@ const AFFECTS: Record<string, string[]> = {
   setting_proposal: ["asks", "status"],
   report: ["asks", "status"],
   job_run: ["jobs", "watch", "today", "status", "setup", "sync"],
-  watch_run: ["watch", "watch-kinds", "today", "status", "sign-ins", "jobs"],
+  watch_run: ["watch", "watch-kinds", "waiting", "today", "status", "sign-ins", "jobs"],
   tool_run: ["jobs", "status", "files", "working-copies"],
-  snapshot: ["status", "sync", "setup"],
+  snapshot: ["status", "sync", "setup", "waiting"],
   setting_change: ["settings", "status", "setup", "panels", "today", "lists", "ai-accounts", "ai-endpoints", "watch", "packs"],
   value_list: ["lists", "settings", "people", "projects"],
   // The audit trail has no screen yet, so writing an entry refreshes nothing.
   audit_entry: [],
   // Opening the list of what changed since yesterday clears Today's line for it. The list itself is kept as it was drawn.
   look: ["today"],
+  // Opening a screen with a count of what is new there clears that count.
+  screen_look: ["waiting"],
 };
 
 /** The query keys' first parts to refresh for the kinds of record written, or null to refresh everything: an empty list

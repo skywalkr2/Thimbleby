@@ -533,3 +533,61 @@ test("a meta line on a person's page never ends with a separator: the link to wh
   }
   expect(open.querySelectorAll(".origin").length).toBe(2);
 });
+
+// The person's own page (design 7.14): it reads as theirs, never as someone else's.
+
+const OWN_FIELDS = { full_name: "Robin Sample", name_verified: false, track_only: false, status: "active", stance: null, relation: "my sister", role: "Editor" };
+
+function ownPage(extra: Routes = {}, over: Partial<S["RecordPageView"]> = {}) {
+  return api(
+    "person",
+    "PER-1",
+    OWN_FIELDS,
+    page({
+      kind: "person",
+      id: "PER-1",
+      name: "Robin Sample",
+      open_actions: [{ id: "ACT-1", text: "Send the proof to the printer before the end of the month so the books are on the shelves for the launch", due: null, owners: ["Robin Sample"], project: "PRJ-1", project_name: "Harbor", origin: null }],
+      open_questions: [{ id: "Q-1", title: "What does proof mean here?", to: "PER-1", to_name: "Robin Sample", status: "open", kind: "question", origin: null }],
+      ...over,
+    }),
+    { "GET me": () => ({ full_name: "Robin Sample", person: "PER-1" }), "GET person-memory/PER-1": () => { throw new Error("the person's own page asks for nothing about someone else"); }, ...extra },
+  );
+}
+
+test("the person's own page says You with their name, and lists what waits for them and the questions for them", async () => {
+  ownPage();
+  renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "You · Robin Sample" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 3, name: "What's waiting for you" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "Questions for you" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "Your details" })).toBeInTheDocument();
+  // The question is a question for them, not something they asked themselves.
+  expect(screen.getByRole("link", { name: "What does proof mean here?" })).toBeInTheDocument();
+  expect(screen.queryByText(/asked of/)).toBeNull();
+});
+
+test("the person's own page has nothing that describes someone else to them", async () => {
+  ownPage();
+  renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: "You · Robin Sample" });
+  for (const words of [/You asked/, /Open with/, /No contact on file/, /Who they are to you/, /What to remember/, /Name verified/, /Track only/, /^Status$/, /Relation/]) {
+    expect(screen.queryByText(words)).toBeNull();
+  }
+  expect(screen.queryByRole("combobox", { name: "Who they are to you" })).toBeNull();
+  // The details they keep are still there.
+  expect(screen.getByText("Editor")).toBeInTheDocument();
+});
+
+test("someone else's page keeps its own words, their details and who they are to you", async () => {
+  api("person", "PER-2", OWN_FIELDS, page({ kind: "person", id: "PER-2", name: "Sam Other", open_questions: [{ id: "Q-2", title: "Is it final?", to: "PER-2", to_name: "Sam Other", status: "open", kind: "question", origin: null }] }), {
+    "GET me": () => ({ full_name: "Robin Sample", person: "PER-1" }),
+    "GET person-memory/PER-2": () => ({ person: "PER-2", name: "Sam Other", last_in_touch: null, you_asked: [], they_owe: [], you_owe: [], they_asked: [], reach: { kept: {}, replies_on: null }, dates: [], matters: [] }),
+  });
+  renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Sam Other" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 3, name: "Open with Sam Other" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "Details" })).toBeInTheDocument();
+  expect(screen.getByText("Name verified")).toBeInTheDocument();
+  expect(screen.getByText("Who they are to you")).toBeInTheDocument();
+});

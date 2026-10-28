@@ -45,7 +45,7 @@ const joined = (parts: ReactNode[]): ReactNode =>
 
 /** `part` shows only what is open with the record ("open") or only the rest ("rest": what finished, the facts, the history), so
  * the page can put its own to-dos first, then the conversation, then the history; left out, all of it. */
-export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
+export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self?: boolean }) {
   const { t, tn, has } = useWords();
   const factLine = useFactLine();
   const place = usePlaceText();
@@ -73,8 +73,8 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
   const open = page.open_actions.length + page.open_questions.length;
   return (
     <div className="record-activity">
-      {showOpen && open > 0 && (
-        <Section id="record-open" title={t("record.open_with", { name: page.name })} count={open}>
+      {showOpen && open > 0 && (!props.self || page.open_actions.length > 0) && (
+        <Section id="record-open" title={props.self ? t("record.open_you") : t("record.open_with", { name: page.name })} count={props.self ? page.open_actions.length : open}>
           <ul className="queue">
             {page.open_actions.map((a) => (
               <Row
@@ -90,13 +90,29 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest" }) {
                 ])}
               />
             ))}
-            {page.open_questions.map((q) => (
+            {!props.self && page.open_questions.map((q) => (
               <Row
                 key={q.id}
                 pill={<Pill tone="neutral">{t("unfiled.kind.question")}</Pill>}
                 title={<a href={viewHref(recordView("question", q.id))}>{q.title}</a>}
                 meta={joined([
                   q.to_name && t("record.asked_of", { name: q.to_name }),
+                  q.series && q.series_title && <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
+                  hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} inline />,
+                ])}
+              />
+            ))}
+          </ul>
+        </Section>
+      )}
+      {showOpen && props.self && page.open_questions.length > 0 && (
+        <Section id="record-questions" title={t("record.questions_you")} count={page.open_questions.length}>
+          <ul className="queue">
+            {page.open_questions.map((q) => (
+              <Row
+                key={q.id}
+                title={<a href={viewHref(recordView("question", q.id))}>{q.title}</a>}
+                meta={joined([
                   q.series && q.series_title && <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
                   hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} inline />,
                 ])}

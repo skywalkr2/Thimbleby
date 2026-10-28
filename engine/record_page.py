@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from engine import agenda as agenda_module
 from engine import repeats, sides
+from engine.followups import ABOUT_THE_APP
 from engine.history import changes_for_person
 from engine.names import render_owner
 from engine.origin import origins
@@ -119,7 +120,7 @@ def page(
             found = _ids_named(view, store, value, name_of)
         details.append({"field": field, "value": value, "type": _type_of(info.annotation), "refs": found})
 
-    actions, questions = _open_with(view, kind, record_id)
+    actions, questions = _open_with(view, kind, record_id, pm)
     action_origin = origins(view, "action", [a.id for a in actions])
     question_origin = origins(view, "question", [q.id for q in questions])
 
@@ -327,8 +328,10 @@ def fact_source(view: Any, record: Any) -> dict[str, Any]:
     }
 
 
-def _open_with(view: Any, kind: str, record_id: str) -> tuple[list[Any], list[Any]]:
-    """Open actions and questions with this person, in this project (or organization's people)."""
+def _open_with(view: Any, kind: str, record_id: str, pm: str | None = None) -> tuple[list[Any], list[Any]]:
+    """Open actions and questions with this person, in this project (or organization's people). On the page of the
+    person themselves, what the app asks about its own connections is left out: it is a line on Today, not a question
+    for them."""
     people = {record_id} if kind == "person" else set()
     if kind == "organization":
         people = {p.id for p in view.list("person") if p.data.get("org") == record_id}
@@ -343,6 +346,8 @@ def _open_with(view: Any, kind: str, record_id: str) -> tuple[list[Any], list[An
     for q in view.list("question"):
         d = q.data
         if d.get("status") not in ("open", "sent"):
+            continue
+        if kind == "person" and record_id == pm and (d.get("resolves") or {}).get("kind") in ABOUT_THE_APP:
             continue
         if d.get("to") in people or (kind == "project" and record_id in (d.get("projects") or [])):
             questions.append(q)

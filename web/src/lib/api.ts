@@ -130,6 +130,10 @@ export const api = {
     return call<S["HandledView"]>("GET", `handled?${query.toString()}`);
   },
   /** How many each list on Handled for you holds, for a line that only counts. */
+  /** What waits for the person on each screen that lists it, for the side menu and the side tabs. */
+  waiting: () => call<S["WaitingCounts"]>("GET", "waiting"),
+  /** The person opened a screen with a count of what is new in it. */
+  looked: (screen: S["LookedAt"]["screen"]) => call<S["Ok"]>("POST", "waiting/looked", { screen } satisfies S["LookedAt"]),
   handledCounts: () => call<S["HandledCountsToday"]>("GET", "handled/counts"),
   closerLookUndo: (req: string) => call<S["Created"]>("POST", `requests/${id(req)}/closer-look/undo`),
   /** What can be said about a watched file (the saved copy `record` came from it): the files it can be linked to. */

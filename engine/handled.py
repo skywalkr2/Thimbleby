@@ -183,6 +183,7 @@ def _closed_rows(view: Any, cfg: Any, labels: dict[str, str], said: dict[str, st
                 "change": watched.get("change", "new"),
                 "older_version": mark["rule"] == VERSION_RULE,
                 "side": sides.watch_source_side(view, cfg, watched.get("source")),
+                "handled_at": str(req.data["created_at"]),
             }
         )
     return out
@@ -218,6 +219,7 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
                         "section": _rule_section(cfg, item["section"]),
                         "saved": held[-1].data.get("source") if held else None,
                         "request": None,
+                        "handled_at": mark.get("at") or snap.data.get("seen_at"),
                     },
                     view,
                 )
@@ -245,6 +247,7 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
                         "section": cfg.watch.handled_rule_section,
                         "saved": made.data.get("source"),
                         "request": made.id,
+                        "handled_at": made.data.get("created_at"),
                     },
                     view,
                 )

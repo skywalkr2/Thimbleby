@@ -553,3 +553,13 @@ test("the primary button treats the message as the first side", async () => {
   await user.click(await within(sales).findByRole("button", { name: "Treat as Hale Upholstery: Offer a" }));
   await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3, side: "PRJ-shop" }));
 });
+
+// What is new here counts from when the person last left the screen (design 7.1): leaving marks it looked at.
+test("leaving Handled for you marks it looked at, so what came after counts as new on the menu", async () => {
+  const calls = open({ "POST waiting/looked": () => ({ ok: "handled" }) });
+  await screen.findByRole("heading", { name: "Handled for you" });
+  // While the person is there nothing is marked: what is new still counts as new.
+  expect(calls.some((c) => c.route === "POST waiting/looked")).toBe(false);
+  cleanup();
+  await waitFor(() => expect(body(calls, "POST waiting/looked")).toEqual({ screen: "handled" }));
+});

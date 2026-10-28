@@ -94,7 +94,8 @@ main p { max-width: var(--measure); }
 .queue:not(.detail-queue) > .line[aria-current="true"] > .row > .acts > .btn.primary:not(:disabled):hover { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
 .queue:not(.detail-queue) > .line:focus-within > .row > .acts > .btn.primary:not(:disabled) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
 .queue:not(.detail-queue) > .line:focus-within > .row > .acts > .btn.primary:not(:disabled):hover { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
-.expander { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; }
+/* A row's title is a block that grows with its words: the row takes the height of every line, never one line's. */
+.expander { display: block; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; height: auto; overflow: visible; }
 .expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
 /* A title whose click would change nothing (its row is already chosen) neither looks nor feels clickable. */
 .expander[data-inert] { cursor: default; }
@@ -106,8 +107,10 @@ main p { max-width: var(--measure); }
 .in-pane .body { border-top: 0; padding: var(--space-3) 0 0; }
 .in-pane[data-row]:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
 .in-pane .learned-inset, .in-pane .made { padding-inline: 0; }
-.detail-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-3); }
-.detail-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+/* The state and the row's menu share one line: the words wrap inside their own part, so the menu is never left alone under them. */
+.detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-3); }
+.detail-top > .acts { flex: none; }
+.detail-state { display: flex; flex: 1 1 0; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
 .detail-state .sub, .detail-notes .sub, .row-notes .sub { color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
 .detail-notes { display: grid; gap: var(--space-1); padding-bottom: var(--space-2); }
 .row-notes { display: grid; gap: var(--space-1); padding: 0 var(--row-px) var(--space-3); }
@@ -596,3 +599,10 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 /* A file's preview in its details pane (design 7.15): a picture at most as wide as the pane, text kept to the pane's width. */
 img.file-preview { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
 pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--space-3); background: var(--surface-sunk); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: var(--text-sm); }
+
+/* One group on a screen with a list and a detail has nothing to choose between: its items stand in place, in the frame the detail pane would have had. */
+.in-place { background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); min-width: 0; max-width: 72rem; display: grid; gap: var(--space-3); }
+.in-place > h2 { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+/* A side's own list of projects under its name, on the grouping by project. */
+.by-side { display: grid; gap: var(--space-2); min-width: 0; }
+.by-side > h2 { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); }

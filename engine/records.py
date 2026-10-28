@@ -1103,6 +1103,22 @@ class Look(Record):
     at: datetime = Field(description="The moment the list was drawn that the person then opened.")
 
 
+class ScreenLook(Record):
+    """When a person last opened a screen that lists what the app did without them, so a count of what is new there
+    means what came after that moment. One record for each person and screen; it only ever moves forward, and nothing
+    but opening the screen writes it."""
+
+    record_kind: ClassVar[str] = "screen_look"
+    prefix: ClassVar[str] = "SLOOK"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("person", "screen"),)
+
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person who looked; none when the workspace names no person yet."
+    )
+    screen: str = Field(min_length=1, description="The screen that was opened, by its name in the app.")
+    at: datetime = Field(description="The moment the screen was opened.")
+
+
 class PromiseCount(Record):
     """The person's own count for one day: how many promises they count on their own list that day (`present`) and how
     many of those the app didn't have (`missed`). Entered on the Quality screen and kept as the person typed it; the
@@ -2655,6 +2671,7 @@ REGISTRY: dict[str, type[Record]] = {
         JobRun,
         SettingChange,
         Look,
+        ScreenLook,
         PromiseCount,
         GateSample,
         WeekPlan,
@@ -2705,6 +2722,7 @@ AGENDA_REFERENCES = [
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
+    "screen_look": [("person", "person")],
     "promise_count": [("person", "person")],
     "gate_sample": [("person", "person"), ("items[].source", "source")],
     "week_plan": [("person", "person")],

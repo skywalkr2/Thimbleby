@@ -74,6 +74,15 @@ const rowsOnSide = (s: S["FollowupSection"], choice: SideChoice): S["FollowupSec
 });
 const hasRows = (s: S["FollowupSection"]) => s.questions.length + (s.later ?? []).length + s.actions.length > 0;
 
+/** The rows of a section that a tab (To send, Later, Waiting on them) holds, for the grouping by project, which lists rows
+ * and not people. The person's own section is what waits on them under To send. */
+function rowsOnTab(s: S["FollowupSection"], filter: Filter): S["FollowupSection"] {
+  if (filter === "later") return { ...s, questions: [], actions: [] };
+  if (s.is_pm) return filter === "send" ? { ...s, later: [] } : { ...s, questions: [], actions: [], later: [] };
+  if (filter === "send") return { ...s, questions: toSendQuestions(s), actions: toSendActions(s), later: [] };
+  return { ...s, questions: waitingQuestions(s), actions: waitingActions(s), later: [] };
+}
+
 /** What shows under a side choice. The person's own section and the by-project list are filtered row by row. Someone
  * else's section is one message to them, so it stays whole while any of its rows shows, and goes when none does. */
 function sectionsOnSide(found: S["FollowupSection"][], choice: SideChoice, byProject: boolean): S["FollowupSection"][] {
@@ -117,6 +126,8 @@ export function FollowUps(props: { compact?: boolean }) {
   const { justMe } = useSides();
   const byProject = group === "project" && !justMe;
   const sections = sectionsOnSide(present, side.choice, byProject);
+  // By project the tab picks the rows, since a project holds rows of several people.
+  const projectSections = byProject ? sections.map((s) => rowsOnTab(s, filter)).filter(hasRows) : sections;
   const shown = sections.filter((s) =>
     filter === "send"
       ? s.is_pm || s.to_send > 0
@@ -144,7 +155,7 @@ export function FollowUps(props: { compact?: boolean }) {
     if (picked.enter) choice.enter(picked.key);
     else choice.choose(picked.key);
     // A person's line takes the cursor here.
-    if (picked.focus) showRow(choiceRow(picked.key) ?? null);
+    if (picked.focus) showRow(choiceRow(picked.key) ?? document.getElementById("followups-group-title"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
   // The acts the person has looked at again since they went stale; a fresh read keeps it.
@@ -191,7 +202,7 @@ export function FollowUps(props: { compact?: boolean }) {
     <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
       <div className="heading">
         <Heading id="followups-title">{t("followups.title")}</Heading>
-        <SideFilter />
+        <SideFilter waiting="followups" />
         {!compact && !justMe && (
           <SegmentedControl
             label={t("followups.group")}
@@ -203,15 +214,13 @@ export function FollowUps(props: { compact?: boolean }) {
             ]}
           />
         )}
-        {!byProject && (
-          <div className="filters" role="group" aria-label={t("followups.filter")}>
-            {FILTERS.map((f) => (
-              <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-                {t(`followups.filter.${f}`)}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="filters" role="group" aria-label={t("followups.filter")}>
+          {FILTERS.map((f) => (
+            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {t(`followups.filter.${f}`)}
+            </button>
+          ))}
+        </div>
       </div>
       {followups.isPending ? (
         <Skeleton />
@@ -225,7 +234,11 @@ export function FollowUps(props: { compact?: boolean }) {
       ) : sections.length === 0 && actRows.length === 0 ? (
         <p className="empty">{present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")}</p>
       ) : byProject ? (
-        <FollowUpsByProject sections={sections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
+        projectSections.length === 0 ? (
+          <p className="empty">{t(`followups.empty_${filter}`)}</p>
+        ) : (
+          <FollowUpsByProject sections={projectSections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
+        )
       ) : shown.length === 0 && actRows.length === 0 ? (
         <p className="empty">{t(`followups.empty_${filter}`)}</p>
       ) : reviewing && phone && reviewable.length > 0 ? (
@@ -236,6 +249,12 @@ export function FollowUps(props: { compact?: boolean }) {
           render={(item) => <PersonSection key={item.id} section={item.section} open />}
           onClose={() => setReviewing(false)}
         />
+      ) : shown.length === 1 && actRows.length === 0 && !compact ? (
+        // One group has nothing to choose between: its items are shown in place, not as a list beside a pane that holds them.
+        <div className="in-place" data-in-place="">
+          <h2 id="followups-group-title" tabIndex={-1}>{shown[0].is_pm ? t("followups.you") : shown[0].name}</h2>
+          <ol className="queue detail-queue">{detailOf(shown[0])}</ol>
+        </div>
       ) : (
         <ListDetail
           title={selectedAct ? actTitle(selectedAct, t) : selected ? (selected.is_pm ? t("followups.you") : selected.name) : ""}

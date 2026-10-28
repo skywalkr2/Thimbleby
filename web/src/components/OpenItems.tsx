@@ -95,7 +95,7 @@ export function OpenItems() {
     <section className="panel-section" aria-labelledby="open-title" data-open-items="">
       <div className="heading">
         <h1 id="open-title">{t("open.title")}</h1>
-        <SideFilter />
+        <SideFilter waiting="open" />
         <div className="filters" role="group" aria-label={t("open.tabs")}>
           <button type="button" aria-pressed={tab === "actions"} onClick={() => choose("actions")}>
             {t("open.tab.actions", { n: actions.length })}

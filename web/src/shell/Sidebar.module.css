@@ -22,7 +22,9 @@
 
 /* The icon rail: one icon each, with a tooltip. */
 .rail { align-items: stretch; }
-.rail .entry { justify-content: center; padding: 0; }
-.rail .label, .rail .count, .rail .title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rail .entry { justify-content: center; padding: 0; position: relative; }
+/* A count on the rail is a small figure on the icon's corner, so what waits still shows without the labels. */
+.rail .count { position: absolute; top: 2px; right: var(--space-1); margin: 0; min-width: var(--space-4); padding: 0 var(--space-1); border-radius: var(--radius-full); text-align: center; background: var(--accent); color: var(--text-on-accent); }
+.rail .label, .rail .title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .rail .group + .group { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .rail .toggle { justify-content: center; }

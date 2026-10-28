@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 246. Where something waits the app says so; Follow-ups with one group; the person's own page (2026-10-28; owner's real use; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Side menu and side tabs (7.1, 7.8) | A count on Today and on Follow-ups only | **Built** (`tests/test_waiting.py`, `web/src/shell/Sidebar.test.tsx`, `web/src/components/SideFilterCounts.test.tsx`): What changed (not yet checked), Follow-ups (to send), To-dos and questions (waiting on the person) and Handled for you (new since the person last left it) each show a count, from one answer, `GET /api/waiting`; each side's tab says how many wait in it; the words are the entry's name for a screen reader; none waiting means no badge |
+| Last look (5.1) | One record for the list of changes since yesterday | **Built** (`tests/test_waiting.py`): `screen_look`, one record for each person and screen, only moves forward |
+| Follow-ups (7.5) | A list of one line beside a pane holding everything when there was one group; no tabs by project; "No project" | **Built** (`web/src/components/FollowUps.test.tsx`): one group shows its items in place; by project groups by side then project, says "<side>: not in a project" or "Not in a project", and keeps To send, Later and Waiting on them; a question about a stopped connection is never a follow-up (`tests/test_waiting.py`) |
+| The person's own page (7.14) | Read as someone else's page: "You asked <name>", "Open with <name>", "Who they are to you", internal fields | **Built** (`web/src/components/RecordPageRecords.test.tsx`, `tests/test_record_page.py`): "You · <name>", "Your details", "What's waiting for you", "Questions for you"; a to-do's title wraps in every record list; What changed's detail keeps its menu on the state's line |
+
 ## 245. Deliveries are schedule entries, and a date with no year takes a reader's year (2026-10-28; owner's first evening; built)
 
 | Where | Before | Now |

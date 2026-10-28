@@ -22,8 +22,12 @@ const change = (id: string, state: string) => ({ id, state, changeset: null }) a
 const line = (key: string): S["QueueLineView"] => ({ key, group: "review", kind: "review", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} });
 const plugin = { plugin: "demo", id: "L-1", text: "Look at this", about: null, action: null, action_is: null, why: "", until: null };
 
-function show(opts: { current?: Parameters<typeof Sidebar>[0]["current"]; expanded?: boolean; panels?: S["PanelView"][]; onToggle?: () => void } = {}) {
+const none = (): S["WaitingCount"] => ({ total: 0, sides: [] });
+const waitingFixture = (): S["WaitingCounts"] => ({ changed: { total: 2, sides: [] }, followups: { total: 3, sides: [] }, open: { total: 4, sides: [] }, handled: { total: 1, sides: [] } });
+
+function show(opts: { current?: Parameters<typeof Sidebar>[0]["current"]; expanded?: boolean; panels?: S["PanelView"][]; onToggle?: () => void; waiting?: S["WaitingCounts"] } = {}) {
   fakeApi({
+    "GET waiting": () => opts.waiting ?? { changed: none(), followups: none(), open: none(), handled: none() },
     "GET panels": () => opts.panels ?? [],
     "GET changes": () => [change("a", "review"), change("b", "needs_you"), change("c", "done")],
     "GET followups": () => [{ person: "p", name: "Sam", is_pm: false, message: "", questions: [], actions: [], to_send: 3 }],
@@ -90,15 +94,38 @@ test("a plugin panel is the current view when its address is", async () => {
 });
 
 test("counts show where they help and an empty count shows nothing", async () => {
-  show();
+  show({ waiting: { changed: none(), followups: { total: 3, sides: [] }, open: none(), handled: none() } });
   const changed = await screen.findByRole("link", { name: /^What changed/ });
   await waitFor(() => expect(screen.getByRole("link", { name: /^Follow-ups/ })).toHaveTextContent("3"));
-  // What changed is the history: what waits is counted on Today, so it has no count even when the screen lists changes.
+  // Nothing waiting on What changed (the answer holds none): no badge.
   expect(changed).toHaveTextContent(/^What changed$/);
   // Today counts its own lines (the queue's and the add-ons'), the same number its heading gives; the views with no count
   // have none.
   await within(screen.getByRole("link", { name: /^Today/ })).findByText("4");
   expect(screen.getByRole("link", { name: "Stages" })).toHaveTextContent(/^Stages$/);
+});
+
+test("every entry with something waiting for the person shows its count, and says in words what it counts", async () => {
+  show({ waiting: waitingFixture() });
+  // The words are for a screen reader: the figure is drawn, and the name of the link carries what it counts.
+  expect(await screen.findByRole("link", { name: "What changed, 2 changes not yet checked" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Handled for you, 1 new since you last looked" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Follow-ups, 3 follow-ups to send" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "To-dos and questions, 4 waiting on you" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /^Today, 4 things need you/ })).toBeInTheDocument();
+  // The figure itself is drawn but not read a second time.
+  const followups = screen.getByRole("link", { name: /^Follow-ups/ });
+  expect(followups.querySelector('[class*="count"]')).toHaveAttribute("aria-hidden", "true");
+  expect(followups.querySelector('[class*="count"]')).toHaveTextContent("3");
+  // A view with nothing waiting has no badge at all.
+  expect(screen.getByRole("link", { name: "People" })).toHaveTextContent(/^People$/);
+});
+
+test("a count of one is singular in words, and a view with nothing waiting has no count", async () => {
+  show({ waiting: { changed: { total: 1, sides: [] }, followups: { total: 1, sides: [] }, open: none(), handled: none() } });
+  expect(await screen.findByRole("link", { name: "What changed, 1 change not yet checked" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Follow-ups, 1 follow-up to send" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "To-dos and questions" })).toBeInTheDocument();
 });
 
 test("with the sidebar collapsed to a rail, each icon still has its name, and the toggle pins it open", async () => {

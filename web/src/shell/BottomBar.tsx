@@ -11,6 +11,7 @@ import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { useNav, type NavEntry } from "./nav";
+import { NavCount, navName } from "./NavCount";
 import styles from "./BottomBar.module.css";
 
 function Sheet(props: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -36,10 +37,10 @@ function Links(props: { entries: NavEntry[]; current: View; onPick: () => void }
   return (
     <div className={styles.list}>
       {props.entries.map((e) => (
-        <Link key={e.view} href={viewHref(e.view)} className={styles.link} aria-current={props.current === e.view ? "page" : undefined} onPress={props.onPick}>
+        <Link key={e.view} href={viewHref(e.view)} className={styles.link} aria-current={props.current === e.view ? "page" : undefined} aria-label={e.count ? navName(e) : undefined} onPress={props.onPick}>
           {e.icon ? <Icon name={e.icon} /> : null}
           <span>{e.label}</span>
-          {e.count ? <span className={styles.count}>{e.count}</span> : null}
+          <NavCount entry={e} className={styles.count} />
         </Link>
       ))}
     </div>

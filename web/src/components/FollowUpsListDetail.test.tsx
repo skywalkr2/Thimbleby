@@ -223,7 +223,9 @@ describe("beside the list", () => {
       questions: [question("Q-7", "Is the index final?", { status: "sent", sent: "2026-10-10", waiting_days: 6, chase_due: true })],
       actions: [{ id: "ACT-1", text: "Send the index", due: null, project_name: "Book", told: "2026-10-12", told_days: 2, followed_up: null, chase_due: false, chases: 0 }],
     });
-    fakeApi(routes(() => [waiting]));
+    // A second person is waited on too, so there is a list to choose from (one group alone is shown in place).
+    const other = person("PER-3", "Casey Moor", { to_send: 0, questions: [question("Q-9", "Is the cover final?", { status: "sent", sent: "2026-10-11", waiting_days: 3 })] });
+    fakeApi(routes(() => [waiting, other]));
     renderApp(<FollowUps />);
     await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
     const row = await line("Robin Sample");
