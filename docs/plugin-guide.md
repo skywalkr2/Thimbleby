@@ -1476,6 +1476,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 | `aliases` | list[str] | `[]` | Other forms the project is called by: another name, a code or a ticket-key prefix. An item that contains one as a whole word is filed under the project's side. |
 | `summary` | str \| None | `None` | A short description of what the project is. |
 | `owner` | str \| None | `None` | The id of the person responsible for the project. |
+| `organization` | str \| None | `None` | The id of the organization this project is the work of, for a business or job the person works for. The project and the organization keep one name: renaming either renames the other. Only the person sets it. |
 | `links` | list[Link] | `[]` | Pages that belong to the project. |
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open. |
@@ -3171,6 +3172,7 @@ Start a new project, optionally inside another (a book in its series). A system 
 | `area` | bool | `False` | True for an area of life that never finishes (health, home, money) and so has no end day; left false for a project with a goal and an end. |
 | `status` | str \| None | `None` | Where the project stands, only when the input states it, with those words as evidence. A status nobody stated is left out and stays unknown: never write "not started" or a guess. |
 | `link` | str \| None | `None` | The page the project was added from, when the input gave one. It is kept as a link on the project; the project's details are filled from it only when something set up can read it. |
+| `organization` | str \| None | `None` | The name or id of the organization the project is the work of (a business or job the person works for): one with that name is linked, else it is made. Only the person's own change sets it; the assistant leaves it out. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that name the project, when an input is where it came from; required when a status is given, and then the words that state the status. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

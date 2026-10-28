@@ -160,11 +160,13 @@ def side_field_problem(view: Any, cfg: Any, project_id: str | None, fields: dict
 
 @dataclass(frozen=True)
 class SideInfo:
-    """A side besides Personal: the id of its top `project`, what it is (`kind`: job or business) and its `name`."""
+    """A side besides Personal: the id of its top `project`, what it is (`kind`: job or business), its `name` and the id
+    of its `organization` (the same name, kept in step; design 6.32)."""
 
     project: str
     kind: str
     name: str
+    organization: str | None = None
 
 
 def _stands_as_a_side(view: Any, record: Any) -> bool:
@@ -189,7 +191,9 @@ def side_list(view: Any, cfg: Any) -> list[SideInfo]:
             or not _stands_as_a_side(view, record)
         ):
             continue
-        found.append(SideInfo(entry.project, entry.kind, str(record.data.get("name") or "")))
+        found.append(
+            SideInfo(entry.project, entry.kind, str(record.data.get("name") or ""), record.data.get("organization"))
+        )
     return found
 
 
@@ -742,6 +746,7 @@ def set_business(
     a kind that isn't one, or no name."""
     from engine import settings as config_screens
     from engine.applier import apply_as_person
+    from engine.organizations import link_sides
 
     name = " ".join(name.split())
     if not name:
@@ -754,13 +759,21 @@ def set_business(
     if same := next((s for s in listed if s.name == name), None):
         held = view.get("project", same.project)
         if summary is None or held is None or (held.data.get("summary") or "") == summary:
+            link_sides(store, cfg)  # a side from before gets its organization
             return Business(same.project, False, None, same.kind)
         op = {"op": "record.set", "kind": "project", "id": same.project, "field": "summary", "value": summary}
+        link_sides(store, cfg)
         return Business(same.project, False, apply_as_person(store, cfg, [op], f"Described {name}"), same.kind)
-    add: dict[str, Any] = {"op": "project.add", "name": name}
+    # The side is also an organization of the same name (one with that name is linked, else made), and the person works
+    # for it when their record names no organization: all in the one changeset, so Undo takes them together.
+    add: dict[str, Any] = {"op": "project.add", "name": name, "organization": name}
     if summary is not None:
         add["summary"] = summary
-    changeset = apply_as_person(store, cfg, [add], "Added the business")
+    ops = [add]
+    me = view.get("person", cfg.workspace.user.person) if cfg.workspace.user.person else None
+    if me is not None and not me.data.get("org"):
+        ops.append({"op": "record.set", "kind": "person", "id": me.id, "field": "org", "value": name})
+    changeset = apply_as_person(store, cfg, ops, "Added the business")
     made = next(p for p in store.read().list("project") if p.data["name"] == name)
     entries = [{"project": s.project, "kind": s.kind} for s in listed]
     config_screens.save(
@@ -803,6 +816,7 @@ def remove_side(ws: Any, store: Any, cfg: Any, project_id: str, *, env: dict[str
     `project.sides`. Refused in plain words while anything is filed under it, or when it is not a side. Returns the ids
     removed."""
     from engine import settings as config_screens
+    from engine.organizations import release
 
     if not any(s.project == project_id for s in side_list(store.read(), cfg)):
         raise StoreError("That isn't one of your sides.")
@@ -811,8 +825,10 @@ def remove_side(ws: Any, store: Any, cfg: Any, project_id: str, *, env: dict[str
         if not removable_side(tx, project_id):
             raise StoreError("Something is already filed under it, so it can't be removed here.")
         gone = [*reversed(_below(tx, project_id)), project_id]
+        org = tx.get("project", project_id).data.get("organization")
         for pid in gone:
             tx.delete("project", pid, context, read_version=tx.get("project", pid).version)
+        release(tx, cfg, org)  # the organization made for the side goes with it, unless other people work for it
     kept = [{"project": e.project, "kind": e.kind} for e in cfg.workspace.project.sides if e.project != project_id]
     config_screens.save(
         ws,
@@ -881,6 +897,7 @@ def restore_side(
     in `project.sides` again with its kind, at `position` among the sides (the end when there are fewer). Refused in
     plain words for a project that isn't a removed side. Returns the ids brought back."""
     from engine import settings as config_screens
+    from engine.organizations import reclaim
 
     if kind not in SIDE_KINDS:
         raise StoreError(f"A side is a {' or a '.join(SIDE_KINDS)}.")
@@ -889,6 +906,7 @@ def restore_side(
         top = tx.get("project", project_id, include_deleted=True)
         if top is None or tx.get("project", project_id) is not None or top.data.get("parent"):
             raise StoreError("That isn't a side that was taken back out.")
+        reclaim(tx, cfg, top.data.get("organization"))
         every = tx.list("project", include_deleted=True)
         live = {p.id for p in tx.list("project")}
         back = [project_id]

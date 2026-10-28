@@ -942,6 +942,12 @@ class ProjectAddOp(OpModel):
         description="The page the project was added from, when the input gave one. It is kept as a link on the "
         "project; the project's details are filled from it only when something set up can read it.",
     )
+    organization: str | None = Field(
+        None,
+        description="The name or id of the organization the project is the work of (a business or job the person "
+        "works for): one with that name is linked, else it is made. Only the person's own change sets it; the "
+        "assistant leaves it out.",
+    )
     evidence: EvidenceIn | None = Field(
         None,
         description="The exact words from the input that name the project, when an input is where it came from; "

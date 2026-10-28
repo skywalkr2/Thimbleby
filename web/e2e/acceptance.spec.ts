@@ -335,7 +335,7 @@ test.describe.serial("acceptance scenario", () => {
     // the cursor is in the first of its fields, the first person's relation.
     await expect(page.getByRole("heading", { level: 2, name: "People", exact: true })).toBeVisible();
     await expect(page.getByRole("combobox", { name: /relates to you/ }).first()).toBeFocused();
-    await expect(page.getByRole("textbox", { name: "Their name" })).toBeVisible();
+    await expect(page.getByRole("form", { name: "Add someone" }).getByRole("textbox", { name: "Name" })).toBeVisible();
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     await line.getByRole("button", { name: "More actions for setup" }).click();

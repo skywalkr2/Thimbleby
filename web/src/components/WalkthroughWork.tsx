@@ -83,7 +83,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
           : "";
 
   const refresh = () =>
-    Promise.all(["business", "setup", "projects"].map((key) => client.invalidateQueries({ queryKey: [key] })));
+    Promise.all(["business", "setup", "projects", "people", "organizations"].map((key) => client.invalidateQueries({ queryKey: [key] })));
   // A change made at once that couldn't be saved names what went wrong and offers to run it again.
   const [retry, setRetry] = useState<(() => void) | null>(null);
   const sayProblem = (err: unknown, again?: () => void) => {

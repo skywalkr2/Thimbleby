@@ -22,9 +22,16 @@ import { SentFolderPicker } from "./SentFolderPicker";
 
 type Result = S["FirstPromisesView"];
 
-/** The first-result screen's body. `go` moves the walkthrough to another screen (to finish what the first result needs). */
+/** Where the Sent folder is being chosen: the account whose folder it is, held by the screen itself so the choice stays open
+ * while the body under it changes with the run (reading, working, done). */
+type Picking = { key: string | null; choose: (key: string | null) => void };
+
+/** The first-result screen's body. `go` moves the walkthrough to another screen (to finish what the first result needs).
+ * The Sent folder picker is drawn here, beside the body, because the body is a different component at each stage of the
+ * run and would take the open picker, and what was picked in it, with it when the run moves on. */
 export function FirstPromises(props: { go: (screen: Screen) => void; onHandIn: () => void }) {
   const { t } = useWords();
+  const [choosing, setChoosing] = useState<string | null>(null);
   const result = useQuery({
     queryKey: ["first-promises"],
     queryFn: api.firstPromises,
@@ -33,6 +40,21 @@ export function FirstPromises(props: { go: (screen: Screen) => void; onHandIn: (
   });
   const data = result.data;
   if (!data) return result.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton />;
+  const chosen = data.coverage.find((p) => p.missing_sent && placeKey(p) === choosing);
+  return (
+    <>
+      <Stage data={data} go={props.go} onHandIn={props.onHandIn} picking={{ key: chosen ? choosing : null, choose: setChoosing }} />
+      {chosen && chosen.folders.length > 0 && (
+        <SentFolderPicker source={chosen.folders[0].source} label={chosen.folders[0].name} onClose={() => setChoosing(null)} />
+      )}
+    </>
+  );
+}
+
+/** What the first result shows at the stage the server says it is at. */
+function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: () => void; picking: Picking }) {
+  const { t } = useWords();
+  const { data, picking } = props;
   switch (data.stage) {
     case "no_ai":
       return <Needs text={t("walkthrough.promises.no_ai")} label={t("walkthrough.promises.to_ai")} run={() => props.go("ai")} />;
@@ -57,16 +79,16 @@ export function FirstPromises(props: { go: (screen: Screen) => void; onHandIn: (
         </p>
       );
     case "offer":
-      return <Offer data={data} />;
+      return <Offer data={data} picking={picking} />;
     case "working":
       return (
         <div data-first-promises="working">
           <p role="status">{t("walkthrough.promises.working", { finished: data.finished, count: data.count })}</p>
-          <ReadList data={data} done={false} />
+          <ReadList data={data} done={false} picking={picking} />
         </div>
       );
     default:
-      return <Found data={data} onHandIn={props.onHandIn} />;
+      return <Found data={data} onHandIn={props.onHandIn} picking={picking} />;
   }
 }
 
@@ -82,7 +104,7 @@ function Needs(props: { text: string; label: string; run: () => void }) {
 }
 
 /** The look back, offered with its estimate before anything is read: one total and one Go. */
-function Offer(props: { data: Result }) {
+function Offer(props: { data: Result; picking: Picking }) {
   const { t, tn } = useWords();
   const act = useAct();
   const estimate = useEstimate();
@@ -98,7 +120,7 @@ function Offer(props: { data: Result }) {
     <div className="field" data-first-promises="offer">
       <h3 id="first-promises-offer">{title}</h3>
       <p role="status">{tn("walkthrough.promises.offer.found", data.count, { cost: costWords(data, estimate, t) })}</p>
-      <ReadList data={data} done={false} plan />
+      <ReadList data={data} done={false} plan picking={props.picking} />
       <div className="row-end">
         <Button variant="primary" loading={busy} onClick={() => void go()}>
           {t("walkthrough.promises.go")}
@@ -109,11 +131,11 @@ function Offer(props: { data: Result }) {
 }
 
 /** What was found: the promises, one follow-up ready to copy, or the plain empty case with "Missed one". */
-function Found(props: { data: Result; onHandIn: () => void }) {
+function Found(props: { data: Result; onHandIn: () => void; picking: Picking }) {
   const { t, tn } = useWords();
   const missed = useMissedOne();
   const { data } = props;
-  const list = <ReadList data={data} done />;
+  const list = <ReadList data={data} done picking={props.picking} />;
   if (data.promises.length === 0) {
     return (
       <div className="field" data-first-promises="none">
@@ -161,22 +183,22 @@ function Found(props: { data: Result; onHandIn: () => void }) {
 type Place = Result["coverage"][number];
 type Folder = Place["folders"][number];
 
+/** What names the account whose Sent folder is chosen. */
+const placeKey = (p: Place) => `${p.kind}:${p.account ?? ""}`;
+
 /** Whether a folder the person connected wasn't read. A missing sent folder alone isn't that: it has its own line. */
 const unread = (data: Result) => data.coverage.some((p) => p.folders.some((f) => f.outcome !== "read"));
 
 /** What is read, one row per source: before the Start the account, the folder and the day it reads from; after it how
  * each one went, said in words. A source that wasn't read, or a mail account with no sent folder, is said plainly
  * beside it, so a list made from less than everything never reads as complete. */
-function ReadList(props: { data: Result; done: boolean; plan?: boolean }) {
+function ReadList(props: { data: Result; done: boolean; plan?: boolean; picking: Picking }) {
   const { t } = useWords();
-  const { data, plan } = props;
-  // The account whose Sent folder is being chosen, right here: the picker opens in place and the screen stays where it is.
-  const [choosing, setChoosing] = useState<string | null>(null);
+  const { data, plan, picking } = props;
   if (data.coverage.length === 0) return null;
-  // A mail account whose sent folder the service didn't name is read without it: the person chooses it here.
+  // A mail account whose sent folder the service didn't name is read without it: the person chooses it here, and the
+  // screen draws the picker (`FirstPromises`) and keeps it open while the run moves on.
   const missing = data.coverage.filter((p) => p.missing_sent);
-  const placeKey = (p: Place) => `${p.kind}:${p.account ?? ""}`;
-  const chosen = missing.find((p) => placeKey(p) === choosing);
   const place = (p: Place) => t(`walkthrough.coverage.${p.kind}${p.account ? "_at" : ""}`, { account: p.account ?? "" });
   const named = (f: Folder) => (f.folder && f.folder.toLowerCase() !== f.name.toLowerCase() ? t("walkthrough.coverage.folder_named", { name: f.name, folder: f.folder }) : f.name);
   const row = (p: Place, f: Folder) => {
@@ -202,13 +224,10 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean }) {
         ))}
       </ul>
       {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : unread(data) ? "walkthrough.coverage.partial" : "walkthrough.coverage.read_no_sent")}</p>}
-      {missing.length > 0 && !chosen && (
+      {missing.length > 0 && picking.key === null && (
         <div className="row-end">
-          <Button onClick={() => setChoosing(placeKey(missing[0]))}>{t("walkthrough.coverage.add_sent")}</Button>
+          <Button onClick={() => picking.choose(placeKey(missing[0]))}>{t("walkthrough.coverage.add_sent")}</Button>
         </div>
-      )}
-      {chosen && chosen.folders.length > 0 && (
-        <SentFolderPicker source={chosen.folders[0].source} label={chosen.folders[0].name} onClose={() => setChoosing(null)} />
       )}
     </section>
   );

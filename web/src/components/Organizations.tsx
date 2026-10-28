@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useFirstField } from "../lib/focus";
+import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -26,8 +27,8 @@ export function Organizations() {
     {
       id: "remove",
       label: t("setup.remove"),
-      disabled: o.people > 0,
-      reason: t("setup.org_remove_blocked"),
+      disabled: o.people > 0 || !!o.side,
+      reason: t(o.side ? "orgs.remove_own" : "setup.org_remove_blocked"),
       run: () =>
         void act(
           () => api.removeOrganization(o.id),
@@ -37,6 +38,7 @@ export function Organizations() {
   ];
   const columns: TableColumn<S["OrganizationView"]>[] = [
     { id: "people", header: t("orgs.col.people"), rank: 1, numeric: true, cell: (o) => (o.people > 0 ? o.people : "") },
+    { id: "side", header: t("orgs.col.side"), rank: 1, cell: (o) => (o.side ? t(o.side_kind === "job" ? "orgs.side.job" : "orgs.side.business") : "") },
     { id: "aliases", header: t("orgs.col.aliases"), rank: 2, cell: (o) => o.aliases.join(", ") },
   ];
   return (
@@ -54,7 +56,15 @@ export function Organizations() {
       ) : (
         <RecordsTable
           label={t("setup.organizations")}
-          name={{ header: t("orgs.col.name"), title: (o) => o.name, cell: (o) => o.name }}
+          name={{
+            header: t("orgs.col.name"),
+            title: (o) => o.name,
+            cell: (o, open) => (
+              <a href={viewHref(recordView("organization", o.id))} onClick={open}>
+                {o.name}
+              </a>
+            ),
+          }}
           columns={columns}
           groups={[{ id: "all", title: t("setup.organizations"), rows }]}
           rowKey={(o) => o.id}

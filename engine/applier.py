@@ -1932,6 +1932,10 @@ def edit_record(store: Store, tx: Tx, op: Any, w: WriteContext) -> None:
 
         fields = sides.person_write(tx, store.plugins.cfg, fields)[0]  # `side` and `sides` are kept in step
     tx.update(op.record.kind, op.record.id, fields, w, read_version=op.read_version)
+    if "name" in fields:
+        from engine.organizations import keep_names_together
+
+        keep_names_together(tx, op.record.kind, op.record.id, fields["name"], w)
     if op.record.kind == "event" and "start" in op.fields:
         follow_event(tx, op.record.id, w)
 
@@ -3530,6 +3534,15 @@ def _apply_op(
         }
         if op.status is not None:
             data["status"] = op.status
+        if op.organization:
+            from engine.organizations import resolve
+
+            if w.actor != "pm":
+                raise NeedsPerson("only you can say which organization a project is the work of")
+            from engine.organizations import adopt_name
+
+            data["organization"] = resolve(tx, op.organization, w)
+            adopt_name(tx, data["organization"], data["name"], w)
         if op.link:
             # An address nothing set up can open is kept as a link that says so; nothing is read from it.
             from engine.projects import source_for_link
@@ -3714,6 +3727,10 @@ def _apply_op(
         if op.field == "series" and value is not None and cur.data.get("event") is None:
             changes["event"] = series_module.placement(tx, None, value, today, zone(ctx.cfg))
         tx.update(op.kind, op.id, changes, w, read_version=cur.version)
+        if op.field == "name":
+            from engine.organizations import keep_names_together
+
+            keep_names_together(tx, op.kind, op.id, value, w)
         made(op.kind, op.id)
     elif isinstance(op, ProjectRoleOp):
         cur = tx.get("project", op.project)

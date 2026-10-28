@@ -3857,6 +3857,13 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   - **The sides' list:** `workspace.project.sides`, each entry a top-level project id and its kind (`job` or `business`).
     `workspace.project.business`, the old single value, is read as one entry of kind `business` by a config migration and
     is never written again. Personal stays `workspace.project.personal`.
+  - **The side is an organization too** (owner, 2026-10-28; change log 247; **built**, `tests/test_side_organization.py`):
+    `project.organization` names the organization of the same name by id, made or linked when the side is added (in the
+    same changeset: `project.add` takes `organization`, and the person's own record names it when it names none), set
+    only by the person; renaming either renames the other in the same write (`engine/organizations.py`); a side from
+    before is linked once at start; `SideInfo.organization` and `GET /api/organizations` (`side`, `side_kind`) carry it.
+    The domain and organization votes below then work for the side's people. Plugin guide regenerated (a core record
+    and an op field).
   - **People:** `person.sides`, the side ids a person belongs to (the Personal project's id among them). `person.side`
     (personal, business or both) stays readable, worked out from `sides`; writing it still works while there is at most
     one business side, and with several it is refused in plain words ("say which side").

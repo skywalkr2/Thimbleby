@@ -150,10 +150,11 @@ def create_app(
 
         move_identity(ws, store, cfg)
     from engine.lists import ensure as ensure_lists
-    from engine.organizations import move_names
+    from engine.organizations import link_sides, move_names
     from engine.rules import seed_rules
 
     move_names(store)
+    link_sides(store, cfg)  # a side from before the link gets its organization, once
     ensure_lists(store)
     seed_rules(store)
     try:

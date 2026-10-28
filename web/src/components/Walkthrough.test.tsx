@@ -1240,7 +1240,7 @@ describe("each screen", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
-  test("People: asked by how they relate, saved with that relation and side, each side of work under its own name", async () => {
+  test("People: one add row for the step, saved with the relation and the side picked in it; the people added are listed under their side", async () => {
     const user = userEvent.setup();
     let added = false;
     const calls = fakeApi(
@@ -1260,33 +1260,38 @@ describe("each screen", () => {
     open();
     expect(await screenTitle()).toHaveTextContent("People");
     expect(screen.getByText(/You can skip this: it will ask about names it doesn't recognize/)).toBeInTheDocument();
-    // Each side's people are headed by that side's name, in the order of the sides.
-    const headings = await screen.findAllByRole("heading", { level: 3 });
-    expect(headings.map((h) => h.textContent)).toEqual(["The people in your life", `The people at ${EMPLOYER}`, `The people at ${SHOP}`]);
-    const personal = screen.getByRole("region", { name: "The people in your life" });
-    await user.type(within(personal).getByLabelText("Their name"), "Pat Kin");
-    await user.selectOptions(within(personal).getByLabelText("How they relate to you"), "sister");
-    await user.click(within(personal).getByRole("button", { name: "Add" }));
-    expect(await within(personal).findByRole("listitem")).toHaveTextContent("Pat Kin · my sister");
+    // There is one add row for the whole step, not a form for each side.
+    const row = await screen.findByRole("form", { name: "Add someone" });
+    expect(screen.getAllByRole("form")).toHaveLength(1);
+    expect(within(row).getAllByRole("textbox")).toHaveLength(1);
+    expect(within(row).getByLabelText("Side")).toHaveDisplayValue("Personal");
+    expect(within(within(row).getByLabelText("Side")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
+    await user.type(within(row).getByLabelText("Name"), "Pat Kin");
+    await user.selectOptions(within(row).getByLabelText("Who they are"), "sister");
+    await user.click(within(row).getByRole("button", { name: "Add" }));
+    expect(await screen.findByRole("region", { name: "The people in your life" })).toHaveTextContent("Pat Kin · my sister");
     expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], sides: [PERSONAL], relation: "my sister" });
+    // Paste a list is a link under the row.
+    expect(screen.getByRole("button", { name: "Paste a list" })).toHaveClass("link-button");
   });
 
   describe("People: the personal side", () => {
     const personalOnly = (over: Record<string, (body: unknown) => unknown> = {}) =>
       fakeApi(routes(over, CORE.map((id) => step(id)), { step: "people" }));
-    const relationBox = async () => within(await screen.findByRole("region", { name: "The people in your life" })).getByLabelText("How they relate to you");
+    const addRow = async () => screen.findByRole("form", { name: "Add someone" });
+    const relationBox = async () => within(await addRow()).getByLabelText("Who they are");
 
-    test("the relation box starts empty, so no one is filed under a relation nobody chose", async () => {
+    test("with no business the add row has no Side and the relation box starts empty, so no one is filed under a relation nobody chose", async () => {
       const user = userEvent.setup();
       const calls = personalOnly({ "POST people": () => ({ id: "PER-9" }) });
       open();
       const box = await relationBox();
       expect(box).toHaveValue("");
       expect(within(box).getAllByRole("option")[0]).toHaveTextContent("Choose…");
+      expect(within(await addRow()).queryByLabelText("Side")).toBeNull();
       // A name alone can be added: the relation is left empty, never guessed.
-      const personal = screen.getByRole("region", { name: "The people in your life" });
-      await user.type(within(personal).getByLabelText("Their name"), "Pat Kin");
-      await user.click(within(personal).getByRole("button", { name: "Add" }));
+      await user.type(within(await addRow()).getByLabelText("Name"), "Pat Kin");
+      await user.click(within(await addRow()).getByRole("button", { name: "Add" }));
       await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
       expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], side: "personal", relation: null });
     });
@@ -1303,12 +1308,12 @@ describe("each screen", () => {
       const user = userEvent.setup();
       personalOnly();
       open();
-      const personal = await screen.findByRole("region", { name: "The people in your life" });
-      await user.type(within(personal).getByLabelText("Their name"), "Pat Kin");
-      await user.selectOptions(within(personal).getByLabelText("How they relate to you"), "other");
-      expect(within(personal).getByRole("button", { name: "Add" })).toBeDisabled();
-      await user.type(within(personal).getByLabelText("How they relate to you, in your words"), "my dentist");
-      expect(within(personal).getByRole("button", { name: "Add" })).toBeEnabled();
+      const row = await addRow();
+      await user.type(within(row).getByLabelText("Name"), "Pat Kin");
+      await user.selectOptions(within(row).getByLabelText("Who they are"), "other");
+      expect(within(row).getByRole("button", { name: "Add" })).toBeDisabled();
+      await user.type(within(row).getByLabelText("How they relate to you, in your words"), "my dentist");
+      expect(within(row).getByRole("button", { name: "Add" })).toBeEnabled();
     });
 
     const SUGGESTED = { people: [
@@ -1316,7 +1321,7 @@ describe("each screen", () => {
       { name: "Lee Kin", address: "lee@example.com", count: 1, from_sent: true },
     ] };
 
-    test("the people the person mailed most are suggested, each with an Add that adds them with no relation", async () => {
+    test("the people the person writes to are suggested, one row each with a tick box, and Add these adds the ticked rows with no relation", async () => {
       const user = userEvent.setup();
       let suggested = SUGGESTED;
       const calls = personalOnly({
@@ -1327,20 +1332,25 @@ describe("each screen", () => {
         },
       });
       open();
-      const list = await screen.findByRole("region", { name: "People you write to most" });
+      const list = await screen.findByRole("region", { name: "People you write to" });
       expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([expect.stringContaining("Casey Kin"), expect.stringContaining("Lee Kin")]);
+      expect(list).toHaveTextContent("casey@example.com");
       expect(list).toHaveTextContent("4 messages");
       expect(list).toHaveTextContent("From the mail you sent.");
-      await user.click(within(list).getByRole("button", { name: "Add Casey Kin" }));
+      // Nothing is ticked, so nothing can be added yet.
+      expect(within(list).getByRole("button", { name: "Add these" })).toBeDisabled();
+      expect(within(list).getAllByRole("checkbox")).toHaveLength(2);
+      await user.click(within(within(list).getByRole("group", { name: "Add Casey Kin to" })).getByRole("checkbox", { name: "Personal" }));
+      await user.click(within(list).getByRole("button", { name: "Add these" }));
       await waitFor(() => expect(calls.some((c) => c.route === "POST setup/people-add")).toBe(true));
-      // The address the mail showed goes with the name, to be kept as the way to reach them.
-      expect(calls.find((c) => c.route === "POST setup/people-add")!.body).toEqual({ full_name: "Casey Kin", aliases: [], address: "casey@example.com", side: "personal" });
+      // The address the mail showed goes with the name, to be kept as the way to reach them; only the ticked row is added.
+      expect(calls.filter((c) => c.route === "POST setup/people-add").map((c) => c.body)).toEqual([{ full_name: "Casey Kin", aliases: [], address: "casey@example.com", side: "personal" }]);
       // The one added leaves the suggestions.
-      await waitFor(() => expect(within(screen.getByRole("region", { name: "People you write to most" })).queryByRole("button", { name: "Add Casey Kin" })).toBeNull());
-      expect(screen.getByRole("button", { name: "Add Lee Kin" })).toBeInTheDocument();
+      await waitFor(() => expect(within(screen.getByRole("region", { name: "People you write to" })).queryByText("Casey Kin")).toBeNull());
+      expect(screen.getByText("Lee Kin")).toBeInTheDocument();
     });
 
-    test("with a business each suggestion is added to Personal or to the business, by the button the person presses", async () => {
+    test("with a business each row has a tick box for Personal and for the business, and one person can be on both", async () => {
       const user = userEvent.setup();
       const calls = fakeApi(
         routes(
@@ -1354,24 +1364,31 @@ describe("each screen", () => {
         ),
       );
       open();
-      const list = await screen.findByRole("region", { name: "People you write to most" });
-      // The suggestions are listed once, with a place for each, not under Personal alone.
+      const list = await screen.findByRole("region", { name: "People you write to" });
       const first = within(list).getAllByRole("listitem")[0];
-      expect(within(first).getAllByRole("button").map((b) => b.textContent)).toEqual(["Add to Personal", `Add to ${SHOP}`]);
-      expect(within(list).queryByRole("button", { name: "Add Casey Kin" })).toBeNull();
-      await user.click(within(first).getByRole("button", { name: `Add Casey Kin to ${SHOP}` }));
-      await waitFor(() => expect(calls.some((c) => c.route === "POST setup/people-add")).toBe(true));
-      expect(calls.find((c) => c.route === "POST setup/people-add")!.body).toEqual({ full_name: "Casey Kin", aliases: [], address: "casey@example.com", sides: ["PRJ-3"] });
+      expect(within(first).getAllByRole("checkbox").map((c) => (c as HTMLInputElement).labels?.[0].textContent)).toEqual(["Personal", SHOP]);
+      expect(within(list).getAllByRole("button")).toHaveLength(1);
+      await user.click(within(first).getByRole("checkbox", { name: SHOP }));
+      const second = within(list).getAllByRole("listitem")[1];
+      await user.click(within(second).getByRole("checkbox", { name: "Personal" }));
+      await user.click(within(second).getByRole("checkbox", { name: SHOP }));
+      await user.click(within(list).getByRole("button", { name: "Add these" }));
+      await waitFor(() => expect(calls.filter((c) => c.route === "POST setup/people-add")).toHaveLength(2));
+      expect(calls.filter((c) => c.route === "POST setup/people-add").map((c) => c.body)).toEqual([
+        { full_name: "Casey Kin", aliases: [], address: "casey@example.com", sides: ["PRJ-3"] },
+        { full_name: "Lee Kin", aliases: [], address: "lee@example.com", sides: [PERSONAL, "PRJ-3"] },
+      ]);
     });
 
-    test("with no one to suggest, nothing is said about suggestions", async () => {
+    test("with no one to suggest, the section says so in one line", async () => {
       personalOnly();
       open();
-      await screen.findByRole("region", { name: "The people in your life" });
-      expect(screen.queryByText("People you write to most")).toBeNull();
+      const list = await screen.findByRole("region", { name: "People you write to" });
+      expect(list).toHaveTextContent("No one to suggest yet. Add the people you write to below.");
+      expect(within(list).queryByRole("button")).toBeNull();
     });
 
-    test("Paste a list opens a box with the cursor in it; each line is added with no relation, and what was on file is said", async () => {
+    test("Paste a list is a link under the add row that opens a box with the cursor in it; each line is added with no relation, and what was on file is said", async () => {
       const user = userEvent.setup();
       const calls = personalOnly({ "POST setup/people-paste": () => ({ added: ["Casey Kin", "Lee Kin"], skipped: ["Pat Kin"] }) });
       open();
@@ -1399,7 +1416,7 @@ describe("each screen", () => {
     });
   });
 
-  test("People: a job's parts and a business's parts are lists to pick from, saved on that side by its id", async () => {
+  test("People: a job's parts and a business's parts are one list that follows the side picked, saved on that side by its id", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
@@ -1412,27 +1429,30 @@ describe("each screen", () => {
       ),
     );
     open();
-    const job = await screen.findByRole("region", { name: `The people at ${EMPLOYER}` });
-    const business = screen.getByRole("region", { name: `The people at ${SHOP}` });
-    const options = (el: HTMLElement) => within(within(el).getByLabelText("Their part")).getAllByRole("option").map((o) => o.textContent);
-    expect(options(job)).toEqual(expect.arrayContaining(["manager", "colleague"]));
-    expect(options(business)).toEqual(expect.arrayContaining(["customer", "supplier", "staff"]));
+    const row = await screen.findByRole("form", { name: "Add someone" });
+    const options = () => within(within(row).getByLabelText("Who they are")).getAllByRole("option").map((o) => o.textContent);
+    await user.selectOptions(within(row).getByLabelText("Side"), EMPLOYER);
+    expect(options()).toEqual(expect.arrayContaining(["manager", "colleague"]));
+    await user.selectOptions(within(row).getByLabelText("Side"), SHOP);
+    expect(options()).toEqual(expect.arrayContaining(["customer", "supplier", "staff"]));
     // "customer" stays and "client" is gone: two words for one part left people choosing between them.
-    expect(options(business)).not.toContain("client");
-    expect(options(job)).not.toContain("client");
-    expect(options(business)).not.toContain("manager");
-    await user.type(within(business).getByLabelText("Their name"), "Sam Kin");
-    await user.selectOptions(within(business).getByLabelText("Their part"), "customer");
-    await user.click(within(business).getByRole("button", { name: "Add" }));
+    expect(options()).not.toContain("client");
+    expect(options()).not.toContain("manager");
+    // The part starts on the first of the list, and picking a side with other parts moves it to that list's first.
+    expect(within(row).getByLabelText("Who they are")).toHaveValue("customer");
+    await user.type(within(row).getByLabelText("Name"), "Sam Kin");
+    await user.selectOptions(within(row).getByLabelText("Who they are"), "supplier");
+    await user.click(within(row).getByRole("button", { name: "Add" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
-    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Sam Kin", aliases: [], sides: ["PRJ-3"], role: "customer" });
+    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Sam Kin", aliases: [], sides: ["PRJ-3"], role: "supplier" });
   });
 
   test("People: with no side of work, only the people in the person's life are asked, saved on the personal side", async () => {
     fakeApi(routes({ "GET people": () => [] }, CORE.map((id) => step(id)), { step: "people" }));
     open();
-    await screen.findByRole("region", { name: "The people in your life" });
+    await screen.findByRole("form", { name: "Add someone" });
     expect(screen.queryByRole("heading", { name: /The people at/ })).toBeNull();
+    expect(screen.queryByLabelText("Side")).toBeNull();
   });
 
   test("Skip for now skips the step and moves to the next screen; Back and the list move too, and each is kept", async () => {

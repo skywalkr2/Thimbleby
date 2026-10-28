@@ -49,6 +49,26 @@ used" with nothing active) and the glossary as a bare word list.
 
 **Impact:** design 7.18 (the Knowledge screen); no engine or op change; tested with P94. Change log: none until built.
 
+## 2026-10-28: Setup's People step suggests only real people, and has one add row
+
+**Decided:** The people step headed "People you write to" suggests only real people the person wrote to. Sent mail
+comes first; no-reply, role, company and service senders, bulk mail, set-aside senders and the kinds of mail the app
+tracks (bills, orders, deliveries) are left out. With no sent mail, received mail suggests only senders whose shown name
+is a person's, from a personal or company mailbox, never a role address. With none, the list says so in one line. Each
+suggestion is one row (name, address, a tick box for Personal and for each business or job) and one "Add these" adds the
+ticked rows. One add row serves the whole step (Name, Who they are, Side when there is a business, Add) on one line where
+it fits, with "Paste a list" as a link under it; there is no form for each side. The words that mark a role address or a
+company name are settings (`ui.walkthrough.not_people_addresses`, `ui.walkthrough.not_people_names`).
+
+**Decided by:** the owner (2026-10-28, from the first evening: suggestions that were companies and services, and a
+form repeated for each side).
+
+**Why:** suggesting a shop's no-reply address as a person to add made the list useless, and a repeated form hid that one
+add serves every side.
+
+**Impact:** design 7.8 (People) and 4.13 (the two settings, with demo values in both workspaces); tested with P87.
+Change log: section 247.
+
 ## 2026-10-28: A business or job you add is also an organization
 
 **Decided:** Adding a business or a job, in setup or later, also makes it an organization on People, the one the
@@ -63,7 +83,7 @@ not", the People screen with no organizations after adding a business).
 filing rules that use organizations had nothing to use.
 
 **Impact:** design 6.32 (sides) and 5.1 (the organization record gains the link), the setup business step and Add a
-business; tested with P93. Change log: none until built.
+business; tested with P93. Change log: section 247.
 
 ## 2026-10-28: Addresses are read whole, and HTML becomes text where it comes in
 

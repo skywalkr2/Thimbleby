@@ -210,6 +210,18 @@ test("the organizations section has one row each with how many people work there
   expect(section).not.toHaveTextContent("ORG-1");
 });
 
+test("an organization that is the person's own business says so and cannot be removed while it is one of their sides", async () => {
+  const user = userEvent.setup();
+  api([], { "GET organizations": () => [{ ...firstOrg, people: 0, side: "PRJ-7", side_kind: "business" }, secondOrg] });
+  renderApp(<People />);
+  const section = await screen.findByRole("region", { name: "Organizations" });
+  const rows = (await within(section).findAllByRole("row")).slice(1);
+  expect(rows[0]).toHaveTextContent("Your business");
+  expect(rows[1]).not.toHaveTextContent("Your");
+  await user.click(within(rows[0]).getByRole("button", { name: /More actions for/ }));
+  expect(await screen.findByRole("menuitem", { name: "Remove" })).toHaveAttribute("aria-disabled", "true");
+});
+
 test("an organization is added in a drawer and undo removes it", async () => {
   const user = userEvent.setup();
   const calls = api([], { "POST organizations": () => ({ id: "ORG-3" }), "POST organizations/ORG-3/remove": () => ({ ok: "ORG-3" }) });

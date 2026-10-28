@@ -31,6 +31,7 @@ import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
 import { SideInside } from "./SideInside";
 import { useSides } from "../lib/sides";
+import { recordView, viewHref } from "../lib/views";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
@@ -59,6 +60,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const { justMe, personal, sides } = useSides();
   // Personal's page and each side's page are the top of a side: they say what is inside and never call themselves a project.
   const isSide = kind === "project" && (personal === id || sides.some((s) => s.project === id));
+  // An organization that is one of the person's own businesses or jobs says so, and links to that side.
+  const ownSide = kind === "organization" ? sides.find((s) => s.organization === id) : undefined;
   const { open, dialog } = useTextReview();
   // "Change this" sits in a menu beside the record's own actions, for the kinds of record it can be asked for.
   const change = useChangeThis({ kind: kind as ChangeKind, id });
@@ -164,6 +167,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && invite.form}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
+      {data && ownSide && (
+        <p className="hint" data-testid="organization-side">
+          {t(ownSide.kind === "job" ? "orgs.page.job" : "orgs.page.business")} <a href={viewHref(recordView("project", ownSide.project))}>{ownSide.name}</a>
+        </p>
+      )}
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
@@ -251,7 +259,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 }
 
 /** What a side keeps (a side is a group, not a project): the rest of a project's fields are not listed on its page. */
-const SIDE_FIELDS = new Set<string>(["name", "aliases", "summary", "links", "tags", "content_levels", "data_level"]);
+const SIDE_FIELDS = new Set<string>(["name", "aliases", "summary", "links", "tags", "content_levels", "data_level", "organization"]);
 
 /** What a person's page leaves out when the person is the one the app is for. */
 const SELF_HIDDEN = new Set<string>(["name_verified", "track_only", "status", "relation"]);

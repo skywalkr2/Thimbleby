@@ -1266,6 +1266,8 @@ class OrganizationView(BaseModel):
     aliases: list[str] = []
     notes: str | None = None
     people: int = Field(0, description="How many people on file work for it.")
+    side: str | None = Field(None, description="The id of the business or job it is, when it is one of the sides.")
+    side_kind: Literal["job", "business"] | None = Field(None, description="Whether that side is a job or a business.")
 
 
 class OrganizationIn(BaseModel):
@@ -5747,6 +5749,7 @@ class SideView(BaseModel):
     kind: Literal["job", "business"]
     name: str
     summary: str | None = Field(None, description="The side's description, when it has one.")
+    organization: str | None = Field(None, description="The id of the organization the side is, when it has one.")
     removable: bool = Field(
         False,
         description="Setup is not finished and nothing is filed under the side or its projects, so setup can take it "

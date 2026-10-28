@@ -100,6 +100,7 @@ from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource, WorkspaceFile
 from engine.drop_notes import dropped_actions, note_the_drops
 from engine.names import People
+from engine.organizations import own_organization
 from engine.sign_in_sources import accounts_of
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
@@ -369,6 +370,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 allow=("workspace.user.",),
             )
             person_named()
+            # A business added before the person was named: they work for it.
+            with store.transaction() as tx:
+                own_organization(tx, current(), pid)
         workspace_name = " ".join((body.workspace_name or "").split())
         if workspace_name and current().workspace.name == WORKSPACE_DEFAULT_NAME:
             try:
@@ -402,6 +406,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     kind=s.kind,
                     name=s.name,
                     summary=(view.get("project", s.project).data.get("summary") or None),
+                    organization=s.organization,
                     removable=open_to_change and sides.removable_side(view, s.project),
                 )
                 for s in listed

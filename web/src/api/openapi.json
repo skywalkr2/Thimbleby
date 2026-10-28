@@ -16401,6 +16401,34 @@
             "description": "How many people on file work for it.",
             "title": "People",
             "type": "integer"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the business or job it is, when it is one of the sides.",
+            "title": "Side"
+          },
+          "side_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "job",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether that side is a job or a business.",
+            "title": "Side Kind"
           }
         },
         "required": [
@@ -26465,6 +26493,18 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "organization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the organization the side is, when it has one.",
+            "title": "Organization"
           },
           "project": {
             "title": "Project",

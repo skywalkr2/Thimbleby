@@ -421,7 +421,7 @@ class Project(Record):
     record_kind: ClassVar[str] = "project"
     prefix: ClassVar[str] = "PRJ"
     content_levels_field: ClassVar[str | None] = "content_levels"
-    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"priority": ()}
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"priority": (), "organization": ()}
 
     name: str = Field(min_length=1, description="The name shown wherever the project appears.")
     group: Annotated[str | None, InList("project-group")] = Field(
@@ -444,6 +444,12 @@ class Project(Record):
     )
     summary: str | None = Field(None, description="A short description of what the project is.")
     owner: str | None = Field(None, description="The id of the person responsible for the project.")
+    organization: Annotated[str | None, RefTo("organization")] = Field(
+        None,
+        description="The id of the organization this project is the work of, for a business or job the person works "
+        "for. The project and the organization keep one name: renaming either renames the other. Only the person "
+        "sets it.",
+    )
     links: list[Link] = Field(default_factory=list, description="Pages that belong to the project.")
     tags: list[str] = Field(default_factory=list, description="Free labels for finding the project.")
     content_levels: list[str] = Field(
@@ -2740,7 +2746,12 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "standing_yes": [("person", "person")],
     "person": [("team", "team"), ("org", "organization"), ("sides[]", "project")],
     "team": [("members[]", "person")],
-    "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],
+    "project": [
+        ("owner", "person"),
+        ("parent", "project"),
+        ("roles[].person", "person"),
+        ("organization", "organization"),
+    ],
     "action": [
         ("project", "project"),
         ("event", "event"),

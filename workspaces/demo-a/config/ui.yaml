@@ -11,7 +11,7 @@ feedback_problem_days: 3   # how far back Send feedback offers to add failed wor
 feedback_problem_max: 20   # the most failures it offers to add
 today: {mail_hours: 48, mail_max: 40, agenda_days_ahead: 2, schedule_days: 3, stale_after_days: 21, fold_batches_after_days: 3, top_priorities_lines: 5, top_priorities_ahead_days: 14}   # what Today's agenda and what came in cover
 followups: {action_due_within_days: 7, undated_after_days: 14, question_after_days: 4, second_nudge_items: 2, escalate_after_chases: 2}   # when a sent item is due a follow-up
-walkthrough: {first_promises: 5}   # how many promises the walkthrough's first-result screen shows
+walkthrough: {first_promises: 5, suggested_people: 5, not_people_addresses: [info, support, sales, billing], not_people_names: [team, support, bank, store]}   # how many promises the first-result screen shows; how many people the people step suggests, and the address and name words that are never a person
 series: {usually_with_share: 0.5, usually_with_min_meetings: 2, usually_with_max: 6}   # who a series is "usually with" on its page
 brand: {color: "#2f6f5e", logo: null}   # the accent color; a logo is an image file in this config folder
 notifications: {enabled: false, browser: true, webhook: null, webhook_format: json, webhook_app: null, apps_extra: [], quiet_hours: {start: "22:00", end: "06:30"}, retry_minutes: 15, message_one: "1 decision waiting for you", message_many: "{count} decisions waiting for you", test_message: "This is a test. You will get a note like this when something needs you."}   # notices that something needs you: off until turned on, to you only, a count and never what an item is about

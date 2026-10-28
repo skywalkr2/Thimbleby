@@ -34,7 +34,7 @@ const page = (kind: string, id: string, name: string, details: S["RecordPageView
 
 const ref = (kind: string, id: string, name: string) => ({ kind, id, name, removed: false });
 
-function serve(kind: string, id: string, fields: Record<string, unknown>, fieldViews: S["FieldView"][], shown: S["RecordPageView"]) {
+function serve(kind: string, id: string, fields: Record<string, unknown>, fieldViews: S["FieldView"][], shown: S["RecordPageView"], extra: Record<string, () => unknown> = {}) {
   const k = encodeURIComponent(kind);
   fakeApi({
     [`GET record?kind=${k}&id=${id}`]: () => ({ kind, id, version: 3, fields: { id, ...fields }, long_text: [] }),
@@ -47,6 +47,7 @@ function serve(kind: string, id: string, fields: Record<string, unknown>, fieldV
     "GET organizations": () => [],
     [`GET plugin-actions?kind=${k}&id=${id}`]: () => [],
     [`GET task-kinds?kind=${k}&id=${id}`]: () => [],
+    ...extra,
   });
 }
 
@@ -140,4 +141,51 @@ test("a reference to a record that was deleted says it was removed, never its id
   const value = (term: string) => within(details).getByText(term).closest(".detail")!.querySelector("dd")!.textContent;
   expect(value("Team")).toBe("Removed");
   expect(details.textContent).not.toMatch(/\b[A-Z]{2,5}-\d+\b/);
+});
+
+const ownSides = (): S["BusinessState"] => ({
+  business: true,
+  name: "Quarry House",
+  personal: "PRJ-1",
+  sides: [{ project: "PRJ-7", kind: "business", name: "Quarry House", organization: "ORG-1", removable: false }],
+  chosen: "work",
+});
+
+test("the page of an organization that is one of the person's own businesses says so and links to that side", async () => {
+  serve(
+    "organization",
+    "ORG-1",
+    { name: "Quarry House" },
+    [field("name", "text", { required: true })],
+    page("organization", "ORG-1", "Quarry House", []),
+    { "GET setup/business": ownSides },
+  );
+  renderApp(<RecordPage kind="organization" id="ORG-1" onBack={() => {}} />);
+  const line = await screen.findByTestId("organization-side");
+  expect(line).toHaveTextContent("This is your business: Quarry House");
+  expect(within(line).getByRole("link", { name: "Quarry House" })).toHaveAttribute("href", expect.stringContaining("PRJ-7"));
+});
+
+test("the page of any other organization says nothing about a side", async () => {
+  serve("organization", "ORG-2", { name: "Elsewhere" }, [field("name", "text", { required: true })], page("organization", "ORG-2", "Elsewhere", []), {
+    "GET setup/business": ownSides,
+  });
+  renderApp(<RecordPage kind="organization" id="ORG-2" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: "Elsewhere" });
+  expect(screen.queryByTestId("organization-side")).toBeNull();
+});
+
+test("the page of a side names its organization among its details", async () => {
+  serve(
+    "project",
+    "PRJ-7",
+    { name: "Quarry House", organization: "ORG-1" },
+    [field("name", "text", { required: true }), field("organization", "reference", { refers_to: "organization" })],
+    page("project", "PRJ-7", "Quarry House", [{ field: "organization", value: "ORG-1", type: "text", refs: [ref("organization", "ORG-1", "Quarry House")] }]),
+    { "GET setup/business": ownSides },
+  );
+  renderApp(<RecordPage kind="project" id="PRJ-7" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  const term = await within(details).findByText("Organization");
+  expect(term.closest(".detail")!.querySelector("dd")).toHaveTextContent("Quarry House");
 });

@@ -50,12 +50,12 @@ function show(
   handIn: () => void = noop,
 ) {
   const calls = fakeApi({ "GET setup/first-promises": () => first, ...routes });
-  renderApp(
+  const rendered = renderApp(
     <MissedOneProvider>
       <FirstPromises go={go} onHandIn={handIn} />
     </MissedOneProvider>,
   );
-  return calls;
+  return Object.assign(calls, { client: rendered.client });
 }
 
 describe("the offer", () => {
@@ -324,6 +324,25 @@ describe("what it reads", () => {
       await user.click(screen.getByRole("button", { name: "Read it too" }));
       expect(await screen.findByRole("alert")).toHaveTextContent("Choose a folder that isn't read yet.");
       expect(screen.getByRole("combobox", { name: "Folder of the mail you sent" })).toBeInTheDocument();
+    });
+
+    test("a picker opened while the first run is working stays open, with what was picked, when the run finishes and the screen is drawn again", async () => {
+      const user = userEvent.setup();
+      const coverage = [place([folder("Inbox", { from_date: from })], { missing_sent: true })];
+      let now = view({ stage: "working", count: 12, finished: 3, complete: false, coverage });
+      const shown = show(now, {
+        "GET setup/first-promises": () => now,
+        "GET watch/inbox/folders": () => folders({ folders: ["Archive", "Sent", "Sent Items"], sent: "Sent" }),
+      });
+      await user.click(await screen.findByRole("button", { name: "Choose the Sent folder" }));
+      const pick = await screen.findByRole("combobox", { name: "Folder of the mail you sent" });
+      await user.selectOptions(pick, "Sent Items");
+      // The run ends: the same screen is now the result, with the same missing sent folder.
+      now = view({ stage: "ready", count: 12, finished: 12, complete: false, coverage });
+      await shown.client.invalidateQueries({ queryKey: ["first-promises"] });
+      await waitFor(() => expect(document.querySelector('[data-first-promises="none"], [data-first-promises="found"]')).not.toBeNull());
+      expect(screen.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent Items");
+      expect(screen.queryByRole("button", { name: "Choose the Sent folder" })).toBeNull();
     });
 
     test("Cancel closes the picker and the button is back", async () => {

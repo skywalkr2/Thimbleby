@@ -150,14 +150,10 @@ test.describe.serial("journey: the owner's first evening", () => {
     // An add-on's mail has no sent folder taken by itself (that is for the plain mailbox): the screen says so and offers it.
     await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toBeVisible();
     // The choice opens right there with the usual name first (an add-on's mail can't list its folders), and Cancel leaves it.
-    // While the first run is working the list of what was read is drawn again as the run moves on, which closes a choice
-    // opened a moment before: press the button again until the choice stays open.
-    await expect(async () => {
-      const choose = main.getByRole("button", { name: "Choose the Sent folder" });
-      if (await choose.isVisible()) await choose.click();
-      // The list waits for the add-on's answer about its folders, which takes longer while the first run is working.
-      await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent", { timeout: 5_000 });
-    }).toPass({ timeout: 60_000 });
+    // It stays open while the first run is working and the list of what was read is drawn again as the run moves on.
+    await main.getByRole("button", { name: "Choose the Sent folder" }).click();
+    // The list waits for the add-on's answer about its folders, which takes longer while the first run is working.
+    await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent", { timeout: 15_000 });
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
     await main.getByRole("button", { name: "Cancel" }).click();
     await main.getByRole("button", { name: "Continue" }).click();
@@ -170,13 +166,12 @@ test.describe.serial("journey: the owner's first evening", () => {
     // 5. People by relation.
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
     expect(await widerThanWindow(page, "People")).toEqual([]);
-    const personal = main.getByRole("region", { name: /./ }).first();
-    await main.getByLabel("Name").first().fill(friend);
-    await main.getByLabel("How they relate to you").first().selectOption({ label: "my friend" });
-    await main.getByRole("button", { name: "Add", exact: true }).first().click();
+    const addRow = main.getByRole("form", { name: "Add someone" });
+    await addRow.getByLabel("Name").fill(friend);
+    await addRow.getByLabel("Who they are").selectOption({ label: "my friend" });
+    await addRow.getByRole("button", { name: "Add", exact: true }).click();
     // The people added so far are their own list; the suggestions above it may still show the same name for a moment.
     await expect(main.getByRole("region", { name: "The people in your life" }).getByRole("listitem").filter({ hasText: friend })).toContainText("my friend");
-    void personal;
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();

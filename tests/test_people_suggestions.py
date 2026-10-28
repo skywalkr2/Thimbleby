@@ -11,9 +11,11 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine import people_suggestions
+from engine.storage import WriteContext
 from tests.conftest import DEMO_B, fixture_records
 from tests.test_source_intake import NOW, make, read
 
+_W = WriteContext(actor="engine", trust="trusted", op="test.suggestions")
 TOKEN = "people-suggestions-token"
 LIMIT = 5
 
@@ -30,12 +32,14 @@ def who(n: int) -> str:
     return f"Correspondent {chr(65 + n)} <c{n}@example.com>"
 
 
-def message(key: str, sender: str, to: list[str] | None = None, *, bulk: bool | None = None) -> dict:
+def message(
+    key: str, sender: str, to: list[str] | None = None, *, bulk: bool | None = None, subject: str | None = None
+) -> dict:
     received = NOW.replace(hour=8).isoformat()
     details = {"sender": sender, "received": received, "unread": True, "participants": to or [], "bulk": bulk}
     return {
         "key": key,
-        "title": f"Subject of {key}",
+        "title": subject or f"Subject of {key}",
         "text": f"From: {sender}\n\nWords about {key}.",
         "message": details,
     }
@@ -82,24 +86,99 @@ def test_when_the_persons_sent_mail_is_read_the_people_it_went_to_most_are_sugge
     assert found[0].address == "c0@example.com"
 
 
-def test_the_most_frequent_correspondents_are_suggested_when_no_sent_mail_is_read(tmp_path):
+def test_the_most_frequent_senders_who_look_like_people_are_suggested_when_no_sent_mail_is_read(tmp_path):
     items = [
         message("m1", who(0)),
         message("m2", who(0)),
         message("m3", who(1)),
         message("m4", who(2), bulk=True),  # a mailing list isn't someone to add
         message("m5", "No Reply <no-reply@example.com>"),
-        message("m6", "info@example.com"),
+        message("m6", "info@example.com"),  # no name shown: not a person's form
     ]
     _ws, cfg, store = setup(tmp_path, items, sent=False)
     found = people_suggestions.suggest(store, cfg, LIMIT)
     store.close()
-    # An address with no name shown is named by the words of the address; an automated sender is left out.
     assert [(s.name, s.count, s.from_sent) for s in found] == [
         ("Correspondent A", 2, False),
         ("Correspondent B", 1, False),
-        ("Info", 1, False),
     ]
+
+
+def test_a_sender_is_only_suggested_from_received_mail_when_their_shown_name_is_a_persons_and_the_address_is_not_a_role(
+    tmp_path,
+):
+    shown = [
+        "Casey Kin <casey.kin@example.com>",  # a person, at a company mailbox
+        "Jo O'Neil-Smith <jo@example.com>",  # a name with a hyphen and an apostrophe
+        "Hale Support <people3@example.com>",  # a company word in the name
+        "Pat Kin <info@example.com>",  # a role address, whatever name it shows
+        "Sam <sam@example.com>",  # one word is not a full name
+        "ACME ALERTS <people@example.com>",  # capitals only
+        "Order Team <people2@example.com>",  # a company word in the name
+        "pat kin <pat@example.com>",  # no capitals
+        "<bare@example.com>",  # no name at all
+        "Name9 Digits <digits@example.com>",  # a digit in a name
+    ]
+    items = [message(f"m{n}", sender) for n, sender in enumerate(shown)]
+    _ws, cfg, store = setup(tmp_path, items, sent=False)
+    found = people_suggestions.suggest(store, cfg, 20)
+    store.close()
+    assert names(found) == ["Casey Kin", "Jo O'Neil-Smith"]
+
+
+def test_sent_mail_suggests_only_real_people_not_no_reply_role_company_set_aside_or_tracked_kind_senders(tmp_path):
+    from engine.config.schema import TriageRule
+
+    ws, cfg, store = make(tmp_path, [], first_run="baseline")
+    bill_word = cfg.watch.mail_kinds.bill.subject_words[0]
+    store.close()
+    keep = [who(0), "plain.person@example.com"]  # a name from the address is fine for someone written to
+    leave = {
+        "no-reply": "No Reply <no-reply@example.com>",
+        "role": "Pat Kin <support@example.com>",
+        "company": "Hale Support Desk <maria@example.com>",
+        "rule sender": "Rule Sender <rule.sender@example.com>",
+        "rule domain": "Domain Person <anyone@promos.example.com>",
+        "set aside": "Set Aside <set.aside@example.com>",
+        "bulk": "Bulk Sender <bulk.sender@example.com>",
+        "kind": "Kind Sender <kind.sender@example.com>",
+    }
+    items = [
+        message("sent1", "me@example.com", [*keep, *leave.values()]),
+        message("sent2", "me@example.com", [who(0)]),
+        message("set-aside", leave["set aside"]),
+        message("bulk", leave["bulk"], bulk=True),
+        message("kind", leave["kind"], subject=f"{bill_word} for May"),
+    ]
+    _ws, cfg, store = setup(tmp_path / "again", items, sent=True)
+    cfg.watch.triage = [
+        TriageRule(
+            name="Sales mail you set aside",
+            kind="sender-rule",
+            set_aside="sales",
+            params={"senders": ["rule.sender@example.com"], "domains": ["promos.example.com"]},
+        )
+    ]
+    with store.transaction() as tx:
+        snap = next(r for r in tx.list("snapshot") if r.data["key"] == "set-aside")
+        tx.update(
+            "snapshot",
+            snap.id,
+            {"set_aside": {"section": "sales", "rule": "r", "reason": "x"}},
+            _W,
+            read_version=snap.version,
+        )
+    found = people_suggestions.suggest(store, cfg, 20)
+    store.close()
+    assert names(found) == ["Correspondent A", "Plain Person"]
+
+
+def test_with_nobody_to_suggest_the_list_is_empty(tmp_path):
+    items = [message("m1", "No Reply <no-reply@example.com>"), message("m2", "info@example.com")]
+    _ws, cfg, store = setup(tmp_path, items, sent=False)
+    found = people_suggestions.suggest(store, cfg, LIMIT)
+    store.close()
+    assert found == []
 
 
 def test_nobody_already_on_file_nor_the_person_themselves_is_suggested(tmp_path):

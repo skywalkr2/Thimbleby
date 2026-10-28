@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 247. A business or job is an organization too; the People step suggests real people with one add row (2026-10-28; owner's first evening; built)
+
+| Where | Before | Now |
+|---|---|---|
+| Sides and organizations (5.1, 6.32) | A business or job was only a top project; People › Organizations never listed it, and the person was not said to work anywhere | **Built** (`tests/test_side_organization.py`): `Project.organization` (an organization id, set only by the person) links a side to the organization of the same name, made or linked when the side is added, in the same changeset (`project.add` takes `organization`) with the person's own record naming it when it names none; renaming either renames the other in the same write; a side from before is linked once at start (`engine/organizations.py::link_sides`); taking a side back out in setup takes its organization with it unless other people work for it, and Undo brings both back |
+| Pages (7.14) | An organization's page and a side's page did not meet | **Built** (`web/src/components/RecordPageNames.test.tsx`, `web/e2e/side-is-a-group.spec.ts`): the organization's page and People › Organizations say "Your business" or "Your job" and link to the side, whose page names its organization; the organization can't be removed while it is a side |
+| Mail from the organization's people (6.32) | Filing by domain and organization worked only for organizations people had been given by hand | **Built** (`tests/test_side_organization.py::test_mail_from_the_organizations_people_files_under_the_side_by_the_domain_rule`): the same rule files their mail under the side |
+| Setup's People (7.8) | Suggestions listed anyone who wrote or was written to, with an Add for each place; a form for Personal and one for each side | **Built** (`tests/test_people_suggestions.py`, `web/src/components/Walkthrough.test.tsx`): "People you write to" suggests only real people (sent mail first; no-reply, role, company, service, bulk, set-aside and mail-kind senders left out; received mail only from person-shaped names), one row each with a tick box per side and one "Add these"; one add row for the step (Name, Who they are, Side when there is a business, Add) and "Paste a list" as a link; settings `ui.walkthrough.not_people_addresses` and `not_people_names` |
+| Setup's mail step (7.8) | "Choose the Sent folder" lost its open state when the first run moved on, because each stage drew the list as a different component | **Built** (`web/src/components/FirstPromises.test.tsx`): the picker is drawn by the screen itself and stays open, with what was picked, while the run moves on |
+
 ## 246. Where something waits the app says so; Follow-ups with one group; the person's own page (2026-10-28; owner's real use; built)
 
 | Where | Before | Now |

@@ -640,7 +640,16 @@ def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_
         "name": BUSINESS_NAME,
         "personal": personal_id,
         "sides": [
-            {"project": business, "kind": "business", "name": BUSINESS_NAME, "summary": None, "removable": False}
+            {
+                "project": business,
+                "kind": "business",
+                "name": BUSINESS_NAME,
+                "summary": None,
+                "organization": next(
+                    o["id"] for o in client.get("/api/organizations").json() if o["name"] == BUSINESS_NAME
+                ),
+                "removable": False,
+            }
         ],
         "chosen": "work",
     }

@@ -390,9 +390,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     read_only = {"source"}
 
     def shown_kinds() -> set[str]:
-        """Kinds a screen may show any record of: those written to the synced folder, running plugins' own, the kinds
-        of their panels, and the read-only ones."""
-        kinds = {k for k, m in store.plugins.records.items() if getattr(m, "layout", None) or k == "project"}
+        """Kinds a screen may show any record of: those written to the synced folder, projects and organizations,
+        running plugins' own, the kinds of their panels, and the read-only ones."""
+        kinds = {
+            k
+            for k, m in store.plugins.records.items()
+            if getattr(m, "layout", None) or k in ("project", "organization")
+        }
         kinds |= read_only & set(store.plugins.records)
         for plugin, registrar in store.plugins.registrars.items():
             if store.plugins.active(plugin):
@@ -2268,6 +2272,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         for p in store.read().list("person"):
             if p.data.get("org"):
                 count[p.data["org"]] = count.get(p.data["org"], 0) + 1
+        from engine import sides
+
+        view = store.read()
+        own = {s.organization: s for s in sides.side_list(view, cfg) if s.organization}
         found = [
             OrganizationView(
                 id=o.id,
@@ -2275,8 +2283,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 aliases=o.data.get("aliases", []),
                 notes=o.data.get("notes"),
                 people=count.get(o.id, 0),
+                side=own[o.id].project if o.id in own else None,
+                side_kind=own[o.id].kind if o.id in own else None,
             )
-            for o in store.read().list("organization")
+            for o in view.list("organization")
         ]
         return sorted(found, key=lambda o: o.name.casefold())
 

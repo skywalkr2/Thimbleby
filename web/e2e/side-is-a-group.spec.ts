@@ -98,3 +98,37 @@ test.describe("a business is a group, not a project", () => {
     await expect(page.getByRole("button", { name: `More actions for ${PROJECT}` })).toBeVisible(LOADED);
   });
 });
+
+test.describe("a business is also an organization", () => {
+  test.beforeAll(async ({ request }) => {
+    // A worker that starts again finds the business there already; saying it again changes nothing.
+    const made = await request.post("api/setup/business", { headers: AUTH, data: { name: SIDE, kind: "business", summary: SUMMARY } });
+    expect(made.ok()).toBe(true);
+    side = (await made.json()).project;
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("?token=e2e-token");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+  });
+
+  test("People › Organizations lists the business once, as the person's own, and its page and the business's page name each other", async ({ page }) => {
+    await go(page, "records/people");
+    const organizations = page.getByRole("region", { name: "Organizations", exact: true });
+    const rows = organizations.getByRole("row").filter({ hasText: SIDE });
+    await expect(rows).toHaveCount(1, LOADED);
+    await expect(rows).toContainText("Your business");
+    // It is the one the person works for, and it can't be removed while it is one of their sides.
+    await rows.getByRole("button", { name: /^More actions for/ }).click();
+    await expect(page.getByRole("menuitem", { name: "Remove" })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    // The organization's page says it is the business, linking to the business's page, which names the organization.
+    await rows.getByRole("link", { name: SIDE }).click();
+    const line = page.getByTestId("organization-side");
+    await expect(line).toContainText("This is your business:", LOADED);
+    await line.getByRole("link", { name: SIDE }).click();
+    await expect(page.getByRole("heading", { level: 1, name: SIDE, exact: true })).toBeVisible(LOADED);
+    await expect(page.getByRole("region", { name: "Details", exact: true }).getByText("Organization", { exact: true })).toBeVisible(LOADED);
+    expect(await wider(page)).toBeLessThanOrEqual(0);
+  });
+});
