@@ -196,10 +196,16 @@ test.describe("the visual system", () => {
     // Narrower, it is at the bottom center, above the bottom bar.
     await page.setViewportSize({ width: 390, height: HEIGHT });
     await expect(toast).toBeVisible();
-    const phone = (await toast.boundingBox())!;
-    expect(Math.abs(phone.x + phone.width / 2 - 390 / 2)).toBeLessThan(100);
-    const bar = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
-    expect(phone.y + phone.height).toBeLessThanOrEqual(bar.y);
+    // The window was just resized: wait for the navigation to have moved to the bottom bar, then read both boxes in one frame.
+    const views = page.getByRole("navigation", { name: "Views" });
+    await expect.poll(async () => (await views.boundingBox())!.y).toBeGreaterThan(HEIGHT / 2);
+    await expect
+      .poll(async () => {
+        const bar = (await views.boundingBox())!;
+        const phone = (await toast.boundingBox())!;
+        return { centered: Math.abs(phone.x + phone.width / 2 - 390 / 2) < 100, above: phone.y + phone.height <= bar.y };
+      })
+      .toEqual({ centered: true, above: true });
   });
 
   // WCAG 2.4.11 (axe does not check it): with three toasts showing, no control the cursor reaches is hidden under them.

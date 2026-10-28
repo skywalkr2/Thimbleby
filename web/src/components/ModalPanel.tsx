@@ -22,7 +22,7 @@ export function ModalPanel(props: { titleId: string; onClose: () => void; /** A 
 
 /** Put focus back on the control that opened a dialog, once the dialog has gone. While a dialog is open the rest of the
  * page is inert, and that is lifted a moment after the dialog leaves, so this waits (a frame at a time, about a second
- * at most) until the control can take focus. */
+ * at most) until the control can take focus, and never takes it from a dialog that has opened since. */
 export function restoreFocus(target: () => HTMLElement | null | undefined, frames = 60): void {
   const attempt = (left: number) => {
     const el = target();
@@ -31,6 +31,8 @@ export function restoreFocus(target: () => HTMLElement | null | undefined, frame
       window.requestAnimationFrame(() => attempt(left - 1));
       return;
     }
+    // Out of frames with another dialog open (one opened after this one closed): the cursor is that dialog's now.
+    if (document.querySelector("[data-modal-open]")) return;
     el?.focus();
   };
   window.requestAnimationFrame(() => attempt(frames));

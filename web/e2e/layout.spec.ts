@@ -200,9 +200,16 @@ test.describe("no screen is wider than the window", () => {
       // The first row's detail stands beside the list: its menu is on the line its state begins, never alone beneath it.
       const pane = page.locator("[data-detail-pane]");
       await expect(pane).toBeVisible(LOADED);
-      const state = await pane.locator(".detail-state .kind").boundingBox();
-      const menu = await pane.locator(".detail-top .acts button").first().boundingBox();
-      expect(state && menu && Math.abs(menu.y - state.y) < 24).toBe(true);
+      // Both are read in one frame, and again until the list above has stopped settling: two separate reads can straddle a shift.
+      await expect
+        .poll(async () =>
+          pane.evaluate((el) => {
+            const state = el.querySelector(".detail-state .kind")?.getBoundingClientRect();
+            const menu = el.querySelector(".detail-top .acts button")?.getBoundingClientRect();
+            return state && menu ? Math.abs(menu.y - state.y) : null;
+          }),
+        )
+        .toBeLessThan(24);
     }
   });
 

@@ -2767,6 +2767,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "act": [
         ("target.recipients[].person", "person"),
         ("approved.by", "person"),
+        ("was_approved.by", "person"),
         ("approved.standing_yes", "standing_yes"),
         ("reminder", "action"),
         ("run", "run"),
