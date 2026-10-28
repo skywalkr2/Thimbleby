@@ -45,6 +45,9 @@ const sides = { port: 8763 + offset };
 // nothing else in it but one run waiting for the first go, read as it stands (the check on rows of empty parts, and the
 // captures when CAPTURE_DIR is set).
 const firstDay = { port: 8764 + offset };
+// And quick edits in a row: a server of its own, so a save refused as "changed since you opened it" can only be the
+// screen's own race and never another scenario writing Settings at the same moment.
+const quickEdits = { port: 8766 + offset };
 
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
 // outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
@@ -113,7 +116,7 @@ export default defineConfig({
         // The panes the shell opens (drawer, Ask pane, the stages board, review mode), and every main screen's accessibility
         // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
         { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },
-        ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /(settings-walk|quick-edits)\.spec\.ts/, use, dependencies: [s.name] }] : []),
+        ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /settings-walk\.spec\.ts/, use, dependencies: [s.name] }] : []),
         ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
         // The schedule at a phone, a tablet and a desktop width, and moving through its days (once, at the root).
         ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /schedule\.spec\.ts/, use, dependencies: [s.name] }] : []),
@@ -130,6 +133,7 @@ export default defineConfig({
     { name: "just-me", testMatch: /just-me\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${justMe.port}/` } },
     { name: "sides", testMatch: /side-is-a-group\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sides.port}/` } },
     { name: "first-day", testMatch: /first-day.*\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${firstDay.port}/` } },
+    { name: "quick-edits", testMatch: /quick-edits\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${quickEdits.port}/` } },
     { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
     {
       name: "journeys",
@@ -208,6 +212,13 @@ export default defineConfig({
       command: `uv run python -m tests.e2e_server --port ${sides.port} --base-path / --just-me --plain-stages`,
       cwd: "..",
       url: `http://127.0.0.1:${sides.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `uv run python -m tests.e2e_server --port ${quickEdits.port} --base-path /`,
+      cwd: "..",
+      url: `http://127.0.0.1:${quickEdits.port}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
     },
