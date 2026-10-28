@@ -285,6 +285,9 @@ class _Recorder:
     def sign_in(self, name, **kwargs):
         self.sources = list(kwargs["sources"])
 
+    def channel(self, *args, **kwargs):
+        return None
+
 
 @pytest.mark.parametrize(("switch", "named"), [(None, True), ("1", True), ("0", False)])
 def test_the_journey_mail_add_on_names_the_sent_mail_unless_the_app_is_told_it_does_not(monkeypatch, switch, named):
@@ -308,3 +311,98 @@ def test_the_journey_mail_add_on_names_the_sent_mail_unless_the_app_is_told_it_d
     finally:
         monkeypatch.delenv("JOURNEY_SENT_MAIL", raising=False)
         importlib.reload(journey_mail)
+
+
+def signed_in_token(client, scope: str) -> dict[str, str]:
+    granted = exchange(client, code_from(sign_in_page(client, scope=scope))).json()
+    assert granted["scope"] == scope  # the service says what it granted: what the sign-in asked for
+    return {"Authorization": f"Bearer {granted['access_token']}"}
+
+
+def test_the_service_changes_mail_only_for_a_token_that_holds_the_wider_access(service):
+    state, client = service
+    reading = signed_in_token(client, "mail.read")
+    asked = {"attempt": "k1", "action": "move", "messages": ["m-1"], "folder": "fld-archive-7", "label": None}
+    assert client.get("/mail/v1/folders", headers=reading).status_code == 403
+    assert client.post("/mail/v1/acts", json=asked, headers=reading).status_code == 403
+    assert client.post("/mail/v1/acts", json=asked).status_code == 401
+    assert state.acts == []
+
+    acting = signed_in_token(client, "mail.read mail.modify")
+    listed = client.get("/mail/v1/folders", headers=acting).json()["folders"]
+    assert {f["kind"] for f in listed} == {"folder", "label"}
+    assert all(f["id"] != f["name"] for f in listed) and any("/" in f["name"] for f in listed)
+    made = client.post("/mail/v1/acts", json=asked, headers=acting).json()
+    assert client.post("/mail/v1/acts", json=asked, headers=acting).json() == made  # one attempt is one change
+    assert state.acts == [{**asked, "id": made["id"]}]
+    assert client.get("/mail/v1/acts/status", params={"attempt": "k1"}, headers=acting).json() == made
+    assert client.get("/mail/v1/acts/status", params={"attempt": "other"}, headers=acting).json() == {"id": None}
+    client.post("/mail/v1/acts/undo", json={"id": made["id"], "action": "move"}, headers=acting)
+    assert state.undone == [{"id": made["id"], "action": "move"}]
+
+
+def test_a_token_renewed_keeps_the_access_it_was_given(service):
+    state, client = service
+    granted = exchange(client, code_from(sign_in_page(client, scope="mail.read mail.modify"))).json()
+    renewed = client.post(
+        "/account/token",
+        data={"grant_type": "refresh_token", "refresh_token": granted["refresh_token"], "client_id": CLIENT_ID},
+    ).json()
+    assert renewed["scope"] == "mail.read mail.modify"
+    headers = {"Authorization": f"Bearer {renewed['access_token']}"}
+    assert client.get("/mail/v1/folders", headers=headers).status_code == 200
+
+
+class _Context:
+    """The context a channel is handed, answered by the fake service in-process, so the add-on's own code runs."""
+
+    def __init__(self, client, token: str):
+        self.client, self.token = client, token
+        self.access_token = lambda: token
+
+        class Web:
+            def request(_self, method, url, **kwargs):
+                from engine.net import Response
+
+                path = url.split("/mail/v1", 1)[1]
+                answer = client.request(method, f"/mail/v1{path}", **kwargs)
+                if answer.status_code in (401, 403):
+                    raise ConnectorError("auth" if answer.status_code == 401 else "no_access", "refused")
+                return Response(answer.status_code, dict(answer.headers), answer.content)
+
+        self.web = Web()
+
+
+def test_the_journey_mail_channel_acts_lists_and_takes_back_through_the_service(service, monkeypatch):
+    from engine.plugin_api import ChannelFailed, ChannelNotSent, ChannelSent, ChannelUndone, OutgoingAbout, OutgoingAct
+    from tests.fixtures.plugins import journey_mail
+
+    monkeypatch.setattr(journey_mail, "SERVICE", "")
+    state, client = service
+    headers = signed_in_token(client, "mail.read mail.modify")
+    acting = _Context(client, headers["Authorization"][7:])
+    listed = journey_mail.folders("journey-mail/account:me", acting)
+    assert {(f.name, f.kind) for f in listed} >= {("Projects/Archive", "folder"), ("Follow up", "label")}
+
+    folder = next(f.id for f in listed if f.name == "Projects/Archive")
+    act = OutgoingAct(
+        id="a1",
+        kind="mailbox",
+        parts={},
+        action="move",
+        folder=folder,
+        about=(OutgoingAbout(id="r1", service_id="m-1"),),
+    )
+    sent = journey_mail.send(act, "key-1", acting)
+    assert isinstance(sent, ChannelSent)
+    assert [(a["messages"], a["folder"], a["action"]) for a in state.acts] == [(["m-1"], folder, "move")]
+    assert journey_mail.status("key-1", acting) == sent
+    assert isinstance(journey_mail.status("never", acting), ChannelNotSent)
+    assert isinstance(journey_mail.undo(act, sent.service_id, acting), ChannelUndone)
+    assert state.undone == [{"id": sent.service_id, "action": "move"}]
+
+    reading = _Context(client, signed_in_token(client, "mail.read")["Authorization"][7:])
+    assert journey_mail.send(act, "key-2", reading) == ChannelFailed("auth", "Sign in to Example mail again.")
+    assert journey_mail.folders("journey-mail/account:me", reading) == ChannelFailed(
+        "auth", "Sign in to Example mail again."
+    )

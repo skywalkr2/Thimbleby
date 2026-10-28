@@ -362,6 +362,25 @@ describe("opened from Today", () => {
     const pane = await screen.findByRole("complementary", { name: "File for Reports" });
     await waitFor(() => expect(pane.contains(document.activeElement)).toBe(true));
   });
+
+  test("a line asked for while the list it was read from is older than the line is chosen once the list is read again", async () => {
+    // A second act drafted in one visit: the screen opens with the list kept from the first visit, which doesn't hold the new
+    // act, and reads it again; the request waits for that read instead of being dropped by the old list.
+    besidePane();
+    let acts = [actFixture()];
+    let gate: Promise<void> | null = null;
+    fakeApi({ "GET acts": async (_b, q) => (await gate, actsAnswer(acts, q)), "GET followups": () => [] });
+    const { client } = renderApp(<FollowUps />);
+    await screen.findByRole("complementary", { name: "Message to Ana Example" });
+    let release = () => {};
+    gate = new Promise((done) => (release = done));
+    acts = two();
+    void client.invalidateQueries({ queryKey: ["acts"] });
+    reveal("act", "XACT-2");
+    await new Promise((done) => setTimeout(done, 50)); // the list is being read again; the line isn't in the one kept
+    release();
+    expect(await screen.findByRole("complementary", { name: "File for Reports" })).toBeInTheDocument();
+  });
 });
 
 

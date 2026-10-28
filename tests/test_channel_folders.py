@@ -322,3 +322,43 @@ def test_the_testing_kit_calls_a_channels_folders_and_checks_the_answer():
         channel_folders(
             lambda account, context: (_ for _ in ()).throw(RuntimeError("seen by the test")), account, context
         )
+
+
+# ---- an add-on's own account id, which names its plugin -----------------------------------------------------------
+
+#: An add-on's sign-in account is `<plugin>/<sign-in>:<address>`: the slash must reach the routes whole.
+ADDON_ACCOUNT = "demo/account:pat@example.com"
+
+
+@pytest.fixture
+def addon(client, monkeypatch):  # noqa: F811
+    """A signed-in account of an add-on whose channel only files messages (no reply), and lists its folders."""
+    fake = FakeChannel(
+        accounts=("demo/account",),
+        folder_answer=list(LISTED),
+        kinds=("mailbox",),
+    )
+    client.store.plugins.core_channels[CHANNEL] = fake.registration(CHANNEL)
+    del client.store.plugins.core_channels["fake"]
+    client.cfg.watch.acting.append(ADDON_ACCOUNT)
+    client.listing = fake
+    known = [AccountInfo(ADDON_ACCOUNT, "Demo (pat@example.com)", True)]
+    monkeypatch.setattr(act_accounts, "known", lambda store, cfg: known)
+    monkeypatch.setattr(act_accounts, "of_record", lambda view, store, cfg, record_id: ADDON_ACCOUNT)
+    return client
+
+
+def test_an_add_on_accounts_folders_are_listed_through_its_slash(addon):
+    from urllib.parse import quote
+
+    found = addon.get(f"/api/acts/accounts/{quote(ADDON_ACCOUNT, safe='')}/folders")
+    assert found.status_code == 200, found.text
+    assert found.json()["listed"] is True
+    assert [f["name"] for f in found.json()["folders"]] == [f.name for f in LISTED]
+
+
+def test_a_channel_that_only_files_messages_offers_its_mailbox_acts(addon):
+    mail = message(addon, "filed-only")
+    offered = addon.get("/api/acts/options", params={"record": mail}).json()
+    assert {"archive", "move", "label", "mark_read"} <= set(offered["actions"])
+    assert offered["folders_listed"] is True and offered["folders_account"] == ADDON_ACCOUNT

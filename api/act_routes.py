@@ -245,7 +245,8 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         if kind == "message":
             out.actions = list(ACT_REPLY_ACTIONS)
             out.can_act = bool(channel and acting and channel.takes("message", "reply"))
-            if account and channel is not None:
+            # What files messages is the account's mailbox channel, which needn't be the one that replies.
+            if account:
                 serves = serving(account, "mailbox", "archive")
                 mail = serves[1] if serves else None
                 if mailbox:
@@ -312,7 +313,7 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             folders_account=account if channel_lists else None,
         )
 
-    @r.get("/acts/accounts/{account}/folders")
+    @r.get("/acts/accounts/{account:path}/folders")
     def account_folders(account: str) -> AccountFoldersView:
         """The folders and labels the account's channel lists, for Move to and Label: asked when the person opens the
         form and kept for `watch.folders_cache_minutes`. An account whose channel can't list them is `listed: false`;

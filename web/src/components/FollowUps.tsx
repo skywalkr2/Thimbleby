@@ -174,13 +174,17 @@ export function FollowUps(props: { compact?: boolean }) {
   });
   useEffect(() => {
     if (wantAct === null || !acts.data) return;
-    if (acts.data.some((a) => a.id === wantAct)) {
+    const held = acts.data.some((a) => a.id === wantAct);
+    // The list kept from an earlier visit may be older than the act asked for (it was drafted since): while it is being read
+    // again the request waits for that, and is dropped only when a read that has finished doesn't hold the act either.
+    if (!held && acts.isFetching) return;
+    if (held) {
       setGroup("person");
       setFilter("send");
       setPicked({ key: actKey(wantAct), n: Date.now(), focus: false, enter: true });
     }
     setWantAct(null);
-  }, [wantAct, acts.data]);
+  }, [wantAct, acts.data, acts.isFetching]);
   const selectedAct = actRows.find((a) => actKey(a.id) === choice.chosen) ?? null;
   const selected = shown.find((s) => s.person === choice.chosen) ?? null;
   // What a person's message keeps while it is shown on the line and in the detail.

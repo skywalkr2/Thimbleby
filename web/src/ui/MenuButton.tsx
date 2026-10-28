@@ -1,7 +1,7 @@
 // A menu (design 7.12): a surface with a floating shadow, 36px items with an optional icon, a separator between groups,
 // a disabled item that says why, and groups that choose one value (a checked item). Built on the React Aria menu, so it
 // is keyboard and screen-reader complete. The trigger is any React Aria button (an IconButton, a StatusChip).
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useRef, type ReactNode } from "react";
 import { Header, Menu, MenuItem, MenuSection, MenuTrigger, Popover, Separator, Text } from "react-aria-components";
 import { Icon, type IconName } from "./Icon";
 import styles from "./MenuButton.module.css";
@@ -35,13 +35,41 @@ export interface MenuGroup {
 
 export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; placement?: "bottom end" | "bottom start" | "top end" | "top start" }) {
   const groups = props.groups.filter((g) => g.entries.length);
+  const chosen = useRef<(() => void) | null>(null);
+  const opener = useRef<Element | null>(null);
   if (!groups.length) return null;
   const find = (key: unknown) => groups.flatMap((g) => g.entries).find((e) => e.id === key);
+  // The open menu keeps focus inside itself, with the page behind it out of reach, and gives focus back to its button as it
+  // closes. An entry that opens something with its own cursor (a form's first field) can't take it while the menu is still
+  // there, and one that opens a dialog would have it return to nowhere. So an entry runs just after the menu has closed, with
+  // the cursor first put back on the button the menu came from: the form's field then takes it, and a dialog gives it back
+  // to the button when it closes. A choice in a group of independent ticks leaves the menu open, so it runs at once.
+  const closed = (open: boolean) => {
+    if (open) {
+      opener.current = document.activeElement;
+      return;
+    }
+    const run = chosen.current;
+    if (!run) return;
+    chosen.current = null;
+    window.setTimeout(() => {
+      const button = opener.current;
+      if (button instanceof HTMLElement && button.isConnected && document.activeElement === document.body) button.focus();
+      run();
+    }, 0);
+  };
   return (
-    <MenuTrigger>
+    <MenuTrigger onOpenChange={closed}>
       {props.trigger}
       <Popover placement={props.placement ?? "bottom end"} className={styles.popover}>
-        <Menu className={styles.menu} onAction={(key) => find(key)?.run?.()}>
+        <Menu
+          className={styles.menu}
+          onAction={(key) => {
+            const entry = find(key);
+            if (entry && groups.some((g) => g.checked !== undefined && g.entries.includes(entry))) entry.run?.();
+            else chosen.current = entry?.run ?? null;
+          }}
+        >
           {groups.map((group, index) => (
             <Fragment key={group.id}>
               {index > 0 && <Separator className={styles.sep} />}

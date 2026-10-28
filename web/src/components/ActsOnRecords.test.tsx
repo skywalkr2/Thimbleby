@@ -275,6 +275,37 @@ describe("a saved message", () => {
     expect(post(calls)[0].body).toEqual({ kind: "mailbox", action: "label", about: [MESSAGE], label: "lbl-1" });
   });
 
+  // The menu gives focus back to its button when it closes; a form opened from it must keep the cursor it was given, also when
+  // what it shows is already there (the list asked for by an earlier form) and so is drawn at once.
+  const settled = () => new Promise((done) => setTimeout(done, 100));
+
+  test("Label opened from the menu with the account's list already asked for puts the cursor in the list", async () => {
+    const user = userEvent.setup();
+    open("source", message, routes({ [`GET acts/options?record=${MESSAGE}`]: channelOptions, [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: listed }));
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    await screen.findByRole("combobox", { name: "Move to folder" });
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Label…" }));
+    const label = await screen.findByRole("combobox", { name: "Label" });
+    await settled();
+    expect(label).toHaveFocus();
+  });
+
+  test.each([
+    ["Reply to everyone", "textbox", "Your reply"],
+    ["Forward", "combobox", "Forward to"],
+  ])("%s opened from the menu puts the cursor in its first field", async (item, role, name) => {
+    const user = userEvent.setup();
+    open("source", message, routes());
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: item }));
+    const first = await screen.findByRole(role as "textbox", { name: new RegExp(name) });
+    await settled();
+    expect(first).toHaveFocus();
+  });
+
   test("a channel that lists only folders leaves Label typed", async () => {
     const user = userEvent.setup();
     open(

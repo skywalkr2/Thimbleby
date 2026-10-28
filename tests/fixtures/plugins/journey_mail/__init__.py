@@ -1,7 +1,9 @@
 """A fictional mail and calendar add-on for the journey tests. It signs in to a made-up service through that service's
 own sign-in page, and its two connectors read a small JSON API over HTTPS: the messages in the inbox and the events on
-the main calendar. It changes nothing there. The service's address comes from the environment of the process that runs
-the app, so the same files serve any port.
+the main calendar. Reading changes nothing there. Its channel changes mail on the person's yes (archive, move, label,
+mark as read) through the same service, which keeps what it was asked so a test can read it, and lists the account's own
+folders and labels. The service's address comes from the environment of the process that runs the app, so the same files
+serve any port.
 """
 
 from __future__ import annotations
@@ -10,7 +12,20 @@ import os
 
 from pydantic import BaseModel, Field
 
-from engine.plugin_api import ConnectorError, EventDetails, MessageDetails, Poll, Settings, SourceItem
+from engine.plugin_api import (
+    ChannelFailed,
+    ChannelFolder,
+    ChannelNotSent,
+    ChannelSent,
+    ChannelUndone,
+    ChannelUnknown,
+    ConnectorError,
+    EventDetails,
+    MessageDetails,
+    Poll,
+    Settings,
+    SourceItem,
+)
 
 SERVICE = os.environ.get("JOURNEY_SERVICE_ADDRESS", "https://127.0.0.1:1").rstrip("/")
 SIGN_IN = "journey-mail/account"
@@ -20,6 +35,9 @@ SIGN_IN = "journey-mail/account"
 SENT_MAIL = os.environ.get("JOURNEY_SENT_MAIL", "1") != "0"
 #: The app registration this add-on ships, as the made-up service knows it.
 DEFAULT_CLIENT_ID = "journey-mail-app"
+CHANNEL = "journey-mail/mail-channel"
+#: What the person allows by turning acting on: the service refuses a change unless the token holds it.
+ACTING_SCOPES = ["mail.modify"]
 
 
 class Config(Settings):
@@ -96,6 +114,56 @@ def account(context) -> str:
     return str(_get(context, "/account/v1/me")["email"])
 
 
+def _failed(err: ConnectorError) -> ChannelFailed:
+    """What a refused or unreachable request means for the person, decided from the kind and never from the words."""
+    if err.kind in ("auth", "no_access"):
+        return ChannelFailed("auth", "Sign in to Example mail again.")
+    return ChannelFailed("offline" if err.kind == "offline" else "outage", "Example mail didn't answer.")
+
+
+def _call(context, method: str, path: str, **kwargs):
+    token = context.access_token()
+    return context.web.request(method, f"{SERVICE}{path}", headers={"Authorization": f"Bearer {token}"}, **kwargs)
+
+
+def folders(account: str, context) -> list[ChannelFolder] | ChannelFailed:
+    try:
+        listed = _call(context, "GET", "/mail/v1/folders").json().get("folders", [])
+    except ConnectorError as err:
+        return _failed(err)
+    return [ChannelFolder(f["id"], f["name"], f["kind"]) for f in listed]
+
+
+def send(act, attempt_key: str, context):
+    body = {
+        "attempt": attempt_key,
+        "action": act.action,
+        "messages": [about.service_id for about in act.about],
+        "folder": act.folder,
+        "label": act.label,
+    }
+    try:
+        return ChannelSent(str(_call(context, "POST", "/mail/v1/acts", json=body).json()["id"]))
+    except ConnectorError as err:
+        return _failed(err)
+
+
+def status(attempt_key: str, context):
+    try:
+        found = _call(context, "GET", "/mail/v1/acts/status", params={"attempt": attempt_key}).json().get("id")
+    except ConnectorError:
+        return ChannelUnknown()
+    return ChannelSent(str(found)) if found else ChannelNotSent()
+
+
+def undo(act, service_id: str, context):
+    try:
+        _call(context, "POST", "/mail/v1/acts/undo", json={"id": service_id, "action": act.action})
+    except ConnectorError as err:
+        return _failed(err)
+    return ChannelUndone()
+
+
 def register(registrar) -> None:
     registrar.connector(
         "journey-mail/mail", label="Example mail", settings=InboxSettings, poll=poll_inbox, reads="mail"
@@ -114,6 +182,7 @@ def register(registrar) -> None:
         token_url=f"{SERVICE}/account/token",
         revoke_url=f"{SERVICE}/account/revoke",
         scopes=["mail.read", "calendar.read", "offline"],
+        acting_scopes=ACTING_SCOPES,
         allows=["Read your mail", "Read your calendar"],
         account=account,
         default_client_id=DEFAULT_CLIENT_ID,
@@ -135,4 +204,16 @@ def register(registrar) -> None:
                 else []
             ),
         ],
+    )
+    registrar.channel(
+        CHANNEL,
+        label="Example mail",
+        # Only files messages: a saved message's mailbox acts are offered whether or not the account's channel replies.
+        kinds=["mailbox"],
+        send=send,
+        status=status,
+        undo=undo,
+        actions={"mailbox": ["archive", "move", "label", "mark_read"]},
+        accounts=[SIGN_IN],
+        folders=folders,
     )

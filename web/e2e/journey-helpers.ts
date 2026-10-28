@@ -63,6 +63,16 @@ export interface SignInSeen {
   };
 }
 
+/** What the add-on's channel asked the made-up mail service to change and take back, the folders and labels it lists (ids that
+ * differ from their names), the scopes the live tokens hold and the messages the service has. */
+export interface MailActsSeen {
+  acts: { attempt: string; action: string; messages: string[]; folder: string | null; label: string | null; id: string }[];
+  undone: { id: string; action: string }[];
+  folders: { id: string; name: string; kind: "folder" | "label" }[];
+  granted: string[];
+  messages: { id: string; subject: string }[];
+}
+
 /** Collects what the browser reports as wrong while a journey runs; a journey ends by checking the list is empty. */
 export function collectProblems(page: Page, problems: string[]) {
   page.on("console", (msg) => {

@@ -15,8 +15,34 @@ test("a menu opens from its button and runs the chosen entry, then closes", asyn
   await user.click(screen.getByRole("button", { name: "Open the menu" }));
   expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["First", "Second"]);
   await user.click(screen.getByRole("menuitem", { name: "First" }));
-  expect(run).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+});
+
+test("an entry runs once the menu has closed, so what it opens keeps the cursor it asks for", async () => {
+  // The open menu holds focus inside itself (and the page behind it out of reach) and gives focus back to its button as it
+  // closes; an entry that opens a form, whose first field takes the cursor as it is drawn, must run after that, or the field
+  // can't take it and the cursor ends on the button instead.
+  const user = userEvent.setup();
+  let menuOpenWhenRun: boolean | null = null;
+  const run = vi.fn(() => {
+    menuOpenWhenRun = screen.queryByRole("menu") !== null;
+  });
+  menu([{ id: "a", entries: [{ id: "one", label: "First", run }] }]);
+  await user.click(screen.getByRole("button", { name: "Open the menu" }));
+  await user.click(screen.getByRole("menuitem", { name: "First" }));
+  await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+  expect(menuOpenWhenRun).toBe(false);
+});
+
+test("a choice in a group of independent ticks runs at once and leaves the menu open", async () => {
+  const user = userEvent.setup();
+  const run = vi.fn();
+  menu([{ id: "a", title: "Columns", checked: ["x"], entries: [{ id: "x", label: "Stage", run }] }]);
+  await user.click(screen.getByRole("button", { name: "Open the menu" }));
+  await user.click(screen.getByRole("menuitemcheckbox", { name: "Stage" }));
+  expect(run).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("menu")).toBeInTheDocument();
 });
 
 test("it opens and moves by keyboard, and Escape closes it with focus back on the button", async () => {
@@ -27,7 +53,7 @@ test("it opens and moves by keyboard, and Escape closes it with focus back on th
   button.focus();
   await user.keyboard("{Enter}");
   await user.keyboard("{ArrowDown}{Enter}");
-  expect(run).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
   await user.click(button);
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());

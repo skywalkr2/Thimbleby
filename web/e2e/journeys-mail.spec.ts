@@ -7,12 +7,16 @@
 // Names come from the fictional workspace the fake services serve, never written out here.
 import { expect, test } from "@playwright/test";
 import {
+  checkAccessibility,
   collectProblems,
+  dismissToasts,
   fakeAddress,
   openView,
   pressStart,
   visit,
+  widerThanWindow,
   type Info,
+  type MailActsSeen,
   type Requests,
   type SignInSeen,
 } from "./journey-helpers";
@@ -24,6 +28,7 @@ const problems: string[] = [];
 
 const requests = async (): Promise<Requests> => (await fetch(`${FAKE}/__e2e/ai-requests`)).json();
 const service = async (): Promise<SignInSeen> => (await fetch(`${FAKE}/__e2e/sign-in`)).json();
+const changes = async (): Promise<MailActsSeen> => (await fetch(`${FAKE}/__e2e/mail-acts`)).json();
 
 test.describe.serial("journey: mail", () => {
   test.beforeAll(async () => {
@@ -306,5 +311,135 @@ test.describe.serial("journey: mail", () => {
     expect(after.inputs.filter((input) => input.includes(later.subject))).toHaveLength(0);
     expect(new Set(after.inputs).size).toBe(handedIn + 1);
     expect(await service()).toMatchObject({ unauthorized: 0, refused: 0 });
+  });
+
+  // Acting on a signed-in account (design 6.12). It runs on what J2 left: the account signed in and its messages saved, so it
+  // needs no server of its own. The add-on's channel carries each change to the made-up mail service, which refuses any
+  // change for a token that holds only the reading access, so the test proves the sign-in again, not only the screens.
+  test("J2b. Let the assistant act on my signed-in mail: Move to and Label pick from the account's own folders and labels, the yes shows the names, and what the service was asked is the ids", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const trouble: string[] = [];
+    collectProblems(page, trouble);
+    const before = await service();
+    expect((await changes()).granted.every((scopes) => !scopes.includes("mail.modify"))).toBe(true);
+    const seenOnService = await changes();
+    // A saved message from that account, a work message the first read took in: What changed lists it, and its detail's title
+    // opens the message's own page.
+    const message = seenOnService.messages.find((m) => before.recent_items.mail.includes(m.subject));
+    if (!message) throw new Error("the made-up service holds no recent work message");
+    const openMessage = async () => {
+      await openView(page, "What changed");
+      const title = new RegExp(`^Email from .+ · ${message.subject}$`);
+      await page.getByRole("list").getByRole("button", { name: new RegExp(`^Email from .+ · ${message.subject} `) }).click();
+      await page.getByRole("link", { name: title }).click();
+      await expect(page.getByRole("heading", { level: 1, name: message.subject })).toBeVisible();
+    };
+    const archive = seenOnService.folders.find((f) => f.kind === "folder" && f.name.includes("/"));
+    const follow = seenOnService.folders.find((f) => f.kind === "label");
+    if (!archive || !follow) throw new Error("the made-up service lists no nested folder or no label");
+    expect(archive.id).not.toBe(archive.name);
+    expect(follow.id).not.toBe(follow.name);
+
+    // Acting is the person's switch, off until they turn it on. Turning it on for the signed-in account sends them to the
+    // service's own page to allow more, which brings them back to Settings with the switch on.
+    await page.goto(`?token=${info.token}#settings`);
+    const acting = page.locator("[data-acting-accounts]");
+    const switchOn = acting.getByRole("checkbox", { name: /^Let .+ act after your yes$/ });
+    await expect(switchOn).toBeVisible();
+    await expect(switchOn).not.toBeChecked();
+    // The page is replaced by the service's, so the box shows the switch on only once the person is back.
+    await switchOn.click();
+    await expect(page.locator("[data-acting-accounts]").getByRole("checkbox", { name: /^Let .+ act after your yes$/ })).toBeChecked({
+      timeout: 30_000,
+    });
+    const after = await service();
+    expect(after.authorizations).toBe(before.authorizations + 1);
+    expect(after.exchanges).toBe(before.exchanges + 1);
+    expect((await changes()).granted.some((scopes) => scopes.includes("mail.modify"))).toBe(true);
+    expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
+    await visit(page);
+
+    // A saved message from that account: its page offers Move to.
+    await openMessage();
+    await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Move to…" }).click();
+
+    // The account's own folders are a list to pick from, with the nested one by its whole path, never a box to type in; the
+    // labels are not in it. The cursor is in the list.
+    const form = page.locator('[data-act-form="move"]');
+    const folders = form.getByRole("combobox", { name: "Move to folder" });
+    await expect(folders).toBeFocused();
+    await expect(form.getByRole("textbox")).toHaveCount(0);
+    await expect(page.locator("[data-folders-not-listed]")).toHaveCount(0);
+    const offered = await folders.locator("option").allTextContents();
+    expect(offered).toEqual(["Choose a folder", ...seenOnService.folders.filter((f) => f.kind === "folder").map((f) => f.name)]);
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(form).toBeVisible();
+      await checkAccessibility(page);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    }
+    expect(await widerThanWindow(page, "Move to")).toEqual([]);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await folders.selectOption({ label: archive.name });
+    await form.getByRole("button", { name: "Draft the move" }).click();
+
+    // Waiting to go out names the folder as the person knows it, not its id, and nothing has been asked of the service yet.
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
+    const waiting = page.getByRole("list", { name: "Waiting to go out" }).getByRole("listitem");
+    await expect(waiting).toHaveCount(1);
+    await expect(waiting).toContainText(`Move 1 message to ${archive.name}`);
+    const pane = page.getByRole("complementary", { name: `Move 1 message to ${archive.name}` });
+    await expect(pane).toContainText(`Folder: ${archive.name}`);
+    await expect(pane).not.toContainText(archive.id);
+    expect((await changes()).acts).toEqual([]);
+    await pane.getByRole("button", { name: "Approve and send" }).click();
+    const dialog = page.getByRole("dialog", { name: "Go ahead with this now: Move 1 message to " + archive.name + "?" });
+    await dialog.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByText("Sent the change to your mail.")).toBeVisible();
+
+    // The service was asked once, for the folder's id and the message's own id there. Undo, from the toast, asks it once to
+    // take that back.
+    const moved = await changes();
+    expect(moved.acts).toHaveLength(1);
+    expect(moved.acts[0]).toMatchObject({ action: "move", folder: archive.id, label: null, messages: [message.id] });
+    expect(moved.undone).toEqual([]);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByText("Took back the change to your mail.")).toBeVisible();
+    const back = await changes();
+    expect(back.acts).toHaveLength(1);
+    expect(back.undone).toEqual([{ id: moved.acts[0].id, action: "move" }]);
+
+    // Label picks from the account's labels the same way.
+    await dismissToasts(page);
+    await openMessage();
+    await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Label…" }).click();
+    const labelForm = page.locator('[data-act-form="label"]');
+    const labels = labelForm.getByRole("combobox", { name: "Label" });
+    await expect(labels).toBeFocused();
+    await expect(labelForm.getByRole("textbox")).toHaveCount(0);
+    expect(await labels.locator("option").allTextContents()).toEqual([
+      "Choose a label",
+      ...seenOnService.folders.filter((f) => f.kind === "label").map((f) => f.name),
+    ]);
+    await checkAccessibility(page);
+    await labels.selectOption({ label: follow.name });
+    await labelForm.getByRole("button", { name: "Draft the label" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
+    const labelPane = page.getByRole("complementary", { name: `Label 1 message ${follow.name}` });
+    await expect(labelPane).toContainText(`Label: ${follow.name}`);
+    await expect(labelPane).not.toContainText(follow.id);
+    await labelPane.getByRole("button", { name: "Approve and send" }).click();
+    await page.getByRole("dialog", { name: `Go ahead with this now: Label 1 message ${follow.name}?` }).getByRole("button", { name: "Send" }).click();
+    await expect(page.getByText("Sent the change to your mail.")).toBeVisible();
+    const labeled = await changes();
+    expect(labeled.acts).toHaveLength(2);
+    expect(labeled.acts[1]).toMatchObject({ action: "label", label: follow.id, folder: null, messages: [message.id] });
+    expect(labeled.undone).toHaveLength(1); // the label was not taken back
+    expect(await service()).toMatchObject({ unauthorized: 0, refused: 0 });
+    expect(trouble.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
   });
 });

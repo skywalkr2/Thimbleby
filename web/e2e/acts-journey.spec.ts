@@ -148,6 +148,34 @@ test.describe("mail and calendar acts", () => {
     expect(problems).toEqual([]);
   });
 
+  test("each form a message's menu opens has the cursor in its first field, so the person can type at once", async ({ page }) => {
+    const problems: string[] = [];
+    collectProblems(page, problems);
+    const first = await seeded(page);
+    await signIn(page);
+    await openRecord(page, "source", first.tidy.id, first.tidy.title);
+    // The menu hands focus back to its button as it closes; the form it opened must still end with the cursor in it.
+    for (const [item, form] of [
+      ["Label…", "label"],
+      ["Move to…", "move"],
+      ["Reply to everyone", "reply"],
+      ["Label…", "label"],
+    ] as const) {
+      await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+      await page.getByRole("menuitem", { name: item }).click();
+      const field = page.locator(`[data-act-form="${form}"]`).locator("input, select, textarea").first();
+      await expect(field).toBeVisible();
+      await expect(field).toBeFocused();
+      // And it stays there: the menu's own hand-back comes a frame later.
+      await page.waitForTimeout(300);
+      await expect(field).toBeFocused();
+      await page.locator(`[data-act-form="${form}"]`).getByRole("button", { name: "Cancel" }).click();
+    }
+    // The stand-in mailbox has no settings to read its folders from, so Move to's list request fails here; that is the
+    // server's seeding, not what is checked.
+    expect(problems.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
+  });
+
   test("an invitation is answered from its entry: the answer is read in full, goes to the organizer after the yes and can't be taken back", async ({ page }) => {
     const problems: string[] = [];
     collectProblems(page, problems);

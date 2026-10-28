@@ -19,7 +19,9 @@ With `--https-port` the process also answers over HTTPS, with a certificate from
 - `/account/...` is a sign-in page that sends the person straight back with a code, a token address that checks the
   code and the PKCE verifier, a revoke address and a "who am I" answer;
 - `/mail/v1/...` and `/calendar/v1/...` are a small mail and calendar API that answers only to a token it issued, with
-  fictional messages from example.com addresses and meetings today;
+  fictional messages from example.com addresses and meetings today. The mail API also changes mail (a change, taking it
+  back, what an attempt became, the account's folders and labels) for a token that holds the wider access acting asks
+  for, and keeps each change for `/__e2e/mail-acts`;
 - `/catalog/...` is an add-on catalog feed listing the add-ons named by `--catalog` (fixture folders; the example panel
   by default), and the wheels it points to, built from their fixture folders at start.
 
@@ -87,6 +89,9 @@ class State:
         self.codes: dict[str, dict] = {}  # given and not yet used: the challenge and address each was asked with
         self.access: set[str] = set()  # access tokens the service issued and has not withdrawn
         self.refresh: set[str] = set()
+        self.scopes: dict[str, str] = {}  # what each token holds: the scopes its sign-in asked for
+        self.acts: list[dict] = []  # changes to mail the add-on's channel asked for, in order (each with its attempt)
+        self.undone: list[dict] = []  # changes it asked to take back
         #: The moment the made-up mailbox and calendar are dated from, so reading them again gives the same text.
         self.moment = datetime.now(UTC)
         self.evening = False  # the owner-evening journey's extra mail, event and retired model
@@ -224,13 +229,17 @@ def account_routes(state: State) -> list[Route]:
     """The made-up service's sign-in: the page sends the person straight back, as a person already signed in to it
     would be; the token address is where the app proves it started the sign-in (PKCE)."""
 
-    def issue(with_refresh: bool) -> dict:
+    def issue(with_refresh: bool, scope: str, refresh: str | None = None) -> dict:
+        """A token holding `scope`, which is what the service says it granted: a sign-in that asked for more (acting) is
+        given more, and the token that renews it keeps the same."""
         access = "access-" + secrets.token_urlsafe(12)
         state.access.add(access)
-        body = {"access_token": access, "token_type": "Bearer", "expires_in": TOKEN_SECONDS, "scope": SCOPES}
+        state.scopes[access] = scope
+        body = {"access_token": access, "token_type": "Bearer", "expires_in": TOKEN_SECONDS, "scope": scope}
         if with_refresh:
             refresh = "refresh-" + secrets.token_urlsafe(12)
             state.refresh.add(refresh)
+            state.scopes[refresh] = scope
             body["refresh_token"] = refresh
         return body
 
@@ -251,7 +260,11 @@ def account_routes(state: State) -> list[Route]:
         ):
             return refused("invalid_request")
         code = "code-" + secrets.token_urlsafe(12)
-        state.codes[code] = {"challenge": q["code_challenge"], "redirect": redirect}
+        state.codes[code] = {
+            "challenge": q["code_challenge"],
+            "redirect": redirect,
+            "scope": q.get("scope") or SCOPES,
+        }
         state.seen["authorizations"] += 1
         return RedirectResponse(f"{redirect}?{urlencode({'code': code, 'state': q['state']})}", status_code=302)
 
@@ -268,10 +281,10 @@ def account_routes(state: State) -> list[Route]:
             ):
                 return refused("invalid_grant")
             state.seen["exchanges"] += 1
-            return JSONResponse(issue(with_refresh=True))
+            return JSONResponse(issue(with_refresh=True, scope=grant["scope"]))
         if form.get("grant_type") == "refresh_token" and form.get("refresh_token") in state.refresh:
             state.seen["renewals"] += 1
-            return JSONResponse(issue(with_refresh=False))
+            return JSONResponse(issue(with_refresh=False, scope=state.scopes.get(form["refresh_token"], SCOPES)))
         return refused("invalid_grant")
 
     async def revoke(request: Request) -> Response:
@@ -575,7 +588,68 @@ def mail_routes(state: State) -> list[Route]:
             return JSONResponse({"messages": sent_messages(state.moment) if state.sent_mail else []})
         return JSONResponse({"messages": messages(state.moment, state.later_mail, state.evening)})
 
-    return [Route("/messages", listed)]
+    return [Route("/messages", listed), *change_routes(state)]
+
+
+#: The scope the made-up service wants before it changes mail, which a sign-in holds only once acting is turned on.
+MODIFY_SCOPE = "mail.modify"
+#: What the mailbox lists as places a message can go: ids that differ from the names the person sees, one folder nested.
+FOLDERS = [
+    {"id": "fld-archive-7", "name": "Projects/Archive", "kind": "folder"},
+    {"id": "fld-receipts-3", "name": "Receipts", "kind": "folder"},
+    {"id": "lbl-follow-up-2", "name": "Follow up", "kind": "label"},
+    {"id": "lbl-waiting-5", "name": "Waiting on others", "kind": "label"},
+]
+
+
+def change_routes(state: State) -> list[Route]:
+    """The made-up service's changes to mail, as the add-on's channel asks for them: the account's folders and labels,
+    one change (kept, with the attempt it came with, for a test to read), what an attempt became, and taking one back.
+    Each needs a token that holds the wider access."""
+
+    def allowed(request: Request) -> bool:
+        header = request.headers.get("authorization", "")
+        return signed_in(state, request) and MODIFY_SCOPE in state.scopes.get(header[7:], "").split()
+
+    def refused(request: Request) -> JSONResponse:
+        if not signed_in(state, request):
+            state.seen["unauthorized"] += 1
+            return unauthorized()
+        return JSONResponse({"error": {"code": "InsufficientScope"}}, status_code=403)
+
+    async def folders(request: Request) -> JSONResponse:
+        return JSONResponse({"folders": FOLDERS}) if allowed(request) else refused(request)
+
+    async def change(request: Request) -> JSONResponse:
+        if not allowed(request):
+            return refused(request)
+        body = await request.json()
+        for done in state.acts:
+            if done["attempt"] == body.get("attempt"):
+                return JSONResponse({"id": done["id"]})
+        made = {**body, "id": f"change-{len(state.acts) + 1}"}
+        state.acts.append(made)
+        return JSONResponse({"id": made["id"]})
+
+    async def status(request: Request) -> JSONResponse:
+        if not allowed(request):
+            return refused(request)
+        found = next((a for a in state.acts if a["attempt"] == request.query_params.get("attempt")), None)
+        return JSONResponse({"id": found["id"] if found else None})
+
+    async def undo(request: Request) -> JSONResponse:
+        if not allowed(request):
+            return refused(request)
+        body = await request.json()
+        state.undone.append(body)
+        return JSONResponse({"undone": body.get("id")})
+
+    return [
+        Route("/folders", folders),
+        Route("/acts", change, methods=["POST"]),
+        Route("/acts/status", status),
+        Route("/acts/undo", undo, methods=["POST"]),
+    ]
 
 
 def calendar_routes(state: State) -> list[Route]:
@@ -713,6 +787,18 @@ def helper_routes(state: State, base: str) -> list[Route]:
             }
         )
 
+    async def mail_acts(_request: Request) -> JSONResponse:
+        """What the add-on's channel asked the mail service to change and to take back, and the messages it holds."""
+        return JSONResponse(
+            {
+                "acts": state.acts,
+                "undone": state.undone,
+                "folders": FOLDERS,
+                "granted": sorted({state.scopes[t] for t in state.access if t in state.scopes}),
+                "messages": [{"id": m["id"], "subject": m["subject"]} for m in messages(state.moment)],
+            }
+        )
+
     async def mail_later(_request: Request) -> JSONResponse:
         """A new message from the social network's sender arrives, saying nothing about itself."""
         now = datetime.now(UTC)
@@ -749,6 +835,7 @@ def helper_routes(state: State, base: str) -> list[Route]:
         Route("/__e2e/sign-in", sign_in),
         Route("/__e2e/source-file", put_source_file, methods=["POST"]),
         Route("/__e2e/mail-later", mail_later, methods=["POST"]),
+        Route("/__e2e/mail-acts", mail_acts),
     ]
 
 
