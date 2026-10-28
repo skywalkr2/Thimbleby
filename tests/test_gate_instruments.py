@@ -79,7 +79,8 @@ def test_the_review_on_today_is_a_screen_that_counts_toward_review_time(env):
 
 def test_the_median_review_time_is_the_median_of_the_days_with_any_and_counts_every_screen(env):
     _, cfg, store = env
-    now = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
+    # A moment just past, never later today: noon would still be ahead just after midnight, and fall outside the window.
+    now = datetime.now(UTC).replace(microsecond=0) - timedelta(minutes=1)
     cap = cfg.dispatch.knowledge.review_visit_max_seconds
     assert cap > 600
     for days_ago, screen, seconds in [
