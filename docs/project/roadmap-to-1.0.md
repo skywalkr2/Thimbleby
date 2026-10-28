@@ -966,11 +966,7 @@ management (not just read only) lets do it"):
   from its own list and a selection from several accounts says a folder belongs to one account
   (`tests/test_act_batch.py::test_move_to_is_offered_for_a_signed_in_account_that_cannot_list_its_folders_and_says_so`,
   `web/src/components/ActsOnRecords.test.tsx` "Move to for a signed-in account that can't list its folders ...",
-  `web/src/components/MailSelection.test.tsx`). **Left:** the mail add-on (0.1.1) declares `send`, `reply`, `reply_all` and
-  `forward` for messages and `create`, `move`, `cancel` and `answer` for events, and no mailbox changes, so Archive, Move
-  to, Label and Mark as read are not offered for a signed-in account until its add-on declares them (the guide's
-  `registrar.channel` already has `mailbox: archive, move, label, mark_read`; it is a request to the add-on's builder,
-  not a plugin API change); and the owner's live check of the add-on's replies and forwards on a real account.
+  `web/src/components/MailSelection.test.tsx`). **Left:** the mail add-on's Google channel (0.1.1) declares the mailbox changes (`archive`, `move`, `label`, `mark_read`) beside the message acts, so a Google account gets them once acting is on; its Microsoft side has no channel yet (the add-on's 0.2.0); Move to takes a typed folder for a signed-in account, since no plugin API hands the host a list of an account's folders or labels (an addition for the next plugin API release); and the owner's live check of acting on a real account.
 - [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): one choice in Settings: in the app's own calendar (local, with an
