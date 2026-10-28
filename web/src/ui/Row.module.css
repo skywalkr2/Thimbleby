@@ -26,6 +26,7 @@
 .title {
   margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--row-title-weight); overflow-wrap: anywhere;
 }
+.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .meta { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
 .oneLine { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .actions { grid-column: 3; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }

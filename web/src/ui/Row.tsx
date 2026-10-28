@@ -1,4 +1,4 @@
-// A list row (design 7.14): [pill] title (two lines at most) and meta, then the one primary action, then the menu at the
+// A list row (design 7.14): [pill] title (wrapping in full; `clamp` keeps it to two lines for a compact list) and meta, then the one primary action, then the menu at the
 // right edge. The pill column is a fixed width, empty when there is no exception, so titles align on every row of every
 // list. `tag` is a second, quieter mark that sits under the pill (what came from outside). `oneLine` keeps the meta to one
 // line, cut with an ellipsis, for a list that must stay short (Today). `data-row` puts it in the keyboard loop. Rows are
@@ -14,6 +14,8 @@ export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   meta?: ReactNode;
   /** Keep the meta to one line, cut with an ellipsis. */
   oneLine?: boolean;
+  /** Keep the title to two lines, cut with an ellipsis, for a list that must stay compact (Today's queue). The value is the title's full words, kept in its `title` attribute. */
+  clamp?: string;
   primary?: ReactNode;
   menu?: ReactNode;
   selected?: boolean;
@@ -26,7 +28,7 @@ export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
 }
 
 export function Row(props: RowProps) {
-  const { pill, tag, title, meta, oneLine, primary, menu, selected, children, as = "li", className, ...rest } = props;
+  const { pill, tag, title, meta, oneLine, clamp, primary, menu, selected, children, as = "li", className, ...rest } = props;
   const Tag = as;
   return (
     <Tag
@@ -42,7 +44,9 @@ export function Row(props: RowProps) {
         {tag}
       </div>
       <div className={styles.main}>
-        <div className={styles.title}>{title}</div>
+        <div className={clamp ? `${styles.title} ${styles.clamp}` : styles.title} title={clamp}>
+          {title}
+        </div>
         {meta && (
           <p className={oneLine ? `${styles.meta} ${styles.oneLine}` : styles.meta} title={oneLine && typeof meta === "string" ? meta : undefined}>
             {meta}

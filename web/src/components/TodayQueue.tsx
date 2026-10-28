@@ -1264,6 +1264,7 @@ function QueueRow(props: {
       aria-label={title}
       aria-describedby={line.notes ? `${detailId}-notes` : undefined}
       role="group"
+      clamp={title}
       pill={d.pill ? <Pill tone={d.tone}>{d.pill}</Pill> : undefined}
       title={
         <>

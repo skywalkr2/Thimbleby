@@ -160,21 +160,25 @@ test("the organization filter is sized to its content", async () => {
   expect(css).toMatch(/select\s*\{[^}]*width:\s*auto/);
 });
 
-test("the organizations are a table: name, how many people work there, other names, and the row's menu", async () => {
+test("the organizations are a table: name, how many people work there, whether it is yours, other names, and the row's menu", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET people": () => [person("P-1", "Ana Person")],
-    "GET organizations": () => [{ ...firstOrg, aliases: ["Org 1"] }, org("ORG-2", "Org two", 0)],
+    "GET organizations": () => [{ ...firstOrg, aliases: ["Org 1"], side: "SIDE-1", side_kind: "business" as const }, org("ORG-2", "Org two", 0)],
   });
   renderApp(<People />);
   const table = await screen.findByRole("table", { name: "Organizations" });
-  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent).filter(Boolean)).toEqual(["Organization", "People", "Also called", "Actions"]);
+  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent).filter(Boolean)).toEqual(["Organization", "People", "Yours", "Also called", "Actions"]);
   const one = within(table).getByText("Org one").closest("tr")!;
   expect(one).toHaveTextContent("2");
   expect(one).toHaveTextContent("Org 1");
+  // The name opens the organization's page, and an organization that is one of your sides says which kind.
+  expect(within(one).getByRole("link", { name: "Org one" })).toHaveAttribute("href", expect.stringContaining("organization/ORG-1"));
+  expect(one).toHaveTextContent("Your business");
   // A person count of zero is an empty cell, and the menu is the only button on the row.
   const two = within(table).getByText("Org two").closest("tr")!;
   expect(within(two).queryByText("0")).toBeNull();
+  expect(two).not.toHaveTextContent("Your");
   expect(within(two).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["More actions for Org two"]);
   await user.click(within(two).getByRole("button", { name: "More actions for Org two" }));
   expect(await screen.findByRole("menuitem", { name: "Rename" })).toBeInTheDocument();

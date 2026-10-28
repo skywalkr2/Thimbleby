@@ -1164,10 +1164,12 @@ test("a line's notes are on hover and read by a screen reader, and a line with n
   show([decision, aboutAction]);
   await screen.findByText("Pick an owner for “Plan the launch”");
   const owner = row("owner");
-  expect(owner.querySelector("[title]")).toHaveAttribute("title", "Ask about the paper too");
+  expect(owner.querySelector('[title="Ask about the paper too"]')).not.toBeNull();
   const described = owner.getAttribute("aria-describedby")!;
   expect(document.getElementById(described)).toHaveTextContent("Ask about the paper too");
-  expect(row("decision").querySelector("[title]")).toBeNull();
+  // The only hover on a line with no notes is its own title in full, kept for when the title is cut to two lines.
+  const hovers = Array.from(row("decision").querySelectorAll("[title]")).map((el) => el.getAttribute("title"));
+  expect(hovers).toEqual([row("decision").getAttribute("aria-label")]);
   expect(row("decision")).not.toHaveAttribute("aria-describedby");
 });
 

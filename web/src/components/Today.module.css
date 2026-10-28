@@ -77,7 +77,7 @@
    running text keep theirs. Night mode keeps every underline. */
 .rail :is(a, :global(.link-button)):not(:global(.btn)) { text-decoration-line: var(--rail-link-line); }
 .rail :is(a, :global(.link-button)):not(:global(.btn)):is(:hover, :focus-visible) { text-decoration-line: underline; }
-.rail p :is(a, :global(.link-button)):not(:global(.btn)) { text-decoration-line: underline; }
+.rail :is(p, :global(.tb-title)) :is(a, :global(.link-button)):not(:global(.btn)) { text-decoration-line: underline; }
 
 /* A rail panel folded to one line on the phone, and the week's own pieces. */
 .fold { min-width: 0; border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-md); background: var(--surface); }

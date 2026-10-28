@@ -154,7 +154,7 @@ test("links in the rail have no underline until the pointer or the keyboard is o
   // Hover and keyboard focus bring it back, so a link is never found by color alone.
   expect(css).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\):is\(:hover, :focus-visible\) \{ text-decoration-line: underline; \}/);
   // A link inside a paragraph is running text.
-  expect(css).toMatch(/\.rail p :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: underline; \}/);
+  expect(css).toMatch(/\.rail :is\(p, :global\(\.tb-title\)\) :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: underline; \}/);
 });
 
 test("night's row actions are tonal too: the deep brand fill with the light brand text, readable, and the chosen line's is the one filled button", () => {

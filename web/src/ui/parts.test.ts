@@ -25,13 +25,17 @@ test("the shared styles hold no older pill or tabs rules", () => {
   expect(css).not.toMatch(/(^|\n)\.pill(?![-\w])|\.tabs(?![-\w])/);
 });
 
-// A row's title wraps to every line it needs; it is never cut to a number of lines (a long to-do is read whole), and the
-// title button and the detail's state line let their row and pane grow with the words.
-test("a row's title is never clamped to a number of lines", () => {
+// A row's title wraps to every line it needs (a long to-do is read whole); only a list that asks for `clamp`, Today's
+// queue, cuts it to two lines, with the full words in the title attribute and in the open details. The title button and
+// the detail's state line let their row and pane grow with the words.
+test("a row's title is never clamped to a number of lines unless the list opts in", () => {
   const css = readFileSync(join(root, "ui", "Row.module.css"), "utf-8");
   const title = css.match(/\n\.title \{[^}]*\}/)?.[0] ?? "";
   expect(title).not.toBe("");
   expect(title).not.toMatch(/line-clamp|overflow: hidden/);
+  expect(css.match(/\n\.clamp \{[^}]*\}/)?.[0]).toMatch(/line-clamp: 2/);
+  const queue = readFileSync(join(root, "components", "TodayQueue.tsx"), "utf-8");
+  expect(queue).toMatch(/clamp=\{title\}/);
 });
 
 test("the title button grows with its words and the detail's menu shares the state's line", () => {
