@@ -156,9 +156,18 @@ def to_text(markup: str) -> str:
     return _lines("".join(reader.parts))
 
 
-def as_text(text: str) -> str:
+def carries_structured_data(text: str) -> bool:
+    """Whether a text might carry structured data (a booking's JSON-LD or microdata), which is read from its markup."""
+    lowered = text.lower()
+    return "application/ld+json" in lowered or "itemscope" in lowered
+
+
+def as_text(text: str, *, keep_structured: bool = True) -> str:
     """The text itself when it holds no markup; otherwise its lines before the first one with a tag as they are, and
-    the rest as the text the markup shows."""
+    the rest as the text the markup shows. A text that carries structured data is kept as it came by default, since
+    that data is read from its markup (a booking); `keep_structured=False` converts it too, for what is only shown."""
+    if keep_structured and carries_structured_data(text):
+        return text
     found = _TAG.search(text)
     if found is None:
         return text

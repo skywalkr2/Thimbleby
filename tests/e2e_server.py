@@ -26,7 +26,6 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from api.app import create_app
-from engine.addons import ENV_ADDONS_DIR
 from engine.ai.adapters.stub import set_responder
 from engine.cleaning import normalize
 from engine.cli import KEEP_ALIVE
@@ -289,8 +288,6 @@ def main() -> None:
     stress = layout_strings() if args.layout_stress else {}
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
-    # Add-ons this test app installs go to its own folder, never the computer's real add-ons folder.
-    os.environ[ENV_ADDONS_DIR] = str(tmp / "addons")
     if args.just_me:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
@@ -317,6 +314,9 @@ def main() -> None:
         "storage.backups.targets": [{"path": str(tmp / "offsite"), "label": "test folder"}],
         # Backups only on request, so the browser tests see the state before the first one.
         "storage.backups.automatic": False,
+        # Add-ons this test app installs go to its own folder, never the computer's real add-ons folder. Given as a
+        # flag like the rest: settings read again from the files and the environment leave a flag's key alone.
+        "server.addons_dir": str(tmp / "addons"),
     }
     if not args.plain_stages:
         # A stage that starts work when entered, so the browser tests can exercise waiting for the go.

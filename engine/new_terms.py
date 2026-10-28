@@ -25,6 +25,7 @@ from typing import Any
 from engine import addresses, knowledge
 from engine.automatic_mail import classify_automatic
 from engine.config import Config
+from engine.html_text import as_text
 from engine.language_words import language_words
 from engine.names import People
 from engine.ops import GlossaryAddOp
@@ -216,7 +217,7 @@ def scan(store: Any, cfg: Config, request_id: str, text: str, now: datetime, *, 
     before = raised_terms(view)
     chosen: list[tuple[str, str]] = []
     for word, line in candidates(
-        text,
+        as_text(text, keep_structured=False),  # a booking page kept as markup for its data is read as its words here
         language_words(cfg.language, "new_term_patterns"),
         language_words(cfg.language, "new_term_ignore"),
         addresses.address_patterns(cfg.language),

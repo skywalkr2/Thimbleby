@@ -19,6 +19,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from engine.bookings import Booking, read_bookings
+from engine.html_text import carries_structured_data
 from engine.records import canonical_time
 from engine.same_entry import same_entry
 from engine.sides import word
@@ -35,8 +36,7 @@ class Made:
 
 def looks_structured(text: str) -> bool:
     """Whether a text might carry booking markup at all, so plain mail is never parsed."""
-    lowered = text.lower()
-    return "application/ld+json" in lowered or "itemscope" in lowered
+    return carries_structured_data(text)
 
 
 def _moment(value: date | datetime | None, zone_name: str | None) -> str | None:
