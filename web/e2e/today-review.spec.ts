@@ -112,21 +112,17 @@ test.describe("A review happens on Today", () => {
       const send = row.getByRole("button", { name: "Send back", exact: true });
       await expect(send).toBeEnabled();
       const window_ = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
-      // The button can be brought whole into the window. The pane may still be settling after the note opens, so it is
-      // scrolled to and measured again until the layout holds still.
-      await expect
-        .poll(async () => {
-          await send.scrollIntoViewIfNeeded();
-          const b = (await send.boundingBox())!;
-          return b.y >= 0 && b.y + b.height <= window_.height;
-        })
-        .toBe(true);
-      // The button is inside the window, in both directions, whole.
-      const box = (await send.boundingBox())!;
-      expect(box.x).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width).toBeLessThanOrEqual(window_.width);
-      expect(box.y).toBeGreaterThanOrEqual(0);
-      expect(box.y + box.height).toBeLessThanOrEqual(window_.height);
+      // The button can be brought whole into the window, in both directions. The screen may still be settling after the
+      // note opens (a card beside it loading), so it is scrolled to and measured in one step, again until the layout holds
+      // still; a button that never fits still fails when the retries run out.
+      await expect(async () => {
+        await send.scrollIntoViewIfNeeded();
+        const box = (await send.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(window_.width);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height).toBeLessThanOrEqual(window_.height);
+      }).toPass({ timeout: 10_000 });
       const fit = await note.evaluate((area) => {
         const probe = document.createElement("span");
         probe.style.cssText = `position:absolute;visibility:hidden;width:72ch;font:${getComputedStyle(area).font}`;

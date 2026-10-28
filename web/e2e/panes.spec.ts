@@ -169,7 +169,10 @@ async function somethingToLookAt(page: Page) {
 /** Makes sure someone has a message waiting to be sent. The demo holds to-dos for people already; when the other tests used
  * them up, the production check-in notes are handed in again, which files to-dos for the people named in them. */
 async function somethingToSend(page: Page, baseURL: string) {
-  const waiting = async () => ((await (await page.request.get("api/followups")).json()) as Array<{ is_pm: boolean; to_send: number }>).some((s) => !s.is_pm && s.to_send > 0);
+  // Review mode is for going through several people: with one, Follow-ups shows their messages in place. Other tests on this
+  // server send and clear follow-ups, so make sure two people have something waiting.
+  const waiting = async () =>
+    ((await (await page.request.get("api/followups")).json()) as Array<{ is_pm: boolean; to_send: number }>).filter((s) => !s.is_pm && s.to_send > 0).length >= 2;
   if (await waiting()) return;
   const cases = (await (await page.request.get(`${new URL(baseURL).origin}/__e2e/cases`)).json()) as Array<{ id: string; pasted?: string }>;
   const notes = cases.find((c) => c.id === "production-checkin")!;
