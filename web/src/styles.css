@@ -428,7 +428,12 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .found-local { border: 2px solid var(--accent); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-3); background: var(--accent-soft); display: grid; gap: var(--space-2); }
 .found-local p { margin: 0; font-weight: var(--weight-semibold); }
 .more-options { margin: var(--space-1) 0 var(--space-3); }
-.more-options > summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-sm); min-height: var(--btn-h-sm); display: flex; align-items: center; }
+.more-options > summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-sm); min-height: var(--btn-h-sm); display: flex; align-items: center; gap: var(--space-2); list-style: none; }
+/* A fold shows it is one: a chevron before its title, pointing right when closed and down when open (the flex layout above takes
+   the browser's own marker away, so the control is drawn here). */
+.more-options > summary::-webkit-details-marker { display: none; }
+.more-options > summary::before { content: ""; flex: none; width: 0.5em; height: 0.5em; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
+.more-options[open] > summary::before { transform: rotate(45deg); }
 .key-step { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
 .key-step h4 { margin: 0; font-size: var(--text-sm); }
 .kind-group { margin-top: var(--space-3); }

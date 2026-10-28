@@ -159,6 +159,8 @@ export function OpenItems() {
 }
 
 function Choice(props: { id: string; label: string; value: string; onChange: (v: string) => void; none: string; options: Array<[string, string]> }) {
+  // A filter with fewer than two real choices besides "all" changes nothing; one already set stays so the person can clear it.
+  if (props.options.length < 2 && !props.value) return null;
   return (
     <div className="field">
       <label htmlFor={props.id}>{props.label}</label>

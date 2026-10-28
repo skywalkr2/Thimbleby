@@ -88,7 +88,7 @@ test("ordinary fields are a labelled list: readable labels, names for people, on
   expect(await screen.findByRole("heading", { level: 1, name: "The harbor" })).toBeInTheDocument();
   const details = screen.getByRole("region", { name: "Details" });
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
-  expect(terms).toEqual(["Title", "Owner", "Tags"]);
+  expect(terms).toEqual(["Owner", "Tags"]);
   expect(within(details).queryByText("What the chapter is called.")).toBeNull();
   expect(within(details).getByText("Robin Example")).toBeInTheDocument();
   expect(within(details).getByText("one")).toBeInTheDocument();

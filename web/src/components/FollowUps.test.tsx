@@ -405,6 +405,20 @@ test("the default view hides what was already sent; Waiting on them shows it, on
   expect(screen.queryByRole("textbox")).toBeNull();
 });
 
+// First day (promise P77): with nothing to follow up on any tab, the choices between tabs and groupings change nothing, so they
+// are not drawn until there is something; the heading and the empty message are what is there.
+test("with nothing on any tab, By person, By project, To send, Later and Waiting on them are not drawn; with something they are", async () => {
+  fakeApi({ "GET followups": () => [], "GET people": () => [], "GET acts": () => [] });
+  const empty = renderApp(<FollowUps />);
+  expect(await screen.findByText(/Nobody is waiting on anything from you/)).toBeInTheDocument();
+  for (const name of ["By person", "By project", "To send", "Later", "Waiting on them"]) expect(screen.queryByRole("button", { name })).toBeNull();
+  empty.unmount();
+  fakeApi({ "GET followups": () => sections, "GET people": () => [], "GET acts": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByRole("heading", { name: "You" });
+  for (const name of ["To send", "Later", "Waiting on them"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+});
+
 test("Waiting on them has its own empty state, and the PM's decisions stay under To send", async () => {
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });

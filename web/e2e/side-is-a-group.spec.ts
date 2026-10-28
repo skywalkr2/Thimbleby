@@ -152,8 +152,8 @@ test.describe("a business is also an organization", () => {
     // The organization's page says it is the business, linking to the business's page, which names the organization.
     await rows.getByRole("link", { name: SIDE }).click();
     const line = page.getByTestId("organization-side");
-    await expect(line).toContainText("This is your business:", LOADED);
-    await line.getByRole("link", { name: SIDE }).click();
+    await expect(line).toContainText("This is your business.", LOADED);
+    await line.getByRole("link", { name: "Open its page" }).click();
     await expect(page.getByRole("heading", { level: 1, name: SIDE, exact: true })).toBeVisible(LOADED);
     await expect(page.getByRole("region", { name: "Details", exact: true }).getByText("Organization", { exact: true })).toBeVisible(LOADED);
     expect(await wider(page)).toBeLessThanOrEqual(0);

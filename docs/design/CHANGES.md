@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 253. The first day after setup: setup's writes are not edits, flags say what is so, a name once, Today's side column, filters over one choice, Follow-ups over nothing (2026-10-28; P77)
+
+| Where | Before | Now |
+|---|---|---|
+| Activity on a record page (7.14) | Setup's writes read "You changed the target date of Example Imprint" (every value written when a record is made was a change), and "the why they matter of" | The making of a record is one line (`ActivityEntry.made`: added, or added in setup), with the values written in that change folded in; the app's own side-and-people link is no line; the sentence is "changed {field} on **Name**". Built: `tests/test_first_day_activity.py`, `web/src/components/RecordPageRecords.test.tsx` |
+| Details of a record (7.14) | "Area: No" and "Name verified: No"; "Yes" for a flag that is on | A flag that is off is left out; one that is on is the wording sheet's phrase (`flag.<field>`). Built: `RecordPageNames.test.tsx`, `tests/test_first_day_activity.py` (every core flag has a phrase) |
+| A name twice (7.14) | The heading, Details' Name and Details' Organization all said the business's name; the organization's page said it again in its link | The name field is left out when the heading says it; a side's own organization is "Your business" linking to its page, which says "This is your business." Built: `RecordPageNames.test.tsx`, `web/e2e/side-is-a-group.spec.ts` |
+| Today's side column (7.7) | The Schedule card was drawn only with events, a problem or a connect button (after setup), leaving a blank third on a first day | Always drawn: "Nothing on your calendar today", and one link to connect a calendar when none is. Built: `TodayRail.test.tsx`, `Today.test.tsx`, `web/e2e/first-day.spec.ts` (the boxes at 1440) |
+| Filters on lists (7.14) | People offered an Organization filter with one organization; To-dos and questions offered a Project or Person choice with one option | Not drawn with fewer than two real choices; one already set stays so it can be cleared. Built: `People.test.tsx`, `OpenItems.test.tsx` |
+| Follow-ups (7.5) | By person / By project and To send / Later / Waiting on them over an empty screen; "How your messages start and end" looked like a heading with nothing under it | The tabs are not drawn until there is something on any of them; every `more-options` fold draws a chevron that turns when open. Built: `FollowUps.test.tsx`, `web/src/folds.test.ts`, `web/e2e/first-day.spec.ts` |
+
 ## 252. The schedule is a calendar page: Day, Work week, Week and Month, with the side filter, due dates and an entry's details beside it (2026-10-28; P86)
 
 | Where | Before | Now |

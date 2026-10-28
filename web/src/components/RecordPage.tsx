@@ -49,7 +49,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { useFocusAfterRender } from "../lib/focus-after-render";
 
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
-  const { t } = useWords();
+  const { t, has } = useWords();
   const { kind, id } = props;
   const record = useQuery({ queryKey: ["record", kind, id], queryFn: () => api.record(kind, id) });
   const fields = useQuery({ queryKey: ["kind", kind], queryFn: () => api.kindView(kind) });
@@ -114,6 +114,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 
   const data = record.data;
   const offered = editableFields(fields.data?.fields ?? []);
+  // The record's name, never its id: the page says it (a person is named by their full name).
+  const name = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
+  const ownOrganization = kind === "project" ? sides.find((s) => s.project === id) : undefined;
   const rows = data
     ? inReadingOrder(
         Object.entries(data.fields)
@@ -124,16 +127,30 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter(([name]) => !(isSelf && SELF_HIDDEN.has(name)))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
-          .map(([name, value]) => ({
-            name,
-            // A delivery is said in words (its status, carrier and numbers), never as the stored object.
-            lines: kind === "event" && name === "delivery" ? deliveryLines(value as Delivery | null, t) : detailLines(name, value, info.get(name), names),
-          }))
+          .map(([name, value]) => {
+            // A side's own organization is one line, "Your business", linking to the organization's page: its name is the heading's.
+            if (ownOrganization?.organization && name === "organization" && value === ownOrganization.organization) {
+              const text = t(ownOrganization.kind === "job" ? "orgs.own.job" : "orgs.own.business");
+              return { name, lines: [text], link: { text, href: viewHref(recordView("organization", ownOrganization.organization)) } };
+            }
+            return {
+              name,
+              // A yes or no says only what is so: a flag that is off is left out, and one that is on is said in words.
+              // A delivery is said in words (its status, carrier and numbers), never as the stored object.
+              lines:
+                info.get(name)?.type === "yes_no" || typeof value === "boolean"
+                  ? flagLines(value, name, t, has)
+                  : kind === "event" && name === "delivery"
+                    ? deliveryLines(value as Delivery | null, t)
+                    : detailLines(name, value, info.get(name), names),
+              link: undefined as { text: string; href: string } | undefined,
+            };
+          })
+          // What the heading already says is not said again under it: the name field, when it is the name.
+          .filter((row) => !(NAME_FIELDS.has(row.name) && row.lines.length === 1 && row.lines[0] === name))
           .filter((row) => row.lines.length > 0),
       )
     : [];
-  // The record's name, never its id: the page says it (a person is named by their full name).
-  const name = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
   const heading = isSelf ? t("record.you_named", { name }) : name;
 
   return (
@@ -174,7 +191,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
       {data && ownSide && (
         <p className="hint" data-testid="organization-side">
-          {t(ownSide.kind === "job" ? "orgs.page.job" : "orgs.page.business")} <a href={viewHref(recordView("project", ownSide.project))}>{ownSide.name}</a>
+          {t(ownSide.kind === "job" ? "orgs.page.job" : "orgs.page.business")} <a href={viewHref(recordView("project", ownSide.project))}>{t("orgs.page.projects")}</a>
         </p>
       )}
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
@@ -243,9 +260,15 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   <div key={row.name} className="detail">
                     <dt>{labelOf(row.name)}</dt>
                     <dd>
-                      {row.lines.map((line, i) => (
-                        <div key={i}>{typeof line === "string" ? line : <SafeLink label={line.label || domainOf(line.url) || line.url} url={line.url} />}</div>
-                      ))}
+                      {row.link ? (
+                        <div>
+                          <a href={row.link.href}>{row.link.text}</a>
+                        </div>
+                      ) : (
+                        row.lines.map((line, i) => (
+                          <div key={i}>{typeof line === "string" ? line : <SafeLink label={line.label || domainOf(line.url) || line.url} url={line.url} />}</div>
+                        ))
+                      )}
                     </dd>
                   </div>
                 ))}
@@ -261,6 +284,15 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {dialog}
     </section>
   );
+}
+
+/** The fields that name a record: the page's heading says the name, so a detail that repeats it is left out. */
+const NAME_FIELDS = new Set<string>(["name", "full_name", "title"]);
+
+/** A yes or no in words: nothing for a no, the wording sheet's phrase for a yes (`flag.<field>`), else "Yes". */
+function flagLines(value: unknown, field: string, t: (key: string) => string, has: (key: string) => boolean): string[] {
+  if (value !== true) return [];
+  return [t(has(`flag.${field}`) ? `flag.${field}` : "value.yes")];
 }
 
 /** What a side keeps (a side is a group, not a project): the rest of a project's fields are not listed on its page. */

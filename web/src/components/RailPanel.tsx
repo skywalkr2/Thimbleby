@@ -91,31 +91,31 @@ export function RailPanel(props: {
   );
 }
 
-/** An empty panel's words. With `inline` they are one line: the words, then the button. */
-export function Empty(props: { text: string; inline?: boolean; button?: { label: string; run: () => void } }) {
+/** An empty panel's words. With `inline` they are one line: the words, then the button. A button with an `href` is a link to
+ * another screen (`run` is for one that acts here). */
+export function Empty(props: { text: string; inline?: boolean; button?: { label: string; run?: () => void; href?: string } }) {
+  const action = (b: { label: string; run?: () => void; href?: string }) =>
+    b.href ? (
+      <a className="btn" href={b.href}>
+        {b.label}
+      </a>
+    ) : (
+      <button type="button" className="btn" onClick={b.run}>
+        {b.label}
+      </button>
+    );
   if (props.inline) {
     return (
       <p className="tb-empty tb-empty-line">
         {props.text}
-        {props.button && (
-          <>
-            {" "}
-            <button type="button" className="btn" onClick={props.button.run}>
-              {props.button.label}
-            </button>
-          </>
-        )}
+        {props.button && <> {action(props.button)}</>}
       </p>
     );
   }
   return (
     <div className="tb-empty">
       <p>{props.text}</p>
-      {props.button && (
-        <button type="button" className="btn" onClick={props.button.run}>
-          {props.button.label}
-        </button>
-      )}
+      {props.button && action(props.button)}
     </div>
   );
 }

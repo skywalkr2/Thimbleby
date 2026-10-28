@@ -1080,11 +1080,12 @@ test("a message in the rail shows the sender's name only, with the address in th
   expect(Array.from(row.children).map((c) => c.className.split(" ")[0]).slice(0, 2)).toEqual(["tb-when", "tb-what"]);
 });
 
-test("a card with nothing in it is not drawn: a rail with only mail has one card", async () => {
+test("a card with nothing in it is not drawn, except Schedule, which says so: a rail with only mail has two cards", async () => {
   show([decision], { "GET today/arrived": () => mail() });
   const rail = await screen.findByRole("group", { name: RAIL });
   await within(rail).findByRole("region", { name: "Came in" });
-  expect(within(rail).getAllByRole("region")).toHaveLength(1);
+  expect(within(rail).getAllByRole("region").map((r) => r.getAttribute("aria-label") ?? r.querySelector("h2,h3")?.textContent)).toEqual(["Schedule", "Came in"]);
+  expect(await within(within(rail).getByRole("region", { name: "Schedule" })).findByText(/^Nothing on your calendar/)).toBeInTheDocument();
 });
 
 test("a quiet day's brief is not drawn as a card of its own", async () => {
@@ -1098,7 +1099,10 @@ test("with nothing in any card and an empty queue, Today says one line: nothing 
   show([]);
   expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
   expect(screen.getAllByText("Nothing else needs you today")).toHaveLength(1);
-  expect(within(screen.getByRole("group", { name: RAIL })).queryByRole("region")).toBeNull();
+  // The Schedule card is the one card always drawn, so the side column is never blank: it says there is nothing today.
+  const regions = within(screen.getByRole("group", { name: RAIL })).getAllByRole("region");
+  expect(regions).toHaveLength(1);
+  expect(within(regions[0]).getByText(/^Nothing on your calendar/)).toBeInTheDocument();
 });
 
 test("the empty line is left out while the queue has a line", async () => {

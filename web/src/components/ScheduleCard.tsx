@@ -1,7 +1,7 @@
 // The Schedule card of Today's rail (design 7.7): the first days of the schedule (the connected calendars' events and the
 // app's own entries, day by day), today first, and a link to the full schedule. It is today's view: the week (what is due,
-// who is waiting, the meetings further on) is the inspector's when no line is chosen, never a list in this card. A card with
-// nothing in it is not drawn.
+// who is waiting, the meetings further on) is the inspector's when no line is chosen, never a list in this card. The card is
+// always drawn: with nothing in it, it says so, and with no calendar connected it offers one link to connect one.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -69,12 +69,13 @@ function whenText(event: Event, date: string, t: T): string {
     : wallTime(event.start);
 }
 
-/** The Schedule card and whether to draw it. It is drawn when the calendars have events from today on, a calendar couldn't
- * be read, or there is a calendar to connect (`onAddSource` is given only once setup is finished); `settled` is true once
- * everything it asks has answered. */
-export function useScheduleCard(onAddSource?: () => void): { settled: boolean; drawn: boolean; card: ReactNode } {
+/** The Schedule card, which is always drawn (so Today's side column is never left blank), and whether it has anything to tell:
+ * `drawn` is true when the calendars have events from today on, a calendar couldn't be read, or there is a calendar to connect
+ * (`onAddSource` opens Sources with the add form, offered once setup is finished; `connectHref` is the link offered otherwise);
+ * `settled` is true once everything it asks has answered. */
+export function useScheduleCard(onAddSource?: () => void, connectHref?: string): { settled: boolean; drawn: boolean; card: ReactNode } {
   const { t, tn } = useWords();
-  const sourceState = useSourceState(onAddSource, t("today.agenda.connect"), "calendar");
+  const sourceState = useSourceState(onAddSource ?? (connectHref ? () => {} : undefined), t("today.agenda.connect"), "calendar");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
   const span = useQuery({ queryKey: ["today", "agenda-span"], queryFn: api.agendaSpan });
@@ -88,7 +89,9 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
   const onItsWay = events.filter(isOnItsWay);
   const count = events.filter((e) => !e.cancelled && e.days.includes(today)).length;
   const settled = !agenda.isPending && !watch.isPending;
-  const drawn = agenda.isError || groups.length > 0 || onItsWay.length > 0 || sourceState.problems.length > 0 || !!sourceState.button;
+  // With no calendar connected the card offers one link to connect one: to the add form once setup is finished, else to Connections.
+  const connect = sourceState.button ? (onAddSource ? sourceState.button : { label: sourceState.button.label, href: connectHref }) : undefined;
+  const drawn = agenda.isError || groups.length > 0 || onItsWay.length > 0 || sourceState.problems.length > 0 || (!!sourceState.button && !!onAddSource);
   const dayLabel = (date: string) => (date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date));
   const summary = count > 0 ? tn("today.agenda.count", count) : "";
 
@@ -108,7 +111,7 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
         </div>
       }
     >
-      {agenda.isPending ? (
+      {agenda.isPending || watch.isPending ? (
         <Skeleton />
       ) : agenda.isError ? (
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
@@ -118,9 +121,9 @@ export function useScheduleCard(onAddSource?: () => void): { settled: boolean; d
             <p>{t("today.agenda.not_read")}</p>
             <SourceProblems problems={sourceState.problems} />
           </div>
-        ) : sourceState.button ? (
-          <Empty inline text={span.data ? t("today.agenda.empty", { start: day(span.data.first), end: day(span.data.last) }) : t("today.agenda.empty_today")} button={sourceState.button} />
-        ) : null
+        ) : (
+          <Empty inline text={connect && span.data ? t("today.agenda.empty", { start: day(span.data.first), end: day(span.data.last) }) : t("today.agenda.empty_today")} button={connect} />
+        )
       ) : (
         <>
           {groups.map((group) => {

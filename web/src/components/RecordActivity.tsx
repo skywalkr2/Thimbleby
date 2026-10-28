@@ -55,10 +55,12 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
   const labelOf = useFieldLabel();
   // What the change was, in a word, from the op that made it; one the sheet has no word for is just a change.
   const verb = (op: string) => (has(`record.op.${op.split("#")[0]}`) ? t(`record.op.${op.split("#")[0]}`) : t("record.op.other"));
-  // A change with a word of its own (added, closed, asked) says that word; any other says which field changed, by its label.
+  // A change with a word of its own (added, closed, asked) says that word; any other says which field changed, by its label, in
+  // a sentence a label of any shape fits ("changed due date on", "changed why they matter on"). The making of a record is "added".
   const did = (e: Page["activity"][number]) => {
     const own = e.op.split("#")[0];
     const plain = own !== "record.edit" && has(`record.op.${own}`);
+    if (e.made) return plain ? verb(e.op) : t("record.op.added");
     return !plain && e.field ? t("record.did_field", { field: labelOf(e.field).toLocaleLowerCase() }) : verb(e.op);
   };
   // A second or later move of the same date, in the person's own history: "moved again (second time since Oct 6)".
@@ -178,8 +180,16 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
             {page.activity.map((e, i) => (
               <li key={`${e.at}-${e.id}-${e.op}-${i}`}>
                 <span className="when">{monthDay(e.at)}</span>{" "}
-                <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
-                <strong>{plainTitle(e.name)}</strong>
+                {e.made === "setup" ? (
+                  <>
+                    <strong>{plainTitle(e.name)}</strong> <span>{t("record.activity.setup")}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
+                    <strong>{plainTitle(e.name)}</strong>
+                  </>
+                )}
                 {movedAgain(e) && <span> · {movedAgain(e)}</span>}
               </li>
             ))}

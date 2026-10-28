@@ -2178,6 +2178,22 @@
             "title": "Kind",
             "type": "string"
           },
+          "made": {
+            "anyOf": [
+              {
+                "enum": [
+                  "added",
+                  "setup"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the entry is the record being made, with every value written in that change folded in (then there is no field): added by the person, or by the workspace's own setup.",
+            "title": "Made"
+          },
           "moved_again": {
             "anyOf": [
               {

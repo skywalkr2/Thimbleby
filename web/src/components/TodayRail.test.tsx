@@ -299,10 +299,14 @@ test("while setup is open the cards leave the connect lines out, and an empty ra
     true,
   );
   expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Connect a mailbox" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull();
   expect(screen.queryByRole("region", { name: "Came in" })).toBeNull();
+  // The Schedule card is always drawn: it says nothing is on today, and with no calendar connected it links to Connections
+  // (the setup line offers the add form while setup is open).
+  const schedule = await column("Schedule");
+  expect(within(schedule).getByText(/^Nothing on your calendar/)).toBeInTheDocument();
+  expect(within(schedule).getByRole("link", { name: "Connect a calendar" }).getAttribute("href")).toMatch(/#settings\/connections$/);
+  expect(within(schedule).getByRole("link", { name: "Open the schedule" })).toBeInTheDocument();
 });
 
 test("the connect lines come back once setup is finished", async () => {
@@ -312,12 +316,12 @@ test("the connect lines come back once setup is finished", async () => {
 });
 
 test("the empty line is said only when the queue is empty too", async () => {
-  // A calendar source is on and nothing is in it: no card is drawn, and the line waits for the queue to be empty as well.
+  // A calendar source is on and nothing is in it: only Schedule is drawn, and the line waits for the queue to be empty as well.
   const { calls } = open({ "GET today/agenda": () => [], "GET today/arrived": () => ({ items: [], left_out: 0 }), "GET watch": () => [watched("a", { reads: ["calendar"] })] }, vi.fn(), vi.fn(), false);
   const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
-  // Every card has answered once the rail has drawn nothing and the queue is the only thing that could have been empty.
+  // Every card has answered once the rail has drawn nothing but Schedule and the queue is the only thing that could have been empty.
   await waitFor(() => expect(calls.some((c) => c.route === "GET watch")).toBe(true));
-  expect(within(rail).queryByRole("region")).toBeNull();
+  expect(within(rail).getAllByRole("region")).toHaveLength(1);
   expect(screen.queryByText("Nothing else needs you today")).toBeNull();
 });
 
@@ -361,7 +365,7 @@ test("when every source is off, the cards still offer Connect", async () => {
   expect(screen.queryByText(/^Checked /)).toBeNull();
 });
 
-test("with calendar sources reading and nothing in them, no card is drawn, and nothing says checked or offers to connect", async () => {
+test("with calendar sources reading and nothing in them, only Schedule is drawn, and nothing says checked or offers to connect", async () => {
   open(
     {
       ...EMPTY,
@@ -375,9 +379,12 @@ test("with calendar sources reading and nothing in them, no card is drawn, and n
     true,
   );
   expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
-  expect(within(screen.getByRole("group", { name: "Briefing, schedule and mail" })).queryByRole("region")).toBeNull();
+  const regions = within(screen.getByRole("group", { name: "Briefing, schedule and mail" })).getAllByRole("region");
+  expect(regions).toHaveLength(1);
+  expect(within(regions[0]).getByText("Nothing on your calendar today.")).toBeInTheDocument();
   expect(screen.queryByText(/^Checked /)).toBeNull();
   expect(screen.queryByText("Not checked yet")).toBeNull();
+  expect(screen.queryByRole("link", { name: "Connect a calendar" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Connect a mailbox" })).toBeNull();
 });
@@ -528,14 +535,16 @@ test("an empty mail card says the mailbox wasn't read when there was no network,
   expect(await within(col).findByText("Your mail couldn't be read, so this list may be missing messages.")).toBeInTheDocument();
   expect(within(col).getByRole("alert")).toHaveTextContent("Work mail couldn't be checked without an internet connection. It will retry automatically.");
   expect(within(col).queryByText("No mail has come in lately.")).toBeNull();
-  // The calendar card has no unread source of its own and nothing in it, so it is not drawn.
-  expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull();
+  // The calendar card has no unread source of its own and nothing in it, so it says nothing is on today.
+  expect(within(await column("Schedule")).getByText("Nothing on your calendar today.")).toBeInTheDocument();
 });
 
-test("a source that is off is not reported, so a calendar with nothing in it draws no card", async () => {
+test("a source that is off is not reported, so a calendar with nothing in it says nothing is on today", async () => {
   open({ ...EMPTY, "GET watch": () => [unread("cal", ["calendar"], "failed", { enabled: false }), watched("b", { reads: ["calendar"] })] }, vi.fn(), vi.fn(), true);
   expect(await screen.findByText("Nothing else needs you today")).toBeInTheDocument();
-  expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull();
+  const schedule = await column("Schedule");
+  expect(within(schedule).getByText("Nothing on your calendar today.")).toBeInTheDocument();
+  expect(within(schedule).queryByRole("alert")).toBeNull();
 });
 
 test("Check now says which source couldn't be read and why, in place of only a count", async () => {
@@ -551,7 +560,7 @@ test("Check now says which source couldn't be read and why, in place of only a c
   ).toBeInTheDocument();
 });
 
-test("the week's due items alone draw no Schedule card, and no count of zero is shown", async () => {
+test("the week's due items alone put nothing in the Schedule card, and no count of zero is shown", async () => {
   open({
     "GET watch": () => [watched("a", { reads: ["calendar"] })],
     "GET today/agenda": () => [],
@@ -564,7 +573,7 @@ test("the week's due items alone draw no Schedule card, and no count of zero is 
     }),
   });
   await screen.findByRole("group", { name: "Briefing, schedule and mail" });
-  await waitFor(() => expect(screen.queryByRole("region", { name: "Schedule" })).toBeNull());
+  expect(await within(await column("Schedule")).findByText("Nothing on your calendar today.")).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 (events|things|messages)/);
   expect(screen.queryByText("Send the estimate")).toBeNull();
 });

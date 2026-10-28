@@ -16,7 +16,8 @@ from engine.storage import StoreError, WriteContext
 from engine.text_shape import text_problem
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="organizations.move")
-_LINK = WriteContext(actor="engine", trust="trusted", op="organizations.link")
+LINK_OP = "organizations.link"
+_LINK = WriteContext(actor="engine", trust="trusted", op=LINK_OP)
 
 
 def find(tx: Any, name: str) -> str | None:

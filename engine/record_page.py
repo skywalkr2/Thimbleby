@@ -13,11 +13,14 @@ from engine import repeats, sides
 from engine.followups import ABOUT_THE_APP
 from engine.history import changes_for_person
 from engine.names import render_owner
+from engine.organizations import LINK_OP
 from engine.origin import origins
 from engine.records import ref_fields, soft_ref_paths, values_at
 from engine.texts import long_text_fields
 
 ACTIVITY_MAX = 60
+# The op the workspace's own start writes its first records with (the person, the personal project).
+SETUP_OP = "init"
 COMPLETED_MAX = 50
 _NAME_FIELDS = ("full_name", "name", "title", "text")
 _HIDDEN = {"id", "stage", "ext", "aliases", "agenda", "filed_by", "repeat", "occurrence_of"}
@@ -367,13 +370,32 @@ def _activity(
 ) -> list[dict[str, Any]]:
     """What happened to the record and to what is open with it: one entry per change, newest first. A change that only
     moves a date on an existing item is left out (it is not news; the ledger keeps it), except a second move of the
-    same date within `second_move_days`, which says it moved again and since when."""
+    same date within `second_move_days`, which says it moved again and since when. The making of a record is one entry
+    (`made`), with every value written in the change that made it folded in: "added", or "setup" for what the workspace
+    was started with. The link the app keeps between a side and its people is bookkeeping, and so is a person's own
+    organization set to one their same change just made; neither is an entry."""
     entries = []
     related = [("action", a.id) for a in actions] + [("question", q.id) for q in questions]
     if kind == "project":
         related += [("note", n.id) for n in view.list("note") if n.data.get("project") == record_id]
+    made_in: dict[str, set[str]] = {}
+
+    def made_with(changeset: str) -> set[str]:
+        if changeset not in made_in:
+            made_in[changeset] = {r["record_id"] for r in view.changes_of(changeset) if r["version"] == 1}
+        return made_in[changeset]
+
     for ref_kind, ref_id in [(kind, record_id), *related]:
-        for row in changes_for_person(view, ref_kind, ref_id, second_move_days):
+        rows = changes_for_person(view, ref_kind, ref_id, second_move_days)
+        making = {r["changeset"] for r in rows if r["version"] == 1 and r.get("changeset")}
+        made = False
+        for row in rows:
+            if _bookkeeping(row, made_with):
+                continue
+            part_of_making = row["version"] == 1 or (row.get("changeset") in making)
+            if part_of_making and made:
+                continue
+            made = made or part_of_making
             entries.append(
                 {
                     "at": str(row["at"]),
@@ -381,7 +403,8 @@ def _activity(
                     "id": ref_id,
                     "name": name_of(ref_kind, ref_id),
                     "op": row["op"],
-                    "field": row.get("field"),
+                    "field": None if part_of_making else row.get("field"),
+                    "made": ("setup" if row["op"].split("#")[0] == SETUP_OP else "added") if part_of_making else None,
                     "actor": row["actor"],
                     "by_assistant": row["actor"] not in ("pm",),
                     "moved_again": row.get("moved_again"),
@@ -400,6 +423,20 @@ def _activity(
         seen.add(key)
         unique.append({k: v for k, v in entry.items() if k != "seq"})
     return unique[:ACTIVITY_MAX]
+
+
+def _bookkeeping(row: dict[str, Any], made_with: Any) -> bool:
+    """Whether a ledger row is no news to the person: the link the app keeps between a side and its people, or the
+    person's own change that sets someone's organization to one made in the same change (they work for the business
+    they just added)."""
+    if row["op"].split("#")[0] == LINK_OP:
+        return True
+    if row["version"] == 1 or row["actor"] != "pm" or not row.get("changeset") or row.get("field") != "org":
+        return False
+    after = row.get("after")
+    pointed = {after} if isinstance(after, str) else set(after) if isinstance(after, list) else set()
+    pointed = {p for p in pointed if isinstance(p, str)}
+    return bool(pointed & made_with(row["changeset"]) - {row["record_id"]})
 
 
 def counts(view: Any) -> dict[str, dict[str, Any]]:

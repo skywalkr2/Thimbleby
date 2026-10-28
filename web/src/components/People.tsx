@@ -145,7 +145,7 @@ export function People() {
           <EmptyState text={side.choice !== "all" ? t("sides.empty.people", { side: side.named }) : t(justMe ? "setup.no_people.just_me" : "setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
         ) : (
           <>
-            {!justMe && (orgs.data ?? []).length > 0 && filter}
+            {!justMe && ((orgs.data ?? []).length > 1 || org !== ALL) && filter}
             {rows.length === 0 ? (
               <p className="empty">{t("people.none_here")}</p>
             ) : (

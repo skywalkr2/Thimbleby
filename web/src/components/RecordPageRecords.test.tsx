@@ -5,6 +5,7 @@ import type { S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { person, project } from "../lib/records-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
+import en from "../wording/en.json";
 import { RecordPage } from "./RecordPage";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
@@ -80,15 +81,49 @@ test("activity says who changed which field of what, by the field's label and th
   const first = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
   const activity = await screen.findByRole("region", { name: "Activity" });
   const rows = within(activity).getAllByRole("listitem");
-  expect(rows[0]).toHaveTextContent("Helper changed the due date of Send two spine options");
+  expect(rows[0]).toHaveTextContent("Helper changed due date on Send two spine options");
   expect(within(rows[0]).getByText("Send two spine options").tagName).toBe("STRONG");
-  expect(rows[1]).toHaveTextContent("You changed the why they matter of Harbor");
-  expect(rows[2]).toHaveTextContent("Helper changed the target date of Harbor");
+  expect(rows[1]).toHaveTextContent("You changed why they matter on Harbor");
+  expect(rows[2]).toHaveTextContent("Helper changed target date on Harbor");
   expect(activity.textContent).not.toMatch(/·\s*(due|target|Why)/i);
   first.unmount();
   api("project", "PRJ-1", { name: "Harbor" }, shown);
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />, {}, { unnamed: true });
-  expect(within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem")[0]).toHaveTextContent("Your assistant changed the due date of Send two spine options");
+  expect(within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem")[0]).toHaveTextContent("Your assistant changed due date on Send two spine options");
+});
+
+test("the making of a record is one line that says added, or added in setup, and never a change of one of its fields", async () => {
+  const made = (id: string, name: string, op: string, how: "added" | "setup"): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "project", id, name, op, field: null, made: how, actor: "pm", by_assistant: false });
+  api("project", "PRJ-1", { name: "Harbor" }, page({ activity: [made("PRJ-2", "First catalog", "project.add#0", "added"), made("PRJ-1", "Harbor", "init", "setup")] }));
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const rows = within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem");
+  expect(rows[0]).toHaveTextContent("You added First catalog");
+  expect(rows[1]).toHaveTextContent("Harbor was added in setup");
+  expect(rows[1].textContent).not.toMatch(/changed|You /);
+});
+
+// Every field a label exists for, and the ones the sheet leaves to the field's own name, in the sentence that names a change:
+// a label of any shape reads as English in it ("changed why they matter on", never "changed the why they matter of").
+const FIELD_NAMES = [
+  ...Object.keys(en)
+    .filter((k) => /^field\.[a-z_]+(\.just_me)?$/.test(k))
+    .map((k) => k.split(".")[1]),
+  "why_they_matter", "how_to_reach", "name_verified", "track_only", "budget_usd", "first_name", "what_it_is", "who_decides", "which_stage", "when_due", "where_from",
+];
+
+test("the sentence for a changed field reads as English for every field that can appear", async () => {
+  const unique = Array.from(new Set(FIELD_NAMES));
+  const entry = (name: string): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "project", id: "PRJ-1", name: "Harbor", op: "record.edit", field: name, actor: "pm", by_assistant: false });
+  api("project", "PRJ-1", { name: "Harbor" }, page({ activity: unique.map(entry) }));
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const rows = within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem");
+  expect(rows).toHaveLength(unique.length);
+  for (const row of rows) {
+    const sentence = row.textContent ?? "";
+    expect(sentence, sentence).toMatch(/You changed [^ ].* on Harbor/);
+    expect(sentence, sentence).not.toMatch(/\bthe (why|how|what|who|whom|whose|when|where|which|whether)\b/i);
+    expect(sentence, sentence).not.toMatch(/\bof Harbor/);
+  }
 });
 
 test("a second move of the same date says it moved again, neutrally, with how many times and since when", async () => {
@@ -588,6 +623,8 @@ test("someone else's page keeps its own words, their details and who they are to
   expect(await screen.findByRole("heading", { level: 1, name: "Sam Other" })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { level: 3, name: "Open with Sam Other" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 3, name: "Details" })).toBeInTheDocument();
-  expect(screen.getByText("Name verified")).toBeInTheDocument();
+  // A flag that is off (the name not confirmed, not only followed) says nothing, and the name is the heading's.
+  expect(screen.queryByText("Name verified")).toBeNull();
+  expect(screen.getByText("Editor")).toBeInTheDocument();
   expect(screen.getByText("Who they are to you")).toBeInTheDocument();
 });

@@ -151,7 +151,7 @@ test("a person row has no Details button either, and a long address is clipped w
 });
 
 test("the organization filter is sized to its content", async () => {
-  fakeApi({ "GET people": () => [person("P-1", "Ana Person")], "GET organizations": () => [firstOrg] });
+  fakeApi({ "GET people": () => [person("P-1", "Ana Person")], "GET organizations": () => [firstOrg, org("ORG-2", "Org two", 0)] });
   renderApp(<People />);
   const filter = (await screen.findByRole("combobox", { name: "Organization" })).closest(".field")!;
   expect(filter).toHaveAttribute("data-size", "content");

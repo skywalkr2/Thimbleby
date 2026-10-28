@@ -29,8 +29,9 @@ describe("nothing waiting", () => {
   test("the To send tab is Follow-ups' own: nothing is listed to approve and the screen says nobody is waiting", async () => {
     show([]);
     expect(screen.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByText(/Nobody is waiting on anything from you/)).toBeInTheDocument();
+    // With nothing on any tab the tabs change nothing, so they are not drawn.
+    expect(screen.queryByRole("button", { name: "To send" })).toBeNull();
     expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
   });
 

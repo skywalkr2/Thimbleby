@@ -1,11 +1,12 @@
 // Today's rail (design 7.7): at most three cards beside the queue (below it under 1024px, and on the phone each folded to one
-// line): Briefing, Schedule and Came in. A card with nothing in it is not drawn; when none is drawn and the queue is empty,
-// one line says so. What needs the person is the queue, not the rail, and a to-do is acted on in To-dos and questions, so
+// line): Briefing, Schedule and Came in. The Schedule card is always drawn, so the side column is never blank; the others are
+// drawn when they have something. When nothing but the Schedule's own "nothing today" is there and the queue is empty, one line
+// says so. What needs the person is the queue, not the rail, and a to-do is acted on in To-dos and questions, so
 // neither the priorities nor the to-dos are cards. An add-on's Today panels follow the cards, each folded to one line.
 import { useState } from "react";
 import { useSetupOpen } from "../lib/setup-open";
 import { useWords } from "../lib/wording";
-import { settingsView, type View } from "../lib/views";
+import { settingsView, viewHref, type View } from "../lib/views";
 import { BriefCard, hasBrief, useBrief } from "./BriefCard";
 import { useCameInCard } from "./CameInCard";
 import { PluginPanels } from "./PluginPanels";
@@ -31,7 +32,8 @@ export function TodayRail(props: {
   const [, closed] = useState(0);
   const brief = useBrief(null);
   const briefing = props.workspace ? { settled: !brief.isPending, drawn: hasBrief(brief.data, props.workspace) } : { settled: true, drawn: false };
-  const schedule = useScheduleCard(add);
+  // The Schedule card is always drawn and, with no calendar connected, links to Connections while setup is open too.
+  const schedule = useScheduleCard(add, viewHref(settingsView("connections")));
   const cameIn = useCameInCard(add);
   const settled = briefing.settled && schedule.settled && cameIn.settled;
   const nothing = settled && !briefing.drawn && !schedule.drawn && !cameIn.drawn;
@@ -39,7 +41,7 @@ export function TodayRail(props: {
     <div className={styles.rail} role="group" aria-label={t("today.rail.label")} data-region="">
       <RailFolds>
         {briefing.drawn && props.workspace && <BriefCard workspace={props.workspace} onOpenRecord={open} onOpenView={props.onView} onClosed={() => closed((n) => n + 1)} />}
-        {schedule.drawn && schedule.card}
+        {schedule.card}
         {cameIn.drawn && cameIn.card}
       </RailFolds>
       {nothing && props.queueEmpty && (

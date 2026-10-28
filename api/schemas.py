@@ -1708,6 +1708,11 @@ class ActivityEntry(BaseModel):
     name: str
     op: str
     field: str | None = None
+    made: Literal["added", "setup"] | None = Field(
+        None,
+        description="Set when the entry is the record being made, with every value written in that change folded in "
+        "(then there is no field): added by the person, or by the workspace's own setup.",
+    )
     actor: str
     by_assistant: bool
     moved_again: int | None = Field(

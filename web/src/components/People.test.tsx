@@ -78,6 +78,13 @@ test("the organization filter narrows the table to people who work for it, or fo
   expect(screen.queryByRole("link", { name: "Ana Person" })).toBeNull();
 });
 
+test("the organization filter is offered only when there are two organizations or more: with one it has nothing to choose", async () => {
+  api([person("P-1", "Ana Person", { org: firstOrg.id, org_name: firstOrg.name }), person("P-2", "Ben Person")], { "GET organizations": () => [firstOrg] });
+  renderApp(<People />);
+  await row("Ana Person");
+  expect(screen.queryByRole("combobox", { name: "Organization" })).toBeNull();
+});
+
 test("a row opens its detail with what is known, never zero, and a link to the page", async () => {
   const user = userEvent.setup();
   api([person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, aliases: ["Anita"], open_items: 1, how_to_reach: { phone: "555-0100" } })]);

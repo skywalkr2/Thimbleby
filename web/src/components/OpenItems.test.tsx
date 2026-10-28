@@ -384,17 +384,27 @@ const BUSINESS = () => ({ business: true, name: "Orchard Press", personal: "PRJ-
 test("a to-do filed on a side and in none of its projects shows the side as not in a project, and the project filter lists real projects only", async () => {
   const user = userEvent.setup();
   api(
-    { "GET setup/business": BUSINESS, "GET projects": () => [project("PRJ-personal", "Personal", { side: true }), project("PRJ-side", "Orchard Press", { side: true }), project("PRJ-1", "Harbor", { parent: "PRJ-side" })] },
-    { actions: [action("A-1", "Send the proof"), action("A-2", "Tidy the shelf", { project: "PRJ-side", project_name: "", side_name: "Orchard Press" })], questions: [] },
+    { "GET setup/business": BUSINESS, "GET projects": () => [project("PRJ-personal", "Personal", { side: true }), project("PRJ-side", "Orchard Press", { side: true }), project("PRJ-1", "Harbor", { parent: "PRJ-side" }), project("PRJ-2", "Lantern", { parent: "PRJ-side" })] },
+    { actions: [action("A-1", "Send the proof"), action("A-2", "Tidy the shelf", { project: "PRJ-side", project_name: "", side_name: "Orchard Press" }), action("A-3", "Order the paper", { project: "PRJ-2", project_name: "Lantern" })], questions: [] },
   );
   renderApp(<OpenItems />);
   const [first, second] = await rows();
   expect(first).toHaveTextContent("Harbor");
   expect(second).toHaveTextContent("Orchard Press: not in a project");
   const choice = screen.getByRole("combobox", { name: "Project" });
-  expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor"]);
+  expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor", "Lantern"]);
   await user.selectOptions(choice, "PRJ-1");
   expect(await rows()).toHaveLength(1);
+});
+
+test("a filter with fewer than two real choices is not offered: one project, or one person, has nothing to narrow by", async () => {
+  api({}, { actions: [action("A-1", "Send the proof"), action("A-2", "Tidy the shelf")], questions: [] });
+  renderApp(<OpenItems />);
+  await rows();
+  expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Person" })).toBeNull();
+  // The state is always a real choice.
+  expect(screen.getByRole("combobox", { name: "State" })).toBeInTheDocument();
 });
 
 // ---- the to-do row's own acts: Drop, Change this, a reminder, a hold, what is learned (moved here with the row) ---------------

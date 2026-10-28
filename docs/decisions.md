@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: The first day after setup
+
+**Decided:** The captures of a fresh workspace after setup with a business (promise P77), read against the owner's first
+evening, set six fixes, built together (change log 251): what setup wrote reads as the record being set up (one "added" line
+per record, or "added in setup", never "You changed the target date of ..."), and a field's label fits the sentence for a
+change ("changed why they matter on", not "the why they matter of"); a yes or no in Details says only what is so (a flag that is
+off is left out, one that is on is said in the wording sheet's words); a name is not said twice (a page leaves out the name its
+heading says, and a side's own organization is one line, "Your business", linking to its page); Today's Schedule card is always
+drawn, so the side column is never blank, with one link to connect a calendar when none is; a filter with fewer than two real
+choices is not drawn (the People Organization filter, a one-project or one-person to-do filter); and Follow-ups draws no tabs over
+nothing, while its closed "How your messages start and end" section is a fold with a visible control, as every
+`more-options` fold now is.
+
+**Decided by:** the owner's first evening and the main session's review of the captures; the builder chose the wording of the
+new phrases (`flag.<field>`, "was added in setup", "Your business") and the rule that a person's own link to a record made in
+the same change is no Activity line, for review.
+
+**Why:** each was a first-day screen that looked unfinished or unkind (an Activity list blaming the person for the app's own
+writes, a "No" for a thing that is not so, blank space, a lone heading, controls that change nothing).
+
+**Impact:** design 7.5, 7.7 and 7.14; `ActivityEntry.made` (API schema regenerated); no plugin API change, no change to scope.
+Setup's change still reads as a note in What changed (found, not fixed). Change log: section 253.
+
 ## 2026-10-28: The steward's remaining items are built to the design, with their settings
 
 **Decided:** The nine remaining items of phase S are built as designed (change log 250): what changed in an invitation on the
