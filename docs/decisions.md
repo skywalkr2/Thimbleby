@@ -22,7 +22,7 @@ switch shows off, with its reason, while no folder is chosen. (6) The assistant 
 on has no passing test: a whole test that passed for the accounts in use as set up now, or a passing check of each account in
 use as set up now (a Test on its own row counts); a comment, a label, a budget or a backup account added and taken away don't.
 
-**Decided by:** the UI/UX sweep's reviewer (X02, X03, X04, X12, X13, X14, X17) and the main session's brief, which names the
+**Decided by:** the owner for (1), replacing the earlier rule that brought setup back while the name or an AI account was missing ("never a forced return - sure thats fine"); the UI/UX sweep's reviewer (X02, X03, X04, X12, X13, X14, X17) and the main session's brief, which names the
 leaving rule; the choice of what counts as tested is the builder's, for review.
 
 **Why:** a person who skipped everything could never stay on Today (even `#today` reopened setup), the last screen and the
