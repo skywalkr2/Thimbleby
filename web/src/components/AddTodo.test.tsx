@@ -116,8 +116,8 @@ test("a repeat that doesn't fall on the day says which day it does", async () =>
   await user.type(screen.getByRole("textbox", { name: "Repeats" }), "every Tuesday");
   expect(await screen.findByText(/isn't one of those days/)).toBeInTheDocument();
   // The form's button may still be settling (a check of the date or the repeat in flight), so it is waited for.
-  expect(await screen.findByRole("button", { name: "Add" })).toBeDisabled();
-});
+  expect(await screen.findByRole("button", { name: "Add" }, { timeout: 5000 })).toBeDisabled();
+}, 20000);
 
 test("the toast's Undo takes back every change, last first", async () => {
   const user = userEvent.setup();

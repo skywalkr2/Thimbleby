@@ -1034,12 +1034,12 @@ yet follow, that it is *designed*, with its phase.
 | Installing an add-on (4.13, 3.11) | Into the app's Python environment, which a rebuild cleared | **Built** (`tests/test_addons_folder.py`): into `server.addons_dir` (default: the app's data place), loaded from there at start; old installs moved once |
 | Setup's People (7.8) | Done only with a second person, so moving on left Today's setup line asking | **Built** (`tests/test_walkthrough.py`): moving on with nobody added reads "No one added" and counts as passed |
 
-## 242. A side is a group, never a project (2026-10-28; owner; designed, being built)
+## 242. A side is a group, never a project (2026-10-28; owner; built)
 
 | Where | Before | Now |
 |---|---|---|
-| Sides (6.32) | A side's top project was listed, picked, counted and edited as a project | A group: never offered as a project; name, other names and description only; "in <side>, not in a project"; side then project (optional) when choosing where something belongs |
-| Setup's business step (7.8) | Every line of "what it works on" became a project, a description included | A description box kept on the side, apart from the list of project names |
+| Sides (6.32) | A side's top project was listed, picked, counted and edited as a project | **Built** (`tests/test_side_is_a_group.py`, `web/e2e/side-is-a-group.spec.ts`, `web/src/components/ProjectPicker.test.tsx`): a group, never offered as a project; name, other names and description only; "in <side>, not in a project"; side then project (optional) when choosing where something belongs; the Projects screen heads each side with its projects |
+| Setup's business step (7.8) | Every line of "what it works on" became a project, a description included | **Built** (`web/src/components/Walkthrough.test.tsx`): "What is <name>?" kept on the side, apart from the list of project names |
 
 ## 241. Setup's mail step leads with what was just connected (2026-10-28; owner's run; built)
 
