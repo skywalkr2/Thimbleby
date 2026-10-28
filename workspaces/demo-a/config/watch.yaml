@@ -72,9 +72,9 @@ versions:   # copies of one document in a watched folder: only the newest counts
   same_document: []   # files said by hand to be one document: [{source: <folder id>, files: [<path>, <path>]}]
   not_same: {}   # files said not to belong to the name's document, by folder id
   current: {}   # the copy said to be current when names couldn't tell, by folder id
-automated_mail:   # one-time-code mail from a no-reply address is set aside with no AI run
+automated_mail:   # one-time-code mail from a no-reply address, and bulk mail from a notification sender, is set aside with no AI run
   set_aside: true
-  senders: [no-reply, noreply, no_reply, do-not-reply, donotreply]   # what an automated address starts with
+  senders: [no-reply, noreply, no_reply, do-not-reply, donotreply, notification]   # what an automated address starts with
   words: [verification code, one-time code, one-time password, security code, sign-in code, login code, passcode, new sign-in, new login, sign-in attempt, security alert, suspicious activity, reset your password, access token, personal access token, app password, api key was, was added to your account, was added to your, new device, signed in from, security notice, security notification, verify your email, confirm your email]
 mail_kinds:   # bills, orders and deliveries are tracked for the Personal project, never set aside
   enabled: true

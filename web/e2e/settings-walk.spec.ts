@@ -153,7 +153,7 @@ test("the settings walk counts 18 basic and 26 advanced rows, each labelled in p
   }
 });
 
-test("Add-ons holds the catalog settings in a closed section named For developers, and Knowledge holds the glossary", async ({ page }) => {
+test("Add-ons holds the catalog settings in a closed section named For developers, and Knowledge holds the person's own words", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/addons");
   const fold = page.locator("details.developer-settings");
@@ -164,8 +164,9 @@ test("Add-ons holds the catalog settings in a closed section named For developer
   await expect(page.getByRole("group", { name: "Access keys for private downloads" })).toBeVisible();
   await notWider(page, "Add-ons, For developers");
   await page.goto("?token=e2e-token#records/knowledge");
-  await expect(page.getByRole("heading", { level: 2, name: "Glossary" })).toBeVisible(LOADED);
-  await expect(page.getByLabel("A word to add")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Your words" })).toBeVisible(LOADED);
+  await expect(page.getByLabel("A word", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("What it means")).toBeVisible();
   await notWider(page, "Knowledge");
 });
 

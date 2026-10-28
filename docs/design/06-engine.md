@@ -250,7 +250,10 @@ match and is contained like any plugin call (6.1).
 **Automated notices** (sections 204, 205): after the workspace's rules, the built-in sorting sets aside, by rules with no AI
 run, mail from a no-reply address (`watch.automated_mail.senders`) whose subject or text holds a notice phrase (`words`: a
 one-time code, a sign-in alert, a security notice), in its own section, *Automated notices*, never in sales; `set_aside` turns
-it off. A no-reply bill or order has no such phrase and goes on to the assistant.
+it off. A no-reply bill or order has no such phrase and goes on to the assistant. Bulk mail is also an automated notice, not
+sales, when it comes from an automated sender (the same `senders`, which include notification addresses) or the mail
+service files it under its updates category (a build failure or an account notice sent with list headers); mail the service
+files under promotions, social or forums stays sales, and mail that is not bulk is not touched by this (section 248; P78).
 
 **Bills, orders and deliveries are never set aside** (section 205; P46): right after the automated notices, rules with no AI
 run (`engine/mail_kinds.py`, words in `watch.mail_kinds`, on from the first sign-in with no setup) recognize a bill or
@@ -290,9 +293,11 @@ It is sorted in this order, first match wins:
    moves out of the other choices when the person changes their mind. A `sender-rule` matches the sender's address (read from
    the message's sender, else its author, else the text's From line) or its domain, and a domain matches its subdomains, in any
    case.
-2. **What the mail says about itself, built in:** after the list, and with no setting to edit, the core sets aside as sales mail
-   mail that is `bulk` (the `bulk-mail` matcher) and mail whose `categories` include promotions, social or forums (the
-   `service-category` matcher). One setting, `watch.set_aside_defaults` (on), turns this off. It applies to every workspace,
+2. **What the mail says about itself, built in:** after the list, and with no setting to edit, the core sets aside, in this order:
+   an automated one-time-code or security mail (notices); a bill, an order or a delivery is kept with the assistant; bulk
+   mail from an automated sender or in the service's updates category (notices, unless the service files it under promotions,
+   social or forums); then as sales mail mail that is `bulk` (the `bulk-mail` matcher) and mail whose `categories` include
+   promotions, social or forums (the `service-category` matcher). One setting, `watch.set_aside_defaults` (on), turns this off. It applies to every workspace,
    whenever it was made, because it isn't a rule written into the file. *Why not in the file:* a default written into a new
    workspace's list would never reach a workspace made before, and the person edits nothing to be helped.
    The sender in the person's contacts who isn't one of the workspace's people (`personal-contact`) is *designed, not yet

@@ -157,6 +157,21 @@ def test_the_knowledge_list_carries_how_much_each_entry_was_used(app):
     assert (body[unused]["used"], body[unused]["given"], body[unused]["last_used"]) == (0, 0, None)
 
 
+def test_a_word_added_with_its_meaning_is_an_active_glossary_entry_in_the_persons_words_and_undo_removes_it(app):
+    client, store = app
+    done = client.post("/api/knowledge/terms", json={"term": "  Gutter ", "meaning": "the  inner margin"})
+    assert done.status_code == 200
+    entries = [e for e in client.get("/api/knowledge").json() if e["kind"] == "glossary_entry"]
+    assert [(e["term"], e["meaning"], e["status"], e["learned_from"]) for e in entries] == [
+        ("Gutter", "the inner margin", "active", "person")
+    ]
+    assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={"ops": None}).status_code == 200
+    assert [
+        e for e in client.get("/api/knowledge", params={"status": "active"}).json() if e["kind"] == "glossary_entry"
+    ] == []
+    assert client.post("/api/knowledge/terms", json={"term": "Bleed", "meaning": "  "}).status_code == 422
+
+
 def test_the_rules_list_has_each_rule_with_its_reach_what_it_constrains_where_it_came_from_and_its_use(app):
     client, store = app
     scope = {"scope": "projects", "projects": [PROJECT]}

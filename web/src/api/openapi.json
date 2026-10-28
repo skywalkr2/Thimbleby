@@ -12698,6 +12698,30 @@
         "title": "KnowledgeNarrow",
         "type": "object"
       },
+      "KnowledgeTermAdd": {
+        "additionalProperties": false,
+        "description": "A word of the person's own and what it means here: kept as an active glossary entry in their words.",
+        "properties": {
+          "meaning": {
+            "description": "What it means here.",
+            "minLength": 1,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "term": {
+            "description": "The word, acronym or name as the person writes it.",
+            "minLength": 1,
+            "title": "Term",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term",
+          "meaning"
+        ],
+        "title": "KnowledgeTermAdd",
+        "type": "object"
+      },
       "KnowledgeView": {
         "description": "One piece of what the assistant learned: a lesson, glossary entry, routing entry or style note. `learned_from`\nsays whose words it is (person, input, assistant, pack, seed or import); `origin` is the link to where it came from,\ndecided on the server like an action's. The fields after `applies_to` are those of its kind and are empty for\nthe others.",
         "properties": {
@@ -37177,6 +37201,45 @@
           }
         },
         "summary": "Rule Review Not Now Undo"
+      }
+    },
+    "/api/knowledge/terms": {
+      "post": {
+        "description": "Add a word of the person's own with its meaning: an active glossary entry in their words, with Undo.",
+        "operationId": "add_term_api_knowledge_terms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeTermAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Term"
       }
     },
     "/api/knowledge/{entry_id}/discard": {

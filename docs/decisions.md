@@ -47,7 +47,24 @@ opinino i will say"), on the session's proposal after "we probably need to defin
 **Why:** the screen showed tabs and empty messages that meant nothing on a new workspace ("Everything active has been
 used" with nothing active) and the glossary as a bare word list.
 
-**Impact:** design 7.18 (the Knowledge screen); no engine or op change; tested with P94. Change log: none until built.
+**Impact:** design 7.18 (the Knowledge screen); one route to add a word with its meaning (`POST /api/knowledge/terms`); tested with P94. Change log: section 248.
+
+## 2026-10-28: Bulk mail from a notification sender or in the updates category is a notice, not sales; the button reads "Bring it in" (P78)
+
+**Decided:** Bulk mail that comes from an automated sender (`watch.automated_mail.senders`, which now includes notification
+addresses) or that the mail service files under its updates category is an automated notice, set aside in that section,
+not sales. Mail the service files under promotions, social or forums, and a newsletter, stay sales; a bill, an order or a
+delivery is still kept with the assistant; mail that is not bulk is not touched. On a set-aside row the button that brings
+the mail back reads "Bring it in" and asks for the side (Personal or a business) only when there is more than one, with
+the same signal as before.
+
+**Decided by:** the owner (P78, from a build failure filed under Sales and promotions in his inbox).
+
+**Why:** the built-in order set bulk mail aside as sales before notices were considered, and "Treat as <side>" named a
+choice the person had not yet made.
+
+**Impact:** design 6.5 (the built-in sorting order) and 7.20; one default word in `watch.automated_mail.senders`; no op
+change. Change log: section 248.
 
 ## 2026-10-28: Setup's People step suggests only real people, and has one add row
 

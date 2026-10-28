@@ -686,18 +686,17 @@ test("Knowledge, with lessons, rules and their scopes and evidence, says names, 
     "GET people": () => [{ id: "PER-1", name: "Sample Person" }, { id: "PER-2", name: "Robin Sample" }],
   });
   const view = renderApp(<Knowledge onOpenReview={vi.fn()} />);
-  await screen.findByRole("list", { name: "What Helper knows" });
-  // Each filter shows other rows, and each row says where it came from, what it reaches and how much it was used.
+  await screen.findByRole("list", { name: "Waiting for your OK" });
   const user = userEvent.setup();
-  for (const filter of [/^Proposed/, /^Active/, /^Unused/, /^No longer used/]) {
-    await user.click(screen.getByRole("radio", { name: filter }));
-    sweep(view.container);
-  }
-  await user.click(screen.getByRole("radio", { name: /^Active/ }));
-  const rows = within(screen.getByRole("list", { name: "What Helper knows" })).getAllByRole("listitem");
-  expect(rows.length).toBeGreaterThan(2);
+  sweep(view.container);
+  // What was not used in a while and what was retired are behind one link.
+  await user.click(screen.getByText("Not used in a while, and what was retired"));
+  sweep(view.container);
+  // Each row says where it came from, what it reaches and how much it was used.
+  const rows = screen.getAllByRole("listitem").filter((row) => row.hasAttribute("data-row"));
+  expect(rows.length).toBeGreaterThan(4);
   for (const row of rows) {
-    for (const more of within(row).queryAllByRole("button", { name: /^(Narrow|Where|Details|More)/ })) await user.click(more);
+    for (const more of within(row).queryAllByRole("button", { name: /^(Limit|Where|Details|More)/ })) await user.click(more);
     sweep(view.container);
   }
 });

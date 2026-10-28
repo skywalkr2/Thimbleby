@@ -3044,13 +3044,16 @@ class VersionFamilies(FileModel):
 class AutomatedMail(FileModel):
     set_aside: bool = Field(
         True,
-        description="Set aside automated notices (a one-time code, a sign-in alert, a security notice) from a "
-        "no-reply address into the Automated notices section, with no AI run. It applies after the rules "
-        "above, so a rule that keeps mail from a sender wins.",
+        description="Set aside automated notices into the Automated notices section, with no AI run: a one-time "
+        "code, a sign-in alert or a security notice from a no-reply address, and bulk mail from an automated "
+        "sender or in the mail service's updates category. It applies after the rules above, so a rule that "
+        "keeps mail from a sender wins.",
     )
     senders: list[str] = Field(
-        default_factory=lambda: ["no-reply", "noreply", "no_reply", "do-not-reply", "donotreply"],
-        description="Words an automated sender's address starts with, before the @ sign.",
+        default_factory=lambda: ["no-reply", "noreply", "no_reply", "do-not-reply", "donotreply", "notification"],
+        description="Words an automated sender's address starts with, before the @ sign (no-reply, notifications and "
+        "the like). A one-time code or security mail from such a sender is an automated notice, and so is bulk mail "
+        "from one.",
     )
     words: list[str] = Field(
         default_factory=lambda: [

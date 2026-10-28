@@ -19,6 +19,7 @@ SHOP = "shop.example.com"
 WORK = "colleague@work.example.com"
 OWN = "own-mail.example.com"  # a public mail domain the person adds in the settings
 CLUB = "club.example.com"
+BUILDS = "builds.example.com"
 UNIQUE = "zebra-quartz-marmalade"  # a phrase that is only in the messages under test
 
 
@@ -174,6 +175,110 @@ def test_a_workspace_with_its_own_rules_or_written_earlier_still_sets_aside_bulk
             assert sections["Subject of work"] is None
         finally:
             store.close()
+
+
+def sorted_as(tmp_path, one, **watch):
+    """What the rules and the built-in sorting make of one mail change: its section and rule, or None."""
+    from engine.triage import first_match
+
+    ws, cfg, store = make(tmp_path, [], **watch)
+    try:
+        found = first_match(store, cfg, one)
+        return (found["section"], found["rule"]) if found else None
+    finally:
+        store.close()
+
+
+def test_bulk_mail_from_a_notification_sender_or_in_the_updates_category_is_an_automated_notice_not_sales(tmp_path):
+    """A build failure or an account notice sent with list headers is a notice. A newsletter, and anything the mail
+    service files under promotions or social, stays sales."""
+    notice = ("notices", "Automated notices")
+    failure = {**change(f"notifications@{BUILDS}", bulk=True), "title": "Build failed on the main branch"}
+    assert sorted_as(tmp_path / "a", failure) == notice
+    # An automated sender that is not named "notifications": the other words of the setting count the same.
+    assert sorted_as(tmp_path / "b", change(f"no-reply@{BUILDS}", bulk=True)) == notice
+    # A sender the setting doesn't name, but the mail service files it under updates.
+    assert sorted_as(tmp_path / "c", change(f"ci@{BUILDS}", bulk=True, categories=["updates"])) == notice
+    # Sales stay sales: a newsletter, and promotions or social, even from a notification sender.
+    assert sorted_as(tmp_path / "d", change(f"news@{LISTS}", bulk=True)) == ("sales", "Bulk mail")
+    assert sorted_as(tmp_path / "e", change(f"news@{LISTS}", categories=["promotions"])) == (
+        "sales",
+        "Promotions and social",
+    )
+    assert sorted_as(tmp_path / "f", change(f"notifications@{SHOP}", bulk=True, categories=["promotions"])) == (
+        "sales",
+        "Bulk mail",
+    )
+    assert sorted_as(tmp_path / "g", change(f"notifications@{SHOP}", bulk=True, categories=["social"])) == (
+        "sales",
+        "Bulk mail",
+    )
+    assert sorted_as(tmp_path / "h", change(f"ci@{BUILDS}", bulk=True, categories=["social", "updates"])) == (
+        "sales",
+        "Bulk mail",
+    )
+
+
+def test_a_notification_that_is_not_bulk_and_mail_the_service_files_under_updates_alone_stay_with_the_assistant(
+    tmp_path,
+):
+    assert sorted_as(tmp_path / "a", change(f"notifications@{BUILDS}", bulk=False)) is None
+    assert sorted_as(tmp_path / "b", change(f"notifications@{BUILDS}")) is None
+    assert sorted_as(tmp_path / "c", change(f"ci@{BUILDS}", categories=["updates"])) is None
+    assert sorted_as(tmp_path / "d", change(f"ci@{BUILDS}", bulk=False, categories=["updates"])) is None
+
+
+def test_a_bill_sent_in_bulk_from_a_notification_sender_is_still_kept_and_so_is_mail_a_keep_rule_names(tmp_path):
+    bill = {**change(f"notifications@{BUILDS}", bulk=True), "title": "Your statement is ready"}
+    assert sorted_as(tmp_path / "a", bill) is None
+    keep = [
+        {
+            "name": "Keep",
+            "kind": "sender-rule",
+            "params": {"senders": [f"notifications@{BUILDS}"]},
+            "set_aside": "never",
+        }
+    ]
+    assert sorted_as(tmp_path / "b", change(f"notifications@{BUILDS}", bulk=True), triage=keep) is None
+
+
+def test_with_automated_notices_off_or_the_built_in_sorting_off_bulk_notifications_go_the_old_way(tmp_path):
+    one = change(f"notifications@{BUILDS}", bulk=True)
+    assert sorted_as(tmp_path / "a", one, automated_mail={"set_aside": False}) == ("sales", "Bulk mail")
+    assert sorted_as(tmp_path / "b", one, set_aside_defaults=False) is None
+    # The person's own sender words decide what an automated sender is.
+    own = {"senders": ["alerts"]}
+    assert sorted_as(tmp_path / "c", one, automated_mail=own) == ("sales", "Bulk mail")
+    assert sorted_as(tmp_path / "d", change(f"alerts@{BUILDS}", bulk=True), automated_mail=own) == (
+        "notices",
+        "Automated notices",
+    )
+
+
+def test_a_build_failure_sent_in_bulk_is_set_aside_as_a_notice_when_the_mail_is_read(tmp_path):
+    from engine.watch import refresh
+
+    items = [
+        mail("ci", f"notifications@{BUILDS}", bulk=True, subject="Build failed on the main branch"),
+        mail("news", f"a@{LISTS}", bulk=True),
+        mail("promo", f"notifications@{SHOP}", bulk=True, categories=["promotions"]),
+        mail("work", WORK),
+    ]
+    ws, cfg, store = make(tmp_path, items)
+    try:
+        result = refresh(ws, store, cfg, "m", NOW)
+        sections = {
+            store.read().get("source", store.read().get("request", r).data["source"]).data["title"]: store.read()
+            .get("request", r)
+            .data.get("set_aside")
+            for r in result.new
+        }
+        assert sections["Build failed on the main branch"]["section"] == "notices"
+        assert sections["Subject of news"]["section"] == "sales"
+        assert sections["Subject of promo"]["section"] == "sales"
+        assert sections["Subject of work"] is None
+    finally:
+        store.close()
 
 
 def test_the_set_aside_count_is_what_the_folder_holds_so_a_confirmed_item_is_not_in_it(tmp_path):

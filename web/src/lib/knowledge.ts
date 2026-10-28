@@ -8,8 +8,10 @@ type T = ReturnType<typeof useWords>;
 export const KINDS = ["rule", "lesson", "glossary_entry", "routing_entry", "style_note"] as const;
 export type Kind = (typeof KINDS)[number];
 export type Status = S["KnowledgeView"]["status"];
-export const FILTERS = ["proposed", "active", "unused", "retired"] as const;
-export type Filter = (typeof FILTERS)[number];
+
+/** The plain-word groups of what is in use. `other` holds what nothing says a group for, so nothing is put in a wrong one. */
+export const GROUPS = ["filed", "who", "write", "facts", "other"] as const;
+export type Group = (typeof GROUPS)[number];
 
 /** An entry or a rule, in one shape. */
 export interface Item {
@@ -28,6 +30,11 @@ export interface Item {
   /** A code check enforces the rule, so it holds whether or not anything triggers it. */
   enforced: boolean;
   origin: S["Origin"] | null;
+  /** What a rule is about: op kinds or fields. Empty for an entry. */
+  constrains: string[];
+  /** A glossary entry's word and what it means; empty for the others. */
+  term: string;
+  meaning: string;
 }
 
 /** Every entry and rule as items, newest first. */
@@ -48,6 +55,9 @@ export function itemsOf(entries: S["KnowledgeView"][], rules: S["RuleView"][]): 
       learnedAt: e.learned_at,
       enforced: false,
       origin: e.origin ?? null,
+      constrains: [],
+      term: e.term ?? "",
+      meaning: e.meaning ?? "",
     })),
     ...rules.map((r) => ({
       id: r.id,
@@ -64,19 +74,81 @@ export function itemsOf(entries: S["KnowledgeView"][], rules: S["RuleView"][]): 
       learnedAt: r.learned_at ?? "",
       enforced: r.enforced,
       origin: r.origin ?? null,
+      constrains: r.constrains ?? [],
+      term: "",
+      meaning: "",
     })),
   ];
   return found.sort((a, b) => (a.learnedAt === b.learnedAt ? b.id.localeCompare(a.id) : a.learnedAt < b.learnedAt ? 1 : -1));
 }
 
-/** Which filters an item is in: unused means active and never applied by a run. */
-export function inFilter(item: Item, filter: Filter): boolean {
-  if (filter === "unused") return item.status === "active" && item.used === 0;
-  return item.status === filter;
+/** Which kind of work a rule or lesson is limited to decides its group; one place for all of it. */
+const GROUP_OF_TASK: Record<string, Group> = {
+  notes: "filed",
+  "follow-on": "filed",
+  transcribe: "filed",
+  reply: "write",
+  "monday-message": "write",
+  ask: "write",
+  "meeting-prep": "write",
+  "action-work": "write",
+};
+
+/**
+ * The group an item of what the assistant follows belongs to, in plain words:
+ * - who does what: a routing entry; or anything about particular people, or a rule that constrains an owner;
+ * - how to write for you: a style note; or anything limited to the work of writing (a reply, the Monday message, an
+ *   answer, meeting preparation, work on a to-do); or a rule that constrains wording;
+ * - how things are filed: anything limited to filing notes, turning a voice note into text or checking what a move
+ *   changes; or any other standing rule;
+ * - facts it knows: a lesson that says something about the work and is limited to nothing else;
+ * - other: only when nothing above applies.
+ */
+export function groupOf(item: Pick<Item, "kind" | "scope" | "constrains">): Group {
+  if (item.kind === "routing_entry") return "who";
+  if (item.kind === "style_note") return "write";
+  for (const task of item.scope.task_kinds ?? []) if (task in GROUP_OF_TASK) return GROUP_OF_TASK[task];
+  if (item.constrains.some((c) => /owner|assign|\bto\b|person|team/i.test(c))) return "who";
+  if (item.constrains.some((c) => /title|text|message|wording|summary|question|reply/i.test(c))) return "write";
+  if ((item.scope.people ?? []).length) return "who";
+  if (item.kind === "rule") return "filed";
+  return item.kind === "lesson" ? "facts" : "other";
 }
 
-export function counts(items: Item[]): Record<Filter, number> {
-  return Object.fromEntries(FILTERS.map((f) => [f, items.filter((i) => inFilter(i, f)).length])) as Record<Filter, number>;
+/** What a proposal changes, for its line: its group, or "words" for a glossary entry. */
+export function changesOf(item: Item): Group | "words" {
+  return item.kind === "glossary_entry" ? "words" : groupOf(item);
+}
+
+/** Active and not used for `days` days (never used counts from when it was learned). Words are never stale. */
+export function notUsedInAWhile(item: Item, now: Date, days: number | undefined): boolean {
+  if (item.status !== "active" || item.kind === "glossary_entry" || days === undefined) return false;
+  const since = item.lastUsed ?? item.learnedAt;
+  if (!since) return false;
+  return now.getTime() - new Date(since).getTime() > days * 86_400_000;
+}
+
+export interface Sections {
+  /** Proposed, waiting for the person. */
+  waiting: Item[];
+  /** Active and used lately, by group, in the order of GROUPS; a group with nothing is left out. */
+  follows: { group: Group; items: Item[] }[];
+  /** The person's words: active glossary entries. */
+  words: Item[];
+  /** Active but not used in a while. */
+  idle: Item[];
+  /** Retired. */
+  retired: Item[];
+}
+
+/** Every item in the one section it belongs to; `items` is newest first and each section keeps that order. */
+export function sectionsOf(items: Item[], now: Date, days: number | undefined): Sections {
+  const waiting = items.filter((i) => i.status === "proposed");
+  const words = items.filter((i) => i.status === "active" && i.kind === "glossary_entry");
+  const idle = items.filter((i) => notUsedInAWhile(i, now, days));
+  const lately = items.filter((i) => i.status === "active" && i.kind !== "glossary_entry" && !idle.includes(i));
+  const follows = GROUPS.map((group) => ({ group, items: lately.filter((i) => groupOf(i) === group) })).filter((g) => g.items.length > 0);
+  return { waiting, follows, words, idle, retired: items.filter((i) => i.status === "retired") };
 }
 
 /** "today", "yesterday", "3 days ago" or "2 months ago". */

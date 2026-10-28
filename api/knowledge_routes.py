@@ -16,6 +16,7 @@ from api.schemas import (
     KnowledgeDiscard,
     KnowledgeKeep,
     KnowledgeNarrow,
+    KnowledgeTermAdd,
     KnowledgeView,
     LearnedLine,
     LearnedView,
@@ -225,6 +226,27 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Wo
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         return act(found, edit(found, fields), "Kept what was learned", "kept")
+
+    @r.post("/knowledge/terms")
+    def add_term(body: KnowledgeTermAdd) -> Applied:
+        """Add a word of the person's own with its meaning: an active glossary entry in their words, with Undo."""
+        term = " ".join(body.term.split())
+        meaning = " ".join(body.meaning.split())
+        if not term or not meaning:
+            raise HTTPException(status_code=422, detail="A word needs its meaning.")
+        op = {
+            "op": "glossary.add",
+            "text": f"{term}: {meaning}",
+            "term": term,
+            "meaning": meaning,
+            "confidence": "confirmed",
+        }
+        try:
+            changeset = apply_as_person(store, cfg, [op], "Added a word to the glossary")
+        except (StoreError, ValueError) as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return Applied(changeset=changeset)
 
     @r.post("/knowledge/{entry_id}/discard")
     def discard(entry_id: str, body: KnowledgeDiscard) -> Applied:

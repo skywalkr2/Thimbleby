@@ -1,7 +1,5 @@
-/* The Knowledge screen and the rules review: filters, a list of rows, and the form that narrows what a row applies to. */
+/* The Knowledge screen and the rules review: its parts, a list of rows, and the form that narrows what a row applies to. */
 .intro { margin: 0 0 var(--space-3); color: var(--text-muted); }
-.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-3); }
-.kind { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
 .review { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .review p { margin: 0; min-width: 0; }
 .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -16,3 +14,8 @@
 .back { margin: 0 0 var(--space-3); }
 .edit { display: flex; flex-direction: column; gap: var(--space-2); }
 .edit textarea { width: 100%; }
+.part { margin: 0 0 var(--space-5); min-width: 0; }
+.group { margin: 0 0 var(--space-4); min-width: 0; }
+.words { margin: 0 0 var(--space-5); min-width: 0; }
+.addword { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0; max-width: 32rem; }
+.addword input { width: 100%; }

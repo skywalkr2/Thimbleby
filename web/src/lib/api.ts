@@ -314,6 +314,8 @@ export const api = {
     call<S["Applied"]>("POST", `knowledge/${id(entry)}/discard`, { read_version: readVersion, reason: reason || null }),
   justThisTime: (entry: string, readVersion: number) =>
     call<S["Applied"]>("POST", `knowledge/${id(entry)}/just-this-time`, { read_version: readVersion }),
+  /** A word of the person's own with what it means, kept as an active glossary entry. */
+  addTerm: (term: string, meaning: string) => call<S["Applied"]>("POST", "knowledge/terms", { term, meaning }),
   narrowKnowledge: (entry: string, body: S["KnowledgeNarrow"]) =>
     call<S["Applied"]>("POST", `knowledge/${id(entry)}/narrow`, body),
   retireKnowledge: (entry: string, readVersion: number) =>

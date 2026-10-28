@@ -249,19 +249,19 @@ test("each list says so when it is empty", async () => {
   expect(await screen.findByText("Nothing has been read with nothing to do.")).toBeInTheDocument();
 });
 
-test("a row offers Treat as work, and in its menu Treat as personal, Always set aside mail like this and Open the message, with no Keep set aside anywhere", async () => {
+test("a set-aside row offers Bring it in, and in its menu Always set aside mail like this and Open the message, with no Keep set aside and no Treat as anywhere", async () => {
   const user = userEvent.setup();
   open({
     "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [group("kind:sales", [row("a", { link: "message-a" })])] }),
   });
   const sales = await open_(user, /^Sales and promotions · 1$/);
-  expect(within(sales).getByRole("button", { name: "Treat as work: Offer a" })).toBeInTheDocument();
+  expect(within(sales).getByRole("button", { name: "Bring it in: Offer a" })).toHaveTextContent("Bring it in");
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
-  expect(await screen.findByRole("menuitem", { name: "Treat as personal" })).toBeInTheDocument();
-  expect(screen.getByRole("menuitem", { name: "Always set aside mail like this" })).toBeInTheDocument();
+  expect(await screen.findByRole("menuitem", { name: "Always set aside mail like this" })).toBeInTheDocument();
   expect(screen.getByRole("menuitem", { name: "Open the message" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: /Treat as/ })).not.toBeInTheDocument();
   expect(screen.queryByText(/Keep (it|them all)? ?set aside/i)).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: /keep/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /keep|Treat as/i })).not.toBeInTheDocument();
 });
 
 test("a row of the read list has Take a closer look, and in its menu the other choices", async () => {
@@ -290,11 +290,11 @@ test("Open the message is not offered for a message with neither a link nor a sa
   open();
   const sales = await open_(user, SALES);
   await user.click(within(sales).getAllByRole("button", { name: /^More actions for/ })[0]);
-  expect(await screen.findByRole("menuitem", { name: "Treat as personal" })).toBeInTheDocument();
+  expect(await screen.findByRole("menuitem", { name: "Always set aside mail like this" })).toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Open the message" })).not.toBeInTheDocument();
 });
 
-test("Treat as work on a set-aside mail hands it in with the version read, offers Always for the sender, and Undo sets it aside again", async () => {
+test("Bring it in with no side to choose hands the mail in with the version read, offers Always for the sender, and Undo sets it aside again", async () => {
   const user = userEvent.setup();
   const calls = open({
     "POST handled/a/work": () => done("a"),
@@ -302,9 +302,10 @@ test("Treat as work on a set-aside mail hands it in with the version read, offer
     "POST watch/sorting": () => SAVED,
   });
   const sales = await open_(user, SALES);
-  await user.click(within(sales).getByRole("button", { name: "Treat as work: Offer a" }));
+  await user.click(within(sales).getByRole("button", { name: "Bring it in: Offer a" }));
   await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3 }));
   expect(await screen.findByText("Handed in Offer a. Helper is on it.")).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "Bring it in as" })).toBeNull();
   expect(screen.getByRole("button", { name: "Apply to this email domain" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(body(calls, "POST mail/a/set-aside")).toEqual({ section: "sales" }));
@@ -325,21 +326,6 @@ test("Take a closer look on a mail read with nothing to do offers no sorting rul
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(body(calls, "POST handled/q/undo")).toEqual({ read_version: 5 }));
   expect(calls.some((c) => c.route === "POST mail/q/set-aside")).toBe(false);
-});
-
-test("Treat as personal hands the message in for the Personal project, and Undo sets it aside again", async () => {
-  const user = userEvent.setup();
-  const calls = open({
-    "POST handled/a/personal": () => done("a", { domain: null }),
-    "POST mail/a/set-aside": () => ({ id: "a", version: 6, section: "sales", address: addr("a"), domain: null }),
-  });
-  const sales = await open_(user, SALES);
-  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Treat as personal" }));
-  await waitFor(() => expect(body(calls, "POST handled/a/personal")).toEqual({ read_version: 3 }));
-  expect(await screen.findByText(/Handed in Offer a for your Personal project/)).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(body(calls, "POST mail/a/set-aside")).toEqual({ section: "sales" }));
 });
 
 test("Always set aside mail like this saves a rule for the sender in the row's section, kept as a correction, and reads it back", async () => {
@@ -392,7 +378,7 @@ test("a change a rule closed is a row of the set-aside tab: a chip for its kind 
   expect(within(pages).getByRole("listitem")).toHaveTextContent("Page");
   const sales = await open_(user, SALES);
   expect(within(sales).getAllByRole("listitem")[0]).toHaveTextContent("Set aside because:");
-  expect(within(sales).getByRole("button", { name: "Treat as work: Offer a" })).toBeInTheDocument();
+  expect(within(sales).getByRole("button", { name: "Bring it in: Offer a" })).toBeInTheDocument();
   await user.click(within(files).getByRole("button", { name: "Take a closer look at Plan a" }));
   await waitFor(() => expect(body(calls, "POST requests/REQ-a/closer-look")).toEqual({ read_version: 3 }));
   expect(await screen.findByText("Handed in Plan a. Helper is on it.")).toBeInTheDocument();
@@ -511,47 +497,78 @@ const TWO_SIDES: Routes = {
   "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", "Hale Upholstery"), project("PRJ-day", "Day job")],
 };
 
-test("with nothing beside Personal a set-aside row offers a closer look and neither Treat as work nor Treat as personal appears", async () => {
+test("with nothing beside Personal Bring it in hands the mail in at once, with no side to choose and no Treat as", async () => {
   const user = userEvent.setup();
   const calls = open({ ...JUST_ME, "POST handled/a/work": () => done("a") });
   const sales = await open_(user, SALES);
-  await waitFor(() => expect(within(sales).getByRole("button", { name: "Take a closer look at Offer a" })).toBeInTheDocument());
+  await waitFor(() => expect(within(sales).getByRole("button", { name: "Bring it in: Offer a" })).toBeInTheDocument());
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
   expect(screen.queryByRole("menuitem", { name: /Treat as/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Treat as/ })).toBeNull();
   await user.keyboard("{Escape}");
-  await user.click(within(sales).getByRole("button", { name: "Take a closer look at Offer a" }));
+  await user.click(within(sales).getByRole("button", { name: "Bring it in: Offer a" }));
   await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3 }));
+  expect(screen.queryByRole("group", { name: "Bring it in as" })).toBeNull();
 });
 
 test("the reworded line for mail that is not sales or notices says nothing about work", () => {
   expect(en["setaside.what.mixed"]).not.toMatch(/work/i);
 });
 
-test("with sides the button names the first side, and the menu names Personal and each other side", async () => {
+test("with sides Bring it in asks which side, Personal and each business, and brings the mail in as the one chosen", async () => {
   const user = userEvent.setup();
   const calls = open({ ...TWO_SIDES, "POST handled/a/work": () => done("a"), "POST mail/a/set-aside": () => ({ id: "a", version: 6, section: "sales", address: addr("a"), domain: null }) });
   const sales = await open_(user, SALES);
-  const button = await within(sales).findByRole("button", { name: "Treat as Hale Upholstery: Offer a" });
-  expect(button).toHaveTextContent("Treat as Hale Upholstery");
-  await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
-  expect(await screen.findByRole("menuitem", { name: "Treat as Personal" })).toBeInTheDocument();
-  expect(screen.getByRole("menuitem", { name: "Treat as Day job" })).toBeInTheDocument();
-  expect(screen.queryByRole("menuitem", { name: "Treat as Hale Upholstery" })).toBeNull();
-  expect(screen.queryByText(/Treat as work|Treat as personal/)).toBeNull();
-  await user.click(screen.getByRole("menuitem", { name: "Treat as Day job" }));
+  const button = await within(sales).findByRole("button", { name: "Bring it in: Offer a" });
+  expect(button).toHaveTextContent("Bring it in");
+  expect(screen.queryByText(/Treat as/)).toBeNull();
+  await waitFor(() => expect(window.fetch).toHaveBeenCalledWith(expect.stringContaining("setup/business"), expect.anything()));
+  await user.click(button);
+  const picker = await within(sales).findByRole("group", { name: "Bring it in as" });
+  // Nothing is sent until a side is chosen, and the first side has the cursor.
+  expect(calls.some((c) => c.route === "POST handled/a/work")).toBe(false);
+  const choices = within(picker).getAllByRole("button");
+  expect(choices.map((c) => c.textContent)).toEqual(["Personal", "Hale Upholstery", "Day job", "Cancel"]);
+  expect(choices[0]).toHaveFocus();
+  await user.click(within(picker).getByRole("button", { name: "Bring it in as Day job: Offer a" }));
   await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3, side: "PRJ-day" }));
   expect(await screen.findByText(/Handed in Offer a for Day job/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(body(calls, "POST mail/a/set-aside")).toEqual({ section: "sales" }));
 });
 
-test("the primary button treats the message as the first side", async () => {
+test("choosing Personal brings the mail in under the Personal project, and Cancel or Escape closes the choice and sends nothing", async () => {
   const user = userEvent.setup();
   const calls = open({ ...TWO_SIDES, "POST handled/a/work": () => done("a") });
   const sales = await open_(user, SALES);
-  await user.click(await within(sales).findByRole("button", { name: "Treat as Hale Upholstery: Offer a" }));
-  await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3, side: "PRJ-shop" }));
+  const button = await within(sales).findByRole("button", { name: "Bring it in: Offer a" });
+  await user.click(button);
+  await user.keyboard("{Escape}");
+  expect(within(sales).queryByRole("group", { name: "Bring it in as" })).toBeNull();
+  expect(button).toHaveFocus();
+  await user.click(button);
+  await user.click(within(sales).getByRole("button", { name: "Cancel" }));
+  expect(within(sales).queryByRole("group", { name: "Bring it in as" })).toBeNull();
+  expect(calls.some((c) => c.route === "POST handled/a/work")).toBe(false);
+  await user.click(button);
+  await user.click(within(sales).getByRole("button", { name: "Bring it in as Personal: Offer a" }));
+  await waitFor(() => expect(body(calls, "POST handled/a/work")).toEqual({ read_version: 3, side: "PRJ-personal" }));
+});
+
+test("the menu of a set-aside row does not name the sides, and a mail read with nothing to do keeps Take a closer look with the sides in its menu", async () => {
+  const user = userEvent.setup();
+  open(TWO_SIDES);
+  const sales = await open_(user, SALES);
+  await user.click(await within(sales).findByRole("button", { name: "More actions for Offer a" }));
+  expect(await screen.findByRole("menuitem", { name: "Always set aside mail like this" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: /Treat as/ })).toBeNull();
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
+  const other = await open_(user, /^Other mail · 1$/);
+  expect(within(other).getByRole("button", { name: "Take a closer look at Lunch q" })).toBeInTheDocument();
+  await user.click(within(other).getByRole("button", { name: "More actions for Lunch q" }));
+  expect(await screen.findByRole("menuitem", { name: "Treat as Personal" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Treat as Day job" })).toBeInTheDocument();
 });
 
 // What is new here counts from when the person last left the screen (design 7.1): leaving marks it looked at.

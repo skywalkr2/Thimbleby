@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 248. The Knowledge screen as one page; bulk notifications are notices; Bring it in (2026-10-28; P94, P78)
+
+| Where | Before | Now |
+|---|---|---|
+| Knowledge (7.18) | Four tabs (Proposed, Active, Unused, No longer used), a Kind list, empty messages that did not fit a new workspace, and a glossary of bare words | **Built** (`web/src/components/Knowledge.test.tsx`, `web/src/lib/knowledge.test.ts`): Waiting for your OK, What the assistant follows in plain groups with use counts and Stop using, Your words, and Not used in a while with what was retired behind one link; one line on a new workspace |
+| Your words (7.18) | The words the assistant never asks about, with no meaning | **Built** (`web/src/components/Glossary.test.tsx`, `tests/test_knowledge_screen.py::test_a_word_added_with_its_meaning_is_an_active_glossary_entry_in_the_persons_words_and_undo_removes_it`): each glossary entry with its meaning (the answers to "What does X mean here?" included), and a form to add a word with its meaning (`POST /api/knowledge/terms`) |
+| Set-aside sorting (6.5) | Bulk mail was sales before notices were considered, so a build failure sent with list headers was filed under Sales and promotions | **Built** (`tests/test_set_aside.py`): bulk mail from an automated sender (`watch.automated_mail.senders`, now including notification addresses) or in the service's updates category is an automated notice; promotions, social and forums stay sales; bills, orders and deliveries stay with the assistant |
+| Handled for you (7.20) | The set-aside row's button read "Treat as <side>" | **Built** (`web/src/components/Handled.test.tsx`, `web/e2e/journeys-mail.spec.ts`): "Bring it in", which asks for the side only when there is more than one; the signal is the same |
+
 ## 247. A business or job is an organization too; the People step suggests real people with one add row (2026-10-28; owner's first evening; built)
 
 | Where | Before | Now |

@@ -220,9 +220,9 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(bill).toContainText(/Nov(ember)? 5|2026-11-05|5 Nov/);
     await expect(bill).not.toContainText("Personal");
 
-    // Nothing in Knowledge's Proposed tab says it is not known yet.
+    // Nothing on the Knowledge page says a word is not known yet.
     await openView(page, "Knowledge");
-    await page.getByRole("radio", { name: /^Proposed/ }).check();
+    await expect(page.getByRole("heading", { level: 2, name: "Your words" })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText(/not known yet/i)).toHaveCount(0);
 
     expect(restarts()).toBe(1);

@@ -10,6 +10,11 @@ A rule with `set_aside` puts mail in the Set aside folder (sales and promotions,
 plainly closing it; `never` keeps mail with the assistant, over every set-aside rule after it and over the built-in
 sorting that follows the list (`watch.set_aside_defaults`). `personal` sets nothing aside: the mail is handed in and
 filed under the Personal project. A match returns `{rule, reason}`, with `section` when the mail is set aside.
+
+The built-in sorting after the list runs in this order: an automated one-time-code or security mail from an automated
+sender (notices); a bill, an order or a delivery (kept with the assistant); bulk mail from an automated sender or in the
+mail service's updates category (notices, never sales, unless the service files it under promotions, social or forums);
+then bulk mail, and mail in promotions, social or forums (sales).
 """
 
 from __future__ import annotations
@@ -126,6 +131,29 @@ def service_category(change: dict[str, Any], params: dict[str, Any]) -> str | No
     return None
 
 
+#: The mail service's own categories that mean the message is promotional or social: they keep it in sales.
+SALES_CATEGORIES = ("promotions", "social", "forums")
+#: The category the mail service files notifications under.
+NOTICE_CATEGORY = "updates"
+
+
+def automated_bulk_notice(change: dict[str, Any], params: dict[str, Any]) -> str | None:
+    """Mail that is bulk but is an automated notice rather than sales: the sender's address starts with one of the
+    `senders` words (no-reply, notifications and the like), or the mail service files it under its updates category.
+    Mail the service files under promotions, social or forums stays sales. Not bulk, nothing here."""
+    if _message(change).get("bulk") is not True:
+        return None
+    seen = {str(c).strip().lower() for c in _message(change).get("categories") or []}
+    if seen & set(SALES_CATEGORIES):
+        return None
+    local = sender_address(change).partition("@")[0]
+    if local and any(local.startswith(str(w).strip().lower()) for w in params.get("senders", []) if str(w).strip()):
+        return "it is an automated notice sent to many people, not a sales mailing"
+    if NOTICE_CATEGORY in seen:
+        return f"your mail service files it under {NOTICE_CATEGORY}, and it was sent to many people"
+    return None
+
+
 def _domain(text: Any) -> str:
     return str(text).strip().lower().removeprefix("*.").lstrip("@").strip(".")
 
@@ -228,6 +256,10 @@ def classify_placed(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[
         return None, True, False  # a bill, an order or a delivery is never set aside, and no sorting may set it aside
     if not cfg.watch.set_aside_defaults:
         return None, kept, False
+    if cfg.watch.set_aside_defaults and auto.set_aside:
+        reason = automated_bulk_notice(change, {"senders": auto.senders})
+        if reason:
+            return {"rule": "Automated notices", "reason": reason, "section": "notices"}, kept, False
     built_in = BUILT_IN_SET_ASIDE
     for kind, params, name, section in built_in:
         reason = CORE[kind](change, params)

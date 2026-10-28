@@ -6072,6 +6072,15 @@ class KnowledgeKeep(BaseModel):
     applies_to: Scope | None = Field(None, description="What it applies to, when the person changed it.")
 
 
+class KnowledgeTermAdd(BaseModel):
+    """A word of the person's own and what it means here: kept as an active glossary entry in their words."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    term: str = Field(min_length=1, description="The word, acronym or name as the person writes it.")
+    meaning: str = Field(min_length=1, description="What it means here.")
+
+
 class KnowledgeNarrow(BaseModel):
     """Narrow what a rule or entry applies to: the person's own change to its scope."""
 

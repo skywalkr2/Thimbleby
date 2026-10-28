@@ -41,6 +41,12 @@ export function useKnowledgeActs() {
         () => api.narrowKnowledge(item.id, { read_version: item.version, applies_to }),
         (done) => ({ message: t("knowledge.toast.narrowed"), undo: undo(done) }),
       ),
+    /** Add a word of the person's own with what it means: active at once, in their words. */
+    addTerm: (term: string, meaning: string) =>
+      act(
+        () => api.addTerm(term, meaning),
+        (done) => ({ message: t("knowledge.words.added", { word: term }), undo: undo(done) }),
+      ),
     /** Keep a standing rule as it is in the review: its next review starts now. */
     keepRule: (item: Target) =>
       act(

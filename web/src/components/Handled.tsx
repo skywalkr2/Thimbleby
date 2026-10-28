@@ -2,10 +2,9 @@
 // assistant read it: what was sorted away before it read it (mail set aside and changes a rule closed, of any kind of
 // item) and mail it read with nothing to do. Rows are grouped by kind, by the reason they were handled or by sender,
 // collapsed, with a count and a Show more past a page of rows; a kind-of-item filter and a search narrow them. Every row says what kind of item it is and why, and offers Take a
-// closer look (or, for set-aside mail, Treat as the side it belongs to) in one click with Undo, each recording a
-// correction. With nothing beside the person's own life there is no side to name, so the set-aside row offers a closer look
-// too and neither Treat as work nor Treat as personal appears. Leaving an item where it is is the confirmation, so there
-// is no choice that keeps it.
+// closer look (or, for set-aside mail, Bring it in) in one click with Undo, each recording a correction. Bring it in asks
+// which side the mail belongs to, Personal or a business, only when there is more than one; with one it goes there at once.
+// Leaving an item where it is is the confirmation, so there is no choice that keeps it.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
@@ -182,8 +181,14 @@ function HandledRow(props: { item: Row }) {
   const { isWork, isPersonal, isSide, alwaysLikeThis } = useSetAside();
   const { justMe, personal, sides } = useSides();
   const [busy, setBusy] = useState(false);
+  const [choosing, setChoosing] = useState(false);
+  const bringButton = useRef<HTMLButtonElement>(null);
+  const firstPlace = useRef<HTMLButtonElement>(null);
   const { item } = props;
   const titleId = `handled-row-${item.id}`;
+  useEffect(() => {
+    if (choosing) firstPlace.current?.focus();
+  }, [choosing]);
   const mail = { id: item.id, title: item.title, version: item.version, tab: item.tab };
   const choose = async (treat: typeof isWork) => {
     setBusy(true);
@@ -220,17 +225,20 @@ function HandledRow(props: { item: Row }) {
     closed && item.item === "file" ? item.saved : null,
     item.older_version && item.request ? { request: item.request, readVersion: item.version } : undefined,
   );
-  // The places a message can be treated as belonging to: with a side beside Personal, each one by name (Personal first
-  // in the menu); with only Personal there are none; otherwise the older work and personal pair.
+  // The places a message can be brought in as belonging to: with a side beside Personal, Personal and each side by name.
+  // With only Personal, or before the sides are known, there is nothing to choose.
   const named = sides.length > 0 ? sides.map((side) => ({ id: side.project, name: side.name })) : [];
   const personalSide = personal ? { id: personal, name: t("sides.filter.personal") } : null;
+  const places = sides.length > 0 ? [...(personalSide ? [personalSide] : []), ...named] : [];
+  const aside = !closed && item.tab === "set_aside";
+  // On the read list the menu offers the other sides by name; on the set-aside list Bring it in asks.
   const asSides = [...(personalSide ? [personalSide] : []), ...named];
   const menu: MenuAction[] = closed
     ? [{ id: "seen", label: t("sources.silent.seen"), run: () => void seen() }]
-    : justMe
+    : aside || justMe
       ? []
       : named.length > 0
-        ? (item.tab === "set_aside" ? asSides.filter((side) => side.id !== named[0].id) : asSides).map((side) => ({
+        ? asSides.map((side) => ({
             id: `side-${side.id}`,
             label: t("setaside.treat_as", { side: side.name }),
             run: () => void choose(isSide(side)),
@@ -251,10 +259,16 @@ function HandledRow(props: { item: Row }) {
     : item.reason
       ? t("handled.set_aside_why", { reason: item.reason.replace(/[.\s]+$/, "") })
       : t("handled.read_why");
-  // Set-aside mail is handed in as work, or as its side when there is one; a mail read with nothing to do, a change a rule
-  // closed, and (with nothing beside Personal) set-aside mail get a closer look.
-  const primarySide = !closed && !justMe && item.tab === "set_aside" && named.length > 0 ? named[0] : null;
-  const look = item.tab !== "set_aside" || justMe;
+  // Bring it in on set-aside mail: handed in as the side it belongs to, asked only with more than one side. A mail read with
+  // nothing to do, and a change a rule closed, get a closer look.
+  const bring = () => {
+    if (places.length > 1) setChoosing(true);
+    else void choose(places.length === 1 ? isSide(places[0]) : isWork);
+  };
+  const stopChoosing = () => {
+    setChoosing(false);
+    bringButton.current?.focus();
+  };
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
       <div className="row">
@@ -271,19 +285,51 @@ function HandledRow(props: { item: Row }) {
             type="button"
             className="btn primary"
             data-key="primary"
+            ref={bringButton}
             disabled={busy}
-            aria-label={
-              primarySide
-                ? t("setaside.treat_as_named", { side: primarySide.name, title: item.title })
-                : t(look ? "handled.look_named" : "setaside.work_named", { title: item.title })
-            }
-            onClick={() => void (closed ? lookCloser() : choose(primarySide ? isSide(primarySide) : isWork))}
+            aria-expanded={aside && places.length > 1 ? choosing : undefined}
+            aria-label={aside ? t("setaside.bring_in_named", { title: item.title }) : t("handled.look_named", { title: item.title })}
+            onClick={() => void (closed ? lookCloser() : aside ? bring() : choose(isWork))}
           >
-            {primarySide ? t("setaside.treat_as", { side: primarySide.name }) : t(look ? "handled.look" : "setaside.work")}
+            {aside ? t("setaside.bring_in") : t("handled.look")}
           </button>
           <RowMenu label={item.title} actions={menu} />
         </div>
       </div>
+      {choosing && (
+        <div
+          className={styles.bring}
+          role="group"
+          aria-label={t("setaside.bring_in_as")}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              stopChoosing();
+            }
+          }}
+        >
+          <span>{t("setaside.bring_in_as")}</span>
+          {places.map((side, index) => (
+            <button
+              key={side.id}
+              type="button"
+              className="btn"
+              ref={index === 0 ? firstPlace : undefined}
+              disabled={busy}
+              aria-label={t("setaside.bring_in_side_named", { side: side.name, title: item.title })}
+              onClick={() => {
+                setChoosing(false);
+                void choose(isSide(side));
+              }}
+            >
+              {side.name}
+            </button>
+          ))}
+          <button type="button" className="btn quiet" onClick={stopChoosing}>
+            {t("action.cancel")}
+          </button>
+        </div>
+      )}
       {versions.form}
     </li>
   );
