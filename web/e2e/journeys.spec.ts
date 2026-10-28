@@ -130,7 +130,8 @@ test.describe.serial("journeys", () => {
     await expect(recap.locator("li")).toHaveCount(7);
     await expect(recap.locator('[data-step="work"]')).toContainText("Done");
     await expect(recap.locator('[data-step="promises"]')).toContainText("Skipped (needs mail)");
-    await expect(recap.locator('[data-step="people"]')).toContainText("Skipped");
+    // Moving on from People with nobody added passes it, and says so.
+    await expect(recap.locator('[data-step="people"]')).toContainText("No one added");
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();

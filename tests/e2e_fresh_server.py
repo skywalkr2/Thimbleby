@@ -37,8 +37,7 @@ import sys
 import sysconfig
 from pathlib import Path
 
-import yaml
-
+from engine.addons import ENV_ADDONS_DIR, SITE
 from engine.cli import add_plugin
 from engine.cli import main as cockpit
 from engine.config.yaml_edit import set_key
@@ -131,6 +130,8 @@ def main() -> None:
     )
     args = parser.parse_args()
     state = args.state.resolve()
+    # Add-ons this test app installs go to its own folder, never the computer's real add-ons folder.
+    os.environ[ENV_ADDONS_DIR] = str(state / "addons")
     ws = prepare(state)
     info = {
         "token": ws.install_token(),
@@ -150,14 +151,7 @@ def main() -> None:
     if args.add_ons:
         python, project_site = throwaway_python(state)
         info["project_site"] = str(project_site)
-        info["install_target"] = yaml.safe_load(
-            subprocess.run(  # noqa: S603
-                [python, "-c", "import sysconfig,json;print(json.dumps(sysconfig.get_paths()['purelib']))"],
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout
-        )
+        info["install_target"] = str(state / "addons" / SITE)
     if args.log:
         info["log"] = str(state / "app.log")
     (state / "info.json").write_text(json.dumps(info), encoding="utf-8")

@@ -26,6 +26,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from api.app import create_app
+from engine.addons import ENV_ADDONS_DIR
 from engine.ai.adapters.stub import set_responder
 from engine.cleaning import normalize
 from engine.cli import KEEP_ALIVE
@@ -288,6 +289,8 @@ def main() -> None:
     stress = layout_strings() if args.layout_stress else {}
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
+    # Add-ons this test app installs go to its own folder, never the computer's real add-ons folder.
+    os.environ[ENV_ADDONS_DIR] = str(tmp / "addons")
     if args.just_me:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
