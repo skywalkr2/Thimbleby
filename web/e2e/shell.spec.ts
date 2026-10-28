@@ -319,20 +319,24 @@ test.describe("screen use and the shell", () => {
       for (const width of [2000, 1440, 1280, 390]) {
         await page.setViewportSize({ width, height: HEIGHT });
         await expect(line).toBeVisible();
-        const m = await line.evaluate((row) => {
-          const pill = row.querySelector("[data-pill]")!.getBoundingClientRect();
-          const column = row.querySelector("[data-pill]")!.parentElement!.getBoundingClientRect();
-          const title = row.querySelector('[id$="-title"]')!.getBoundingClientRect();
-          const box = row.getBoundingClientRect();
-          return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, columnRight: column.right, columnW: column.width, titleLeft: title.left, titleTop: title.top, rowLeft: box.left, rowRight: box.right };
-        });
-        const note = `${scheme} ${width}: ${JSON.stringify(m)}`;
-        if (process.env.E2E_MEASURE) console.log(note);
-        // Beside the title, or (on a phone, where the row stacks) above it.
-        expect(m.pillRight <= m.titleLeft || m.pillBottom <= m.titleTop, note).toBe(true);
-        expect(m.pillRight, note).toBeLessThanOrEqual(m.columnRight + 0.5);
-        expect(m.pillLeft, note).toBeGreaterThanOrEqual(m.rowLeft);
-        expect(m.pillRight, note).toBeLessThanOrEqual(m.rowRight);
+        // Measured until the row has laid out at the new width: under load the first frame after a resize can show the pill's
+        // column not yet sized. A layout that never settles right still fails when the retries run out.
+        await expect(async () => {
+          const m = await line.evaluate((row) => {
+            const pill = row.querySelector("[data-pill]")!.getBoundingClientRect();
+            const column = row.querySelector("[data-pill]")!.parentElement!.getBoundingClientRect();
+            const title = row.querySelector('[id$="-title"]')!.getBoundingClientRect();
+            const box = row.getBoundingClientRect();
+            return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, columnRight: column.right, columnW: column.width, titleLeft: title.left, titleTop: title.top, rowLeft: box.left, rowRight: box.right };
+          });
+          const note = `${scheme} ${width}: ${JSON.stringify(m)}`;
+          if (process.env.E2E_MEASURE) console.log(note);
+          // Beside the title, or (on a phone, where the row stacks) above it.
+          expect(m.pillRight <= m.titleLeft || m.pillBottom <= m.titleTop, note).toBe(true);
+          expect(m.pillRight, note).toBeLessThanOrEqual(m.columnRight + 0.5);
+          expect(m.pillLeft, note).toBeGreaterThanOrEqual(m.rowLeft);
+          expect(m.pillRight, note).toBeLessThanOrEqual(m.rowRight);
+        }).toPass({ timeout: 5000 });
       }
     });
   }
