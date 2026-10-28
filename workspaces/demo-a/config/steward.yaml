@@ -36,6 +36,7 @@ brief:
   goals_max: 5   # the most goals for the week
   offer_reminders: true   # the morning brief offers a reminder for a to-do with a day coming up and no reminder
   remind_within_days: 3   # a to-do's day can be up to this many days ahead for a reminder to be offered
+  dated_risk_days: 3   # a deadline, renewal or expiry a mail or booking states is at risk in the brief from this many days ahead; 0 is off
 meetings:
   prep_hours_before: 24   # the prep for an entry with other people shows on Today this many hours before it starts
   prep_min_open: 0   # the fewest open things with the people coming that an entry needs for a line on Today; 0 gives every one a line
@@ -44,6 +45,8 @@ meetings:
   setup_lead_working_days: 2   # a meeting you set up counts on Today from this many working days before its day; once its invitation is out it shows only on its day
   setup_words: [meeting]   # words in an open to-do's text that mark it as a meeting you set up
   invitation_days_ahead: 14   # an unanswered invitation gets a line on Today when its entry starts within this many days; 0 is off
+  changes_days: 7   # an invitation's page looks this many days back for what changed in it
+  capture_alone: false   # the question of what happened also shows for an entry nobody else is on
 people:
   quiet_promise_days: 7   # a promise to or from someone with no news for this many days gets a line on Today; 0 is off
   snooze_days: [1, 3, 7, 14]   # the days a line about a promise gone quiet can be snoozed for, as a list to pick from
@@ -59,6 +62,9 @@ attention:
   quiet: false   # on, suggestions wait for the morning brief in quiet hours; off here so the sandbox shows them at any time of day
   daily_cap: 5   # the most suggestions Today shows in a day; the rest wait for the morning brief
   threshold: 0.0   # a suggestion that matters less than this (0 to 1) is not shown
+  quiet_after_dismissals: 3   # putting off the same kind of suggestion this many times keeps that kind for the morning brief; 0 is off
+  stop_after_dismissals: 0   # putting it off this many times stops that kind altogether; 0 never stops one
+  learn_days: 30   # how many days back dismissals are counted
   importance:
     escalate: 0.8   # how much each kind of suggestion matters, from 0 to 1
     unfiled: 0.4
@@ -69,6 +75,8 @@ attention:
     pattern: 0.5
 dates:
   bookings_to_calendar: true   # a booking confirmation with structured details becomes an entry in the app's own calendar
+  find_by_rules: true   # an input is also read for a deadline, renewal or expiry with a full date beside words such as due, renews or expires; what is found waits for your yes
+  find_most: 5   # the most dates the rules offer from one input
   suggest_reminders: true   # a reminder is offered with a deadline, renewal, expiry, warranty end or bill an input states
   lead_days:
     deadline: 3   # days before the day that the offered reminder falls

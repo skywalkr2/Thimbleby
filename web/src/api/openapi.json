@@ -12308,6 +12308,108 @@
         "title": "IntakeUnseenIn",
         "type": "object"
       },
+      "InvitationChangeView": {
+        "description": "One thing that changed in a calendar entry that came as an invitation (`MeetingPrepView.changes`). The screen\nwords it from `kind` (cancelled, restored, title_changed, moved, now_timed, now_all_day, end_changed,\nlocation_changed, location_removed, organizer_changed, organizer_renamed, attendee_added, attendee_removed,\nattendee_renamed, attendee_replied, or one that could not be compared: `*_unknown`). `day` and `at` are the new time\n(a day alone for an all-day entry), `from_day` and `from_at` the old one; `text` is the new title or place, `name`\nthe person it is about, `status` their answer, `reason` why a value could not be read.",
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "from_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From At"
+          },
+          "from_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Day"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "InvitationChangeView",
+        "type": "object"
+      },
       "ItemTitle": {
         "description": "An item's title in parts (design 7.14); the screen puts them into words: \"{kind} from {person} \u00b7 {topic}\".",
         "properties": {
@@ -14279,6 +14381,22 @@
         "title": "MeetingCaptureIn",
         "type": "object"
       },
+      "MeetingCaptureUndo": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "description": "The moment the entry was marked, as the capture answered it.",
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "captured_at"
+        ],
+        "title": "MeetingCaptureUndo",
+        "type": "object"
+      },
       "MeetingCaptured": {
         "properties": {
           "captured_at": {
@@ -14351,6 +14469,27 @@
               }
             ],
             "title": "Captured At"
+          },
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the invitation last changed, within the days looked back.",
+            "title": "Changed At"
+          },
+          "changes": {
+            "description": "What changed in the invitation within `steward.meetings.changes_days` days, in a stable order.",
+            "items": {
+              "$ref": "#/components/schemas/InvitationChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
           },
           "coming": {
             "items": {
@@ -24176,12 +24315,16 @@
       "ReviewTimeIn": {
         "properties": {
           "screen": {
-            "description": "The screen that looks over the assistant's work: review (the review mode), changes (what changed), since (since yesterday) or today (the review pane opened on Today).",
+            "description": "The screen that looks over the assistant's work: review (the review mode), changes (what changed), since (since yesterday), today (the review pane opened on Today), handled (what was handled for the person), followups (the follow-ups), open (the to-dos and questions) or knowledge (what the assistant knows).",
             "enum": [
               "review",
               "changes",
               "since",
-              "today"
+              "today",
+              "handled",
+              "followups",
+              "open",
+              "knowledge"
             ],
             "title": "Screen",
             "type": "string"
@@ -37992,6 +38135,56 @@
           }
         },
         "summary": "Capture"
+      }
+    },
+    "/api/meetings/{event_id}/capture/undo": {
+      "post": {
+        "description": "Take back \"nothing to note\": the entry is asked about again. It names the moment the entry was marked, so\na later capture is never undone from here.",
+        "operationId": "undo_capture_api_meetings__event_id__capture_undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingCaptureUndo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingCaptured"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Capture"
       }
     },
     "/api/meetings/{event_id}/prep": {

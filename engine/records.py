@@ -752,6 +752,12 @@ class Question(Record):
         "words. A question to anyone but the person says it.",
     )
     dropped_reason: str | None = Field(None, description="Why the person dropped it, when they did.")
+    asker: Annotated[str | None, RefTo("person")] = Field(
+        None,
+        description="The id of the person who asked it, when the input says who asked (a question someone put to the "
+        "person). Empty for a question the assistant or the person made up, and for a name that isn't one known "
+        "person: it is never guessed. The asker's page lists it as a question they asked.",
+    )
 
 
 class Watched(BaseModel):
@@ -2772,6 +2778,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     ],
     "question": [
         ("to", "person"),
+        ("asker", "person"),
         ("projects[]", "project"),
         ("event", "event"),
         ("series", "series"),

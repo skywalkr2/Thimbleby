@@ -9,7 +9,7 @@ The patterns, all read from the records with no AI:
 - `replies`: the same person asked for `steward.patterns.owed_replies` replies and the person owes them all. Choices:
   none is needed, leave it.
 - `stale`: the person's own undated to-dos nothing has changed for `ui.today.stale_after_days` ("Still doing this?").
-  Choices: keep it, drop it, snooze it (several to-dos on one line: keep them, snooze them).
+  One line for each to-do. Choices: keep it, drop it, snooze it.
 
 A choice acts at once and records a `suggestion_chosen` signal. One that changes records goes through the applier as the
 person's own change, so its Undo is the change's Undo; one that only says "leave it", "keep" or "snooze" changes no
@@ -42,9 +42,8 @@ CHOICES: dict[str, tuple[str, ...]] = {
     REDATED: ("drop", "hold", "leave"),
     REPLIES: ("no_reply", "leave"),
 }
-#: What a stale line offers for one to-do, and for several.
-STALE_ONE = ("keep", "drop", "snooze")
-STALE_MANY = ("keep", "snooze")
+#: What a stale line offers for its one to-do.
+STALE_CHOICES = ("keep", "drop", "snooze")
 #: The choices that change no record and keep the line away until it changes.
 STAYS_OFF = ("leave",)
 #: The choices that only mark a to-do as looked at: its quiet clock starts again (keep) or waits (snooze).

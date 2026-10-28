@@ -732,6 +732,11 @@ class QuestionAddOp(OpModel):
         "depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead "
         "and say so in the change's note.",
     )
+    asker: str | None = Field(
+        None,
+        description='Who asked it, by name or id, when the input says who put the question to the user ("Ana asks '
+        "which trim size to use\"). Leave it out when the input doesn't say; never guess.",
+    )
 
 
 class QuestionUpdateOp(OpModel):

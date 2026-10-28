@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 250. The steward's remaining items: the invitation's page, dates in the brief, effort for a new to-do, dismissals that teach, a line for each stale to-do, review time everywhere, capture and undo, who asked, dates by rules (2026-10-28; S2 to S5)
+
+| Where | Before | Now |
+|---|---|---|
+| An invitation's page (6.32, 7.14) | No account of what changed in it | The changes since `steward.meetings.changes_days`, who was added, left out or answered included, read from the entry's history. Built: `tests/test_invitation_page.py` |
+| The morning brief (6.32) | At-risk lines were to-dos due today or late, what others owe, and clashes | Also a deadline, renewal or expiry a fact records (`steward.brief.dated_risk_days`), and what someone owes the person whose words name one meeting today. Built: `tests/test_brief.py` (samples 4, 7, 8, 9) |
+| Effort for a new to-do (6.32) | "Never for a to-do added in the same answer" | The effort names it as `$new:<n>`, held for the yes. Built: `tests/test_day_capacity.py` |
+| The attention budget (6.32) | A dismissed suggestion stayed off until it changed, and taught nothing | A kind put off `quiet_after_dismissals` times goes to the brief, and at `stop_after_dismissals` is not offered. Built: `tests/test_attention_learning.py` |
+| The stale sweep (6.32) | One line for several to-dos, with Look over | One line for each, with Keep, Drop and Snooze, inside the day's cap. Built: `tests/test_open_items.py`, `tests/test_patterns.py` |
+| The outcome measured (6.20) | Review time from the review mode, What changed and Since yesterday | Also Handled for you, the follow-ups, the to-dos and questions, and Knowledge. Built: `tests/test_outcome.py` |
+| Capture after a meeting (6.32) | The line asked only for entries with others; "Nothing to note" had no Undo | `steward.meetings.capture_alone` asks for the others too; Undo asks the question again. Built: `tests/test_meetings_people.py` |
+| People memory (5.1, 6.32) | A question had no asker | `Question.asker`, set from `question.add` only for one known person; "asked by them" includes those questions. Built: `tests/test_meetings_people.py` |
+| Dates in documents (6.32) | Only the assistant's own reading made dated facts | A pass over the input finds a full date beside the language lists' words and offers a dated fact held for the yes. Built: `tests/test_dated_scan.py` |
+
 ## 249. Settings in one format; money, quick links, word lists, no browser on screen, the Add-ons screen (2026-10-28; owner's first real evening; P79 to P84)
 
 | Where | Before | Now |

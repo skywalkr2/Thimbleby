@@ -566,6 +566,110 @@ def test_an_invitation_changed_before_the_evening_or_not_an_invitation_is_not_ov
     assert [x for x in lines_of(built(env, "morning"), "changed") if x.kind == "invitation"] == []
 
 
+# ---- dates inside mail and bookings, and meetings named in words ---------------------------------------------------
+
+
+def dated(store, text, offset, kind="deadline", **more) -> str:
+    return make(store, "fact", text=text, on=day(offset), on_kind=kind, **more)
+
+
+def risk_of(env, kind, now=NOW):
+    return [x for x in lines_of(built(env, "morning", now), "risk") if x.kind == kind]
+
+
+def test_a_deadline_renewal_or_expiry_within_the_window_is_an_at_risk_line_soonest_first(env):
+    _, cfg, store, _ = env
+    later = dated(store, "The pass runs out", 3, "expiry")
+    today = dated(store, "The room can be cancelled free until noon", 0)
+    soon = dated(store, "The studio letter says Friday is the last day to cancel", 2, "renewal")
+    dated(store, "The warranty ends", 1, "warranty")
+    dated(store, "The invoice is due", 1, "bill")
+    dated(store, "Too far ahead", cfg.steward.brief.dated_risk_days + 1)
+    dated(store, "Already past", -1)
+    found = risk_of(env, "dated")
+    assert [(x.link[1], x.change, x.days, x.day) for x in found] == [
+        (today, "deadline", 0, day(0)),
+        (soon, "renewal", 2, day(2)),
+        (later, "expiry", 3, day(3)),
+    ]
+    assert found[1].text == "The studio letter says Friday is the last day to cancel" and found[1].link[0] == "fact"
+
+
+def test_a_dated_fact_a_newer_one_replaced_is_left_out_and_the_window_can_be_closed(env):
+    _, cfg, store, _ = env
+    old = dated(store, "Cancel by Friday", 2, "renewal")
+    new = dated(store, "Cancel by Monday instead", 5, "renewal", supersedes=old)
+    assert risk_of(env, "dated") == []  # the replacement is beyond the window; the replaced one is not shown
+    cfg.steward.brief.dated_risk_days = 6
+    assert [x.link[1] for x in risk_of(env, "dated")] == [new]
+    cfg.steward.brief.dated_risk_days = 0
+    assert risk_of(env, "dated") == []
+
+
+def an_owed_promise(store, cfg, who, text="Send the third drawing", quote=None, **more) -> str:
+    fields = {"text": text, "owners": [{"person": who}], "promised_to": [me(cfg)], **more}
+    if quote:
+        fields["evidence"] = {"source": "note", "quote": quote}
+    return make(store, "action", **fields)
+
+
+def a_meeting(store, title, hour, **more) -> str:
+    start = datetime(TODAY.year, TODAY.month, TODAY.day, hour, 0, tzinfo=UTC)
+    return make(
+        store, "event", title=title, start=start.isoformat(), end=(start + timedelta(hours=1)).isoformat(), **more
+    )
+
+
+def test_a_promise_to_the_person_whose_words_name_a_meeting_today_is_at_risk_at_that_meeting(env):
+    _, cfg, store, _ = env
+    mira = someone(store, "Mira Fictional")
+    review = a_meeting(store, "Design review", 14)
+    third = an_owed_promise(store, cfg, mira, quote="I will send the third drawing before the design review")
+    by_words = an_owed_promise(store, cfg, mira, text="Send the notes for the Design review")
+    by_due_words = an_owed_promise(store, cfg, mira, text="Send the quote", due_words="before the design review")
+    an_owed_promise(store, cfg, mira, text="Send the invoice", quote="I will send the invoice on Friday")
+    found = {x.link[1]: x for x in risk_of(env, "meeting_wait")}
+    assert set(found) == {third, by_words, by_due_words}
+    line = found[third]
+    assert (line.text, line.person, line.other, line.day, line.at) == (
+        "Send the third drawing",
+        mira,
+        "Design review",
+        day(0),
+        "14:00",
+    )
+    assert review and line.person_name == "Mira Fictional"
+
+
+def test_a_meeting_named_in_words_is_left_out_when_it_is_over_called_off_all_day_ambiguous_or_already_linked(env):
+    _, cfg, store, _ = env
+    mira = someone(store, "Mira Fictional")
+    morning = a_meeting(store, "Early review", 7)  # over at 9:00 on the clock of the brief
+    a_meeting(store, "Called off review", 15, cancelled=True)
+    make(store, "event", title="Offsite day", start=day(0), end=day(1))
+    a_meeting(store, "Budget review", 13)
+    a_meeting(store, "Team lunch", 16)  # the words name both, so they don't say which one is meant
+    for words in ("Early review", "Called off review", "Offsite day", "Budget review and the Team lunch"):
+        an_owed_promise(store, cfg, mira, text=f"Send the notes for {words}")
+    linked = an_owed_promise(store, cfg, mira, text="Send the plan for the Lunch talk")
+    lunch = a_meeting(store, "Lunch talk", 12)
+    update(store, "action", linked, due_event=lunch)
+    # A to-do of the person's own is not a promise to them, and one on hold is not listed.
+    own(store, cfg, "Prepare the Lunch talk")
+    clock = datetime(TODAY.year, TODAY.month, TODAY.day, 9, 0, tzinfo=UTC)
+    assert morning and risk_of(env, "meeting_wait", clock) == []
+
+
+def test_a_meeting_wait_comes_before_clashes_and_a_dated_fact_last(env):
+    _, cfg, store, _ = env
+    mira = someone(store, "Mira Fictional")
+    a_meeting(store, "Design review", 14)
+    an_owed_promise(store, cfg, mira, text="Send the notes for the Design review")
+    dated(store, "Cancel by Friday", 2, "renewal")
+    kinds = [x.kind for x in lines_of(built(env, "morning"), "risk")]
+    assert kinds == ["meeting_wait", "dated"]
+
+
 # ---- the evening wrap-up -------------------------------------------------------------------------------------------
 
 EVENING = datetime(2026, 10, 19, 18, 0, tzinfo=UTC)
@@ -808,7 +912,7 @@ def test_a_case_names_what_no_rule_makes_yet_and_only_that():
         for case in load_cases(ws):
             assert set(case.get("left") or []) <= set(LEFT)
     leftover = {c["sample"]: c.get("left") for c in load_cases(DEMO_B) if c.get("left")}
-    assert 6 not in leftover and leftover[7] == ["document_dates", "deadline"]
+    assert 6 not in leftover and leftover[7] == ["document_dates"]
 
 
 def test_the_scoring_is_exact_a_missing_extra_or_changed_line_and_a_wrong_order_are_each_a_problem(tmp_path):

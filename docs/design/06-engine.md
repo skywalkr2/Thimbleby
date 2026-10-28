@@ -3610,8 +3610,14 @@ people and details, and never acts in their name without their yes on the exact 
   credited to whoever did it, what moved ahead today or is still open today, and what others still owe or haven't
   answered; it is quiet when nothing moved and nobody is waited on. Each section shows at most `steward.brief.max_lines`
   and says how many more. The card is at the top of Today from `steward.brief.morning_from`, gives way to the wrap-up from
-  `steward.brief.evening_from` and closes for the day in that browser, which is no signal of anything. **Left:** at-risk lines from a date
-  inside a mail or a booking ("the last day to cancel"; S4) and from a meeting named only in words. The sample mornings are cases in both workspaces
+  `steward.brief.evening_from` and closes for the day in that browser, which is no signal of anything. **Built (S2, dates and meetings in words; change log
+  250):** a deadline, renewal or expiry that a fact records (from a mail, a booking or a document), from today through
+  `steward.brief.dated_risk_days`, is an at-risk line saying how far away it is (a fact a newer one replaced is left out;
+  warranties and bills are not listed here); and what someone else still owes the person, whose words (its text, the words
+  its day was read from, the words it was quoted from) name exactly one calendar entry today that is timed and not over,
+  and which isn't already due at it, is an at-risk line at that meeting (`engine/brief.py`, `_dated` and `_meeting_waits`;
+  the matching is `engine/due_phrases.py::named_entry`, whole title words in order). Samples 7 and 9 and samples 4 and 8
+  carry these lines; sample 7 still lacks its changed line from the document and sample 3 its request to move a call. The sample mornings are cases in both workspaces
   (`workspaces/*/briefs/`, `engine/brief_cases.py`), each scored exactly with what it still lacks named (`left:`).
   `tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`.
 - **The capacity check, clashes, the attention budget and the reminder offer (phase S2, built; change log 192).** *Effort:* a
@@ -3639,11 +3645,19 @@ people and details, and never acts in their name without their yes on the exact 
   and the ones put off today), most important first by `steward.attention.importance`; what is due or at risk is never
   held. What is saved for the brief is one line each under "needs your yes". "Not now" (in a suggestion's menu) records the
   signal `suggestion_dismissed` with the line and what it was, stays off until its items change, and Undo takes it back.
+  *What dismissals teach* (`engine/attention_learning.py`, by rules, never AI): each "Not now" and each "Leave it" names its
+  kind of suggestion, and when the same kind has been put off `steward.attention.quiet_after_dismissals` (3; 0 is off) times
+  within `steward.attention.learn_days` (30) days, that kind stops interrupting on Today and is kept for the brief, one line
+  each; at `steward.attention.stop_after_dismissals` (0, never; it must exceed the first) it is not offered at all. A
+  dismissal taken back, a snooze and a clash marked fine count for nothing, and old ones are forgotten with the window, so
+  raising a setting or taking dismissals back shows the kind again at once. `tests/test_attention_learning.py`.
   *The reminder offer:* for the person's own to-do with a day within `steward.brief.remind_within_days` and no reminder,
   the brief says "Add a reminder on Thu at 9:00 for 'X'" with **Remind me**, which sets it for the working morning before
   the day (else the morning of it), the person's own change with Undo. Only to-dos carry a reminder; a date inside a mail or
-  a booking is S4. **Left:** an effort suggested for a to-do added in the same answer; the response of a connected event the
-  app kept no entry for (it counts as busy). `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
+  a booking is S4. *An effort for a to-do added in the same answer* names it as `$new:<n>` (the record op `n` made, as any op
+  may, 6.7); it is held for the person's yes like any suggested effort, and the notes prompt says so (the case
+  `effort-stated-for-a-new-todo` in both workspaces). **Left:** the response of a connected event the app kept no entry for
+  (it counts as busy). `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
   `tests/test_brief.py` (samples 6 and 7), `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`,
   `web/src/components/AddTodo.test.tsx`, `web/src/components/RepeatingTodos.test.tsx`.
 - **Adding a to-do yourself (phase S2; designed 2026-10-22).** Today and To-dos have **Add a to-do**: the words, when
@@ -3736,10 +3750,19 @@ people and details, and never acts in their name without their yes on the exact 
     and **Snooze** to a day from `steward.people.snooze_days` (`POST /api/quiet-promises/{id}/snooze`; a `suggestion_dismissed`
     signal with a day in its note, which the line's own return and Undo read, not counted in the day's cap).
     `tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`.
-  - **Left:** asking "who asked this" of a question (a question has no asker, so "asked by them" is the replies owed); a
-    capture for an entry nobody else is on; birthdays from a contact source; dates written in languages other than
-    English; the browser journey `web/e2e/meetings-journey.spec.ts` has run in the full runs. `tests/test_meetings_people.py`,
-    `web/src/components/MeetingPrep.test.tsx`.
+  - **Built (S3, change log 250):** *What changed in an invitation* is on the entry's page (`GET /api/meetings/{id}/prep`
+    `changes`), read from the entry's history by `engine/invitation_changes.py` over `engine/invitation_history.py` (the brief
+    reads the same): each change since `steward.meetings.changes_days` (7) days, who was added, left out or answered included,
+    none for an entry that did not come as an invitation (`tests/test_invitation_page.py`). *A question has an optional
+    asker* (`Question.asker`, a person id, set from `question.add`'s `asker` only when the input names exactly one known
+    person other than who it is for; never guessed), so a person's "asked by them" is the replies owed and the questions they put
+    to the person (`tests/test_meetings_people.py`). *Capture for an entry nobody else is on:* its page offers the box once it
+    has ended, whatever the setting; the Today line asking what happened is for entries with others unless
+    `steward.meetings.capture_alone` is on (off by default, never for an entry called off or declined). *Nothing to note* has an
+    Undo (`POST /api/meetings/{id}/capture/undo`, naming the moment of the marking, so a later capture is never undone),
+    which asks the question again. The browser journey `web/e2e/meetings-journey.spec.ts` ran alone and passed
+    (`tests/test_meetings_people.py`, `web/src/components/MeetingPrep.test.tsx`).
+  - **Left:** birthdays from a contact source; dates written in languages other than English.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
   connection); areas of life with their own data level and allowed accounts; capture from anywhere, voice included
   through an adapter capability.
@@ -3784,8 +3807,16 @@ people and details, and never acts in their name without their yes on the exact 
       note too.
   - **Left:** the forward-to address and the global shortcut wait for phase I; a booking in mail read through a connector
     (connectors hand over plain text, so only markup in a pasted or dropped message is read until one carries it); dated
-    facts by rules alone when the assistant misses one; a fact's reminder delivered through the person's own calendar or
-    mail; speech-to-text on the native and command-line adapters.
+    a fact's reminder delivered through the person's own calendar or mail; speech-to-text on the native and command-line
+    adapters.
+  - **Built (S4, dates by rules alone; change log 250):** when the assistant's reading of an input missed one, a pass over
+    its new text (never quoted history, a signature, an automated notice or the person's own words) finds a sentence with
+    exactly one full future date and the words of one kind of day from the language lists (`dated_deadline_words`,
+    `dated_renewal_words`, `dated_expiry_words`), and none of `dated_doubt_words`, and adds a dated `fact` op to the answer for
+    that day unless the answer already has one for it (at most `steward.dates.find_most`, off with
+    `steward.dates.find_by_rules`). Its words are not the person's own, so the op carries the group `dates-found` and is held
+    for the person's yes; declining adds nothing (`engine/dated_scan.py`, `tests/test_dated_scan.py`). A fact kept this way
+    gets no proposed reminder: it is the person's own change.
 - **Manner:** suggestions on patterns, each a line with choices recorded as signals; talking to the assistant as the way
   to ask for anything, every proposed change kept or dropped inline.
   **Built (S5, change log 195):**
@@ -3800,14 +3831,15 @@ people and details, and never acts in their name without their yes on the exact 
     marks the signal taken back. Leave it keeps the line off until the pattern changes (a further move, another reply
     owed), as Not now does. A drop made from a suggestion writes no `dropped` correction, so it teaches nothing; No
     reply needed is the `no_reply_needed` correction it is. The words a choice writes (a reason, what a hold waits for,
-    "every week") come from the wording sheet through the request. *The stale sweep* is the existing line, with choices: for one
-    to-do Keep, Drop, Snooze ("Still doing this?"); for several, Look over and, in the menu, Keep them and Snooze them. Keep
+    "every week") come from the wording sheet through the request. *The stale sweep* is one line for each stale to-do, with choices: Keep, Drop, Snooze ("Still doing this?"). Keep
     and Snooze are marks, not changes to the record: Keep starts the quiet clock again, Snooze holds the to-do out of the
     sweep for `steward.patterns.snooze_days`; nothing is ever closed on its own. A line saved for the brief is a digest
     line worded by its pattern. `tests/test_patterns.py`, `web/src/components/SuggestionChoices.test.tsx`.
   - *Talking to the assistant on a record:* see 6.25. `tests/test_conversation.py`,
     `web/src/components/RecordConversation.test.tsx`.
-  - **Left:** a separate stale line for each of several to-dos.
+  - **Built (S5, change log 250):** the stale sweep is one line for each stale to-do, with Keep, Drop and Snooze on it, inside the
+    attention budget's cap (the rest wait for the brief, named one each). `tests/test_open_items.py`, `tests/test_patterns.py`,
+    `web/src/components/SuggestionChoices.test.tsx`.
 - **Promises come first** (2026-10-17): dependable memory for commitments is the reason to choose the product. A promise
   is found with its evidence and its basis (said or inferred), and its end is proposed the same way: done, date
   changed, called off, partly delivered, or answered without an answer; never closed silently.
@@ -3825,8 +3857,12 @@ people and details, and never acts in their name without their yes on the exact 
   says once when the person leaves, as a `review_time` signal at most `dispatch.knowledge.review_visit_max_seconds` a
   visit; nothing is measured outside the app); *follow-ups completed* (another person's promise or a question that was
   chased and then done or answered, by the week). The gate week reads these from the week's rows.
-  `tests/test_outcome.py`, `web/src/components/Quality.test.tsx`, `web/src/lib/review-time.test.tsx`. **Left:** review
-  time from screens beyond review mode, What changed and Since yesterday.
+  `tests/test_outcome.py`, `web/src/components/Quality.test.tsx`, `web/src/lib/review-time.test.tsx`. **Built (S5, change log 250):** review time is
+  counted from the review pane on Today, the review mode, What changed, Since yesterday, Handled for you, the follow-ups, the
+  to-dos and questions, and what the assistant knows (`outcome.SCREENS`; the compact follow-ups on Today are part of Today and
+  count nothing of their own): `tests/test_outcome.py::test_every_screen_that_looks_over_the_assistants_work_counts_its_time_in_the_same_measure`,
+  `web/src/components/Handled.test.tsx`, `web/src/components/FollowUps.test.tsx`, `web/src/components/OpenItems.test.tsx`,
+  `web/src/components/Knowledge.test.tsx`.
 - **Acting after a yes** (owner, 2026-10-17): mail (reply, forward, send, archive, move, label, mark read) and calendar
   (create, move, cancel, accept, decline, propose a time) through the publisher (6.3, 6.12), each act shown exactly,
   approved, carried out with a visible status and written to the ledger. A reminder can reach a sleeping person as an

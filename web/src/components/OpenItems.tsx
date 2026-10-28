@@ -6,6 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
+import { useReviewTime } from "../lib/review-time";
 import { useAct } from "../lib/act";
 import { day, monthDay } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
@@ -56,6 +57,7 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 
 export function OpenItems() {
   const { t, tn } = useWords();
+  useReviewTime("open");
   const items = useQuery({ queryKey: ["open-items"], queryFn: api.openItems });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const [tab, setTab] = useState<Tab>("actions");

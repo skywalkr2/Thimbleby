@@ -137,10 +137,9 @@ class Line:
     escalate (the one thing a person still hasn't answered after `ui.followups.escalate_after_chases` follow-ups, as a
     suggestion to ask someone else: its id in `questions` or `actions`, its words in `text`, who hasn't answered in
     `person`, the follow-ups it has had in `count` and the days since the last word in `waiting_days`), stale (the
-    person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`: `count` of them,
-    their ids in `actions`, the longest untouched in `waiting_days`, and one's own words in `subject` when there is just
-    one), terms (the questions about unknown words that wait for an answer, as one line: `count` of them, their ids in
-    `questions`).
+    person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`, one line for each:
+    its id in `actions`, the days untouched in `waiting_days` and its own words in `subject`), terms (the questions
+    about unknown words that wait for an answer, as one line: `count` of them, their ids in `questions`).
     nudge is the one follow-up line for a person the person is waiting on (`count` of their items, `overdue` how many
     are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
     without an answer any of its promises has had, which the line says), opening the one message to them. A promise
@@ -1174,22 +1173,24 @@ def _everything(
             )
         )
 
-    # Review: the person's own to-dos nobody has touched for a while, as one line.
+    # Review: the person's own to-dos nobody has touched for a while, one line each with Keep, Drop and Snooze. The
+    # attention budget's daily cap decides how many show; the rest wait for the brief.
     from engine.open_items import stale_actions
 
-    stale = [r for r in stale_actions(store, cfg, now) if r.id not in on_a_line]
-    if stale:
+    for r in stale_actions(store, cfg, now):
+        if r.id in on_a_line:
+            continue
         lines.append(
             Line(
-                key="stale",
+                key=f"stale:{r.id}",
                 group="review",
                 kind="stale",
-                count=len(stale),
-                actions=[r.id for r in stale],
-                waiting_days=stale[0].untouched_days,
-                subject=stale[0].text if len(stale) == 1 else None,
-                choices=list(patterns.STALE_ONE if len(stale) == 1 else patterns.STALE_MANY),
-                since=min(r.since for r in stale),
+                count=1,
+                actions=[r.id],
+                waiting_days=r.untouched_days,
+                subject=r.text,
+                choices=list(patterns.STALE_CHOICES),
+                since=r.since,
             )
         )
 

@@ -101,6 +101,22 @@ def explicit_dates(text: str, locale: str) -> list[date]:
     return found
 
 
+def dates_with_places(text: str, locale: str) -> list[tuple[date, int, int]]:
+    """Every full calendar date a text states, as the day with where it starts and ends in the text, in the order the
+    text states them (the rules of `explicit_dates`)."""
+    locale = locale.replace("_", "-").casefold()
+    if re.search(r"\bday/month/year\b|\bdd/mm/yyyy\b", text, re.IGNORECASE):
+        locale = "en-gb"
+    elif re.search(r"\bmonth/day/year\b|\bmm/dd/yyyy\b", text, re.IGNORECASE):
+        locale = "en-us"
+    found = []
+    for match in re.finditer(_DATE_PATTERN, text, re.IGNORECASE):
+        value, _ = _parse_date(match.group(0), locale)
+        if value is not None:
+            found.append((value, match.start(), match.end()))
+    return found
+
+
 def find_dates(text: str, received: datetime, tz: tzinfo, locale: str) -> list[DateFinding]:
     """Find labeled English date statements, retaining uncertainty and relative anchors."""
 

@@ -29,6 +29,7 @@ from engine.today import zone
 
 TASK = "meeting-prep"
 _CAPTURE = WriteContext(actor="pm", trust="trusted", op="meeting.capture")
+_UNCAPTURE = WriteContext(actor="pm", trust="trusted", op="meeting.uncapture")
 _ASK = WriteContext(actor="pm", trust="trusted", op="meeting.prep_note")
 #: The request states in which the assistant still has the note, or the person has to act before it can go on.
 IN_HAND = ("queued", "running", "needs_you")
@@ -233,12 +234,19 @@ def prep_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
     return sorted(found, key=lambda x: (x.start, x.event))
 
 
+def _still_on(data: dict[str, Any]) -> bool:
+    """An entry that was not called off and that the person did not decline."""
+    return not data.get("cancelled") and str(data.get("response") or "").strip().casefold() != "declined"
+
+
 def capture_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
     """The entries with other people on them that ended within `steward.meetings.capture_hours_after` hours and that
-    nothing has been written down for; the latest ended first."""
+    nothing has been written down for; the latest ended first. With `steward.meetings.capture_alone` an entry nobody
+    else is on is asked about too, unless it was called off or the person declined it."""
     view = store.read()
     here = zone(cfg)
     rules = cfg.steward.meetings
+    alone = rules.capture_alone
     mine = entry_rules.identity(view, cfg)
     found: list[Line] = []
     for entry in view.list("event"):
@@ -248,7 +256,7 @@ def capture_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
         if not spans[1] <= now < spans[1] + timedelta(hours=rules.capture_hours_after):
             continue
         others = with_others(view, cfg, entry, mine=mine)
-        if not others:
+        if not others and not (alone and _still_on(entry.data)):
             continue
         found.append(
             Line(
@@ -298,6 +306,23 @@ def capture(ws: Any, store: Any, cfg: Any, entry_id: str, text: str, now: dateti
         if current_entry is not None:
             tx.update("event", entry_id, {"captured_at": now.isoformat()}, _CAPTURE, read_version=current_entry.version)
     return Captured(request, now)
+
+
+def uncapture(store: Any, entry_id: str, captured_at: datetime) -> None:
+    """Take back "nothing to note": the entry is asked about again. Only the marking made at `captured_at` is taken
+    back, so a later capture, or words that made a run, are never undone from here."""
+    with store.transaction() as tx:
+        found = tx.get("event", entry_id)
+        if found is None:
+            raise StoreError(f"There is no calendar entry {entry_id}.")
+        marked = found.data.get("captured_at")
+        try:
+            same = marked is not None and datetime.fromisoformat(str(marked)) == captured_at
+        except ValueError:
+            same = False
+        if not same:
+            raise StoreError("What happened at this entry was written down again since; there is nothing to undo.")
+        tx.update("event", entry_id, {"captured_at": None}, _UNCAPTURE, read_version=found.version)
 
 
 # ---- the prep note ---------------------------------------------------------------------------------------------------
@@ -397,7 +422,7 @@ def facts(store: Any, cfg: Any, entry_id: str, now: datetime) -> str:
         groups = (
             ("The person promised them", one.promised_to),
             ("They promised the person", one.promised_by),
-            ("They asked the person (a reply is owed)", one.asked_by),
+            ("They asked the person (a reply or an answer is owed)", one.asked_by),
             ("The person asked them", one.asked_of),
         )
         for label, items in groups:

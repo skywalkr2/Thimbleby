@@ -7,6 +7,9 @@ change pulled back) queues one that waits for the next batch, with a time that s
 `about`, goes through the normal request path (estimate, go, budgets), and asks for at most one proposal. What it
 proposes is a proposal like any other: it changes nothing until the person keeps it.
 
+A dismissal of a suggestion line ("Not now", "Leave it") is not a correction of anything the assistant made, so it
+queues no learning request; it teaches the attention budget by rules instead (`engine.attention_learning`).
+
 Netting: a correction the person undid within its undo time doesn't teach. Signals stay as they are; the learning for
 one is cancelled before it runs, or its result is undone after.
 """

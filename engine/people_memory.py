@@ -57,8 +57,9 @@ _DAY_FIRST = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([A-Za-z]{3,9}
 @dataclass(frozen=True)
 class Item:
     """One thing open with a person. `kind`: promised_to (the person promised it to them), promised_by (they promised
-    it to the person), asked_of (a question to them) or asked_by (a reply the person owes them). `record` is the kind
-    of record it is (action or question) and `id` its id. `quote` is the exact words it was made from, when the record
+    it to the person), asked_of (a question to them) or asked_by (a reply the person owes them, or a question they put
+    to the person, for one whose input said who asked). `record` is the kind of record it is (action or question) and
+    `id` its id. `quote` is the exact words it was made from, when the record
     carries them, and `source` the input they came from. `quiet` is the days with no news (since it was made, or its
     latest news or chase); `since` that day."""
 
@@ -217,6 +218,20 @@ def open_with(view: Any, pm: str | None, person: str, today: date, here: ZoneInf
             found["promised_by"].append(action_item(view, "promised_by", record, today, here))
     for record in view.list("question"):
         d = record.data
+        if d.get("asker") == person and d.get("to") == pm and d.get("status") == "open":
+            found["asked_by"].append(
+                Item(
+                    "asked_by",
+                    "question",
+                    record.id,
+                    str(d["title"]),
+                    None,
+                    None,
+                    d.get("source"),
+                    0,
+                    _made_on(view, "question", record.id, here),
+                )
+            )
         if d.get("to") == person and d.get("status") in ("open", "sent"):
             found["asked_of"].append(
                 Item(

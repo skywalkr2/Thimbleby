@@ -316,7 +316,8 @@ class ReviewMeasure:
 
 def review_measure(view: Any, win: Window, here: tzinfo) -> ReviewMeasure:
     """Review time in the window: each `review_time` signal is one visit to a screen that looks over the assistant's
-    work (the review pane on Today, What changed, Since yesterday, the review mode), by the day it was recorded. The
+    work (the review pane on Today, What changed, Since yesterday, the review mode, Handled for you, the follow-ups, the
+    to-dos and questions, and what the assistant knows), by the day it was recorded. The
     median is of a day's total over the days with any visit: a day nobody reviewed is not a day of review, so counting
     it as zero would let the figure pass by not looking."""
     seconds: dict[date, int] = defaultdict(int)

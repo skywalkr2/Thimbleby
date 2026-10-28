@@ -8,6 +8,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
+import { useReviewTime } from "../lib/review-time";
 import { whenText as when } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
 import { useSideFilter, useSides } from "../lib/sides";
@@ -46,6 +47,7 @@ export function Handled() {
   const search = useRef<HTMLInputElement>(null);
   // What is new here counts from when the person last left this screen.
   useLookedAt("handled");
+  useReviewTime("handled");
 
   // The cursor starts in the search box.
   useEffect(() => {

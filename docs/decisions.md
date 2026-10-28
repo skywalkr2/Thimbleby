@@ -4,6 +4,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: The steward's remaining items are built to the design, with their settings
+
+**Decided:** The nine remaining items of phase S are built as designed (change log 250): what changed in an invitation on the
+entry's page; dated facts and a meeting named in a promise's words as at-risk lines in the morning brief; an effort for a to-do
+added in the same answer, by `$new:<n>`; dismissals that teach the attention budget by rules; one stale line for each to-do;
+review time counted on every screen that looks over the assistant's work; capture for an entry nobody else is on (a setting, off
+by default, with the page always offering it) and an Undo for "nothing to note"; a question's asker; and dated facts found by
+rules alone, held for the person's yes. A meeting "named only in words" is read as a calendar entry today whose whole title the
+promise's own words give, never from a fuzzy match.
+
+**Decided by:** the owner's phase S plan; the readings above, the names and defaults of the new settings (`steward.meetings.changes_days`,
+`capture_alone`; `steward.brief.dated_risk_days`; `steward.attention.quiet_after_dismissals`, `stop_after_dismissals`,
+`learn_days`; `steward.dates.find_by_rules`, `find_most`; the four `language.dated_*_words` lists) and quieting a kind at
+three dismissals with stopping off by default were the builder's choices and are for review.
+
+**Why:** these were the roadmap's "Left" lines. Nothing stops silently: a quieted kind is kept for the brief, and stopping a
+kind is the person's own setting.
+
+**Impact:** design 5.1, 6.32, 4.0 and 7.7; one core record field (`Question.asker`) and one op field (`question.add.asker`), so
+the plugin guide is regenerated; no change to scope. Change log: section 250.
+
 ## 2026-10-28: Settings in one format; money is currency; chips for word lists; no browser on screen; Quick links
 
 **Decided:** Every page of Settings (Connections and Add-ons too) is drawn in one frame, with its rarely changed settings in

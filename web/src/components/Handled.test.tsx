@@ -143,6 +143,17 @@ const open_ = async (user: ReturnType<typeof userEvent.setup>, name: RegExp) => 
   return header.closest("section") as HTMLElement;
 };
 
+test("the time this screen is open and in view is counted as time spent looking over the assistant's work, once, when the person leaves it", async () => {
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  const calls = open({ "POST quality/review-time": () => ({ seconds: 30 }) });
+  await screen.findByRole("radio", { name: "Set aside before reading · 6" });
+  clock.mockReturnValue(start + 30_000);
+  cleanup();
+  clock.mockRestore();
+  expect(calls.filter((c) => c.route === "POST quality/review-time").map((c) => c.body)).toEqual([{ screen: "handled", seconds: 30 }]);
+});
+
 test("two tabs with their counts, each saying in one line what it holds, and the cursor starts in the search box", async () => {
   const user = userEvent.setup();
   const calls = open();

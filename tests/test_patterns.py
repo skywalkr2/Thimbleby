@@ -305,15 +305,44 @@ def stale_one(store, cfg, text="Tidy the style sheet") -> str:
     return made
 
 
-def test_one_stale_to_do_has_a_still_doing_this_line_with_keep_drop_and_snooze_and_several_have_keep_and_snooze(env):
+def test_each_stale_to_do_has_its_own_still_doing_this_line_with_keep_drop_and_snooze(env):
     ws, cfg, store = env
     now = datetime.now(UTC)
     first = stale_one(store, cfg)
     (line,) = [x for x in queue(ws, store, cfg, now) if x.kind == "stale"]
-    assert line.actions == [first] and line.choices == ["keep", "drop", "snooze"]
-    stale_one(store, cfg, "Sort the old proofs")
-    (line,) = [x for x in queue(ws, store, cfg, now) if x.kind == "stale"]
-    assert line.count == 2 and line.choices == ["keep", "snooze"]
+    assert line.actions == [first] and line.choices == ["keep", "drop", "snooze"] and line.key == f"stale:{first}"
+    second = stale_one(store, cfg, "Sort the old proofs")
+    found = {x.key: x for x in queue(ws, store, cfg, now) if x.kind == "stale"}
+    assert set(found) == {f"stale:{first}", f"stale:{second}"}
+    assert all(x.count == 1 and x.choices == ["keep", "drop", "snooze"] for x in found.values())
+    assert found[f"stale:{second}"].subject == "Sort the old proofs" and found[f"stale:{first}"].waiting_days
+
+
+def test_the_attention_budgets_cap_decides_how_many_stale_lines_show_and_the_rest_wait_for_the_brief(tmp_path):
+    from engine.today_queue import queue_split
+
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    cfg = ws.config(env={"COCKPIT__STEWARD__ATTENTION__DAILY_CAP": "2", "COCKPIT__STEWARD__ATTENTION__QUIET": "false"})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        made = [stale_one(store, cfg, f"Tidy shelf {n}") for n in range(4)]
+        found = queue_split(ws, store, cfg, datetime.now(UTC))
+        shown = [x for x in found.shown if x.kind == "stale"]
+        waiting = [x for x in found.digest if x.kind == "stale"]
+        assert len(shown) == 2 and len(waiting) == 2
+        assert {x.actions[0] for x in shown + waiting} == set(made)
+    finally:
+        store.close()
+
+
+def test_putting_one_stale_line_off_leaves_the_others_showing(env):
+    ws, cfg, store = env
+    now = datetime.now(UTC)
+    first = stale_one(store, cfg)
+    second = stale_one(store, cfg, "Sort the old proofs")
+    line = next(x for x in queue(ws, store, cfg, now) if x.key == f"stale:{first}")
+    suggestions.put_off(store, cfg, line, now)
+    assert [x.actions for x in queue(ws, store, cfg, now) if x.kind == "stale"] == [[second]]
 
 
 def test_keep_starts_the_quiet_clock_again_and_undo_makes_it_stale_again(api):

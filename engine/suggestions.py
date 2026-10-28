@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from engine import attention, patterns
+from engine import attention, attention_learning, patterns
 from engine.storage import WriteContext
 from engine.today import zone
 
@@ -131,9 +131,14 @@ def split(cfg: Any, view: Any, lines: list[Any], now: datetime) -> Split:
     """The lines with the suggestions among them sorted by the attention rules. A line that isn't a suggestion is shown;
     a suggestion put off, or below the threshold, is dropped; one saved for the brief goes to the digest."""
     settings = cfg.steward.attention
-    suggested = [line for line in lines if line.kind in KINDS]
-    if not suggested:
-        return Split(list(lines), [])
+    taught = attention_learning.verdicts(view, cfg, now)
+    # What the person's dismissals taught: a kind they keep putting off is kept for the brief, or not offered at all.
+    stopped = [line for line in lines if line.kind in KINDS and taught.get(line.kind) == attention_learning.STOPPED]
+    quieted = [line for line in lines if line.kind in KINDS and taught.get(line.kind) == attention_learning.QUIET]
+    gone = {id(line) for line in stopped + quieted}
+    suggested = [line for line in lines if line.kind in KINDS and id(line) not in gone]
+    if not suggested and not quieted:
+        return Split([line for line in lines if id(line) not in gone], [])
     reminders = cfg.steward.reminders
     quiet = (
         attention.QuietHours(time.fromisoformat(reminders.quiet_start), time.fromisoformat(reminders.quiet_end))
@@ -151,8 +156,14 @@ def split(cfg: Any, view: Any, lines: list[Any], now: datetime) -> Split:
         dismissed(view),
     )
     verdict = {id(line): d.disposition for line, d in zip(suggested, decisions, strict=True)}
-    shown = [line for line in lines if line.kind not in KINDS or verdict[id(line)] == "shown_now"]
+    shown = [line for line in lines if line.kind not in KINDS or verdict.get(id(line)) == "shown_now"]
     waiting = [line for line in suggested if verdict[id(line)] == "saved_for_digest"]
+    off = dismissed(view)
+    waiting += [
+        line
+        for line in quieted
+        if off.get((line.kind, line.key)) != change_key(line) and importance(cfg, line.kind) >= settings.threshold
+    ]
     # What waits for the brief is in the order of what matters.
     waiting.sort(key=lambda line: -importance(cfg, line.kind))
     return Split(shown, waiting)

@@ -6441,9 +6441,11 @@ class QualityOutcome(BaseModel):
 
 
 class ReviewTimeIn(BaseModel):
-    screen: Literal["review", "changes", "since", "today"] = Field(
+    screen: Literal["review", "changes", "since", "today", "handled", "followups", "open", "knowledge"] = Field(
         description="The screen that looks over the assistant's work: review (the review mode), changes (what "
-        "changed), since (since yesterday) or today (the review pane opened on Today)."
+        "changed), since (since yesterday), today (the review pane opened on Today), handled (what was handled for "
+        "the person), followups (the follow-ups), open (the to-dos and questions) or knowledge (what the assistant "
+        "knows)."
     )
     seconds: int = Field(ge=0, le=86400, description="How long the screen was open and in view on this visit.")
 
@@ -7363,6 +7365,25 @@ class PrepNoteView(BaseModel):
     estimate_usd: float | None = None
 
 
+class InvitationChangeView(BaseModel):
+    """One thing that changed in a calendar entry that came as an invitation (`MeetingPrepView.changes`). The screen
+    words it from `kind` (cancelled, restored, title_changed, moved, now_timed, now_all_day, end_changed,
+    location_changed, location_removed, organizer_changed, organizer_renamed, attendee_added, attendee_removed,
+    attendee_renamed, attendee_replied, or one that could not be compared: `*_unknown`). `day` and `at` are the new time
+    (a day alone for an all-day entry), `from_day` and `from_at` the old one; `text` is the new title or place, `name`
+    the person it is about, `status` their answer, `reason` why a value could not be read."""
+
+    kind: str
+    text: str | None = None
+    name: str | None = None
+    status: str | None = None
+    reason: str | None = None
+    day: str | None = None
+    at: str | None = None
+    from_day: str | None = None
+    from_at: str | None = None
+
+
 class MeetingPrepView(BaseModel):
     """The prep for one calendar entry (GET /api/meetings/{id}/prep), worked out by rules: who is coming, what is open
     with each of them and the last time in touch. `over` says the entry has ended; `captured_at` is when what happened
@@ -7376,6 +7397,13 @@ class MeetingPrepView(BaseModel):
     untrusted: bool = False
     over: bool = False
     captured_at: datetime | None = None
+    changed_at: datetime | None = Field(
+        None, description="When the invitation last changed, within the days looked back."
+    )
+    changes: list[InvitationChangeView] = Field(
+        default_factory=list,
+        description="What changed in the invitation within `steward.meetings.changes_days` days, in a stable order.",
+    )
     coming: list[PrepGuestView]
     people: list[PersonPrepView]
     note: PrepNoteView
@@ -7388,6 +7416,12 @@ class MeetingCaptureIn(BaseModel):
         "",
         description="What happened at the entry, in the person's own words; empty says there is nothing to note.",
     )
+
+
+class MeetingCaptureUndo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    captured_at: datetime = Field(description="The moment the entry was marked, as the capture answered it.")
 
 
 class MeetingCaptured(BaseModel):

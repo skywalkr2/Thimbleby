@@ -1379,5 +1379,41 @@
   "United States of America",
   "United States",
   "Canada"
+ ],
+ "dated_deadline_words": [
+  "due",
+  "deadline"
+ ],
+ "dated_renewal_words": [
+  "renew",
+  "renews",
+  "renewing",
+  "renewal",
+  "auto-renews"
+ ],
+ "dated_expiry_words": [
+  "expire",
+  "expires",
+  "expiring",
+  "expiry",
+  "expiration"
+ ],
+ "dated_doubt_words": [
+  "not",
+  "ignore",
+  "superseded",
+  "incorrect",
+  "previous",
+  "formerly",
+  "may",
+  "might",
+  "could",
+  "if",
+  "proposed",
+  "estimated",
+  "tentative",
+  "subject to",
+  "unless",
+  "would"
  ]
 }

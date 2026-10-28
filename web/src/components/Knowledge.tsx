@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
+import { useReviewTime } from "../lib/review-time";
 import { useKnowledgeActs } from "../lib/knowledge-acts";
 import { changesOf, itemsOf, reachWords, sectionsOf, usedWords, type Item } from "../lib/knowledge";
 import { useReachNames } from "../lib/reach";
@@ -24,6 +25,7 @@ import styles from "./Knowledge.module.css";
 export function Knowledge(props: { onOpenReview: () => void }) {
   const words = useWords();
   const { t, tn } = words;
+  useReviewTime("knowledge");
   const entries = useQuery({ queryKey: ["knowledge"], queryFn: api.knowledge });
   const rules = useQuery({ queryKey: ["knowledge", "rules"], queryFn: api.knowledgeRules });
   const review = useQuery({ queryKey: ["knowledge", "rules", "review"], queryFn: api.ruleReview });

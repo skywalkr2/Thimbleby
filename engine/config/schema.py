@@ -2172,6 +2172,22 @@ class LanguageFile(FileModel):
         "workspace knows (a calendar entry still ahead, or a series), also puts the action on that meeting's agenda, "
         "linked to it. Case is ignored."
     )
+    dated_deadline_words: list[str] | None = word_list(
+        "Words that, in a sentence of an input with one full date, make that date a deadline the assistant offers as "
+        "a fact when its own reading missed it ('due', 'deadline'). Matched as whole words, ignoring case."
+    )
+    dated_renewal_words: list[str] | None = word_list(
+        "Words that, in a sentence of an input with one full date, make that date a renewal the assistant offers as a "
+        "fact when its own reading missed it ('renews', 'renewal'). Matched as whole words, ignoring case."
+    )
+    dated_expiry_words: list[str] | None = word_list(
+        "Words that, in a sentence of an input with one full date, make that date an expiry the assistant offers as a "
+        "fact when its own reading missed it ('expires', 'expiry'). Matched as whole words, ignoring case."
+    )
+    dated_doubt_words: list[str] | None = word_list(
+        "Words that make the date in a sentence doubtful ('not', 'may', 'if', 'proposed'), so the sentence is not "
+        "offered as a dated fact. Matched as whole words, ignoring case."
+    )
     closed_words: list[str] | None = word_list(
         'The words that only say something is closed ("close", "closed", "mark it closed"). Closed with '
         'neither delivery words nor called-off words is neither done nor called off: you are asked "Done by the owner, '
@@ -3598,6 +3614,13 @@ class BriefSettings(ConfigModel):
         le=60,
         description="How many days ahead a to-do's day can be for the morning brief to offer a reminder for it.",
     )
+    dated_risk_days: int = Field(
+        3,
+        ge=0,
+        le=60,
+        description="How many days ahead a deadline, renewal or expiry that a mail or a booking states can be for the "
+        "morning brief to list it as at risk, starting with the day itself. Zero turns these lines off.",
+    )
 
     @field_validator("morning_from", "evening_from", "overnight_from", mode="before")
     @classmethod
@@ -3667,6 +3690,19 @@ class MeetingSettings(ConfigModel):
         description="An invitation you haven't answered gets a line on Today when its entry starts within this many "
         "days; the line opens the entry, where you accept, say maybe, decline or propose a time. Zero turns the line "
         "off.",
+    )
+    changes_days: int = Field(
+        7,
+        ge=1,
+        le=90,
+        description="How many days back an invitation's page looks for what changed in it: a new time, place, title or "
+        "organizer, a call-off, and who was added, left out or answered.",
+    )
+    capture_alone: bool = Field(
+        False,
+        description="Whether the line asking what happened also shows for a calendar entry nobody else is on. Off, "
+        "only entries with other people on them ask; every ended entry's page still lets you write down what "
+        "happened.",
     )
 
 
@@ -3845,6 +3881,39 @@ class AttentionSettings(ConfigModel):
         description="How much each kind of suggestion matters, from 0 to 1, which decides what is shown first and what "
         "waits when there are more than the day's cap.",
     )
+    quiet_after_dismissals: int = Field(
+        3,
+        ge=0,
+        le=50,
+        description="How many times you can put off the same kind of suggestion (Not now, or Leave it) before the "
+        "assistant stops interrupting you with that kind on Today and keeps it for the morning brief. Putting a "
+        "suggestion off and then taking it back doesn't count. Zero never changes what shows.",
+    )
+    stop_after_dismissals: int = Field(
+        0,
+        ge=0,
+        le=100,
+        description="How many times you can put off the same kind of suggestion before the assistant stops offering "
+        "that kind at all, on Today and in the brief. Zero never stops one. Raise it, or take dismissals back, to "
+        "see that kind again.",
+    )
+    learn_days: int = Field(
+        30,
+        ge=1,
+        le=365,
+        description="How many days back the assistant counts the times you put off a kind of suggestion. Older "
+        "dismissals are forgotten.",
+    )
+
+    @model_validator(mode="after")
+    def _stopping_comes_after_quieting(self) -> AttentionSettings:
+        if (
+            self.quiet_after_dismissals
+            and self.stop_after_dismissals
+            and self.stop_after_dismissals <= self.quiet_after_dismissals
+        ):
+            raise ValueError("stopping a kind of suggestion must take more dismissals than quieting it")
+        return self
 
 
 class LeadDaysSettings(ConfigModel):
@@ -3875,6 +3944,18 @@ class DatesSettings(ConfigModel):
         description="Whether a booking confirmation (a flight, a stay, a table, a rental car, a train, an event) that "
         "carries its details as structured data becomes an entry in the app's own calendar, with the confirmation's "
         "words as its evidence. Nothing is sent to any calendar service.",
+    )
+    find_by_rules: bool = Field(
+        True,
+        description="Whether every input is also read for a deadline, renewal or expiry written with a full date in a "
+        "sentence with words such as due, renews or expires, when the assistant's own reading missed it. What is found "
+        "waits for your yes; nothing is added until you say so, because the words are not yours.",
+    )
+    find_most: int = Field(
+        5,
+        ge=1,
+        le=50,
+        description="The most dates the rules offer from one input. The assistant's own reading is not counted.",
     )
     suggest_reminders: bool = Field(
         True,

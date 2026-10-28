@@ -1593,6 +1593,7 @@ A question for a person; a decision is a question to the person. Added by `quest
 | `resolves` | dict[str, Any] \| None | `None` | What answering it releases, e.g. a held op. |
 | `matters_for` | str \| None | `None` | Which of the person's decisions, designs or dated items depends on the answer, by id or in words. A question to anyone but the person says it. |
 | `dropped_reason` | str \| None | `None` | Why the person dropped it, when they did. |
+| `asker` | str \| None | `None` | The id of the person who asked it, when the input says who asked (a question someone put to the person). Empty for a question the assistant or the person made up, and for a name that isn't one known person: it is never guessed. The asker's page lists it as a question they asked. |
 
 ### `source` (SRC-n)
 
@@ -3212,6 +3213,7 @@ A question for a person, written for its reader. A decision is a question to who
 | `asks_about` | Literal['date', 'decision', 'design', 'mistake', 'other'] | `'other'` | What the question asks about: date (chasing when something will be done, or a promise), decision, design (how they do their own work, or its detail), mistake (an apparent contradiction with a recorded decision or fact: link both sides), or other. |
 | `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the user when nobody is named. |
 | `matters_for` | str \| None | `None` | For a question to anyone but the user: which of the user's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
+| `asker` | str \| None | `None` | Who asked it, by name or id, when the input says who put the question to the user ("Ana asks which trim size to use"). Leave it out when the input doesn't say; never guess. |
 
 ### `question.done`
 

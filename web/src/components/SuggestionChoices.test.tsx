@@ -106,24 +106,30 @@ test("replies owed to one person are one line that says how many, with a menu en
 test("one stale to-do asks whether the person is still doing it, with Keep it, Drop it and Snooze", async () => {
   const user = userEvent.setup();
   const { calls } = show(
-    [line("stale", { key: "stale", count: 1, actions: ["A-1"], waiting_days: 30, subject: "Tidy the style sheet", choices: ["keep", "drop", "snooze"] })],
+    [line("stale", { key: "stale:A-1", count: 1, actions: ["A-1"], waiting_days: 30, subject: "Tidy the style sheet", choices: ["keep", "drop", "snooze"] })],
     { "POST suggestions/choose": () => ({ signal: "SIG-6", changeset: null }) },
   );
   expect(await screen.findByText("Decide whether you are still doing: Tidy the style sheet")).toBeInTheDocument();
-  const found = row("stale");
+  const found = row("stale:A-1");
   expect(within(found).getByRole("button", { name: "Keep it" })).toBeInTheDocument();
   expect(within(found).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
   await user.click(within(found).getByRole("button", { name: /More|menu/i }));
   await user.click(await screen.findByRole("menuitem", { name: "Snooze" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/choose")?.body).toMatchObject({ key: "stale", choice: "snooze" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/choose")?.body).toMatchObject({ key: "stale:A-1", choice: "snooze" }));
 });
 
-test("several stale to-dos keep Look over as the button and offer Keep them and Snooze them in the menu", async () => {
+test("each of several stale to-dos is its own line, and a choice names the line it was made on", async () => {
   const user = userEvent.setup();
-  show([line("stale", { key: "stale", count: 3, actions: ["A-1", "A-2", "A-3"], waiting_days: 40, choices: ["keep", "snooze"] })]);
-  await screen.findByText("Keep or drop 3 to-dos nobody has touched lately");
-  expect(within(row("stale")).getByRole("button", { name: "Look over" })).toBeInTheDocument();
-  await user.click(within(row("stale")).getByRole("button", { name: /More|menu/i }));
-  expect(await screen.findByRole("menuitem", { name: "Keep them" })).toBeInTheDocument();
-  expect(screen.getByRole("menuitem", { name: "Snooze them" })).toBeInTheDocument();
+  const { calls } = show(
+    [
+      line("stale", { key: "stale:A-1", count: 1, actions: ["A-1"], waiting_days: 40, subject: "Tidy the style sheet", choices: ["keep", "drop", "snooze"] }),
+      line("stale", { key: "stale:A-2", count: 1, actions: ["A-2"], waiting_days: 35, subject: "Sort the old proofs", choices: ["keep", "drop", "snooze"] }),
+    ],
+    { "POST suggestions/choose": () => ({ signal: "SIG-7", changeset: null }) },
+  );
+  expect(await screen.findByText("Decide whether you are still doing: Tidy the style sheet")).toBeInTheDocument();
+  expect(screen.getByText("Decide whether you are still doing: Sort the old proofs")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Look over" })).toBeNull();
+  await user.click(within(row("stale:A-2")).getByRole("button", { name: "Keep it" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/choose")?.body).toMatchObject({ key: "stale:A-2", choice: "keep" }));
 });

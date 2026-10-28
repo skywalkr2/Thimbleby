@@ -172,15 +172,15 @@ test("a travel clash says how little time is between the meetings, how much is n
 
 test("a suggestion has Not now in its menu, which puts it off with Undo; what is due has none", async () => {
   const user = userEvent.setup();
-  const { calls } = show([line("stale", { key: "stale", count: 3, actions: ["A-1", "A-2", "A-3"], waiting_days: 40 }), capacity], {
+  const { calls } = show([line("stale", { key: "stale:A-1", count: 1, actions: ["A-1"], waiting_days: 40, subject: "Tidy the style sheet" }), capacity], {
     "GET capacity": () => proposal,
     "POST suggestions/not-now": () => ({ signal: "SIG-9" }),
     "POST suggestions/not-now/SIG-9/undo": () => ({ ok: "SIG-9" }),
   });
-  await screen.findByText("Keep or drop 3 to-dos nobody has touched lately");
+  await screen.findByText("Decide whether you are still doing: Tidy the style sheet");
   await user.click(within(row("stale")).getByRole("button", { name: /More|menu/i }));
   await user.click(await screen.findByRole("menuitem", { name: "Not now" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/not-now")?.body).toEqual({ key: "stale" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST suggestions/not-now")?.body).toEqual({ key: "stale:A-1" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST suggestions/not-now/SIG-9/undo")).toBe(true));
   expect(within(row("capacity")).queryByRole("button", { name: /More|menu/i })).toBeNull();

@@ -1,0 +1,40 @@
+# The effort names the to-do made by the first op as "$new:0"; from an input it waits for the person's yes, so it is held
+# while the to-do itself is kept.
+id: effort-stated-for-a-new-todo
+title: A to-do the person is asked to do, with its length stated, gets the effort proposed for that new to-do and waiting
+  for the yes
+skills:
+- evidence
+received: '2026-10-14'
+pasted: 'From: Ines Duarte
+
+
+  Could you send me the proof corrections by Friday? It is a ten minute job.'
+expect:
+- op: action.add
+  owners:
+  - PER-1
+  text_has:
+  - proof corrections
+- held: record.set
+  text_has:
+  - effort_minutes
+  - '10'
+stub_answer:
+  summary: Ines asks for the proof corrections by Friday; the effort waits for a yes.
+  ops:
+  - op: action.add
+    text: Send Ines the proof corrections
+    owners:
+    - PER-1
+    project: PRJ-1
+    evidence:
+      quote: Could you send me the proof corrections by Friday?
+    due_words: by Friday
+  - op: record.set
+    kind: action
+    id: $new:0
+    field: effort_minutes
+    value: 10
+    evidence:
+      quote: It is a ten minute job.

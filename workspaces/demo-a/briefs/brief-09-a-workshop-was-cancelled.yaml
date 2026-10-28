@@ -5,6 +5,7 @@ received: '2026-10-29'
 now: '2026-10-29T09:00'
 form: morning
 given:
+- {kind: fact, id: FACT-91, fields: {text: The room booking can be cancelled free only until noon today, 'on': '2026-10-29', on_kind: deadline, trust: untrusted, evidence: {source: note, quote: Free cancellation until 12:00 on 29 October}}}
 - {kind: event, id: EVT-91, fields: {title: Planning workshop, start: '2026-10-30T10:00:00-05:00', end: '2026-10-30T12:00:00-05:00', invitation: true, organizer: {address: organizer@example.com, name: Odile Fenwick}, trust: untrusted, source: SRC-0, key: workshop-1}}
 - {kind: question, id: Q-91, fields: {to: PER-4, title: 'Can the room booking be cancelled?'}}
 then:
@@ -15,4 +16,5 @@ expect:
   - {kind: on_today, change: need, count: 1, queue: 'send:PER-4'}
   changed:
   - {kind: invitation, change: cancelled, text: Planning workshop, person_name: Odile Fenwick, day: '2026-10-30', link: [event, EVT-91]}
-left: [booking]
+  risk:
+  - {kind: dated, change: deadline, text: The room booking can be cancelled free only until noon today, day: '2026-10-29', days: 0, link: [fact, FACT-91]}

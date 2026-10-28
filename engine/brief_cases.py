@@ -44,7 +44,7 @@ from engine.yaml_load import load_yaml
 
 FOLDER = "briefs"
 #: What a sample has that no rule makes yet, by the name a case gives it.
-LEFT = ("deadline", "booking", "document_dates", "meeting_dependency")
+LEFT = ("document_dates", "meeting_dependency")
 #: The records of the workspace that a case starts without, so what the case gives is all there is.
 LEFT_OUT = ("action", "question", "event", "series", "note")
 

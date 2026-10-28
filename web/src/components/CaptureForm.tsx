@@ -1,6 +1,6 @@
 // What happened at a calendar entry (design 6.32, 7.14): a short box for the person's own words, on Today's line and on the
 // entry's page. The words are handed in like any note typed on a record, so the promises, questions and facts in them are
-// found for the person to review; "Nothing to note" ends the question with no run. The cursor starts in the box, Enter
+// found for the person to review; "Nothing to note" ends the question with no run, and Undo asks it again. The cursor starts in the box, Enter
 // saves, Escape closes. A save that didn't go through leaves the words where they are.
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../lib/api";
@@ -24,7 +24,11 @@ export function CaptureForm(props: { event: string; title: string; onClose: () =
     setBusy(true);
     const done = await act(
       () => api.captureMeeting(props.event, said),
-      (result) => ({ message: noted(t(said ? "meeting.capture.saved" : "meeting.capture.nothing_saved", { title: props.title }), result.request) }),
+      (result) => ({
+        message: noted(t(said ? "meeting.capture.saved" : "meeting.capture.nothing_saved", { title: props.title }), result.request),
+        // Saying there is nothing to note is taken back by asking again; words that made a run are undone where that run's changes are.
+        undo: said ? undefined : () => api.undoCapture(props.event, result.captured_at),
+      }),
     );
     if (done === undefined) setBusy(false);
     else props.onClose();

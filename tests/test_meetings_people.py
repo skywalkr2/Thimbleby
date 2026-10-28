@@ -330,6 +330,53 @@ def test_saying_there_is_nothing_to_note_ends_the_line_and_makes_no_run(env):
     assert store.read().get("event", again).data["captured_at"]
 
 
+def test_an_entry_nobody_else_is_on_is_asked_about_only_when_the_setting_says_so_and_never_when_called_off_or_declined(
+    env,
+):
+    ws, cfg, store = env
+    alone = entry(store, "Dentist", start=at(hours=-3), end=at(hours=-2))
+    entry(store, "Called off", start=at(hours=-3), end=at(hours=-2), cancelled=True)
+    entry(store, "Turned down", start=at(hours=-3), end=at(hours=-2), response="declined")
+    assert meeting_prep.capture_lines(store, cfg, NOW) == []  # off by default
+    cfg.steward.meetings.capture_alone = True
+    (line,) = meeting_prep.capture_lines(store, cfg, NOW)
+    assert (line.event, line.title, line.others, line.people) == (alone, "Dentist", 0, [])
+    (shown,) = [x for x in queue(ws, store, cfg, NOW) if x.kind == "meeting_capture"]
+    assert (shown.event, shown.text, shown.names, shown.count) == (alone, "Dentist", [], 0)
+    done = meeting_prep.capture(ws, store, cfg, alone, "Booked the next visit for March.", NOW)
+    assert done.request and meeting_prep.capture_lines(store, cfg, NOW) == []
+
+
+def test_the_page_of_an_ended_entry_nobody_else_is_on_lets_the_person_write_down_what_happened_whatever_the_setting(
+    env,
+):
+    ws, cfg, store = env
+    alone = entry(store, "Dentist", start=at(hours=-3), end=at(hours=-2))
+    found = meeting_prep.prep(store, cfg, alone, NOW)
+    assert found.over and found.coming == [] and found.people == []
+    assert meeting_prep.capture(ws, store, cfg, alone, "Booked the next visit for March.", NOW).request
+    assert store.read().get("event", alone).data["captured_at"]
+
+
+def test_nothing_to_note_can_be_undone_so_the_entry_is_asked_about_again_and_only_that_marking_is_undone(env):
+    ws, cfg, store = env
+    ana = person(store, "Ana Guest")
+    ended = entry(store, start=at(hours=-3), end=at(hours=-2), guests=[(ana, "accepted")])
+    done = meeting_prep.capture(ws, store, cfg, ended, "", NOW)
+    assert meeting_prep.capture_lines(store, cfg, NOW) == []
+    meeting_prep.uncapture(store, ended, done.captured_at)
+    assert store.read().get("event", ended).data.get("captured_at") is None
+    assert [x.event for x in meeting_prep.capture_lines(store, cfg, NOW)] == [ended]
+    # A marking made later is not the one asked to be undone.
+    later = NOW + timedelta(minutes=5)
+    meeting_prep.capture(ws, store, cfg, ended, "", later)
+    with pytest.raises(StoreError, match="written down again"):
+        meeting_prep.uncapture(store, ended, done.captured_at)
+    assert store.read().get("event", ended).data["captured_at"]
+    with pytest.raises(StoreError, match="no calendar entry"):
+        meeting_prep.uncapture(store, "EVT-9999", NOW)
+
+
 def test_capturing_an_entry_that_isnt_there_is_refused(env):
     ws, cfg, store = env
     with pytest.raises(StoreError, match="no calendar entry"):
@@ -415,6 +462,66 @@ def test_asked_of_and_by_them_and_promises_both_ways_are_on_the_persons_page_wit
     assert [(i.id, i.quote) for i in found.promised_to] == [(mine, "I'll send the cover")]
     assert [(i.id, i.quote) for i in found.promised_by] == [(theirs, "I will return the contract")]
     assert [i.id for i in found.asked_by] == [owed] and [i.id for i in found.asked_of] == [asked]
+
+
+def test_a_question_someone_put_to_the_person_is_asked_by_them_and_no_other_question_is(env):
+    _, cfg, store = env
+    ana = person(store, "Ana Guest")
+    ben = person(store, "Ben Guest")
+    owed = promise(store, cfg, me(cfg), None, "Reply to Ana", "any news?", reply_owed=True, asker=ana)
+    put = question(store, me(cfg), "Which trim size do you want?", asker=ana)
+    question(store, me(cfg), "Is the index final?", asker=ben)  # another asker
+    question(store, me(cfg), "Is the cover final?")  # nobody said who asked
+    answered = question(store, me(cfg), "Is the title final?", asker=ana)
+    update(store, "question", answered, {"status": "answered", "answer": "Yes."})
+    to_ben = question(store, ben, "Can you send the files?", asker=ana)  # asked of Ben by Ana: not asked of the person
+    found = people_memory.memory(store, cfg, ana, NOW)
+    assert sorted(i.id for i in found.asked_by) == sorted([owed, put])
+    assert {i.id: i.record for i in found.asked_by} == {owed: "action", put: "question"}
+    assert next(i for i in found.asked_by if i.id == put).text == "Which trim size do you want?"
+    assert [i.id for i in found.asked_of] == []
+    assert to_ben not in {i.id for i in found.asked_by}
+    # The prep for an entry they are on lists it too.
+    entry_id = entry(store, "Design review", start=at(hours=6), guests=[(ana, "accepted")])
+    (prepared,) = prep(env, entry_id).people
+    assert put in {i.id for i in prepared.asked_by}
+
+
+def test_the_assistant_names_who_asked_a_question_by_name_and_it_is_kept_only_for_one_known_person(env):
+    _, cfg, store = env
+    ana = person(store, "Ana Guest")
+    person(store, "Ben Guest")
+    person(store, "Ben Other")  # two people with the same first name: not one known person
+
+    def ask(**more) -> str:
+        done = apply_as_person(
+            store,
+            cfg,
+            [{"op": "question.add", "to": me(cfg), "title": "Which trim size do you want?", **more}],
+            "A question",
+        )
+        (made,) = store.read().get("changeset", done).data["ops"][0]["records"]
+        return made["id"]
+
+    assert store.read().get("question", ask(asker="Ana Guest")).data["asker"] == ana
+    assert store.read().get("question", ask(asker=ana)).data["asker"] == ana
+    assert store.read().get("question", ask()).data["asker"] is None
+    assert store.read().get("question", ask(asker="Ben")).data["asker"] is None  # more than one Ben
+    assert store.read().get("question", ask(asker="Nobody Known")).data["asker"] is None
+    other = store.read().get("question", ask(asker="Ana Guest")).data
+    assert other["to"] == me(cfg)
+
+
+def test_a_question_is_never_asked_by_the_one_it_is_for(env):
+    _, cfg, store = env
+    done = apply_as_person(
+        store,
+        cfg,
+        [{"op": "question.add", "to": me(cfg), "title": "Which trim size do you want?", "asker": me(cfg)}],
+        "A question",
+    )
+    (made,) = store.read().get("changeset", done).data["ops"][0]["records"]
+    assert store.read().get("question", made["id"]).data["asker"] is None
 
 
 # ---- a promise that has gone quiet ----------------------------------------
@@ -616,6 +723,25 @@ def test_the_capture_route_files_the_note_marks_the_entry_and_refuses_one_that_i
     assert [x for x in http.get("/api/today/queue").json() if x["kind"] == "meeting_capture"] == []
     assert http.post("/api/meetings/EVT-9999/capture", json={"text": "x"}).status_code == 404
     assert http.post(f"/api/meetings/{ended}/capture", json={}).json()["request"] is None
+
+
+def test_the_undo_route_asks_about_the_entry_again_and_refuses_a_marking_made_since(client):
+    http, store, _ = client
+    ana = person(store, "Ana Guest")
+    ended = entry(
+        store,
+        "Kickoff",
+        start=(datetime.now(UTC) - timedelta(hours=3)).isoformat(),
+        end=(datetime.now(UTC) - timedelta(hours=2)).isoformat(),
+        guests=[(ana, "accepted")],
+    )
+    marked = http.post(f"/api/meetings/{ended}/capture", json={}).json()["captured_at"]
+    assert [x for x in http.get("/api/today/queue").json() if x["kind"] == "meeting_capture"] == []
+    assert http.post(f"/api/meetings/{ended}/capture/undo", json={"captured_at": marked}).status_code == 200
+    assert http.get(f"/api/meetings/{ended}/prep").json()["captured_at"] is None
+    assert [x["event"] for x in http.get("/api/today/queue").json() if x["kind"] == "meeting_capture"] == [ended]
+    assert http.post(f"/api/meetings/{ended}/capture/undo", json={"captured_at": marked}).status_code == 409
+    assert http.post("/api/meetings/EVT-9999/capture/undo", json={"captured_at": marked}).status_code == 404
 
 
 def test_the_memory_route_gives_each_part_of_a_persons_page(client):

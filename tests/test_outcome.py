@@ -188,6 +188,17 @@ def test_review_time_is_summed_per_week_with_the_visits_and_held_to_the_most_for
     ]
 
 
+def test_every_screen_that_looks_over_the_assistants_work_counts_its_time_in_the_same_measure(env):
+    cfg, store, clock = env
+    clock.at = day(WEEK_2)
+    screens = ("review", "changes", "since", "today", "handled", "followups", "open", "knowledge")
+    assert screens == outcome.SCREENS
+    for n, screen in enumerate(screens):
+        assert outcome.record_review_time(store, cfg, screen, 10 * (n + 1), day(WEEK_2, n % 5)) == 10 * (n + 1)
+    (week,) = [w for w in figures(cfg, store) if w.week == WEEK_2]
+    assert (week.review_seconds, week.review_visits) == (sum(10 * (n + 1) for n in range(8)), 8)
+
+
 def test_a_screen_that_doesnt_look_over_the_assistants_work_is_refused(env):
     cfg, store, _ = env
     with pytest.raises(Exception, match="screen"):
@@ -257,4 +268,6 @@ def test_the_quality_view_carries_every_measure_for_the_window_and_each_week_and
 def test_a_review_time_for_a_screen_that_isnt_one_is_refused(api):
     client, _, _ = api
     assert client.post("/api/quality/review-time", json={"screen": "settings", "seconds": 5}).status_code == 422
+    for screen in ("handled", "followups", "open", "knowledge"):
+        assert client.post("/api/quality/review-time", json={"screen": screen, "seconds": 5}).json() == {"seconds": 5}
     assert client.post("/api/quality/review-time", json={"screen": "review", "seconds": 0}).json() == {"seconds": 0}

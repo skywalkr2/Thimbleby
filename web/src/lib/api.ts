@@ -448,6 +448,7 @@ export const api = {
   meetingPrep: (entry: string) => call<S["MeetingPrepView"]>("GET", `meetings/${id(entry)}/prep`),
   /** Write down what happened at an entry, as the person's own words; no words says there is nothing to note. */
   captureMeeting: (entry: string, text: string) => call<S["MeetingCaptured"]>("POST", `meetings/${id(entry)}/capture`, { text }),
+  undoCapture: (entry: string, capturedAt: string) => call<S["MeetingCaptured"]>("POST", `meetings/${id(entry)}/capture/undo`, { captured_at: capturedAt }),
   /** Ask the assistant to draft a prep note for an entry; it comes back as a draft on the entry's page. */
   askPrepNote: (entry: string, note?: string) => call<S["HandedOver"]>("POST", `meetings/${id(entry)}/prep-note`, { note: note ?? null }),
   /** What the records say about one person, each part with the words or record it rests on. */

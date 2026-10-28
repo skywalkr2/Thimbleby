@@ -148,6 +148,15 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       return tn("brief.line.own_due.overdue", line.days ?? 0, { text });
     case "owed_late":
       return tn("brief.line.owed_late", line.days ?? 0, { name, text });
+    case "dated": {
+      const kind = line.change === "renewal" || line.change === "expiry" ? line.change : "deadline";
+      const days = line.days ?? 0;
+      return days === 0 ? t(`brief.line.dated.${kind}.today`, { text }) : tn(`brief.line.dated.${kind}`, days, { text, date });
+    }
+    case "meeting_wait": {
+      const vars = { name, text, other: plainTitle(line.other ?? ""), time: clock(line.at) };
+      return name ? t("brief.line.meeting_wait", vars) : t("brief.line.meeting_wait_unnamed", vars);
+    }
     case "clash":     {
       const vars = { text, other: plainTitle(line.other ?? ""), date, time: clock(line.at) };
       if (line.state !== "travel") return tn("brief.line.clash", line.minutes ?? 0, vars);
@@ -162,6 +171,7 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       return t("brief.line.capacity", { needed: durationWords(line.needed_minutes ?? 0, tn), free: durationWords(line.minutes ?? 0, tn) });
     case "digest":
       if (line.change?.startsWith("pattern_")) return tn(`brief.line.digest.${line.change}`, line.count ?? 1, { name, text });
+      if (line.change === "stale" && text) return t("brief.line.digest.stale_named", { text });
       return line.change === "escalate" ? t("brief.line.digest.escalate", { name, text }) : tn(`brief.line.digest.${line.change}`, line.count ?? 1);
     case "yes":
       if (line.change === "reminder_offer") return t("brief.line.reminder_offer", { text, date, time: clock(line.at) });

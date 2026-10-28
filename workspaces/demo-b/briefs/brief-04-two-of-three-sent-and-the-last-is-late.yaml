@@ -1,12 +1,13 @@
 id: brief-04-two-of-three-sent-and-the-last-is-late
 sample: 4
-title: Two of three drawings came in, the third is a day late and the chase is drafted
+title: Two of three drawings came in, the third is a day late, the chase is drafted and the review it was promised for is today
 received: '2026-10-22'
 now: '2026-10-22T09:00'
 form: morning
 given:
 - {kind: action, id: ACT-91, fields: {text: Send the first two drawings, owners: [{person: PER-2}], promised_to: [PER-1], due: '2026-10-23', told: {PER-2: '2026-10-14'}}}
-- {kind: action, id: ACT-92, fields: {text: Send the third drawing, owners: [{person: PER-2}], promised_to: [PER-1], due: '2026-10-21', told: {PER-2: '2026-10-14'}}}
+- {kind: action, id: ACT-92, fields: {text: Send the third drawing, owners: [{person: PER-2}], promised_to: [PER-1], due: '2026-10-21', told: {PER-2: '2026-10-14'}, evidence: {source: note, quote: I will send the third drawing before the design review}}}
+- {kind: event, id: EVT-93, fields: {title: Design review, start: '2026-10-22T14:00:00-04:00', end: '2026-10-22T15:00:00-04:00', trust: trusted}}
 then:
 - at: '2026-10-22T07:20'
   news: {action: ACT-91, by: PER-2, text: Two of the three drawings are attached}
@@ -15,4 +16,5 @@ expect:
   - {kind: on_today, change: need, count: 1, queue: 'nudge:PER-2'}
   changed:
   - {kind: news, text: Send the first two drawings, person: PER-2, detail: Two of the three drawings are attached}
-left: [meeting_dependency]
+  risk:
+  - {kind: meeting_wait, text: Send the third drawing, person: PER-2, other: Design review, day: '2026-10-22', at: '14:00', link: [action, ACT-92]}

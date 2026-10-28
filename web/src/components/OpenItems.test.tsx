@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
@@ -85,6 +85,18 @@ async function rows() {
   const list = await screen.findByRole("list", { name: "Open to-dos" });
   return within(list).getAllByRole("listitem");
 }
+
+test("the time this screen is open and in view is counted as time spent looking over the assistant's work, once, when the person leaves it", async () => {
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  const calls = api({ "POST quality/review-time": () => ({ seconds: 30 }) });
+  renderApp(<OpenItems />);
+  await rows();
+  clock.mockReturnValue(start + 30_000);
+  cleanup();
+  clock.mockRestore();
+  expect(calls.filter((c) => c.route === "POST quality/review-time").map((c) => c.body)).toEqual([{ screen: "open", seconds: 30 }]);
+});
 
 test("every open to-do is a row with its owners, due date, project and the project it is part of, and where it came from", async () => {
   api();

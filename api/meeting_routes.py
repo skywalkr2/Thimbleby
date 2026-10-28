@@ -7,6 +7,7 @@ draft kind that goes the usual way (estimate, the person's go above the configur
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -14,10 +15,12 @@ from fastapi import APIRouter, HTTPException
 from api.schemas import (
     DatedView,
     HandedOver,
+    InvitationChangeView,
     KeptView,
     LeftOpenView,
     MeetingCaptured,
     MeetingCaptureIn,
+    MeetingCaptureUndo,
     MeetingPrepView,
     OpenItemView,
     PersonMemoryView,
@@ -28,11 +31,12 @@ from api.schemas import (
     ReachView,
     TouchView,
 )
-from engine import meeting_prep, people_memory
+from engine import invitation_history, meeting_prep, people_memory
 from engine.config import Config
 from engine.intake import IntakeError
 from engine.names import People
 from engine.storage import Store, StoreError
+from engine.today import zone
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
@@ -56,6 +60,16 @@ def build_meeting_router(ws: Workspace, cfg: Config, store: Store, events: Event
         names = People(store, cfg)
         view = store.read()
         entry = view.get("event", event_id)
+        changed = (
+            invitation_history.changes_since(
+                view,
+                entry,
+                zone(cfg),
+                worker.now() - timedelta(days=cfg.steward.meetings.changes_days),
+            )
+            if entry is not None
+            else None
+        )
         return MeetingPrepView(
             event=found.event,
             title=found.title,
@@ -65,6 +79,8 @@ def build_meeting_router(ws: Workspace, cfg: Config, store: Store, events: Event
             untrusted=found.untrusted,
             over=found.over,
             captured_at=entry.data.get("captured_at") if entry is not None else None,
+            changed_at=changed[0] if changed else None,
+            changes=[InvitationChangeView(**invitation_history.describe(c)) for c in changed[1]] if changed else [],
             coming=[
                 PrepGuestView(
                     person=g.person,
@@ -110,6 +126,17 @@ def build_meeting_router(ws: Workspace, cfg: Config, store: Store, events: Event
         events.changed()
         worker.poke()
         return MeetingCaptured(request=done.request, captured_at=done.captured_at)
+
+    @r.post("/meetings/{event_id}/capture/undo")
+    def undo_capture(event_id: str, body: MeetingCaptureUndo) -> MeetingCaptured:
+        """Take back "nothing to note": the entry is asked about again. It names the moment the entry was marked, so
+        a later capture is never undone from here."""
+        try:
+            meeting_prep.uncapture(store, event_id, body.captured_at)
+        except StoreError as err:
+            raise HTTPException(status_code=404 if "no calendar entry" in str(err) else 409, detail=str(err)) from None
+        events.changed()
+        return MeetingCaptured(request=None, captured_at=body.captured_at)
 
     @r.post("/meetings/{event_id}/prep-note")
     def ask_for_prep_note(event_id: str, body: PrepNoteAsk) -> HandedOver:

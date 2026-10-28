@@ -1015,7 +1015,7 @@ S2. **Time and attention:**
   someone else, with a repeat, Undo and what isn't clear said back (`tests/test_add_todo.py`); the drawer with the
   cursor in the words, the said-back day and repeat, the lists and the Undo toast, on Today and To-dos
   (`web/src/components/AddTodo.test.tsx`). The to-do and its repeat are two changes in order, undone last first.
-- [ ] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
+- [x] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed
   overnight" lines and the invitation's page.
@@ -1024,7 +1024,7 @@ S2. **Time and attention:**
   (`tests/test_brief.py::test_what_changed_in_an_invitation_overnight_is_a_line_for_each_change_that_matters`,
   `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
   **Built (cleanup batch):** an unanswered invitation is a Today line that opens the entry's page, where it is answered
-  (`tests/test_invitation_lines.py`). **Left:** what changed in an invitation shown on the entry's page itself.
+  (`tests/test_invitation_lines.py`). **Built (S2, the entry's page):** the page lists what changed since `steward.meetings.changes_days`, one row for each change, who was added, left out or answered included, from the entry's history that the brief reads too (`engine/invitation_history.py`; `tests/test_invitation_page.py::test_the_page_names_each_change_since_the_entry_was_kept_including_who_answered_and_who_was_added`, `tests/test_invitation_page.py::test_an_entry_that_is_not_an_invitation_or_was_changed_by_the_person_shows_no_changes`, `web/src/components/MeetingPrep.test.tsx` "what changed in the invitation is a list on the entry's page, one row for each change, and nothing when nothing changed").
 - [ ] [S2] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
   Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.
@@ -1035,9 +1035,15 @@ S2. **Time and attention:**
   exactly, with what it still lacks named. **Built (S2, capacity and clashes):** the capacity line first in the at-risk
   section (sample 6), clashes from today onward with travel time, and the reminder offer (sample 7)
   (`tests/test_day_capacity.py`, `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`).
-  **Left:** at-risk lines from dates inside mail and bookings ("the last day to cancel", samples 7 and 9) and from a
-  meeting named only in words (samples 4 and 8).
-- [ ] [S2] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
+  **Built (S2, dates and meetings in words):** a deadline, renewal or expiry a fact records, from today through
+  `steward.brief.dated_risk_days`, is an at-risk line ("the last day to cancel", samples 7 and 9), and what someone owes the
+  person whose words name one timed calendar entry today is an at-risk line at that meeting (samples 4 and 8)
+  (`tests/test_brief.py::test_a_deadline_renewal_or_expiry_within_the_window_is_an_at_risk_line_soonest_first`,
+  `tests/test_brief.py::test_a_promise_to_the_person_whose_words_name_a_meeting_today_is_at_risk_at_that_meeting`,
+  `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
+  **Left:** sample 7's changed line from the document ("your renewal letter says Friday is the last day to cancel") and
+  sample 3's request in words to move a call; neither is a rule yet.
+- [x] [S2] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
   the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
   scheduling.
   What to move is proposed by rules (`engine/capacity.py`, `tests/test_capacity.py`): never a fixed to-do, those due
@@ -1054,9 +1060,11 @@ S2. **Time and attention:**
   `effort-stated-for-an-open-todo` in both workspaces); the check and the Today line "Move N to-dos: today holds about
   H hours" with its proposed moves, each acting at once with Undo, and the same line in the brief
   (`tests/test_day_capacity.py`, `web/src/components/TodayCapacity.test.tsx`); clashes from today onward as Today and
-  brief lines (`tests/test_day_capacity.py`). **Left:** an effort suggested for a to-do added in the same answer (the
-  op can name only an existing to-do).
-- [ ] [S2] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
+  brief lines (`tests/test_day_capacity.py`). **Built (S2, a new to-do's effort):** the effort suggestion names a to-do added
+  earlier in the same answer as `$new:<n>` (the mechanism every op shares), held for the yes (`tests/test_day_capacity.py::test_an_effort_suggested_for_a_to_do_added_in_the_same_answer_is_held_and_kept_with_the_new_to_do`,
+  `tests/test_day_capacity.py::test_the_effort_cases_of_both_workspaces_pass_on_their_stub_answers_including_one_for_a_new_to_do`,
+  the case `effort-stated-for-a-new-todo` in both workspaces).
+- [x] [S2] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
   threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
   changes). All settings with defaults.
   Which suggestions interrupt is decided by rules (`engine/attention.py`, `tests/test_attention.py`): held back when
@@ -1066,11 +1074,14 @@ S2. **Time and attention:**
   touched, items filed under no project, what was learned), what waits is in the next morning brief, and "Not now" puts a
   suggestion off until its items change, with Undo and the signal `suggestion_dismissed`
   (`engine/suggestions.py`, `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
-  `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`). **Left:** a dismissed kind of
-  suggestion teaching the assistant (the signal is recorded but no learning reads it yet).
+  `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`). **Built (S2, dismissals that teach):** a kind put off `quiet_after_dismissals` times
+  within `learn_days` goes to the brief instead of Today, and at `stop_after_dismissals` (off by default) is not offered, by
+  rules from the signals; Undo, a snooze and old dismissals count for nothing (`engine/attention_learning.py`;
+  `tests/test_attention_learning.py::test_a_kind_put_off_the_configured_number_of_times_goes_to_the_brief_instead_of_today`,
+  `tests/test_attention_learning.py::test_taking_dismissals_back_teaches_nothing_and_the_kind_comes_back`).
 
 S3. **People and meetings:**
-- [ ] [S3] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
+- [x] [S3] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
   **Built so far (S3, change log 193):** for any calendar entry with other people on it, by rules: who is coming (by id,
   without anyone who declined), what is open with each of them both ways with the exact words it was made from, the last
   time in touch and what the last entry with them left open, as the entry's page and a Today line
@@ -1079,7 +1090,12 @@ S3. **People and meetings:**
   entry, whose words are handed in like any note (`engine/meeting_prep.py`, `tests/test_meetings_people.py`,
   `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** the browser journey, which has run in the full runs
   (`web/e2e/meetings-journey.spec.ts`; its seed is `tests/e2e_meetings.py`, `tests/test_e2e_meetings_seed.py`).
-  **Left:** the journey passing in a browser run, a capture for an entry nobody else is on, and an undo for "nothing to note".
+  **Built (S3, the rest):** a capture for an entry nobody else is on (its page offers the box once it has ended; the Today line
+  too when `steward.meetings.capture_alone` is on), an undo for "nothing to note", and the journey passing in a browser run on
+  its own (`tests/test_meetings_people.py::test_an_entry_nobody_else_is_on_is_asked_about_only_when_the_setting_says_so_and_never_when_called_off_or_declined`,
+  `tests/test_meetings_people.py::test_nothing_to_note_can_be_undone_so_the_entry_is_asked_about_again_and_only_that_marking_is_undone`,
+  `web/src/components/MeetingPrep.test.tsx` "Nothing to note ends the question with no words, and Escape closes the box without sending",
+  `web/e2e/meetings-journey.spec.ts`).
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
   dates, all with evidence; shown before a meeting, and one line when a promised follow-up has gone quiet.
   **Built so far (S3, change log 193):** a person's page has What to remember by rules, each part with its evidence: last in
@@ -1090,8 +1106,11 @@ S3. **People and meetings:**
   `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** Send a follow-up from the line (a message to whoever owes the promise, written from the wording
   sheet and drafted as an act for the person's yes) and Snooze to a day from a list, with Undo
   (`tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`); the person's page journey, which has run in the full runs
-  (`web/e2e/meetings-journey.spec.ts`). **Left:** who asked a question (a question has no asker, so "asked by
-  them" is the replies owed), dates from a contact source or in other languages.
+  (`web/e2e/meetings-journey.spec.ts`). **Built (S3, who asked):** a question has an optional asker, set from the input only
+  when it names exactly one known person other than who it is for, and "asked by them" includes those questions
+  (`tests/test_meetings_people.py::test_a_question_someone_put_to_the_person_is_asked_by_them_and_no_other_question_is`,
+  `tests/test_meetings_people.py::test_the_assistant_names_who_asked_a_question_by_name_and_it_is_kept_only_for_one_known_person`).
+  **Left:** dates from a contact source or in other languages.
 
 S4. **What arrives, and where it may go:**
 - [ ] [S4] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
@@ -1113,9 +1132,12 @@ S4. **What arrives, and where it may go:**
   day has passed; one prompt line and one evaluation case in each fictional workspace
   (`engine/dated_facts.py`, `tests/test_dated_facts.py`, `web/src/lib/queue-words.test.ts`,
   `web/src/components/TodayArrives.test.tsx`). **Left:** a booking in mail read through a connector (the connectors hand
-  over plain text, so only markup in a pasted or dropped message is read until a connector carries it), dated facts by
-  rules alone when the assistant misses one, delivering a fact's reminder through the person's own calendar or mail,
-  and a bill's amount (never: bills are reminders only).
+  over plain text, so only markup in a pasted or dropped message is read until a connector carries it), delivering a
+  fact's reminder through the person's own calendar or mail, and a bill's amount (never: bills are reminders only).
+  **Built (S4, by rules alone):** when the assistant misses one, a pass over the input's new text finds a sentence with one
+  full future date and the words for a deadline, a renewal or an expiry (language lists), and offers a dated fact held for the
+  person's yes (`engine/dated_scan.py`; `tests/test_dated_scan.py::test_a_date_the_assistant_missed_is_held_for_the_persons_yes_and_kept_with_their_yes`,
+  `tests/test_dated_scan.py::test_nothing_is_found_from_words_that_are_not_a_full_future_date_with_one_kind_of_day_and_no_doubt`).
 - [ ] [S4] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
   them, and **the separation visible:** each area says which account reads it and whether anything leaves the
   computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
@@ -1148,13 +1170,16 @@ S4. **What arrives, and where it may go:**
   tests.
 
 S5. **Manner and proof:**
-- [ ] [S5] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the
+- [x] [S5] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the
   governor's stale sweep for the person's own items is brought forward from phase E.
   **Built so far (S5, change log 195):** a to-do moved `steward.patterns.moved_times` times, a promise re-dated
   `redated_times` times and a person owed `owed_replies` replies are each one suggestion line with choices, and the
   stale line carries Keep, Drop and Snooze for one to-do (Keep them and Snooze them for several); each choice acts at
   once, records a `suggestion_chosen` signal and has Undo, inside the attention budget (`tests/test_patterns.py`,
-  `web/src/components/SuggestionChoices.test.tsx`). **Left:** a separate stale line for each of several to-dos.
+  `web/src/components/SuggestionChoices.test.tsx`). **Built (S5, one line each):** the stale sweep is one line for each stale to-do, with Keep, Drop and Snooze, inside the
+  attention budget's cap, the rest named one each in the brief (`tests/test_open_items.py::test_todays_queue_has_one_line_for_each_stale_to_do`,
+  `tests/test_patterns.py::test_the_attention_budgets_cap_decides_how_many_stale_lines_show_and_the_rest_wait_for_the_brief`,
+  `web/src/components/SuggestionChoices.test.tsx` "each of several stale to-dos is its own line, and a choice names the line it was made on").
 - [ ] [S5] **Talking to Reginald:** the conversation on a record (plugin question 190) as the way to ask for anything, every
   proposed change kept or dropped inline.
   **Built so far (S5, change log 195):** a box on a to-do, question, person, project or calendar entry: each message an
@@ -1173,8 +1198,10 @@ S5. **Manner and proof:**
   week.
   **Built so far (S5, change log 195):** the four measures per week and for the window on `GET /api/quality` and the
   Quality screen (`tests/test_outcome.py`, `web/src/components/Quality.test.tsx`, `web/src/lib/review-time.test.tsx`).
-  **Left:** review time from screens beyond review mode, What changed and Since yesterday; the exit is the owner's
-  measured week.
+  **Built (S5, every review screen):** review time is also counted from Handled for you, the follow-ups, the to-dos and
+  questions, and Knowledge (`tests/test_outcome.py::test_every_screen_that_looks_over_the_assistants_work_counts_its_time_in_the_same_measure`,
+  `web/src/components/Handled.test.tsx`, `web/src/components/FollowUps.test.tsx`, `web/src/components/OpenItems.test.tsx`,
+  `web/src/components/Knowledge.test.tsx`). **Left:** the exit is the owner's measured week.
 
 Decided by the owner (2026-10-17): approved mail and calendar management in 1.0 (S1b); reminders reach a sleeping
 person through their own calendar or a mail to themselves, no third-party push, a companion phone app after 1.0; the

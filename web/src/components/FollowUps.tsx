@@ -6,6 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
+import { useReviewTime } from "../lib/review-time";
 import { useAct } from "../lib/act";
 import { actTitle, useWaitingActs } from "../lib/acts";
 import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
@@ -100,6 +101,8 @@ function sectionsOnSide(found: S["FollowupSection"][], choice: SideChoice, byPro
 export function FollowUps(props: { compact?: boolean }) {
   const { t } = useWords();
   const compact = !!props.compact;
+  // The full screen counts as time spent looking over the assistant's work; the compact one on Today is part of that screen.
+  useReviewTime("followups", !compact);
   const Heading = compact ? "h3" : "h1";
   const [filter, setFilter] = useState<Filter>("send");
   const [group, setGroup] = useState<Group>("person");

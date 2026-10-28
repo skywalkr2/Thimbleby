@@ -109,6 +109,7 @@ test("Nothing to note ends the question with no words, and Escape closes the box
   const user = userEvent.setup();
   const { calls } = today([line("meeting_capture", { key: "meeting_capture:EVT-1", text: "Design review", event: "EVT-1", at: "2026-10-20T11:00:00-04:00" })], {
     "POST meetings/EVT-1/capture": () => ({ request: null, captured_at: "2026-10-20T12:00:00Z" }),
+    "POST meetings/EVT-1/capture/undo": () => ({ request: null, captured_at: "2026-10-20T12:00:00Z" }),
   });
   const row = await rowOf("Capture what happened at Design review");
   await user.click(within(row).getByRole("button", { name: "Capture" }));
@@ -119,6 +120,22 @@ test("Nothing to note ends the question with no words, and Escape closes the box
   await user.click(await within(row).findByRole("button", { name: "Nothing to note" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST meetings/EVT-1/capture")?.body).toEqual({ text: "" }));
   expect(await screen.findByText(/Marked Design review as nothing to note/)).toBeInTheDocument();
+  // Undo asks the question again: it names the moment the entry was marked.
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST meetings/EVT-1/capture/undo")?.body).toEqual({ captured_at: "2026-10-20T12:00:00Z" }));
+});
+
+test("words that were written down have no Undo here: their changes are undone where the run's changes are", async () => {
+  const user = userEvent.setup();
+  const { calls } = today([line("meeting_capture", { key: "meeting_capture:EVT-1", text: "Design review", event: "EVT-1", at: "2026-10-20T11:00:00-04:00" })], {
+    "POST meetings/EVT-1/capture": () => ({ request: "REQ-1", captured_at: "2026-10-20T12:00:00Z" }),
+  });
+  const row = await rowOf("Capture what happened at Design review");
+  await user.click(within(row).getByRole("button", { name: "Capture" }));
+  await user.type(await within(row).findByRole("textbox"), "Agreed the trim size.{Enter}");
+  await screen.findByText(/Saved what happened at Design review/);
+  expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  expect(calls.some((c) => c.route === "POST meetings/EVT-1/capture/undo")).toBe(false);
 });
 
 test("a promise gone quiet is one line that says who to follow up with and which way the promise went", async () => {
@@ -265,10 +282,45 @@ test("a person with nothing open and no contact says so, and someone not on file
   expect(screen.getByText("1 other isn't on file: Sam Stranger")).toBeInTheDocument();
 });
 
+test("what changed in the invitation is a list on the entry's page, one row for each change, and nothing when nothing changed", async () => {
+  entryPage(
+    prep({
+      changed_at: "2026-10-20T08:00:00Z",
+      changes: [
+        { kind: "moved", day: "2026-10-23", at: "10:00", from_day: "2026-10-21", from_at: "09:00" },
+        { kind: "location_changed", text: "Room 4" },
+        { kind: "attendee_replied", name: "Nell Newcomer", status: "accepted" },
+        { kind: "attendee_added", name: "Gale Guest" },
+        { kind: "times_unknown", reason: "no_zone" },
+      ],
+    }),
+  );
+  const list = await screen.findByRole("region", { name: "What changed in the invitation" });
+  const rows = within(list).getAllByRole("listitem").map((row) => row.textContent);
+  expect(rows).toEqual([
+    "Moved from Wed, Oct 21 9:00 AM to Fri, Oct 23 at 10:00 AM",
+    "The place is now Room 4",
+    "Nell Newcomer answered: yes",
+    "Gale Guest was added",
+    "Something changed that could not be read",
+  ]);
+  expect(list).toHaveTextContent(/Last changed on .*Oct 20/);
+  cleanup();
+  entryPage(prep({ changes: [] }));
+  await screen.findByRole("region", { name: ANA });
+  expect(screen.queryByRole("region", { name: "What changed in the invitation" })).toBeNull();
+});
+
 test("an entry nobody else is on says so and offers no prep note", async () => {
   entryPage(prep({ coming: [], people: [] }));
   expect(await screen.findByText("Nobody else is on this calendar entry.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Draft a prep note" })).toBeNull();
+});
+
+test("an ended entry nobody else is on still offers to capture what happened", async () => {
+  entryPage(prep({ coming: [], people: [], over: true }));
+  expect(await screen.findByText("Nobody else is on this calendar entry.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Capture what happened" })).toBeInTheDocument();
 });
 
 test("a prep note is asked for in one press, and the page says where it stands afterwards", async () => {

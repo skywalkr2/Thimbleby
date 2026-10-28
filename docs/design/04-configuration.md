@@ -393,6 +393,14 @@ Built keys:
 - `steward.people.snooze_days` ([1, 3, 7, 14]): the days a line about a promise gone quiet can be snoozed for, as a list;
   `steward.meetings.invitation_days_ahead` (14; 0 is off): how soon an entry must start for an unanswered invitation to get a
   Today line (6.32). Demo values are in both fictional workspaces.
+- `steward.meetings.changes_days` (7): how many days back an invitation's page looks for what changed in it;
+  `steward.meetings.capture_alone` (false): whether the Today line asking what happened also shows for an entry nobody else is
+  on (6.32). `steward.brief.dated_risk_days` (3; 0 is off): how many days ahead a deadline, renewal or expiry that a fact
+  records is an at-risk line in the morning brief. `steward.attention.quiet_after_dismissals` (3; 0 is off),
+  `stop_after_dismissals` (0, never; it must exceed the first) and `learn_days` (30): what putting off the same kind of
+  suggestion teaches (6.32). `steward.dates.find_by_rules` (true) and `find_most` (5): whether and how many dated facts the
+  rules offer from an input the assistant missed them in; the words are `language.dated_deadline_words`,
+  `dated_renewal_words`, `dated_expiry_words` and `dated_doubt_words` (6.32). Demo values are in both fictional workspaces.
 - `ask_lead_words` (Can you, Could you, Would you, Please) and `own_promise_words` (I'll, I will): what the
   `own-request-not-promise` lint reads (6.33): a sentence in the person's own sent mail that starts with an asking word
   or ends in a question mark, and holds no promising word, asks someone else, so an action owned by the person from it is

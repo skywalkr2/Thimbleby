@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeSettings, settingItem } from "../lib/settings-fixtures";
@@ -105,6 +105,17 @@ const group = (name: string) => screen.getByRole("list", { name });
 const body = (calls: ReturnType<typeof fakeSettings>, route: string) => calls.find((c) => c.route === route)?.body;
 const sections = () => screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
 const past = () => screen.getByText("Not used in a while, and what was retired");
+
+test("the time this screen is open and in view is counted as time spent looking over the assistant's work, once, when the person leaves it", async () => {
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  const { calls } = open({ "POST quality/review-time": () => ({ seconds: 30 }) });
+  await screen.findByRole("list", { name: "Waiting for your OK" });
+  clock.mockReturnValue(start + 30_000);
+  cleanup();
+  clock.mockRestore();
+  expect(calls.filter((c) => c.route === "POST quality/review-time").map((c) => c.body)).toEqual([{ screen: "knowledge", seconds: 30 }]);
+});
 
 test("the page reads Waiting for your OK, What Helper follows, Your words, and Not used in a while behind a link; no tabs", async () => {
   open();

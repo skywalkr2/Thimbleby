@@ -463,7 +463,7 @@ const MORE: Brief = {
       more: 0,
       lines: [
         line({ key: "remind:ACT-7", kind: "yes", change: "reminder_offer", text: "Decide on the renewal", day: "2026-10-29", at: "09:00", when: "2026-10-29T09:00:00-05:00", link: { kind: "action", id: "ACT-7" } }),
-        line({ key: "digest:stale", kind: "digest", change: "stale", count: 3, queue: "stale" }),
+        line({ key: "digest:stale:ACT-3", kind: "digest", change: "stale", count: 1, text: "Tidy the style sheet", queue: "stale:ACT-3" }),
       ],
     },
   ],
@@ -482,6 +482,21 @@ test("a travel clash whose meetings have no places says it for getting from one 
   const travel = (over: Partial<Line>) => line({ key: "clash:x", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", day: "2026-10-22", at: "11:10", ...over });
   show({ ...MORE, sections: [{ key: "risk", more: 0, lines: [travel({ minutes: 29, needed_minutes: 30 })] }] });
   expect(await screen.findByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 1 minute between them; you need about 30 to get from one to the other")).toBeInTheDocument();
+});
+
+test("a deadline, renewal or expiry from a mail or a booking is an at-risk line that says how far away it is", async () => {
+  const dated = (key: string, change: string, days: number, over: Partial<Line> = {}) => line({ key, kind: "dated", change, text: "The studio letter says to cancel by Friday", day: "2026-10-23", days, link: { kind: "fact", id: key }, ...over });
+  show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [dated("FACT-1", "renewal", 3), dated("FACT-2", "deadline", 0, { text: "The room is free to cancel until noon" }), dated("FACT-3", "expiry", 1, { text: "The pass runs out" }), dated("FACT-4", "deadline", 2, { text: "The form is due" })] }] });
+  expect(await screen.findByText("Renewal in 3 days, Fri, Oct 23: The studio letter says to cancel by Friday")).toBeInTheDocument();
+  expect(screen.getByText("Deadline today: The room is free to cancel until noon")).toBeInTheDocument();
+  expect(screen.getByText("Expires tomorrow: The pass runs out")).toBeInTheDocument();
+  expect(screen.getByText("Deadline in 2 days, Fri, Oct 23: The form is due")).toBeInTheDocument();
+});
+
+test("a promise whose words name a meeting today says so, with who owes it and when the meeting is", async () => {
+  show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [line({ key: "meeting_wait:ACT-2", kind: "meeting_wait", text: "Send the third drawing", person_name: "Mira Example", other: "Design review", day: "2026-10-20", at: "14:00", link: { kind: "action", id: "ACT-2" } }), line({ key: "meeting_wait:ACT-3", kind: "meeting_wait", text: "Send the quote", other: "Budget review", day: "2026-10-20", at: "12:00" })] }] });
+  expect(await screen.findByText("Mira Example: Send the third drawing is still open, and Design review is today at 2:00 PM")).toBeInTheDocument();
+  expect(screen.getByText("Send the quote is still open, and Budget review is today at 12:00 PM")).toBeInTheDocument();
 });
 
 test("a title with a raw date in it never shows it in the brief: the date is written as elsewhere", async () => {
@@ -505,8 +520,8 @@ test("a suggestion that waited for the brief is worded as the brief's own line a
   const onOpenView = vi.fn();
   fakeApi({ "GET brief": () => MORE, "GET today/queue": () => [] });
   renderApp(<BriefCard workspace="ws" onOpenRecord={vi.fn()} onOpenView={onOpenView} />);
-  expect(await screen.findByText("Keep or drop 3 to-dos nobody has touched lately")).toBeInTheDocument();
-  const item = screen.getByText("Keep or drop 3 to-dos nobody has touched lately").closest("li")!;
+  expect(await screen.findByText("Decide whether you are still doing: Tidy the style sheet")).toBeInTheDocument();
+  const item = screen.getByText("Decide whether you are still doing: Tidy the style sheet").closest("li")!;
   await user.click(within(item).getByRole("button", { name: "Open" }));
   expect(onOpenView).toHaveBeenCalledWith("work/open");
 });

@@ -641,7 +641,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "answer":
         return t("queue.answer", { text: line.text ?? "" });
       case "stale":
-        return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: plainTitle(line.subject) }) : tn("queue.stale", line.count);
+        return t("queue.stale.one_named", { text: plainTitle(line.subject ?? "") });
       case "pattern": {
         const vars = { text: plainTitle(line.text ?? ""), name };
         return tn(`queue.pattern.${line.state ?? "moved"}`, line.count, vars);
@@ -1080,31 +1080,15 @@ function QueueRow(props: {
           menu: [],
         };
       case "stale": {
-        // One to-do: Keep, Drop and Snooze right on the line. Several: Look over opens them, and Keep and Snooze are in
-        // the menu, for all of them.
+        // One line for each to-do: Keep, Drop and Snooze right on the line.
         const [first, second, ...rest] = choices;
-        if (line.count === 1 && first) {
-          return {
-            pill: t("queue.pill.stale"),
-            tone: "neutral",
-            meta: tn("queue.stale.meta", line.waiting_days ?? 0),
-            primary: { label: first.label, run: first.run },
-            other: second ? { label: second.label, run: second.run } : undefined,
-            menu: rest.map((c) => ({ id: c.id, label: c.label, run: c.run })),
-          };
-        }
         return {
           pill: t("queue.pill.stale"),
           tone: "neutral",
           meta: tn("queue.stale.meta", line.waiting_days ?? 0),
-          primary: {
-            label: t("queue.stale.open"),
-            run: () => {
-              chooseFilters({ state: "stale" });
-              props.handlers.onOpenView?.("work/open");
-            },
-          },
-          menu: choices.map((c) => ({ id: c.id, label: c.label, run: c.run })),
+          primary: first ? { label: first.label, run: first.run } : { label: t("queue.stale.open"), run: () => props.handlers.onOpenRecord?.("action", line.actions?.[0] ?? "") },
+          other: second ? { label: second.label, run: second.run } : undefined,
+          menu: rest.map((c) => ({ id: c.id, label: c.label, run: c.run })),
         };
       }
       case "promise": {

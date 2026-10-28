@@ -27,10 +27,20 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
-from engine import day_capacity, day_clashes, invitation_changes, since_yesterday, suggestions, week_plan
+from engine import (
+    day_capacity,
+    day_clashes,
+    invitation_changes,
+    invitation_history,
+    since_yesterday,
+    suggestions,
+    week_plan,
+)
 from engine.blocked import standing_hold
 from engine.config.schema import WEEKDAYS
+from engine.due_phrases import named_entry
 from engine.firm_due import firm_due
+from engine.meeting_guests import window
 from engine.names import People
 from engine.records import entry_time
 from engine.reminder_lines import rules
@@ -245,38 +255,12 @@ def _cap(lines: list[Line], key: str, rule: Any) -> Section:
 
 def _event_state(data: dict[str, Any], here: Any) -> invitation_changes.Invitation:
     """An event record as an invitation (attendees are left out: who replied is not news)."""
-
-    def when(value: Any, *, end: bool = False, all_day: bool = False) -> date | datetime | None:
-        if not value:
-            return None
-        found = entry_time(str(value))
-        if isinstance(found, datetime):
-            return found if found.tzinfo else found.replace(tzinfo=here)
-        return found + timedelta(days=1) if end and all_day else found
-
-    start = entry_time(str(data["start"])) if data.get("start") else None
-    all_day = start is not None and not isinstance(start, datetime)
-    organizer = data.get("organizer") or {}
-    return invitation_changes.Invitation(
-        summary=data.get("title"),
-        start=when(data.get("start")),
-        end=when(data.get("end"), end=True, all_day=all_day),
-        location=data.get("where"),
-        organizer=invitation_changes.Person(organizer["address"], organizer.get("name"))
-        if organizer.get("address")
-        else None,
-        attendees=(),
-        cancelled=bool(data.get("cancelled")),
-    )
+    return invitation_history.event_state(data, here)
 
 
 def _local_parts(value: Any) -> tuple[str | None, str | None]:
     """A change's time as a day and a clock time (none for an all-day date)."""
-    if isinstance(value, dict) and value.get("at") is not None:
-        return value["at"].date().isoformat(), value["at"].strftime("%H:%M")
-    if isinstance(value, dict) and value.get("date") is not None:
-        return value["date"].isoformat(), None
-    return None, None
+    return invitation_history.local_parts(value)
 
 
 def _invitation_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
@@ -446,6 +430,104 @@ def _capacity(c: _Day) -> list[Line]:
     ]
 
 
+#: The kinds of dated fact the brief lists as at risk: a day by which the person has to act or lose something.
+AT_RISK_KINDS = ("deadline", "renewal", "expiry")
+
+
+def _dated(c: _Day) -> list[Line]:
+    """The deadlines, renewals and expiries that facts record (from a mail, a booking or a document), from today through
+    `steward.brief.dated_risk_days` days ahead, soonest first. A fact a newer one replaced is left out."""
+    window = c.cfg.steward.brief.dated_risk_days
+    if window <= 0:
+        return []
+    last = c.today + timedelta(days=window)
+    replaced = {f.data["supersedes"] for f in c.view.list("fact") if f.data.get("supersedes")}
+    found: list[tuple[date, str, Line]] = []
+    for fact in c.view.list("fact"):
+        d = fact.data
+        on = d.get("on")
+        if on is None or d.get("on_kind") not in AT_RISK_KINDS or fact.id in replaced:
+            continue
+        day = on if isinstance(on, date) else date.fromisoformat(str(on))
+        if not c.today <= day <= last:
+            continue
+        found.append(
+            (
+                day,
+                fact.id,
+                Line(
+                    f"dated:{fact.id}",
+                    "dated",
+                    change=d["on_kind"],
+                    text=d["text"],
+                    day=day.isoformat(),
+                    days=(day - c.today).days,
+                    link=("fact", fact.id),
+                ),
+            )
+        )
+    return [line for _, _, line in sorted(found, key=lambda t: (t[0], t[1]))]
+
+
+def _named_today(c: _Day, data: dict[str, Any]) -> Any | None:
+    """The one calendar entry today, timed, not called off and not over, that an open to-do's words name: its text, the
+    words its day was read from and the quoted words it came from. None when the words name none or several, or the
+    to-do is already due at an entry."""
+    if data.get("due_event"):
+        return None
+    entries = []
+    for entry in c.view.list("event"):
+        spans = window(entry.data, c.here)
+        if (
+            spans is None
+            or entry.data.get("cancelled")
+            or not isinstance(entry_time(str(entry.data["start"])), datetime)
+            or spans[0].astimezone(c.here).date() != c.today
+            or spans[1] <= c.now
+        ):
+            continue
+        entries.append(entry)
+    for phrase in (data.get("text"), data.get("due_words"), (data.get("evidence") or {}).get("quote")):
+        found = named_entry(entries, str(phrase), "") if phrase else None
+        if found is not None:
+            return found
+    return None
+
+
+def _meeting_waits(c: _Day) -> list[Line]:
+    """What someone else still owes the person and whose words name a meeting today that is not yet over: the thing
+    is at risk at that meeting, soonest meeting first. The meeting is named only in words: the to-do isn't due at it."""
+    found: list[tuple[datetime, str, Line]] = []
+    for a in c.open_actions():
+        d = a.data
+        if c.mine(d) or c.pm not in (d.get("promised_to") or []):
+            continue
+        entry = _named_today(c, d)
+        spans = window(entry.data, c.here) if entry is not None else None
+        if entry is None or spans is None:
+            continue
+        who = next((o["person"] for o in d.get("owners") or [] if o.get("person")), None)
+        start = spans[0].astimezone(c.here)
+        found.append(
+            (
+                start,
+                a.id,
+                Line(
+                    f"meeting_wait:{a.id}",
+                    "meeting_wait",
+                    text=d["text"],
+                    person=who,
+                    person_name=c.name(who),
+                    other=entry.data["title"],
+                    day=start.date().isoformat(),
+                    at=start.strftime("%H:%M"),
+                    link=("action", a.id),
+                ),
+            )
+        )
+    return [line for _, _, line in sorted(found, key=lambda t: (t[0], t[1]))]
+
+
 def _risk(c: _Day) -> list[Line]:
     # What doesn't fit today comes first: it is the reason the to-dos below it are at risk.
     lines: list[Line] = _capacity(c)
@@ -501,7 +583,9 @@ def _risk(c: _Day) -> list[Line]:
                     link=("action", action_id),
                 )
             )
+    lines += _meeting_waits(c)
     lines += _clashes(c)
+    lines += _dated(c)
     return lines
 
 
@@ -533,7 +617,7 @@ def _digest(c: _Day) -> list[Line]:
             f"digest:{q.key}",
             "digest",
             change=f"pattern_{q.state}" if q.kind == "pattern" else q.kind,
-            text=q.text,
+            text=q.text or q.subject,
             person=q.person,
             person_name=c.name(q.person),
             count=q.count,

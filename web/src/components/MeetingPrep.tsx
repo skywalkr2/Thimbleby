@@ -10,6 +10,7 @@ import { day } from "../lib/dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { CaptureForm } from "./CaptureForm";
+import { InvitationChanges } from "./InvitationChanges";
 import { ITEM_KINDS, PrepItems } from "./PrepItems";
 
 type Person = S["PersonPrepView"];
@@ -86,6 +87,8 @@ export function MeetingPrep(props: { entry: string; title: string }) {
   if (!prep) return null;
   const strangers = prep.coming.filter((g) => !g.person);
   return (
+    <>
+    <InvitationChanges changes={prep.changes ?? []} changedAt={prep.changed_at} />
     <section aria-labelledby="meeting-prep" className="record-section" data-meeting-prep={prep.event}>
       <div className="heading">
         <h3 id="meeting-prep">{t("meeting.prep.heading")}</h3>
@@ -113,5 +116,6 @@ export function MeetingPrep(props: { entry: string; title: string }) {
       )}
       {capturing && <CaptureForm event={prep.event} title={props.title} onClose={() => setCapturing(false)} />}
     </section>
+    </>
   );
 }

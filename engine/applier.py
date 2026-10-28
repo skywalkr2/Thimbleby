@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from engine import (
     acts,
     audience,
+    dated_scan,
     decision_lines,
     deliveries,
     draft_checks,
@@ -281,6 +282,8 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
         ops += signature_contact.proposals(
             ctx.inputs.raw_input, view, ctx.cfg, ctx.people, contact_kind(ctx.cfg, "phone"), ops
         )
+    if ctx.actor != "pm" and not ctx.confirmed_by_pm and "fact" in ctx.allowed_ops:
+        ops += _found_dates(ctx, view, ops)
     if ctx.actor != "pm" and not ctx.confirmed_by_pm:
         req = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
         settled = req.data.get("project") if req is not None else None
@@ -708,6 +711,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         why = series_module.item_problem(view, merged.get("event"), merged.get("series"))
                         if why:
                             refuse(i, "targets", why)
+        if isinstance(op, FactOp) and op.group == dated_scan.GROUP and not _persons_own(view, ctx):
+            # A date the rules found in an input is not the person's own words: it waits for their yes.
+            problems.append(Problem("dated-confirm", "hold", i, DATED_WAITS))
         if isinstance(op, PersonContactOp):
             why = contact_problem(view, ctx.cfg, op)
             if why:
@@ -1016,6 +1022,7 @@ STANCE_PLAIN = {
 }
 #: Why a contact detail or a project the assistant found waits, as the held line says it.
 CONTACT_WAITS = "A way to reach someone waits for your confirmation."
+DATED_WAITS = "A date found in the words of an input waits for your confirmation."
 #: Why an act the assistant drafted waits: nothing goes out, and nothing is even drafted, until the person says so.
 ACT_WAITS = "Something to send waits for your confirmation; nothing goes out until you say yes."
 REACHED_WAITS = "Someone has already been sent this: look at it before dropping it."
@@ -3910,6 +3917,7 @@ def _apply_op(
             "kind": op.kind,
             "source": source,
             "matters_for": " ".join(op.matters_for.split()) if op.matters_for else None,
+            "asker": _asker(ctx, op.asker, to),
         }
         made("question", tx.create("question", data, w).id)
     elif isinstance(op, QuestionDoneOp):
@@ -3964,6 +3972,32 @@ def _apply_op(
         tx.update("person", op.person, {"how_to_reach": reach}, w, read_version=found.version)
         made("person", op.person)
     return touched, None
+
+
+def _asker(ctx: Context, name: str | None, to: str) -> str | None:
+    """The person who asked a question, when the input names one known person other than who it is for; never
+    guessed."""
+    if not (name or "").strip():
+        return None
+    found = ctx.people.resolve(name)
+    return found.person if found.status == "ok" and found.person != to else None
+
+
+def _found_dates(ctx: Context, view: Any, ops: list[OpModel]) -> list[OpModel]:
+    """The dated facts the rules find in an input the assistant read, for the dates its answer lacks
+    (`engine/dated_scan.py`): only for the extraction of an input that isn't the person's own words, never for an
+    automated notice. Each carries the group that holds it for the person's yes."""
+    if origin_of(ctx).get("task") != "notes" or _persons_own(view, ctx) or not ctx.inputs.raw_input.strip():
+        return []
+    from engine.mail_kinds import automated_notice_input
+    from engine.reply_split import split_message
+
+    if automated_notice_input(ctx.cfg, ctx.inputs.raw_input):
+        return []
+    head = reply_lines.leading_headers(ctx.inputs.raw_input)
+    text = split_message(head[1] if head else ctx.inputs.raw_input).new
+    today = local_day(datetime.fromisoformat(ctx.store.clock()), zone(ctx.cfg))
+    return list(dated_scan.proposals(ctx.cfg, view, text, ctx.inputs.source, ops, today))
 
 
 def _next_occurrence(tx: Tx, ctx: Context, ended: Any, w: WriteContext, made: Any) -> None:

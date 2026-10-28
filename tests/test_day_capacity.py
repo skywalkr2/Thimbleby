@@ -161,6 +161,62 @@ def test_the_assistants_effort_is_held_as_a_question_and_leaving_it_is_a_signal(
     assert store.read().get("action", action).data["effort_minutes"] == 45
 
 
+def _assistant_adds_and_suggests(env, quote, minutes=90):
+    """An answer that adds a to-do and, in the same answer, suggests how long it takes (`$new:0` is the to-do)."""
+    _, cfg, store = env
+    ops = [
+        {
+            "op": "action.add",
+            "text": "Write the quarterly report",
+            "owners": [me(cfg)],
+            "evidence": {"quote": quote},
+        },
+        {
+            "op": "record.set",
+            "kind": "action",
+            "id": "$new:0",
+            "field": "effort_minutes",
+            "value": minutes,
+            "evidence": {"quote": quote},
+        },
+    ]
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(store.plugins.ops),
+        Inputs("REQ-1", None, quote, "", "trusted", cites="mail:1"),
+        actor="assistant",
+    )
+    cs_id = apply_changeset(cs, [], ctx, run=None)
+    return cs_id, store.read().get("changeset", cs_id).data["ops"]
+
+
+def test_an_effort_suggested_for_a_to_do_added_in_the_same_answer_is_held_and_kept_with_the_new_to_do(env):
+    _, cfg, store = env
+    quote = "Write the quarterly report, it is about a day and a half of work"
+    cs_id, outcomes = _assistant_adds_and_suggests(env, quote, 90)
+    assert [o["status"] for o in outcomes] == ["applied", "held"]
+    (new,) = [a for a in store.read().list("action") if a.data["text"] == "Write the quarterly report"]
+    assert new.data.get("effort_minutes") is None and "only you can set effort_minutes" in outcomes[1]["reason"]
+    release(store, cfg, cs_id, 1)
+    assert store.read().get("action", new.id).data["effort_minutes"] == 90
+
+
+def test_the_held_effort_names_the_new_to_do_and_leaving_it_is_a_signal(env):
+    from engine import held_ask
+
+    _, cfg, store = env
+    cs_id, outcomes = _assistant_adds_and_suggests(env, "Write the quarterly report, about two hours of work", 120)
+    asked = held_ask.describe(store.read(), People(store, cfg), outcomes[1]["op"])
+    assert asked["ask"] == "effort" and asked["value"] == "120" and asked["item"] == "Write the quarterly report"
+    decline_held(store, cs_id, 1)
+    (new,) = [a for a in store.read().list("action") if a.data["text"] == "Write the quarterly report"]
+    assert new.data.get("effort_minutes") is None
+    assert [s.data["kind"] for s in store.read().list("signal")].count("held_declined") == 1
+
+
 # ---- the capacity check --------------------------------------------------------------------------------------------
 
 
@@ -445,10 +501,12 @@ def test_no_offer_is_made_when_the_setting_is_off(tmp_path):
         store.close()
 
 
-def test_the_effort_cases_of_both_workspaces_pass_on_their_stub_answers():
+def test_the_effort_cases_of_both_workspaces_pass_on_their_stub_answers_including_one_for_a_new_to_do():
     from engine.evaluate import evaluate
     from tests.conftest import DEMO_A
 
     for template in (DEMO_A, DEMO_B):
-        results = evaluate(template, stub=True, runs=1, env={}, only=["effort-stated-for-an-open-todo"]).results
+        results = evaluate(
+            template, stub=True, runs=1, env={}, only=["effort-stated-for-an-open-todo", "effort-stated-for-a-new-todo"]
+        ).results
         assert results and all(r.passed and not r.missing and not r.forbidden for r in results), results

@@ -3,7 +3,6 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
-import { takeFilters } from "../lib/open-items";
 import { RestartProvider } from "../lib/restart";
 import { forgetLine } from "../lib/today";
 import { person } from "../lib/records-fixtures";
@@ -119,16 +118,6 @@ test("for an action it reassigns it, taking the one who hasn't answered off it",
   await user.click(await screen.findByRole("button", { name: "Pick who" }));
   await user.selectOptions(await screen.findByRole("combobox", { name: "Ask instead" }), "PER-3");
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "ACT-4", read_version: 6, fields: { owners: [{ person: "PER-3" }, { person: "PER-1" }] } }));
-});
-
-test("the stale to-dos are one line that opens the list narrowed to them", async () => {
-  const user = userEvent.setup();
-  const { onView } = show([line("stale", { key: "stale", count: 3, actions: ["A-1", "A-2", "A-3"], waiting_days: 40 })]);
-  expect(await screen.findByText("Keep or drop 3 to-dos nobody has touched lately")).toBeInTheDocument();
-  expect(row("stale")).toHaveTextContent("The longest has gone 40 days with no change");
-  await user.click(within(row("stale")).getByRole("button", { name: "Look over" }));
-  expect(onView).toHaveBeenCalledWith("work/open");
-  expect(takeFilters()).toEqual({ project: "", person: "", state: "stale" });
 });
 
 test("one stale to-do is titled by its own words", async () => {

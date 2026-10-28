@@ -161,7 +161,7 @@ def _with(ws, days: int):
     return ws.config(env={}, flags={"ui.today.stale_after_days": days})
 
 
-def test_todays_queue_has_one_line_for_the_stale_to_dos(env):
+def test_todays_queue_has_one_line_for_each_stale_to_do(env):
     ws, cfg, store = env
     long_ago = NOW - timedelta(days=cfg.ui.today.stale_after_days + 5)
     a = add_action(store, "Tidy the style sheet")
@@ -169,10 +169,12 @@ def test_todays_queue_has_one_line_for_the_stale_to_dos(env):
     for record in (a, b):
         stamp(store, "action", record, long_ago)
     lines = [line for line in queue(ws, store, cfg, NOW) if line.kind == "stale"]
-    assert len(lines) == 1
-    line = lines[0]
-    assert (line.group, line.count) == ("review", 2) and set(line.actions) == {a, b}
-    assert line.waiting_days >= cfg.ui.today.stale_after_days
+    assert len(lines) == 2
+    assert {line.key for line in lines} == {f"stale:{a}", f"stale:{b}"}
+    for line in lines:
+        assert (line.group, line.count) == ("review", 1) and len(line.actions) == 1
+        assert line.waiting_days >= cfg.ui.today.stale_after_days
+    assert {line.subject for line in lines} == {"Tidy the style sheet", "Sort the old proofs"}
     assert [x for x in queue(ws, store, _with(ws, 0), NOW) if x.kind == "stale"] == []
 
 

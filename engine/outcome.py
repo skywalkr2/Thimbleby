@@ -10,8 +10,9 @@ read from the records alone. Nothing here calls AI, and nothing is tracked beyon
   off for now ("Not now") is a matter of timing, never a false alert.
 - **Time spent reviewing:** the seconds the screens that look over the assistant's work were open and in view, each
   visit as that screen measured it and counted for at most `dispatch.knowledge.review_visit_max_seconds`, with the
-  number of visits. The app records a `review_time` signal when the person leaves such a screen; it measures nothing
-  else.
+  number of visits. The screens are the review pane on Today, the review mode, What changed, Since yesterday, Handled
+  for you, the follow-ups, the to-dos and questions, and what the assistant knows (`SCREENS`). The app records a
+  `review_time` signal when the person leaves such a screen; it measures nothing else.
 - **Follow-ups completed:** things the person waited on and chased that were then settled in the week: a promise
   someone else owed that was followed up and then done, and a question that was followed up and then answered.
 
@@ -37,7 +38,7 @@ FALSE_ALERT_CORRECTIONS = frozenset(
 #: The suggestion choices that say nothing needed doing.
 DISMISSING = ("leave", "keep")
 #: The screens that look over the assistant's work, as the screens name themselves when they record their time.
-SCREENS = ("review", "changes", "since", "today")
+SCREENS = ("review", "changes", "since", "today", "handled", "followups", "open", "knowledge")
 TAKEN_BACK = "taken back"
 
 _TIME = WriteContext(actor="pm", trust="trusted", op="review.time")

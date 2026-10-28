@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
@@ -49,6 +49,30 @@ const sections: S["FollowupSection"][] = [
     to_send: 2,
   },
 ];
+
+test("the time this screen is open and in view is counted as time spent looking over the assistant's work, once, when the person leaves it", async () => {
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [], "POST quality/review-time": () => ({ seconds: 30 }) });
+  renderApp(<FollowUps />);
+  await screen.findByRole("listitem", { name: "You" });
+  clock.mockReturnValue(start + 30_000);
+  cleanup();
+  clock.mockRestore();
+  expect(calls.filter((c) => c.route === "POST quality/review-time").map((c) => c.body)).toEqual([{ screen: "followups", seconds: 30 }]);
+});
+
+test("the compact follow-ups on Today are part of Today and count nothing of their own", async () => {
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [], "POST quality/review-time": () => ({ seconds: 30 }) });
+  renderApp(<FollowUps compact />);
+  await waitFor(() => expect(calls.some((c) => c.route === "GET followups")).toBe(true));
+  clock.mockReturnValue(start + 30_000);
+  cleanup();
+  clock.mockRestore();
+  expect(calls.filter((c) => c.route === "POST quality/review-time")).toEqual([]);
+});
 
 test("the PM comes first, then each person with Copy", async () => {
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });

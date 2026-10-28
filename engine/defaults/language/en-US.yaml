@@ -250,3 +250,14 @@ meeting_words: [will cover, we'll cover, we will cover, will be covered, covered
   we'll get it in, we will get it in, raise it, bring it up, discuss it, move it to, moved to]
 # Words that only say it is closed.
 closed_words: [close, closed, closing, close out, closed out]
+
+# Dates in documents: the words that, beside a full date in the same sentence, make it a deadline, a renewal or an expiry.
+# Words that make a date a deadline.
+dated_deadline_words: [due, deadline]
+# Words that make a date a renewal.
+dated_renewal_words: [renew, renews, renewing, renewal, auto-renews]
+# Words that make a date an expiry.
+dated_expiry_words: [expire, expires, expiring, expiry, expiration]
+# Words that make a sentence's date doubtful, so the sentence is not read as a fact.
+dated_doubt_words: [not, ignore, superseded, incorrect, previous, formerly, may, might, could, if, proposed,
+  estimated, tentative, subject to, unless, would]

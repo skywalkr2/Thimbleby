@@ -5,7 +5,8 @@ received: '2026-10-28'
 now: '2026-10-28T09:00'
 form: morning
 given:
-- {kind: action, id: ACT-91, fields: {text: Send the quote, owners: [{person: PER-3}], promised_to: [PER-1], due: '2026-10-30', told: {PER-3: '2026-10-23'}}}
+- {kind: action, id: ACT-91, fields: {text: Send the quote, owners: [{person: PER-3}], promised_to: [PER-1], due: '2026-10-30', told: {PER-3: '2026-10-23'}, evidence: {source: note, quote: I will send the quote before the budget review}}}
+- {kind: event, id: EVT-93, fields: {title: Budget review, start: '2026-10-28T12:00:00-05:00', end: '2026-10-28T13:00:00-05:00', trust: trusted}}
 - {kind: question, id: Q-91, fields: {to: PER-3, title: 'Does the quoted price include travel?', status: sent, sent_at: '2026-10-23T15:00:00-05:00'}}
 then:
 - at: '2026-10-28T07:30'
@@ -15,4 +16,5 @@ expect:
   - {kind: on_today, change: need, count: 1, queue: 'nudge:PER-3'}
   changed:
   - {kind: news, text: Send the quote, person: PER-3, detail: Replied but did not say whether the quote includes travel}
-left: [meeting_dependency]
+  risk:
+  - {kind: meeting_wait, text: Send the quote, person: PER-3, other: Budget review, day: '2026-10-28', at: '12:00', link: [action, ACT-91]}
