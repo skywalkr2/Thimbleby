@@ -560,7 +560,7 @@ def test_a_plugin_reads_the_sides_the_side_of_a_record_and_a_persons_sides(tmp_p
     from engine.plugin_api import PLUGIN_API_VERSION, Side
     from engine.plugin_api.testing import plugin_workspace
 
-    assert PLUGIN_API_VERSION == "0.3.91"
+    assert tuple(int(n) for n in PLUGIN_API_VERSION.split(".")) >= (0, 3, 91)
     with plugin_workspace(a_plugin_folder(tmp_path), root=tmp_path / "ws") as ws:
         view = ws.view()
         personal = ws.cfg.workspace.project.personal

@@ -149,6 +149,8 @@ TARGET_FIELDS_READ_BY_OTHERS = {
     "proposed_start": False,
     "proposed_end": False,
     "action": False,
+    "folder_name": False,  # what the person's own screen showed a picked folder as; never sent
+    "label_name": False,  # the same for a picked label
 }
 
 

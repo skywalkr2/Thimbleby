@@ -135,8 +135,8 @@ async function handIn(page: Page, c: Case) {
   await go(page, "What changed");
   // What changed titles a change as Today does. Choosing the line shows the whole change in the detail pane beside the
   // list, which is what the steps read.
-  const lines = page.getByRole("main").locator("li.line:not(.in-pane)");
-  const line = mine ? lines.and(page.locator(`[data-changeset="${mine}"]`)).first() : lines.first();
+  const rows = page.getByRole("main").locator("li.line:not(.in-pane)");
+  const line = mine ? rows.and(page.locator(`[data-changeset="${mine}"]`)).first() : rows.first();
   await expect(line.locator(".kind").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
   const expander = line.locator(".expander").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
