@@ -22,6 +22,7 @@
 | `appendix/auto-checks.md` | The automatic checks run on every screen opened, with each hit |
 | `shots/<sweep>/<name>.jpg` | 381 screenshots: every one a finding cites. Each name matches the appendix |
 | `visual/README.md` | The visual review: a score for every screen, shared component fixes (VC01 to VC13), findings by screen (VS01 to VS19), six mockups with before and after, visual exit criteria E9 to E12 |
+| `visual/PATH-TO-4.6.md` | The path past 3.5: where the mockups really score (3.6), what each point needs at 4.6, shared work VP01–VP15, the scoring method, and exit criteria E13 (4.0) and E14 (4.6) |
 | `visual/appendix/`, `visual/mockups/`, `visual/before-after/` | The three visual reviews in full, the mockup pages and their renders, and side-by-side images of today's screen and the mockup |
 
 **Source ids:**

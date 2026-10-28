@@ -122,7 +122,29 @@ One row per shared component (VC) and per screen (VS). Seen at `04ffc21e`. Fold 
 | VS18 | Visual | Settings › Connections | Follow the `connections` mockup: an account card with a status pill and a sources table. Adding is a two-step drawer | V3-1, V3-2, V3-11 (masters X09, X53) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
 | VS19 | Visual | Settings › Add-ons | Each card: name, publisher, one line, status pill, one action. Details in a disclosure | V3-14 (masters X52) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
 
-## Exit criteria (README section 3, plus visual E9–E12)
+## Path to 4.6 (visual/PATH-TO-4.6.md)
+
+Stage B items gate E13 (4.0); stage C items gate E14 (4.6). None block the current round.
+
+| ID | Sev | Area | Title | Sources | Done when | Status | Commit | Test | Checked |
+|---|---|---|---|---|---|---|---|---|---|
+| VP01 | Visual B | Shared | One content grid | PATH-TO-4.6 §4 | Title, filters, primary, list, cards and setup footer share two edges via a content-max token | To do | | | |
+| VP02 | Visual B | Shared | Row anatomy v2 | PATH-TO-4.6 §4 | Fixed lead slot, titles share one edge, two row heights, 2-line title clamp, owner only when not you, questions not tickable | To do | | | |
+| VP03 | Visual B | Shared | Type scale v2 | PATH-TO-4.6 §4 | 24/16/15/13 steps, meta in text-muted, 11px uppercase group labels, 12px only for pills and column headers | To do | | | |
+| VP04 | Visual B | Shared | Primary discipline | PATH-TO-4.6 §4 | At most one filled button per viewport; two secondary styles; Today's review folded by default | To do | | | |
+| VP05 | Visual B | Shared | Status and state rows | PATH-TO-4.6 §4 | One dot-plus-word status; warn/danger rows with edge and tint; colour never alone; header status agrees with connections | To do | | | |
+| VP06 | Visual B | Shared | Night elevation and focus | PATH-TO-4.6 §4 | Surface lifts off canvas by night; focus ring at least 3:1 on every surface incl. tinted rows | To do | | | |
+| VP07 | Visual B | Shared | State sheet per screen | PATH-TO-4.6 §4 | First run, filtered empty, skeleton loading without shift, error, offline, conflict, 0/1/100+ for every inventory screen | To do | | | |
+| VP08 | Visual B | Shared | Phone shell | PATH-TO-4.6 §4 | 56px tab bar with icons and active state, header icons, rows stack actions at 480px and under, filters in one sheet | To do | | | |
+| VP09 | Visual C | Shared | Interaction and motion | PATH-TO-4.6 §4 | Hover, pressed, reveal, tick-and-undo, expand, overlay timings per PATH section 4, all via --dur-* tokens | To do | | | |
+| VP10 | Visual C | Shared | Keyboard | PATH-TO-4.6 §4 | / j k x e Enter Esc work on every list; focus returns to the trigger; shown in tooltips and the ? sheet | To do | | | |
+| VP11 | Visual C | Shared | Content resilience | PATH-TO-4.6 §4 | Long names, emails, paths, 40+ rows, 99+ counts, longer text; fixtures added to both fictional workspaces | To do | | | |
+| VP12 | Visual C | Shared | In-between widths | PATH-TO-4.6 §4 | Checked at 1024 and 768; rail drops under 1100; menu folds under 900; no sideways scroll 360–1920 | To do | | | |
+| VP13 | Visual C | Shared | Hit targets | PATH-TO-4.6 §4 | 24px visible / 44px touch, 32px desktop, 8px apart | To do | | | |
+| VP14 | Visual B, C | Shared | Mockups v2 then v3 (reviewer) | PATH-TO-4.6 §4 | v2 re-scored cold at 4.0 or more with phone and state sheets; v3 at 4.6 with interaction recordings | To do | | | |
+| VP15 | Visual C | Shared | Design QA in the build | PATH-TO-4.6 §4 | Before/after captures per UI batch; screenshot comparisons in CI on every inventory screen; style guide shows every state | To do | | | |
+
+## Exit criteria (README section 3, plus visual E9–E12, then E13–E14 for the path to 4.6)
 
 | # | Criterion | Status | Evidence | Checked |
 |---|---|---|---|---|
@@ -138,3 +160,5 @@ One row per shared component (VC) and per screen (VS). Seen at `04ffc21e`. Fold 
 | E10 | VC01–VC13 built as shared components or tokens and used everywhere; the style guide shows each in both themes | To do | | |
 | E11 | The six mockup screens built to their mockup (or an owner-approved variant), shown side by side in the hand-over | To do | | |
 | E12 | Visual guards in CI: no native unstyled fieldset/select/date/time/file; no paragraph under 13px; no autofocus on page load; at most one solid primary per region; no empty leading column in a row | To do | | |
+| E13 | Stage B: every inventory screen at least 4.0 overall, no point below 3.5, from day, night, phone and state-sheet captures; VP01–VP08 done; mockups v2 at 4.0 or more, built | To do | | |
+| E14 | Stage C: every inventory screen at least 4.6 overall, no point below 4.3, by the PATH-TO-4.6 §6 method (fixed captures and recordings, two reviewers, lower counts, owner signs off); VP09–VP13 and VP15 done; mockups v3 built; CI screenshot comparisons pass | To do | | |

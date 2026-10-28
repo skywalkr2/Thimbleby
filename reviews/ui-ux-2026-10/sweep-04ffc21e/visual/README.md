@@ -4,7 +4,7 @@
 
 **Seen at:** all findings come from build `04ffc21e`. Screens will change batch by batch, so each item names the screen and the master `X` id it belongs to. The host folds each item into the batch already touching that screen.
 
-**Question asked:** do the pages look good by today's standards for modern web apps (Linear, Notion, Things, Superhuman, Stripe)? That means:
+**Question asked:** do the pages look good by today's standards for modern web apps (the best-known task, mail, notes and payments apps)? That means:
 - calm, with a clear hierarchy and one obvious action
 - consistent components and purposeful spacing
 - type that tells the story, and restrained colour
@@ -158,6 +158,8 @@ These are added to `../TRACKING.md` as E9–E12. The round isn't done until they
   - at most one solid primary button per region (a page header, a card, a dialog footer)
   - no list row with an empty leading column
 
+**Beyond this round:** 3.5 is the gate for now, not the goal. `PATH-TO-4.6.md` sets E13 (4.0) and E14 (4.6). It covers the work (VP01–VP15), a standard for each point, and a stricter scoring method. A separate reviewer scored the six mockups cold at **3.6 on average**. So building them gets the app to E9 and no further. The rest of the way is states, the phone, interaction and craft.
+
 ## 7. Gaps (no screenshot in the sweep)
 
 Each appendix lists what it couldn't see. Taken together:
@@ -165,6 +167,6 @@ Each appendix lists what it couldn't see. Taken together:
 - **Night:** What changed with data; the opened Today line; Follow-ups' message pane; To-dos' menu and editors; Add to schedule; the Hand-in drawer; the Ask pane.
 - **Phone:** the Schedule with events; dialogs and menus; Files; the organization page.
 - **A real project page** (as opposed to a side's page); Handover with a conflict; Backups with a folder and key set.
-- **Anthropic and OpenAI error states;** the sign-in popup.
+- **The AI providers' error states;** the sign-in popup.
 
 The fresh captures for E9 must cover these, and I'll score them in the re-sweep.
