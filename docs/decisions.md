@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+
+## 2026-10-28: Where the cursor starts
+
+**Decided:** When a screen or a setup step opens, the cursor is on its heading, never in a field and never on a label.
+When a form, dialog or drawer the person opened appears, from a button or a menu, the cursor is in its first field.
+
+**Decided by:** the owner, deferring to the UI/UX reviewer ("i will defer to the UI reviewer on cursor. My main point
+when we made that rule was because the cursor twas defaulting to labels").
+
+**Why:** the earlier rule (every screen's first field) was made because the cursor landed on labels; a field taking the
+cursor on page load surprised the reviewer and moved screen-reader users past the page's heading.
+
+**Impact:** design 7.1; CLAUDE.md's UI rules; the sweep's batch V builds it with its guard (E12). Change log: section 255.
 ## 2026-10-28: A channel lists an account's folders and labels
 
 **Decided:** Plugin API 0.3.92 adds `folders=` to `registrar.channel`: `fn(account, context)` returns `ChannelFolder(id, name,

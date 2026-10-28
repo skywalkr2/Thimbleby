@@ -218,8 +218,9 @@ time. These rules hold for the main session and every subagent.
 
 ## UI rules (design Part 7)
 - Today is the home; panels are filtered views. One primary action per row, the rest in its menu.
-- When a screen, step or form opens, the cursor is in its first main field (owner); only a screen with no field puts it
-  on its heading. Shortcut keys never fire while the cursor is in a field.
+- When a screen or setup step opens, the cursor is on its heading, never in a field or on a label; a form, dialog or
+  drawer the person opened puts it in its first field (owner, 2026-10-28). Shortcut keys never fire while the cursor is
+  in a field.
 - A field with a known set of values is a list to pick from, never a box to type in (owner): time zones, people,
   projects, value lists, accounts, models, folders. A text setting names its list with `json_schema_extra={"choices": …}`.
 - Reversible actions act at once with an undo toast; only send, publish, post and spending above the configured amount confirm.

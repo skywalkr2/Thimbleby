@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 255. Where the cursor starts: a screen on its heading, a form the person opened in its first field (2026-10-28; P96)
+
+- 7.1 (the cursor): a screen or setup step opening puts the cursor on its heading, never in a field or on a label; a
+  form, dialog or drawer the person opened puts it in its first field. Was: every screen and step in its first field.
+  The UI/UX sweep's visual guard (E12, no field focused on page load) checks it.
+
 ## 254. A channel lists an account's folders and labels, plugin API 0.3.92 (2026-10-28; P91)
 
 | Where | Before | Now |
