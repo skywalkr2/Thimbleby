@@ -474,14 +474,14 @@ test("the capacity line says what the to-dos need and what the calendar has, and
   await screen.findByRole("heading", { level: 2, name: "Morning brief" });
   expect(screen.getByText("Your to-dos need about 3 hours; your calendar has about 30 minutes free")).toBeInTheDocument();
   // The travel line says how many minutes are between the meetings, how many the travel needs, and where each one is.
-  expect(screen.getByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 10 minutes between them; you need about 30 to get from Room 4 to Room 2")).toBeInTheDocument();
+  expect(screen.getByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 10 minutes between them; you need about 30 minutes to get from Room 4 to Room 2")).toBeInTheDocument();
   expect(screen.queryByText(/too little to travel/)).toBeNull();
 });
 
 test("a travel clash whose meetings have no places says it for getting from one to the other, and a minute reads as one", async () => {
   const travel = (over: Partial<Line>) => line({ key: "clash:x", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", day: "2026-10-22", at: "11:10", ...over });
   show({ ...MORE, sections: [{ key: "risk", more: 0, lines: [travel({ minutes: 29, needed_minutes: 30 })] }] });
-  expect(await screen.findByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 1 minute between them; you need about 30 to get from one to the other")).toBeInTheDocument();
+  expect(await screen.findByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 1 minute between them; you need about 30 minutes to get from one to the other")).toBeInTheDocument();
 });
 
 test("a deadline, renewal or expiry from a mail or a booking is an at-risk line that says how far away it is", async () => {

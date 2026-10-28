@@ -16,6 +16,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from engine.plain_errors import reason_of
 from engine.storage import StoreError
 from engine.yaml_load import load_yaml
 
@@ -67,7 +68,7 @@ def _problem(err: ValidationError) -> str:
     """A refusal in words: the field and what is wrong with it, or the file's own rule when a model-level check
     refused it (it has no field)."""
     first = err.errors()[0]
-    message = str(first["msg"]).removeprefix("Value error, ").removeprefix("Assertion failed, ")
+    message = reason_of(first)
     where = ".".join(map(str, first["loc"]))
     return f"{where}: {message}" if where else message
 

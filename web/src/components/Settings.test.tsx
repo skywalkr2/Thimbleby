@@ -341,11 +341,11 @@ test("locked settings are disabled and say where they come from; others the scre
   expect(screen.getByLabelText("What demo.flagged does")).toBeDisabled();
   expect(screen.getByText("Set by an option used to start the app")).toBeInTheDocument();
   const table = screen.getByText("What demo.table does").closest(".setting") as HTMLElement;
-  expect(within(table).getByText("Changed in demo.yaml")).toBeInTheDocument();
+  expect(within(table).getByText("Change this setting outside this screen.")).toBeInTheDocument();
   expect(within(table).queryByRole("textbox")).toBeNull();
   const server = screen.getByText("What demo.server does").closest(".setting") as HTMLElement;
   expect(within(server).getByText("local")).toBeInTheDocument();
-  expect(within(server).getByText("Changed in demo.yaml")).toBeInTheDocument();
+  expect(within(server).getByText("Change this setting outside this screen.")).toBeInTheDocument();
 });
 
 test("there is no Save button: a text setting saves when the cursor leaves it, with the fingerprint, and reads back with Undo", async () => {
@@ -678,6 +678,19 @@ test("a refused value shows the server's words on its own row and keeps what was
   expect(note).toHaveTextContent("demo.title can't be empty here");
   expect(rowOf("The display name.")).toContainElement(note);
   expect(screen.getByLabelText("The display name.")).toHaveValue("Nope");
+});
+
+test("a refused value says what is allowed in words beside its field, naming the field by its label", async () => {
+  const user = userEvent.setup();
+  api(ITEMS, { "POST settings": () => new Refuse(400, "Use a number that is 0 or more.", { "X-Cockpit-Field": "demo.title" }) });
+  open();
+  const title = await screen.findByLabelText("The display name.");
+  await user.clear(title);
+  await user.type(title, "-3");
+  await user.tab();
+  const note = await screen.findByRole("alert");
+  expect(note).toHaveTextContent("“The display name” can't be saved. Use a number that is 0 or more.");
+  expect(note.textContent).not.toMatch(/Input should|should be/);
 });
 
 test("a section opens with the cursor on its heading, never in a field", async () => {

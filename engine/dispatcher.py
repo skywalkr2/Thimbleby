@@ -51,6 +51,7 @@ from engine.money import usd
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import PacketRefused, build, target_of
+from engine.plain_text import is_data
 from engine.projects import budget_problem
 from engine.rule_use import record_applied, record_named
 from engine.storage import Store, StoreError, WriteContext
@@ -1065,6 +1066,8 @@ def _drafted(
     text = _unfenced(result.text)
     if not text.strip():
         return "", "The assistant's draft came back empty."
+    if is_data(text):
+        return "", "Couldn't draft this: the assistant's answer wasn't plain writing."
     if result.truncated:
         more_task = replace(task, request=task.request + "\n\n" + CONTINUE.format(text=text))
         try:

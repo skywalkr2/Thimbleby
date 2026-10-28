@@ -14,6 +14,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from engine.plain_errors import reason_of
 from engine.records import REGISTRY, KnowledgeRecord, Person, kind_label, ref_fields, values_at
 from engine.references import join_scope
 from engine.storage import StoreError, WriteContext
@@ -54,7 +55,7 @@ def kind_of(entry_id: str) -> str | None:
 
 def _words(err: ValidationError) -> str:
     first = err.errors()[0]
-    return str(first["msg"]).removeprefix("Value error, ")
+    return reason_of(first)
 
 
 def references_problem(view: Any, kind: str, data: dict[str, Any], only: set[str] | None = None) -> str | None:

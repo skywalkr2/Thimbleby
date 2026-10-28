@@ -1,6 +1,7 @@
 // Showing any record's values in plain words: field names made readable and values as lines of text.
 import { useCallback } from "react";
 import { day, whenText } from "./dates";
+import { plainDates } from "./read";
 import { useSides } from "./sides";
 import { useWords } from "./wording";
 
@@ -62,6 +63,7 @@ export function inReadingOrder<T extends { name: string }>(rows: T[]): T[] {
 /** One line of a detail: words, or a link shown by its title with the domain beside it. */
 export type DetailLine = string | { label: string; url: string };
 
+const RECORD_KEY = /^[A-Z][A-Z0-9]*-\d+$/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/;
 /** The keys of a map inside a list whose values are one of a fixed set of words, not free text. */
@@ -81,9 +83,11 @@ export function useDetailLines() {
         if (!text) return "";
         const known = names.get(text);
         if (known) return known;
+        // A record's id the page can't name (it is gone, or not yet resolved) is left out: an id is never shown.
+        if (RECORD_KEY.test(text)) return "";
         if (ISO_DAY.test(text)) return day(text);
         if (ISO_TIME.test(text)) return whenText(text) || text;
-        return token ? (has(`value.${key}.${text}`) ? t(`value.${key}.${text}`) : readable(text)) : text;
+        return token ? (has(`value.${key}.${text}`) ? t(`value.${key}.${text}`) : readable(text)) : plainDates(text);
       };
       const plain = (v: unknown) => ["string", "number", "boolean"].includes(typeof v);
       const walk = (key: string, v: unknown, inList: boolean): DetailLine[] => {
@@ -97,7 +101,9 @@ export function useDetailLines() {
           return parts.flatMap(([k, item]) => {
             if (!plain(item)) return walk(k, item, false);
             const text = scalar(k, item, TOKEN_KEYS.has(k));
-            return text ? [`${readable(k)}: ${text}`] : [];
+            // A map keyed by records (who was told, and when) names each by its title; one the page can't name has no label.
+            const label = names.get(k) ?? (RECORD_KEY.test(k) ? "" : has(`field.${k}`) ? t(`field.${k}`) : readable(k));
+            return text ? [label ? `${label}: ${text}` : text] : [];
           });
         }
         const text = scalar(key, v, view?.type === "choice" && !view.value_list && !inList);

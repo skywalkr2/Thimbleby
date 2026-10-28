@@ -30,6 +30,31 @@ labels of To-dos and questions no longer carry their count in the wording. Not d
 classes (`line`, `row`, `queue`) still carry their own markup in 29 places (the expandable lines of Follow-ups, What changed, Add-ons, sign-ins, sources and others), with the same measures; each moves onto
 `Row` when its screen is rebuilt. No change to scope. Change log: section 259.
 
+## 2026-10-28: One formatter for everything a person reads
+
+**Decided:** (1) What a record, an input or the assistant wrote reaches the screen as words, through one formatter in each
+place it is made: a record by its title (never its id; a record with no title by its kind), a date or moment as a day and a
+time on the person's own clock, a setting's value as its own field says it, a refused value as a sentence from the error's
+kind and limits beside its field, a message to someone else with days as the date format writes them and no zero before the
+day. (2) A text that is only data is shown as nothing, and a draft that is only data is refused ("Couldn't draft this") and
+tried again. (3) A record's fields have plain labels from the sheet, shared by its page and its form. (4) The default heading
+above a message's to-dos is "To-dos with you:". (5) A browser test over every main screen, at 1440 and 390 pixels, in both
+themes, with data in the workspace, fails on an internal id, an ISO date or time, a file name, a zone or language code, JSON or
+a validation phrase.
+
+**Decided by:** the UI/UX sweep's reviewer (X16, X32, X37, X38, X49, cause 2); the builder's choices for review: a to-do's own
+words are shown with days in words wherever they are shown, while the edit box keeps them as written; a page shows nothing
+until its names have arrived rather than ids; a refusal in one saved setting is sent as the reason alone, and the screen puts it beside its field with the field's label.
+
+**Why:** the same record was an id in one place and a title in the next, a date was numbers in a title and words beside it, and
+a refusal read as the validation library wrote it.
+
+**Impact:** Design 7.0 and 7.14 (the one formatter), 7.8 and 4.0 (`messages.actions_heading`'s default, with demo values in
+both workspaces) and CHANGES section 260. New: `engine/plain_errors.py`, `engine/plain_text.py`, `engine/written_dates.py`,
+`web/src/lib/read.ts`, `web/src/lib/setting-words.ts`, the `field.*` labels in the sheet, `SettingsRefused`. Not changed: the
+Add-on files screen names its files, and a message to a friend opens as one to a colleague does (a greeting by relation is a
+design question). No change to scope. Change log: section 260.
+
 ## 2026-10-28: A connection is tried before it is added; one privacy question in setup; no model names in setup; every moment on the person's clock
 
 **Decided:** (1) A mailbox, a calendar link or file, a feed or a folder is read once before it is saved (a change to one too);

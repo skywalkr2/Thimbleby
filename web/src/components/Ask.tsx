@@ -11,6 +11,7 @@ import { copyMessage } from "../lib/copy";
 import { whenText } from "../lib/dates";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { problemText } from "../lib/problem";
+import { useSettingWordsFromCache } from "../lib/setting-words";
 import { formatValue, labelOf } from "../lib/settings";
 import { freshSettings, useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
@@ -294,6 +295,7 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
   const act = useAct();
   const client = useQueryClient();
   const afterSave = useAfterSave();
+  const settingWords = useSettingWordsFromCache();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const { proposal: p } = props;
@@ -327,7 +329,7 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
   return (
     <div className="ask-item">
       <span className="what">{t("ask.suggestion")}</span>
-      <strong>{t("ask.suggestion_line", { label, value: formatValue(p.value, t) })}</strong>
+      <strong>{t("ask.suggestion_line", { label, value: item ? settingWords.value(item, p.value) : formatValue(p.value, t) })}</strong>
       {p.why && <span className="sub">{p.why}</span>}
       {open ? (
         <div className="acts">

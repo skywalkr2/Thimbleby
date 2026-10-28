@@ -8,6 +8,7 @@ import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
+import { plainDates } from "../lib/read";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
@@ -80,7 +81,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
           <div className="detail">
             <dt>{t("promise.words")}</dt>
             <dd>
-              <q>{view.quote}</q>
+              <q>{plainDates(view.quote)}</q>
               {!props.omitOrigin && <OriginLink origin={view.origin} />}
             </dd>
           </div>

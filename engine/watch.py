@@ -36,6 +36,7 @@ from engine.html_text import as_text
 from engine.language_words import language_words
 from engine.names import People
 from engine.own_accounts import own_names
+from engine.plain_errors import reason_of
 from engine.storage import StoreError, WriteContext
 from engine.triage import classify, classify_placed
 
@@ -235,7 +236,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
         except ValidationError as err:
             first = err.errors()[0]
             where = ".".join(str(p) for p in first["loc"]) or "settings"
-            raise ConnectorError("no_access", f"its settings don't fit: {where}: {first['msg']}") from None
+            raise ConnectorError("no_access", f"its settings don't fit: {where}: {reason_of(first)}") from None
         poll = _poll(store, connector, settings, state, ws, cfg, now, source.account)
     except ConnectorError as err:
         outcome = {"offline": "offline", "throttled": "throttled"}.get(err.kind, "failed")

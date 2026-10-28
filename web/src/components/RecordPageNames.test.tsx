@@ -77,7 +77,7 @@ test("a person's details say names, words and a label for a choice, in the order
   renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Quarry House");
-  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Role", "Organization", "How to reach", "Aliases", "Team", "Status"]);
+  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Role", "Organization", "How to reach", "Other names", "Team", "Status"]);
   const value = (term: string) => within(details).getByText(term).closest(".detail")!.querySelector("dd")!.textContent;
   expect(value("Organization")).toBe("Quarry House");
   expect(value("Team")).toBe("Quarry Editorial");

@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 260. One formatter for everything a person reads: titles, days, setting values, refusals (2026-10-28; sweep batch 3, X16, X32, X37, X38, X49)
+
+| Where | Before | Now |
+|---|---|---|
+| Record pages (7.14) | A person's page read "You · PER-1", "Organization ORG-1" and "Team TEAM-1" until its names arrived; a map keyed by records read "Told · PER 3: Wed, Oct 28"; fields were called "Basis Said", "Trust", "Aliases", "Budget usd" | Nothing is shown until the names have arrived; a map is said by the records' titles and an id that can't be named is left out; fields have plain labels shared by the page and its form (`field.*`: "Other names", "How it was said", "Budget (US dollars)") |
+| Dates in words (7.0) | A to-do's own words carried "by 2026-11-04" onto its page, its menu's label, the Month view, quotes, a source's text; a moment read "2026-10-28T15:07:36Z" | `web/src/lib/read.ts` writes every date and moment in a text as a day (and a time on the person's clock); the sheet's `{name}` values, the details, quotes and sources pass through it |
+| What a change made (7.3) | "Made: WEEK-1, an unreviewed draft" | The record is named by its title, or by its kind in words ("this week's plan") |
+| Data where words belong (6.7, 7.0) | A note named by JSON, and a weekly message draft that was JSON, were shown | A title that is only data shows as "a note"; a draft that is only data is refused as "Couldn't draft this" and tried again, and files nothing |
+| Messages to others (6.3, 6.12) | "Action items with you: - Lend us the trailer on 2026-11-07. (due Sat, Nov 07)" | "To-dos with you:", dates as the date format writes them, with no zero before the day, in the to-do's own words too |
+| A setting's value (7.15, 4.0) | The line after a save said "en-GB", "saturday", "1.5" and "back to the default, ai"; a read-only setting said "Changed in steward.yaml" | The line says the value as the setting's own field does (language name, city, person, tier, weekday, amount of money); a setting changed elsewhere says "Change this setting outside this screen." |
+| A refused value (7.15, 4.0) | "Input should be greater than or equal to 0", "String should match pattern '^#[0-9a-fA-F]{6}$'" | A sentence from the kind of the error and its limits ("Use a number that is 0 or more."), sent with the setting it is about; the screen shows it beside that field, naming it by the label the field shows ("“Backups to keep” can't be saved. Use a number that is 1 or more."); with several settings in one save the sentence names the one |
+| The clash line (7.1) | "you need about 30 to get from Room 4 to Room 2" | "you need about 30 minutes to get from Room 4 to Room 2" |
+| The guard (7.0) | Nothing looked for internals as a whole | A browser test over every main screen at 1440 and 390 pixels in both themes (`web/e2e/internals.spec.ts`) |
+
 ## 259. The shared components: one Button, Row, PageHeader, EmptyState, and the link and type tokens (2026-10-28; sweep batch V1, VC01, VC02, VC03, VC04, VC08)
 
 | Where | Before | Now |

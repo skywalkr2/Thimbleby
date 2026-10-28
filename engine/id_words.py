@@ -36,6 +36,7 @@ KIND_WORDS = {
     "source": "the message",
     "snapshot": "the mail item",
     "text_version": "the text",
+    "week_plan": "this week's plan",
 }
 #: The kinds an op that retires "an entry" may mean.
 KNOWLEDGE_KINDS = ("lesson", "glossary_entry", "routing_entry", "style_note")

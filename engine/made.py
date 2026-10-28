@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from engine.id_words import kind_words
+
 #: Record fields that name a record, in the order they are tried.
 _NAME_FIELDS = ("title", "name", "full_name", "text")
 
@@ -18,12 +20,13 @@ class Made:
     record: tuple[str, str]  # (kind, id) of the record the person opens to see it
 
 
-def _name_of(record: Any) -> str:
+def _name_of(record: Any, kind: str) -> str:
     for key in _NAME_FIELDS:
         value = record.data.get(key)
         if isinstance(value, str) and value.strip():
             return " ".join(value.split())[:120]
-    return record.id
+    # A record with no words of its own is named by its kind in words, never by its id.
+    return kind_words(kind)
 
 
 def made_by(view: Any, outcomes: list[dict[str, Any]]) -> list[Made]:
@@ -47,9 +50,10 @@ def made_by(view: Any, outcomes: list[dict[str, Any]]) -> list[Made]:
                 and record.data["source"] == "draft"
                 and record.data["status"] != "discarded"
             ):
-                owner = view.get(record.data["owner_kind"], record.data["owner_id"])
-                label = _name_of(owner) if owner is not None else record.data["owner_id"]
-                found.append(Made("draft", record.id, label, (record.data["owner_kind"], record.data["owner_id"])))
+                owner_kind = record.data["owner_kind"]
+                owner = view.get(owner_kind, record.data["owner_id"])
+                label = _name_of(owner, owner_kind) if owner is not None else kind_words(owner_kind)
+                found.append(Made("draft", record.id, label, (owner_kind, record.data["owner_id"])))
             elif ref["kind"] == "file":
                 found.append(Made("file", record.id, record.data["name"], ("file", record.id)))
             else:

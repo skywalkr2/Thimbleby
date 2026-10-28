@@ -26,6 +26,7 @@ import {
   fromDraft,
   groupLabel,
   isOff,
+  labelForKey,
   depthOf,
   matches,
   switchOf,
@@ -50,6 +51,7 @@ import {
 } from "../lib/settings-save";
 import { handOffSearch, takeSearch } from "../lib/settings-search";
 import { useSides } from "../lib/sides";
+import { useSettingWordsFromCache } from "../lib/setting-words";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
@@ -211,6 +213,7 @@ export function Settings(props: {
   const { t, tn, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
+  const settingWords = useSettingWordsFromCache();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   // What decides which sections are listed, and when a section that loads its own content is ready to take the cursor.
   const lists = useValueLists();
@@ -382,7 +385,7 @@ export function Settings(props: {
           rememberFingerprint(client, now.fingerprint);
           const was = view.items;
           setRefreshed({
-            lines: refreshedSettings(was, now.items, (k) => k in typed, t, has),
+            lines: refreshedSettings(was, now.items, (k) => k in typed, t, has, settingWords.value),
             time: changedTime(now),
           });
           setProblems((all) => {
@@ -401,12 +404,14 @@ export function Settings(props: {
         }
         return;
       }
+      // A refused value says what is allowed beside its field, naming the field by the label its screen shows.
+      const refused =
+        err instanceof ApiError && err.detail && err.field
+          ? t("settings.refused", { label: labelForKey(err.field, view.items, t, has), reason: err.detail })
+          : null;
       setProblems((all) => ({
         ...all,
-        [key]:
-          err instanceof ApiError && err.detail
-            ? err.detail
-            : problemText(err, t),
+        [key]: refused ?? (err instanceof ApiError && err.detail ? err.detail : problemText(err, t)),
       }));
     }
   };

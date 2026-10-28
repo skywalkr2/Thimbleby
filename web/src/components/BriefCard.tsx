@@ -161,8 +161,9 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       const vars = { text, other: plainTitle(line.other ?? ""), date, time: clock(line.at) };
       if (line.state !== "travel") return tn("brief.line.clash", line.minutes ?? 0, vars);
       // The time between the meetings is what the travel asked for less what falls short.
-      const need = line.needed_minutes ?? 0;
-      const between = Math.max(0, need - (line.minutes ?? 0));
+      const needed = line.needed_minutes ?? 0;
+      const need = durationWords(needed, tn);
+      const between = Math.max(0, needed - (line.minutes ?? 0));
       return line.place && line.other_place
         ? tn("brief.line.clash.travel", between, { ...vars, need, from: line.place, to: line.other_place })
         : tn("brief.line.clash.travel_apart", between, { ...vars, need });

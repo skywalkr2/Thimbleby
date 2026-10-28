@@ -1,6 +1,7 @@
 // Rendering text that may come from outside content. Never raw HTML: everything is a text node. "- " lines become a
 // list, "Label: url" lines become a named link, and every link shows its real domain so a label can't disguise it.
 import type { ReactNode } from "react";
+import { plainDates } from "../lib/read";
 import { useWords } from "../lib/wording";
 
 const LABELLED_LINK = /^(.{1,120}?):\s+(https?:\/\/\S+)$/;
@@ -34,7 +35,7 @@ function line(text: string): ReactNode {
   if (labelled) return <SafeLink label={labelled[1]} url={labelled[2]} />;
   const bare = BARE_LINK.exec(text);
   if (bare) return <SafeLink label={domainOf(bare[1]) ?? bare[1]} url={bare[1]} />;
-  return text;
+  return plainDates(text);
 }
 
 export function SafeText(props: { text: string; className?: string }) {
@@ -95,17 +96,17 @@ export function findQuote(text: string, quote: string): [number, number] | null 
 export function Highlighted(props: { text: string; quote: string }) {
   const { t } = useWords();
   const found = findQuote(props.text, props.quote);
-  if (!found) return <div className="source-text">{props.text}</div>;
+  if (!found) return <div className="source-text">{plainDates(props.text)}</div>;
   const [start, end] = found;
   return (
     <div className="source-text">
-      {props.text.slice(0, start)}
+      {plainDates(props.text.slice(0, start))}
       <mark>
         <span className="sr">{t("source.quote_start")}</span>
-        {props.text.slice(start, end)}
+        {plainDates(props.text.slice(start, end))}
         <span className="sr">{t("source.quote_end")}</span>
       </mark>
-      {props.text.slice(end)}
+      {plainDates(props.text.slice(end))}
     </div>
   );
 }

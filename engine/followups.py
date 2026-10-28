@@ -22,6 +22,7 @@ from engine.promises import Late
 from engine.scope import stance_of
 from engine.storage import Store, WriteContext
 from engine.today import local_day, zone
+from engine.written_dates import day_words, plain_dates
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
 
@@ -471,9 +472,9 @@ def compose(s: Section, cfg: Config, people: People) -> str:
     lines = [words.greeting.format(first_name=people.first_name(s.person)), ""]
     for n, q in enumerate(questions, 1):
         prefix = f"{n}. " if len(questions) > 1 else ""
-        lines.append(prefix + q["title"])
+        lines.append(prefix + plain_dates(q["title"], words.date_format))
         if q["text"]:
-            lines.append(q["text"])
+            lines.append(plain_dates(q["text"], words.date_format))
         lines += [f"{link['label']}: {link['url']}" for link in q["links"]]
         lines.append("")
     if actions:
@@ -481,8 +482,8 @@ def compose(s: Section, cfg: Config, people: People) -> str:
         for a in actions:
             bits = [a["project_name"]] if a["project_name"] else []
             if a["due"] and not a.get("due_check"):
-                bits.append("due " + date.fromisoformat(a["due"]).strftime(words.date_format))
-            lines.append(f"- {a['text']}" + (f" ({', '.join(bits)})" if bits else ""))
+                bits.append("due " + day_words(date.fromisoformat(a["due"]), words.date_format))
+            lines.append(f"- {plain_dates(a['text'], words.date_format)}" + (f" ({', '.join(bits)})" if bits else ""))
         lines.append("")
     lines.append(words.closing)
     return "\n".join(lines)
@@ -494,7 +495,7 @@ def compose_nudge(s: Section, cfg: Config, people: People, today: date) -> Nudge
     or later follow-up lists only the longest-waiting few and asks who else to ask, or for a date. None when nothing is
     due."""
     words = cfg.language.messages
-    shown = lambda day: date.fromisoformat(str(day)).strftime(words.date_format)  # noqa: E731
+    shown = lambda day: day_words(date.fromisoformat(str(day)), words.date_format)  # noqa: E731
     due = [
         *(("question", q["id"], q["title"], q["chases"], q["sent"], None) for q in s.questions if q["chase_due"]),
         *(
@@ -520,6 +521,7 @@ def compose_nudge(s: Section, cfg: Config, people: People, today: date) -> Nudge
         lines.append(words.nudge_intro.format(count=len(due), date=shown(first)))
     lines.append("")
     for n, (kind, _id, text, _chases, _asked, due_on) in enumerate(due, 1):
+        text = plain_dates(text, words.date_format)
         line = f"{n}. {text}" if len(due) > 1 else text
         if kind == "action" and due_on and date.fromisoformat(str(due_on)) < today:
             line += " " + words.nudge_overdue.format(date=shown(due_on))

@@ -7,6 +7,7 @@ from engine.evaluate import evaluate, load_cases, load_pack_cases
 from engine.followups import FollowUpError, follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
+from engine.written_dates import day_words
 from tests.conftest import DEMO_A, DEMO_B, fixture_records
 
 NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
@@ -143,7 +144,7 @@ def test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_f
     assert row["told"] is None and row["told_days"] is None and not row["chase_due"]
     sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == owner)
     shown = cfg.language.messages.date_format
-    expected = date.fromisoformat(value).strftime(shown) if field == "due" else value
+    expected = day_words(date.fromisoformat(value), shown) if field == "due" else value
     assert sec.to_send >= 1 and expected in sec.message
     # Sending again, even on the same day, settles it: it is told again and stays told.
     mark_sent(store, cfg, owner, sent_text=sec.message, now=NOW)

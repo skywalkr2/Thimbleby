@@ -19,6 +19,7 @@ from pydantic import BaseModel, ValidationError
 
 from engine.config import automatic
 from engine.config.schema import CURRENT_VERSIONS, FILES, FileModel
+from engine.plain_errors import reason_of
 from engine.yaml_load import load_yaml
 
 ENV_PREFIX = "COCKPIT__"
@@ -29,9 +30,12 @@ class ConfigError(Exception):
     """A config file or value can't be used. The message says which file and key, and why; it is for the terminal.
     `plain` says the same without a file name, key or command, for the screen."""
 
-    def __init__(self, message: str, plain: str | None = None) -> None:
+    def __init__(self, message: str, plain: str | None = None, reason: str | None = None) -> None:
         super().__init__(message)
         self.plain = plain or "a setting has a value that isn't allowed"
+        #: For a value a setting refused: what is allowed, as one sentence that names no setting (it is shown beside the
+        #: setting's own field); None for any other problem.
+        self.reason = reason
 
 
 @dataclass
@@ -272,13 +276,17 @@ def field_label(model: type[BaseModel], loc: Iterable[Any]) -> str | None:
     return label or None
 
 
+def refusal_parts(model: type[BaseModel], err: ValidationError) -> tuple[str | None, str]:
+    """The setting a validation error points at, as it is labelled, and what is allowed for it."""
+    first = err.errors()[0]
+    return field_label(model, first["loc"]), reason_of(first)
+
+
 def refusal_text(model: type[BaseModel], err: ValidationError) -> str:
     """A validation error as one sentence for the screen: which setting, and what is wrong with its value."""
-    first = err.errors()[0]
-    msg = first["msg"].removeprefix("Value error, ")
-    label = field_label(model, first["loc"])
+    label, reason = refusal_parts(model, err)
     more = f" ({len(err.errors()) - 1} more)" if len(err.errors()) > 1 else ""
-    return (f"“{label}” isn't allowed: {msg}" if label else f"a setting isn't allowed: {msg}") + more
+    return (f"“{label}” isn't allowed: {reason}" if label else f"a setting isn't allowed: {reason}") + more
 
 
 def _describe(name: str, err: ValidationError) -> ConfigError:
@@ -286,7 +294,11 @@ def _describe(name: str, err: ValidationError) -> ConfigError:
     for item in err.errors():
         where = ".".join(str(p) for p in item["loc"]) or "(file)"
         problems.append(f"{name}.{where}: {item['msg']}")
-    return ConfigError(f"{name}.yaml has problems:\n  " + "\n  ".join(problems), plain=refusal_text(FILES[name], err))
+    return ConfigError(
+        f"{name}.yaml has problems:\n  " + "\n  ".join(problems),
+        plain=refusal_text(FILES[name], err),
+        reason=refusal_parts(FILES[name], err)[1],
+    )
 
 
 def _render_model(instance: BaseModel, model: type[BaseModel], indent: int) -> list[str]:

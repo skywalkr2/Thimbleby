@@ -337,7 +337,7 @@ defaults; the override rule; live).
 
 Built keys:
 
-- `messages`: `greeting` ("Hi {first_name},"), `actions_heading` ("Action items with you:"), `closing` ("Thanks!") and
+- `messages`: `greeting` ("Hi {first_name},"), `actions_heading` ("To-dos with you:"), `closing` ("Thanks!") and
   `date_format` (strftime codes, default `%a, %b %d`) for copied messages, and `date_time_format` (default
   `%a, %b %d, %Y, %H:%M`) for a date and time in the assistant's own text, written in the person's time zone (6.7); and
   `merged_note` and `merged_reason`, the words a merge of two near-duplicate to-dos adds to the kept one's notes and gives as the

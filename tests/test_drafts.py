@@ -248,6 +248,17 @@ def test_an_empty_draft_is_tried_again_by_itself_and_files_nothing(env, monkeypa
     assert not [v for v in store.read().list("text_version") if v.data["source"] == "draft"]
 
 
+def test_a_draft_that_is_only_data_is_never_filed_as_writing(env, monkeypatch):
+    _, _, store = env
+    record = chapter(env)
+    answers(monkeypatch, prose('{"summary": "Filed as a note.", "ops": [{"op": "note", "text": "x"}]}'))
+    request_id = start(env, record)
+    assert run(env, request_id) is None
+    waiting = store.read().get("request", request_id).data
+    assert "Couldn't draft this" in waiting["waiting"] and "{" not in waiting["waiting"]
+    assert not [v for v in store.read().list("text_version") if v.data["source"] == "draft"]
+
+
 def test_a_return_lint_on_a_draft_gets_a_fix_round(env, monkeypatch):
     _, _, store = env
     record = chapter(env)

@@ -1719,7 +1719,7 @@ class ChecksFile(FileModel):
 
 class MessageSettings(ConfigModel):
     greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
-    actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
+    actions_heading: str = Field("To-dos with you:", description="The line above someone's action items.")
     closing: str = Field("Thanks!", description="The last line of a copied message.")
     quiet_intro: str = Field(
         "Checking in on this:",

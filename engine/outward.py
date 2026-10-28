@@ -32,6 +32,7 @@ from engine.language_words import language_words
 from engine.names import People
 from engine.storage import StoreError, WriteContext
 from engine.titles import title_for
+from engine.written_dates import day_words
 
 #: The setting that holds the assistant's name, and the key its history is kept under.
 NAME_KEY = "workspace.assistant_name"
@@ -202,7 +203,7 @@ class SourceLabels:
         self.names = assistant_names(view, cfg.workspace.assistant_name if cfg is not None else DEFAULT_NAME)
 
     def _on(self, day: date | None) -> str:
-        return day.strftime(self.words.source_date_format) if day else ""
+        return day_words(day, self.words.source_date_format) if day else ""
 
     def recorded(self, day: date | None) -> str:
         return self.words.source_recorded.format(date=self._on(day))

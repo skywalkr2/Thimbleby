@@ -8,7 +8,7 @@ import { resolveOffers, usePluginActions, useTaskKinds, type Offer } from "../li
 import { usePluginRun } from "../lib/plugin-run";
 import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
-import { inReadingOrder, readable, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
+import { inReadingOrder, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
 import { reconcile, type Refreshed } from "../lib/refreshed";
 import { time } from "../lib/dates";
 import { useToasts } from "../lib/toasts";
@@ -46,6 +46,7 @@ import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
 import { Skeleton } from "../ui/Skeleton";
+import { plainTitle } from "../lib/title-dates";
 import { useFocusAfterRender } from "../lib/focus-after-render";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -118,9 +119,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const data = record.data;
   const offered = editableFields(fields.data?.fields ?? []);
   // The record's name, never its id: the page says it (a person is named by their full name).
-  const name = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
+  // While what resolves the names is still on its way the page has no name yet, and no detail: an id is never shown.
+  const settled = !page.isPending && !people.isPending && !projects.isPending;
+  const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "") : "";
   const ownOrganization = kind === "project" ? sides.find((s) => s.project === id) : undefined;
-  const rows = data
+  const rows = data && settled
     ? inReadingOrder(
         Object.entries(data.fields)
           // The id of the input an item came from is shown as its "Where it came from" link instead.
@@ -154,7 +157,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter((row) => row.lines.length > 0),
       )
     : [];
-  const heading = isSelf ? t("record.you_named", { name }) : name;
+  const heading = isSelf && name ? t("record.you_named", { name }) : name;
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
@@ -253,6 +256,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                 projects={projects.data ?? []}
                 onDone={stopEditing}
               />
+            ) : !settled ? (
+              <Skeleton />
             ) : rows.length === 0 ? (
               <p className="hint">{t("record.no_details")}</p>
             ) : (
@@ -353,6 +358,7 @@ function DetailsForm(props: {
   onDone: () => void;
 }) {
   const { t } = useWords();
+  const labelOf = useFieldLabel();
   const client = useQueryClient();
   const { push } = useToasts();
   const base = useId();
@@ -398,7 +404,7 @@ function DetailsForm(props: {
           setShown(saved);
           const at = now.changed_at ? new Date(now.changed_at) : null;
           setRefreshed({
-            lines: out.refreshed.map((name) => ({ label: readable(name), value: lines(now.fields[name]).join(", ") || t("settings.empty") })),
+            lines: out.refreshed.map((name) => ({ label: labelOf(name), value: lines(now.fields[name]).join(", ") || t("settings.empty") })),
             time: at && !Number.isNaN(at.getTime()) ? time(at) : "",
           });
         } catch {
@@ -462,8 +468,9 @@ function DetailInput(props: {
   autoFocus: boolean;
 }) {
   const { t } = useWords();
+  const labelOf = useFieldLabel();
   const { field: f, id, value } = props;
-  const label = readable(f.name);
+  const label = labelOf(f.name);
   const text = String(value);
   const required = f.required === true;
   const help = f.description ? `${id}-help` : undefined;

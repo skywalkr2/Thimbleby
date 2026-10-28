@@ -4,10 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../lib/api";
 import { useTierName } from "../lib/ai-routing";
-import { depthOf, fileName, formatValue, fromDraft, isChanged, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
-import { zoneChoices } from "../lib/time-zones";
-import { dateFormatChoices } from "../lib/date-formats";
-import { languageChoices } from "../lib/languages";
+import { depthOf, fromDraft, isChanged, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
+import { settingChoices, settingValue, type SettingWordsContext } from "../lib/setting-words";
 import { useWriteAmount } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { ClampedHint } from "../ui/ClampedHint";
@@ -60,9 +58,7 @@ export function SettingRow(props: {
     : item.renamed_from
       ? t("settings.renamed_from")
       : readOnly
-        ? item.plugin
-          ? t("settings.changed_in_addon")
-          : t("settings.changed_in", { file: fileName(item) })
+        ? t("settings.changed_in_addon")
         : null;
   const hint = label !== item.description ? item.description : null;
   const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft, locale) : null;
@@ -88,43 +84,17 @@ export function SettingRow(props: {
     .filter(Boolean)
     .join(" ");
   const off = item.locked || props.disabled || props.gate !== null || !!props.reason;
-  const option = (o: string) => (has(`settings.option.${item.key}.${o}`) ? t(`settings.option.${item.key}.${o}`) : o);
   // Lists the person's own records and settings keep show them by name: people, and the tiers by their plain names.
   const people = useQuery({ queryKey: ["people"], queryFn: api.people, enabled: item.choices === "people" });
   const tierName = useTierName();
   const personName = (id: string) => (people.data ?? []).find((p) => p.id === id)?.name ?? id;
-  const ownerExample = (format: string) =>
-    format.replace("{full_name}", t("settings.owner_example_name")).replace("{team}", t("settings.owner_example_team"));
+  const words: SettingWordsContext = { t, has, writeAmount, tierName, personName };
   // A setting that may be empty starts its list with a line that says so.
   const mayBeEmpty = item.default === "" || item.default == null;
-  // A list of languages shows each tag as its name in the browser's language, in the order of those names; a list of date
-  // formats shows each as today's date written that way.
-  const choices =
-    item.choices === "languages"
-      ? languageChoices(item.options ?? [])
-          .map((c) => ({ tag: c.tag, label: has(`settings.option.${item.key}.${c.tag}`) ? t(`settings.option.${item.key}.${c.tag}`) : c.label }))
-          .sort((a, b) => a.label.localeCompare(b.label))
-      : item.choices === "time_zones"
-        ? zoneChoices(item.options ?? []).map((c) => ({ tag: c.id, label: c.label }))
-        : item.choices === "date_formats" || item.choices === "date_time_formats"
-        ? dateFormatChoices(item.options ?? [])
-        : item.choices === "people"
-          ? (item.options ?? []).map((o) => ({ tag: o, label: personName(o) }))
-          : item.choices === "tiers"
-            ? (item.options ?? []).map((o) => ({ tag: o, label: tierName(o) }))
-            : item.choices === "owner_formats"
-              ? (item.options ?? []).map((o) => ({ tag: o, label: ownerExample(o) }))
-              : item.choices === "media_types"
-                ? (item.options ?? []).map((o) => ({ tag: o, label: has(`settings.media.${o}`) ? t(`settings.media.${o}`) : o }))
-                : (item.options ?? []).map((o) => ({ tag: o, label: option(o) }));
+  const choices = settingChoices(item, words);
 
   /** A value in words: a choice by its label (the spelling of English, a city), anything else as the sheet writes values. */
-  const valueWords = (value: unknown) =>
-    item.type === "choice"
-      ? (choices.find((c) => c.tag === String(value))?.label ?? formatValue(value, t))
-      : item.money === true && typeof value === "number"
-        ? writeAmount(value)
-        : formatValue(value, t);
+  const valueWords = (value: unknown) => settingValue(item, value, words);
   const typedSecret = !!props.secret && item.secret === true && item.type === "text" && !readOnly && !item.locked;
   let control;
   if (typedSecret && props.secret) {

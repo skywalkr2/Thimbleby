@@ -273,8 +273,8 @@ test("Edit details offers the right control for each editable field and skips th
   expect(within(form).getByRole("textbox", { name: "Title" })).toBeRequired();
   expect(within(form).getByRole("spinbutton", { name: "Pages" })).toHaveValue(12);
   expect(within(form).getByRole("checkbox", { name: "Final" })).not.toBeChecked();
-  expect(within(form).getByLabelText("Due")).toHaveAttribute("type", "date");
-  expect(within(form).getByLabelText("Due")).toHaveValue("2026-11-01");
+  expect(within(form).getByLabelText("Due date")).toHaveAttribute("type", "date");
+  expect(within(form).getByLabelText("Due date")).toHaveValue("2026-11-01");
   const state = within(form).getByRole("combobox", { name: "State" });
   expect(within(state).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
   const mood = within(form).getByRole("combobox", { name: "Mood" });
@@ -345,7 +345,7 @@ test("a number with a known set of values is a list of days to pick from, and th
     }),
   );
   const form = await openForm(user);
-  const lead = within(form).getByRole("combobox", { name: "Lead days" });
+  const lead = within(form).getByRole("combobox", { name: "Days of notice" });
   expect(lead).toHaveValue("2");
   expect(within(lead).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "0", "1", "2", "3"]);
   expect(within(form).queryByRole("spinbutton")).toBeNull();
@@ -479,7 +479,7 @@ test("an action's page shows where it came from as a link, in place of the input
   expect(within(details).queryByText("SRC-3")).toBeNull();
 });
 
-test("a page with no origin shows no link and keeps every field", async () => {
+test("a page with no origin shows no link, and an input's id it can't name is never shown", async () => {
   fakeApi(
     routes({
       [`GET record?${on}`]: () => ({ kind: KIND, id: ID, version: 4, fields: { id: ID, title: "The harbor", source: "SRC-3" }, long_text: [] }),
@@ -487,6 +487,6 @@ test("a page with no origin shows no link and keeps every field", async () => {
   );
   renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
-  expect(within(details).getByText("SRC-3")).toBeInTheDocument();
+  expect(within(details).queryByText("SRC-3")).toBeNull();
   expect(screen.queryByText("Where it came from")).toBeNull();
 });

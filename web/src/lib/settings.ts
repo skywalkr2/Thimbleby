@@ -74,9 +74,6 @@ export function formatValue(value: unknown, t: T): string {
   return String(value);
 }
 
-/** Where a setting that this screen can't change is changed. */
-export const fileName = (item: Pick<Item, "file">) => `${item.file}.yaml`;
-
 /** A short label from the wording sheet when there is one, otherwise the setting's own description. */
 export function labelOf(item: Pick<Item, "key" | "description">, t: T, has: Has): string {
   const key = `settings.key.${item.key}`;

@@ -14,11 +14,18 @@ export type Refreshed = { label: string; value: string };
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 /** The settings the person did not touch whose saved value is not the one the form was showing. */
-export function refreshedSettings(before: Item[], after: Item[], touched: (key: string) => boolean, t: T, has: Has): Refreshed[] {
+export function refreshedSettings(
+  before: Item[],
+  after: Item[],
+  touched: (key: string) => boolean,
+  t: T,
+  has: Has,
+  value: (item: Item, value: unknown) => string = (_item, v) => formatValue(v, t),
+): Refreshed[] {
   const was = new Map(before.map((i) => [i.key, i.value]));
   return after
     .filter((i) => was.has(i.key) && !touched(i.key) && !same(was.get(i.key), i.value))
-    .map((i) => ({ label: labelForKey(i.key, after, t, has), value: formatValue(i.value, t) }));
+    .map((i) => ({ label: labelForKey(i.key, after, t, has), value: value(i, i.value) }));
 }
 
 /** Whether a setting the person did touch has a different saved value now than when the form opened. */

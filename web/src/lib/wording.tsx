@@ -1,6 +1,7 @@
 // The wording sheet: every user-facing string comes from here, with overrides from the workspace's config/ui.yaml.
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import sheet from "../wording/en.json";
+import { plainDates } from "./read";
 
 export type Words = Record<string, string>;
 export type Vars = Record<string, string | number>;
@@ -16,9 +17,12 @@ const WordsContext = createContext<{ words: Words; base: Vars; overrides: Words;
 /** The suffix of a variant of an entry used while the assistant still has the default name. */
 const UNNAMED = ".unnamed";
 
+/** A value put into a sentence: a text's dates are written as words, so a label made from a title reads as the title does. */
+const readable = (value: string | number): string => (typeof value === "string" ? plainDates(value) : String(value));
+
 export function format(words: Words, key: string, vars: Vars = {}): string {
   const template = words[key] ?? key;
-  return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match));
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? readable(vars[name]) : match));
 }
 
 export function WordingProvider(props: {

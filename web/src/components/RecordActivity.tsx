@@ -182,12 +182,12 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
                 <span className="when">{monthDay(e.at)}</span>{" "}
                 {e.made === "setup" ? (
                   <>
-                    <strong>{plainTitle(e.name)}</strong> <span>{t("record.activity.setup")}</span>
+                    <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong> <span>{t("record.activity.setup")}</span>
                   </>
                 ) : (
                   <>
                     <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
-                    <strong>{plainTitle(e.name)}</strong>
+                    <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong>
                   </>
                 )}
                 {movedAgain(e) && <span> · {movedAgain(e)}</span>}

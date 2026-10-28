@@ -1046,8 +1046,8 @@ function QueueRow(props: {
         const between = Math.max(0, needed - (line.minutes ?? 0));
         const travel =
           line.place && line.other_place
-            ? tn("queue.clash.meta.travel", between, { need: needed, from: line.place, to: line.other_place })
-            : tn("queue.clash.meta.travel_apart", between, { need: needed });
+            ? tn("queue.clash.meta.travel", between, { need: durationWords(needed, tn), from: line.place, to: line.other_place })
+            : tn("queue.clash.meta.travel_apart", between, { need: durationWords(needed, tn) });
         return {
           pill: t("queue.pill.clash"),
           tone: "warn",

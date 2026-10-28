@@ -166,7 +166,9 @@ def test_a_bad_value_or_a_locked_key_writes_nothing(tmp_path, monkeypatch):
     before = (ws.config_dir / "storage.yaml").read_text()
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     bad = c.post(f"{api}/settings", json={"changes": {"storage.backups.keep": 0}, "fingerprint": fingerprint})
-    assert bad.status_code == 400 and "How many backups to keep" in bad.json()["detail"]
+    # One setting in the save: the reason alone, said beside the field that was typed in (its screen names it).
+    assert bad.status_code == 400 and bad.json()["detail"] == "Use a number that is 1 or more."
+    assert bad.headers["X-Cockpit-Field"] == "storage.backups.keep"
     assert (ws.config_dir / "storage.yaml").read_text() == before
     locked = c.post(f"{api}/settings", json={"changes": {"ui.density": "comfortable"}, "fingerprint": fingerprint})
     assert locked.status_code == 400 and "set by an environment variable" in locked.json()["detail"]
@@ -631,7 +633,7 @@ def test_an_add_ons_settings_are_a_form_group_saved_to_its_own_file(tmp_path):
     wrong = c.post(
         f"{api}/settings", json={"changes": {"plugins/example.ask_on_add": "maybe"}, "fingerprint": fingerprint}
     )
-    assert wrong.status_code >= 400 and "File a question for you" in wrong.text
+    assert wrong.status_code >= 400 and wrong.json()["detail"] == "Choose yes or no."
     unknown = c.post(f"{api}/settings", json={"changes": {"plugins/nobody.thing": 1}, "fingerprint": fingerprint})
     assert unknown.status_code >= 400
 

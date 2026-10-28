@@ -26,7 +26,7 @@ from pydantic import BaseModel
 
 from engine import audit
 from engine.config import ConfigError, levels, load_config
-from engine.config.loader import RENAMED_KEYS, plain_label, refusal_text
+from engine.config.loader import RENAMED_KEYS, plain_label, refusal_parts, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
 from engine.money import parse_usd
@@ -49,6 +49,15 @@ Kind = Literal["text", "number", "integer", "yes_no", "choice", "list", "other"]
 
 class SettingsError(StoreError):
     """A save that can't be made; the message says which key and why."""
+
+
+class SettingsRefused(SettingsError):
+    """A value a setting refused. `reason` says what is allowed in one sentence that names no setting, for the
+    setting's own field; the message also names the setting, for anywhere that shows it alone."""
+
+    def __init__(self, message: str, reason: str) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class SettingsConflict(SettingsError):
@@ -671,7 +680,7 @@ def _check_plugin(model: type[BaseModel], text: str) -> None:
     except ValidationError as err:
         first = err.errors()[0]
         log.warning("An add-on's settings were refused at %s: %s", ".".join(map(str, first["loc"])), first["msg"])
-        raise SettingsError(refusal_text(model, err)) from None
+        raise SettingsRefused(refusal_text(model, err), refusal_parts(model, err)[1]) from None
 
 
 def _check_key(
@@ -713,6 +722,8 @@ def _check_whole(config_dir: Path, texts: dict[str, str], env: dict[str, str] | 
             return load_config(trial, env=env)
         except ConfigError as err:
             log.warning("A save was refused: %s", err)
+            if err.reason:
+                raise SettingsRefused(err.plain, err.reason) from None
             raise SettingsError(err.plain) from None
 
 

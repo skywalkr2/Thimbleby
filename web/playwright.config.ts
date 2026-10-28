@@ -11,7 +11,8 @@ const servers = [
   { name: "root", port: 8781 + offset, base: "/" },
   { name: "nested", port: 8782 + offset, base: "/admin" },
 ];
-// The layout check has a server of its own, because it holds long made-up text that the other scenarios must not see.
+// The layout check has a server of its own, because it holds long made-up text that the other scenarios must not see. The
+// check that no screen shows an internal reads the same server, with the demo's history and the work added to it.
 const layout = { port: 8786 + offset };
 // So does the check of the yes to an AI account reading work mail and notes: its server has a second stand-in account whose
 // person said Not now, which the other scenarios must not see on Today.
@@ -124,7 +125,7 @@ export default defineConfig({
         ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
       ];
     }),
-    { name: "layout", testMatch: /(layout|handled|guards)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
+    { name: "layout", testMatch: /(layout|handled|guards|internals)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
     { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
     { name: "capacity", testMatch: /today-(capacity|review)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
     { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },

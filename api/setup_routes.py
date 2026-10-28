@@ -268,6 +268,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return done
         except config_screens.SettingsConflict as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+        except config_screens.SettingsRefused as err:
+            # One setting changed: the field it was typed in names it, so the reason alone is said beside it.
+            alone = len({*changes, *reset}) == 1
+            raise HTTPException(
+                status_code=400,
+                detail=err.reason if alone else str(err),
+                headers={FIELD: next(iter({*changes, *reset}))} if alone else None,
+            ) from None
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
 

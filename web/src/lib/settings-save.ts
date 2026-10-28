@@ -1,6 +1,6 @@
 // What follows any saved settings (the Settings screen and the guided setup steps): the question about restarting when a change needs one, a refresh of
 // what the saved files change, and a toast that reads back what changed with Undo.
-import { zoneLabel } from "./time-zones";
+import { useSettingWordsFromCache } from "./setting-words";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, type S } from "./api";
@@ -27,6 +27,7 @@ export function useAfterSave() {
   const { push } = useToasts();
   const { t, tn, has } = useWords();
   const restart = useRestart();
+  const words = useSettingWordsFromCache();
   return useCallback(
     (saved: S["SettingsSaved"], opts: { message?: string; quiet?: boolean } = {}): Promise<void> => {
       rememberFingerprint(client, saved.fingerprint);
@@ -48,9 +49,9 @@ export function useAfterSave() {
       // A value that is an id of the app's own (a setting that holds a person or a project) is never shown as one: the line
       // says the setting changed.
       const line = (c: S["SettingChangeView"]) => {
-        // A time zone is said as its city, as everywhere else, never as the id the settings hold.
-        const zone = known.find((i) => i.key === c.key)?.choices === "time_zones" && typeof c.after === "string";
-        const value = zone ? zoneLabel(String(c.after)) : formatValue(c.after, t);
+        // A value is said as the setting's own screen says it: a city, a language, a person, an amount of money.
+        const item = known.find((i) => i.key === c.key);
+        const value = item ? words.value(item, c.after) : formatValue(c.after, t);
         if (leaksInternals(value)) return t("settings.saved_changed", { label: label(c.key) });
         return c.is_default ? t("settings.saved_default", { label: label(c.key), value }) : t("settings.saved_line", { label: label(c.key), value });
       };
@@ -68,7 +69,7 @@ export function useAfterSave() {
       });
       return refreshed;
     },
-    [client, push, t, tn, has, restart],
+    [client, push, t, tn, has, restart, words],
   );
 }
 

@@ -15,6 +15,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from engine.config import Config
+from engine.plain_errors import reason_of
 from engine.storage import Store, Stored, StoreError, WriteContext
 
 
@@ -116,7 +117,7 @@ def check_file(
         details = kind.details.model_validate(meta or {}).model_dump(mode="json")
     except ValidationError as err:
         first = err.errors()[0]
-        raise StoreError(f"{'.'.join(map(str, first['loc'])) or 'details'}: {first['msg']}") from None
+        raise StoreError(f"{'.'.join(map(str, first['loc'])) or 'details'}: {reason_of(first)}") from None
     if project is not None and view.get("project", project) is None:
         raise StoreError(f"there is no project {project}")
     if replaces is not None and view.get("file", replaces) is None:
