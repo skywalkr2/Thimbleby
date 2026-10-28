@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: A business or job you add is also an organization
+
+**Decided:** Adding a business or a job, in setup or later, also makes it an organization on People, the one the
+person works for, linked to the side by id: one with the same name already there is linked rather than repeated, and
+renaming either keeps them together. A side added before this gets its organization once, at start. The person is
+listed as working for it, so mail from its people files under that side by the rules already built.
+
+**Decided by:** the owner ("heres a big miss - when you add a business in setup it should be in this screen, but its
+not", the People screen with no organizations after adding a business).
+
+**Why:** the business existed only as a group of projects; nothing on People said who the person works for, and the
+filing rules that use organizations had nothing to use.
+
+**Impact:** design 6.32 (sides) and 5.1 (the organization record gains the link), the setup business step and Add a
+business; tested with P93. Change log: none until built.
+
 ## 2026-10-28: Addresses are read whole, and HTML becomes text where it comes in
 
 **Decided:** The term scan recognizes a postal address as one thing, by formats kept as language data, and asks
