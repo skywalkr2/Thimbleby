@@ -167,4 +167,4 @@ Each appendix lists what it couldn't see. Taken together:
 - **A real project page** (as opposed to a side's page); Handover with a conflict; Backups with a folder and key set.
 - **Anthropic and OpenAI error states;** the sign-in popup.
 
-The fresh captures in exit criterion 6 must cover these, and I'll score them in the re-sweep.
+The fresh captures for E9 must cover these, and I'll score them in the re-sweep.
