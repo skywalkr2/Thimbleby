@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 254. A channel lists an account's folders and labels, plugin API 0.3.92 (2026-10-28; P91)
+
+| Where | Before | Now |
+|---|---|---|
+| Plugin API (3.x, 6.12) | A channel had no way to say where messages can go; Move to and Label on a signed-in account took a typed name | `registrar.channel(..., folders=fn)`: `fn(account, context)` returns `ChannelFolder(id, name, kind)` items or a `ChannelFailed`; read-only, only for an account the channel serves, refused at registration without `mailbox: move` or `label`. `engine.plugin_api.testing.channel_folders` calls it in a test. Built: `tests/test_channel_folders.py` |
+| The core's use (6.12) | `folders_listed` was true for a plain mailbox only | `engine/channel_folders.py` asks the account's channel with a time limit and a short cache (`watch.folders_timeout_seconds` 10, `watch.folders_cache_minutes` 5; a failure, a raise, a timeout or a malformed answer is "no list"); `GET /api/acts/accounts/{account}/folders` returns the list or the reason; the options views set `folders_listed` and `folders_account`. Built: `tests/test_channel_folders.py` |
+| The act (6.12) | `folder` and `label` were what the person typed | They are the id the person picked, handed to `send` as picked; the target also keeps the item's `folder_name` and `label_name` (display only, outside the fingerprint) so the approval and the batch panel read the name. Built: `tests/test_channel_folders.py` |
+| Move to and Label (7.4) | A typed box for a signed-in account | A list to pick from (folders for Move to, labels for Label) with a skeleton while it loads; when the channel can't list, the reason in the wording sheet's words and the typed box; one kind listed leaves the other typed; several messages the same. Built: `web/src/components/ActsOnRecords.test.tsx`, `web/src/components/MailSelection.test.tsx` |
+| Settings (4.x) | n/a | `watch.folders_cache_minutes` and `watch.folders_timeout_seconds` (live, kept in files), with demo values in both workspaces |
+
 ## 253. The first day after setup: setup's writes are not edits, flags say what is so, a name once, Today's side column, filters over one choice, Follow-ups over nothing (2026-10-28; P77)
 
 | Where | Before | Now |

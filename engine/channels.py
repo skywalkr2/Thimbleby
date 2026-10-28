@@ -1,12 +1,14 @@
 """Channels: how an approved act is carried out (design 6.12).
 
-A channel is registered by a plugin (`registrar.channel`) or shipped by the core. It is called only by the publisher,
-and only for an act the person approved, whose fingerprint still matches. It declares what it can do: send, say what
-happened to an attempt by its key, and undo; which actions it takes for each kind of target; and which kinds of
-account it serves. The core ships `copy`, whose send is the person's own (they copy the
-approved text and mark it sent), and `FakeChannel`, which tests use to play every answer a service can give.
+A channel is registered by a plugin (`registrar.channel`) or shipped by the core. Its `send` is called only by the
+publisher, and only for an act the person approved, whose fingerprint still matches. It declares what it can do: send,
+say what happened to an attempt by its key, undo, and list the folders and labels an account has; which actions it
+takes for each kind of target; and which kinds of account it serves. The core ships `copy`, whose send is the
+person's own (they copy the approved text and mark it sent), and `FakeChannel`, which tests use to play every answer
+a service can give.
 
-A channel never writes records and never sees anything but the act it is handed.
+A channel never writes records and never sees anything but the act it is handed (or, for `folders`, the account it
+is asked about).
 """
 
 from __future__ import annotations
@@ -128,6 +130,18 @@ class ChannelFailed:
 
 
 @dataclass(frozen=True)
+class ChannelFolder:
+    """One place an account can file a message, as `folders` lists it: `id` is what the channel wants back in a move or
+    label act (the act's `folder` or `label`), `name` what the person sees (a nested folder's whole path, such as
+    "Projects/Archive") and `kind` says whether it is a `folder` (a message is in one) or a `label` (a message can
+    carry several)."""
+
+    id: str
+    name: str
+    kind: Literal["folder", "label"] = "folder"
+
+
+@dataclass(frozen=True)
 class ChannelUndone:
     """The answer to `undo` when the service took the act back."""
 
@@ -160,6 +174,9 @@ class ChannelRegistration:
     actions: dict[str, tuple[str, ...]] = field(default_factory=dict)
     #: The kinds of account it serves (a sign-in's name, or `mailbox`); empty means it needs no account.
     accounts: tuple[str, ...] = ()
+    #: `folders(account, context)`: the folders and labels the account has, as `ChannelFolder`s, or a `ChannelFailed`;
+    #: None for a channel that can't list them (the person types the name).
+    folders: Callable[..., Any] | None = None
     #: True for a channel the person carries out themselves (`copy`): the publisher never calls it, and the act is
     #: sent only when the person says it was.
     manual: bool = False
@@ -188,7 +205,8 @@ class FakeChannel:
     has no status capability at all. `templates` is the version each template has now. What went out is in
     `delivered`, one (act, attempt key) for each call that reached the service; `calls` is every call to `send` and
     `status_calls` the keys `status` was asked about; `contexts` is the context each call to `send`, `status` and `undo`
-    got, in order."""
+    got, in order. `folder_answer` is what `folders` says (a list of `ChannelFolder`, a `ChannelFailed`, or an exception
+    to raise); left None the channel lists no folders. Each call is in `folder_calls`."""
 
     mode: Literal["succeed", "fail", "timeout", "timeout_after_send"] = "succeed"
     failure: ChannelFailed = field(default_factory=lambda: ChannelFailed("outage", "The service was down."))
@@ -203,6 +221,8 @@ class FakeChannel:
     calls: list[tuple[OutgoingAct, str]] = field(default_factory=list)
     status_calls: list[str] = field(default_factory=list)
     contexts: list[ChannelContext | None] = field(default_factory=list)
+    folder_answer: list[ChannelFolder] | ChannelFailed | Exception | None = None
+    folder_calls: list[tuple[str, ChannelContext | None]] = field(default_factory=list)
 
     def _id_of(self, key: str) -> str:
         return f"fake-{key}"
@@ -239,6 +259,14 @@ class FakeChannel:
             raise TimeoutError("no answer")
         return ChannelUndone()
 
+    def folders(self, account: str, context: ChannelContext | None = None) -> Any:
+        """What `folder_answer` says: the list, a `ChannelFailed`, or (an exception) a raised error. Every call is in
+        `folder_calls`."""
+        self.folder_calls.append((account, context))
+        if isinstance(self.folder_answer, Exception):
+            raise self.folder_answer
+        return self.folder_answer
+
     def template_version(self, name: str) -> str | None:
         return self.templates.get(name)
 
@@ -254,4 +282,5 @@ class FakeChannel:
             template_version=self.template_version,
             actions={kind: tuple(ACT_ACTIONS[kind]) for kind in self.kinds},
             accounts=self.accounts,
+            folders=self.folders if self.folder_answer is not None else None,
         )

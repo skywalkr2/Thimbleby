@@ -15,6 +15,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import ValidationError
 
 from api.schemas import (
+    AccountFoldersView,
+    AccountFolderView,
     ActAboutView,
     ActAccountsView,
     ActAccountView,
@@ -42,6 +44,7 @@ from api.schemas import (
 )
 from engine import act_accounts, acts, own_accounts, propose_times, reply_recipients
 from engine.applier import apply_as_person, release
+from engine.channel_folders import FolderLists, lists_folders
 from engine.channels import COPY
 from engine.channels_mailbox import ANSWERS as MAILBOX_ANSWERS
 from engine.channels_mailbox import NO_PROPOSE
@@ -59,6 +62,7 @@ from engine.workspace import Workspace
 
 def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
+    folder_lists = FolderLists(store, cfg)
 
     def guard(fn: Any) -> Any:
         try:
@@ -164,6 +168,8 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             calendar=data["target"].get("calendar"),
             when=data["target"].get("when"),
             folder=data["target"].get("folder"),
+            folder_name=data["target"].get("folder_name"),
+            label_name=data["target"].get("label_name"),
             template=(data.get("template") or {}).get("name"),
             fingerprint=acts.current_fingerprint(view, store.plugins, data)[0],
             approved_by=approval["by"] if approval else None,
@@ -249,7 +255,9 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
                     for a in ("archive", "move", "label", "mark_read")
                     if mail is not None and mail.takes("mailbox", a)
                 ]
-                out.folders_listed = bool(out.folder_source)
+                if not mailbox and lists_folders(store, account):
+                    out.folders_account = account
+                out.folders_listed = bool(out.folder_source or out.folders_account)
         elif channel is not None and channel.takes("calendar", "answer"):
             out.can_act = acting
             out.answers = list(MAILBOX_ANSWERS) if mailbox else ["accepted", "tentative", "declined", "propose"]
@@ -295,11 +303,28 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         if account is None:
             return ActBatchOptionsView()
         listed = act_accounts.kind_of(account) == act_accounts.MAILBOX
+        channel_lists = not listed and lists_folders(store, account)
         return ActBatchOptionsView(
             account=account,
             account_label=act_accounts.label_of(store, cfg, account),
             folder_source=act_accounts.name_of(account) if listed else None,
-            folders_listed=listed,
+            folders_listed=listed or channel_lists,
+            folders_account=account if channel_lists else None,
+        )
+
+    @r.get("/acts/accounts/{account}/folders")
+    def account_folders(account: str) -> AccountFoldersView:
+        """The folders and labels the account's channel lists, for Move to and Label: asked when the person opens the
+        form and kept for `watch.folders_cache_minutes`. An account whose channel can't list them is `listed: false`;
+        a channel that can but didn't (it failed, took longer than `watch.folders_timeout_seconds` or answered badly)
+        gives no folders and its `reason`, and the person types the name."""
+        if not any(act_accounts.same(info.id, account) for info in act_accounts.known(store, cfg)):
+            return AccountFoldersView()
+        answer = folder_lists.get(account, worker.now())
+        return AccountFoldersView(
+            listed=answer.listed,
+            folders=[AccountFolderView(id=f.id, name=f.name, kind=f.kind) for f in answer.folders],
+            reason=answer.problem,  # type: ignore[arg-type]
         )
 
     @r.post("/acts/batch")
@@ -311,6 +336,15 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         view = store.read()
         ops: list[dict[str, Any]] = []
         skipped: list[ActBatchSkipped] = []
+        names: dict[tuple[str, str], str | None] = {}
+
+        def named_once(account: str, kind: str, picked: str | None) -> str | None:
+            """The picked folder's name, asked of the account's list once for the whole selection."""
+            key = (account.lower(), kind)
+            if key not in names:
+                names[key] = folder_lists.named(account, kind, picked, worker.now())
+            return names[key]
+
         for rid in dict.fromkeys(body.about):
             found = view.get("source", rid)
             title = (found.data.get("title") or "") if found is not None else ""
@@ -333,6 +367,8 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
                     "about": [rid],
                     "folder": body.folder,
                     "label": body.label,
+                    "folder_name": named_once(account, "folder", body.folder),
+                    "label_name": named_once(account, "label", body.label),
                 }
                 ops.append(
                     {
@@ -471,6 +507,12 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             "about": body.about,
             "folder": body.folder,
             "label": body.label,
+            "folder_name": folder_lists.named(account, "folder", body.folder, worker.now())
+            if body.kind == "mailbox"
+            else None,
+            "label_name": folder_lists.named(account, "label", body.label, worker.now())
+            if body.kind == "mailbox"
+            else None,
             "answer": body.answer,
             "proposed_start": body.proposed_start,
             "proposed_end": body.proposed_end,

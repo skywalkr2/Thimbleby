@@ -377,7 +377,7 @@ def build() -> str:
             "### Testing a connector: `engine.plugin_api.testing`\n\n" + _para(_doc(testing)),
             "\n\n".join(
                 _join(f"#### `{name}{inspect.signature(getattr(testing, name))}`", _para(_doc(getattr(testing, name))))
-                for name in ("connector_context", "read")
+                for name in ("connector_context", "channel_context", "channel_folders", "read")
             ),
             "#### Reply and Asked\n\n" + _para(_doc(testing.Reply)) + " " + _para(_doc(testing.Asked)),
             "### Testing everything else: `plugin_workspace`\n\n"
@@ -420,6 +420,7 @@ def build() -> str:
                     api.OutgoingRecipient,
                     api.ChannelSent,
                     api.ChannelFailed,
+                    api.ChannelFolder,
                     api.ChannelNotSent,
                     api.ChannelUnknown,
                     api.ChannelUndone,

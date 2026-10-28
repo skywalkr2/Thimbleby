@@ -8,6 +8,7 @@ import { api, type S } from "../lib/api";
 import { messageLine } from "../lib/acts";
 import { useActBatch, type BatchAction, type Drafted } from "../lib/act-batch";
 import { useWords } from "../lib/wording";
+import { Skeleton } from "../ui/Skeleton";
 import { LabelForm, MoveForm } from "./MessageActs";
 import styles from "./MailSelection.module.css";
 
@@ -70,7 +71,7 @@ export function MailSelectionBar(props: { records: string[]; onClear: () => void
         </button>
       </div>
       {asking === "move" && <MoveBatch records={props.records} onCancel={() => setAsking(null)} onSubmit={(folder) => draft("move", { folder })} />}
-      {asking === "label" && <LabelForm onCancel={() => setAsking(null)} onSubmit={(label) => draft("label", { label })} />}
+      {asking === "label" && <LabelBatch records={props.records} onCancel={() => setAsking(null)} onSubmit={(label) => draft("label", { label })} />}
       {plan && <BatchConfirm plan={plan} busy={busy} onApprove={() => void approve()} onCancel={() => void cancel()} />}
     </section>
   );
@@ -91,7 +92,16 @@ function MoveBatch(props: { records: string[]; onCancel: () => void; onSubmit: (
       </div>
     );
   }
-  return <MoveForm source={found.data.folder_source ?? null} account={found.data.account_label ?? null} onCancel={props.onCancel} onSubmit={props.onSubmit} />;
+  return <MoveForm source={found.data.folder_source ?? null} listAccount={found.data.folders_account ?? null} account={found.data.account_label ?? null} onCancel={props.onCancel} onSubmit={props.onSubmit} />;
+}
+
+/** The label to put on the selection: from the one account's own labels when its channel lists them, else typed. Messages from
+ * several accounts, or from none, take it typed; the drafts say which can't be labeled. */
+function LabelBatch(props: { records: string[]; onCancel: () => void; onSubmit: (label: string) => Promise<void> }) {
+  const found = useQuery({ queryKey: ["act-batch-options", props.records], queryFn: () => api.actBatchOptions(props.records), staleTime: 30_000 });
+  if (found.isPending) return <Skeleton rows={1} />;
+  const listed = !found.data?.several_accounts && found.data?.account ? (found.data.folders_account ?? null) : null;
+  return <LabelForm listAccount={listed} account={found.data?.account_label ?? null} onCancel={props.onCancel} onSubmit={props.onSubmit} />;
 }
 
 function skippedWords(s: S["ActBatchSkipped"], t: (k: string, v?: Record<string, string | number>) => string): string {
@@ -105,7 +115,7 @@ function BatchConfirm(props: { plan: { drafted: Drafted; what: BatchAction; fold
   const n = drafted.acts.length;
   return (
     <div className={styles.confirm} role="group" aria-label={t("batch.confirm.title")} data-batch-confirm="">
-      <h3>{n > 0 ? tn(`batch.title.${what}`, n, { folder: folder ?? "", label: label ?? "" }) : t("batch.none_drafted")}</h3>
+      <h3>{n > 0 ? tn(`batch.title.${what}`, n, { folder: drafted.acts[0]?.folder_name ?? folder ?? "", label: drafted.acts[0]?.label_name ?? label ?? "" }) : t("batch.none_drafted")}</h3>
       {n > 0 && <p className="hint">{t("batch.confirm.intro")}</p>}
       <ul className={styles.list}>
         {drafted.acts.map((a) => (

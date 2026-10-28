@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.91"
+PLUGIN_API_VERSION = "0.3.92"
 
 
 class Settings(BaseModel):
@@ -2311,6 +2311,7 @@ class Registrar:
         template_version: Callable | None = None,
         actions: dict[str, Sequence[str]] | None = None,
         accounts: Sequence[str] = (),
+        folders: Callable | None = None,
     ) -> None:
         """A way an approved act is carried out (listed in `provides.channels`): a message sent, a message filed, an
         event written, a file put in a folder, on the person's behalf. `kinds` are the kinds of target it takes:
@@ -2364,7 +2365,24 @@ class Registrar:
         with no clear answer, so the act stays sent and the person looks in the service. `template_version(name)`
         returns the version a template has now (None when it is gone), so a yes given to content rendered from an older
         one goes stale. A channel never writes records; it sees only the act it is handed. Draft acts with the core op
-        `act.draft` from a person action."""
+        `act.draft` from a person action.
+
+        **Listing where messages can go:** `folders(account, context)` lets Move to and Label offer the account's own
+        folders and labels to pick from, instead of a box the person types a name in. It gets the account id and a
+        `ChannelContext` built exactly as for `send` (for that account, reaching only the plugin's declared hosts and
+        that account's sign-in), and returns a list of `ChannelFolder(id, name, kind)`: `id` is what the channel wants
+        back in a move or label act (the act's `folder` or `label`, as the person picked it), `name` is what the person
+        sees (a nested folder's whole path, such as "Projects/Archive") and `kind` is `folder` or `label`. Move to
+        offers the `folder`s and Label the `label`s; a channel that lists only one kind leaves the other typed. When it
+        can't list, it returns `ChannelFailed(kind, reason)` with the same kinds as `send`; the core shows the person
+        its own words for the kind, never the service's. It is read-only: it never changes anything, makes a bounded
+        number of requests, and is called only for an account the channel serves. The core calls it when the person
+        opens Move to or Label, and keeps the answer for a short time (`watch.folders_cache_minutes`, default 5), so
+        opening the form again doesn't ask the service again; a call that takes longer than
+        `watch.folders_timeout_seconds` (default 10), raises, or returns anything else counts as no list, and the
+        person types the name, as before. A channel that declares neither `mailbox: move` nor `mailbox: label` in
+        `actions` may not pass `folders` (the registration is refused). Test it with
+        `engine.plugin_api.testing.channel_folders`."""
         self._name(name)
         if name in self.channels or not callable(send):
             raise RegistrationRefused("channel", "duplicate channel or invalid send function")
@@ -2383,8 +2401,14 @@ class Registrar:
             declared[kind] = tuple(dict.fromkeys(names))
         if not all(isinstance(a, str) and a.strip() for a in accounts):
             raise RegistrationRefused("channel", "accounts are the names of the kinds of account the channel serves")
-        if any(fn is not None and not callable(fn) for fn in (status, undo, template_version)):
-            raise RegistrationRefused("channel", "a channel's status, undo and template_version are functions")
+        if any(fn is not None and not callable(fn) for fn in (status, undo, template_version, folders)):
+            raise RegistrationRefused("channel", "a channel's status, undo, template_version and folders are functions")
+        if folders is not None and not {"move", "label"} & set(declared.get("mailbox", ())):
+            raise RegistrationRefused(
+                "channel",
+                "folders lists where messages can be moved or labeled, so the channel declares "
+                "actions={'mailbox': [...]} with move or label",
+            )
         from engine.channels import ChannelRegistration
 
         self.channels[name] = ChannelRegistration(
@@ -2397,6 +2421,7 @@ class Registrar:
             template_version,
             declared,
             tuple(dict.fromkeys(a.strip() for a in accounts)),
+            folders,
         )
 
     def sign_in(
@@ -2758,6 +2783,7 @@ class Registrar:
 from engine.channels import (  # noqa: E402 - part of the plugin API
     ChannelContext,
     ChannelFailed,
+    ChannelFolder,
     ChannelNotSent,
     ChannelSent,
     ChannelUndone,
@@ -2783,6 +2809,7 @@ __all__ = [
     "Change",
     "ChannelContext",
     "ChannelFailed",
+    "ChannelFolder",
     "ChannelNotSent",
     "ChannelSent",
     "ChannelUndone",

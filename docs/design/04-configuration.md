@@ -268,6 +268,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   level a watched source's items carry when the source sets none. It is kept on each source record (5.1).
 - `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
+- `folders_cache_minutes` (5) and `folders_timeout_seconds` (10): how long the list of an account's folders and labels (asked
+  of the account's channel when the person opens Move to or Label, 6.12) is kept before the service is asked again (0 asks
+  every time), and how long to wait for it before the person types the name instead. Both are live and kept in files.
 - `handled_rule_section` (`notices`): the section "Always set aside mail like this" files a sender under when the mail was
   one the assistant read and found nothing to do in, which has no section of its own: `sales` or `notices` (7.20;
   `personal`, from before personal mail stopped being set aside, reads as `notices`). A set-aside mail keeps its own

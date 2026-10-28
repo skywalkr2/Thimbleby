@@ -1840,10 +1840,14 @@ for it, that nothing goes out without the PM approving that exact content, alrea
         (`POST /api/acts/batch/send`) approves each act as its own (its own change in the ledger) and the publisher sends
         each in turn; one that is different from what was shown, that the channel refuses or that goes stale says why and
         stops nothing else; Undo in the toast takes back each sent act its channel can. `tests/test_act_batch.py`.
-      - *Move to for a signed-in account.* Offered when the account's channel declares `move`. The channel API has no folder
-        list, so the screen says plainly that the account doesn't list its folders (`ActOptionsView.folders_listed`) and
-        takes the folder's name as typed; a plain mailbox still picks from its own folders, and a selection from several
-        accounts is refused a folder (`GET /api/acts/batch-options`), a folder belonging to one account.
+      - *Move to for a signed-in account.* Offered when the account's channel declares `move`. A channel that lists its
+        folders (plugin API 0.3.92, `folders=`) gives the screens a list to pick from (`folders_account` on the options views,
+        `GET /api/acts/accounts/{account}/folders`): folders for Move to, labels for Label, the picked id handed to the
+        channel and its name shown in the approval; when it can't list (it failed, or it took too long) the screen says why
+        and takes the name typed. A channel with no list says plainly that the account doesn't list its folders
+        (`ActOptionsView.folders_listed`) and takes the folder's name as typed; a plain mailbox still picks from its own
+        folders, and a selection from several accounts is refused a folder (`GET /api/acts/batch-options`), a folder
+        belonging to one account.
       - *Events.* `POST /api/acts` takes `calendar`, `when`, `start`, `end`, `title` and `alarm_minutes`; a new event with no
         calendar named goes on the account's own calendar. `GET /api/acts/calendar-options` lists the connected calendar
         accounts a new event can go on (acting on, its channel declares `create`). `ActOptionsView.event_actions` offers
@@ -3982,6 +3986,20 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     first, kind `personal`, then each side with its kind and name) and `side_of(record or project id)`. Nothing is
     removed. A person stored before 0.3.91 with only `side` has an empty `sides` on its raw record; the core reads `side`
     in its place, and a plugin uses `side_of` (*built*, `tests/test_many_sides.py`).
+  - **Plugin API 0.3.92** (the owner, 2026-10-28: "if its not much just add it"): a channel that files messages may list an
+    account's folders and labels, `registrar.channel(..., folders=fn)` with `fn(account, context)` returning
+    `ChannelFolder(id, name, kind)` items (`kind` `folder` or `label`) or a `ChannelFailed`. It is read-only and asked only
+    for an account the channel serves, with the context `send` gets, when the person opens Move to or Label
+    (`engine/channel_folders.py`; `GET /api/acts/accounts/{account}/folders`): the answer is kept for
+    `watch.folders_cache_minutes` (5, per account, a failure never kept), a call longer than `watch.folders_timeout_seconds`
+    (10) counts as no list, and so does a raised exception or a malformed answer; a `ChannelFailed` gives the person the
+    core's words for its kind (`auth`, `refused`, `outage`, `offline`), never the service's text. A channel declaring
+    neither `mailbox: move` nor `mailbox: label` may not pass `folders`. The act's `folder` or `label` is the id the
+    person picked, as the channel gave it, and is what `send` is handed; the core keeps the picked item's `name` on the
+    target (`folder_name`, `label_name`, display only, outside the fingerprint, looked up from the list when the act is
+    drafted) so the approval reads the name. A plain mailbox keeps its own list (`folder_source`); an account whose
+    channel lists names `folders_account` on the options views. Built: `tests/test_channel_folders.py`,
+    `web/src/components/ActsOnRecords.test.tsx`, `web/src/components/MailSelection.test.tsx`.
   - **Filing (built, `tests/test_many_sides.py`):** each rank votes for a set of side ids and decides when it names one;
     the order is people, then the input's **source** (its `sides`; `filed_by.by: source`), then the sender's domain,
     aliases, project names and side words. The business side words apply only while there is exactly one other side.

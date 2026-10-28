@@ -71,6 +71,7 @@ test("key families built at run time are complete", () => {
     ...["stdout", "outbox"].map((x) => `welcome.ai.output_via.${x}`),
     ...["open", "internal", "restricted"].map((x) => `welcome.ai.data.${x}`),
     ...["number", "integer"].map((x) => `settings.invalid.${x}`),
+    ...["auth", "refused", "outage", "offline", "unavailable"].map((x) => `acts.folders.reason.${x}`),
     ...(s.AskView.properties.state.enum ?? []).map((x) => `ask.state.${x}`),
     ...(s.AutoClosedView.properties.change.enum ?? []).map((x) => `sources.closed.change.${x}`),
     ...(s.SilentCloseView.properties.how.enum ?? []).map((x) => `sources.silent.how.${x}`),

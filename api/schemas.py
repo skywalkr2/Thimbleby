@@ -7038,7 +7038,16 @@ class ActView(BaseModel):
     recipients: list[ActRecipientView] = Field(default_factory=list)
     calendar: str | None = None
     when: str | None = None
-    folder: str | None = None
+    folder: str | None = Field(
+        None,
+        description="The folder a move puts the messages in, as the channel is handed it (an id, or the typed name).",
+    )
+    folder_name: str | None = Field(
+        None, description="What the person saw the picked folder called, when it differs from `folder`; show this."
+    )
+    label_name: str | None = Field(
+        None, description="What the person saw the picked label called, when it differs from `label`; show this."
+    )
     template: str | None = Field(None, description="The name of the template the content was rendered from.")
     fingerprint: str = Field(
         description="What a yes would cover now; approving names it, and a different one is refused."
@@ -7153,7 +7162,15 @@ class ActOptionsView(BaseModel):
         False,
         description="Whether Move to has a list of the account's folders to pick from. False for an account whose "
         "service can't be asked for its folders (an add-on's sign-in), where Move to is offered with the folder named "
-        "by the person and the screen says plainly that the account doesn't list its folders.",
+        "by the person and the screen says plainly that the account doesn't list its folders. True when "
+        "`folder_source` names a plain mailbox's source, or `folders_account` an account whose channel lists its "
+        "folders and labels.",
+    )
+    folders_account: str | None = Field(
+        None,
+        description="The account whose channel lists its folders and labels "
+        "(GET /api/acts/accounts/{account}/folders), for Move to and Label; none for a plain mailbox "
+        "(see `folder_source`) and for an account whose channel can't.",
     )
 
 
@@ -7201,6 +7218,12 @@ class ActBatchOptionsView(BaseModel):
     several_accounts: bool = Field(False, description="The messages came in on more than one account.")
     folder_source: str | None = Field(None, description="The mail source whose folders can be listed, for Move to.")
     folders_listed: bool = False
+    folders_account: str | None = Field(
+        None,
+        description="The account whose channel lists its folders and labels "
+        "(GET /api/acts/accounts/{account}/folders); none for a plain mailbox "
+        "(see `folder_source`) and for an account whose channel can't.",
+    )
 
 
 class ActSendOptionsView(BaseModel):
@@ -7231,6 +7254,25 @@ class ActAccountsView(BaseModel):
     """GET /api/acts/accounts."""
 
     accounts: list[ActAccountView]
+
+
+class AccountFolderView(BaseModel):
+    """One folder or label an account has."""
+
+    id: str = Field(description="What the act is given when the person picks it (the act's `folder` or `label`).")
+    name: str = Field(description="What the person sees; a nested folder's whole path.")
+    kind: Literal["folder", "label"] = Field(description="Move to offers folders and Label offers labels.")
+
+
+class AccountFoldersView(BaseModel):
+    """GET /api/acts/accounts/{account}/folders: the folders and labels the account's channel lists, for Move to and
+    Label. `listed` is false when the account's channel can't list them (the person types the name). `reason` says why
+    a channel that can list gave none: auth (sign in again), refused, outage, offline, or unavailable (it raised, took
+    too long or answered badly); the screen words it, never the service."""
+
+    listed: bool = False
+    folders: list[AccountFolderView] = Field(default_factory=list)
+    reason: Literal["auth", "refused", "outage", "offline", "unavailable"] | None = None
 
 
 class ActCalendarOptionsView(BaseModel):

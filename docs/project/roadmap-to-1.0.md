@@ -33,7 +33,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   (open promises P34 to P50, the lessons P51 to P54); and **phase U, built and validated by the reviewer**
   (`reviews/ui-ux-2026-10/validate-82d24cc/`: G1 to G4 fixed, both personas finish setup alone, no Today action raised the
   count), with its second pass, the audit's leftovers (A2, A2b, A3, A5) and the bookkeeping (A1) done. Each ticked box cites its
-  tests. **Plugin API 0.3.91**; the hold on API changes applies again (P33).
+  tests. **Plugin API 0.3.92** (0.3.91, then a channel's folder list); the hold on API changes applies again (P33).
 - **Open in the audit's batch:** A4, the checklist's partials, each re-marked with why (C16, C23, C24, C29, C35, C43).
 - **Next, in order:**
   1. **AI account hardening** (gate I-0a): B-11c's last item (`thinking: off`, which the service's listing gives no capability
@@ -966,7 +966,7 @@ management (not just read only) lets do it"):
   from its own list and a selection from several accounts says a folder belongs to one account
   (`tests/test_act_batch.py::test_move_to_is_offered_for_a_signed_in_account_that_cannot_list_its_folders_and_says_so`,
   `web/src/components/ActsOnRecords.test.tsx` "Move to for a signed-in account that can't list its folders ...",
-  `web/src/components/MailSelection.test.tsx`). **Left:** the mail add-on's Google channel (0.1.1) declares the mailbox changes (`archive`, `move`, `label`, `mark_read`) beside the message acts, so a Google account gets them once acting is on; its Microsoft side has no channel yet (the add-on's 0.2.0); Move to takes a typed folder for a signed-in account, since no plugin API hands the host a list of an account's folders or labels (an addition for the next plugin API release); and the owner's live check of acting on a real account.
+  `web/src/components/MailSelection.test.tsx`). **Left:** the mail add-on's Google channel (0.1.1) declares the mailbox changes (`archive`, `move`, `label`, `mark_read`) beside the message acts, so a Google account gets them once acting is on; its Microsoft side has no channel yet (the add-on's 0.2.0); and the owner's live check of acting on a real account. *Built 2026-10-28 (plugin API 0.3.92, change log 254):* a channel lists an account's folders and labels (`registrar.channel(..., folders=fn)`), so Move to picks folders and Label picks labels from the account's list, with the reason and a typed box when the channel can't list (`tests/test_channel_folders.py`, `web/src/components/ActsOnRecords.test.tsx`, `web/src/components/MailSelection.test.tsx`); a channel with no list still takes a typed name; the mail add-on's next release fills it.
 - [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): one choice in Settings: in the app's own calendar (local, with an

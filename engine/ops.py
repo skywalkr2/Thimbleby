@@ -1463,6 +1463,12 @@ class ActTargetIn(BaseModel):
     when: str | None = Field(None, description="The day or time of an event.")
     folder: str | None = Field(None, description="The folder a file is written to, or a mailbox act moves messages to.")
     label: str | None = Field(None, description="The label a mailbox act puts on the messages.")
+    folder_name: str | None = Field(
+        None, description="What the person saw the picked folder called, when the channel's own id for it differs."
+    )
+    label_name: str | None = Field(
+        None, description="What the person saw the picked label called, when the channel's own id for it differs."
+    )
     start: str | None = Field(None, description="When an event starts, as ISO 8601 text.")
     end: str | None = Field(None, description="When an event ends, as ISO 8601 text.")
     title: str | None = Field(None, description="What an event is called.")

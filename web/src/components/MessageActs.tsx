@@ -8,6 +8,7 @@ import { useId, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useDraftAct, useActOptions } from "../lib/acts";
 import { useWords } from "../lib/wording";
+import { Skeleton } from "../ui/Skeleton";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
 
@@ -74,8 +75,8 @@ export function useMessageActs(record: string | null, subject: string, enabled =
   if (options && asking === "reply") form = <TextForm label={t("acts.reply.label")} go={t("acts.reply.go")} onCancel={close} onSubmit={async (text) => done(await reply("reply", text))} />;
   if (options && asking === "reply_all") form = <TextForm label={t("acts.reply.label")} go={t("acts.reply.go")} onCancel={close} onSubmit={async (text) => done(await reply("reply_all", text))} />;
   if (options && asking === "forward") form = <ForwardForm onCancel={close} onSubmit={async (text, to) => done(await reply("forward", text, to))} />;
-  if (options && asking === "move") form = <MoveForm source={options.folder_source ?? null} account={options.account_label ?? null} onCancel={close} onSubmit={async (folder) => done(await change("move", { folder }))} />;
-  if (options && asking === "label") form = <LabelForm onCancel={close} onSubmit={async (label) => done(await change("label", { label }))} />;
+  if (options && asking === "move") form = <MoveForm source={options.folder_source ?? null} listAccount={options.folders_account ?? null} account={options.account_label ?? null} onCancel={close} onSubmit={async (folder) => done(await change("move", { folder }))} />;
+  if (options && asking === "label") form = <LabelForm listAccount={options.folders_account ?? null} account={options.account_label ?? null} onCancel={close} onSubmit={async (label) => done(await change("label", { label }))} />;
 
   return {
     options,
@@ -166,9 +167,29 @@ function ForwardForm(props: { onCancel: () => void; onSubmit: (text: string, to:
   );
 }
 
-/** The folder to move to, from the account's own folders. An account that can't list its folders (`source` none) says so and takes
- * the folder's name as the person types it. */
-export function MoveForm(props: { source: string | null; account?: string | null; onCancel: () => void; onSubmit: (folder: string) => Promise<void> }) {
+type Choice = { value: string; name: string };
+
+/** What an account's channel lists of one kind, for a list to pick from: `waiting` while it is asked, `choices` (the folders for
+ * Move to, the labels for Label) once it answers, and `reason` when it couldn't list at all (the screen then takes the name typed,
+ * and says why). A channel that lists only the other kind gives no choices and no reason. */
+function useAccountChoices(account: string | null | undefined, kind: "folder" | "label"): { waiting: boolean; choices: Choice[]; reason: string | null } {
+  const found = useQuery({
+    queryKey: ["account-folders", account],
+    queryFn: () => api.accountFolders(account ?? ""),
+    enabled: !!account,
+    retry: false,
+    staleTime: (query) => (query.state.data?.reason ? 0 : 60_000),
+  });
+  if (!account) return { waiting: false, choices: [], reason: null };
+  if (found.isPending) return { waiting: true, choices: [], reason: null };
+  const choices = (found.data?.folders ?? []).filter((f) => f.kind === kind).map((f) => ({ value: f.id, name: f.name }));
+  return { waiting: false, choices, reason: found.isError ? "unavailable" : (found.data?.reason ?? null) };
+}
+
+/** The folder to move to, from the account's own folders: a plain mailbox's (`source`) or the ones its channel lists
+ * (`listAccount`). An account that can't list its folders says so (and why, when its channel tried) and takes the folder's name as
+ * the person types it. */
+export function MoveForm(props: { source: string | null; listAccount?: string | null; account?: string | null; onCancel: () => void; onSubmit: (folder: string) => Promise<void> }) {
   const { t } = useWords();
   const id = useId();
   const folders = useQuery({
@@ -178,6 +199,10 @@ export function MoveForm(props: { source: string | null; account?: string | null
     retry: false,
     staleTime: 300_000,
   });
+  const listed = useAccountChoices(props.source ? null : props.listAccount, "folder");
+  const choices: Choice[] = props.source ? (folders.data?.folders ?? []).map((f) => ({ value: f, name: f })) : listed.choices;
+  const pick = !!props.source || listed.choices.length > 0;
+  const account = props.account ?? "";
   const [folder, setFolder] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -194,16 +219,18 @@ export function MoveForm(props: { source: string | null; account?: string | null
         if (e.key === "Escape") props.onCancel();
       }}
     >
-      {props.source ? (
+      {listed.waiting ? (
+        <Skeleton rows={1} />
+      ) : pick ? (
         <>
           <label className="hint" htmlFor={id}>
             {t("acts.move.label")}
           </label>
           <select id={id} autoFocus value={folder} onChange={(e) => setFolder(e.target.value)}>
             <option value="">{t("acts.move.choose")}</option>
-            {(folders.data?.folders ?? []).map((f) => (
-              <option key={f} value={f}>
-                {f}
+            {choices.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.name}
               </option>
             ))}
           </select>
@@ -211,7 +238,7 @@ export function MoveForm(props: { source: string | null; account?: string | null
       ) : (
         <>
           <p className="hint" role="note" data-folders-not-listed="">
-            {t("acts.move.not_listed", { account: props.account ?? "" })}
+            {listed.reason ? t(`acts.folders.reason.${listed.reason}`, { account }) : t("acts.move.not_listed", { account })}
           </p>
           <label className="hint" htmlFor={id}>
             {t("acts.move.name_label")}
@@ -231,10 +258,13 @@ export function MoveForm(props: { source: string | null; account?: string | null
   );
 }
 
-/** The label to put on the messages: a few words typed, since a mailbox has no list of its labels to pick from. */
-export function LabelForm(props: { onCancel: () => void; onSubmit: (label: string) => Promise<void> }) {
+/** The label to put on the messages: picked from the labels the account's channel lists (`listAccount`), else a few words typed (a
+ * plain mailbox has no list of labels, and a channel that lists only folders leaves labels typed). When the channel tried and
+ * couldn't list, the screen says why. */
+export function LabelForm(props: { listAccount?: string | null; account?: string | null; onCancel: () => void; onSubmit: (label: string) => Promise<void> }) {
   const { t } = useWords();
   const id = useId();
+  const listed = useAccountChoices(props.listAccount, "label");
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -251,10 +281,35 @@ export function LabelForm(props: { onCancel: () => void; onSubmit: (label: strin
         if (e.key === "Escape") props.onCancel();
       }}
     >
-      <label className="hint" htmlFor={id}>
-        {t("acts.label.label")}
-      </label>
-      <input id={id} type="text" autoFocus autoComplete="off" value={label} onChange={(e) => setLabel(e.target.value)} />
+      {listed.waiting ? (
+        <Skeleton rows={1} />
+      ) : listed.choices.length > 0 ? (
+        <>
+          <label className="hint" htmlFor={id}>
+            {t("acts.label.label")}
+          </label>
+          <select id={id} autoFocus value={label} onChange={(e) => setLabel(e.target.value)}>
+            <option value="">{t("acts.label.choose")}</option>
+            {listed.choices.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : (
+        <>
+          {listed.reason && (
+            <p className="hint" role="note" data-folders-not-listed="">
+              {t(`acts.folders.reason.${listed.reason}`, { account: props.account ?? "" })}
+            </p>
+          )}
+          <label className="hint" htmlFor={id}>
+            {t("acts.label.label")}
+          </label>
+          <input id={id} type="text" autoFocus autoComplete="off" value={label} onChange={(e) => setLabel(e.target.value)} />
+        </>
+      )}
       <div className="row-end">
         <button type="button" className="btn quiet" onClick={props.onCancel}>
           {t("acts.cancel")}

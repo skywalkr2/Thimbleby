@@ -10,6 +10,30 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.92 adds
+
+Manifests stay `'>=0.3,<0.4'`. Additive only: nothing a 0.3.91 plugin relies on changes. A channel that files messages can
+now say where they can go, so Move to and Label offer an account's own folders and labels to pick from instead of a box
+the person types a name in; the generated guide has the exact signatures.
+
+- **A channel lists an account's folders and labels:** `registrar.channel(..., folders=fn)`, with `fn(account, context)`
+  returning a list of `ChannelFolder(id, name, kind)`, or `ChannelFailed(kind, reason)` when it can't. `id` is what the
+  channel wants back in a move or label act (the act's `folder` or `label`, exactly as the person picked it), `name` is
+  what the person sees (a nested folder's whole path), and `kind` is `folder` or `label`: Move to offers the folders and
+  Label the labels, and a kind the channel doesn't list stays typed. The function gets a `ChannelContext` built as for
+  `send`, is read-only, makes a bounded number of requests and is called only for an account the channel serves. The core
+  calls it when the person opens Move to or Label, keeps the answer for `watch.folders_cache_minutes` (5) and gives up
+  after `watch.folders_timeout_seconds` (10); a failure shows the person the core's own words for its kind, and a raised
+  exception, a timeout or a malformed answer counts as no list (the person types the name, as before). A channel that
+  declares neither `mailbox: move` nor `mailbox: label` in `actions` may not pass `folders` (the registration is refused).
+- **A picked folder is its id, shown by its name:** the act's `folder` or `label` is the `id` the person picked, and
+  that is what `OutgoingAct.folder` or `.label` carries to `send`. The core also keeps the picked item's `name` on the act
+  target (`folder_name`, `label_name`, display only, not covered by the fingerprint) so the approval and Waiting to go
+  out read "Move to Projects/Archive", never an id. A name typed by hand is both.
+- **The testing kit:** `engine.plugin_api.testing.channel_folders(folders, account, context)` calls a channel's `folders`
+  and checks the answer as the core does (a list of well-formed `ChannelFolder`s, or a `ChannelFailed`; anything else
+  raises `ValueError`); build the context with `channel_context`. The guide now lists both.
+
 ## What 0.3.91 adds
 
 Manifests stay `'>=0.3,<0.4'`. Additive only: nothing a 0.3.90 plugin relies on changes. The person's life has any

@@ -344,6 +344,8 @@ INTERNAL = (
     "watch.mail_kinds.shipping.version",
     "watch.sorting_batch",
     "watch.set_aside_keep_seconds",
+    "watch.folders_cache_minutes",
+    "watch.folders_timeout_seconds",
     "watch.failures_before_asking",
     "watch.unread_gap_factor",
     "steward.background_stuck_after_minutes",

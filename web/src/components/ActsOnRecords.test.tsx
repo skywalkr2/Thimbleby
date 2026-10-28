@@ -217,6 +217,139 @@ describe("a saved message", () => {
     expect(calls.some((c) => c.route.startsWith("GET watch/"))).toBe(false);
   });
 
+  const SIGNED = "demo-service:pat@example.com";
+  const channelOptions = () => options({ account: SIGNED, account_label: "Demo service (pat@example.com)", folder_source: null, folders_listed: true, folders_account: SIGNED });
+  const listed = (): S["AccountFoldersView"] => ({
+    listed: true,
+    reason: null,
+    folders: [
+      { id: "fld-1", name: "Projects/Archive", kind: "folder" },
+      { id: "fld-2", name: "Receipts", kind: "folder" },
+      { id: "lbl-1", name: "Waiting", kind: "label" },
+    ],
+  });
+
+  test("Move to for an account whose channel lists its folders picks from the folders only and drafts the move with the id", async () => {
+    const user = userEvent.setup();
+    const calls = open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: channelOptions,
+        [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: listed,
+        "POST acts": () => drafted({ kind: "mailbox", action: "move", folder: "fld-2", folder_name: "Receipts", parts: {} }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    const folder = await screen.findByRole("combobox", { name: "Move to folder" });
+    expect(folder).toHaveFocus();
+    expect(within(folder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Projects/Archive", "Receipts"]);
+    expect(screen.queryByRole("textbox", { name: "Name of the folder" })).toBeNull();
+    await user.selectOptions(folder, "Receipts");
+    await user.click(screen.getByRole("button", { name: "Draft the move" }));
+    await waitFor(() => expect(post(calls)).toHaveLength(1));
+    expect(post(calls)[0].body).toEqual({ kind: "mailbox", action: "move", about: [MESSAGE], folder: "fld-2" });
+    expect(calls.some((c) => c.route.startsWith("GET watch/"))).toBe(false);
+  });
+
+  test("Label for an account whose channel lists its labels picks from the labels only and drafts the label with the id", async () => {
+    const user = userEvent.setup();
+    const calls = open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: channelOptions,
+        [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: listed,
+        "POST acts": () => drafted({ kind: "mailbox", action: "label", label: "lbl-1", label_name: "Waiting", parts: {} }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Label…" }));
+    const label = await screen.findByRole("combobox", { name: "Label" });
+    expect(label).toHaveFocus();
+    expect(within(label).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a label", "Waiting"]);
+    await user.selectOptions(label, "Waiting");
+    await user.click(screen.getByRole("button", { name: "Draft the label" }));
+    await waitFor(() => expect(post(calls)).toHaveLength(1));
+    expect(post(calls)[0].body).toEqual({ kind: "mailbox", action: "label", about: [MESSAGE], label: "lbl-1" });
+  });
+
+  test("a channel that lists only folders leaves Label typed", async () => {
+    const user = userEvent.setup();
+    open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: channelOptions,
+        [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: () => ({ listed: true, reason: null, folders: [{ id: "fld-1", name: "Receipts", kind: "folder" }] }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Label…" }));
+    expect(await screen.findByRole("textbox", { name: "Label" })).toHaveFocus();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  test("a channel that lists only labels leaves Move to typed", async () => {
+    const user = userEvent.setup();
+    open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: channelOptions,
+        [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: () => ({ listed: true, reason: null, folders: [{ id: "lbl-1", name: "Waiting", kind: "label" }] }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    expect(await screen.findByRole("textbox", { name: "Name of the folder" })).toHaveFocus();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  test("while the list is asked for there is a skeleton, and when it can't be had the reason and a box to type the name", async () => {
+    const user = userEvent.setup();
+    let release: (v: S["AccountFoldersView"]) => void = () => undefined;
+    const slow = new Promise<S["AccountFoldersView"]>((resolve) => (release = resolve));
+    const calls = open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: channelOptions,
+        [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: () => slow,
+        "POST acts": () => drafted({ kind: "mailbox", action: "move", folder: "Receipts", parts: {} }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    expect(await screen.findByRole("status", { name: "Loading…" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    release({ listed: true, folders: [], reason: "auth" });
+    expect(await screen.findByText("Demo service (pat@example.com) needs you to sign in again before it can show its folders and labels. Type the name exactly as it is called there.")).toBeInTheDocument();
+    const name = screen.getByRole("textbox", { name: "Name of the folder" });
+    expect(name).toHaveFocus();
+    await user.type(name, "Receipts");
+    await user.click(screen.getByRole("button", { name: "Draft the move" }));
+    await waitFor(() => expect(post(calls)).toHaveLength(1));
+    expect(post(calls)[0].body).toEqual({ kind: "mailbox", action: "move", about: [MESSAGE], folder: "Receipts" });
+  });
+
+  test("Label says why too when the channel couldn't list, and takes the label typed", async () => {
+    const user = userEvent.setup();
+    open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: channelOptions,
+        [`GET acts/accounts/${encodeURIComponent(SIGNED)}/folders`]: () => ({ listed: true, folders: [], reason: "outage" }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Label…" }));
+    expect(await screen.findByText("Demo service (pat@example.com) is unavailable, so its folders and labels can't be shown. Type the name exactly as it is called there.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Label" })).toHaveFocus();
+  });
+
   test("Label asks for the label with the cursor in it", async () => {
     const user = userEvent.setup();
     const calls = open("source", message, routes({ "POST acts": () => drafted({ kind: "mailbox", action: "label", label: "Waiting", parts: {} }) }));

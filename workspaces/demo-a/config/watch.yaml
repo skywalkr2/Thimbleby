@@ -83,6 +83,8 @@ mail_kinds:   # bills, orders and deliveries are tracked for the Personal projec
   shipping: {senders: [shipping, tracking], subject_words: [has shipped, out for delivery, has been delivered, tracking number], words: [estimated delivery]}
 sorting_batch: 25   # messages covered by one sorting run
 set_aside_keep_seconds: 60   # how long a confirmed message's copy is kept so Undo can bring it back
+folders_cache_minutes: 5   # how long an account's list of folders and labels is kept before the service is asked again
+folders_timeout_seconds: 10   # how long to wait for an account's service to list its folders and labels, then the name is typed
 handled_rule_section: notices   # where Always set aside goes for mail the assistant already read: sales or notices
 handled_keep_days: 30   # how many days an item stays listed on Handled for you, then it leaves the list
 public_mail_domains_extra: [mail.example.net]   # more free mail domains, so no rule is offered for the whole domain

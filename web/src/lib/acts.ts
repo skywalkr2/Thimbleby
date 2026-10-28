@@ -117,8 +117,8 @@ export function recipientNames(a: Act, t: T): string {
 const vars = (a: Act, t: T) => ({
   names: recipientNames(a, t),
   calendar: a.calendar ?? "",
-  folder: a.folder ?? "",
-  label: a.label ?? "",
+  folder: a.folder_name ?? a.folder ?? "",
+  label: a.label_name ?? a.label ?? "",
   title: a.title ?? "",
   n: (a.about ?? []).length,
   event: (a.about ?? []).find((x) => x.kind === "event")?.title ?? "",

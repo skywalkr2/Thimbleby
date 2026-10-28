@@ -75,6 +75,8 @@ export const api = {
   sendActBatch: (body: S["ActBatchYesIn"]) => call<S["ActBatchResultView"]>("POST", "acts/batch/send", body),
   /** The one account the selected messages came in on and whether it lists its folders, for Move to. */
   actBatchOptions: (records: string[]) => call<S["ActBatchOptionsView"]>("GET", `acts/batch-options?${records.map((r) => `record=${id(r)}`).join("&")}`),
+  /** The folders and labels an account's channel lists, for Move to and Label; `reason` says why a channel that can list gave none. */
+  accountFolders: (account: string) => call<S["AccountFoldersView"]>("GET", `acts/accounts/${id(account)}/folders`),
   /** One act, as its list line reads it. */
   readAct: (a: string) => call<S["ActView"]>("GET", `acts/${id(a)}`),
   /** The person drafts an act (a reply, a change to their mail, an answer to an invitation); nothing is sent. */

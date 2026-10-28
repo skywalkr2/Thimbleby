@@ -624,6 +624,11 @@ def _organizer(tx: Tx, op: ActDraftOp) -> list[ActRecipientIn]:
     return [ActRecipientIn(address=address, from_text=entry.data.get("trust") == "untrusted")]
 
 
+def _from_screen(w: WriteContext) -> bool:
+    """Whether a write is the person's own, made on a screen."""
+    return w.actor == "pm" and w.trust == "trusted"
+
+
 def _draft(tx: Tx, op: ActDraftOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
     about = _about(tx, op)
     channel, intended, account = route(
@@ -657,6 +662,10 @@ def _draft(tx: Tx, op: ActDraftOp, ctx: Any, w: WriteContext) -> list[dict[str, 
                 "when": target.when,
                 "folder": target.folder,
                 "label": target.label,
+                # The names shown at approval for a channel's folder and label ids come only from the person's own
+                # screen, which reads them from the account's list; from anyone else they could misname the target.
+                "folder_name": target.folder_name if _from_screen(w) else None,
+                "label_name": target.label_name if _from_screen(w) else None,
                 "start": target.start,
                 "end": target.end,
                 "title": target.title,

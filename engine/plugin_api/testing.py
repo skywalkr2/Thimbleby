@@ -1,6 +1,6 @@
 """Testing a plugin: part of the plugin API, for plugins' own tests. A connector or a channel without a network
-(`connector_context`, `channel_context`, `read`), everything else in a throwaway workspace (`plugin_workspace`), and a
-packet function's context from one (`packet_context`).
+(`connector_context`, `channel_context`, `channel_folders`, `read`), everything else in a throwaway workspace
+(`plugin_workspace`), and a packet function's context from one (`packet_context`).
 
     from engine.plugin_api.testing import Reply, connector_context, read
 
@@ -37,7 +37,8 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 import httpx
 
-from engine.channels import ChannelContext
+from engine.channel_folders import checked_list
+from engine.channels import ChannelContext, ChannelFailed, ChannelFolder
 from engine.connectors import ConnectorContext, ConnectorError, Poll, checked_poll
 from engine.storage import StoreError
 
@@ -46,6 +47,7 @@ __all__ = [
     "Reply",
     "connector_context",
     "channel_context",
+    "channel_folders",
     "read",
     "plugin_workspace",
     "packet_context",
@@ -174,6 +176,30 @@ def channel_context(
         account=account,
         granted=frozenset(granted or ()),
     )
+
+
+def channel_folders(
+    folders: Callable[..., Any], account: str, context: ChannelContext
+) -> list[ChannelFolder] | ChannelFailed:
+    """Call a channel's `folders(account, context)` and check its answer as the core does: a list of `ChannelFolder`s
+    (each with an id, a name and a kind of `folder` or `label`; one for each kind and id) comes back as a list, a
+    `ChannelFailed` as itself. Anything else raises `ValueError`, which the core would treat as no list, and an
+    exception the channel raises passes through, so a test sees it.
+
+        context = channel_context(service, network=["api.example.com"], account=account, token="token")
+        listed = channel_folders(my_folders, account, context)
+        assert [(f.id, f.name, f.kind) for f in listed] == [("Label_1", "Receipts", "label")]
+    """
+    answer = folders(account, context)
+    if isinstance(answer, ChannelFailed):
+        return answer
+    found, problem = checked_list(answer)
+    if problem is not None:
+        raise ValueError(
+            "folders returns a list of ChannelFolder(id, name, kind) with an id, a name and a kind of 'folder' or "
+            "'label', or a ChannelFailed"
+        )
+    return list(found)
 
 
 def read(poll: Callable[..., Poll], settings: Any, state: dict[str, Any] | None, context: ConnectorContext) -> Poll:

@@ -3415,6 +3415,20 @@ class WatchFile(FileModel):
         description="After you confirm set-aside mail is not work for you, how long the app keeps its copy so Undo can "
         "bring it back; then the copy is deleted from the app (it stays in your mailbox). 0 deletes at once.",
     )
+    folders_cache_minutes: float = Field(
+        5,
+        ge=0,
+        le=1440,
+        description="How long the app keeps the list of an account's folders and labels after asking the account's "
+        "service for it, so opening Move to or Label again doesn't ask again. 0 asks every time.",
+    )
+    folders_timeout_seconds: float = Field(
+        10,
+        gt=0,
+        le=120,
+        description="How long the app waits for an account's service to list its folders and labels. When it takes "
+        "longer, Move to and Label ask you to type the name, as for an account that can't list them.",
+    )
     handled_rule_section: Literal["sales", "notices"] = Field(
         "notices",
         description="Where mail goes when you choose Always set aside mail like this on mail the assistant already "

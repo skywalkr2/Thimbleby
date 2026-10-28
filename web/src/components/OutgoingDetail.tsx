@@ -181,8 +181,8 @@ export function OutgoingDetail(props: {
           ))}
           {act.calendar && <li>{act.calendar === "own" ? t("outgoing.calendar_own", { account: act.account_label ?? "" }) : t("outgoing.calendar_line", { calendar: act.calendar })}</li>}
           {act.when && <li>{t("outgoing.when_line", { when: act.when })}</li>}
-          {act.folder && <li>{t("outgoing.folder_line", { folder: act.folder })}</li>}
-          {act.label && <li>{t("outgoing.label_line", { label: act.label })}</li>}
+          {act.folder && <li>{t("outgoing.folder_line", { folder: act.folder_name ?? act.folder })}</li>}
+          {act.label && <li>{t("outgoing.label_line", { label: act.label_name ?? act.label })}</li>}
           {act.template && <li>{t("outgoing.template_line", { template: act.template })}</li>}
           <li>{t("outgoing.via", { channel: act.channel_label })}</li>
         </ul>

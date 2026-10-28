@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: A channel lists an account's folders and labels
+
+**Decided:** Plugin API 0.3.92 adds `folders=` to `registrar.channel`: `fn(account, context)` returns `ChannelFolder(id, name,
+kind)` items (`kind` is `folder` or `label`) or a `ChannelFailed`, so Move to and Label on a signed-in mail account offer the
+account's own folders and labels to pick from instead of a typed name. The core asks only the channel that serves the account,
+only when the person opens Move to or Label, with a time limit (`watch.folders_timeout_seconds`, 10) and a short cache
+(`watch.folders_cache_minutes`, 5); a failure, a raised exception, a timeout or a malformed answer means no list and the person
+types the name, as before, the screen saying why in the wording sheet's words. A channel with neither `mailbox: move` nor
+`mailbox: label` may not pass `folders`. The act's `folder` or `label` is the id the person picked and is what the channel is
+handed; the target also keeps the picked item's name (`folder_name`, `label_name`, display only, outside the fingerprint) so the
+approval reads the name. Additive only; manifests stay `'>=0.3,<0.4'`.
+
+**Decided by:** owner ("if its not much just add it"); the display-name fields and the reasons the route returns were the
+builder's choice, for review.
+
+**Why:** the mail add-on's next release can fill the list for a Google or Microsoft account, and a typed folder name is the
+kind of box CLAUDE.md says a known set of values must never be. The channel's own id can differ from its name (a label's id),
+so the approval must not show the id.
+
+**Impact:** Design 6.12 (the channel section and the Move to bullet) and 7.4, `docs/plugin-api-0.x.md`, the regenerated plugin
+guide and OpenAPI schema; two new settings with demo values in both workspaces; `ActTarget` and `ActTargetIn` gain two optional
+display fields. No change to scope. Change log: section 254.
+
 ## 2026-10-28: The first day after setup
 
 **Decided:** The captures of a fresh workspace after setup with a business (promise P77), read against the owner's first

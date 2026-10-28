@@ -20,6 +20,74 @@
         "title": "AccountChoice",
         "type": "object"
       },
+      "AccountFolderView": {
+        "description": "One folder or label an account has.",
+        "properties": {
+          "id": {
+            "description": "What the act is given when the person picks it (the act's `folder` or `label`).",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Move to offers folders and Label offers labels.",
+            "enum": [
+              "folder",
+              "label"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "What the person sees; a nested folder's whole path.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "title": "AccountFolderView",
+        "type": "object"
+      },
+      "AccountFoldersView": {
+        "description": "GET /api/acts/accounts/{account}/folders: the folders and labels the account's channel lists, for Move to and\nLabel. `listed` is false when the account's channel can't list them (the person types the name). `reason` says why\na channel that can list gave none: auth (sign in again), refused, outage, offline, or unavailable (it raised, took\ntoo long or answered badly); the screen words it, never the service.",
+        "properties": {
+          "folders": {
+            "items": {
+              "$ref": "#/components/schemas/AccountFolderView"
+            },
+            "title": "Folders",
+            "type": "array"
+          },
+          "listed": {
+            "default": false,
+            "title": "Listed",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "auth",
+                  "refused",
+                  "outage",
+                  "offline",
+                  "unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "AccountFoldersView",
+        "type": "object"
+      },
       "ActAboutView": {
         "description": "One thing an act is about, labeled for the screen: a saved message by its sender, subject and date, or a\ncalendar entry by its title and time.",
         "properties": {
@@ -261,6 +329,18 @@
             ],
             "description": "The mail source whose folders can be listed, for Move to.",
             "title": "Folder Source"
+          },
+          "folders_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account whose channel lists its folders and labels (GET /api/acts/accounts/{account}/folders); none for a plain mailbox (see `folder_source`) and for an account whose channel can't.",
+            "title": "Folders Account"
           },
           "folders_listed": {
             "default": false,
@@ -834,9 +914,21 @@
             "description": "The mail source whose folders GET /api/watch/{source}/folders lists, for Move to.",
             "title": "Folder Source"
           },
+          "folders_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account whose channel lists its folders and labels (GET /api/acts/accounts/{account}/folders), for Move to and Label; none for a plain mailbox (see `folder_source`) and for an account whose channel can't.",
+            "title": "Folders Account"
+          },
           "folders_listed": {
             "default": false,
-            "description": "Whether Move to has a list of the account's folders to pick from. False for an account whose service can't be asked for its folders (an add-on's sign-in), where Move to is offered with the folder named by the person and the screen says plainly that the account doesn't list its folders.",
+            "description": "Whether Move to has a list of the account's folders to pick from. False for an account whose service can't be asked for its folders (an add-on's sign-in), where Move to is offered with the folder named by the person and the screen says plainly that the account doesn't list its folders. True when `folder_source` names a plain mailbox's source, or `folders_account` an account whose channel lists its folders and labels.",
             "title": "Folders Listed",
             "type": "boolean"
           },
@@ -1312,7 +1404,20 @@
                 "type": "null"
               }
             ],
+            "description": "The folder a move puts the messages in, as the channel is handed it (an id, or the typed name).",
             "title": "Folder"
+          },
+          "folder_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person saw the picked folder called, when it differs from `folder`; show this.",
+            "title": "Folder Name"
           },
           "id": {
             "title": "Id",
@@ -1351,6 +1456,18 @@
             ],
             "description": "The label a mailbox act applies.",
             "title": "Label"
+          },
+          "label_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person saw the picked label called, when it differs from `label`; show this.",
+            "title": "Label Name"
           },
           "made_by": {
             "enum": [
@@ -32709,6 +32826,46 @@
           }
         },
         "summary": "Accounts"
+      }
+    },
+    "/api/acts/accounts/{account}/folders": {
+      "get": {
+        "description": "The folders and labels the account's channel lists, for Move to and Label: asked when the person opens the\nform and kept for `watch.folders_cache_minutes`. An account whose channel can't list them is `listed: false`;\na channel that can but didn't (it failed, took longer than `watch.folders_timeout_seconds` or answered badly)\ngives no folders and its `reason`, and the person types the name.",
+        "operationId": "account_folders_api_acts_accounts__account__folders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "title": "Account",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountFoldersView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Folders"
       }
     },
     "/api/acts/batch": {

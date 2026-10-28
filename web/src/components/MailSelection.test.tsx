@@ -234,6 +234,60 @@ test("Move to for a signed-in account that can't list its folders says so plainl
   expect(posts(calls, "POST acts/batch")[0].body).toEqual({ action: "move", about: ["SRC-a"], folder: "Receipts" });
 });
 
+const CHANNEL_ACCOUNT = "demo-service:pat@example.com";
+const channelBatch = (): S["ActBatchOptionsView"] => ({ account: CHANNEL_ACCOUNT, account_label: "Demo service (pat@example.com)", several_accounts: false, folder_source: null, folders_listed: true, folders_account: CHANNEL_ACCOUNT });
+const channelRoute = `GET acts/accounts/${encodeURIComponent(CHANNEL_ACCOUNT)}/folders`;
+
+test("Move to for an account whose channel lists its folders picks a folder and drafts the move with its id, and the panel names it", async () => {
+  const user = userEvent.setup();
+  const calls = open({
+    "GET acts/batch-options?record=SRC-a&record=SRC-b": channelBatch,
+    [channelRoute]: () => ({ listed: true, reason: null, folders: [{ id: "fld-1", name: "Projects/Archive", kind: "folder" }, { id: "lbl-1", name: "Waiting", kind: "label" }] }),
+    "POST acts/batch": () => ({ acts: [draftOf("XACT-1", "SRC-a", "a", "move", { folder: "fld-1", folder_name: "Projects/Archive" })], skipped: [], changeset: "CS-9" }),
+  });
+  await tick(user, ["Subject a", "Subject b"]);
+  await user.click(within(screen.getByRole("region", { name: "Selected mail" })).getByRole("button", { name: "Move to…" }));
+  const folder = await screen.findByRole("combobox", { name: "Move to folder" });
+  expect(within(folder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Projects/Archive"]);
+  await user.selectOptions(folder, "Projects/Archive");
+  await user.click(screen.getByRole("button", { name: "Draft the move" }));
+  expect(await screen.findByRole("heading", { name: "Move 1 message to Projects/Archive" })).toBeInTheDocument();
+  expect(posts(calls, "POST acts/batch")[0].body).toEqual({ action: "move", about: ["SRC-a", "SRC-b"], folder: "fld-1" });
+});
+
+test("Label for an account whose channel lists its labels picks a label and drafts the label with its id", async () => {
+  const user = userEvent.setup();
+  const calls = open({
+    "GET acts/batch-options?record=SRC-a": channelBatch,
+    [channelRoute]: () => ({ listed: true, reason: null, folders: [{ id: "fld-1", name: "Projects/Archive", kind: "folder" }, { id: "lbl-1", name: "Waiting", kind: "label" }] }),
+    "POST acts/batch": () => ({ acts: [draftOf("XACT-1", "SRC-a", "a", "label", { label: "lbl-1", label_name: "Waiting" })], skipped: [], changeset: "CS-9" }),
+  });
+  await tick(user, ["Subject a"]);
+  await user.click(within(screen.getByRole("region", { name: "Selected mail" })).getByRole("button", { name: "Label…" }));
+  const label = await screen.findByRole("combobox", { name: "Label" });
+  expect(within(label).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a label", "Waiting"]);
+  await user.selectOptions(label, "Waiting");
+  await user.click(screen.getByRole("button", { name: "Draft the label" }));
+  expect(await screen.findByRole("heading", { name: "Label 1 message Waiting" })).toBeInTheDocument();
+  expect(posts(calls, "POST acts/batch")[0].body).toEqual({ action: "label", about: ["SRC-a"], label: "lbl-1" });
+});
+
+test("when the channel couldn't list, a selection says why and takes the folder's name typed", async () => {
+  const user = userEvent.setup();
+  const calls = open({
+    "GET acts/batch-options?record=SRC-a": channelBatch,
+    [channelRoute]: () => ({ listed: true, folders: [], reason: "offline" }),
+    "POST acts/batch": () => ({ acts: [draftOf("XACT-1", "SRC-a", "a", "move", { folder: "Receipts" })], skipped: [], changeset: "CS-9" }),
+  });
+  await tick(user, ["Subject a"]);
+  await user.click(within(screen.getByRole("region", { name: "Selected mail" })).getByRole("button", { name: "Move to…" }));
+  expect(await screen.findByText("You are offline, so the folders and labels of Demo service (pat@example.com) can't be shown. Type the name exactly as it is called there.")).toBeInTheDocument();
+  await user.type(screen.getByRole("textbox", { name: "Name of the folder" }), "Receipts");
+  await user.click(screen.getByRole("button", { name: "Draft the move" }));
+  await waitFor(() => expect(posts(calls, "POST acts/batch")).toHaveLength(1));
+  expect(posts(calls, "POST acts/batch")[0].body).toEqual({ action: "move", about: ["SRC-a"], folder: "Receipts" });
+});
+
 test("Move to for messages from several accounts says a folder belongs to one account and offers no list", async () => {
   const user = userEvent.setup();
   open({ "GET acts/batch-options?record=SRC-a&record=SRC-b": () => ({ account: null, account_label: null, several_accounts: true, folder_source: null, folders_listed: false }) });
