@@ -141,14 +141,16 @@ export function Schedule() {
       const arrow = event.key === "ArrowLeft" || event.key === "ArrowRight";
       const picks = VIEW_KEYS[event.key];
       if (!arrow && !picks) return;
-      // Only with the cursor on the screen's own content or on no control at all: a menu or a group of options keeps its arrows.
-      const target = event.target instanceof Node ? event.target : null;
-      if (target !== document.body && !(region.current && target && region.current.contains(target))) return;
-      event.preventDefault();
       if (picks) {
+        event.preventDefault();
         if (keys.current.fits(picks)) keys.current.choose(picks);
         return;
       }
+      // The arrows only with the cursor on the screen's own content or on no control at all: a menu or a group of options
+      // keeps its arrows.
+      const target = event.target instanceof Node ? event.target : null;
+      if (target !== document.body && !(region.current && target && region.current.contains(target))) return;
+      event.preventDefault();
       // Shift moves a week in Day view; the other views already move by that much or more.
       keys.current.go((event.key === "ArrowRight" ? 1 : -1) * (event.shiftKey && viewRef.current === "day" ? 7 : 1));
     };

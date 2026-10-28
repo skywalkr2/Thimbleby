@@ -146,6 +146,21 @@ describe("the keys and the arrows", () => {
     expect(checked()).toBe("Work week");
   });
 
+  test("the view keys work with the cursor on the page's heading outside the calendar, where it lands when the screen opens", async () => {
+    fakeApi(scheduleRoutes());
+    renderApp(
+      <>
+        <h1 tabIndex={-1}>Page heading</h1>
+        <Schedule />
+      </>,
+    );
+    await screen.findByRole("heading", { level: 3, name: /^Today · / });
+    const top = screen.getByRole("heading", { name: "Page heading" });
+    top.focus();
+    fireEvent.keyDown(top, { key: "4" });
+    await waitFor(() => expect(checked()).toBe("Month"));
+  });
+
   test("the arrows and the Today button move a day, a week or a month, by the view", async () => {
     const user = userEvent.setup();
     const { calls } = await open();

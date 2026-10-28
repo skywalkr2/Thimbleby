@@ -5,9 +5,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+// The lanes shown after pressing 2 and then 3. A view with no room for its columns isn't offered, so its key leaves the view
+// as it was: at 768 pressing 3 keeps the work week.
 const SIZES = [
   { width: 390, height: 844, lanes: { work_week: 1, week: 1 } },
-  { width: 768, height: 900, lanes: { work_week: 5, week: 1 } },
+  { width: 768, height: 900, lanes: { work_week: 5, week: 5 } },
   { width: 1440, height: 900, lanes: { work_week: 5, week: 7 } },
   { width: 2000, height: 1100, lanes: { work_week: 5, week: 7 } },
 ];
