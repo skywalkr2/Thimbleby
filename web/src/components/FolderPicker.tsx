@@ -8,7 +8,8 @@ import { api, ApiError } from "../lib/api";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 /** A folder's address inside another, using the separator the address already uses. */
 export function joinPath(base: string, name: string): string {
   const sep = base.includes("\\") && !base.includes("/") ? "\\" : "/";
@@ -66,9 +67,9 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
       )}
       {problem && path && (
         <div className="row-end">
-          <button type="button" className="btn" onClick={() => setPath(undefined)}>
+          <Button onClick={() => setPath(undefined)}>
             {t("folders.start_over")}
-          </button>
+          </Button>
         </div>
       )}
       {folders.isPending && <Skeleton />}
@@ -78,17 +79,15 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
             {folders.data.home ? t("folders.home") : t("folders.here", { path: folders.data.path })}
           </p>
           <div className="row-end">
-            <button
-              type="button"
-              className="btn"
+            <Button
               disabled={!folders.data.parent}
               onClick={() => setPath(folders.data?.parent ?? undefined)}
             >
               {t("folders.up")}
-            </button>
+            </Button>
           </div>
           {folders.data.folders.length === 0 && (!picksFile || (folders.data.files ?? []).length === 0) ? (
-            <p className="empty">{t(picksFile ? "folders.no_files" : "folders.none")}</p>
+            <EmptyState text={t(picksFile ? "folders.no_files" : "folders.none")} />
           ) : (
             <ul className="folder-list">
               {folders.data.folders.map((name) => (
@@ -101,9 +100,9 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
               {picksFile &&
                 (folders.data.files ?? []).map((name) => (
                   <li key={`file:${name}`}>
-                    <button type="button" className="btn small" onClick={() => props.onPick(joinPath(folders.data!.path, name))}>
+                    <Button size="sm" onClick={() => props.onPick(joinPath(folders.data!.path, name))}>
                       {t("folders.use_file", { name })}
-                    </button>
+                    </Button>
                   </li>
                 ))}
             </ul>
@@ -111,13 +110,13 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
         </>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
+        </Button>
         {!picksFile && (
-          <button type="button" className="btn primary" disabled={!folders.data} onClick={() => folders.data && props.onPick(folders.data.path)}>
+          <Button variant="primary" disabled={!folders.data} onClick={() => folders.data && props.onPick(folders.data.path)}>
             {t("folders.use")}
-          </button>
+          </Button>
         )}
       </div>
     </ModalPanel>

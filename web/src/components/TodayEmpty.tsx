@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 import { NothingNeedsYou } from "./Coverage";
 import { MissedOneLine } from "./MissedOne";
 
@@ -15,32 +15,29 @@ export function TodayEmpty(props: { className?: string; onContinueSetup?: () => 
   const noAi = status.data.ai.state === "not_set_up" || status.data.ai.state === "stand_in";
   if (noAi) {
     return (
-      <p className={props.className} data-queue-empty="connect">
-        {t("queue.empty.connect")}{" "}
-        {props.onContinueSetup && (
-          <Button size="sm" variant="primary" data-tonal="" onClick={props.onContinueSetup}>
-            {t("queue.empty.continue_setup")}
-          </Button>
-        )}
-      </p>
+      <EmptyState
+        className={props.className}
+        icon="gear"
+        data-queue-empty="connect"
+        text={t("queue.empty.connect")}
+        action={props.onContinueSetup ? { label: t("queue.empty.continue_setup"), onClick: props.onContinueSetup } : null}
+      />
     );
   }
   if (status.data.assistant.last_run_at === null) {
     return (
-      <p className={props.className} data-queue-empty="first">
-        {t("queue.empty.hand_in")}{" "}
-        {props.onHandIn && (
-          <Button size="sm" variant="primary" onClick={props.onHandIn}>
-            {t("handin.open")}
-          </Button>
-        )}
-      </p>
+      <EmptyState
+        className={props.className}
+        icon="upload"
+        data-queue-empty="first"
+        text={t("queue.empty.hand_in")}
+        action={props.onHandIn ? { label: t("handin.open"), onClick: props.onHandIn } : null}
+      />
     );
   }
   return (
-    <>
-      <NothingNeedsYou className={props.className} />
-      <MissedOneLine className={props.className} />
-    </>
+    <NothingNeedsYou className={props.className}>
+      <MissedOneLine className="hint" />
+    </NothingNeedsYou>
   );
 }

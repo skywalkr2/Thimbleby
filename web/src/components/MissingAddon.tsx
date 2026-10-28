@@ -8,7 +8,7 @@ import { waitsForRestart } from "../lib/packs";
 import { addonLabel } from "../lib/settings";
 import { useWords } from "../lib/wording";
 import { RestartNowButton, usePackChange } from "./Addons";
-
+import { Button } from "../ui/Button";
 /** The add-on a connector belongs to: the part of its id before the slash; none for one the app itself provides. */
 export const addonOfConnector = (connector: string): string | null => {
   const at = connector.indexOf("/");
@@ -39,20 +39,18 @@ export function MissingAddon(props: { plugin: string; onOpenAddons?: () => void 
         {restart ? (
           <RestartNowButton />
         ) : installable ? (
-          <button
-            type="button"
-            className="btn primary small"
+          <Button variant="primary" size="sm"
             disabled={change.busy !== null}
             aria-label={t("sources.addon_install_named", { name })}
             onClick={() => void change.install()}
           >
             {t("sources.addon_install")}
-          </button>
+          </Button>
         ) : (
           props.onOpenAddons && (
-            <button type="button" className="btn quiet small" onClick={props.onOpenAddons}>
+            <Button variant="quiet" size="sm" onClick={props.onOpenAddons}>
               {t("sources.addon_open")}
-            </button>
+            </Button>
           )
         )}
       </p>

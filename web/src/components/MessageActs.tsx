@@ -11,7 +11,7 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 type Asking = "reply" | "reply_all" | "forward" | "move" | "label";
 
 /** The subject with the prefix a reply or forward carries, once: "Re: Proofs" stays "Re: Proofs". */
@@ -116,12 +116,12 @@ function TextForm(props: { label: string; go: string; onCancel: () => void; onSu
       </label>
       <textarea id={id} rows={5} autoFocus value={text} onChange={(e) => setText(e.target.value)} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!text.trim() || busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!text.trim() || busy}>
           {props.go}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -156,12 +156,12 @@ function ForwardForm(props: { onCancel: () => void; onSubmit: (text: string, to:
       </label>
       <textarea id={id} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!to || !text.trim() || busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!to || !text.trim() || busy}>
           {t("acts.forward.go")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -247,12 +247,12 @@ export function MoveForm(props: { source: string | null; listAccount?: string | 
         </>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!folder.trim() || busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!folder.trim() || busy}>
           {t("acts.move.go")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -311,12 +311,12 @@ export function LabelForm(props: { listAccount?: string | null; account?: string
         </>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!label.trim() || busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!label.trim() || busy}>
           {t("acts.label.go")}
-        </button>
+        </Button>
       </div>
     </form>
   );

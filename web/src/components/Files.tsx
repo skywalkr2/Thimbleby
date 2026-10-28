@@ -20,8 +20,10 @@ import { AddFile } from "./AddFile";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SideFilter } from "./SideFilter";
+import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
-
+import { Button, ButtonLink } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 /** The width the list needs beside the pane before the pane would overlay it. */
 const FILES_FIT = 420;
 /** The media types shown as text in the preview, and how much of the start of one is shown. */
@@ -51,28 +53,28 @@ export function Files() {
 
   return (
     <section className="panel-section" aria-labelledby="files-title">
-      <div className="heading">
-        <h1 id="files-title">{t("files.title")}</h1>
-        <SideFilter />
-        <div className="acts wrap" role="group" aria-label={t("files.actions_label")}>
-          {(workspace.data ?? []).map((action) => (
-            <button
-              key={action.name}
-              type="button"
-              className="btn"
-              onClick={(e) => {
-                const button = e.currentTarget;
-                start(action, null, () => button);
-              }}
-            >
-              {action.label}
-            </button>
-          ))}
-          <button ref={addButton} type="button" className="btn primary" onClick={() => setAdding(true)}>
+      <PageHeader
+        id="files-title"
+        title={t("files.title")}
+        filters={<SideFilter />}
+        actionsLabel={t("files.actions_label")}
+        actions={(workspace.data ?? []).map((action) => (
+          <Button
+            key={action.name}
+            onClick={(e) => {
+              const button = e.currentTarget;
+              start(action, null, () => button);
+            }}
+          >
+            {action.label}
+          </Button>
+        ))}
+        primary={
+          <Button variant="primary" ref={addButton} onClick={() => setAdding(true)}>
             {t("files.add")}
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      />
       <ListDetail
         title={selected?.name ?? ""}
         onClose={choice.close}
@@ -82,16 +84,11 @@ export function Files() {
         {files.isPending ? (
           <Skeleton />
         ) : files.isError ? (
-          <p className="empty">
-            {t("files.load_failed")}{" "}
-            <button type="button" className="btn" onClick={() => void files.refetch()}>
-              {t("action.try_again")}
-            </button>
-          </p>
+          <EmptyState icon="alert" text={t("files.load_failed")} action={{ label: t("action.try_again"), onClick: () => void files.refetch() }} />
         ) : everything.length === 0 ? (
-          <p className="empty">{t("files.empty")}</p>
+          <EmptyState text={t("files.empty")} />
         ) : shown.length === 0 ? (
-          <p className="empty">{t("sides.empty.files", { side: side.named })}</p>
+          <EmptyState text={t("sides.empty.files", { side: side.named })} />
         ) : (
           <ul className="queue">
             {shown.map((file) => (
@@ -143,8 +140,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
           {file.origin === "tool" && <Pill tone="warn" className="pill-flush">{t("files.untrusted")}</Pill>}
         </div>
         <div className="acts">
-          <a
-            className="btn primary"
+          <ButtonLink variant="primary"
             data-key="primary"
             href={api.fileContent(file.id)}
             target="_blank"
@@ -152,7 +148,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
             aria-label={t("files.open_named", { name: file.name })}
           >
             {t("files.open")}
-          </a>
+          </ButtonLink>
           <RowMenu label={file.name} actions={menu} />
         </div>
       </div>
@@ -212,9 +208,9 @@ function FileDetail(props: { file: S["FileView"]; project?: string; side?: boole
         )}
       </section>
       <div className="row-end">
-        <a className="btn primary" href={api.fileContent(file.id)} target="_blank" rel="noopener noreferrer" aria-label={t("files.open_named", { name: file.name })}>
+        <ButtonLink variant="primary" href={api.fileContent(file.id)} target="_blank" rel="noopener noreferrer" aria-label={t("files.open_named", { name: file.name })}>
           {t("files.open")}
-        </a>
+        </ButtonLink>
       </div>
     </>
   );

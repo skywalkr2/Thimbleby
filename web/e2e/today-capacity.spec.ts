@@ -108,18 +108,17 @@ test.describe("Today's capacity", () => {
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
-  test("every line's title starts at the same place at 1440px, whichever kind of line it is", async ({ page }) => {
+  test("every line starts at the same place at 1440px, whichever kind of line it is and whether or not it has a mark", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await signIn(page);
     const rows = page.locator("[data-queue-line]");
     await expect(rows.first()).toBeVisible();
     await layoutSettled(page);
-    // The words column is the second part of every line, after its pill column.
+    // A line has no column held for a mark: its words are its first part, so they start at the row's padding on every line.
     const starts = await rows.evaluateAll((els) =>
       els.map((e) => ({
         kind: e.getAttribute("data-queue-line"),
-        x: Math.round(e.children[1].getBoundingClientRect().left * 10) / 10,
-        pill: Math.round(e.children[0].getBoundingClientRect().width),
+        x: Math.round((e.firstElementChild!.getBoundingClientRect().left - e.getBoundingClientRect().left) * 10) / 10,
       })),
     );
     expect(starts.length).toBeGreaterThan(5);

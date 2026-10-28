@@ -122,12 +122,12 @@ export function MissedOne(props: { onClose: () => void }) {
           </span>
         </div>
         <div className="row-end">
-          <button type="button" className="btn quiet" onClick={props.onClose}>
+          <Button variant="quiet" onClick={props.onClose}>
             {t("action.cancel")}
-          </button>
-          <button type="submit" className="btn primary" disabled={busy || !text.trim()}>
+          </Button>
+          <Button variant="primary" type="submit" disabled={busy || !text.trim()}>
             {t(busy ? "missed.sending" : "missed.go")}
-          </button>
+          </Button>
         </div>
       </form>
     </ModalPanel>

@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useWords } from "../lib/wording";
 import type { S } from "../lib/api";
-
+import { Button } from "../ui/Button";
 type Mode = "held" | "type" | "where";
 
 export type SecretState = Pick<S["SourceSecretView"], "where" | "name">;
@@ -114,30 +114,28 @@ export function SecretField(props: {
       {mode === "where" && referenceBox}
       <div className="inline-field">
         {mode === "held" && (
-          <button
-            type="button"
-            className="btn small"
+          <Button size="sm"
             disabled={props.disabled}
             aria-label={t("secret.replace_named", { label: props.label })}
             onClick={() => go("type")}
           >
             {t("secret.replace")}
-          </button>
+          </Button>
         )}
         {mode === "type" && props.held && (
-          <button type="button" className="btn quiet small" disabled={props.disabled} onClick={() => go("held")}>
+          <Button variant="quiet" size="sm" disabled={props.disabled} onClick={() => go("held")}>
             {t("secret.keep_current")}
-          </button>
+          </Button>
         )}
         {mode !== "where" && props.offerWhere !== false && (
-          <button type="button" className="btn quiet small" disabled={props.disabled} onClick={() => go("where")}>
+          <Button variant="quiet" size="sm" disabled={props.disabled} onClick={() => go("where")}>
             {t("secret.where_instead")}
-          </button>
+          </Button>
         )}
         {mode === "where" && (
-          <button type="button" className="btn quiet small" disabled={props.disabled} onClick={() => go("type")}>
+          <Button variant="quiet" size="sm" disabled={props.disabled} onClick={() => go("type")}>
             {t("secret.type_instead")}
-          </button>
+          </Button>
         )}
       </div>
     </div>

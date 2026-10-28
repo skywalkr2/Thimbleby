@@ -167,13 +167,13 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
                     setChecked(null);
                   }}
                 />
-                <button type="button" className="btn" disabled={!path.trim()} onClick={() => void check(path.trim())}>
+                <Button disabled={!path.trim()} onClick={() => void check(path.trim())}>
                   {t("welcome.backup.check")}
-                </button>
+                </Button>
                 {props.local && (
-                  <button type="button" className="btn" ref={chooser} onClick={() => setPicking(true)}>
+                  <Button ref={chooser} onClick={() => setPicking(true)}>
                     {t("welcome.backup.choose")}
-                  </button>
+                  </Button>
                 )}
               </div>
               <p className="hint" id="backup-path-hint">

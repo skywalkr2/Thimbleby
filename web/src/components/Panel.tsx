@@ -12,7 +12,9 @@ import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 /** `embedded`: the panel sits under a heading of its own (a folded line on Today), so it draws no title or count of its own. */
 export function Panel(props: { name: string; project?: string; embedded?: boolean; onOpenRecord: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
@@ -42,27 +44,18 @@ export function Panel(props: { name: string; project?: string; embedded?: boolea
   if (panels.isPending || (!!panel && content.isPending)) body = <Skeleton />;
   else if (panels.isError || content.isError || !panel) {
     body = (
-      <p className="empty" role="alert">
-        {failure instanceof ApiError && failure.detail ? failure.detail : t("panel.load_failed")}{" "}
-        <button
-          type="button"
-          className="btn"
-          onClick={() => {
+      <EmptyState role="alert" icon="alert" text={failure instanceof ApiError && failure.detail ? failure.detail : t("panel.load_failed")} action={{ label: t("action.try_again"), onClick: () => {
             void panels.refetch();
             void content.refetch();
-          }}
-        >
-          {t("action.try_again")}
-        </button>
-      </p>
+          } }} />
     );
   } else if (isDocument) {
     body = document.data?.blocks ? (
       <Document blocks={document.data.blocks} onOpenRecord={props.onOpenRecord} />
     ) : (
-      <p className="empty">{t("panel.document_empty")}</p>
+      <EmptyState text={t("panel.document_empty")} />
     );
-  } else if (!rows.data || rows.data.length === 0) body = <p className="empty">{t("panel.empty")}</p>;
+  } else if (!rows.data || rows.data.length === 0) body = <EmptyState text={t("panel.empty")} />;
   else {
     const shared = { panel, rows: rows.data, run, onOpenRecord: props.onOpenRecord };
     body =
@@ -72,21 +65,21 @@ export function Panel(props: { name: string; project?: string; embedded?: boolea
   return (
     <section className="panel-section" aria-labelledby={props.embedded ? undefined : headingId} aria-label={props.embedded ? title : undefined}>
       {!props.embedded && (
-        <div className="heading">
-          {props.project ? <h3 id={headingId}>{title}</h3> : <h1 id={headingId}>{title}</h1>}
-          {!isDocument && rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
-        </div>
+        <PageHeader
+          id={headingId}
+          level={props.project ? 3 : 1}
+          title={title}
+          subtitle={!isDocument && rows.data && rows.data.length > 0 ? tn("panel.count", rows.data.length) : undefined}
+        />
       )}
       {newAction && (
         <div className="panel-new">
-          <button
-            type="button"
-            className="btn primary"
+          <Button variant="primary"
             ref={newButton}
             onClick={() => run({ name: newAction.name, label: newAction.label, is: "action", on: null }, null, () => newButton.current)}
           >
             {newAction.label}
-          </button>
+          </Button>
         </div>
       )}
       {body}
@@ -130,9 +123,7 @@ function RowActions(props: { panel: S["PanelView"]; row: S["PanelRow"]; label: s
   return (
     <div className="acts" ref={box}>
       {primary && (
-        <button
-          type="button"
-          className="btn primary"
+        <Button variant="primary"
           data-key="primary"
           aria-label={t("panel.action_for", { action: primary.label, what: props.label })}
           onClick={(e) => {
@@ -141,7 +132,7 @@ function RowActions(props: { panel: S["PanelView"]; row: S["PanelRow"]; label: s
           }}
         >
           {primary.label}
-        </button>
+        </Button>
       )}
       <RowMenu label={props.label} actions={menu} />
     </div>

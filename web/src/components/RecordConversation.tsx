@@ -11,7 +11,7 @@ import { whenText } from "../lib/dates";
 import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { SafeText } from "./SafeText";
-
+import { Button } from "../ui/Button";
 type Turn = S["AskView"];
 type Op = S["OpView"];
 
@@ -105,9 +105,9 @@ export function RecordConversation(props: { kind: string; id: string }) {
           </span>
         </div>
         <div className="row-end">
-          <button type="submit" className="btn primary" disabled={busy || !message.trim()}>
+          <Button variant="primary" type="submit" disabled={busy || !message.trim()}>
             {t(busy ? "conversation.sending" : "conversation.send")}
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -165,9 +165,9 @@ function TurnRow(props: { turn: Turn }) {
           <div className="ask-item">
             <span className="sub">{turn.estimate_usd != null ? t("conversation.waiting_go_cost", { cost: total(turn.estimate_usd) }) : t("conversation.waiting_go")}</span>
             <div className="acts">
-              <button type="button" className="btn primary" onClick={() => void act(() => api.stageGo(turn.id, turn.version), () => ({ message: t("toast.go") }))}>
+              <Button variant="primary" onClick={() => void act(() => api.stageGo(turn.id, turn.version), () => ({ message: t("toast.go") }))}>
                 {t("conversation.go")}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -196,23 +196,23 @@ function TurnRow(props: { turn: Turn }) {
                 <li key={op.index}>
                   <span>{op.title}</span> <span className="sub">{t(`conversation.op.${op.status}`)}</span>
                   {op.status === "held" && (
-                    <button type="button" className="btn" aria-label={t("conversation.keep_named", { what: op.title })} onClick={() => keep(op)}>
+                    <Button aria-label={t("conversation.keep_named", { what: op.title })} onClick={() => keep(op)}>
                       {t("conversation.keep")}
-                    </button>
+                    </Button>
                   )}
                   {(op.status === "held" || op.status === "applied") && (
-                    <button type="button" className="btn quiet" aria-label={t("conversation.drop_named", { what: op.title })} onClick={() => drop(op)}>
+                    <Button variant="quiet" aria-label={t("conversation.drop_named", { what: op.title })} onClick={() => drop(op)}>
                       {t("conversation.drop")}
-                    </button>
+                    </Button>
                   )}
                 </li>
               ))}
             </ul>
             {!turn.reviewed && ops.some((o) => o.status === "applied") && (
               <div className="acts">
-                <button type="button" className="btn" onClick={keepAll}>
+                <Button onClick={keepAll}>
                   {t("conversation.keep_all")}
-                </button>
+                </Button>
               </div>
             )}
           </div>

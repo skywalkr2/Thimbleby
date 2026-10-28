@@ -6,7 +6,7 @@ import { useIsNarrow } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { Panel } from "../ui/Panel";
 import styles from "./Today.module.css";
-
+import { EmptyState } from "../ui/EmptyState";
 type Folds = { open: ReadonlySet<string>; toggle: (id: string) => void };
 const FoldContext = createContext<Folds | null>(null);
 
@@ -93,41 +93,17 @@ export function RailPanel(props: {
 
 /** An empty panel's words. With `inline` they are one line: the words, then the button. A button with an `href` is a link to
  * another screen (`run` is for one that acts here). */
-export function Empty(props: { text: string; inline?: boolean; button?: { label: string; run?: () => void; href?: string } }) {
-  const action = (b: { label: string; run?: () => void; href?: string }) =>
-    b.href ? (
-      <a className="btn" href={b.href}>
-        {b.label}
-      </a>
-    ) : (
-      <button type="button" className="btn" onClick={b.run}>
-        {b.label}
-      </button>
-    );
-  if (props.inline) {
-    return (
-      <p className="tb-empty tb-empty-line">
-        {props.text}
-        {props.button && <> {action(props.button)}</>}
-      </p>
-    );
-  }
+export function Empty(props: { text: string; inline?: boolean; button?: { label: string; run?: () => void; href?: string }; children?: ReactNode }) {
   return (
-    <div className="tb-empty">
-      <p>{props.text}</p>
-      {props.button && action(props.button)}
-    </div>
+    <EmptyState inline={props.inline} icon="inbox" text={props.text} action={props.button ? { label: props.button.label, onClick: props.button.run, href: props.button.href } : null}>
+      {props.children}
+    </EmptyState>
   );
 }
 
 export function Failed(props: { text: string; retry: () => void }) {
   const { t } = useWords();
   return (
-    <p className="empty">
-      {props.text}{" "}
-      <button type="button" className="btn" onClick={props.retry}>
-        {t("action.try_again")}
-      </button>
-    </p>
+    <EmptyState icon="alert" text={props.text} action={{ label: t("action.try_again"), onClick: props.retry }} />
   );
 }

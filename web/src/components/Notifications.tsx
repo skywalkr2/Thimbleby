@@ -12,7 +12,7 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { heldOf, KeptSecretRow } from "./KeptSecrets";
 import styles from "./Notifications.module.css";
-
+import { Button } from "../ui/Button";
 /** One target's test: runs it, and says how it went in a toast, or in the card when it didn't work. */
 function useTest(target: "browser" | "webhook") {
   const { t } = useWords();
@@ -64,14 +64,14 @@ function BrowserTarget() {
       )}
       <div className={styles.actions}>
         {state === "default" && (
-          <button type="button" className="btn small primary" onClick={() => void askNotify().then(setState)}>
+          <Button variant="primary" size="sm" onClick={() => void askNotify().then(setState)}>
             {t("notify.allow")}
-          </button>
+          </Button>
         )}
         {state === "granted" && (
-          <button type="button" className="btn small" disabled={test.busy} onClick={() => void test.run()}>
+          <Button size="sm" disabled={test.busy} onClick={() => void test.run()}>
             {t("notices.test")}
-          </button>
+          </Button>
         )}
       </div>
     </li>
@@ -132,9 +132,9 @@ function WebhookTarget(props: { local: boolean }) {
         }}
         more={
           held ? (
-            <button type="button" className="btn small" disabled={test.busy} onClick={() => void test.run()}>
+            <Button size="sm" disabled={test.busy} onClick={() => void test.run()}>
               {t("notices.test")}
-            </button>
+            </Button>
           ) : null
         }
       />

@@ -9,7 +9,7 @@ import { dayAndTime } from "../lib/dates";
 import { useActOptions, useDraftAct } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 type Answer = "accepted" | "tentative" | "declined" | "propose";
 
 export interface InvitationActs {
@@ -39,9 +39,9 @@ export function useInvitationActs(entry: string, enabled: boolean): InvitationAc
     buttons: (
       <>
         {answers.includes("accepted") && (
-          <button type="button" className="btn primary" onClick={() => answer("accepted")}>
+          <Button variant="primary" onClick={() => answer("accepted")}>
             {t("acts.answer.accepted")}
-          </button>
+          </Button>
         )}
         <RowMenu label={t("acts.answer.menu")} actions={menu} />
       </>
@@ -151,12 +151,12 @@ function ProposeForm(props: { entry: string; onCancel: () => void; onSubmit: (st
         </p>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={busy || (!chosen && !typed)}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={busy || (!chosen && !typed)}>
           {t("acts.propose.go")}
-        </button>
+        </Button>
       </div>
     </form>
   );

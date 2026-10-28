@@ -57,5 +57,11 @@
     "id": "PER-7",
     "org": "ORG-3",
     "role": "Bookshop events coordinator"
+  },
+  {
+    "full_name": "Bartholomew Featherstonehaugh-Wolfeschlegelsteinhausen",
+    "id": "PER-2001",
+    "org": "ORG-1",
+    "role": "Coordinator of long-running, cross-regional, many-part launch and delivery programs"
   }
 ]

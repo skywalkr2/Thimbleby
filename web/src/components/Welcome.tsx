@@ -26,7 +26,8 @@ import { WorkStep } from "./WalkthroughWork";
 import { Skeleton } from "../ui/Skeleton";
 import { Icon } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type Step = S["SetupStepView"];
 
 /** The id of a step's section, so Today can open the guide at one step. */
@@ -64,7 +65,7 @@ export function StepList(props: {
   }, [props.focusStep, loaded]);
 
   if (setup.isPending) return <Skeleton />;
-  if (setup.isError) return <p className="empty">{t("welcome.failed")}</p>;
+  if (setup.isError) return <EmptyState text={t("welcome.failed")} />;
   // A step with nothing for the person to do (no add-on installed to turn on) isn't offered, so it never reads as done.
   const shown = setup.data.steps.filter((step) => step.applies !== false && (!props.include || props.include(step)));
   return (
@@ -102,9 +103,9 @@ export function StepList(props: {
                 <WelcomeBackup local={setup.data.local} />
               ) : step.id === "people" ? (
                 <div className="row-end">
-                  <button type="button" className="btn" onClick={props.onOpenPeople}>
+                  <Button onClick={props.onOpenPeople}>
                     {t("welcome.people.open")}
-                  </button>
+                  </Button>
                 </div>
               ) : step.id === "addons" ? (
                 <AddonsStep onOpen={props.onOpenAddons} />
@@ -112,22 +113,20 @@ export function StepList(props: {
                 <PackTiers level={4} plugin={step.plugin} />
               ) : step.id === "first_note" ? (
                 <div className="row-end">
-                  <button type="button" className="btn" onClick={props.onHandIn}>
+                  <Button onClick={props.onHandIn}>
                     {t("handin.open")}
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <>
                   {hasSettings(step) && <SuggestedSettings step={step} />}
                   {step.action && (
                     <div className="row-end">
-                      <button
-                        type="button"
-                        className="btn"
+                      <Button
                         onClick={() => start({ name: step.action!, label, on: null }, null)}
                       >
                         {label}
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </>
@@ -163,15 +162,13 @@ function SignInStep(props: { name: string; label: string; done: boolean; onChoos
         </p>
       )}
       <div className="row-end">
-        <button
-          type="button"
-          className="btn"
+        <Button
           disabled={busy}
           aria-label={t("sign_in.sign_in_named", { label: props.label })}
           onClick={() => void start()}
         >
           {busy ? t("sign_in.working") : t("sign_in.sign_in")}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -214,13 +211,13 @@ function AddonsStep(props: { onOpen: () => void }) {
       )}
       <div className="row-end">
         {off.length > 0 && (
-          <button type="button" className="btn" disabled={busy} onClick={() => void leaveOff()}>
+          <Button disabled={busy} onClick={() => void leaveOff()}>
             {t("welcome.addons.leave_off")}
-          </button>
+          </Button>
         )}
-        <button type="button" className="btn" onClick={props.onOpen}>
+        <Button onClick={props.onOpen}>
           {t("welcome.addons.open")}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -276,9 +273,9 @@ function SuggestedSettings(props: { step: Step }) {
         </p>
       )}
       <div className="row-end">
-        <button type="button" className="btn" disabled={busy} onClick={() => void apply()}>
+        <Button disabled={busy} onClick={() => void apply()}>
           {t("welcome.settings.apply")}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -316,14 +313,12 @@ function StepSection(props: { step: Step; label: string; explanation: string; ch
       {props.children}
       {!step.done && (
         <div className="row-end">
-          <button
-            type="button"
-            className="btn quiet"
+          <Button variant="quiet"
             aria-label={t(step.skipped ? "welcome.reopen_named" : "welcome.skip_named", { label, skip: skipWords })}
             onClick={toggle}
           >
             {step.skipped ? t("welcome.reopen") : skipWords}
-          </button>
+          </Button>
         </div>
       )}
     </li>
@@ -351,7 +346,7 @@ export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean }
   // The person's name lives on their person record only; the settings hold the time zone.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   if (!settings.data || !me.data) {
-    return settings.isError || me.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton rows={2} />;
+    return settings.isError || me.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton rows={2} />;
   }
   return <WorkspaceForm {...props} settings={settings.data} me={me.data} />;
 }
@@ -484,9 +479,9 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
       )}
       {!hasSlot && (
         <div className="row-end">
-          <button type="submit" className={props.done ? "btn" : "btn primary"} disabled={busy || empty || !pending}>
+          <Button type="submit" variant={props.done ? "secondary" : "primary"} disabled={busy || empty || !pending}>
             {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
-          </button>
+          </Button>
         </div>
       )}
     </form>

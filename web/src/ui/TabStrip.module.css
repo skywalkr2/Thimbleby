@@ -1,0 +1,9 @@
+.strip { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
+.tab {
+  display: inline-flex; align-items: center; gap: var(--space-2); position: relative; top: 1px; padding: var(--space-2) 0; min-height: var(--target-min);
+  border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; cursor: pointer;
+  color: var(--text-muted); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-medium);
+}
+.tab:hover { color: var(--text); }
+.tab[aria-pressed="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.count { color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-variant-numeric: tabular-nums; }

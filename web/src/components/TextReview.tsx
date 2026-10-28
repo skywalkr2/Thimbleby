@@ -15,7 +15,7 @@ import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Icon } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
-
+import { Button } from "../ui/Button";
 type Choice = "accept" | "reject";
 
 interface Opened {
@@ -140,9 +140,9 @@ export function TextReview(props: { version: string; onClose: () => void }) {
       {review.isError && (
         <p className="problem-note" role="alert">
           {problemText(review.error, t)}{" "}
-          <button type="button" className="btn" onClick={() => void reload()}>
+          <Button onClick={() => void reload()}>
             {t("action.try_again")}
-          </button>
+          </Button>
         </p>
       )}
       {error && (
@@ -228,18 +228,18 @@ export function TextReview(props: { version: string; onClose: () => void }) {
         </div>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
+        </Button>
         {data && (
           <RowMenu
             label={t("text_review.title")}
             actions={[{ id: "discard", label: t("text_review.discard"), run: () => void submit("discard") }]}
           />
         )}
-        <button type="button" className="btn primary" disabled={!data || busy} onClick={() => void submit("accept")}>
+        <Button variant="primary" disabled={!data || busy} onClick={() => void submit("accept")}>
           {t(busy ? "text_review.applying" : "text_review.apply")}
-        </button>
+        </Button>
       </div>
     </ModalPanel>
   );

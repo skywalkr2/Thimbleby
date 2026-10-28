@@ -54,5 +54,11 @@
     "role": "Program manager, carrier experience",
     "team": "TEAM-4",
     "track_only": true
+  },
+  {
+    "full_name": "Bartholomew Featherstonehaugh-Wolfeschlegelsteinhausen",
+    "id": "PER-2001",
+    "org": "ORG-1",
+    "role": "Coordinator of long-running, cross-regional, many-part launch and delivery programs"
   }
 ]

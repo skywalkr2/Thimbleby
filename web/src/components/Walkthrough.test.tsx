@@ -1783,7 +1783,7 @@ describe("Mail and calendar", () => {
     await user.click(within(mine).getByRole("button", { name: oneButton }));
     // After the restart the sign-in is a button to press: a window the app opens by itself is blocked as a pop-up.
     const signIn = await screen.findByRole("button", { name: "Sign in to Service mail-addon" }, { timeout: 3000 });
-    expect(signIn).toHaveClass("primary");
+    expect(signIn).toHaveAttribute("data-variant", "primary");
     expect(signIn).toHaveFocus();
     expect(opener).not.toHaveBeenCalled();
     expect(popup.location.href).toBe("");

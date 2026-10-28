@@ -10,6 +10,7 @@ import { todayOn, wallTime, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
 import { anyReading } from "../lib/sources";
 import { viewHref } from "../lib/views";
+import { Button } from "../ui/Button";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
@@ -66,9 +67,9 @@ function CheckNow(props: { quiet?: boolean }) {
     setChecking(false);
   };
   return (
-    <button ref={button} type="button" className={props.quiet ? "btn quiet small" : "btn small"} disabled={checking} aria-busy={checking} onClick={() => void run()}>
+    <Button ref={button} variant={props.quiet ? "quiet" : "secondary"} size="sm" disabled={checking} aria-busy={checking} onClick={() => void run()}>
       {t(checking ? "today.arrived.checking" : "today.arrived.check")}
-    </button>
+    </Button>
   );
 }
 
@@ -121,10 +122,9 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
         <Failed text={t("today.arrived.load_failed")} retry={() => void arrived.refetch()} />
       ) : items.length === 0 ? (
         sourceState.problems.length > 0 ? (
-          <div className="tb-empty">
-            <p>{t("today.arrived.not_read")}</p>
+          <Empty text={t("today.arrived.not_read")}>
             <SourceProblems problems={sourceState.problems} />
-          </div>
+          </Empty>
         ) : (
           <Empty text={t("today.arrived.empty")} button={sourceState.button} />
         )

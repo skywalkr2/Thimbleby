@@ -65,7 +65,7 @@ export function ReviewMode<T extends { id: string }>(props: {
         <h2 id="review-title" className={styles.heading} tabIndex={-1}>
           {t(props.progress ?? "review.progress", { n: index + 1, total: items.length })}
         </h2>
-        <Button variant="ghost" size="sm" onClick={props.onClose}>
+        <Button variant="quiet" size="sm" onClick={props.onClose}>
           {t("review.back")}
         </Button>
       </div>

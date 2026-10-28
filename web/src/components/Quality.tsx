@@ -14,6 +14,8 @@ import { LoadFailed } from "../ui/LoadFailed";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Quality.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 type View = S["QualityView"];
 
 /** A whole number typed in a field, or null when it isn't one. */
@@ -32,7 +34,7 @@ function Section(props: { id: string; title: string; hint?: string; children: Re
 }
 
 function Empty(props: { text: string }) {
-  return <p className="empty">{props.text}</p>;
+  return <EmptyState inline text={props.text} />;
 }
 
 /** Seconds as whole minutes, never below one for any time at all. */
@@ -51,11 +53,10 @@ function Days(props: { label: string; rows: string[] }) {
   );
 }
 
-function CountForm(props: { view: View; focusFirst: boolean }) {
+function CountForm(props: { view: View }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
-  const dateField = useRef<HTMLInputElement>(null);
   const today = props.view.until || todayOn(new Date());
   const [date, setDate] = useState("");
   const [present, setPresent] = useState("");
@@ -63,10 +64,6 @@ function CountForm(props: { view: View; focusFirst: boolean }) {
   const [busy, setBusy] = useState(false);
   const day = date || today;
   const entry = props.view.counts.days.find((d) => d.day === day);
-  // The cursor starts in the first field once the screen has what it needs.
-  useEffect(() => {
-    if (props.focusFirst) dateField.current?.focus();
-  }, [props.focusFirst]);
   // A day that has a count shows it, so saving again corrects it.
   useEffect(() => {
     setPresent(entry ? String(entry.present) : "");
@@ -96,7 +93,7 @@ function CountForm(props: { view: View; focusFirst: boolean }) {
     <form className={styles.form} onSubmit={(e) => void submit(e)} aria-label={t("quality.counts.form")}>
       <div className="field">
         <label htmlFor={`${base}-date`}>{t("quality.counts.date")}</label>
-        <input id={`${base}-date`} ref={dateField} type="date" value={day} max={today} onChange={(e) => setDate(e.target.value)} required />
+        <input id={`${base}-date`} type="date" value={day} max={today} onChange={(e) => setDate(e.target.value)} required />
       </div>
       <div className="field">
         <label htmlFor={`${base}-present`}>{t("quality.counts.present")}</label>
@@ -244,22 +241,23 @@ export function Quality(props: { onBack: () => void }) {
   const page = useQuery({ queryKey: ["quality"], queryFn: api.quality });
   const view = page.data;
   const work = (kind: string) => (has(`task.${kind}`) ? t(`task.${kind}`) : t("task.other"));
-  // The cursor goes to the form's first field once, when the figures first arrive.
-  const [arrived, setArrived] = useState(false);
-  useEffect(() => {
-    if (view && !arrived) setArrived(true);
-  }, [view, arrived]);
+  // The screen opens with the cursor on its heading.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus({ preventScroll: true }), []);
 
   return (
     <section className="panel-section" aria-labelledby="quality-title">
-      <div className="heading">
-        <h1 id="quality-title">{t("quality.open")}</h1>
-      </div>
-      <p className="hint">
-        <Button size="sm" variant="ghost" onClick={props.onBack}>
-          {t("quality.back")}
-        </Button>
-      </p>
+      <PageHeader
+        id="quality-title"
+        headingRef={heading}
+        focusable
+        title={t("quality.open")}
+        crumb={
+          <Button size="sm" variant="quiet" onClick={props.onBack}>
+            {t("quality.back")}
+          </Button>
+        }
+      />
       {page.isPending ? (
         <Skeleton />
       ) : page.isError || !view ? (
@@ -384,7 +382,7 @@ export function Quality(props: { onBack: () => void }) {
                   />
                 </>
               )}
-              <CountForm view={view} focusFirst={arrived} />
+              <CountForm view={view} />
             </Section>
 
             <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")}>

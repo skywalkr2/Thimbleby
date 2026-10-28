@@ -11,7 +11,8 @@ import { restoreFocus } from "./ModalPanel";
 import { SafeText } from "./SafeText";
 import { WorkingCopies } from "./WorkingCopies";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type Review = (version: string, returnTo?: () => HTMLElement | null | undefined) => void;
 
 /** Words by who wrote them. The three kinds are never folded together. */
@@ -74,20 +75,15 @@ export function TextSection(props: { kind: string; id: string; field: string; he
       <div className="heading">
         <h3 id={titleId}>{labelOf(field)}</h3>
         {data && !editing && (
-          <button ref={editButton} type="button" className="btn" onClick={startEdit}>
+          <Button ref={editButton} onClick={startEdit}>
             {t("text.edit")}
-          </button>
+          </Button>
         )}
       </div>
       {props.help && <p className="hint">{props.help}</p>}
       {text.isPending && <Skeleton />}
       {text.isError && (
-        <p className="empty">
-          {t("text.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void text.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("text.load_failed")} action={{ label: t("action.try_again"), onClick: () => void text.refetch() }} />
       )}
       {data &&
         (editing ? (
@@ -107,12 +103,12 @@ export function TextSection(props: { kind: string; id: string; field: string; he
               }}
             />
             <div className="row-end">
-              <button type="button" className="btn quiet" onClick={stopEdit}>
+              <Button variant="quiet" onClick={stopEdit}>
                 {t("action.cancel")}
-              </button>
-              <button type="button" className="btn primary" disabled={saving} onClick={() => void save()}>
+              </Button>
+              <Button variant="primary" disabled={saving} onClick={() => void save()}>
                 {t(saving ? "text.saving" : "text.save")}
-              </button>
+              </Button>
             </div>
           </div>
         ) : data.text.trim() ? (
@@ -120,7 +116,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
             <SafeText text={data.text} />
           </div>
         ) : (
-          <p className="empty">{t("text.empty")}</p>
+          <EmptyState text={t("text.empty")} />
         ))}
       {counts && data && data.authorship.length > 0 && (
         <div>
@@ -179,16 +175,14 @@ function VersionRow(props: { version: S["TextVersionView"]; current: number | nu
         </div>
         {version.status === "pending" && (
           <div className="acts">
-            <button
+            <Button variant="primary"
               ref={button}
-              type="button"
-              className="btn primary"
               data-key="primary"
               aria-label={t("text.review_named", { n: version.number })}
               onClick={() => props.onReview(version.id, () => button.current)}
             >
               {t("text.review")}
-            </button>
+            </Button>
           </div>
         )}
       </div>

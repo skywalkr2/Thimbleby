@@ -18,6 +18,7 @@ import { FactSource } from "./FactSource";
 import { useFactLine } from "../lib/fact-line";
 import { OriginLink } from "./Origin";
 
+import { EmptyState } from "../ui/EmptyState";
 /** The ways an input arrives that the sheet has a word for; any other is "another input". */
 const KINDS = ["pasted", "email", "calendar", "change", "note", "task"];
 const FIELDS = ["status", "phase", "target", "owner", "summary"] as const;
@@ -195,7 +196,7 @@ export function ProjectKnows(props: { id: string; plain?: boolean }) {
         <>
           <Reading reading={data.reading} area={data.area} />
           {data.area && (data.reading.choices ?? []).length > 0 && <Readers project={props.id} name={data.name} choices={data.reading.choices ?? []} />}
-          {nothing && <p className="empty">{t("knows.nothing_yet")}</p>}
+          {nothing && <EmptyState text={t("knows.nothing_yet")} />}
           <Sources rows={data.sources} />
           <Facts rows={data.facts} />
           {!props.plain && (

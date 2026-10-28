@@ -17,7 +17,7 @@ import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { TimeZoneSelect } from "./TimeZoneSelect";
 import { restoreFocus } from "./ModalPanel";
 import { SecretField, type SecretInput } from "./SecretField";
-
+import { Button } from "../ui/Button";
 export function SettingRow(props: {
   item: Item;
   /** The words for the label when the screen knows better than the sheet (a name it holds); else the sheet's. */
@@ -275,14 +275,12 @@ export function SettingRow(props: {
       item.picker && props.canList ? (
         <div className="inline-field">
           {input}
-          <button type="button" className="btn primary" ref={chooser} disabled={off} onClick={() => setPicking(true)}>
+          <Button variant="primary" ref={chooser} disabled={off} onClick={() => setPicking(true)}>
             {t(item.picker === "file" ? "settings.choose_file" : "settings.choose_folder")}
             <span className="sr"> {label}</span>
-          </button>
+          </Button>
           {String(draft) !== "" && (
-            <button
-              type="button"
-              className="btn quiet"
+            <Button variant="quiet"
               disabled={off}
               onClick={() => {
                 props.onChange("");
@@ -291,7 +289,7 @@ export function SettingRow(props: {
             >
               {t("settings.clear_value")}
               <span className="sr"> {label}</span>
-            </button>
+            </Button>
           )}
         </div>
       ) : (

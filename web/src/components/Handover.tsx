@@ -13,6 +13,8 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Handover.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 type Side = S["HandoverSideView"];
 type Which = S["HandoverChoice"]["which"];
 
@@ -42,20 +44,13 @@ export function Handover() {
   const busy = choose.isPending || changeMind.isPending;
   return (
     <section className="panel-section" aria-labelledby="handover-title">
-      <div className="heading">
-        <h1 id="handover-title">{t("handover.title")}</h1>
-      </div>
+      <PageHeader id="handover-title" title={t("handover.title")} />
       {page.isPending ? (
         <Skeleton />
       ) : page.isError || !view ? (
-        <p className="empty">
-          {t("handover.failed")}{" "}
-          <button type="button" className="btn" onClick={() => void page.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("handover.failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
       ) : view.state === "clear" ? (
-        <p className="empty">{t("handover.clear")}</p>
+        <EmptyState text={t("handover.clear")} />
       ) : view.state === "elsewhere" ? (
         <Elsewhere view={view} />
       ) : (

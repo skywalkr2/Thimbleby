@@ -13,7 +13,7 @@ import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { useFocusAfterRender } from "../lib/focus-after-render";
-
+import { Button } from "../ui/Button";
 type SignIn = S["SignInView"];
 type Account = S["SignInAccount"];
 
@@ -39,9 +39,9 @@ export function SignIns(props: {
         </div>
         <p className="hint">{t("sign_in.none")}</p>
         <div className="row-end">
-          <button type="button" className="btn" onClick={props.onOpenAddons}>
+          <Button onClick={props.onOpenAddons}>
             {t("sign_in.open_addons")}
-          </button>
+          </Button>
         </div>
       </section>
     );
@@ -215,25 +215,21 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                     </span>
                     <span className="acts">
                       {a.status === "expired" && (
-                        <button
-                          type="button"
-                          className="btn quiet"
+                        <Button variant="quiet"
                           disabled={busy || !item.ready}
                           aria-label={t("sign_in.sign_in_again_account", { account: who })}
                           onClick={() => void start()}
                         >
                           {t("sign_in.sign_in_again")}
-                        </button>
+                        </Button>
                       )}
-                      <button
-                        type="button"
-                        className="btn quiet"
+                      <Button variant="quiet"
                         disabled={busy}
                         aria-label={t("sign_in.sign_out_account", { account: who })}
                         onClick={() => void signOutAccount(a)}
                       >
                         {t("sign_in.sign_out")}
-                      </button>
+                      </Button>
                     </span>
                   </li>
                 );
@@ -248,15 +244,13 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
           )}
           {several && accounts.length > 0 && (
             <div className="row-end">
-              <button
-                type="button"
-                className="btn quiet"
+              <Button variant="quiet"
                 disabled={busy || !item.ready}
                 aria-label={t("sign_in.add_account_named", { label: item.label })}
                 onClick={() => void start()}
               >
                 {t("sign_in.add_account")}
-              </button>
+              </Button>
             </div>
           )}
           {allows.length > 0 && (
@@ -282,16 +276,14 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                 {t("sign_in.missing", { list: missing.join(", ") })}
               </p>
               <div className="row-end">
-                <button
-                  type="button"
-                  className="btn"
+                <Button
                   disabled={busy || !item.ready}
                   aria-label={t("sign_in.sign_in_again_named", { label: item.label })}
                   aria-describedby={`${base}-missing`}
                   onClick={() => void start()}
                 >
                   {t("sign_in.sign_in_again")}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -325,9 +317,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
           ) : null}
         </div>
         <div className="acts">
-          <button
-            type="button"
-            className="btn primary"
+          <Button variant="primary"
             data-key="primary"
             disabled={busy || notReady}
             aria-label={named}
@@ -341,7 +331,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
             }
           >
             {label}
-          </button>
+          </Button>
           <RowMenu label={item.label} actions={actions} buttonId={menuId} />
         </div>
       </div>
@@ -444,17 +434,16 @@ function OwnAppForm(props: {
         </div>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" aria-label={t("sign_in.own.cancel_named", { label: item.label })} onClick={props.onClose}>
+        <Button variant="quiet" aria-label={t("sign_in.own.cancel_named", { label: item.label })} onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="btn"
           disabled={!filled || saving || props.disabled}
           aria-label={t("sign_in.own.save_named", { label: item.label })}
         >
           {saving ? t("sign_in.own.saving") : t("sign_in.own.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -478,9 +467,7 @@ export function NotReadingLines() {
             <p className="hint" id={id}>
               {t("sources.signed_in_not_reading", { label: item.label, list })}
             </p>
-            <button
-              type="button"
-              className="btn primary"
+            <Button variant="primary"
               aria-label={t("sign_in.start_reading_named", { label: item.label })}
               aria-describedby={id}
               onClick={() =>
@@ -491,7 +478,7 @@ export function NotReadingLines() {
               }
             >
               {t("sign_in.start_reading")}
-            </button>
+            </Button>
           </li>
         );
       })}

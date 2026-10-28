@@ -8,7 +8,8 @@ import { useAct } from "../lib/act";
 import { whenText as when } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type SilentClose = S["SilentCloseView"];
 
 export function AssistantCloses() {
@@ -24,12 +25,7 @@ export function AssistantCloses() {
       {found.isPending ? (
         <Skeleton />
       ) : found.isError ? (
-        <p className="empty">
-          {t("sources.silent.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void found.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("sources.silent.load_failed")} action={{ label: t("action.try_again"), onClick: () => void found.refetch() }} />
       ) : (
         <>
           {found.data.measure.total > 0 ? (
@@ -43,7 +39,7 @@ export function AssistantCloses() {
             </p>
           ) : null}
           {mine.length === 0 ? (
-            <p className="empty">{t("sources.silent.empty")}</p>
+            <EmptyState text={t("sources.silent.empty")} />
           ) : (
             <ul className="queue">
               {mine.map((item) => (
@@ -84,16 +80,14 @@ function AssistantCloseRow(props: { item: SilentClose }) {
           {item.why ? <span className="sub">{t("sources.silent.why", { reason: item.why })}</span> : null}
         </div>
         <div className="acts">
-          <button
-            type="button"
-            className="btn primary"
+          <Button variant="primary"
             data-key="primary"
             disabled={busy}
             aria-label={t("sources.silent.seen_named", { title: item.title })}
             onClick={() => void seen()}
           >
             {t("sources.silent.seen")}
-          </button>
+          </Button>
         </div>
       </div>
     </li>

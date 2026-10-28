@@ -4,7 +4,7 @@
 import { day } from "../lib/dates";
 import { deliveryLines, deliveryRange } from "../lib/deliveries";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { Pill } from "../ui/Pill";
 import { SafeLink } from "./SafeText";
 import { entryHref, fullWhen, type Calendars, type Entry } from "./ScheduleEntry";
@@ -53,9 +53,9 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
         ))}
       </dl>
       <div className={styles.paneActs}>
-        <a className="btn primary" href={entryHref(entry)}>
+        <ButtonLink variant="primary" href={entryHref(entry)}>
           {entry.kind === "due" ? t("schedule.pane.open_todo") : t("schedule.pane.open")}
-        </a>
+        </ButtonLink>
         {entry.link && <SafeLink label={t("schedule.open_calendar")} url={entry.link} />}
       </div>
     </div>

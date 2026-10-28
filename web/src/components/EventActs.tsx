@@ -7,7 +7,7 @@ import { inputOn, momentOf } from "../lib/dates";
 import { useActOptions, useDraftAct } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 export interface EventActs {
   /** The entries for the entry page's menu; none when nothing is offered. */
   menu: MenuAction[];
@@ -105,12 +105,12 @@ function MoveForm(props: { start: string; end: string; onCancel: () => void; onS
         </p>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={busy || !start}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={busy || !start}>
           {t("acts.event.move.go")}
-        </button>
+        </Button>
       </div>
     </form>
   );

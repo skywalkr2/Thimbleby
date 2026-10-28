@@ -62,7 +62,7 @@ function AddTodoForm(props: { onClose: () => void }) {
       dirty={!!words || !!when.trim() || !!typedRepeat}
       footer={
         <>
-          <Button variant="ghost" onClick={props.onClose}>
+          <Button variant="quiet" onClick={props.onClose}>
             {t("action.cancel")}
           </Button>
           <Button variant="primary" type="submit" form={`${id}-form`} disabled={!ready}>

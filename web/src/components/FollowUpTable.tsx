@@ -6,9 +6,10 @@ import type { Table } from "../lib/followup-table";
 import { SafeLink } from "./SafeText";
 import styles from "./FollowUpTable.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
 export function FollowUpTables(props: { tables: Table[]; name: string; noLink: string }) {
   const { t } = useWords();
-  if (props.tables.length === 0) return <p className="empty">{t("followups.table.empty", { name: props.name })}</p>;
+  if (props.tables.length === 0) return <EmptyState text={t("followups.table.empty", { name: props.name })} />;
   return (
     <div className={styles.wrap}>
       {props.tables.map((table) => {

@@ -12,7 +12,7 @@ import { NoteBox, useNoted } from "./NoteBox";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { plainTitle } from "../lib/title-dates";
-
+import { Button } from "../ui/Button";
 type Line = S["QueueLineView"];
 type Choice = S["SnoozeChoiceView"];
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -138,12 +138,12 @@ export function PickTime(props: { value?: string; onSave: (at: string) => void; 
       </label>
       <input id={id} type="datetime-local" autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!value}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!value}>
           {t("reminder.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -168,9 +168,9 @@ function ReminderItem(props: { item: S["ReminderItemView"]; snoozes: Choice[] })
   return (
     <li ref={ref} tabIndex={-1} className="reminder-item" data-reminder={props.item.action}>
       <span>{text}</span>
-      <button type="button" className="btn small primary" aria-label={t("today.todo.done_named", { text: props.item.text })} onClick={choices.done}>
+      <Button variant="primary" size="sm" aria-label={t("today.todo.done_named", { text: props.item.text })} onClick={choices.done}>
         {t("queue.reminder.done")}
-      </button>
+      </Button>
       <RowMenu label={text} actions={[choices.note]} groups={choices.groups} />
       {choices.form}
     </li>

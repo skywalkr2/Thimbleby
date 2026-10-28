@@ -11,7 +11,7 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { LabelForm, MoveForm } from "./MessageActs";
 import styles from "./MailSelection.module.css";
-
+import { Button } from "../ui/Button";
 type Asking = "move" | "label";
 const ACTIONS: { id: BatchAction; label: string }[] = [
   { id: "archive", label: "acts.archive" },
@@ -62,13 +62,13 @@ export function MailSelectionBar(props: { records: string[]; onClear: () => void
       </p>
       <div className={styles.buttons}>
         {ACTIONS.map((a) => (
-          <button key={a.id} type="button" className="btn" disabled={busy || !!plan} aria-pressed={asking === a.id ? true : undefined} onClick={() => choose(a.id)}>
+          <Button key={a.id} disabled={busy || !!plan} aria-pressed={asking === a.id ? true : undefined} onClick={() => choose(a.id)}>
             {t(a.label)}
-          </button>
+          </Button>
         ))}
-        <button type="button" className="btn quiet" disabled={busy} onClick={props.onClear}>
+        <Button variant="quiet" disabled={busy} onClick={props.onClear}>
           {t("batch.clear")}
-        </button>
+        </Button>
       </div>
       {asking === "move" && <MoveBatch records={props.records} onCancel={() => setAsking(null)} onSubmit={(folder) => draft("move", { folder })} />}
       {asking === "label" && <LabelBatch records={props.records} onCancel={() => setAsking(null)} onSubmit={(label) => draft("label", { label })} />}
@@ -86,9 +86,9 @@ function MoveBatch(props: { records: string[]; onCancel: () => void; onSubmit: (
     return (
       <div role="note" className="hint">
         <p>{t(found.data.several_accounts ? "batch.move.several" : "batch.move.no_account")}</p>
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -135,13 +135,13 @@ function BatchConfirm(props: { plan: { drafted: Drafted; what: BatchAction; fold
         </div>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" disabled={props.busy} onClick={props.onCancel}>
+        <Button variant="quiet" disabled={props.busy} onClick={props.onCancel}>
           {n > 0 ? t("batch.confirm.cancel") : t("acts.cancel")}
-        </button>
+        </Button>
         {n > 0 && (
-          <button type="button" className="btn primary" disabled={props.busy} onClick={props.onApprove}>
+          <Button variant="primary" disabled={props.busy} onClick={props.onApprove}>
             {tn("batch.confirm.go", n)}
-          </button>
+          </Button>
         )}
       </div>
     </div>

@@ -1,59 +1,60 @@
-/* The row anatomy (design 7.14): pill column, title and meta, primary, menu. Same parts at the same x on every row. */
+/* The row anatomy (design 7.14): an optional leading slot, title and one meta line, actions. There is no fixed column for a
+   mark: the leading slot is there only when the row has something for it, and takes only the width of that. */
 .row {
-  display: grid; grid-template-columns: var(--row-pill-w) minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center;
   min-height: var(--row-h); padding: var(--row-py) var(--row-px);
   border-bottom: 1px solid var(--border); background: var(--surface); list-style: none; margin: 0;
 }
+.leads { grid-template-columns: auto minmax(0, 1fr) auto; }
 .row:last-child { border-bottom: 0; }
-/* On a record page a list whose rows hold no pill at all drops the empty pill column, so its titles start at the left edge
-   (a list with any pill keeps the column, so its titles still line up). Written with no more weight than the rules above so
-   the phone layouts below still win. */
-:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row { grid-template-columns: minmax(0, 1fr) auto; }
-:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .pill { display: none; }
-:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .main { grid-column: 1; }
-:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .actions { grid-column: 2; }
-:where(:global(.record-page) ul:not(:has(> .row > .pill:not(:empty)))) > .row > .extra { grid-column: 1 / -1; }
 .row:hover { background: var(--surface-hover); }
 .row:focus { outline: none; }
 .row:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
-.selected, .selected:hover { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
-.selected:focus-visible { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 2px var(--focus-ring); }
+/* The cursor's row: a soft fill and a 2px bar at the left edge; its buttons are the same weight as every other row's. */
+.selected, .selected:hover { background: var(--row-selected-bg); box-shadow: var(--row-selected-bar); }
+.selected:focus-visible { box-shadow: var(--row-selected-bar), inset 0 0 0 2px var(--focus-ring); }
 
-.pill { grid-column: 1; align-self: center; justify-self: start; min-width: 0; max-width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
-/* A pill whose words are longer than the column wraps inside it, so it never draws over the title. */
-.pill > :global([data-pill]) { max-width: 100%; height: auto; min-height: var(--pill-h); white-space: normal; overflow-wrap: anywhere; text-align: left; }
-.main { grid-column: 2; min-width: 0; }
-.title {
-  margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--row-title-weight); overflow-wrap: anywhere;
-}
+.lead { grid-column: 1; align-self: center; justify-self: start; min-width: 0; max-width: 40vw; display: flex; align-items: center; gap: var(--space-2); }
+/* The mark in the title's line: it wraps with the words and never draws over them. */
+.mark { margin-right: var(--space-2); vertical-align: 1px; }
+.mark > :global([data-pill]) { max-width: 100%; height: auto; min-height: var(--pill-h); white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.main { grid-column: 1; min-width: 0; }
+.title :global(a) { color: inherit; text-decoration-line: none; }
+.title :global(a):is(:hover, :focus-visible) { text-decoration-line: underline; }
+.leads > .main { grid-column: 2; }
+.title { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--row-title-weight); overflow-wrap: anywhere; }
 .clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-.meta { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.meta { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }
 .oneLine { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.actions { grid-column: 3; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
-.extra { grid-column: 2 / -1; margin-top: var(--space-2); min-width: 0; }
+.actions { grid-column: 2; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
+.leads > .actions { grid-column: 3; }
+.extra { grid-column: 1 / -1; margin-top: var(--space-2); min-width: 0; }
 .extra:empty { display: none; }
 
-/* A row's action is tonal in both themes (tokens.css). The chosen line's action, the one with the cursor or open in the pane,
-   is the one filled button of its list; the page's own main action (Hand something in) is not in a row. */
-.actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
-.actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-hover); border-color: var(--row-action-border); }
-.selected .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
-.selected .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
-.row:focus-within .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled)) { background: var(--row-action-strong-bg); border-color: var(--row-action-strong-bg); color: var(--row-action-strong-text); }
-.row:focus-within .actions :global(:is([data-variant="primary"], .btn.primary):not(:disabled):hover) { background: var(--row-action-strong-hover); border-color: var(--row-action-strong-hover); }
+/* A row's actions are never solid, and all the same size: a primary asked for here draws as the outline. */
+.actions :global([data-variant]) { height: var(--btn-h-sm); padding-inline: var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
+.actions :global([data-variant="primary"]:not(:disabled)) { background: var(--surface); border-color: var(--btn-border); color: var(--text); }
+.actions :global([data-variant="primary"]:not(:disabled):hover) { background: var(--surface-sunk); border-color: var(--btn-border); }
+.actions :global([data-variant="quiet"]) { padding-inline: var(--space-2); }
 
-/* Phone: the pill sits above the title, and the actions stay at the right edge. */
+/* Phone (the configured phone layout, and any window under 640px): a lone action stays at the right
+   edge, and several go under the title so it keeps its width. Written at the weight of the rules above, and after them. */
 :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
-:global([data-narrow]) .pill { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; }
-:global([data-narrow]) .main { grid-column: 1; }
-:global([data-narrow]) .actions { grid-column: 2; }
-:global([data-narrow]) .extra { grid-column: 1 / -1; }
-
-/* A narrow phone (below 640px): the actions sit under the title at full width, so the title keeps the whole line. Written with
-   the phone layout's own selectors above, so it wins over them whether or not the window has been marked narrow. */
+:global([data-narrow]) .row > .main { grid-column: 1; }
+:global([data-narrow]) .row > .actions { grid-column: 2; }
+:global([data-narrow]) .row.leads { grid-template-columns: auto minmax(0, 1fr) auto; }
+:global([data-narrow]) .row.leads > .main { grid-column: 2; }
+:global([data-narrow]) .row.leads > .actions { grid-column: 3; }
+:global([data-narrow]) .row > .actions:has(> :global([data-variant]) ~ :global([data-variant])), :global([data-narrow]) .row.leads > .actions:has(> :global([data-variant]) ~ :global([data-variant])) { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
 @media (max-width: 639.98px) {
-  .row, :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr); }
-  .main, :global([data-narrow]) .main { grid-column: 1; }
-  .actions, :global([data-narrow]) .actions { grid-column: 1; justify-content: flex-end; flex-wrap: wrap; }
-  .actions > :global([data-variant="primary"]), .actions > :global([data-variant="secondary"]) { flex: 1 1 auto; }
+  .row, :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
+  .row > .lead,   .row > .main, :global([data-narrow]) .row > .main { grid-column: 1; }
+  .row > .actions, :global([data-narrow]) .row > .actions { grid-column: 2; }
+  .row.leads, :global([data-narrow]) .row.leads { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .row.leads > .main, :global([data-narrow]) .row.leads > .main { grid-column: 2; }
+  .row.leads > .actions, :global([data-narrow]) .row.leads > .actions { grid-column: 3; }
+:global([data-narrow]) .row.leads { grid-template-columns: auto minmax(0, 1fr) auto; }
+:global([data-narrow]) .row.leads > .main { grid-column: 2; }
+:global([data-narrow]) .row.leads > .actions { grid-column: 3; }
+  .row > .actions:has(> :global([data-variant]) ~ :global([data-variant])), :global([data-narrow]) .row > .actions:has(> :global([data-variant]) ~ :global([data-variant])), :global([data-narrow]) .row.leads > .actions:has(> :global([data-variant]) ~ :global([data-variant])) { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
 }

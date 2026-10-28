@@ -15,6 +15,7 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./WalkthroughPeople.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
 const RELATIONS = [
   "partner",
   "parent",
@@ -407,9 +408,9 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
           </div>
         )}
         <div className={styles.addButton}>
-          <button type="submit" className="btn" disabled={busy || !ready}>
+          <Button type="submit" disabled={busy || !ready}>
             {t("walkthrough.people.add")}
-          </button>
+          </Button>
         </div>
       </div>
       {problem && (
@@ -426,7 +427,7 @@ export function WalkthroughPeople() {
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const business = useQuery({ queryKey: ["business"], queryFn: api.business });
   const [where, setWhere] = useState(PERSONAL_KEY);
-  if (!people.data) return people.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton rows={2} />;
+  if (!people.data) return people.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton rows={2} />;
   const others = people.data.filter((p) => !p.is_pm && p.status === "active");
   const listed = business.data?.sides ?? [];
   const personal = business.data?.personal ?? null;

@@ -532,7 +532,7 @@ test("a reminder is a menu entry, never a second primary button on the row", asy
   renderApp(<OpenItems />);
   const [first] = await rows();
   expect(within(first).queryByRole("button", { name: /Remind me/ })).toBeNull();
-  expect(within(first).getAllByRole("button").filter((b) => b.getAttribute("data-variant") === "primary" || b.classList.contains("primary"))).toHaveLength(1);
+  expect(within(first).getAllByRole("button").filter((b) => b.getAttribute("data-key") === "primary")).toHaveLength(1);
 });
 
 test("the overdue line's link shows the person's own overdue to-dos and no one else's, as many as the line counts", async () => {

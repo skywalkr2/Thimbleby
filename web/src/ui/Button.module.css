@@ -1,4 +1,6 @@
-.wrap { display: inline-flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+/* The one button (design 7.12): three weights, primary solid, secondary outline, quiet text. Same height, radius and type on
+   all of them, so a row of mixed buttons lines up. */
+.wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); max-width: 100%; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   height: var(--btn-h); padding: 0 var(--btn-px);
@@ -10,26 +12,25 @@
 }
 .btn:hover { background: var(--surface-sunk); }
 .btn:active { transform: translateY(1px); }
-.sm { height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); }
+.sm { height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
 .icon-only { width: var(--btn-h); min-width: var(--target-icon); min-height: var(--target-icon); padding: 0; flex: none; }
 .icon-only.sm { width: var(--btn-h-sm); min-width: var(--target-icon); }
 
 .primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 .primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .secondary { background: var(--surface); }
-/* A primary button marked tonal is quiet in both themes (the soft accent fill by day, the deep brand fill by night): only the
-   screen's one main action, or the chosen line's, is filled. */
-.primary[data-tonal]:not(:disabled) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
-.primary[data-tonal]:not(:disabled):hover { background: var(--row-action-hover); border-color: var(--row-action-border); }
-.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
-.ghost:hover { background: var(--surface-sunk); color: var(--text); }
+.quiet { border-color: transparent; background: transparent; color: var(--text-muted); padding: 0 var(--space-2); }
+.quiet:hover { background: var(--surface-sunk); color: var(--text); }
+.quiet.sm { padding: 0 var(--space-2); }
 .danger { background: var(--danger); border-color: var(--danger); color: var(--text-on-danger); }
 .danger:hover { background: var(--danger); border-color: var(--danger); }
 
 .btn:disabled, .btn:disabled:hover {
   background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; transform: none;
 }
-.ghost:disabled, .ghost:disabled:hover { background: transparent; border-color: transparent; }
+/* A disabled primary keeps its colour family, softened, so it still reads as the region's main action; its reason is beside it. */
+.primary:disabled, .primary:disabled:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent-text); }
+.quiet:disabled, .quiet:disabled:hover { background: transparent; border-color: transparent; color: var(--text-subtle); }
 .loading { cursor: progress; }
 .loading:active { transform: none; }
 
@@ -41,4 +42,5 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 
-.reason { margin: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); max-width: 32ch; }
+.reason { margin: 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); max-width: 40ch; }
+

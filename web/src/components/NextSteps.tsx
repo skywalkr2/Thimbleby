@@ -12,7 +12,7 @@ import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill } from "../ui/Pill";
-
+import { Button } from "../ui/Button";
 /** The form that answers a "Who is this?" question with a new person. It starts from the name as written and whatever the
  * input says about them, and the cursor is in its first field. */
 export function NewPersonForm(props: { question: string; onClose: () => void }) {
@@ -117,12 +117,12 @@ function NewPersonFields(props: { question: string; start: S["NewPersonPrefillVi
         <input id={`${ids}-value`} type="text" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value)} />
       </div>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!fullName.trim() || busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!fullName.trim() || busy}>
           {t("newperson.add")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -199,9 +199,9 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
         )}
       </div>
       <div className="acts">
-        <button type="button" className="btn primary" onClick={() => void add()}>
+        <Button variant="primary" onClick={() => void add()}>
           {t("project_item.add")}
-        </button>
+        </Button>
         <RowMenu
           label={name}
           actions={[
@@ -230,12 +230,12 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
             <PlaceOptions projects={projects.data ?? []} asParent />
           </select>
           <div className="row-end">
-            <button type="button" className="btn quiet" onClick={close}>
+            <Button variant="quiet" onClick={close}>
               {t("action.cancel")}
-            </button>
-            <button type="submit" className="btn primary" disabled={!into}>
+            </Button>
+            <Button variant="primary" type="submit" disabled={!into}>
               {t("project_item.part_of_go")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

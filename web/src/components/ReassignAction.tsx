@@ -9,7 +9,7 @@ import { ownersAfter } from "../lib/open-items";
 import { useWords } from "../lib/wording";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 type Target = { id: string; version: number; owners: S["OpenActionView"]["owners"] };
 
 /** The picker and its Undo, for a place that shows the form itself (Today's suggested escalation); the menu entry below
@@ -59,9 +59,9 @@ export function ReassignForm(props: { action: Target; from?: string; onDone?: ()
       />
       {props.onCancel && (
         <div className="row-end">
-          <button type="button" className="btn quiet" onClick={props.onCancel}>
+          <Button variant="quiet" onClick={props.onCancel}>
             {t("action.cancel")}
-          </button>
+          </Button>
         </div>
       )}
     </div>

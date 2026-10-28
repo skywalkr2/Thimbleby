@@ -82,7 +82,7 @@ test("each status is in words, with one action per row", async () => {
   expect(within(one).getAllByRole("button")).toHaveLength(2);
   const choose = within(one).getByRole("button", { name: "Choose what to read from Service demo/one" });
   expect(choose).toHaveTextContent("Choose what to read");
-  expect(choose).toHaveClass("primary");
+  expect(choose).toHaveAttribute("data-variant", "primary");
   const two = row("Service demo/two");
   expect(within(two).getByText("Sign-in expired")).toBeInTheDocument();
   expect(within(two).getByRole("button", { name: "Sign in again to Service demo/two" })).toHaveTextContent("Sign in again");
@@ -143,9 +143,9 @@ test("a permission that wasn't allowed is named, with Sign in again as a seconda
     "Allow these missing permissions to use all features: Mail.Read, Calendars.Read. Sign in again to choose.",
   );
   // Choosing what to read stays the row's one primary action.
-  expect(within(one).getByRole("button", { name: "Choose what to read from Service demo/one" })).toHaveClass("primary");
+  expect(within(one).getByRole("button", { name: "Choose what to read from Service demo/one" })).toHaveAttribute("data-variant", "primary");
   const again = within(one).getByRole("button", { name: "Sign in again to Service demo/one" });
-  expect(again).not.toHaveClass("primary");
+  expect(again).not.toHaveAttribute("data-variant", "primary");
   expect(again).toHaveAccessibleDescription(note.textContent ?? "");
   await user.click(again);
   await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?again=1"));

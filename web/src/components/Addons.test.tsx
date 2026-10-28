@@ -877,11 +877,11 @@ describe("adding a catalog from the screen", () => {
   });
   const ADDRESS = "https://" + "catalog.example.com/packs.yaml";
 
-  test("with no catalog listed the screen offers an address field, with the cursor in it", async () => {
+  test("with no catalog listed the screen offers an address field, and the cursor stays on the heading", async () => {
     open(view({ feeds: [] }));
     expect(await screen.findByText(/no catalog is set for this copy of the app/)).toBeInTheDocument();
     const field = await screen.findByLabelText("Catalog address");
-    await waitFor(() => expect(field).toHaveFocus());
+    expect(field).not.toHaveFocus();
     expect(screen.getByRole("button", { name: "Add catalog" })).toBeDisabled();
   });
 

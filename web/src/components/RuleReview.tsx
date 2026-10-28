@@ -16,6 +16,8 @@ import { NarrowForm } from "./NarrowForm";
 import { RowMenu } from "./RowMenu";
 import styles from "./Knowledge.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 export function RuleReview(props: { onBack: () => void }) {
   const words = useWords();
   const { t, tn } = words;
@@ -32,16 +34,17 @@ export function RuleReview(props: { onBack: () => void }) {
   const found = review.data;
   return (
     <section className="panel-section" aria-labelledby="rules-review-title">
-      <div className="heading">
-        <h1 id="rules-review-title" ref={heading} tabIndex={-1}>
-          {t("rules_review.title")}
-        </h1>
-      </div>
-      <p className={styles.back}>
-        <Button size="sm" variant="ghost" onClick={props.onBack}>
-          {t("rules_review.back")}
-        </Button>
-      </p>
+      <PageHeader
+        id="rules-review-title"
+        headingRef={heading}
+        focusable
+        title={t("rules_review.title")}
+        crumb={
+          <Button size="sm" variant="quiet" onClick={props.onBack}>
+            {t("rules_review.back")}
+          </Button>
+        }
+      />
       {review.isError ? (
         <LoadFailed message={t("rules_review.load_failed")} onRetry={() => void review.refetch()} />
       ) : !found ? (
@@ -54,7 +57,7 @@ export function RuleReview(props: { onBack: () => void }) {
             {found.moved > 0 && <p>{tn("rules_review.moved", found.moved)}</p>}
           </div>
           {found.flagged.length === 0 ? (
-            <p className="empty">{t("rules_review.empty")}</p>
+            <EmptyState text={t("rules_review.empty")} />
           ) : (
             <ul ref={list} className={styles.list} aria-label={t("rules_review.list_label")}>
               {found.flagged.map((rule) => (

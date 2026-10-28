@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import { Row } from "./Row";
 
-test("a row has a pill column, a title, a meta line, then the primary action and the menu", () => {
+test("a row has a leading mark, a title, a meta line, then the primary action and the menu", () => {
   render(
     <ul>
       <Row
@@ -71,4 +71,19 @@ test("a row with nothing under it adds no space for it", () => {
   const [empty, full] = screen.getAllByRole("listitem");
   expect(empty.querySelector("[class*='extra']")).toBeNull();
   expect(full.querySelector("[class*='extra']")).not.toBeNull();
+});
+
+test("a row with nothing to lead it has no leading column; a control leads it, and a mark stands in the title's line", () => {
+  render(
+    <ul>
+      <Row title="Plain" />
+      <Row title="Marked" pill={<span data-pill="">Clash</span>} />
+      <Row title="Ticked" lead={<button type="button">Done</button>} />
+    </ul>,
+  );
+  const [plain, marked, ticked] = screen.getAllByRole("listitem");
+  expect(plain.querySelector("[data-row-lead]")).toBeNull();
+  expect(marked.querySelector("[data-row-lead]")).toBeNull();
+  expect(within(marked).getByText("Clash").closest("[class*='title']")).toContainElement(within(marked).getByText("Marked"));
+  expect(within(ticked).getByRole("button", { name: "Done" }).closest("[data-row-lead]")).not.toBeNull();
 });

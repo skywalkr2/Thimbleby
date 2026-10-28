@@ -814,7 +814,7 @@ function AccountRow(props: {
               {t("ai_accounts.rename_hint")}
             </p>
             <div className="row-end">
-              <Button variant="ghost" disabled={busy} onClick={close}>
+              <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button variant="primary" type="submit" disabled={busy || label.trim() === "" || label.trim() === name}>
@@ -836,7 +836,7 @@ function AccountRow(props: {
               {t("ai_accounts.key_ends_hint")}
             </p>
             <div className="row-end">
-              <Button variant="ghost" disabled={busy} onClick={close}>
+              <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button variant="primary" type="submit" disabled={busy || ends === (account.credential_expires ?? "")}>
@@ -870,7 +870,7 @@ function AccountRow(props: {
             <label htmlFor={`${base}-key-ends`}>{t("ai_accounts.key_ends_label")}</label>
             <input id={`${base}-key-ends`} type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
             <div className="row-end">
-              <Button variant="ghost" disabled={busy} onClick={close}>
+              <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button variant="primary" type="submit" disabled={busy || key.trim() === ""}>
@@ -930,7 +930,7 @@ function AccountRow(props: {
               ) : null}
             </fieldset>
             <div className="row-end">
-              <Button variant="ghost" disabled={busy} onClick={close}>
+              <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               {offeredModels && (
@@ -948,7 +948,7 @@ function AccountRow(props: {
           <div role="alert">
             <p className="hint">{t("ai_accounts.over", { amount: money(gate.usd), limit: money(confirmAbove) })}</p>
             <div className="row-end">
-              <Button variant="ghost" onClick={() => setGate(null)}>
+              <Button variant="quiet" onClick={() => setGate(null)}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button

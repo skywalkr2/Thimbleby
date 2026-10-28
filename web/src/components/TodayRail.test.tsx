@@ -676,7 +676,7 @@ test("with a mailbox connected and nothing come in, Came in is drawn with a quie
   expect(within(col).getByText("No mail has come in lately.")).toBeInTheDocument();
   const check = within(col).getByRole("button", { name: "Check now" });
   // A quiet text button: not the filled or tonal kind.
-  expect(check.className).toMatch(/\bquiet\b/);
+  expect(check).toHaveAttribute("data-variant", "quiet");
   expect(check.className).not.toMatch(/primary/);
   await user.click(check);
   await waitFor(() => expect(calls.some((c) => c.route === "POST today/arrived/check")).toBe(true));
@@ -686,7 +686,7 @@ test("with a mailbox connected and nothing come in, Came in is drawn with a quie
 test("Check now keeps its usual look when mail came in, and is not drawn when no source is connected", async () => {
   open({ "GET watch": () => [watched("a")] });
   const col = await column("Came in");
-  expect((await within(col).findByRole("button", { name: "Check now" })).className).not.toMatch(/\bquiet\b/);
+  expect((await within(col).findByRole("button", { name: "Check now" }))).not.toHaveAttribute("data-variant", "quiet");
   cleanup();
   open({ ...NOTHING_CAME, "GET watch": () => [] });
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();

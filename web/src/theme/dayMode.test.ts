@@ -85,37 +85,43 @@ test("the day values are the reviewed ones, and decorative edges stay quiet", ()
   expect(contrast(light("--border"), light("--surface"))).toBeLessThan(1.3);
 });
 
-test("night mode keeps its values and its bordered, banded look, with its row actions tonal like the day's", () => {
+test("night mode keeps its values and its bordered, banded look; type, row titles and links are the same as by day", () => {
   expect(dark["--canvas"]).toBe("var(--gray-950)");
   expect(dark["--text"]).toBe("#e8ebf1");
   expect(dark["--text-muted"]).toBe("#a7afbd");
   expect(dark["--surface-sunk"]).toBe("#1d2129");
   expect(dark["--border"]).toBe("var(--gray-800)");
   expect(dark["--btn-border"]).toBe("var(--border-strong)");
-  expect(dark["--row-action-bg"]).toBe("var(--brand-900)");
-  expect(dark["--row-action-text"]).toBe("var(--brand-200)");
   expect(dark["--pane-border"]).toBe("var(--border)");
   expect(dark["--pane-edge"]).toBe("none");
   expect(dark["--band-bg"]).toBe("var(--canvas)");
   expect(dark["--band-bottom"]).toBe("1px solid var(--border)");
-  expect(dark["--row-title-weight"]).toBe("var(--weight-semibold)");
   expect(dark["--pill-neutral-bg"]).toBe("var(--surface-sunk)");
-  expect(dark["--rail-link-line"]).toBe("underline");
+  // What the two themes share is set once, in the light block, and night does not set it again.
+  for (const name of ["--row-title-weight", "--link", "--row-selected-bg", "--row-selected-bar"]) {
+    expect(primitives[name], name).toBeDefined();
+    expect(dark[name], name).toBeUndefined();
+  }
+  expect(primitives["--row-title-weight"]).toBe("var(--weight-semibold)");
   // The media block for the system theme sets the same values as the in-app choice.
   const media = tokens.slice(tokens.indexOf("@media (prefers-color-scheme: dark)"), tokens.indexOf(':root[data-theme="dark"] {'));
-  for (const name of ["--btn-border", "--row-action-bg", "--pane-border", "--pane-edge", "--band-bg", "--band-bottom", "--row-title-weight", "--pill-neutral-bg", "--pill-neutral-edge", "--rail-link-line"]) {
+  for (const name of ["--btn-border", "--pane-border", "--pane-edge", "--band-bg", "--band-bottom", "--pill-neutral-bg", "--pill-neutral-edge"]) {
     expect(media).toContain(`${name}: ${dark[name]}`);
   }
 });
 
-test("a row's action is tonal unless the row is selected, and the selected row's is the filled one", () => {
+test("a row's actions are never solid: the primary draws as the outline, and the cursor's row has a soft fill and a bar, not a filled button", () => {
   const css = read("ui/Row.module.css");
-  expect(css).toMatch(/\.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-bg\)/);
-  expect(css).toMatch(/\.selected \.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-strong-bg\)/);
+  expect(css).toMatch(/\.actions :global\(\[data-variant="primary"\]:not\(:disabled\)\) \{[^}]*background: var\(--surface\)/);
+  expect(css).not.toMatch(/row-action/);
+  expect(css).toMatch(/\.selected, \.selected:hover \{[^}]*background: var\(--row-selected-bg\); box-shadow: var\(--row-selected-bar\)/);
   expect(css).toMatch(/\.title \{[^}]*font-weight: var\(--row-title-weight\)/s);
-  const light = tokens.slice(0, tokens.indexOf("/* ---------- Dark"));
-  expect(light).toMatch(/--row-action-bg: var\(--accent-soft\)/);
-  expect(light).toMatch(/--row-action-strong-bg: var\(--accent\)/);
+  // The same two rules for the lines drawn with the older classes, so the two look alike until they are one.
+  const styles = read("styles.css");
+  expect(styles).toMatch(/\.queue:not\(\.detail-queue\) > \.line > \.row > \.acts > \[data-variant="primary"\]:not\(:disabled\) \{[^}]*background: var\(--surface\)/);
+  expect(styles).toMatch(/\.line\[aria-current="true"\] \{[^}]*var\(--row-selected-bg\)/);
+  expect(tokens).toMatch(/--row-selected-bg: color-mix\(in srgb, var\(--accent-soft\) 55%, transparent\)/);
+  expect(tokens).not.toMatch(/--row-action|--row-pill-w/);
 });
 
 test("panes take their edge from the tokens, and a group header has no band", () => {
@@ -137,54 +143,46 @@ test("panes take their edge from the tokens, and a group header has no band", ()
   expect(light).toMatch(/--pane-border: transparent/);
 });
 
-test("the day look reaches the other Today actions: held and learned lines, Continue setup and the new-lines bar are tonal", () => {
-  expect(read("shell/HeldLines.module.css")).toMatch(/\.actions :global\(\[data-variant="primary"\]:not\(:disabled\)\) \{[^}]*var\(--row-action-bg\)/);
-  expect(read("components/Learned.module.css")).toMatch(/\.todayActs :global\(\[data-variant="primary"\]:not\(:disabled\)\) \{[^}]*var\(--row-action-bg\)/);
-  expect(read("ui/Button.module.css")).toMatch(/\.primary\[data-tonal\]:not\(:disabled\) \{[^}]*var\(--row-action-bg\)/);
-  expect(read("components/TodayEmpty.tsx")).toMatch(/variant="primary" data-tonal=""/);
-  expect(read("components/TodayQueue.tsx")).toMatch(/variant="primary" data-tonal="" aria-keyshortcuts="Shift\+N"/);
+test("the held and learned lines of Today are rows (ui/Row), so they take the same actions and the same cursor look", () => {
+  for (const file of ["shell/HeldLines.tsx", "components/LearnedToday.tsx"]) expect(read(file), file).toMatch(/<Row\b/);
+  expect(read("shell/HeldLines.module.css")).not.toMatch(/grid-template-columns/);
+  expect(read("ui/Button.module.css")).not.toMatch(/data-tonal|row-action/);
 });
 
-test("links in the rail have no underline until the pointer or the keyboard is on them by day; running text and night keep it", () => {
-  const light = tokens.slice(0, tokens.indexOf("/* ---------- Dark"));
-  expect(light).toMatch(/--rail-link-line: none/);
-  const css = read("components/Today.module.css");
-  // Links and link-like buttons in the rail take the token; a button-styled link does not.
-  expect(css).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: var\(--rail-link-line\); \}/);
-  // Hover and keyboard focus bring it back, so a link is never found by color alone.
-  expect(css).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\):is\(:hover, :focus-visible\) \{ text-decoration-line: underline; \}/);
-  // A link inside a paragraph is running text.
-  expect(css).toMatch(/\.rail :is\(p, :global\(\.tb-title\)\) :is\(a, :global\(\.link-button\)\):not\(:global\(\.btn\)\) \{ text-decoration-line: underline; \}/);
+test("one link colour, the same by day and by night, and underlined; a row's title and a link alone in the rail are underlined only when pointed at", () => {
+  expect(primitives["--link"]).toBe("var(--accent-text)");
+  expect(dark["--link"]).toBeUndefined();
+  expect(tokens).not.toMatch(/--rail-link-line/);
+  const css = read("styles.css");
+  expect(css).toMatch(/a, \.link-button \{ color: var\(--link\); \}/);
+  // Written with no weight of its own (:where), so a component that draws its links another way is never overridden.
+  expect(css).toMatch(/:where\(a:not\(\[data-variant\]\), \.link-button\) \{ text-decoration-line: underline;/);
+  // A row's title is the text colour, and underlined only when pointed at, by the keyboard or by the pointer.
+  const row = read("ui/Row.module.css");
+  expect(row).toMatch(/\.title :global\(a\) \{ color: inherit; text-decoration-line: none; \}/);
+  expect(row).toMatch(/\.title :global\(a\):is\(:hover, :focus-visible\) \{ text-decoration-line: underline; \}/);
+  expect(read("ui/RecordsTable.module.css")).toMatch(/\.name a \{ color: var\(--text\); text-decoration: none; \}/);
+  // A link on a line of its own in the rail follows the same rule; one in a sentence keeps its underline.
+  const rail = read("components/Today.module.css");
+  expect(rail).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\[data-variant\]\)\) \{ text-decoration-line: none; \}/);
+  expect(rail).toMatch(/\.rail :is\(p, :global\(\.tb-title\)\) :is\(a, :global\(\.link-button\)\):not\(:global\(\[data-variant\]\)\) \{ text-decoration-line: underline; \}/);
 });
 
-test("night's row actions are tonal too: the deep brand fill with the light brand text, readable, and the chosen line's is the one filled button", () => {
-  expect(dark["--row-action-bg"]).toBe("var(--brand-900)");
-  expect(dark["--row-action-hover"]).toBe("var(--brand-900)");
-  expect(dark["--row-action-text"]).toBe("var(--brand-200)");
-  expect(dark["--row-action-border"]).toBe("transparent");
-  // A tonal action reads on its fill and the fill stands out from the surface it sits on.
-  expect(contrast(color("--row-action-text", dark), color("--row-action-bg", dark))).toBeGreaterThanOrEqual(AA);
-  expect(contrast(color("--row-action-bg", dark), color("--surface", dark))).toBeGreaterThan(1.1);
-  // The filled one, for the chosen line, is the accent with its own text, the same words by day and by night.
-  expect(dark["--row-action-strong-bg"]).toBe("var(--accent)");
-  expect(dark["--row-action-strong-text"]).toBe("var(--text-on-accent)");
-  expect(contrast(color("--row-action-strong-text", dark), color("--accent", dark))).toBeGreaterThanOrEqual(AA);
-  // The media block for the system theme says the same, so the choice of theme and the system's agree.
-  const media = tokens.slice(tokens.indexOf("@media (prefers-color-scheme: dark)"), tokens.indexOf(':root[data-theme="dark"] {'));
-  for (const name of ["--row-action-bg", "--row-action-hover", "--row-action-text", "--row-action-border", "--row-action-strong-bg"]) {
-    expect(media).toContain(`${name}: ${dark[name]}`);
-  }
-  // The shared styles draw the tonal one by default and the filled one for the chosen line, whichever theme's tokens they read.
-  const css = read("ui/Row.module.css");
-  expect(css).toMatch(/\.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-bg\)/);
-  expect(css).toMatch(/\.row:focus-within \.actions :global\(:is\(\[data-variant="primary"\], \.btn\.primary\):not\(:disabled\)\) \{[^}]*background: var\(--row-action-strong-bg\)/);
-  expect(read("styles.css")).toMatch(/\.line:focus-within > \.row > \.acts > \.btn\.primary:not\(:disabled\) \{[^}]*background: var\(--row-action-strong-bg\)/);
+test("the type scale: a paragraph is never under 13px, and the 12px size is for pills, key caps, captions and group headers", () => {
+  expect(primitives["--text-meta"]).toBe("13px");
+  expect(primitives["--lh-meta"]).toBe("18px");
+  expect(primitives["--text-section"]).toBe("16px");
+  expect(primitives["--text-md"]).toBe("15px");
+  expect(primitives["--text-xl"]).toBe("22px");
+  for (const file of ["ui/Row.module.css", "ui/Button.module.css", "ui/EmptyState.module.css"]) expect(read(file), file).not.toMatch(/--text-xs/);
+  expect(read("ui/Row.module.css")).toMatch(/\.meta \{[^}]*font-size: var\(--text-meta\)/);
+  expect(read("styles.css")).toMatch(/\.hint \{ font-size: var\(--text-meta\)/);
 });
 
-test("below 640px a row's actions sit under its title at full width", () => {
+test("below 640px a lone action stays at the row's edge and several sit under the title", () => {
   const css = read("ui/Row.module.css");
   const phone = css.slice(css.indexOf("@media (max-width: 639.98px)"));
-  expect(phone).toMatch(/\.row, :global\(\[data-narrow\]\) \.row \{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
-  expect(phone).toMatch(/\.actions, :global\(\[data-narrow\]\) \.actions \{[^}]*grid-column: 1;[^}]*justify-content: flex-end/);
-  expect(phone).toMatch(/\[data-variant="primary"\][^{]*\{[^}]*flex: 1 1 auto/);
+  expect(phone).toMatch(/\.row, :global\(\[data-narrow\]\) \.row \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  // A lone action stays at the right edge; a second button sends the actions under the title, at the right.
+  expect(phone).toMatch(/\.row > \.actions:has\(> :global\(\[data-variant\]\) ~ :global\(\[data-variant\]\)\)[^{]*\{[^}]*grid-column: 1 \/ -1;[^}]*justify-content: flex-end/);
 });

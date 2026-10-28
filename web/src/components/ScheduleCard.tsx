@@ -15,7 +15,7 @@ import { LearnedLines } from "./Learned";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { recordView, viewHref } from "../lib/views";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
@@ -105,9 +105,9 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
       footer={
         <div className="row-end">
           <AddMeeting today={today} />
-          <a className="btn small" href={viewHref("schedule")}>
+          <ButtonLink size="sm" href={viewHref("schedule")}>
             {t("schedule.open")}
-          </a>
+          </ButtonLink>
         </div>
       }
     >
@@ -117,10 +117,9 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
       ) : groups.length === 0 && onItsWay.length === 0 ? (
         sourceState.problems.length > 0 ? (
-          <div className="tb-empty">
-            <p>{t("today.agenda.not_read")}</p>
+          <Empty text={t("today.agenda.not_read")}>
             <SourceProblems problems={sourceState.problems} />
-          </div>
+          </Empty>
         ) : (
           <Empty inline text={connect && span.data ? t("today.agenda.empty", { start: day(span.data.first), end: day(span.data.last) }) : t("today.agenda.empty_today")} button={connect} />
         )

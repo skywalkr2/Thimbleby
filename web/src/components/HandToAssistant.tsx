@@ -12,7 +12,7 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { useTextReview } from "./TextReview";
-
+import { Button } from "../ui/Button";
 /** The actions the assistant has in hand, by action id. A failed read is no actions: the rows simply say nothing. */
 export function useHanded(): Map<string, S["HandedActionView"]> {
   const found = useQuery({ queryKey: ["handed"], queryFn: api.handed });
@@ -41,12 +41,12 @@ function HandedLine(props: { handed: S["HandedActionView"]; onReview: (version: 
     return (
       <p className="hint" data-handed="draft">
         {t("work.hand.draft")}{" "}
-        <button type="button" className="btn" onClick={() => props.onReview(version)}>
+        <Button onClick={() => props.onReview(version)}>
           {t("work.hand.review")}
-        </button>{" "}
-        <button type="button" className="btn" onClick={() => void copy(version)}>
+        </Button>{" "}
+        <Button onClick={() => void copy(version)}>
           {t("work.hand.copy")}
-        </button>
+        </Button>
       </p>
     );
   }
@@ -106,12 +106,12 @@ export function useHandToAssistant(
           <textarea id={id} className="short" autoFocus value={note} onChange={(e) => setNote(e.target.value)} />
           <p className="hint">{t("work.hand.hint")}</p>
           <div className="row-end">
-            <button type="button" className="btn quiet" onClick={close}>
+            <Button variant="quiet" onClick={close}>
               {t("action.cancel")}
-            </button>
-            <button type="submit" className="btn primary">
+            </Button>
+            <Button variant="primary" type="submit">
               {t("work.hand.go")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

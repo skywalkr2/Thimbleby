@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import type { Item } from "../lib/settings";
 import { useSettingEdits } from "../lib/use-setting-edits";
 import { useWords } from "../lib/wording";
-
+import { Button } from "../ui/Button";
 const GREETING = "language.messages.greeting";
 const CLOSING = "language.messages.closing";
 const FIRST_NAME = "{first_name}";
@@ -82,10 +82,10 @@ function StyleLine(props: { item: Item; edit: ReturnType<typeof useSettingEdits>
           />
         ) : (
           <div>
-            <button type="button" className="btn quiet small" disabled={item.locked || !item.editable} onClick={() => setEditing(true)}>
+            <Button variant="quiet" size="sm" disabled={item.locked || !item.editable} onClick={() => setEditing(true)}>
               {t("followups.style.edit")}
               <span className="sr"> {t(`settings.key.${item.key}`)}</span>
-            </button>
+            </Button>
           </div>
         )}
         {problem && (

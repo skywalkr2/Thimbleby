@@ -6,6 +6,8 @@ import { dayAndTime } from "../lib/dates";
 import { readable, readableTail } from "../lib/records";
 import { useWords } from "../lib/wording";
 
+import { Pill } from "../ui/Pill";
+import { Row } from "../ui/Row";
 // ---- scheduled work ------------------------------------------------------------------------------------------------
 
 const OUTCOMES: Record<string, string> = { ok: "setup.job_ok", failed: "setup.job_failed" };
@@ -25,17 +27,18 @@ export function JobsPanel() {
           const outcome = job.last_outcome ? t(OUTCOMES[job.last_outcome] ?? "setup.job_other", { outcome: readable(job.last_outcome) }) : "";
           const last = job.last_run_at ? t("setup.job_last", { when: dayAndTime(job.last_run_at), outcome }) : t("setup.job_never");
           return (
-            <li className="line" key={job.name}>
-              <div className="row">
-                <span className={`kind ${job.enabled ? "k-send" : "k-done"}`}>{t(job.enabled ? "setup.job_on" : "setup.job_off")}</span>
-                <div className="text">
-                  <strong>{readableTail(job.name)}</strong>
-                  <span className="sub">{tn("setup.job_every", job.every_minutes)}</span>
-                  <span className="sub">{last}</span>
-                  {job.last_error && <span className="sub problem-note">{job.last_error}</span>}
-                </div>
-              </div>
-            </li>
+            <Row
+              key={job.name}
+              pill={<Pill tone={job.enabled ? "need" : "neutral"}>{t(job.enabled ? "setup.job_on" : "setup.job_off")}</Pill>}
+              title={readableTail(job.name)}
+              meta={
+                <>
+                  {tn("setup.job_every", job.every_minutes)} · {last}
+                </>
+              }
+            >
+              {job.last_error && <p className="problem-note">{job.last_error}</p>}
+            </Row>
           );
         })}
       </ul>

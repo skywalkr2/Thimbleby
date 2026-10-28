@@ -154,7 +154,7 @@ test("the time this screen is open and in view is counted as time spent looking 
   expect(calls.filter((c) => c.route === "POST quality/review-time").map((c) => c.body)).toEqual([{ screen: "handled", seconds: 30 }]);
 });
 
-test("two tabs with their counts, each saying in one line what it holds, and the cursor starts in the search box", async () => {
+test("two tabs with their counts, each saying in one line what it holds, and the cursor starts on the heading", async () => {
   const user = userEvent.setup();
   const calls = open();
   expect(await screen.findByRole("heading", { level: 1, name: "Handled for you" })).toBeInTheDocument();
@@ -164,7 +164,7 @@ test("two tabs with their counts, each saying in one line what it holds, and the
   expect(within(screen.getByRole("radiogroup", { name: "Which list" })).getAllByRole("radio")).toHaveLength(2);
   expect(screen.getByText("Kept for 30 days, then it leaves this list. The originals stay where they came from.")).toBeInTheDocument();
   expect(screen.getByText("Sorted away before Helper read it: newsletters, sales, codes, alerts and older copies.")).toBeInTheDocument();
-  expect(screen.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" })).toHaveFocus();
+  expect(screen.getByRole("heading", { level: 1, name: "Handled for you" })).toHaveFocus();
   await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
   expect(await screen.findByText("Mail Helper read and found nothing for you in.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET handled?tab=read&q=")).toBe(true);

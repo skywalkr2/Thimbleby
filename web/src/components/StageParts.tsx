@@ -9,7 +9,7 @@ import { useEstimate } from "../lib/money";
 import { upperFirst, useGo, useTaskWords, type StageRequest, type StageView } from "../lib/stages";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
 export function WaitingLine(props: { request: StageRequest }) {
   const { t } = useWords();
   const task = useTaskWords();
@@ -25,9 +25,9 @@ export function WaitingLine(props: { request: StageRequest }) {
         {estimate && <div className="meta">{estimate}</div>}
       </div>
       <div className="acts">
-        <button type="button" className="btn primary" disabled={busy} onClick={run}>
+        <Button variant="primary" disabled={busy} onClick={run}>
           {t("stages.go")}
-        </button>
+        </Button>
       </div>
       {error && (
         <p className="problem-note full" role="alert">

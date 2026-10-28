@@ -7,7 +7,7 @@ import { Icon } from "../ui/Icon";
 import { api } from "./api";
 import { problemText } from "./problem";
 import { useWords } from "./wording";
-
+import { Button } from "../ui/Button";
 type Phase = "idle" | "asking" | "waiting" | "done" | "stuck" | "refused";
 
 interface RestartApi {
@@ -201,18 +201,18 @@ export function RestartNotice(props: { what?: string; live?: boolean }) {
           <span className="notice-text">{text}</span>
           {phase === "asking" && (
             <span className="acts">
-              <button type="button" className="btn primary small" disabled={busy} onClick={() => void now()}>
+              <Button variant="primary" size="sm" disabled={busy} onClick={() => void now()}>
                 {t("restart.now")}
-              </button>
-              <button type="button" className="btn small" onClick={dismiss}>
+              </Button>
+              <Button size="sm" onClick={dismiss}>
                 {t("restart.later")}
-              </button>
+              </Button>
             </span>
           )}
           {(phase === "stuck" || phase === "refused") && (
-            <button type="button" className="btn small" onClick={dismiss}>
+            <Button size="sm" onClick={dismiss}>
               {t("restart.dismiss")}
-            </button>
+            </Button>
           )}
         </div>
       )}

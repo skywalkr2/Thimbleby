@@ -124,7 +124,7 @@ export default defineConfig({
         ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
       ];
     }),
-    { name: "layout", testMatch: /(layout|handled)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
+    { name: "layout", testMatch: /(layout|handled|guards)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
     { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
     { name: "capacity", testMatch: /today-(capacity|review)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
     { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },

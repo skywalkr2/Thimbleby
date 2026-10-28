@@ -211,7 +211,7 @@ test("Today's heading carries the date, and every view has one h1", async () => 
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
   const heading = await screen.findByRole("heading", { level: 1, name: "Today" });
-  expect(heading.parentElement?.textContent).toMatch(/^Today\S.*\d/);
+  expect(heading.closest("[data-page-header]")?.textContent).toMatch(/^Today\S.*\d/);
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
 });
 

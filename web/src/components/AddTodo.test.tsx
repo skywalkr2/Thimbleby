@@ -54,14 +54,14 @@ test("an empty list offers Add a to-do as its one primary, and the cursor starts
   expect(await screen.findByRole("textbox", { name: "What to do" })).toHaveFocus();
 });
 
-test("with to-dos on the list the button is in the header and is not a primary", async () => {
+test("with to-dos on the list the button is the header's one primary", async () => {
   const action: S["OpenActionView"] = {
     id: "A-1", version: 1, text: "Send the weekly update", state: "open", owners: [{ person: "P-1", name: "Quinn Sample" }], due: null, project: null, project_name: "",
     parent_name: null, notes: null, since: "2026-10-01", on_hold: null, blocker: null, duplicate: null, origin: null, untouched_days: null, owner_question: null, to_send: false,
   };
   api([action]);
   renderApp(<OpenItems />);
-  expect(await screen.findByRole("button", { name: "Add a to-do" })).not.toHaveAttribute("data-variant", "primary");
+  expect(await screen.findByRole("button", { name: "Add a to-do" })).toHaveAttribute("data-variant", "primary");
 });
 
 test("the day and the repeat are said back, the person is the default owner, and nothing is kept until Add", async () => {

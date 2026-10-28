@@ -24,11 +24,12 @@ import { HARDER as HARDER_SHORT, planFor, useAccountActs, useConfirmAbove } from
 import { AiAccounts } from "./AiAccounts";
 import { useSpendLine } from "./AiSpendLine";
 import { domainOf } from "./SafeText";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill } from "../ui/Pill";
 
+import { EmptyState } from "../ui/EmptyState";
 type Kind = S["EndpointView"];
 type ModelInfo = S["AiModelView"];
 type Level = "open" | "internal" | "restricted";
@@ -707,9 +708,9 @@ export function WelcomeAi(props: {
           {s.models.length > 0 ? tn("welcome.ai.local_found", s.models.length, { name: s.name }) : t("welcome.ai.local_found_none", { name: s.name })}
         </p>
         <div className="inline-field">
-          <button type="button" className="btn primary" aria-pressed={chosen} aria-describedby={`ai-found-${s.endpoint}`} onClick={() => chooseFound(s.endpoint)}>
+          <Button variant="primary" aria-pressed={chosen} aria-describedby={`ai-found-${s.endpoint}`} onClick={() => chooseFound(s.endpoint)}>
             {t("welcome.ai.local_use")}
-          </button>
+          </Button>
           {chosen && (
             <Pill tone="neutral" className="pill-gap">
               <Icon name="check" size={14} />{" "}
@@ -861,10 +862,10 @@ export function WelcomeAi(props: {
   const link = (url: string | null | undefined, label: string) => {
     const domain = url ? domainOf(url) : null;
     return url && domain ? (
-      <a className="btn" href={url} target="_blank" rel="noopener noreferrer">
+      <ButtonLink href={url} target="_blank" rel="noopener noreferrer">
         {label} <Icon name="external" size={14} />
         <span className="sr"> {t("welcome.ai.step.opens", { domain })}</span>
-      </a>
+      </ButtonLink>
     ) : null;
   };
   const step = (n: number, title: string, hint: string, action?: ReactNode, body?: ReactNode) => (
@@ -914,9 +915,9 @@ export function WelcomeAi(props: {
             else if (canList && (!asksAddress(kind) || address.trim() !== "")) void check(kind, { key: pasted });
           }}
         />
-        <button type="button" className="btn small" aria-controls="ai-key" onClick={() => setShowKey((v) => !v)}>
+        <Button size="sm" aria-controls="ai-key" onClick={() => setShowKey((v) => !v)}>
           {t(showKey ? "welcome.ai.key_hide" : "welcome.ai.key_show")}
-        </button>
+        </Button>
       </div>
       <p className="hint" id="ai-key-hint">
         {t("welcome.ai.key_hint")} {!kind.needs_key && t("welcome.ai.key_optional")}
@@ -959,7 +960,7 @@ export function WelcomeAi(props: {
       {endpoints.isPending ? (
         <Skeleton />
       ) : endpoints.isError || !endpoints.data?.length ? (
-        <p className="empty">{t("welcome.ai.no_kinds")}</p>
+        <EmptyState text={t("welcome.ai.no_kinds")} />
       ) : (
         <form
           onSubmit={(e) => {
@@ -1070,9 +1071,7 @@ export function WelcomeAi(props: {
                     <Icon name={kind.installed ? "check" : "close"} size={14} />{" "}
                     {endpoints.isFetching ? t("welcome.ai.app_checking") : t(kind.installed ? "welcome.ai.app_installed" : "welcome.ai.app_missing")}
                   </p>
-                  <button
-                    type="button"
-                    className="btn"
+                  <Button
                     disabled={endpoints.isFetching}
                     aria-describedby="ai-app-status"
                     onClick={() =>
@@ -1083,7 +1082,7 @@ export function WelcomeAi(props: {
                     }
                   >
                     {t("welcome.ai.check")}
-                  </button>
+                  </Button>
                 </div>
               )}
               {kind.local && !usingFound && (
@@ -1091,15 +1090,13 @@ export function WelcomeAi(props: {
                   <p className="hint" id="ai-local-status">
                     {t("welcome.ai.local_start")}
                   </p>
-                  <button
-                    type="button"
-                    className="btn"
+                  <Button
                     disabled={guide ? verdict.state === "checking" : !canCheck}
                     aria-describedby="ai-local-status"
                     onClick={() => void (guide ? verify(kind, { model: "" }) : check(kind))}
                   >
                     {t("welcome.ai.check")}
-                  </button>
+                  </Button>
                   {link(kind.install_url, t("welcome.ai.local_get"))}
                 </div>
               )}
@@ -1223,9 +1220,9 @@ export function WelcomeAi(props: {
               {guide && verdictLine}
               {canList && !guide && !kind.local && (
                 <div className="check-row">
-                  <button type="button" className="btn" disabled={!canCheck} onClick={() => void check(kind)}>
+                  <Button disabled={!canCheck} onClick={() => void check(kind)}>
                     {t("welcome.ai.check")}
-                  </button>
+                  </Button>
                   <div role="status" aria-live="polite">
                     {listing && <p className="hint">{t("welcome.ai.checking")}</p>}
                   </div>
@@ -1468,15 +1465,15 @@ export function WelcomeAi(props: {
               )}
               {drawer && (
                 <div className="row-end">
-                  <button type="button" className="btn quiet" disabled={busy} onClick={drawer.onCancel}>
+                  <Button variant="quiet" disabled={busy} onClick={drawer.onCancel}>
                     {t("ai_add.cancel")}
-                  </button>
+                  </Button>
                   {drawerWhy && (
                     <p className="hint" id="ai-add-why">
                       {drawerWhy}
                     </p>
                   )}
-                  <button type="button" className="btn primary" disabled={!ready} aria-describedby={drawerWhy ? "ai-add-why" : undefined} onClick={addOrAsk}>
+                  <Button variant="primary" disabled={!ready} aria-describedby={drawerWhy ? "ai-add-why" : undefined} onClick={addOrAsk}>
                     {busy
                       ? t("ai_add.adding")
                       : chosenFor === "none"
@@ -1486,7 +1483,7 @@ export function WelcomeAi(props: {
                           : overLimit && askedGo
                             ? t("ai_add.go_ahead", { amount: money(checkUsd) })
                             : t("ai_add.add_check_cost", { amount: money(checkUsd) })}
-                  </button>
+                  </Button>
                 </div>
               )}
             </>

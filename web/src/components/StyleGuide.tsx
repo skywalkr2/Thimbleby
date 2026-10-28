@@ -14,20 +14,26 @@ import { LoadFailed } from "../ui/LoadFailed";
 import { MenuButton } from "../ui/MenuButton";
 import { Panel } from "../ui/Panel";
 import { Pill } from "../ui/Pill";
+import { FilterChip } from "../ui/FilterChip";
+import { RoundCheck } from "../ui/RoundCheck";
 import { Row } from "../ui/Row";
+import { TabStrip } from "../ui/TabStrip";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { StatusChip } from "../ui/StatusChip";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import styles from "./StyleGuide.module.css";
 
+import { PageHeader } from "../ui/PageHeader";
 const TYPE_SCALE = [
   { token: "text-2xl", weight: "semibold" },
   { token: "text-xl", weight: "semibold" },
   { token: "text-lg", weight: "semibold" },
+  { token: "text-section", weight: "semibold" },
   { token: "text-md", weight: "semibold" },
   { token: "text-md", weight: "regular" },
   { token: "text-sm", weight: "medium" },
+  { token: "text-meta", weight: "regular" },
   { token: "text-xs", weight: "semibold" },
 ] as const;
 
@@ -63,6 +69,8 @@ export function StyleGuide() {
   const device = useAppearance();
   const [theme, setThemeShown] = useState<Theme>(device.theme);
   const [filter, setFilter] = useState("send");
+  const [tab, setTab] = useState("a");
+  const [who, setWho] = useState("");
   const [drawer, setDrawer] = useState(false);
   const [dialog, setDialog] = useState(false);
   const [draft, setDraft] = useState("");
@@ -77,15 +85,17 @@ export function StyleGuide() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.top}>
-        <h1>{t("styleguide.title")}</h1>
-        <SegmentedControl<Theme>
-          label={t("styleguide.theme")}
-          value={theme}
-          onChange={setThemeShown}
-          options={(["system", "light", "dark"] as Theme[]).map((id) => ({ value: id, label: t(`user.theme.${id}`) }))}
-        />
-      </div>
+      <PageHeader
+        title={t("styleguide.title")}
+        filters={
+          <SegmentedControl<Theme>
+            label={t("styleguide.theme")}
+            value={theme}
+            onChange={setThemeShown}
+            options={(["system", "light", "dark"] as Theme[]).map((id) => ({ value: id, label: t(`user.theme.${id}`) }))}
+          />
+        }
+      />
 
       <Section title={t("styleguide.type")} note={t("styleguide.type_note")}>
         <div className={styles.scale}>
@@ -117,7 +127,7 @@ export function StyleGuide() {
         <div className={styles.demo}>
           <Button variant="primary">{t("styleguide.primary")}</Button>
           <Button>{t("styleguide.secondary")}</Button>
-          <Button variant="ghost">{t("styleguide.ghost")}</Button>
+          <Button variant="quiet">{t("styleguide.ghost")}</Button>
           <Button variant="danger">{t("styleguide.danger")}</Button>
           <Button variant="primary" size="sm">
             {t("styleguide.small")}
@@ -137,7 +147,7 @@ export function StyleGuide() {
           <Button disabled reason={t("styleguide.reason")}>
             {t("styleguide.secondary")}
           </Button>
-          <Button variant="ghost" disabled>
+          <Button variant="quiet" disabled>
             {t("styleguide.ghost")}
           </Button>
           <Button variant="danger" disabled reason={t("styleguide.reason")}>
@@ -166,8 +176,14 @@ export function StyleGuide() {
         </div>
       </Section>
 
-      <Panel title={t("styleguide.rows")} count={4} flush>
+      <Panel title={t("styleguide.rows")} count={5} flush>
         <ul className={styles.list}>
+          <Row
+            lead={<RoundCheck label={t("styleguide.row_lead_check")} onClick={() => undefined} />}
+            title={t("styleguide.row_lead")}
+            meta={t("styleguide.row_lead_meta")}
+            menu={<MenuButton groups={[{ id: "a", entries: [{ id: "x", label: t("styleguide.menu_item") }] }]} trigger={<IconButton icon="more" size="sm" label={t("styleguide.icon_more")} tooltip={false} />} />}
+          />
           <Row
             pill={<Pill tone="need">{t("styleguide.pill_need")}</Pill>}
             title={t("styleguide.row_title")}
@@ -189,6 +205,47 @@ export function StyleGuide() {
         </ul>
       </Panel>
 
+      <Section title={t("styleguide.header")} note={t("styleguide.header_note")}>
+        <PageHeader
+          level={3}
+          title={t("styleguide.header_title")}
+          kind={<Pill>{t("styleguide.header_kind")}</Pill>}
+          subtitle={t("styleguide.header_sub")}
+          primary={<Button variant="primary" icon="plus">{t("styleguide.header_primary")}</Button>}
+          tabs={
+            <TabStrip
+              label={t("styleguide.tabs_label")}
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: "a", label: t("styleguide.tab_a"), count: 6 },
+                { value: "b", label: t("styleguide.tab_b"), count: 0 },
+              ]}
+            />
+          }
+          filters={
+            <>
+              <FilterChip label={t("styleguide.chip_who")} value={who} onChange={setWho} options={[["", t("styleguide.chip_everyone")], ["robin", t("styleguide.chip_robin")]]} />
+              <FilterChip label={t("styleguide.chip_state")} value="open" onChange={() => undefined} options={[["open", t("styleguide.chip_open")], ["all", t("styleguide.chip_all")]]} />
+            </>
+          }
+        />
+      </Section>
+
+      <Section title={t("styleguide.links")} note={t("styleguide.links_note")}>
+        <div className={styles.stack}>
+          <p>
+            {t("styleguide.link_sentence")} <a href="#styleguide">{t("styleguide.link_alone")}</a>
+          </p>
+          <div>
+            <a href="#styleguide">{t("styleguide.link_alone")}</a>
+          </div>
+          <ul className={styles.list}>
+            <Row title={<a href="#styleguide">{t("styleguide.link_name")}</a>} meta={t("styleguide.row_meta")} />
+          </ul>
+        </div>
+      </Section>
+
       <Section title={t("styleguide.segmented")}>
         <div className={styles.demo}>
           <SegmentedControl
@@ -208,6 +265,9 @@ export function StyleGuide() {
         <div className={styles.stack}>
           <Panel title={t("styleguide.empty")} small>
             <EmptyState icon="inbox" text={t("styleguide.empty_text")} action={{ label: t("styleguide.empty_action"), onClick: () => undefined }} />
+          </Panel>
+          <Panel title={t("styleguide.empty_title")} small>
+            <EmptyState icon="folder" title={t("styleguide.empty_title")} text={t("styleguide.empty_titled_text")} action={{ label: t("styleguide.empty_titled_action"), onClick: () => undefined, primary: true }} />
           </Panel>
           <Panel title={t("styleguide.empty_inline")} small>
             <EmptyState inline text={t("styleguide.empty_inline_text")} action={{ label: t("styleguide.empty_inline_action"), onClick: () => undefined }} />

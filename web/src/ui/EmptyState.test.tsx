@@ -45,3 +45,12 @@ test("skeleton rows mark their region busy and say nothing visible", () => {
   expect(container.querySelectorAll("[data-skeleton] > div")).toHaveLength(4);
   expect(region.textContent).toBe("");
 });
+
+test("an empty state has a title, a sentence, the icon and one action, and the action can be a link", () => {
+  const { container } = render(<EmptyState icon="folder" title="No files yet" text="Add one to keep it here." action={{ label: "Add a file", href: "#add" }} />);
+  expect(screen.getByText("No files yet")).toBeInTheDocument();
+  expect(screen.getByText("Add one to keep it here.")).toBeInTheDocument();
+  expect(container.querySelector("svg")).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Add a file" })).toHaveAttribute("href", "#add");
+  expect(container.querySelector("[data-empty]")).not.toBeNull();
+});

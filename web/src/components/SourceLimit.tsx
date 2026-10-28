@@ -6,7 +6,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { PersonPicker } from "./PersonPicker";
-
+import { Button } from "../ui/Button";
 export function SourceLimit(props: { source: string; limit: S["SourceLimit"] }) {
   const { t } = useWords();
   const act = useAct();
@@ -40,22 +40,22 @@ export function SourceLimit(props: { source: string; limit: S["SourceLimit"] }) 
       {limit.why && <p className="hint block">{t("source.limit.why", { why: limit.why })}</p>}
       {limit.widened_by && <p className="hint block">{t("source.limit.widened_by", { name: limit.widened_by })}</p>}
       {!open ? (
-        <button ref={button} type="button" className="btn" aria-expanded={false} onClick={() => setOpen(true)}>
+        <Button ref={button} aria-expanded={false} onClick={() => setOpen(true)}>
           {t("source.limit.widen")}
-        </button>
+        </Button>
       ) : (
         <div className="source-widen">
           <PersonPicker label={t("source.limit.add_label")} value={person} onChange={setPerson} suggested={[]} people={others} noAdd autoFocus />
           <div className="row-end">
-            <button type="button" className="btn primary" disabled={!person} onClick={() => void widen({ people: [person], open: false }, t("source.limit.widened"))}>
+            <Button variant="primary" disabled={!person} onClick={() => void widen({ people: [person], open: false }, t("source.limit.widened"))}>
               {t("source.limit.add")}
-            </button>
-            <button type="button" className="btn" onClick={() => void widen({ people: [], open: true }, t("source.limit.removed"))}>
+            </Button>
+            <Button onClick={() => void widen({ people: [], open: true }, t("source.limit.removed"))}>
               {t("source.limit.remove")}
-            </button>
-            <button type="button" className="btn quiet" onClick={() => setOpen(false)}>
+            </Button>
+            <Button variant="quiet" onClick={() => setOpen(false)}>
               {t("source.limit.cancel")}
-            </button>
+            </Button>
           </div>
         </div>
       )}

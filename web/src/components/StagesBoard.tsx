@@ -17,6 +17,7 @@ import { SafeText } from "./SafeText";
 import { History, WaitingLine } from "./StageParts";
 import styles from "./StagesBoard.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
 /** More columns than this scroll inside the board's own frame instead of wrapping. */
 const FIT = 6;
 const NONE = "";
@@ -100,7 +101,7 @@ export function StagesBoard(props: { kind: string; views: StageView[]; waiting: 
                 </span>
               </h3>
               {here.length === 0 ? (
-                <p className={styles.empty}>{t("stages.board.empty")}</p>
+                <EmptyState inline text={t("stages.board.empty")} />
               ) : (
                 <ul className={styles.cards}>
                   {here.map((view) => (
@@ -223,7 +224,7 @@ function Card(props: { view: StageView; waiting: StageRequest[]; onDrag: (starte
       )}
       {primary && (
         <div className={styles.foot}>
-          <Button variant="primary" size="sm" disabled={busy} onClick={primary.run}>
+          <Button size="sm" disabled={busy} onClick={primary.run}>
             {primary.label}
           </Button>
         </div>

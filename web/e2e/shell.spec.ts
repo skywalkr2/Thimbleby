@@ -304,10 +304,10 @@ test.describe("screen use and the shell", () => {
     });
   }
 
-  // The pill's words are longer than the pill column ("Waiting for you to start it"): the pill stays inside its column and the
-  // row, so it never draws over the start of the title, whatever the window width or theme.
+  // The pill's words are long ("Waiting for you to start it"): the pill stays inside the row and clear of the title, beside it or
+  // above it once it wraps, whatever the window width or theme.
   for (const scheme of ["light", "dark"] as const) {
-    test(`the first-go line's pill stays in its column and clear of the title in ${scheme}, at every width`, async ({ page }) => {
+    test(`the first-go line's pill stays inside the row and clear of the title in ${scheme}, at every width`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.route("**/api/today/queue", async (route) => {
         if (route.request().method() !== "GET") return route.fallback();
@@ -320,21 +320,19 @@ test.describe("screen use and the shell", () => {
       for (const width of [2000, 1440, 1280, 390]) {
         await page.setViewportSize({ width, height: HEIGHT });
         await expect(line).toBeVisible();
-        // Measured until the row has laid out at the new width: under load the first frame after a resize can show the pill's
-        // column not yet sized. A layout that never settles right still fails when the retries run out.
+        // Measured until the row has laid out at the new width: under load the first frame after a resize can show the pill not yet sized. A layout that never settles right still fails when the retries run out.
         await expect(async () => {
           const m = await line.evaluate((row) => {
             const pill = row.querySelector("[data-pill]")!.getBoundingClientRect();
-            const column = row.querySelector("[data-pill]")!.parentElement!.getBoundingClientRect();
-            const title = row.querySelector('[id$="-title"]')!.getBoundingClientRect();
+            // The title's first line (a title that wraps has one box for each line).
+            const title = row.querySelector('[id$="-title"]')!.getClientRects()[0];
             const box = row.getBoundingClientRect();
-            return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, columnRight: column.right, columnW: column.width, titleLeft: title.left, titleTop: title.top, rowLeft: box.left, rowRight: box.right };
+            return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, titleLeft: title.left, titleTop: title.top, rowLeft: box.left, rowRight: box.right };
           });
           const note = `${scheme} ${width}: ${JSON.stringify(m)}`;
           if (process.env.E2E_MEASURE) console.log(note);
           // Beside the title, or (on a phone, where the row stacks) above it.
           expect(m.pillRight <= m.titleLeft || m.pillBottom <= m.titleTop, note).toBe(true);
-          expect(m.pillRight, note).toBeLessThanOrEqual(m.columnRight + 0.5);
           expect(m.pillLeft, note).toBeGreaterThanOrEqual(m.rowLeft);
           expect(m.pillRight, note).toBeLessThanOrEqual(m.rowRight);
         }).toPass({ timeout: 5000 });
@@ -687,16 +685,17 @@ test.describe("screen use and the shell", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeFocused();
   });
 
-  // The cursor starts where you type (design 7.0): in a screen's first main field, or on its heading when it has none.
+  // The cursor starts on the heading (design 7.1): a screen opens with it there, never in a field; a form the person opens puts it in
+  // its first field, which other tests check.
   // Each main screen is opened from another by its address, as a person does by a link, and the cursor is found where it
-  // belongs once the screen has loaded. A screen with a field names it here; any other must have the cursor on its heading.
+  // belongs once the screen has loaded.
   // Today's keyboard also starts on its first queue line, once the queue has arrived (7.7), so there either the heading or
   // that line is where the cursor belongs; which one it is depends on whether the queue was already loaded.
-  const SCREENS: Array<{ name: string; hash: string; field?: (page: Page) => Locator; queue?: boolean }> = [
+  const SCREENS: Array<{ name: string; hash: string; queue?: boolean }> = [
     { name: "Today", hash: "today", queue: true },
     { name: "What changed", hash: "work/changed" },
     { name: "Since yesterday", hash: "work/since" },
-    { name: "Handled for you", hash: "work/handled", field: (page) => page.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" }) },
+    { name: "Handled for you", hash: "work/handled" },
     { name: "Follow-ups", hash: "work/followups" },
     { name: "Stages", hash: "work/stages" },
     { name: "Projects", hash: "records/projects" },
@@ -706,13 +705,13 @@ test.describe("screen use and the shell", () => {
     { name: "Rules review", hash: "records/rules-review" },
     { name: "Connections", hash: "settings/connections" },
     { name: "Add-ons", hash: "settings/addons" },
-    { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "Your name" }) },
+    { name: "Settings", hash: "settings" },
     { name: "What each account can do", hash: "settings/ai-compare" },
-    { name: "Quality", hash: "quality", field: (page) => page.locator("main form input[type=date]").first() },
+    { name: "Quality", hash: "quality" },
     { name: "Handover", hash: "handover" },
   ];
   for (const screen of SCREENS) {
-    test(`${screen.name} opens with the cursor in its first field, or on its heading when it has none`, async ({ page }) => {
+    test(`${screen.name} opens with the cursor on its heading, never in a field`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await signIn(page);
       // Arrive from another screen, so the address changes the way a link does.
@@ -724,10 +723,6 @@ test.describe("screen use and the shell", () => {
         window.location.hash = h;
       }, screen.hash);
       await expect(page).toHaveURL(new RegExp(`#${screen.hash}$`));
-      if (screen.field) {
-        await expect(screen.field(page)).toBeFocused({ timeout: 15_000 });
-        return;
-      }
       await expect
         .poll(
           () =>
@@ -738,8 +733,8 @@ test.describe("screen use and the shell", () => {
               // The queue's first line, on a screen whose keyboard starts there.
               const first = queue ? main.querySelector("[data-row]") : null;
               if (first && first.contains(at)) return true;
-              // On the heading (a page of Settings has its own section's heading), or in a field the screen put the cursor in itself.
-              return at.tagName === "H1" || at.tagName === "H2" || ["INPUT", "SELECT", "TEXTAREA"].includes(at.tagName);
+              // On the heading (a page of Settings has its own section's heading), never in a field.
+              return at.tagName === "H1" || at.tagName === "H2";
             }, !!screen.queue),
           { timeout: 15_000 },
         )
@@ -894,7 +889,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page, "settings/you");
     const name = page.getByRole("textbox", { name: "Name shown at the top" });
-    await expect(page.getByRole("textbox", { name: "Your name" })).toBeFocused();
+    await expect(page.locator("[data-section-heading]")).toBeFocused();
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
     const before = await name.inputValue();
     await name.fill("Harbor workspace");
@@ -1081,7 +1076,8 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await expect(rows.first()).toBeVisible();
       await layoutSettled(page);
       const boxes = await rows.evaluateAll((els) => els.map((e) => ({ top: e.getBoundingClientRect().top, bottom: e.getBoundingClientRect().bottom })));
-      expect(boxes[0].top).toBeLessThanOrEqual(finished ? 200 : 260);
+      // The page header (title, then its line) takes about 20px more than the title and date it replaced; six lines still show.
+      expect(boxes[0].top).toBeLessThanOrEqual(finished ? 220 : 280);
       expect(boxes.filter((b) => b.bottom <= 720).length).toBeGreaterThanOrEqual(6);
       await page.unrouteAll({ behavior: "ignoreErrors" });
     });

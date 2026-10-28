@@ -57,6 +57,7 @@ import { MadeBy } from "./MadeBy";
 import styles from "./Today.module.css";
 import { plainTitle } from "../lib/title-dates";
 
+import { EmptyState } from "../ui/EmptyState";
 export interface QueueHandlers {
   onOpenAiAccounts: () => void;
   onOpenHandover: () => void;
@@ -328,7 +329,7 @@ export function TodayQueue(props: {
           </div>
           {waiting > 0 && (
             <div className={styles.newbar}>
-              <Button size="sm" variant="primary" data-tonal="" aria-keyshortcuts="Shift+N" onClick={show}>
+              <Button size="sm" aria-keyshortcuts="Shift+N" onClick={show}>
                 {tn("queue.new_show", waiting)}
               </Button>
             </div>
@@ -336,12 +337,7 @@ export function TodayQueue(props: {
           {queue.isPending ? (
             <Skeleton />
           ) : queue.isError ? (
-            <p className={styles.empty}>
-              {t("queue.load_failed")}{" "}
-              <Button size="sm" onClick={() => void queue.refetch()}>
-                {t("action.try_again")}
-              </Button>
-            </p>
+            <EmptyState icon="alert" text={t("queue.load_failed")} action={{ label: t("action.try_again"), onClick: () => void queue.refetch() }} />
           ) : (
             <>
               {GROUPS.map((group) => {
@@ -351,7 +347,7 @@ export function TodayQueue(props: {
                 const sending = group === "decide" || group === "risk" ? outgoing.in(group) : [];
                 if (these.length === 0 && !extra && added.length === 0 && sending.length === 0 && !(group === "decide" && staleReminders)) return null;
                 return (
-                  <QueueGroup key={group} id={`queue-group-${group}`} title={t(`queue.group.${group}`)}>
+                  <QueueGroup key={group} id={`queue-group-${group}`} title={t(`queue.group.${group}`)} count={these.length + (extra ? stage.count : 0) + added.length + sending.length}>
                     {these.map((line) => (
                       <LineItem
                         key={line.key}
@@ -379,13 +375,10 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && filter.choice !== "all" && (total ?? 0) > 0 && (
-                <p className={styles.empty} data-queue-empty="side">
-                  {t("sides.empty.today", { side: filter.named })}
-                </p>
+                <EmptyState icon="check" data-queue-empty="side" text={t("sides.empty.today", { side: filter.named })} />
               )}
               {count === 0 && (filter.choice === "all" || !((total ?? 0) > 0)) && (
                 <TodayEmpty
-                  className={styles.empty}
                   onContinueSetup={props.handlers.onOpenGuide ? () => props.handlers.onOpenGuide?.("ai") : undefined}
                   onHandIn={props.handlers.onHandIn}
                 />
@@ -1309,7 +1302,7 @@ function QueueRow(props: {
             <div id={detailId} className={styles.detail}>
               <LineDetail line={line} sendBack={props.selection?.sendBack} onOpenGuide={props.handlers.onOpenGuide} />
               <div className={styles.detailEnd}>
-                <Button size="sm" variant="ghost" onClick={() => select(false)}>
+                <Button size="sm" variant="quiet" onClick={() => select(false)}>
                   {t("action.close")}
                 </Button>
               </div>

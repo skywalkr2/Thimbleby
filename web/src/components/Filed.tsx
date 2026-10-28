@@ -5,7 +5,7 @@ import { useId } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
-
+import { Button } from "../ui/Button";
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Filed = S["FiledView"];
 
@@ -61,9 +61,9 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
       {filed.move_to && (
         <>
           {" "}
-          <button type="button" className="btn small" onClick={() => void move(props.kind, props.id, filed)}>
+          <Button size="sm" onClick={() => void move(props.kind, props.id, filed)}>
             {t("filed.move", { project: filed.move_to_name ?? "" })}
-          </button>
+          </Button>
         </>
       )}
       {options.length > 0 && (

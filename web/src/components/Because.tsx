@@ -11,7 +11,7 @@ import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
 import styles from "./Learned.module.css";
-
+import { Button } from "../ui/Button";
 type Entry = S["AppliedEntryView"];
 
 /** Where an entry opens. */
@@ -121,16 +121,16 @@ function NotHere(props: { entry: Entry; onClose: () => void }) {
         <p className="hint">{t("because.only_retire")}</p>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
-        <button type="button" className="btn" autoFocus={choices.length === 0} onClick={() => void retire()}>
+        </Button>
+        <Button autoFocus={choices.length === 0} onClick={() => void retire()}>
           {t("because.retire")}
-        </button>
+        </Button>
         {choices.length > 0 && (
-          <button type="submit" className="btn primary" disabled={!scope}>
+          <Button variant="primary" type="submit" disabled={!scope}>
             {t("because.narrow")}
-          </button>
+          </Button>
         )}
       </div>
     </form>

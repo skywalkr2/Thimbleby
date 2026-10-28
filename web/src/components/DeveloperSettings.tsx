@@ -8,7 +8,7 @@ import { isOff, switchOf, type Item } from "../lib/settings";
 import { useSettingEdits } from "../lib/use-setting-edits";
 import { useWords } from "../lib/wording";
 import { SettingRow } from "./SettingRow";
-
+import { Button } from "../ui/Button";
 const ENABLED = "workspace.plugins.catalog.enabled";
 const SHIPPED = "workspace.plugins.catalog.shipped_feed";
 const FEEDS = "workspace.plugins.catalog.feeds";
@@ -100,9 +100,9 @@ function ReleaseTokens(props: { item: Item; edit: ReturnType<typeof useSettingEd
               .map(([name, reference]) => (
                 <li key={name} className="inline-field">
                   <span>{t("addons.dev.tokens.line", { host: name, where: words(reference) })}</span>
-                  <button type="button" className="btn quiet small" aria-label={t("addons.dev.tokens.remove_named", { host: name })} onClick={() => remove(name)}>
+                  <Button variant="quiet" size="sm" aria-label={t("addons.dev.tokens.remove_named", { host: name })} onClick={() => remove(name)}>
                     {t("addons.catalog_remove")}
-                  </button>
+                  </Button>
                 </li>
               ))}
           </ul>
@@ -112,9 +112,9 @@ function ReleaseTokens(props: { item: Item; edit: ReturnType<typeof useSettingEd
           <input id={`${id}-host`} type="text" value={host} autoComplete="off" onChange={(e) => setHost(e.target.value)} />
           <label htmlFor={`${id}-where`}>{t("addons.dev.tokens.where")}</label>
           <input id={`${id}-where`} type="text" value={where} autoComplete="off" onChange={(e) => setWhere(e.target.value)} />
-          <button type="button" className="btn" disabled={!host.trim() || !where.trim()} onClick={() => void add()}>
+          <Button disabled={!host.trim() || !where.trim()} onClick={() => void add()}>
             {t("addons.dev.tokens.add")}
-          </button>
+          </Button>
         </div>
         {shown && (
           <p className="problem-note" role="alert">

@@ -19,6 +19,7 @@ import { LoadFailed } from "../ui/LoadFailed";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./AiCompare.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
 const percent = (share: number) => Math.round(share * 100);
 
 export function AiCompare(props: { onBack: () => void }) {
@@ -136,7 +137,7 @@ export function AiCompare(props: { onBack: () => void }) {
             <Button size="sm" variant="primary" onClick={() => void measureColumn(c, true)}>
               {t("ai_compare.confirm_go")}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setAsking(null)}>
+            <Button size="sm" variant="quiet" onClick={() => setAsking(null)}>
               {t("ai_compare.confirm_cancel")}
             </Button>
           </div>
@@ -202,7 +203,7 @@ export function AiCompare(props: { onBack: () => void }) {
         )}
       </div>
       <p className={styles.back}>
-        <Button size="sm" variant="ghost" onClick={props.onBack}>
+        <Button size="sm" variant="quiet" onClick={props.onBack}>
           {t("ai_compare.back")}
         </Button>
       </p>
@@ -214,7 +215,7 @@ export function AiCompare(props: { onBack: () => void }) {
             <Button size="sm" variant="primary" onClick={() => void measureAll(true)}>
               {t("ai_compare.confirm_go")}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setAsking(null)}>
+            <Button size="sm" variant="quiet" onClick={() => setAsking(null)}>
               {t("ai_compare.confirm_cancel")}
             </Button>
           </div>
@@ -236,11 +237,9 @@ export function AiCompare(props: { onBack: () => void }) {
       ) : !skills.data || !accounts.data ? (
         <Skeleton />
       ) : accountNames.length === 0 ? (
-        <p className={styles.empty}>{t("ai_compare.empty")}</p>
+        <EmptyState icon="gear" text={t("ai_compare.empty")} />
       ) : !anyResult ? (
-        <p className={styles.empty} data-nothing-measured="">
-          {t("ai_compare.nothing_measured")}
-        </p>
+        <EmptyState icon="grid" data-nothing-measured="" text={t("ai_compare.nothing_measured")} />
       ) : (
         <div className={styles.scroll} role="region" aria-label={t("ai_compare.title")} tabIndex={0}>
           <table className={styles.grid}>

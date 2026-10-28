@@ -22,6 +22,8 @@ import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./Knowledge.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 export function Knowledge(props: { onOpenReview: () => void }) {
   const words = useWords();
   const { t, tn } = words;
@@ -63,11 +65,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
 
   return (
     <section ref={page} className="panel-section" aria-labelledby="knowledge-title">
-      <div className="heading">
-        <h1 id="knowledge-title" ref={heading} tabIndex={-1}>
-          {t("knowledge.title")}
-        </h1>
-      </div>
+      <PageHeader id="knowledge-title" headingRef={heading} focusable title={t("knowledge.title")} />
       <p className={styles.intro}>{t("knowledge.intro")}</p>
       {(flagged > 0 || moved > 0) && (
         <div className={styles.review}>
@@ -88,7 +86,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
       ) : loading ? (
         <Skeleton />
       ) : empty ? (
-        <p className="empty">{t("knowledge.nothing_yet")}</p>
+        <EmptyState text={t("knowledge.nothing_yet")} />
       ) : (
         <>
           {sections.waiting.length > 0 && (
@@ -100,7 +98,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
           <section className={styles.part} aria-labelledby="knowledge-follows">
             <h2 id="knowledge-follows">{t("knowledge.follows.title")}</h2>
             {sections.follows.length === 0 ? (
-              <p className="empty">{t(sections.waiting.length > 0 ? "knowledge.follows.none_waiting" : "knowledge.follows.none")}</p>
+              <EmptyState text={t(sections.waiting.length > 0 ? "knowledge.follows.none_waiting" : "knowledge.follows.none")} />
             ) : (
               sections.follows.map(({ group, items }) => (
                 <div key={group} className={styles.group}>

@@ -10,7 +10,6 @@ export function Skeleton(props: { rows?: number; className?: string }) {
     <div role="status" aria-busy="true" aria-label={t("loading")} className={[styles.region, props.className ?? ""].filter(Boolean).join(" ")} data-skeleton="">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className={styles.row} aria-hidden="true">
-          <span className={styles.block} />
           <span className={styles.lines}>
             <span className={styles.bar} />
             <span className={`${styles.bar} ${styles.short}`} />

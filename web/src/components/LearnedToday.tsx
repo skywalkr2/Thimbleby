@@ -18,6 +18,7 @@ import { ProposalEvidence, ProposalForms, ReachPicker, useProposal, type Proposa
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./Learned.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
 type List = "daily" | "catch_up";
 
 /** The kinds of queue line this draws: what was learned, and the catch-up list. */
@@ -42,20 +43,22 @@ export function LearnedLine(props: { line: S["QueueLineView"] }) {
     .filter(Boolean)
     .join(" · ");
   return (
-    <section className={styles.todayLine} aria-label={t("learned.today.label")} data-queue-line={line.kind} data-row="" tabIndex={-1}>
-      <Pill tone="need">{t("learned.today.label")}</Pill>
-      <div className={styles.todayBody}>
-        <p className={styles.todayText}>{line.kind === "learned" ? tn("learned.today.review", line.count) : tn("learned.today.catch_up", line.count)}</p>
-        {sub && <p className={styles.todaySub}>{sub}</p>}
-      </div>
-      <div className={styles.todayActs}>
+    <Row
+      as="section"
+      aria-label={t("learned.today.label")}
+      data-queue-line={line.kind}
+      pill={<Pill tone="need">{t("learned.today.label")}</Pill>}
+      title={line.kind === "learned" ? tn("learned.today.review", line.count) : tn("learned.today.catch_up", line.count)}
+      meta={sub || undefined}
+      primary={
         <Button size="sm" variant="primary" data-key="primary" onClick={() => setOpen(true)}>
           {t("learned.today.open")}
         </Button>
-        <RowMenu label={t("learned.today.label")} actions={[{ id: "not-now", label: t("queue.notnow"), run: () => notNow(line.key) }]} />
-      </div>
+      }
+      menu={<RowMenu label={t("learned.today.label")} actions={[{ id: "not-now", label: t("queue.notnow"), run: () => notNow(line.key) }]} />}
+    >
       {open && <ReviewDrawer list={list} onClose={() => setOpen(false)} />}
-    </section>
+    </Row>
   );
 }
 
@@ -90,14 +93,9 @@ function ReviewDrawer(props: { list: List; onClose: () => void }) {
         {found.isPending ? (
           <Skeleton />
         ) : found.isError ? (
-          <p className={styles.empty}>
-            {t("learned.load_failed")}{" "}
-            <Button size="sm" onClick={() => void found.refetch()}>
-              {t("action.try_again")}
-            </Button>
-          </p>
+          <EmptyState icon="alert" text={t("learned.load_failed")} action={{ label: t("action.try_again"), onClick: () => void found.refetch() }} />
         ) : rows.length === 0 ? (
-          <p className={styles.empty}>{t("learned.review.empty")}</p>
+          <EmptyState icon="check" text={t("learned.review.empty")} />
         ) : (
           <>
             <ul className={styles.list} aria-label={daily ? t("learned.review.title") : t("learned.catch_up.title")}>

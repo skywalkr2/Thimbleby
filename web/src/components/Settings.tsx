@@ -75,13 +75,12 @@ import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { WelcomeAi } from "./WelcomeAi";
 import { restoreFocus } from "./ModalPanel";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 type Edits = Record<string, Draft>;
 
 const SEARCH_ID = "settings-search";
-
-const FIRST_FIELD =
-  "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled])";
 
 /** The sections listed down the side of Settings (Connections and Add-ons among them). The pages reached from Settings
  * (what each account can do) show it too, so the person can go to any other section from where they are. */
@@ -163,10 +162,7 @@ export function SettingsFrame(props: {
   const { listed } = useSettingsSections();
   return (
     <section className="panel-section settings-screen" aria-labelledby="settings-title">
-      <div className="heading">
-        <h1 id="settings-title">{t("settings.title")}</h1>
-        {props.acts && <div className="acts">{props.acts}</div>}
-      </div>
+      <PageHeader id="settings-title" title={t("settings.title")} actions={props.acts} />
       <p className="settings-intro">{t("settings.intro")}</p>
       <div className="settings-layout">
         <div className="settings-side">
@@ -301,14 +297,8 @@ export function Settings(props: {
       searchBox.setSelectionRange(searchBox.value.length, searchBox.value.length);
       return;
     }
-    // A field inside a closed "More settings" fold can't take the cursor.
-    const field = Array.from(root.querySelectorAll<HTMLElement>(FIRST_FIELD)).find((el) => !el.closest("details:not([open])"));
-    const heading = root.querySelector<HTMLElement>("[data-section-heading]");
-    const target =
-      section === "ai" || section === "files" || section === "lists"
-        ? heading
-        : (field ?? heading);
-    target?.focus({ preventScroll: true });
+    // A section opens with the cursor on its heading, never in a field.
+    root.querySelector<HTMLElement>("[data-section-heading]")?.focus({ preventScroll: true });
     // Only when a section opens: a save must not move the cursor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section, settled]);
@@ -618,7 +608,7 @@ export function Settings(props: {
     : [];
   const results = () => {
     if (!found.length)
-      return <p className="empty">{t("settings.none_match")}</p>;
+      return <EmptyState text={t("settings.none_match")} />;
     return listed
       .map((id) => ({
         id,
@@ -715,9 +705,9 @@ export function Settings(props: {
         search={{ query, onQuery: setQuery }}
         acts={
           section === "you" && !query.trim() ? (
-            <button type="button" className="btn" onClick={() => props.onOpenGuide()}>
+            <Button onClick={() => props.onOpenGuide()}>
               {t("settings.open_guide")}
-            </button>
+            </Button>
           ) : null
         }
         contentRef={content}
@@ -730,7 +720,7 @@ export function Settings(props: {
         {settings.isPending ? (
           <Skeleton />
         ) : settings.isError ? (
-          <p className="empty">{t("settings.failed")}</p>
+          <EmptyState text={t("settings.failed")} />
         ) : query.trim() ? (
           results()
         ) : (

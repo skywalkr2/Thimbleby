@@ -84,7 +84,7 @@ test.describe("a business is a group, not a project", () => {
         await expect(knows.locator("[data-skeleton]")).toHaveCount(0, LOADED);
         // Nothing has come in yet: no part is shown empty, and the page says so once, in one line.
         await expect(knows.getByText("doesn't know anything here yet", { exact: false })).toHaveCount(1);
-        await expect(knows.locator("p.empty")).toHaveCount(1);
+        await expect(knows.locator("[data-empty]")).toHaveCount(1);
         await expect(knows.getByRole("heading", { level: 3 })).toHaveCount(0);
         expect(await knows.innerText()).not.toMatch(EMPTY_PARTS);
         // Who reads it is a plain line, not a card of its own.

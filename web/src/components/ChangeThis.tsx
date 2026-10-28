@@ -10,7 +10,7 @@ import { useAddOwnRequest } from "./HandIn";
 import { NoteBox } from "./NoteBox";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 /** The kinds of item a change can be asked for: an action, a question, a decision, a calendar entry or a fact. */
 export type ChangeKind = "action" | "question" | "decision" | "event" | "fact";
 
@@ -90,12 +90,12 @@ function Actions(props: { onClose: () => void; label: string; disabled: boolean 
   const { t } = useWords();
   return (
     <div className="row-end">
-      <button type="button" className="btn quiet" onClick={props.onClose}>
+      <Button variant="quiet" onClick={props.onClose}>
         {t("action.cancel")}
-      </button>
-      <button type="submit" className="btn primary" disabled={props.disabled}>
+      </Button>
+      <Button variant="primary" type="submit" disabled={props.disabled}>
         {props.label}
-      </button>
+      </Button>
     </div>
   );
 }

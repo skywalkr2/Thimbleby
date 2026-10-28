@@ -247,16 +247,16 @@ test("with an address a report has a mail link with its title and text encoded, 
     "href",
     `mailto:feedback@example.com?subject=${encodeURIComponent("A missing button")}&body=${encodeURIComponent("It would help\r\nto have one.")}`,
   );
-  expect(link).toHaveClass("primary");
-  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).not.toHaveClass("primary");
-  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).not.toHaveClass("primary");
+  expect(link).toHaveAttribute("data-variant", "primary");
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).not.toHaveAttribute("data-variant", "primary");
+  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).not.toHaveAttribute("data-variant", "primary");
 });
 
 test("without an address a report has no mail link and Copy stays the main action", async () => {
   withReport(draft(), null);
   const row = await item("Question a");
   expect(within(row).queryByRole("link", { name: /Open in your mail/ })).toBeNull();
-  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveClass("primary");
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveAttribute("data-variant", "primary");
 });
 
 test("a report too long for a mail link has none, and says to copy it", async () => {
@@ -264,7 +264,7 @@ test("a report too long for a mail link has none, and says to copy it", async ()
   const row = await item("Question a");
   expect(within(row).queryByRole("link", { name: /Open in your mail/ })).toBeNull();
   expect(within(row).getByText(/too long for a mail link/)).toBeInTheDocument();
-  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveClass("primary");
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveAttribute("data-variant", "primary");
 });
 
 test("opening the report in the mail program makes Mark sent the main action, and Mark sent records it", async () => {
@@ -275,8 +275,8 @@ test("opening the report in the mail program makes Mark sent the main action, an
   // The browser would follow the link; the test only checks what the page does about the click.
   link.addEventListener("click", (e) => e.preventDefault());
   await user.click(link);
-  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveClass("primary");
-  expect(within(row).getByRole("link", { name: "Open in your email app: A missing button" })).not.toHaveClass("primary");
+  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveAttribute("data-variant", "primary");
+  expect(within(row).getByRole("link", { name: "Open in your email app: A missing button" })).not.toHaveAttribute("data-variant", "primary");
   expect(calls.some((c) => c.route === "POST reports/rp1/sent")).toBe(false);
   await user.click(within(row).getByRole("button", { name: "Mark sent: A missing button" }));
   await waitFor(() => expect(sent(calls, "POST reports/rp1/sent")).toEqual({ read_version: 2 }));
@@ -288,7 +288,7 @@ test("copying a report with a mail link also makes Mark sent the main action", a
   const row = await item("Question a");
   await user.click(within(row).getByRole("button", { name: "Copy: A missing button" }));
   expect(await navigator.clipboard.readText()).toBe("A missing button\n\nIt would help\nto have one.");
-  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveClass("primary");
+  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveAttribute("data-variant", "primary");
   expect(within(row).getByRole("link", { name: "Open in your email app: A missing button" })).toBeInTheDocument();
 });
 

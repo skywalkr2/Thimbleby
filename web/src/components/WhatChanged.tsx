@@ -21,7 +21,7 @@ import { useQueue, useTodayCount } from "../lib/today";
 import { useFactLine } from "../lib/fact-line";
 import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { ListDetail } from "../ui/ListDetail";
 import { AskChooser } from "./AskChooser";
 import { ProjectProposalRow } from "./NextSteps";
@@ -39,6 +39,9 @@ import { useOwnRequests } from "./HandIn";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill } from "../ui/Pill";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
+import { TabStrip } from "../ui/TabStrip";
 /** The width the list needs beside the pane: a state, a title with one line under it, the primary and the menu. */
 const CHANGES_FIT = 480;
 
@@ -53,7 +56,6 @@ export function needsAttention(c: S["ChangeItem"]): boolean {
 /** `compact` is for a narrow column on Today: the heading sits one level down. `onOpenGuide` opens the setup guide at a
  * step, for a stopped line whose way on is a step of the guide. */
 export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: string) => void }) {
-  const Heading = props.compact ? "h3" : "h1";
   const { t, tn, has } = useWords();
   useReviewTime("changes", !props.compact);
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
@@ -167,22 +169,14 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
 
   return (
     <section className={props.compact ? "panel-section compact" : "panel-section"} aria-labelledby="changes-title">
-      <div className="heading">
-        <Heading id="changes-title">{t("changes.title")}</Heading>
-        <SideFilter waiting="changed" />
-        {!props.compact && (
-          <a className="btn" href={viewHref("work/since")}>
-            {t("changes.since")}
-          </a>
-        )}
-        <div className="filters" role="group" aria-label={t("changes.filter")}>
-          {filters.map((f) => (
-            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-              {t(`changes.filter.${f}`)}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        id="changes-title"
+        level={props.compact ? 3 : 1}
+        title={t("changes.title")}
+        actions={!props.compact ? <ButtonLink href={viewHref("work/since")}>{t("changes.since")}</ButtonLink> : undefined}
+        tabs={<TabStrip label={t("changes.filter")} value={filter} onChange={setFilter} options={filters.map((f) => ({ value: f, label: t(`changes.filter.${f}`) }))} />}
+        filters={<SideFilter waiting="changed" />}
+      />
       <p className="sr" aria-live="polite">
         {announce}
       </p>
@@ -199,9 +193,9 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       {intake !== null && (
         <p className="hint" data-intake-filter="">
           {t("changes.intake.title", { source: watched.data?.find((w) => w.id === intake)?.label ?? intake })}{" "}
-          <button type="button" className="btn" onClick={() => setIntake(null)}>
+          <Button onClick={() => setIntake(null)}>
             {t("changes.intake.show_all")}
-          </button>
+          </Button>
         </p>
       )}
       {waiting.length > 0 && (
@@ -216,14 +210,9 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       {changes.isPending ? (
         <Skeleton />
       ) : changes.isError ? (
-        <p className="empty">
-          {t("changes.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void changes.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("changes.load_failed")} action={{ label: t("action.try_again"), onClick: () => void changes.refetch() }} />
       ) : rows.length === 0 ? (
-        <p className="empty">{side.choice !== "all" && (changes.data ?? []).length > 0 ? t("sides.empty.changes", { side: side.named }) : t("changes.empty")}</p>
+        <EmptyState text={side.choice !== "all" && (changes.data ?? []).length > 0 ? t("sides.empty.changes", { side: side.named }) : t("changes.empty")} />
       ) : (
         <ListDetail
           title={selected ? changeTitle(selected, t, has) : ""}
@@ -508,9 +497,9 @@ export function ChangeRow(props: {
   const actions = (
     <div className="acts">
       {primary && !props.history && (
-        <button type="button" className="btn primary" onClick={primary.run}>
+        <Button variant="primary" onClick={primary.run}>
           {primary.label}
-        </button>
+        </Button>
       )}
       <RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />
     </div>
@@ -757,20 +746,20 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         {history ? null : heldWords ? (
           <>
             {heldWords.other && (
-              <button type="button" className="btn" onClick={heldWords.other.run}>
+              <Button onClick={heldWords.other.run}>
                 {heldWords.other.label}
-              </button>
+              </Button>
             )}
-            <button type="button" className="btn primary" onClick={heldWords.primary.run}>
+            <Button variant="primary" onClick={heldWords.primary.run}>
               {heldWords.primary.label}
-            </button>
+            </Button>
           </>
         ) : (
           op.status === "held" &&
           !ask && (
-            <button type="button" className="btn primary" onClick={() => void release()}>
+            <Button variant="primary" onClick={() => void release()}>
               {t("op.do_anyway")}
-            </button>
+            </Button>
           )
         )}
         <RowMenu label={plainTitle(op.title, op.meta.due)} actions={menu} />
@@ -848,9 +837,9 @@ function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"]; 
       </div>
       <div className="acts">
         {group.held > 0 && !props.history && (
-          <button type="button" className="btn primary" onClick={() => void keep()}>
+          <Button variant="primary" onClick={() => void keep()}>
             {t("changes.group.keep")}
-          </button>
+          </Button>
         )}
         <RowMenu label={group.label} actions={menu} />
       </div>
@@ -866,9 +855,7 @@ function ReleaseAll(props: { cs: S["ChangesetView"] }) {
   const { cs } = props;
   return (
     <div className="row-end">
-      <button
-        type="button"
-        className="btn"
+      <Button
         onClick={() =>
           void act(
             () => api.releaseAll(cs.id),
@@ -880,7 +867,7 @@ function ReleaseAll(props: { cs: S["ChangesetView"] }) {
         }
       >
         {t("changes.release_all")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -965,9 +952,9 @@ export function SendBackForm(props: { cs: string; onDone: () => void }) {
         {t("changes.send_back_undo")}
       </label>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onDone}>
+        <Button variant="quiet" onClick={props.onDone}>
           {t("action.cancel")}
-        </button>
+        </Button>
         <Button variant="primary" type="submit" disabled={!note.trim()} reason={t("changes.send_back_needs_note")}>
           {t("changes.send_back_go")}
         </Button>
@@ -1009,17 +996,17 @@ function AccountChooser(props: { request: string; onDone: () => void }) {
         <ul className="plain-list account-list">
           {list.map((a) => (
             <li key={a.use}>
-              <button type="button" className="btn" onClick={() => choose(a)}>
+              <Button onClick={() => choose(a)}>
                 {a.label}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onDone}>
+        <Button variant="quiet" onClick={props.onDone}>
           {t("action.cancel")}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -75,9 +75,7 @@ export function Glossary(props: { entries: Item[]; now: Date; onActed: () => voi
             {plain.map((w) => (
               <li key={w} className="inline-field">
                 <span>{w}</span>
-                <button
-                  type="button"
-                  className="btn quiet small"
+                <Button variant="quiet" size="sm"
                   disabled={locked}
                   aria-label={t("knowledge.words.remove_named", { word: w })}
                   onClick={() =>
@@ -88,7 +86,7 @@ export function Glossary(props: { entries: Item[]; now: Date; onActed: () => voi
                   }
                 >
                   {t("knowledge.words.remove")}
-                </button>
+                </Button>
               </li>
             ))}
           </ul>

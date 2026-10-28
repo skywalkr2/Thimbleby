@@ -1,9 +1,11 @@
 // Coverage (design 6.32, 7.7): what the assistant read and when, and which sources it couldn't read, so an empty Today is
 // never mistaken for "couldn't check". Read sources are said in the quiet style; a source that couldn't be read is said
 // in its own words and style, never as "nothing new".
+import type { ReactNode } from "react";
 import { useCoverage, whenWords, type Coverage } from "../lib/coverage";
 import { day, todayOn } from "../lib/dates";
 import { useWords } from "../lib/wording";
+import { EmptyState } from "../ui/EmptyState";
 import styles from "./Today.module.css";
 
 interface Part {
@@ -57,13 +59,14 @@ export function Parts(props: { found: Coverage }) {
 
 /** The one line in Today's header: what was read and when, and what couldn't be. Nothing while no source is on. Looking further
  * back is not offered here: it is in the source's own row menu. */
-export function CoverageLine() {
+export function CoverageLine(props: { as?: "p" | "span" }) {
   const found = useCoverage();
   if (!found) return null;
+  const Tag = props.as ?? "p";
   return (
-    <p className={styles.coverage} data-coverage-line="">
+    <Tag className={styles.coverage} data-coverage-line="">
       <Parts found={found} />
-    </p>
+    </Tag>
   );
 }
 
@@ -76,19 +79,26 @@ export function useNoneText(): string {
 
 /** The empty queue: that nothing needs the person, together with what was read; with a source that couldn't be read, or
  * not read yet, it says only that nothing was found. */
-export function NothingNeedsYou(props: { className?: string }) {
+export function NothingNeedsYou(props: { className?: string; children?: ReactNode }) {
   const { t } = useWords();
   const found = useCoverage();
   const none = useNoneText();
   return (
-    <p className={props.className} data-queue-empty="">
-      {found ? (
-        <>
-          {none} · <Parts found={found} />
-        </>
-      ) : (
-        t("queue.empty")
-      )}
-    </p>
+    <EmptyState
+      className={props.className}
+      icon="check"
+      data-queue-empty=""
+      text={
+        found ? (
+          <>
+            {none} · <Parts found={found} />
+          </>
+        ) : (
+          t("queue.empty")
+        )
+      }
+    >
+      {props.children}
+    </EmptyState>
   );
 }

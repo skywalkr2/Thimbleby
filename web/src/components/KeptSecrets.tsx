@@ -14,7 +14,7 @@ import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { SecretField } from "./SecretField";
-
+import { Button } from "../ui/Button";
 type How = "type" | "where" | "held";
 type Held = Pick<S["SourceSecretView"], "where" | "name">;
 
@@ -97,9 +97,9 @@ export function KeptSecretRow(props: {
       )}
       <div className="row-end">
         {props.more}
-        <button type="submit" className="btn small primary" disabled={!ready || busy} aria-label={props.saveLabel}>
+        <Button variant="primary" size="sm" type="submit" disabled={!ready || busy} aria-label={props.saveLabel}>
           {t(busy ? "secrets.saving" : "secrets.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -197,9 +197,9 @@ export function BackupKey() {
         }}
         more={
           local ? (
-            <button type="button" className="btn small" disabled={making} onClick={() => void make()}>
+            <Button size="sm" disabled={making} onClick={() => void make()}>
               {t("backup_key.make")}
-            </button>
+            </Button>
           ) : null
         }
       />
@@ -216,12 +216,12 @@ export function BackupKey() {
           <input type="text" readOnly value={made} aria-labelledby={`${base}-made-title`} onFocus={(e) => e.currentTarget.select()} />
           <p className="hint">{t("backup_key.made_hint")}</p>
           <div className="row-end">
-            <button type="button" className="btn small" onClick={() => void copy()}>
+            <Button size="sm" onClick={() => void copy()}>
               {t("backup_key.copy")}
-            </button>
-            <button type="button" className="btn small primary" onClick={() => setMade(null)}>
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setMade(null)}>
               {t("backup_key.done")}
-            </button>
+            </Button>
           </div>
         </div>
       )}

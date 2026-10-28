@@ -13,6 +13,7 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { WelcomeBackup } from "./WelcomeBackup";
 
+import { EmptyState } from "../ui/EmptyState";
 export function BackupsPanel(props: { local: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
@@ -42,7 +43,7 @@ export function BackupsPanel(props: { local: boolean }) {
     }
   };
 
-  if (!found.data) return found.isError ? <p className="empty">{t("settings.failed")}</p> : <Skeleton rows={2} />;
+  if (!found.data) return found.isError ? <EmptyState text={t("settings.failed")} /> : <Skeleton rows={2} />;
   const view: S["BackupsView"] = found.data;
   const there = view.targets.length > 0;
   const newest = view.copies[0];

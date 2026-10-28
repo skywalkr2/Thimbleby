@@ -8,7 +8,10 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Attendees } from "./Attendees";
 import { SafeLink } from "./SafeText";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
+import { Pill } from "../ui/Pill";
 type T = ReturnType<typeof useWords>["t"];
 
 /** The page's address names the event and the date of it that was opened: the snapshot, an at sign, then the date's start. */
@@ -51,19 +54,18 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
     : [];
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
-      <div>
-        <button type="button" className="btn quiet small" onClick={props.onBack}>
-          {t("record.back")}
-        </button>
-      </div>
-      <div className="heading">
-        <div>
-          <span className="kind k-review">{t("schedule.event.kind")}</span>
-          <h1 id="record-title">{event?.title ?? t("schedule.event.kind")}</h1>
-        </div>
-      </div>
+      <PageHeader
+        id="record-title"
+        title={event?.title ?? t("schedule.event.kind")}
+        kind={<Pill tone="neutral">{t("schedule.event.kind")}</Pill>}
+        crumb={
+          <Button variant="quiet" size="sm" onClick={props.onBack}>
+            {t("record.back")}
+          </Button>
+        }
+      />
       {found.isPending && <Skeleton />}
-      {found.isError && <p className="empty">{t("schedule.event.gone")}</p>}
+      {found.isError && <EmptyState text={t("schedule.event.gone")} />}
       {event && (
         <>
           <p className="hint">{t("schedule.event.note")}</p>

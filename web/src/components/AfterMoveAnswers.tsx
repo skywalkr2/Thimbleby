@@ -75,7 +75,7 @@ export function AfterMoveAnswers(props: { question: { id: string; title: string 
           </label>
           <textarea id={`${id}-note`} className="short" autoFocus value={note} onChange={(e) => setNote(e.target.value)} />
           <div className="row-end">
-            <Button size="sm" variant="ghost" onClick={() => setChanging(false)}>
+            <Button size="sm" variant="quiet" onClick={() => setChanging(false)}>
               {t("action.cancel")}
             </Button>
             <Button size="sm" variant="primary" type="submit" disabled={!note.trim()}>

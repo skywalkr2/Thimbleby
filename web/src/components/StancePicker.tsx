@@ -6,7 +6,7 @@ import { ApiError, api } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
-
+import { Button } from "../ui/Button";
 export const STANCES = ["manage", "alongside", "report_to", "watch"] as const;
 type Stance = (typeof STANCES)[number];
 
@@ -80,9 +80,9 @@ export function StancePicker(props: {
         <div className="problem-note" role="alert">
           <p>{error}</p>
           {last !== null && (
-            <button type="button" className="btn" onClick={() => void save(last)}>
+            <Button onClick={() => void save(last)}>
               {t("action.try_again")}
-            </button>
+            </Button>
           )}
         </div>
       )}

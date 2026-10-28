@@ -13,12 +13,13 @@
 .row:hover { background: var(--surface-hover); }
 .row:focus { outline: none; }
 .row:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
-.row[data-selected] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.row[data-selected] { background: var(--row-selected-bg); box-shadow: var(--row-selected-bar); }
 .group th { background: var(--surface-sunk); color: var(--text); font-weight: var(--weight-semibold); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .groupCount { color: var(--text-muted); font-weight: var(--weight-regular); }
 th:first-child, .name { width: 30%; }
 .name { font-weight: var(--weight-semibold); font-size: var(--text-md); line-height: var(--lh-md); }
-.name a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+.name a { color: var(--text); text-decoration: none; }
+.name a:hover { text-decoration: underline; text-underline-offset: 2px; }
 .name a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .table .acts { width: calc(var(--space-12) + var(--space-2)); white-space: nowrap; overflow: visible; }
 .actsInner { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }

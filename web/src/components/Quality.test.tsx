@@ -298,10 +298,11 @@ test("a screen with nothing to show says so in plain words in every section", as
   expect(document.body.textContent).not.toMatch(/NaN|undefined|null/);
 });
 
-test("the cursor starts in the form's first field, the date, which holds today and shows that day's count", async () => {
+test("the cursor starts on the heading, and the form's date holds today and shows that day's count", async () => {
   show(FULL);
   const date = await screen.findByLabelText("Day");
-  await waitFor(() => expect(date).toHaveFocus());
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveFocus());
+  expect(date).not.toHaveFocus();
   expect(date).toHaveValue("2026-10-19");
   expect(date).toHaveAttribute("max", "2026-10-19");
   expect(screen.getByLabelText("Promises on your own list")).toHaveValue(10);

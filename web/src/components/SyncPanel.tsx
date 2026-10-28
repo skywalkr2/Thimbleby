@@ -11,7 +11,9 @@ import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
 import { useTextReview } from "./TextReview";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button, ButtonLink } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { Row } from "../ui/Row";
 // ---- synced folder -------------------------------------------------------------------------------------------------
 
 const SYNC_FOLDER = "storage.sync.folder";
@@ -85,9 +87,7 @@ function SyncUnset(props: { fingerprint: string }) {
           </p>
         )}
         <div className="row-end">
-          <button
-            type="button"
-            className="btn"
+          <Button
             disabled={busy}
             onClick={() => {
               setChosen(null);
@@ -95,10 +95,10 @@ function SyncUnset(props: { fingerprint: string }) {
             }}
           >
             {t("setup.sync_shared_back")}
-          </button>
-          <button type="submit" className="btn primary" disabled={busy || shared === null}>
+          </Button>
+          <Button variant="primary" type="submit" disabled={busy || shared === null}>
             {t("setup.sync_shared_save")}
-          </button>
+          </Button>
         </div>
       </form>
     );
@@ -109,9 +109,9 @@ function SyncUnset(props: { fingerprint: string }) {
       <p>{t("setup.sync_unset")}</p>
       {canList ? (
         <div className="row-end">
-          <button type="button" className="btn primary" ref={chooser} disabled={busy} onClick={() => setPicking(true)}>
+          <Button variant="primary" ref={chooser} disabled={busy} onClick={() => setPicking(true)}>
             {t("setup.sync_choose")}
-          </button>
+          </Button>
         </div>
       ) : (
         <form
@@ -124,9 +124,9 @@ function SyncUnset(props: { fingerprint: string }) {
             <label htmlFor="sync-path">{t("setup.sync_path")}</label>
             <div className="inline-field">
               <input id="sync-path" type="text" value={typed} autoComplete="off" onChange={(e) => setTyped(e.target.value)} />
-              <button type="submit" className="btn primary" disabled={!typed.trim()}>
+              <Button variant="primary" type="submit" disabled={!typed.trim()}>
                 {t("setup.sync_save")}
-              </button>
+              </Button>
             </div>
           </div>
         </form>
@@ -206,32 +206,22 @@ export function SyncPanel() {
       {settings.isPending || (folderSet && sync.isPending) ? (
         <Skeleton />
       ) : settings.isError ? (
-        <p className="empty">
-          {t("setup.sync_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void settings.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void settings.refetch() }} />
       ) : !folderSet ? (
         <SyncUnset fingerprint={settings.data!.fingerprint} />
       ) : sync.isError || !data ? (
-        <p className="empty">
-          {t("setup.sync_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void sync.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void sync.refetch() }} />
       ) : !data.folder ? (
-        <p className="empty">{t("setup.sync_off")}</p>
+        <EmptyState text={t("setup.sync_off")} />
       ) : (
         <div className="sync-body">
           <p>{t("setup.sync_in", { folder: data.folder })}</p>
           <SharedSwitch shared={data.shared} />
           {data.handover && (
             <p>
-              <a className="btn primary" href={viewHref("handover")}>
+              <ButtonLink variant="primary" href={viewHref("handover")}>
                 {t("setup.sync_handover")}
-              </a>
+              </ButtonLink>
             </p>
           )}
           {data.stopped && (
@@ -286,28 +276,22 @@ function OutsideEdit(props: { edit: S["OutsideEditView"]; onReview: (version: st
   const { edit } = props;
   const button = useRef<HTMLButtonElement>(null);
   return (
-    <li className="line">
-      <div className="row">
-        <div className="text">
-          <strong className="path">{edit.path}</strong>
-          {edit.problem && <span className="sub">{edit.problem}</span>}
-          {!edit.version && !edit.problem && <span className="sub">{t("setup.sync_waiting")}</span>}
-        </div>
-        {edit.version && (
-          <div className="acts">
-            <button
-              type="button"
-              className="btn primary"
-              ref={button}
-              aria-label={t("panel.action_for", { action: t("setup.sync_review"), what: edit.path })}
-              onClick={() => props.onReview(edit.version!, () => button.current)}
-            >
-              {t("setup.sync_review")}
-            </button>
-          </div>
-        )}
-      </div>
-    </li>
+    <Row
+      title={<span className="path">{edit.path}</span>}
+      meta={edit.problem || (!edit.version ? t("setup.sync_waiting") : undefined)}
+      primary={
+        edit.version ? (
+          <Button
+            variant="primary"
+            ref={button}
+            aria-label={t("panel.action_for", { action: t("setup.sync_review"), what: edit.path })}
+            onClick={() => props.onReview(edit.version!, () => button.current)}
+          >
+            {t("setup.sync_review")}
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }
 

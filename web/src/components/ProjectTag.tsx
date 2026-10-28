@@ -7,5 +7,9 @@ import styles from "./ProjectTag.module.css";
 export function ProjectTag(props: Place & { className?: string }) {
   const text = usePlaceText()(props);
   if (!text) return null;
-  return <span className={props.className ?? styles.project}>{text}</span>;
+  return (
+    <span className={props.className ?? styles.project} data-tag="">
+      {text}
+    </span>
+  );
 }

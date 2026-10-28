@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Button } from "./Button";
+import { Button, ButtonLink } from "./Button";
 import { IconButton } from "./IconButton";
 
 test("a button runs its action, and the variants are marked", async () => {
@@ -79,4 +79,35 @@ test("an icon-only button shows its label as a tooltip on focus", async () => {
   render(<IconButton icon="help" label="Help" />);
   await user.tab();
   expect(await screen.findByRole("tooltip")).toHaveTextContent("Help");
+});
+
+test("the three weights are primary, secondary and quiet, and a link can be drawn as a button", () => {
+  render(
+    <>
+      <Button variant="primary">Go</Button>
+      <Button>Other</Button>
+      <Button variant="quiet">Skip</Button>
+      <ButtonLink href="#there" variant="primary">
+        Open
+      </ButtonLink>
+    </>,
+  );
+  expect(screen.getByRole("button", { name: "Go" })).toHaveAttribute("data-variant", "primary");
+  expect(screen.getByRole("button", { name: "Other" })).toHaveAttribute("data-variant", "secondary");
+  expect(screen.getByRole("button", { name: "Skip" })).toHaveAttribute("data-variant", "quiet");
+  const link = screen.getByRole("link", { name: "Open" });
+  expect(link).toHaveAttribute("href", "#there");
+  expect(link).toHaveAttribute("data-variant", "primary");
+});
+
+test("a disabled primary keeps its weight and its reason sits beside it, in the same group", () => {
+  render(
+    <Button variant="primary" disabled reason="Pick a person first">
+      Send
+    </Button>,
+  );
+  const button = screen.getByRole("button", { name: "Send" });
+  expect(button).toHaveAttribute("data-variant", "primary");
+  expect(button.parentElement).toContainElement(screen.getByText("Pick a person first"));
+  expect(button.nextElementSibling).toBe(screen.getByText("Pick a person first"));
 });

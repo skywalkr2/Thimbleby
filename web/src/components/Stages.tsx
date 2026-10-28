@@ -22,7 +22,9 @@ import { StagesBoard } from "./StagesBoard";
 import { History, WaitingLine } from "./StageParts";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 type Shown = "board" | "list";
 const KEPT = "stages.view";
 
@@ -59,36 +61,34 @@ export function Stages() {
   for (const view of records.data ?? []) groups.set(view.record.kind, [...(groups.get(view.record.kind) ?? []), view]);
   return (
     <>
-      <div className="heading">
-        <h1 id="stages-title">{t("stages.title")}</h1>
-        {groups.size > 0 && (
-          <SegmentedControl
-            label={t("stages.view")}
-            value={shown}
-            onChange={setShown}
-            options={[
-              { value: "board", label: t("stages.view.board") },
-              { value: "list", label: t("stages.view.list") },
-            ]}
-          />
-        )}
-      </div>
+      <PageHeader
+        id="stages-title"
+        title={t("stages.title")}
+        filters={
+          groups.size > 0 ? (
+            <SegmentedControl
+              label={t("stages.view")}
+              value={shown}
+              onChange={setShown}
+              options={[
+                { value: "board", label: t("stages.view.board") },
+                { value: "list", label: t("stages.view.list") },
+              ]}
+            />
+          ) : undefined
+        }
+      />
       {records.isPending ? (
         <section className="panel-section" aria-labelledby="stages-title">
           <Skeleton />
         </section>
       ) : records.isError ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <p className="empty">
-            {t("stages.load_failed")}{" "}
-            <button type="button" className="btn" onClick={() => void records.refetch()}>
-              {t("action.try_again")}
-            </button>
-          </p>
+          <EmptyState icon="alert" text={t("stages.load_failed")} action={{ label: t("action.try_again"), onClick: () => void records.refetch() }} />
         </section>
       ) : groups.size === 0 ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <p className="empty">{t("stages.empty")}</p>
+          <EmptyState text={t("stages.empty")} />
         </section>
       ) : (
         [...groups].map(([kind, views]) => (
@@ -172,9 +172,9 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
         </div>
         <div className="acts">
           {primary && (
-            <button type="button" className="btn primary" disabled={busy} onClick={primary.run}>
+            <Button variant="primary" disabled={busy} onClick={primary.run}>
               {primary.label}
-            </button>
+            </Button>
           )}
           <RowMenu label={view.title} actions={menu} />
         </div>

@@ -7,7 +7,7 @@ import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 /** The row menu's "Drop" entry for an action, and the small form it opens. `onClosed` runs when the form goes, so the row
  * can take focus back. */
 export function useDropAction(action: { id: string; told_names?: string[] }, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
@@ -47,12 +47,12 @@ export function useDropAction(action: { id: string; told_names?: string[] }, onC
       </label>
       <input id={id} type="text" autoFocus value={reason} onChange={(e) => setReason(e.target.value)} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={close}>
+        <Button variant="quiet" onClick={close}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!reason.trim()}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!reason.trim()}>
           {t(told.length > 0 ? "action.drop_go_tell" : "action.drop_go")}
-        </button>
+        </Button>
       </div>
     </form>
   ) : null;

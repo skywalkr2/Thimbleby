@@ -66,7 +66,7 @@ export function PageLinks() {
               {!locked && (
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="quiet"
                   aria-label={t("pages.remove_named", { name: l.name })}
                   onClick={() => void save(links.filter((_, k) => k !== i), t("pages.removed", { name: l.name }))}
                 >

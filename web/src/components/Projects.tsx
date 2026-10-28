@@ -13,7 +13,7 @@ import { day, dayAndTime } from "../lib/dates";
 import { useTotal } from "../lib/money";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
@@ -26,6 +26,7 @@ import { SafeText } from "./SafeText";
 import { Unfiled } from "./Unfiled";
 import styles from "./Projects.module.css";
 
+import { PageHeader } from "../ui/PageHeader";
 type Project = S["ProjectView"];
 
 /** The projects in groups: each configured group in turn, those with none, and last the finished ones. A project inside
@@ -132,12 +133,15 @@ export function Projects() {
 
   return (
     <section className="panel-section" aria-labelledby="projects-title">
-      <div className="heading">
-        <h1 id="projects-title">{t("setup.projects")}</h1>
-        <Button variant="primary" onClick={() => setAdding(true)}>
-          {t("setup.add_project")}
-        </Button>
-      </div>
+      <PageHeader
+        id="projects-title"
+        title={t("setup.projects")}
+        primary={
+          <Button variant="primary" onClick={() => setAdding(true)}>
+            {t("setup.add_project")}
+          </Button>
+        }
+      />
       <ListDetail
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
@@ -242,9 +246,9 @@ function ProjectDetail(props: { project: Project; parent?: Project; total: (n: n
         </section>
       )}
       <div className="row-end">
-        <a className="btn" href={viewHref(recordView("project", p.id))}>
+        <ButtonLink href={viewHref(recordView("project", p.id))}>
           {t("records.open_page", { name: p.name })}
-        </a>
+        </ButtonLink>
         <Button variant="primary" onClick={props.onEdit}>
           {t("setup.edit")}
         </Button>

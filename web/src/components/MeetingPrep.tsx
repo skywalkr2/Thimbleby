@@ -12,7 +12,7 @@ import { useWords } from "../lib/wording";
 import { CaptureForm } from "./CaptureForm";
 import { InvitationChanges } from "./InvitationChanges";
 import { ITEM_KINDS, PrepItems } from "./PrepItems";
-
+import { Button } from "../ui/Button";
 type Person = S["PersonPrepView"];
 
 /** "Last in touch: mail from them on Oct 18", and the subject when it is mail. */
@@ -68,9 +68,9 @@ function PrepNote(props: { entry: string; note: S["PrepNoteView"] }) {
   if (note.state === "none" || note.state === "kept")
     return (
       <p>
-        <button type="button" className="btn" onClick={() => void act(() => api.askPrepNote(props.entry), () => ({ message: t("meeting.note.asked") }))}>
+        <Button onClick={() => void act(() => api.askPrepNote(props.entry), () => ({ message: t("meeting.note.asked") }))}>
           {t(note.state === "kept" ? "meeting.note.again" : "meeting.note.ask")}
-        </button>
+        </Button>
       </p>
     );
   return <p className="hint">{t(`meeting.note.${note.state}`)}</p>;
@@ -109,9 +109,9 @@ export function MeetingPrep(props: { entry: string; title: string }) {
       {prep.over && prep.captured_at && <p className="hint">{t("meeting.capture.done", { date: day(prep.captured_at) })}</p>}
       {prep.over && !prep.captured_at && !capturing && (
         <p>
-          <button type="button" className="btn" onClick={() => setCapturing(true)}>
+          <Button onClick={() => setCapturing(true)}>
             {t("meeting.capture.open")}
-          </button>
+          </Button>
         </p>
       )}
       {capturing && <CaptureForm event={prep.event} title={props.title} onClose={() => setCapturing(false)} />}

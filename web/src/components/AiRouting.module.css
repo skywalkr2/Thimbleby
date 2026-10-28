@@ -1,6 +1,6 @@
 /* Which model does what (design 7.9): the part under the AI accounts. Everything wraps or stacks; nothing is wider than its column. */
 .part { display: grid; gap: var(--space-4); min-width: 0; margin-top: var(--space-6); }
-.part h3 { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); }
+.part h3 { margin: 0; font-size: var(--text-section); line-height: var(--lh-section); }
 .group { display: grid; gap: var(--space-3); min-width: 0; }
 .group h4 { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); }
 .group select, .field select, .field input { max-width: 100%; min-width: 0; }

@@ -27,14 +27,14 @@ test("Today offers Allow for an account the person said Not now about, and Allow
   await expect(line).toBeVisible(SAVED);
 });
 
-test("the Access line's title starts where every other line's title starts, at 1440px", async ({ page }) => {
+test("the Access line starts where every other line starts, at 1440px", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("?token=e2e-token");
   const line = page.locator('[data-queue-line="work_access"]');
   await expect(line).toBeVisible(SAVED);
   await expect(page.locator("[data-queue-line]").nth(1)).toBeVisible();
   const starts = await page.locator("[data-queue-line]").evaluateAll((els) =>
-    els.map((e) => ({ kind: e.getAttribute("data-queue-line"), x: Math.round(e.children[1].getBoundingClientRect().left * 10) / 10 })),
+    els.map((e) => ({ kind: e.getAttribute("data-queue-line"), x: Math.round((e.firstElementChild!.getBoundingClientRect().left - e.getBoundingClientRect().left) * 10) / 10 })),
   );
   expect(starts.length).toBeGreaterThan(1);
   expect(new Set(starts.map((r) => r.x)).size, JSON.stringify(starts)).toBe(1);

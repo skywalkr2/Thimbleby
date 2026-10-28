@@ -54,12 +54,8 @@ afterEach(() => {
   forgetMoves();
 });
 
-/** The buttons that day mode draws filled: primary ones that are not marked tonal, outside a row or inside the selected row. */
-const filled = (main: HTMLElement) =>
-  [...main.querySelectorAll<HTMLElement>('button[data-variant="primary"]:not([data-tonal])')].filter((button) => {
-    const row = button.closest("[data-row]");
-    return !row || row.hasAttribute("data-selected");
-  });
+/** The buttons drawn solid: primary ones outside a row. A row's own actions are never solid (ui/Row draws its primary as the outline). */
+const filled = (main: HTMLElement) => [...main.querySelectorAll<HTMLElement>('button[data-variant="primary"]')].filter((button) => !button.closest("[data-row]"));
 
 test("with several lines and none selected, no line's action is filled", async () => {
   show(() => [held(1), held(2), held(3)]);
@@ -69,25 +65,24 @@ test("with several lines and none selected, no line's action is filled", async (
   expect(filled(main)).toHaveLength(0);
 });
 
-test("selecting a line fills its action and no other: at most one filled button on the screen", async () => {
+test("selecting a line fills no button: its action is the same weight as every other line's", async () => {
   const user = userEvent.setup();
   show(() => [held(1), held(2), held(3)]);
   const second = await screen.findByRole("group", { name: "Close 'Send spine option 2'?" });
   await user.click(within(second).getByRole("button", { name: "Close it" }));
   const marked = [...document.body.querySelectorAll("[data-row][data-selected]")];
   expect(marked.length).toBeLessThanOrEqual(1);
-  expect(filled(document.body).length).toBeLessThanOrEqual(1);
-  for (const button of filled(document.body)) expect(second).toContainElement(button);
-});
-
-test("the empty Today with a setup line has no filled button: Continue setup is tonal", async () => {
-  show(() => [], { "GET status": () => statusFixture({}, { ai: { state: "not_set_up", detail: null } }) });
-  const setup = await screen.findByRole("button", { name: "Continue setup" });
-  expect(setup).toHaveAttribute("data-tonal");
   expect(filled(document.body)).toHaveLength(0);
 });
 
-test("the 'N new · Show' bar's button is tonal, so a screen waiting on new lines still has no extra filled button", async () => {
+test("the empty Today with a setup line has no filled button: Continue setup is a secondary action", async () => {
+  show(() => [], { "GET status": () => statusFixture({}, { ai: { state: "not_set_up", detail: null } }) });
+  const setup = await screen.findByRole("button", { name: "Continue setup" });
+  expect(setup).toHaveAttribute("data-variant", "secondary");
+  expect(filled(document.body)).toHaveLength(0);
+});
+
+test("the 'N new · Show' bar's button is a secondary action, so a screen waiting on new lines still has no extra filled button", async () => {
   const user = userEvent.setup();
   let lines = [held(1), held(2)];
   const { refresh } = show(() => lines);
@@ -97,6 +92,6 @@ test("the 'N new · Show' bar's button is tonal, so a screen waiting on new line
   lines = [held(1), held(2), held(3)];
   await refresh();
   const bar = await screen.findByRole("button", { name: "Show 1 new item" });
-  expect(bar).toHaveAttribute("data-tonal");
+  expect(bar).toHaveAttribute("data-variant", "secondary");
   expect(filled(document.body)).toHaveLength(0);
 });

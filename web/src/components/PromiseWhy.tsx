@@ -9,6 +9,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { useWords } from "../lib/wording";
+import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { OriginLink } from "./Origin";
 import styles from "./PromiseWhy.module.css";
@@ -322,12 +323,12 @@ export function NewDate(props: { label: string; value: string; onSave: (due: str
       </label>
       <input id={id} type="date" autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!value || value === props.value}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!value || value === props.value}>
           {t("promise.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );

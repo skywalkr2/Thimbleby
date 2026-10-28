@@ -72,7 +72,7 @@ test("To-dos has the filter beside its heading, and a side shows its own to-dos 
   renderApp(<OpenItems />);
   expect(await screen.findByText("Water the beans")).toBeInTheDocument();
   const heading = screen.getByRole("heading", { name: "To-dos and questions" });
-  expect(heading.parentElement).toContainElement(await screen.findByRole("radiogroup", { name: "Show" }));
+  expect(heading.closest("[data-page-header]")).toContainElement(await screen.findByRole("radiogroup", { name: "Show" }));
   await user.click(screen.getByRole("radio", { name: "Personal" }));
   await waitFor(() => expect(screen.queryByText("Quote the sofa")).toBeNull());
   expect(screen.getByText("Water the beans")).toBeInTheDocument();
@@ -217,7 +217,7 @@ test("What changed has the control beside its heading for a person with a side, 
   fakeApi({ ...changesRoutes, ...withSide });
   const first = renderApp(<WhatChanged />);
   const heading = await screen.findByRole("heading", { name: "What changed" });
-  expect(await within(heading.parentElement as HTMLElement).findByRole("radiogroup", { name: "Show" })).toBeInTheDocument();
+  expect(await within(heading.closest("[data-page-header]") as HTMLElement).findByRole("radiogroup", { name: "Show" })).toBeInTheDocument();
   first.unmount();
   fakeApi({ ...changesRoutes, ...justMe });
   renderApp(<WhatChanged />);

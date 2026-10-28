@@ -16,7 +16,7 @@ import { problemLines } from "../lib/problem-lines";
 import { parseView, type CoreView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
-
+import { Button, ButtonLink } from "../ui/Button";
 const VIEW_LABEL: Record<CoreView, string> = {
   today: "nav.home",
   schedule: "schedule.title",
@@ -178,21 +178,21 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           </p>
         )}
         <div className="row-end">
-          <button type="button" className="btn quiet" onClick={props.onClose}>
+          <Button variant="quiet" onClick={props.onClose}>
             {t("action.close")}
-          </button>
-          <button type="button" className={`btn${mailIsMain ? "" : " primary"}`} disabled={!ready} onClick={() => void copy()}>
+          </Button>
+          <Button variant={mailIsMain ? "secondary" : "primary"} disabled={!ready} onClick={() => void copy()}>
             {t("feedback.copy")}
-          </button>
+          </Button>
           {mailIsMain &&
             (link ? (
-              <a className="btn primary" href={link}>
+              <ButtonLink variant="primary" href={link}>
                 {t("feedback.mail")}
-              </a>
+              </ButtonLink>
             ) : (
-              <button type="button" className="btn primary" disabled>
+              <Button variant="primary" disabled>
                 {t("feedback.mail")}
-              </button>
+              </Button>
             ))}
         </div>
       </form>

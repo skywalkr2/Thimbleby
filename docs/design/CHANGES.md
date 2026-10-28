@@ -1027,6 +1027,21 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 259. The shared components: one Button, Row, PageHeader, EmptyState, and the link and type tokens (2026-10-28; sweep batch V1, VC01, VC02, VC03, VC04, VC08)
+
+| Where | Before | Now |
+|---|---|---|
+| Button (7.12) | The shared button and a second global `.btn` class on 300 buttons, with a tonal row action and a filled one for the line the cursor was on; "ghost" buttons; a disabled primary read as any disabled button and its reason sat under it | One `Button` (and `ButtonLink`): primary solid, secondary outline, quiet text; a row's actions are never solid; a disabled primary keeps its weight with the reason beside it; every `.btn` moved onto it |
+| Row (7.14) | A fixed 128px column for a mark, empty on most rows, in the component and in four local copies (Today's held and learned lines, the loading rows, the older `line` rows) | No column: a leading slot only when there is a control or dot for it, the mark in the title's line, 13px meta, a soft tint and a bar for the cursor's row; Today's held and learned lines, the loading rows, templates, scheduled work, outside edits and working copies are rows of the component |
+| Headers (7.12) | Each screen drew its own `.heading` with the title, the side filter, buttons and filter groups on one row | `PageHeader` with an underlined `TabStrip` and `FilterChip`s under the title; 21 screens moved onto it; the section headings inside Settings and the setup steps keep the older `heading` layout |
+| Empty states (7.12) | About 90 grey sentences in `<p class="empty">` and rail variants (a few of them with a button) | One `EmptyState`: a 40px icon, a title, one sentence at most 44 characters wide, one action |
+| Links and type (7.12) | A link color that was underlined by night and not by day in the rail; 12px help and meta text on most screens; row titles at weight 500 by day | One `--link`, underlined except a row's title and a rail link alone; `--text-meta` (13px) for meta and help; `--text-section` (16px) for section titles; row titles 600 in both themes |
+| Where the cursor starts (7.1) | Settings, Handled for you, How the assistant is doing and the Add-ons catalog form put the cursor in a field when they opened | The cursor is on the heading; guarded by `web/e2e/guards.spec.ts` |
+
+Built: `web/src/ui/*.test.tsx`, `web/src/theme/dayMode.test.ts`, and the guards in `web/e2e/guards.spec.ts`. Both fictional
+workspaces gain a person and a project with very long names and a list of forty values; the browser tests' layout server adds
+forty to-dos under its long-named project.
+
 ## 258. Setup's checks and words: a connection is tried first, one privacy question, no model names, one clock (2026-10-28; sweep batch 2b, X07, X08, X09, X10, X11, X15, X16)
 
 | Where | Before | Now |

@@ -1,6 +1,5 @@
 /* The calendar page: a bar of controls, then the day, week or month, with an entry's details beside it. Nothing here is wider
    than its column: titles wrap, a day's columns share the room, and a month cell shrinks to a count and dots. */
-.tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); min-width: 0; }
 .nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .back svg { transform: rotate(180deg); }

@@ -47,7 +47,10 @@ import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
 import { Skeleton } from "../ui/Skeleton";
 import { useFocusAfterRender } from "../lib/focus-after-render";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
+import { Pill } from "../ui/Pill";
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t, has } = useWords();
   const { kind, id } = props;
@@ -155,33 +158,36 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
-      <div>
-        <button type="button" className="btn quiet small" onClick={props.onBack}>
-          {t("record.back")}
-        </button>
-      </div>
-      <div className="heading">
-        <div>
-          {!isSide && !isSelf && <span className="kind k-review">{justMe && kind === "project" ? t("record.kind.area") : readableTail(kind)}</span>}
-          <h1 id="record-title">{heading}</h1>
-        </div>
-        {data && (
-          <div className="acts">
-            <Offers kind={kind} id={id} />
-            {message.options && (
-              <button type="button" className="btn primary" onClick={() => message.ask("reply")}>
-                {t("acts.reply")}
-              </button>
-            )}
-            {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
-            {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
-            {invite.buttons}
-            {eventActs.menu.length > 0 && <RowMenu label={t("acts.event.menu")} actions={eventActs.menu} />}
-            {waitingOnYou && <AnswerOnToday question={id} />}
-            {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        id="record-title"
+        title={heading}
+        kind={!isSide && !isSelf ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : readableTail(kind)}</Pill> : undefined}
+        crumb={
+          <Button variant="quiet" size="sm" onClick={props.onBack}>
+            {t("record.back")}
+          </Button>
+        }
+        primary={
+          data && message.options ? (
+            <Button variant="primary" onClick={() => message.ask("reply")}>
+              {t("acts.reply")}
+            </Button>
+          ) : undefined
+        }
+        actions={
+          data ? (
+            <>
+              <Offers kind={kind} id={id} />
+              {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
+              {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
+              {invite.buttons}
+              {eventActs.menu.length > 0 && <RowMenu label={t("acts.event.menu")} actions={eventActs.menu} />}
+              {waitingOnYou && <AnswerOnToday question={id} />}
+              {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
+            </>
+          ) : undefined
+        }
+      />
       {data && kind === "question" && questionMenu.form}
       {data && message.form}
       {data && versions.form}
@@ -198,12 +204,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
       {record.isError && (
-        <p className="empty">
-          {t("record.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void record.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("record.load_failed")} action={{ label: t("action.try_again"), onClick: () => void record.refetch() }} />
       )}
       {data && (
         <div className="record-grid">
@@ -236,9 +237,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             <div className="heading">
               <h3 id="record-details">{t(isSelf ? "record.details_you" : "record.details")}</h3>
               {(drawer || offered.length > 0) && !editing && (
-                <button type="button" className="btn" ref={editButton} onClick={() => setEditing(true)}>
+                <Button ref={editButton} onClick={() => setEditing(true)}>
                   {t("record.edit")}
-                </button>
+                </Button>
               )}
             </div>
             {editing && drawer && kind === "person" && <PersonDrawer person={drawer as S["PersonView"]} onClose={stopEditing} />}
@@ -326,9 +327,7 @@ function Offers(props: { kind: string; id: string }) {
   }));
   return (
     <div className="acts" ref={box} role="group" aria-label={t("record.actions")}>
-      <button
-        type="button"
-        className="btn primary"
+      <Button variant="primary"
         data-key="primary"
         onClick={(e) => {
           const button = e.currentTarget;
@@ -336,7 +335,7 @@ function Offers(props: { kind: string; id: string }) {
         }}
       >
         {primary.label}
-      </button>
+      </Button>
       <RowMenu label={t("record.actions")} actions={menu} />
       {review}
     </div>
@@ -442,12 +441,12 @@ function DetailsForm(props: {
       )}
       <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onDone}>
+        <Button variant="quiet" onClick={props.onDone}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!dirty || saving}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!dirty || saving}>
           {t("record.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );

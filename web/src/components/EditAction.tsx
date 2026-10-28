@@ -10,7 +10,7 @@ import { saidRepeat, useRepeatCheck } from "../lib/repeat";
 import { useWords } from "../lib/wording";
 import { EffortField } from "./EffortField";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 type Target = Pick<S["OpenActionView"], "id" | "version" | "text" | "due" | "repeat" | "effort_minutes">;
 
 export function useEditAction(action: Target, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
@@ -108,19 +108,19 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
         {repeatChanged && read?.status === "off_start" && read.start && (
           <>
             {t("repeat.off_start", { date: day(due), first: day(read.start) })}{" "}
-            <button type="button" className="btn quiet" onClick={() => setDue(read.start ?? "")}>
+            <Button variant="quiet" onClick={() => setDue(read.start ?? "")}>
               {t("repeat.use_first", { first: day(read.start) })}
-            </button>
+            </Button>
           </>
         )}
       </p>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={close}>
+        <Button variant="quiet" onClick={close}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!words || !changed || !repeatOk}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!words || !changed || !repeatOk}>
           {t("open.edit.save")}
-        </button>
+        </Button>
       </div>
     </form>
   ) : null;

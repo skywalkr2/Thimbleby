@@ -8,7 +8,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 export interface VersionActs {
   /** The choices as menu entries; none when the record isn't a file in a watched folder. */
   entries: MenuAction[];
@@ -79,12 +79,12 @@ function SameForm(props: { others: S["VersionFile"][]; onCancel: () => void; onS
         ))}
       </select>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("versions.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!chosen || busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!chosen || busy}>
           {t("versions.same_go")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -127,9 +127,9 @@ export function CurrentCopy(props: { question: string; copies: S["Option"][] }) 
       </select>
       <span className="hint">{t("versions.current_note")}</span>
       <div className="row-end">
-        <button type="submit" className="btn primary" data-key="primary" disabled={!file || busy}>
+        <Button variant="primary" type="submit" data-key="primary" disabled={!file || busy}>
           {t("versions.current_go")}
-        </button>
+        </Button>
       </div>
     </form>
   );

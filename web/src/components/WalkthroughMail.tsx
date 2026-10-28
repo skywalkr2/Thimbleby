@@ -131,9 +131,9 @@ function SortingSwitch() {
       {problem && (
         <div className="problem-note" role="alert">
           <p>{problem}</p>
-          <button type="button" className="btn" onClick={() => void change(again)}>
+          <Button onClick={() => void change(again)}>
             {t("action.try_again")}
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -267,9 +267,9 @@ function SourceSides(props: { sources: Source[]; group?: boolean; what?: string;
             })}
             {failed[0].detail ? ` ${failed[0].detail}` : ""}
           </p>
-          <button type="button" className="btn" onClick={retry}>
+          <Button onClick={retry}>
             {t("action.try_again")}
-          </button>
+          </Button>
         </div>
       )}
     </fieldset>
@@ -300,9 +300,9 @@ function SignInSides(props: { sources: Source[]; what: string; personal: string 
       <SourceSides sources={props.sources} group what={props.what} personal={props.personal} sides={props.sides} />
       {props.sources.length > 1 && (
         <div>
-          <button type="button" className="btn quiet" onClick={() => setApart(true)}>
+          <Button variant="quiet" onClick={() => setApart(true)}>
             {t("walkthrough.mail.sides.separately")}
-          </button>
+          </Button>
         </div>
       )}
     </>
@@ -319,9 +319,9 @@ function SetAsideLine() {
     <div className="field" data-set-aside-line="">
       <p className="sub">
         {t(on ? "walkthrough.mail.aside.on" : "walkthrough.mail.aside.off")} <span aria-hidden="true">·</span>{" "}
-        <button type="button" className="btn quiet" aria-expanded={open} onClick={() => setOpen((x) => !x)}>
+        <Button variant="quiet" aria-expanded={open} onClick={() => setOpen((x) => !x)}>
           {t("walkthrough.mail.aside.change")}
-        </button>
+        </Button>
       </p>
       {open && <SortingSwitch />}
     </div>
@@ -426,9 +426,9 @@ export function WalkthroughMail(props: {
       )}
       {folded && (
         <div className="field">
-          <button type="button" className="btn quiet" aria-expanded={false} onClick={() => setRevealed(true)}>
+          <Button variant="quiet" aria-expanded={false} onClick={() => setRevealed(true)}>
             {t("walkthrough.mail.connect_another")}
-          </button>
+          </Button>
         </div>
       )}
       {!folded && services.length > 0 && (
@@ -456,9 +456,9 @@ export function WalkthroughMail(props: {
             {t(packs.isError ? "walkthrough.mail.load_failed" : "walkthrough.mail.none")}
           </p>
           <div className="row-end">
-            <button type="button" className="btn" aria-describedby="mail-none" onClick={() => props.onChooseSource(null)}>
+            <Button aria-describedby="mail-none" onClick={() => props.onChooseSource(null)}>
               {t("walkthrough.mail.connect_one")}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -467,14 +467,12 @@ export function WalkthroughMail(props: {
           <p>{t(canRestart ? "walkthrough.mail.restart_why" : "walkthrough.mail.restart_manual")}</p>
           {canRestart && (
             <div className="row-end">
-              <button
-                type="button"
-                className="btn primary"
+              <Button variant="primary"
                 disabled={restart.busy || restart.waiting}
                 onClick={() => void restart.now()}
               >
                 {restart.waiting ? t("walkthrough.mail.restarting") : t("walkthrough.mail.restart")}
-              </button>
+              </Button>
             </div>
           )}
           {restart.phase === "refused" && restart.problem && (
@@ -494,9 +492,9 @@ export function WalkthroughMail(props: {
       {!folded && services.length > 0 && (
         <div className="field">
           <div className="row-end">
-            <button type="button" className="btn" onClick={() => props.onChooseSource(null)}>
+            <Button onClick={() => props.onChooseSource(null)}>
               {t("walkthrough.mail.other")}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -517,13 +515,11 @@ export function WalkthroughMail(props: {
             {others.map((source) => (
               <li key={source.id}>
                 <span>{source.label}</span>
-                <button
-                  type="button"
-                  className="btn quiet"
+                <Button variant="quiet"
                   onClick={() => void save((fingerprint) => api.removeSource(source.id, fingerprint), t("sources.removed_toast", { label: source.label }))}
                 >
                   {t("sources.remove")} <span className="sr">{source.label}</span>
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -660,13 +656,11 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               />
               {props.canUseMailbox && (
                 <div>
-                  <button
-                    type="button"
-                    className="btn quiet"
+                  <Button variant="quiet"
                     onClick={() => document.getElementById(MAIL_GUIDE_PICK)?.focus()}
                   >
                     {t("walkthrough.mail.or_mailbox")}
-                  </button>
+                  </Button>
                 </div>
               )}
             </>
@@ -674,9 +668,9 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
           {keySaved && (
             <div role="status">
               <p className="sub">{t("walkthrough.mail.key_saved")}</p>
-              <button type="button" className="btn primary" disabled={busy} onClick={() => void connect()}>
+              <Button variant="primary" disabled={busy} onClick={() => void connect()}>
                 {t("action.try_again")}
-              </button>
+              </Button>
             </div>
           )}
           {state === "ready" &&
@@ -691,31 +685,27 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
         </div>
         <div className="acts">
           {state === "not_installed" && service.installable && (
-            <button
-              type="button"
-              className="btn primary"
+            <Button variant="primary"
               disabled={busy || after}
               aria-describedby={`${base}-state`}
               onClick={() => void connect()}
             >
               {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
-            </button>
+            </Button>
           )}
           {state === "not_installed" && !service.installable && (
-            <button type="button" className="btn" onClick={props.onOpenAddons}>
+            <Button onClick={props.onOpenAddons}>
               {t("walkthrough.mail.get_it")}
-            </button>
+            </Button>
           )}
           {state === "off" && (
-            <button
-              type="button"
-              className="btn primary"
+            <Button variant="primary"
               disabled={busy || after}
               aria-describedby={`${base}-state`}
               onClick={() => void connect()}
             >
               {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -777,10 +767,8 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
             </p>
           )}
           <div className="row-end">
-            <button
-              type="button"
+            <Button variant="primary"
               ref={button}
-              className="btn primary"
               disabled={busy}
               aria-label={resumed ? undefined : t(again ? "sign_in.sign_in_again_named" : "sign_in.sign_in_named", { label: item.label })}
               onClick={() => {
@@ -795,7 +783,7 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
                   : resumed
                     ? t("walkthrough.mail.sign_in_to", { service: resumed })
                     : t(again ? "sign_in.sign_in_again" : "sign_in.sign_in")}
-            </button>
+            </Button>
           </div>
         </>
       )}

@@ -10,7 +10,7 @@ export interface IconButtonProps extends Omit<AriaButtonProps, "children" | "cla
   /** Required: what the button does, in words. */
   label: string;
   size?: "md" | "sm";
-  variant?: "ghost" | "secondary";
+  variant?: "quiet" | "secondary";
   /** Show the tooltip; turn off where the label is also visible beside it. */
   tooltip?: boolean;
   className?: string;
@@ -18,7 +18,7 @@ export interface IconButtonProps extends Omit<AriaButtonProps, "children" | "cla
 }
 
 export function IconButton(props: IconButtonProps) {
-  const { icon, label, size = "md", variant = "ghost", tooltip = true, className, iconSize, ...rest } = props;
+  const { icon, label, size = "md", variant = "quiet", tooltip = true, className, iconSize, ...rest } = props;
   const classes = [styles.btn, styles[variant], styles["icon-only"], size === "sm" ? styles.sm : "", className ?? ""].filter(Boolean).join(" ");
   const button = (
     <AriaButton {...rest} className={classes} aria-label={label}>

@@ -37,7 +37,8 @@ import { AddonSecrets } from "./KeptSecrets";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
 import { DeveloperSettings } from "./DeveloperSettings";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
 type Installed = S["InstalledPackView"];
@@ -54,9 +55,9 @@ export function Addons(props: { onBack?: () => void }) {
           {t("addons.title")}
         </h2>
         {props.onBack && (
-          <button type="button" className="btn" onClick={props.onBack}>
+          <Button onClick={props.onBack}>
             {t("addons.back")}
-          </button>
+          </Button>
         )}
       </div>
       <p className="hint">{t("addons.intro")}</p>
@@ -195,9 +196,9 @@ export function RestartNowButton() {
   return (
     <>
       {" "}
-      <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+      <Button variant="quiet" size="sm" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
         {t("restart.now")}
-      </button>
+      </Button>
     </>
   );
 }
@@ -206,17 +207,15 @@ export function RestartNowButton() {
 function SwitchButton(props: { on: boolean; label: string; busy: boolean; id?: string; onRun: () => void }) {
   const { t } = useWords();
   return (
-    <button
-      type="button"
+    <Button variant="primary"
       id={props.id}
-      className="btn primary"
       data-key="primary"
       disabled={props.busy}
       aria-label={t(props.on ? "addons.switch_off_named" : "addons.switch_on_named", { name: props.label })}
       onClick={props.onRun}
     >
       {t(props.on ? "addons.switch_off" : "addons.switch_on")}
-    </button>
+    </Button>
   );
 }
 
@@ -229,12 +228,7 @@ function Loaded(props: {
   if (query.isPending) return <Skeleton />;
   if (query.isError || !query.data) {
     return (
-      <p className="empty">
-        {t("addons.load_failed")}{" "}
-        <button type="button" className="btn" onClick={() => void query.refetch()}>
-          {t("action.try_again")}
-        </button>
-      </p>
+      <EmptyState icon="alert" text={t("addons.load_failed")} action={{ label: t("action.try_again"), onClick: () => void query.refetch() }} />
     );
   }
   return <>{props.children(query.data)}</>;
@@ -257,7 +251,7 @@ function Available(props: { view: S["PacksView"] }) {
   return (
     <div className="addons-body">
       {empty ? (
-        <p className="empty">{empty}</p>
+        <EmptyState text={empty} />
       ) : (
         <ul className="queue">
           {groupByFile(view.available).map((slots) =>
@@ -453,29 +447,25 @@ function PackRow(props: {
         </div>
         <div className="acts">
           {!installed && pack.installable && !change.installed && offerInstall && (
-            <button
-              type="button"
+            <Button variant="primary"
               id={`pack-install-${index}`}
-              className="btn primary"
               data-key="primary"
               disabled={change.busy !== null}
               aria-label={t("addons.install_named", { name: pack.name })}
               onClick={() => void change.install()}
             >
               {t(change.busy === "install" ? "addons.installing" : "addons.install")}
-            </button>
+            </Button>
           )}
           {!installed && !pack.installable && offerInstall && (
-            <button
-              type="button"
+            <Button variant="primary"
               id={`pack-get-${index}`}
-              className="btn primary"
               data-key="primary"
               aria-label={t("addons.get_named", { name: pack.name })}
               onClick={props.onGet}
             >
               {t("addons.get")}
-            </button>
+            </Button>
           )}
           {installed && !pack.enabled && (
             <SwitchButton on={false} label={pack.name} busy={power.busy} id={`pack-switch-${index}`} onRun={() => void power.run(true)} />
@@ -553,29 +543,25 @@ function PackGroup(props: {
         </div>
         <div className="acts">
           {!anyInstalled && pack.installable && !change.installed && (
-            <button
-              type="button"
+            <Button variant="primary"
               id={`${base}-install`}
-              className="btn primary"
               data-key="primary"
               disabled={change.busy !== null}
               aria-label={t("addons.install_named", { name: names.join(", ") })}
               onClick={() => void change.install()}
             >
               {t(change.busy === "install" ? "addons.installing" : "addons.install")}
-            </button>
+            </Button>
           )}
           {!anyInstalled && !pack.installable && (
-            <button
-              type="button"
+            <Button variant="primary"
               id={`${base}-get`}
-              className="btn primary"
               data-key="primary"
               aria-label={t("addons.get_named", { name: names.join(", ") })}
               onClick={() => props.onGet(first.index)}
             >
               {t("addons.get")}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -607,9 +593,9 @@ function GetIt(props: { pack: Pack; onClose: () => void }) {
         )}
       </div>
       <div className="row-end">
-        <button type="button" className="btn primary" onClick={props.onClose}>
+        <Button variant="primary" onClick={props.onClose}>
           {t("action.close")}
-        </button>
+        </Button>
       </div>
     </ModalPanel>
   );
@@ -631,9 +617,9 @@ function CopyLine(props: { text: string; label: string }) {
     <div className="copy-line">
       <div className="copy-row">
         <code className="command">{props.text}</code>
-        <button type="button" className="btn" aria-label={props.label} onClick={() => void copy()}>
+        <Button aria-label={props.label} onClick={() => void copy()}>
           {t("addons.copy")}
-        </button>
+        </Button>
       </div>
       {blocked && (
         <p className="problem-note" role="alert">
@@ -698,7 +684,7 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
           type="text"
           inputMode="url"
           autoComplete="off"
-          autoFocus
+          autoFocus={!props.first}
           value={address}
           disabled={busy}
           aria-describedby={`${id}-hint`}
@@ -715,13 +701,13 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
       )}
       <div className="row-end">
         {!props.first && props.onDone && (
-          <button type="button" className="btn quiet" onClick={props.onDone}>
+          <Button variant="quiet" onClick={props.onDone}>
             {t("action.cancel")}
-          </button>
+          </Button>
         )}
-        <button type="submit" className="btn primary" disabled={!address.trim() || busy}>
+        <Button variant="primary" type="submit" disabled={!address.trim() || busy}>
           {t(busy ? "addons.catalog_adding" : "addons.catalog_add")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -763,9 +749,9 @@ function Catalog(props: { feeds: Feed[] }) {
     <section className="catalog" aria-labelledby="catalog-title">
       <div className="heading">
         <h3 id="catalog-title">{t("addons.catalog")}</h3>
-        <button type="button" className="btn" disabled={busy} onClick={() => void refresh()}>
+        <Button disabled={busy} onClick={() => void refresh()}>
           {t(busy ? "addons.refreshing" : "addons.refresh")}
-        </button>
+        </Button>
       </div>
       {problem && (
         <p className="problem-note" role="alert">
@@ -785,9 +771,9 @@ function Catalog(props: { feeds: Feed[] }) {
           }}
         />
       ) : (
-        <button type="button" className="btn quiet" ref={addButton} onClick={() => setAdding(true)}>
+        <Button variant="quiet" ref={addButton} onClick={() => setAdding(true)}>
           {t("addons.catalog_add_another")}
-        </button>
+        </Button>
       )}
     </section>
   );
@@ -810,9 +796,9 @@ function FeedLine(props: { feed: Feed; busy: boolean; onRemove: () => void }) {
     <li className="feed">
       <span className="hint">{line}</span>
       {feed.removable && (
-        <button type="button" className="btn quiet small" disabled={props.busy} aria-label={t("addons.catalog_remove_named", { domain: feed.domain })} onClick={props.onRemove}>
+        <Button variant="quiet" size="sm" disabled={props.busy} aria-label={t("addons.catalog_remove_named", { domain: feed.domain })} onClick={props.onRemove}>
           {t("addons.catalog_remove")}
-        </button>
+        </Button>
       )}
       {feed.error && <p className="problem-note">{t("addons.feed.error", { error: feed.error })}</p>}
       {feed.notes.length > 0 && (
@@ -837,7 +823,7 @@ const restartNeeded = (pack: Pack, installed: Installed[]) => {
 
 function InstalledList(props: { items: Installed[] }) {
   const { t } = useWords();
-  if (props.items.length === 0) return <p className="empty">{t("addons.installed.empty")}</p>;
+  if (props.items.length === 0) return <EmptyState text={t("addons.installed.empty")} />;
   return (
     <ul className="queue">
       {groupByFile(props.items).map((slots) =>

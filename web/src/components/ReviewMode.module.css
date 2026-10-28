@@ -12,5 +12,5 @@
 }
 .bar > * { width: 100%; white-space: normal; height: auto; min-height: var(--tap-min); }
 /* The bar has Looks good, so the row's own copy of it is not shown beside it. An item with buttons of its own keeps them. */
-.item:not(.own) :global(.acts .btn.primary) { display: none; }
+.item:not(.own) :global(.acts [data-variant="primary"]) { display: none; }
 .single { grid-template-columns: minmax(0, 1fr); }

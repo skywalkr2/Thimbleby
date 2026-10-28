@@ -162,7 +162,7 @@ test("the queue is one ranked list in the engine's order, each line starting wit
   const lines = Array.from(document.querySelectorAll("[data-queue-line]")).map((el) => el.getAttribute("data-queue-line"));
   expect(lines).toEqual(["decision", "review", "send"]);
   // The groups head the lists, in the engine's order.
-  expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Decide", "Review", "Send and follow up"]);
+  expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.childNodes[0].textContent)).toEqual(["Decide", "Review", "Send and follow up"]);
   expect(within(row("decision")).getByRole("button", { name: "Answer" })).toBeInTheDocument();
   expect(within(row("review")).getByRole("button", { name: "Look over" })).toBeInTheDocument();
   expect(within(row("send")).getByRole("button", { name: "Review & copy" })).toBeInTheDocument();
@@ -897,7 +897,7 @@ test("an add-on's line sits in the group it names, after the queue's own lines, 
   ]);
   expect(review_[1]).toHaveTextContent("from Publishing");
   // A line naming no group is under "More for today", at the end.
-  const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+  const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.childNodes[0].textContent);
   expect(headings).toEqual(["Decide", "Review", "More for today"]);
   expect(within(group("More for today")).getByText("Loose end")).toBeInTheDocument();
 });

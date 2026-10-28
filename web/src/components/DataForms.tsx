@@ -20,7 +20,8 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { ItemFields } from "./SettingRow";
 import { Skeleton } from "../ui/Skeleton";
 import { Icon } from "../ui/Icon";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type Form = S["DataFormView"];
 type DataFile = S["DataFile"];
 
@@ -90,14 +91,9 @@ function FormFiles(props: { form: Form; project: string }) {
       {files.isPending ? (
         <Skeleton />
       ) : files.isError ? (
-        <p className="empty">
-          {t("dataform.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void files.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("dataform.load_failed")} action={{ label: t("action.try_again"), onClick: () => void files.refetch() }} />
       ) : files.data.length === 0 ? (
-        <p className="empty">{t("dataform.none")}</p>
+        <EmptyState text={t("dataform.none")} />
       ) : (
         <ul className="queue">
           {files.data.map((file) => (
@@ -139,16 +135,14 @@ function FormFiles(props: { form: Form; project: string }) {
         />
       )}
       <div className="row-end">
-        <button
-          type="button"
+        <Button
           id={newButton}
-          className="btn"
           aria-expanded={naming}
           aria-label={t("dataform.new_named", { label: form.label })}
           onClick={() => setNaming(true)}
         >
           {t("dataform.new")}
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -198,17 +192,15 @@ function FileRow(props: { form: Form; file: DataFile; project: string; editing: 
           )}
         </div>
         <div className="acts">
-          <button
-            type="button"
+          <Button variant="primary"
             id={openId}
-            className="btn primary"
             data-key="primary"
             aria-expanded={props.editing}
             aria-label={t("dataform.open_named", { file: file.file })}
             onClick={props.onOpen}
           >
             {t("dataform.open")}
-          </button>
+          </Button>
           <RowMenu label={file.file} actions={actions} />
         </div>
       </div>
@@ -271,12 +263,12 @@ function NewFileName(props: { taken: string[]; onCancel: () => void; onStart: (f
         )}
       </div>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onCancel}>
+        <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!ready}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!ready}>
           {t("dataform.start")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -382,12 +374,12 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
         </p>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!canSave} aria-label={t("dataform.save_named", { file })}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!canSave} aria-label={t("dataform.save_named", { file })}>
           {t(busy ? "sources.saving" : "settings.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -431,9 +423,9 @@ function FormPreview(props: { form: Form; file: string; project: string; enabled
     <section className="data-file-preview" aria-labelledby={titleId}>
       <div className="heading">
         <h6 id={titleId}>{t("dataform.preview_title")}</h6>
-        <button type="button" className="btn quiet" disabled={!enabled || shown.isFetching} onClick={() => void shown.refetch()}>
+        <Button variant="quiet" disabled={!enabled || shown.isFetching} onClick={() => void shown.refetch()}>
           {t("dataform.preview_refresh")}
-        </button>
+        </Button>
       </div>
       {body}
     </section>

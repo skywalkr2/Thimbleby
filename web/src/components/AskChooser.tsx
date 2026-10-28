@@ -9,7 +9,7 @@ import { NewPersonForm } from "./NextSteps";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu } from "./RowMenu";
 import { Drawer } from "../ui/Drawer";
-
+import { Button } from "../ui/Button";
 /** Where an unowned action came from, so it can be added to another action instead of being given an owner. */
 export interface FoldAt {
   changeset: string;
@@ -60,13 +60,13 @@ export function AskChooser(props: {
       />
       {foldInto && <span className="hint">{t("ask.fold_hint")}</span>}
       <div className="row-end">
-        <button type="button" className="btn primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
+        <Button variant="primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
           {word}
-        </button>
+        </Button>
         {foldInto && (
-          <button type="button" className="btn" onClick={fold}>
+          <Button onClick={fold}>
             {t("ask.fold", { action: foldInto.text })}
-          </button>
+          </Button>
         )}
         <RowMenu
           label={label}

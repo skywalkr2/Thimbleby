@@ -28,6 +28,8 @@ import { TimeGrid, type DayEntries } from "./ScheduleGrid";
 import { MonthGrid } from "./ScheduleMonth";
 import styles from "./Schedule.module.css";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 /** How far, in pixels, a touch must travel sideways to count as a swipe. */
 const SWIPE_MIN = 60;
 /** The room, in pixels, the Week and Work week columns need (an hour column and about 96px for each day); in less the
@@ -187,15 +189,18 @@ export function Schedule() {
 
   return (
     <section className="panel-section" aria-labelledby="schedule-title" ref={region}>
-      <div className="heading">
-        <h1 id="schedule-title">{t("schedule.title")}</h1>
-        <div className={styles.tools}>
-          {/* Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. */}
-          {data && <AddMeeting today={data.today} />}
-          {/* A connected calendar that can add events after the person's yes offers a new event on it. */}
-          {data && <NewEvent today={data.today} />}
-        </div>
-      </div>
+      <PageHeader
+        id="schedule-title"
+        title={t("schedule.title")}
+        actions={
+          <>
+            {/* Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. */}
+            {data && <AddMeeting today={data.today} />}
+            {/* A connected calendar that can add events after the person's yes offers a new event on it. */}
+            {data && <NewEvent today={data.today} />}
+          </>
+        }
+      />
       <div className={styles.bar}>
         <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
           <IconButton icon="chevron" label={back} className={styles.back} variant="secondary" onPress={() => go(-1)} />
@@ -217,12 +222,7 @@ export function Schedule() {
         {page.isPending ? (
           <Skeleton />
         ) : page.isError || !data ? (
-          <p className="empty">
-            {t("schedule.load_failed")}{" "}
-            <button type="button" className="btn" onClick={() => void page.refetch()}>
-              {t("action.try_again")}
-            </button>
-          </p>
+          <EmptyState icon="alert" text={t("schedule.load_failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
         ) : (
           <div className={styles.frame} data-swipe="" data-view={view} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
             {view === "month" ? (

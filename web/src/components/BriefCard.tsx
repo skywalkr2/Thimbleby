@@ -311,7 +311,7 @@ function Goals(props: { goals: NonNullable<Brief["goals"]> }) {
                   placeholder={t("brief.goals.field", { n: n + 1 })}
                   onChange={(e) => setRows(rows.map((r, i) => (i === n ? e.target.value : r)))}
                 />
-                <Button type="button" onClick={() => setRows(rows.filter((_, i) => i !== n))}>
+                <Button onClick={() => setRows(rows.filter((_, i) => i !== n))}>
                   {t("brief.goals.drop", { n: n + 1 })}
                 </Button>
               </li>
@@ -324,14 +324,14 @@ function Goals(props: { goals: NonNullable<Brief["goals"]> }) {
           )}
           <div className={styles.actions}>
             {rows.length < goals.most && (
-              <Button type="button" onClick={() => setRows([...rows, ""])}>
+              <Button onClick={() => setRows([...rows, ""])}>
                 {t("brief.goals.add")}
               </Button>
             )}
             <Button type="submit" variant="primary">
               {t("brief.goals.save")}
             </Button>
-            <Button type="button" onClick={() => setEditing(false)}>
+            <Button onClick={() => setEditing(false)}>
               {t("brief.goals.cancel")}
             </Button>
           </div>
@@ -543,7 +543,7 @@ export function BriefCard(props: {
           {/* The week's briefing is offered until it is used or dismissed; dismissing ends the offer for this week only. */}
           {(form === "monday" || (!data.quiet && others.includes("monday"))) && (
             <Button
-              variant="ghost"
+              variant="quiet"
               onClick={() =>
                 void act(
                   () => api.dismissWeekly(),

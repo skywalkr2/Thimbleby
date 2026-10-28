@@ -50,7 +50,7 @@ import { Header } from "./shell/Header";
 import { Sidebar, useSidebarMode } from "./shell/Sidebar";
 import { useNeedsYouNotices } from "./components/NeedsYouNotices";
 import shell from "./shell/Shell.module.css";
-
+import { Button } from "./ui/Button";
 export function App(props: { rc: S["RuntimeConfig"] }) {
   const live = useLive();
   // What the app is called is read again after any saved change, so a new name shows in the header at once, with no reload.
@@ -374,16 +374,14 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         <main id="main" className={shell.main} tabIndex={-1}>
           {fromSetup && (
             <p className={shell.backToSetup} data-back-to-setup="">
-              <button
-                type="button"
-                className="btn"
+              <Button
                 onClick={() => {
                   setFromSetup(false);
                   openGuide();
                 }}
               >
                 {t("app.back_to_setup")}
-              </button>
+              </Button>
             </p>
           )}
           {handIn && <HandIn onClose={() => setHandIn(false)} />}

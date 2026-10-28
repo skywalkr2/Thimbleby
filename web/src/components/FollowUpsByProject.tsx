@@ -11,7 +11,7 @@ import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
 import { plainTitle } from "../lib/title-dates";
-
+import { Button } from "../ui/Button";
 type Section = S["FollowupSection"];
 
 interface Item {
@@ -182,9 +182,9 @@ function ProjectItems(props: { group: Group; onOpenPerson: (person: string) => v
             <OriginLink origin={item.origin} />
           </div>
           <div className="acts">
-            <button type="button" className="btn" aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
+            <Button aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
               {t("followups.by_project.open")}
-            </button>
+            </Button>
           </div>
         </li>
       ))}

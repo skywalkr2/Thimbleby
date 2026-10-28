@@ -68,7 +68,7 @@ export function LookBack(props: { source: Source; onClose: () => void }) {
         <Button size="sm" variant="primary" disabled={!found || found.count === 0} loading={busy} onClick={() => void confirm()}>
           {t("coverage.look_back.confirm")}
         </Button>
-        <Button size="sm" variant="ghost" onClick={props.onClose}>
+        <Button size="sm" variant="quiet" onClick={props.onClose}>
           {t("coverage.look_back.cancel")}
         </Button>
       </div>

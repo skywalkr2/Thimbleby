@@ -26,7 +26,10 @@ import { useVersionActs } from "./SameDocument";
 import { useAct } from "../lib/act";
 import { useSelection } from "../lib/act-batch";
 import { MailSelectionBar } from "./MailSelection";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
+import { TabStrip } from "../ui/TabStrip";
 type Tab = S["HandledView"]["tab"];
 type Group = S["HandledView"]["group"];
 type Row = S["HandledRow"];
@@ -48,14 +51,14 @@ export function Handled() {
   const [opened, setOpened] = useState<Set<string>>(new Set());
   // Saved mail ticked in either list, to archive, move, label or mark as read together.
   const picked = useSelection();
-  const search = useRef<HTMLInputElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   // What is new here counts from when the person last left this screen.
   useLookedAt("handled");
   useReviewTime("handled");
 
-  // The cursor starts in the search box.
+  // A screen opens with the cursor on its heading, never in a field.
   useEffect(() => {
-    search.current?.focus({ preventScroll: true });
+    heading.current?.focus({ preventScroll: true });
   }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => setQuery(typed.trim()), TYPING_MS);
@@ -84,55 +87,51 @@ export function Handled() {
 
   return (
     <section className="panel-section" aria-labelledby={`${ids}-title`} data-handled="">
-      <div className="heading">
-        <h1 id={`${ids}-title`}>{t("handled.title")}</h1>
-        <SideFilter waiting="handled" />
-        <SegmentedControl
-          label={t("handled.tabs")}
-          options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`, { n: counts ? counts[name] : "…" }) }))}
-          value={tab}
-          onChange={(name) => {
-            setTab(name);
-            setItem(null);
-            picked.clear();
-          }}
-        />
-      </div>
+      <PageHeader
+        id={`${ids}-title`}
+        headingRef={heading}
+        focusable
+        title={t("handled.title")}
+        filters={
+          <>
+            <SegmentedControl
+              label={t("handled.tabs")}
+              options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`, { n: counts ? counts[name] : "…" }) }))}
+              value={tab}
+              onChange={(name) => {
+                setTab(name);
+                setItem(null);
+                picked.clear();
+              }}
+            />
+            <SideFilter waiting="handled" />
+          </>
+        }
+      />
       <p className="hint">{t(`handled.explain.${tab}`)}</p>
       {list.data && <p className="hint">{tn("handled.kept", list.data.kept_days)}</p>}
       <div className={styles.bar}>
         <div className={`field ${styles.search}`}>
           <label htmlFor={`${ids}-search`}>{t("handled.search")}</label>
-          <input id={`${ids}-search`} ref={search} type="search" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
+          <input id={`${ids}-search`} type="search" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
         </div>
         <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />
       </div>
       {kinds.length > 1 || item ? (
-        <div className={`filters ${styles.tabs}`} role="group" aria-label={t("handled.filter")}>
-          <button type="button" aria-pressed={item === null} onClick={() => setItem(null)}>
-            {t("handled.filter.all")}
-          </button>
-          {kinds.map((k) => (
-            <button key={k.item} type="button" aria-pressed={item === k.item} onClick={() => setItem(k.item)}>
-              {t("handled.filter.kind", { kind: t(`handled.item.${k.item}`), n: k.count })}
-            </button>
-          ))}
-        </div>
+        <TabStrip
+          label={t("handled.filter")}
+          value={item ?? ""}
+          onChange={(value) => setItem(value === "" ? null : value)}
+          options={[{ value: "", label: t("handled.filter.all") }, ...kinds.map((k) => ({ value: k.item, label: t("handled.filter.kind", { kind: t(`handled.item.${k.item}`), n: k.count }) }))]}
+        />
       ) : null}
       {picked.selected.size > 0 && <MailSelectionBar records={[...picked.selected]} onClear={picked.clear} />}
       {list.isPending ? (
         <Skeleton />
       ) : list.isError ? (
-        <p className="empty">
-          {t("handled.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void list.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("handled.load_failed")} action={{ label: t("action.try_again"), onClick: () => void list.refetch() }} />
       ) : list.data.groups.length === 0 ? (
-        <p className="empty" role="status">
-          {query ? t("handled.none_match") : side.choice !== "all" ? t("sides.empty.handled", { side: side.named }) : t(`handled.empty.${tab}`)}
-        </p>
+        <EmptyState role="status" text={query ? t("handled.none_match") : side.choice !== "all" ? t("sides.empty.handled", { side: side.named }) : t(`handled.empty.${tab}`)} />
       ) : (
         <div className={styles.groups}>
           {list.data.groups.map((g, index) => {
@@ -166,9 +165,9 @@ export function Handled() {
                     ))}
                     {g.items.length > limit && (
                       <li className="line">
-                        <button type="button" className="btn quiet" onClick={() => setMore((now) => ({ ...now, [key]: (now[key] ?? 0) + pageRows }))}>
+                        <Button variant="quiet" onClick={() => setMore((now) => ({ ...now, [key]: (now[key] ?? 0) + pageRows }))}>
                           {t("handled.show_more", { n: g.items.length - limit })}
-                        </button>
+                        </Button>
                       </li>
                     )}
                   </ul>
@@ -292,9 +291,7 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
           <span className="sub">{why}</span>
         </div>
         <div className="acts">
-          <button
-            type="button"
-            className="btn primary"
+          <Button variant="primary"
             data-key="primary"
             ref={bringButton}
             disabled={busy}
@@ -303,7 +300,7 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
             onClick={() => void (closed ? lookCloser() : aside ? bring() : choose(isWork))}
           >
             {aside ? t("setaside.bring_in") : t("handled.look")}
-          </button>
+          </Button>
           <RowMenu label={item.title} actions={menu} />
         </div>
       </div>
@@ -321,10 +318,8 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
         >
           <span>{t("setaside.bring_in_as")}</span>
           {places.map((side, index) => (
-            <button
+            <Button
               key={side.id}
-              type="button"
-              className="btn"
               ref={index === 0 ? firstPlace : undefined}
               disabled={busy}
               aria-label={t("setaside.bring_in_side_named", { side: side.name, title: item.title })}
@@ -334,11 +329,11 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
               }}
             >
               {side.name}
-            </button>
+            </Button>
           ))}
-          <button type="button" className="btn quiet" onClick={stopChoosing}>
+          <Button variant="quiet" onClick={stopChoosing}>
             {t("action.cancel")}
-          </button>
+          </Button>
         </div>
       )}
       {versions.form}

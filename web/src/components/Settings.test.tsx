@@ -680,10 +680,12 @@ test("a refused value shows the server's words on its own row and keeps what was
   expect(screen.getByLabelText("The display name.")).toHaveValue("Nope");
 });
 
-test("the first field of the section has the cursor when it opens", async () => {
+test("a section opens with the cursor on its heading, never in a field", async () => {
   api();
   open();
-  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveFocus());
+  const field = await screen.findByLabelText("The display name.");
+  await waitFor(() => expect(document.querySelector("[data-section-heading]")).toHaveFocus());
+  expect(field).not.toHaveFocus();
 });
 
 test("Backups and sync holds the synced folder and the scheduled work, so neither is on the Projects or People screens", async () => {
@@ -1475,9 +1477,9 @@ test("You starts with Your name, the name on the person's record, saved through 
   open();
   const name = await screen.findByLabelText("Your name");
   expect(name).toHaveValue("Sam Tester");
-  // It is the first row of the page, and the cursor is in it when the page opens.
+  // It is the first row of the page; the cursor is on the heading when the page opens.
   expect(document.querySelector(".setting")).toContainElement(name);
-  await waitFor(() => expect(name).toHaveFocus());
+  await waitFor(() => expect(document.querySelector("[data-section-heading]")).toHaveFocus());
   await user.clear(name);
   await user.type(name, "Sam  Q Tester");
   await user.tab();

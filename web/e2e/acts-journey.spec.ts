@@ -116,7 +116,7 @@ test.describe("mail and calendar acts", () => {
 
     await signIn(page);
     await openRecord(page, "source", first.tidy.id, first.tidy.title);
-    await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+    await page.locator("[data-page-header]").getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Archive" }).click();
 
     // The act says what it does in words and lists the message it is about: its sender, subject and date.
@@ -161,7 +161,7 @@ test.describe("mail and calendar acts", () => {
       ["Reply to everyone", "reply"],
       ["Label…", "label"],
     ] as const) {
-      await page.locator(".heading").getByRole("button", { name: /More actions for/ }).click();
+      await page.locator("[data-page-header]").getByRole("button", { name: /More actions for/ }).click();
       await page.getByRole("menuitem", { name: item }).click();
       const field = page.locator(`[data-act-form="${form}"]`).locator("input, select, textarea").first();
       await expect(field).toBeVisible();

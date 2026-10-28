@@ -20,7 +20,7 @@ import { ModalPanel } from "./ModalPanel";
 import { OwnKindsOffer } from "./Templates";
 import { SafeText } from "./SafeText";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button, ButtonLink } from "../ui/Button";
 type AskItem = S["AskView"];
 const SHOWN = 10;
 
@@ -97,12 +97,12 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
           </span>
         </div>
         <div className="row-end">
-          <button type="button" className="btn quiet" onClick={props.onClose}>
+          <Button variant="quiet" onClick={props.onClose}>
             {t("action.close")}
-          </button>
-          <button type="submit" className="btn primary" disabled={busy || !question.trim()}>
+          </Button>
+          <Button variant="primary" type="submit" disabled={busy || !question.trim()}>
             {t(busy ? "ask.sending" : "ask.go")}
-          </button>
+          </Button>
         </div>
       </form>
       <OwnKindsOffer />
@@ -115,9 +115,9 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
         ) : asks.isError ? (
           <p className="hint">
             {t("ask.load_failed")}{" "}
-            <button type="button" className="btn" onClick={() => void asks.refetch()}>
+            <Button onClick={() => void asks.refetch()}>
               {t("action.try_again")}
-            </button>
+            </Button>
           </p>
         ) : asks.data.length === 0 ? (
           <p className="hint">{t("ask.empty")}</p>
@@ -232,12 +232,12 @@ function Verdict(props: { request: string; verdict: "helpful" | "not_helpful" | 
   };
   return (
     <div className="acts" role="group" aria-label={t("ask.verdict_group")}>
-      <button type="button" className="btn quiet" aria-pressed={props.verdict === "helpful"} onClick={() => say(true)}>
+      <Button variant="quiet" aria-pressed={props.verdict === "helpful"} onClick={() => say(true)}>
         {t("ask.helpful")}
-      </button>
-      <button type="button" className="btn quiet" aria-pressed={props.verdict === "not_helpful"} onClick={() => say(false)}>
+      </Button>
+      <Button variant="quiet" aria-pressed={props.verdict === "not_helpful"} onClick={() => say(false)}>
         {t("ask.not_helpful")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -261,16 +261,14 @@ function CorrectIt(props: { request: string }) {
   };
   if (!open) {
     return (
-      <button
-        type="button"
-        className="btn quiet"
+      <Button variant="quiet"
         onClick={() => {
           setOpen(true);
           setTimeout(() => field.current?.focus(), 0);
         }}
       >
         {t("ask.correct")}
-      </button>
+      </Button>
     );
   }
   return (
@@ -280,12 +278,12 @@ function CorrectIt(props: { request: string }) {
         <textarea ref={field} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </label>
       <div className="acts">
-        <button type="button" className="btn primary" disabled={!note.trim()} onClick={() => void send()}>
+        <Button variant="primary" disabled={!note.trim()} onClick={() => void send()}>
           {t("ask.correct_send")}
-        </button>
-        <button type="button" className="btn quiet" onClick={() => setOpen(false)}>
+        </Button>
+        <Button variant="quiet" onClick={() => setOpen(false)}>
           {t("ask.correct_cancel")}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -333,18 +331,16 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
       {p.why && <span className="sub">{p.why}</span>}
       {open ? (
         <div className="acts">
-          <button
-            type="button"
-            className="btn primary"
+          <Button variant="primary"
             disabled={busy}
             aria-label={t("ask.apply_named", { label })}
             onClick={() => void apply()}
           >
             {t("ask.apply")}
-          </button>
-          <button type="button" className="btn quiet" disabled={busy} aria-label={t("ask.not_now_named", { label })} onClick={notNow}>
+          </Button>
+          <Button variant="quiet" disabled={busy} aria-label={t("ask.not_now_named", { label })} onClick={notNow}>
             {t("ask.not_now")}
-          </button>
+          </Button>
         </div>
       ) : (
         <span className="sub">{t(`ask.proposal.${p.status}`)}</span>
@@ -391,21 +387,21 @@ function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
     );
 
   const copyButton = (style: "primary" | "quiet", label: string) => (
-    <button key="copy" type="button" className={`btn ${style}`} aria-label={t("ask.copy_named", { title: r.title })} onClick={() => void copy()}>
+    <Button key="copy" variant={style} aria-label={t("ask.copy_named", { title: r.title })} onClick={() => void copy()}>
       {t(label)}
-    </button>
+    </Button>
   );
   const markSentButton = (style: "primary" | "quiet") => (
-    <button key="sent" type="button" className={`btn ${style}`} aria-label={t("ask.mark_sent_named", { title: r.title })} onClick={markSent}>
+    <Button key="sent" variant={style} aria-label={t("ask.mark_sent_named", { title: r.title })} onClick={markSent}>
       {t("ask.mark_sent")}
-    </button>
+    </Button>
   );
   // Opening the mail program counts as sharing it, as copying does: the person sends it there, then marks it sent.
   const mailLink = (style: "primary" | "quiet") =>
     mail && (
-      <a key="mail" className={`btn ${style}`} href={mail} aria-label={t("ask.mail_named", { title: r.title })} onClick={() => setShared(true)}>
+      <ButtonLink key="mail" variant={style} href={mail} aria-label={t("ask.mail_named", { title: r.title })} onClick={() => setShared(true)}>
         {t("ask.mail")}
-      </a>
+      </ButtonLink>
     );
 
   return (
@@ -422,9 +418,9 @@ function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
             {shared
               ? [markSentButton("primary"), mailLink("quiet"), copyButton("quiet", "ask.copy_again")]
               : [mail ? mailLink("primary") : copyButton("primary", "ask.copy"), mail && copyButton("quiet", "ask.copy"), markSentButton("quiet")]}
-            <button type="button" className="btn quiet" aria-label={t("ask.set_aside_named", { title: r.title })} onClick={setAside}>
+            <Button variant="quiet" aria-label={t("ask.set_aside_named", { title: r.title })} onClick={setAside}>
               {t("ask.set_aside")}
-            </button>
+            </Button>
           </div>
         </>
       ) : (

@@ -12,7 +12,7 @@ import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { SafeLink } from "./SafeText";
 import { SourceLimit } from "./SourceLimit";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
 /** Whether an origin has a link to show: a line that holds it must not leave a dot beside nothing when it has none. */
 export function hasOrigin(origin?: S["Origin"] | null): boolean {
   if (!origin) return false;
@@ -99,9 +99,9 @@ function SourceDialog(props: { source: string; onClose: () => void }) {
         </div>
       )}
       <div className="row-end">
-        <button type="button" className="btn primary" autoFocus onClick={props.onClose}>
+        <Button variant="primary" autoFocus onClick={props.onClose}>
           {t("origin.close")}
-        </button>
+        </Button>
       </div>
     </ModalPanel>
   );

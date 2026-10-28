@@ -29,6 +29,7 @@ import { WelcomeBackup } from "./WelcomeBackup";
 import styles from "./Walkthrough.module.css";
 import { Icon } from "../ui/Icon";
 
+import { EmptyState } from "../ui/EmptyState";
 export interface Handlers {
   onOpenPeople: () => void;
   onOpenAddons: () => void;
@@ -183,7 +184,7 @@ export function Walkthrough(
   if (!data || !current) {
     return (
       <div className={styles.root}>
-        <div className={styles.layout}>{setup.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton />}</div>
+        <div className={styles.layout}>{setup.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton />}</div>
       </div>
     );
   }
@@ -413,14 +414,12 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
               <span className={styles.state}>{t(said)}</span>
               <span className={styles.act}>
                 {state !== "done" && (
-                  <button
-                    type="button"
-                    className="btn"
+                  <Button
                     aria-label={t("walkthrough.done.set_up_named", { label })}
                     onClick={() => props.go(screen)}
                   >
                     {t("walkthrough.done.set_up")}
-                  </button>
+                  </Button>
                 )}
               </span>
             </li>

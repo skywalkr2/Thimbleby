@@ -23,7 +23,7 @@ import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
-
+import { Button } from "../ui/Button";
 export type ActionTarget = { kind: string; id: string } | null;
 type Choices = Record<string, string | boolean>;
 
@@ -393,17 +393,17 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
         </div>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
+        </Button>
         {error && (
-          <button type="button" className="btn" onClick={again}>
+          <Button onClick={again}>
             {t(error.applying ? "review.run_again" : "action.try_again")}
-          </button>
+          </Button>
         )}
-        <button type="button" className="btn primary" disabled={!proposal || busy || applying || !!error} onClick={() => void apply()}>
+        <Button variant="primary" disabled={!proposal || busy || applying || !!error} onClick={() => void apply()}>
           {t(applying ? "review.applying" : "review.apply")}
-        </button>
+        </Button>
       </div>
     </ModalPanel>
   );

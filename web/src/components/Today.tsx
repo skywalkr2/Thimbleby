@@ -18,6 +18,7 @@ import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
 import { TodayRail } from "./TodayRail";
 import styles from "./Today.module.css";
 
+import { PageHeader } from "../ui/PageHeader";
 /** The width from which the inspector sits beside the queue (the layout's third column). */
 const INSPECTOR_FROM = "(min-width: 1680px)";
 
@@ -91,15 +92,23 @@ export function Today(props: {
   return (
     <div className={styles.today}>
       <div className={styles.head}>
-        <h1>{t("nav.home")}</h1>
-        <SideFilter />
-        <AreaFilter />
-        <p>
-          {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <CoverageLine />
+        <PageHeader
+          title={t("nav.home")}
+          subtitle={
+            <>
+              {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
+                .filter(Boolean)
+                .join(" · ")}
+              <CoverageLine as="span" />
+            </>
+          }
+          filters={
+            <>
+              <SideFilter />
+              <AreaFilter />
+            </>
+          }
+        />
       </div>
       <div className={styles.full}>
         <SetupLine workspace={props.workspace} onOpenGuide={props.onOpenGuide} />

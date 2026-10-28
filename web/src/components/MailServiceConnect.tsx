@@ -10,7 +10,7 @@ import { problemText } from "../lib/problem";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { SafeLink } from "./SafeText";
-
+import { Button } from "../ui/Button";
 type Service = S["MailServiceView"];
 
 /** What `onPick` is told when the person chooses to type the server by hand. */
@@ -227,9 +227,9 @@ export function MailServiceConnect(props: {
             </p>
           )}
           <div className="row-end">
-            <button type="button" className="btn primary" disabled={busy || address.trim() === "" || password.trim() === ""} onClick={() => void connect()}>
+            <Button variant="primary" disabled={busy || address.trim() === "" || password.trim() === ""} onClick={() => void connect()}>
               {busy ? t("mail_service.connecting") : t("mail_service.connect", { service: service.name })}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -257,12 +257,12 @@ export function MailServiceConnect(props: {
             </p>
           )}
           <div className="row-end">
-            <button type="button" className="btn quiet" disabled={busy} onClick={finish}>
+            <Button variant="quiet" disabled={busy} onClick={finish}>
               {t("mail_service.calendar_skip")}
-            </button>
-            <button type="button" className="btn primary" disabled={busy || calendar.trim() === ""} onClick={() => void addCalendar()}>
+            </Button>
+            <Button variant="primary" disabled={busy || calendar.trim() === ""} onClick={() => void addCalendar()}>
               {busy ? t("mail_service.connecting") : t("mail_service.calendar_add")}
-            </button>
+            </Button>
           </div>
         </div>
       )}

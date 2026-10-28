@@ -76,8 +76,8 @@ test("with an address the mail link is the main action, with the subject and bod
     "href",
     `mailto:${TO}?subject=${encodeURIComponent(SUBJECT)}&body=${encodeURIComponent(body.replace(/\n/g, "\r\n"))}`,
   );
-  expect(link).toHaveClass("primary");
-  expect(screen.getByRole("button", { name: "Copy" })).not.toHaveClass("primary");
+  expect(link).toHaveAttribute("data-variant", "primary");
+  expect(screen.getByRole("button", { name: "Copy" })).not.toHaveAttribute("data-variant", "primary");
 });
 
 test("the version and screen lines are left out of the link when unchecked", async () => {
@@ -96,7 +96,7 @@ test("a message too long for a mail link has no link and says to copy it", async
   expect(screen.queryByRole("link", { name: "Open in your email app" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Open in your email app" })).toBeNull();
   expect(screen.getByText(/too long for a mail link/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Copy" })).toHaveClass("primary");
+  expect(screen.getByRole("button", { name: "Copy" })).toHaveAttribute("data-variant", "primary");
 });
 
 test("without an address Copy is the main action and the hint says who to send it to", async () => {
@@ -104,7 +104,7 @@ test("without an address Copy is the main action and the hint says who to send i
   await user.type(message(), "Hello");
   expect(screen.queryByRole("link")).toBeNull();
   expect(screen.queryByText("Open in your email app")).toBeNull();
-  expect(screen.getByRole("button", { name: "Copy" })).toHaveClass("primary");
+  expect(screen.getByRole("button", { name: "Copy" })).toHaveAttribute("data-variant", "primary");
   expect(screen.getByText("Send it to whoever gave you the app.")).toBeInTheDocument();
 });
 
@@ -212,7 +212,7 @@ test("problems too long for a mail link leave the copy path", async () => {
   await screen.findByRole("checkbox", { name: "Add the last problems (1)" });
   expect(screen.queryByRole("link", { name: "Open in your email app" })).toBeNull();
   expect(screen.getByText(/too long for a mail link/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Copy" })).toHaveClass("primary");
+  expect(screen.getByRole("button", { name: "Copy" })).toHaveAttribute("data-variant", "primary");
 });
 
 // ---- how often "Missed something?" was used (designer F8) -------------------------------------------------------------

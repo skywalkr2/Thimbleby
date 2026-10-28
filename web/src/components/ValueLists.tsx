@@ -10,7 +10,8 @@ import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { RowMenu, type MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 const slug = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, "-");
 
 type Tone = S["ListSuggestionView"]["tone"];
@@ -40,7 +41,7 @@ export function ValueLists(props: { level?: 2 | 3; place?: ListsPlace }) {
       </div>
       <p className="hint">{t(justMe && place === "lists" ? "lists.intro.just_me" : "lists.intro")}</p>
       {shown.length === 0 ? (
-        <p className="empty">{t("lists.none_yet")}</p>
+        <EmptyState text={t("lists.none_yet")} />
       ) : (
         <ul className="queue">
           {shown.map((list) => (
@@ -222,9 +223,9 @@ function ListBlock(props: { list: ValueList }) {
               </select>
             </>
           )}
-          <button type="submit" className="btn" disabled={!newValue.trim()}>
+          <Button type="submit" disabled={!newValue.trim()}>
             {t("lists.add")} <span className="sr">{t("lists.add_for", { list: list.label })}</span>
-          </button>
+          </Button>
         </form>
         {typed && suggestion.data && chosenTone === null && chosenMeaning === null && <p className="hint">{t("lists.suggested")}</p>}
         {problem && (
@@ -234,15 +235,13 @@ function ListBlock(props: { list: ValueList }) {
         )}
         {list.retired.length > 0 && (
           <div className="list-retired">
-            <button
-              type="button"
-              className="btn quiet small"
+            <Button variant="quiet" size="sm"
               aria-expanded={showRetired}
               aria-controls={`${base}-retired`}
               onClick={() => setShowRetired((v) => !v)}
             >
               {t("lists.retired", { n: list.retired.length })}
-            </button>
+            </Button>
             {showRetired && (
               <div id={`${base}-retired`}>
                 <p className="hint">{t("lists.retired_hint")}</p>
@@ -250,13 +249,11 @@ function ListBlock(props: { list: ValueList }) {
                   {list.retired.map((value) => (
                     <li key={value}>
                       <span className="list-value">{value}</span>
-                      <button
-                        type="button"
-                        className="btn small"
+                      <Button size="sm"
                         onClick={() => void add(value, t("lists.again_toast", { value, list: list.label }))}
                       >
                         {t("lists.offer_again")} <span className="sr">{value}</span>
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -289,12 +286,12 @@ function RenameField(props: { id: string; value: string; onSave: (to: string) =>
         {t("lists.rename_label", { value: props.value })}
       </label>
       <input id={props.id} type="text" value={text} autoFocus autoComplete="off" onChange={(e) => setText(e.target.value)} />
-      <button type="submit" className="btn primary" disabled={!to}>
+      <Button variant="primary" type="submit" disabled={!to}>
         {t("lists.rename_save")}
-      </button>
-      <button type="button" className="btn quiet" onClick={props.onCancel}>
+      </Button>
+      <Button variant="quiet" onClick={props.onCancel}>
         {t("action.cancel")}
-      </button>
+      </Button>
     </form>
   );
 }

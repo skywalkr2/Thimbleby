@@ -10,7 +10,8 @@ import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
 import { Icon } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
-
+import { Button } from "../ui/Button";
+import { Row } from "../ui/Row";
 export function WorkingCopies(props: {
   kind: string;
   id: string;
@@ -47,9 +48,9 @@ export function WorkingCopies(props: {
       {(formats.data ?? []).length > 0 && (
         <div className="acts wrap" role="group" aria-label={t("copies.hand_out_group")}>
           {(formats.data ?? []).map((format) => (
-            <button key={format.name} type="button" className="btn" disabled={busy !== null} onClick={() => void handOut(format)}>
+            <Button key={format.name} disabled={busy !== null} onClick={() => void handOut(format)}>
               {t("copies.hand_out", { label: format.label })}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -99,36 +100,38 @@ function CopyRow(props: { copy: S["WorkingCopyView"]; onReview: (version: string
     );
 
   return (
-    <li className="line" data-row>
-      <div className="row pair">
-        <div className="text">
-          <div className="name">{copy.label}</div>
-          <span className="sub">
-            {[status, t("copies.handed_on", { when: day(copy.handed_at) })].join(" · ")}
-            {" · "}
-            <a href={api.fileContent(copy.file)} download>
-              {t("copies.download")}
-            </a>
-          </span>
+    <Row
+      title={
+        <>
+          {copy.label}
           {copy.stale && (
             <Pill tone="warn" className="pill-gap">
-              <Icon name="alert" size={14} />{" "}
-              {t("copies.stale")}
+              <Icon name="alert" size={14} /> {t("copies.stale")}
             </Pill>
           )}
-        </div>
-        {out && (
-          <div className="acts">
-            <button
+        </>
+      }
+      meta={
+        <>
+          {[status, t("copies.handed_on", { when: day(copy.handed_at) })].join(" · ")}
+          {" · "}
+          <a href={api.fileContent(copy.file)} download>
+            {t("copies.download")}
+          </a>
+        </>
+      }
+      primary={
+        out ? (
+          <>
+            <Button
+              variant="primary"
               ref={button}
-              type="button"
-              className="btn primary"
               data-key="primary"
               aria-label={t("copies.bring_back_named", { what: copy.label })}
               onClick={() => input.current?.click()}
             >
               {t("copies.bring_back")}
-            </button>
+            </Button>
             <input
               ref={input}
               type="file"
@@ -141,10 +144,10 @@ function CopyRow(props: { copy: S["WorkingCopyView"]; onReview: (version: string
                 if (file) void bringBack(file);
               }}
             />
-            <RowMenu label={copy.label} actions={[{ id: "drop", label: t("copies.set_aside_action"), run: setAside }]} />
-          </div>
-        )}
-      </div>
-    </li>
+          </>
+        ) : undefined
+      }
+      menu={out ? <RowMenu label={copy.label} actions={[{ id: "drop", label: t("copies.set_aside_action"), run: setAside }]} /> : undefined}
+    />
   );
 }

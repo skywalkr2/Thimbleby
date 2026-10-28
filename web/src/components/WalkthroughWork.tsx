@@ -20,7 +20,8 @@ import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { insideLines, sideSummary, workLines } from "../lib/work-lines";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
 type Group = { name: string; picked: string[] };
@@ -154,7 +155,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
 
   useContinue(hasSlot ? { run: async () => (changed ? save() : true), disabled: !!missing, why: missing } : null);
 
-  if (!state.data) return state.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton rows={2} />;
+  if (!state.data) return state.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton rows={2} />;
 
   const toggleBusiness = (on: boolean) => {
     setBusinessOn(on);
@@ -353,14 +354,12 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
               </div>
               {rows > 1 && (
                 <div className="row-end">
-                  <button
-                    type="button"
-                    className="btn quiet small"
+                  <Button variant="quiet" size="sm"
                     aria-label={label ? t("walkthrough.work.discard_named", { name: label }) : t("walkthrough.work.discard_unnamed")}
                     onClick={() => setDrafts((all) => all.filter((d) => d.key !== draft.key))}
                   >
                     {t("walkthrough.work.discard")}
-                  </button>
+                  </Button>
                 </div>
               )}
             </section>
@@ -368,9 +367,9 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         })}
       {businessTicked && (
         <div className="row-end">
-          <button type="button" className="btn" onClick={() => setDrafts((all) => [...all, blank()])}>
+          <Button onClick={() => setDrafts((all) => [...all, blank()])}>
             {t("walkthrough.work.add_business")}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -378,17 +377,17 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         <div className="problem-note" role="alert">
           <p>{problem}</p>
           {retry && (
-            <button type="button" className="btn" onClick={retry}>
+            <Button onClick={retry}>
               {t("action.try_again")}
-            </button>
+            </Button>
           )}
         </div>
       )}
       {!hasSlot && (
         <div className="row-end">
-          <button type="submit" className={props.done ? "btn" : "btn primary"} disabled={busy || !changed || !!missing}>
+          <Button type="submit" variant={props.done ? "secondary" : "primary"} disabled={busy || !changed || !!missing}>
             {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
-          </button>
+          </Button>
         </div>
       )}
     </form>
@@ -587,25 +586,21 @@ export function SavedSide(props: {
         <div className="acts">
           {renaming ? (
             <>
-              <button type="button" className="btn primary small" disabled={busy || !name.trim()} onClick={() => void rename()}>
+              <Button variant="primary" size="sm" disabled={busy || !name.trim()} onClick={() => void rename()}>
                 {t("walkthrough.work.rename_save")}
-              </button>
-              <button
-                type="button"
-                className="btn small"
+              </Button>
+              <Button size="sm"
                 onClick={() => {
                   setName(side.name);
                   setRenaming(false);
                 }}
               >
                 {t("walkthrough.work.rename_cancel")}
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className="btn small"
+              <Button size="sm"
                 aria-label={t("walkthrough.work.rename_named", { name: side.name })}
                 onClick={() => {
                   setName(side.name);
@@ -613,17 +608,15 @@ export function SavedSide(props: {
                 }}
               >
                 {t("walkthrough.work.rename")}
-              </button>
-              <button
-                type="button"
-                className="btn quiet small"
+              </Button>
+              <Button variant="quiet" size="sm"
                 disabled={busy}
                 aria-expanded={ask ? asking : undefined}
                 aria-label={t("walkthrough.work.remove_named", { name: side.name })}
                 onClick={() => (ask ? setAsking((on) => !on) : void remove())}
               >
                 {t("walkthrough.work.remove")}
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -632,15 +625,15 @@ export function SavedSide(props: {
         <div className="field" role="group" aria-labelledby={`${base}-ask`} data-remove-ask="">
           <p id={`${base}-ask`}>{t("settings.business.remove_ask", { name: side.name })}</p>
           <div className="row-end">
-            <button type="button" className="btn quiet" disabled={busy} onClick={() => setAsking(false)}>
+            <Button variant="quiet" disabled={busy} onClick={() => setAsking(false)}>
               {t("settings.business.remove_cancel")}
-            </button>
-            <button type="button" className="btn" disabled={busy} onClick={() => void removeWith("end")}>
+            </Button>
+            <Button disabled={busy} onClick={() => void removeWith("end")}>
               {t("settings.business.remove_end")}
-            </button>
-            <button type="button" className="btn primary" disabled={busy} onClick={() => void removeWith("personal")}>
+            </Button>
+            <Button variant="primary" disabled={busy} onClick={() => void removeWith("personal")}>
               {t("settings.business.remove_move", { personal: t("sides.filter.personal") })}
-            </button>
+            </Button>
           </div>
         </div>
       )}

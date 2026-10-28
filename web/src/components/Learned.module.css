@@ -27,26 +27,6 @@
 .summary { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
 .list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .detail { display: grid; gap: var(--space-2); min-width: 0; }
-.empty { margin: 0; color: var(--text-muted); }
-
-/* Today's lines for what was learned, drawn as rows of the queue */
-.todayLine {
-  display: grid; grid-template-columns: var(--row-pill-w) minmax(0, 1fr) auto; align-items: center; column-gap: var(--row-gap); min-width: 0;
-  padding: var(--row-py) var(--row-px); background: var(--surface); border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm); line-height: var(--lh-sm);
-}
-.todayLine:focus { outline: none; }
-.todayLine:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
-.todayLine > :first-child { justify-self: start; min-width: 0; }
-:global([data-narrow]) .todayLine { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
-:global([data-narrow]) .todayLine > :first-child { grid-column: 1 / -1; }
-.todayBody { min-width: 0; }
-.todayText { margin: 0; overflow-wrap: anywhere; }
-.todaySub { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
-.todayActs { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }
-/* The line's action is tonal, like a row's (tokens.css). */
-.todayActs :global([data-variant="primary"]:not(:disabled)) { background: var(--row-action-bg); border-color: var(--row-action-border); color: var(--row-action-text); }
-.todayActs :global([data-variant="primary"]:not(:disabled):hover) { background: var(--row-action-hover); border-color: var(--row-action-border); }
 
 /* "Because you told me" on a card */
 .because { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }

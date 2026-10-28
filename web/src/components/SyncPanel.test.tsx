@@ -195,7 +195,7 @@ test("an outside edit that became a version can be reviewed; one that failed sho
   });
   renderApp(<SyncPanel />);
   const sync = await section("Synced folder");
-  const rows = (await within(sync).findAllByRole("listitem")).filter((li) => li.classList.contains("line"));
+  const rows = (await within(sync).findAllByRole("listitem")).filter((li) => li.hasAttribute("data-row"));
   expect(rows).toHaveLength(3);
   expect(within(rows[0]).getByText("book/chapter-1.md")).toBeInTheDocument();
   expect(within(rows[1]).getByText("It isn't a file the app can read back.")).toBeInTheDocument();

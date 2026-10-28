@@ -111,8 +111,8 @@ test("Handled for you stays inside the window at every width, on both tabs and a
     await page.setViewportSize(size);
     await page.goto("?token=e2e-token#work/handled");
     await expect(page.getByRole("heading", { level: 1, name: "Handled for you", exact: true })).toBeVisible(LOADED);
-    // The cursor starts in the search box.
-    await expect(page.getByRole("searchbox", { name: "Search by sender, subject, kind or reason" })).toBeFocused(LOADED);
+    // The cursor starts on the heading, not in the search box.
+    await expect(page.getByRole("heading", { level: 1, name: "Handled for you", exact: true })).toBeFocused(LOADED);
     for (const tab of [/^Set aside before reading/, /^Read, nothing to do/]) {
       for (const group of ["Kind", "Reason", "Sender"]) {
         await page.getByRole("radio", { name: tab }).click();

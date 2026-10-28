@@ -11,7 +11,7 @@ import { whoTheyAre } from "../lib/people-who";
 import { onSides, useSideFilter, useSides } from "../lib/sides";
 import { viewHref, recordView } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
@@ -24,6 +24,7 @@ import { RecordConversation } from "./RecordConversation";
 import { SideFilter } from "./SideFilter";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
+import { PageHeader } from "../ui/PageHeader";
 /** The organization filter's choices besides one on file: everyone, and people with none. */
 const ALL = "";
 const NONE = "\u0001none";
@@ -126,13 +127,16 @@ export function People() {
 
   return (
     <section className="panel-section" aria-labelledby="people-title">
-      <div className="heading">
-        <h1 id="people-title">{t("setup.people")}</h1>
-        <SideFilter />
-        <Button variant="primary" onClick={() => setAdding(true)}>
-          {t("setup.add_person")}
-        </Button>
-      </div>
+      <PageHeader
+        id="people-title"
+        title={t("setup.people")}
+        filters={<SideFilter />}
+        primary={
+          <Button variant="primary" onClick={() => setAdding(true)}>
+            {t("setup.add_person")}
+          </Button>
+        }
+      />
       <ListDetail
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
@@ -147,7 +151,7 @@ export function People() {
           <>
             {!justMe && ((orgs.data ?? []).length > 1 || org !== ALL) && filter}
             {rows.length === 0 ? (
-              <p className="empty">{t("people.none_here")}</p>
+              <EmptyState text={t("people.none_here")} />
             ) : (
               <RecordsTable
                 label={t("setup.people")}
@@ -208,9 +212,9 @@ function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: R
         {fact(t("people.col.last"), p.last_contact ? day(p.last_contact) : null)}
       </dl>
       <div className="row-end">
-        <a className="btn" href={viewHref(recordView("person", p.id))}>
+        <ButtonLink href={viewHref(recordView("person", p.id))}>
           {t("records.open_page", { name: p.name })}
-        </a>
+        </ButtonLink>
         <Button variant="primary" onClick={props.onEdit}>
           {t("setup.edit")}
         </Button>

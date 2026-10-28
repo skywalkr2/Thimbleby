@@ -1,6 +1,5 @@
 /* The style guide: every shared component in every state, the type scale and the color roles. */
 .page { display: grid; gap: var(--space-6); min-width: 0; }
-.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .section { display: grid; gap: var(--space-3); min-width: 0; }
 .demo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3); }
 .stack { display: grid; gap: var(--space-3); min-width: 0; }

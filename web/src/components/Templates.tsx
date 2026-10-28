@@ -8,7 +8,9 @@ import { useRestart } from "../lib/restart";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Icon } from "../ui/Icon";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { Row } from "../ui/Row";
 export function TemplateList() {
   const { t } = useWords();
   const act = useAct();
@@ -16,7 +18,7 @@ export function TemplateList() {
   const templates = useQuery({ queryKey: ["templates"], queryFn: api.templates });
   const [busy, setBusy] = useState(false);
   if (templates.isPending) return <Skeleton />;
-  if (templates.isError || !templates.data.length) return <p className="empty">{t("welcome.template.none")}</p>;
+  if (templates.isError || !templates.data.length) return <EmptyState text={t("welcome.template.none")} />;
   const apply = async (template: S["TemplateView"]) => {
     setBusy(true);
     const done = await act(
@@ -30,32 +32,22 @@ export function TemplateList() {
     <ul className="queue">
       {templates.data.map((tpl) => {
         return (
-          <li key={tpl.id} className="line">
-            <div className="row pair">
-              <div className="text">
-                <strong>{tpl.name}</strong>
-                {tpl.description && <span className="sub">{tpl.description}</span>}
-              </div>
-              <div className="acts">
-                {tpl.set_up ? (
-                  <span className="template-set-up">
-                    <Icon name="check" size={14} />{" "}
-                    {t("welcome.template.set_up")}
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={busy}
-                    aria-label={t("welcome.template.apply_named", { name: tpl.name })}
-                    onClick={() => void apply(tpl)}
-                  >
-                    {t("welcome.template.apply")}
-                  </button>
-                )}
-              </div>
-            </div>
-          </li>
+          <Row
+            key={tpl.id}
+            title={tpl.name}
+            meta={tpl.description || undefined}
+            primary={
+              tpl.set_up ? (
+                <span className="template-set-up">
+                  <Icon name="check" size={14} /> {t("welcome.template.set_up")}
+                </span>
+              ) : (
+                <Button disabled={busy} aria-label={t("welcome.template.apply_named", { name: tpl.name })} onClick={() => void apply(tpl)}>
+                  {t("welcome.template.apply")}
+                </Button>
+              )
+            }
+          />
         );
       })}
     </ul>

@@ -5,6 +5,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-28: The shared components: one Button, Row, PageHeader, EmptyState, and the link and type tokens (sweep batch V1)
+
+**Decided:** (1) Button has three weights (primary solid, secondary outline, quiet text), one primary per region, and a row's
+actions are never solid, so the line the cursor is on no longer carries a filled button; a disabled primary keeps its weight
+with its reason beside it. (2) Row has no fixed mark column: a leading slot only for a control or a dot, and a mark in the
+title's line. (3) Every screen's title row is a PageHeader, with an underlined tab strip with counts and filter chips under
+it. (4) Every empty list, page and card is one EmptyState. (5) One link color, underlined except a row's title and a rail link
+alone; 13px is the smallest a paragraph goes (`--text-meta`), section titles are 16px. (6) A screen opens with the cursor on
+its heading, so Settings, Handled for you, How the assistant is doing and the add-on catalog form no longer put it in a field.
+(7) A to-do's tick is a round button in the row's leading slot, named Mark done, in place of a Mark done button.
+
+**Decided by:** the UI/UX reviewer's visual review (VC01 to VC04, VC08, VP04, VP11, E10, E12); the builder's choices, for
+review: the filter chips wrap on a phone instead of scrolling sideways (the owner's rule that no screen scrolls sideways
+wins over the review's sideways chips); a mark stands in the title's line, not in the leading column the review's mockup
+draws, so titles line up; the review's mockup fills the cursor row's button, which VP04 and VC01's own text forbid, so it is
+not filled.
+
+**Why:** the screens each had their own copy of the button, the row, the header and the empty line, so a fix to one reached
+few screens and the review scored the lists as forms, with an empty pill column on most rows.
+
+**Impact:** Design 7.12 and 7.1 and CHANGES section 259. No new setting; new wording keys for the style guide, and the tab
+labels of To-dos and questions no longer carry their count in the wording. Not done: the lines drawn with the older global
+classes (`line`, `row`, `queue`) still carry their own markup in 29 places (the expandable lines of Follow-ups, What changed, Add-ons, sign-ins, sources and others), with the same measures; each moves onto
+`Row` when its screen is rebuilt. No change to scope. Change log: section 259.
+
 ## 2026-10-28: A connection is tried before it is added; one privacy question in setup; no model names in setup; every moment on the person's clock
 
 **Decided:** (1) A mailbox, a calendar link or file, a feed or a folder is read once before it is saved (a change to one too);

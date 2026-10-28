@@ -78,7 +78,7 @@ describe("the board", () => {
     expect(within(alpha).getByText("Can move to Third step")).toBeInTheDocument();
   });
 
-  test("a card that is ready has one primary button, which moves it on with Undo; a blocked one lists what is missing and has none", async () => {
+  test("a card that is ready has one Move button, which moves it on with Undo; a blocked one lists what is missing and has none", async () => {
     const user = userEvent.setup();
     const calls = show({
       "POST stages/move": () => ({ changeset: "CS-9", stages: ready }),

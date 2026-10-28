@@ -10,7 +10,7 @@ import { useAct } from "../lib/act";
 import { day, dayAndTime } from "../lib/dates";
 import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
@@ -20,6 +20,8 @@ import { MissedOneLine } from "./MissedOne";
 import type { MenuGroup } from "../ui/MenuButton";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 type Entry = S["SinceEntryView"];
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -83,14 +85,13 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
   const entries = drawn.status === "ready" ? drawn.entries.filter((e) => !gone.has(e.ref)) : [];
   return (
     <section className="panel-section" aria-labelledby="since-title">
-      <div className="heading">
-        <h1 id="since-title" ref={heading} tabIndex={-1}>
-          {t("since.title")}
-        </h1>
-        <a className="btn" href={viewHref("work/changed")}>
-          {t("since.back")}
-        </a>
-      </div>
+      <PageHeader
+        id="since-title"
+        headingRef={heading}
+        focusable
+        title={t("since.title")}
+        actions={<ButtonLink href={viewHref("work/changed")}>{t("since.back")}</ButtonLink>}
+      />
       <p className="hint">{t("since.intro")}</p>
       {drawn.status === "loading" ? (
         <div aria-busy="true" aria-label={t("since.loading")}>
@@ -99,10 +100,9 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
       ) : drawn.status === "failed" ? (
         <LoadFailed message={t("since.load_failed")} onRetry={() => void load()} />
       ) : entries.length === 0 ? (
-        <>
-          <p className="empty">{t("since.empty")}</p>
-          <MissedOneLine className="empty" />
-        </>
+        <EmptyState text={t("since.empty")}>
+          <MissedOneLine className="hint" />
+        </EmptyState>
       ) : (
         <ul className="queue" aria-label={t("since.list_label")}>
           {entries.map((e) => (

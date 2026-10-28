@@ -14,7 +14,7 @@ import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
 import { PlaceOptions } from "./PlaceOptions";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
 const DEFAULT_KIND = "attachment";
 
 export function AddFile(props: { onClose: () => void }) {
@@ -77,9 +77,9 @@ export function AddFile(props: { onClose: () => void }) {
       ) : kinds.isError || !kind ? (
         <p className="problem-note" role="alert">
           {t("addfile.kinds_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void kinds.refetch()}>
+          <Button onClick={() => void kinds.refetch()}>
             {t("action.try_again")}
-          </button>
+          </Button>
         </p>
       ) : (
         <form
@@ -161,12 +161,12 @@ export function AddFile(props: { onClose: () => void }) {
             </p>
           )}
           <div className="row-end">
-            <button type="button" className="btn quiet" onClick={props.onClose}>
+            <Button variant="quiet" onClick={props.onClose}>
               {t("action.cancel")}
-            </button>
-            <button type="submit" className="btn primary" disabled={!ready}>
+            </Button>
+            <Button variant="primary" type="submit" disabled={!ready}>
               {t(add.isPending ? "addfile.adding" : "addfile.go")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

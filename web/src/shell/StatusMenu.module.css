@@ -12,4 +12,4 @@
 .text { margin: 0; min-width: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
 .warn .text { color: var(--warn); font-weight: var(--weight-semibold); }
 .full { grid-column: 1 / -1; }
-.note { margin: 0; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); overflow-wrap: anywhere; }
+.note { margin: 0; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }

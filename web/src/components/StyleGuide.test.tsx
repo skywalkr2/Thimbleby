@@ -9,7 +9,7 @@ afterEach(() => document.documentElement.removeAttribute("data-theme"));
 test("every shared component has a section, in its states", () => {
   renderApp(<StyleGuide />);
   expect(screen.getByRole("heading", { level: 1, name: "Style guide" })).toBeInTheDocument();
-  for (const name of ["Type scale", "Color roles", "Buttons", "Pills and the status chip", "Rows", "Segmented control", "Empty, loading and failed", "Drawer, dialog, menu and toast", "Form controls", "Evidence", "Icons"]) {
+  for (const name of ["Type scale", "Color roles", "Buttons", "Pills and the status chip", "Rows", "Page header, tabs and filters", "Links", "Segmented control", "Empty, loading and failed", "Drawer, dialog, menu and toast", "Form controls", "Evidence", "Icons"]) {
     expect(screen.getByRole("heading", { level: 2, name })).toBeInTheDocument();
   }
   // Disabled with a reason, loading, failed, empty and skeleton states are all there.

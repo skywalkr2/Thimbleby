@@ -4,7 +4,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useWords } from "../lib/wording";
 import { useAddOwnRequest } from "./HandIn";
-
+import { Button } from "../ui/Button";
 export interface NoteSend {
   label: string;
   /** Does the act with the note; an act that didn't go through returns nothing, so the box stays open. */
@@ -61,19 +61,19 @@ export function NoteBox(props: { sends: NoteSend[]; onClose: () => void }) {
         {t("note.hint")}
       </span>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
+        </Button>
         {props.sends.map((s, i) => (
-          <button
+          <Button
             key={s.label}
             type={i === 0 ? "submit" : "button"}
-            className={i === 0 ? "btn primary" : "btn"}
+            variant={i === 0 ? "primary" : "secondary"}
             disabled={!text || busy}
             onClick={i === 0 ? undefined : () => void send(s)}
           >
             {s.label}
-          </button>
+          </Button>
         ))}
       </div>
     </form>

@@ -20,6 +20,7 @@ import { costWords } from "./LookBack";
 import { useMissedOne } from "./MissedOne";
 import { SentFolderPicker } from "./SentFolderPicker";
 
+import { EmptyState } from "../ui/EmptyState";
 type Result = S["FirstPromisesView"];
 
 /** Where the Sent folder is being chosen: the account whose folder it is, held by the screen itself so the choice stays open
@@ -39,7 +40,7 @@ export function FirstPromises(props: { go: (screen: Screen) => void; onHandIn: (
     refetchInterval: (query) => (["reading", "working"].includes(query.state.data?.stage ?? "") ? 3000 : false),
   });
   const data = result.data;
-  if (!data) return result.isError ? <p className="empty">{t("welcome.failed")}</p> : <Skeleton />;
+  if (!data) return result.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton />;
   const chosen = data.coverage.find((p) => p.missing_sent && placeKey(p) === choosing);
   return (
     <>

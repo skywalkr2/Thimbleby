@@ -10,7 +10,7 @@ import { toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { Pill } from "../ui/Pill";
-
+import { Button } from "../ui/Button";
 type Blocker = NonNullable<S["TodoView"]["blocker"]>;
 
 /** What an action can be blocked on, for the picker: people, the other open to-dos and the questions still open or waiting
@@ -120,12 +120,12 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
         )}
       </select>
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={() => setAsking(false)}>
+        <Button variant="quiet" onClick={() => setAsking(false)}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!what.trim() && !on}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!what.trim() && !on}>
           {t("hold.put")}
-        </button>
+        </Button>
       </div>
     </form>
   ) : null;

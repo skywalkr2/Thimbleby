@@ -116,7 +116,7 @@ export function HandIn(props: { onClose: () => void }) {
       dirty={text.trim() !== "" || todo.trim() !== ""}
       footer={
         <>
-          <Button variant="ghost" onClick={props.onClose}>
+          <Button variant="quiet" onClick={props.onClose}>
             {t("action.cancel")}
           </Button>
           <Button variant="primary" type="submit" form="handin-form" disabled={busy || !text.trim()}>

@@ -8,7 +8,7 @@ import { useAct } from "../lib/act";
 import { day, localDate, nextMonday } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
-
+import { Button } from "../ui/Button";
 const DAY = "day";
 const MONDAY = "monday";
 
@@ -134,12 +134,12 @@ export function useHoldFor(
         </>
       )}
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={() => setAsking(false)}>
+        <Button variant="quiet" onClick={() => setAsking(false)}>
           {t("action.cancel")}
-        </button>
-        <button type="submit" className="btn primary" disabled={!ready}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={!ready}>
           {t("followups.hold_for_save")}
-        </button>
+        </Button>
       </div>
     </form>
   ) : null;

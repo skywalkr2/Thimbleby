@@ -13,7 +13,9 @@ import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { plainTitle } from "../lib/title-dates";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
 type Page = S["SeriesPageView"];
 
 export function SeriesPage(props: { id: string; onBack: () => void }) {
@@ -23,27 +25,17 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
   return (
     <section className="panel-section record-page" aria-labelledby="series-title">
       <div>
-        <button type="button" className="btn quiet small" onClick={props.onBack}>
+        <Button variant="quiet" size="sm" onClick={props.onBack}>
           {t("record.back")}
-        </button>
+        </Button>
       </div>
       {page.isPending && <Skeleton />}
       {page.isError && (
-        <p className="empty">
-          {t("record.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void page.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("record.load_failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
       )}
       {data && (
         <>
-          <div className="heading">
-            <div>
-              <span className="kind k-review">{t("series.kind")}</span>
-              <h1 id="series-title">{data.title}</h1>
-            </div>
-          </div>
+          <PageHeader id="series-title" title={data.title} kind={<Pill tone="neutral">{t("series.kind")}</Pill>} />
           <div className="record-grid">
             <div className="record-main">
               <AgendaSection items={data.agenda ?? []} id="series-agenda" />

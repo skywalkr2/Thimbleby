@@ -356,10 +356,11 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await go(page, "Settings");
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
-    // The sections are down the side; the first has the cursor in its first field, and nothing waits behind a Save button.
+    // The sections are down the side; the first opens with the cursor on its heading, and nothing waits behind a Save button.
     const sections = page.getByRole("navigation", { name: "Settings sections" });
     await expect(sections.getByRole("link", { name: "You", exact: true })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("textbox", { name: "Your name" })).toBeFocused();
+    await expect(page.locator("[data-section-heading]")).toBeFocused();
+    await expect(page.getByRole("textbox", { name: "Your name" })).not.toBeFocused();
     // Quality is no longer in the list: it is "How the assistant is doing" in the person's menu.
     await expect(sections.getByRole("link", { name: "Quality" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);

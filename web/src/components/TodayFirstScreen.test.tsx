@@ -162,7 +162,7 @@ test("no filled button is anywhere in the rail; the one button the Schedule card
   show([line("send", { key: "send:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, questions: ["Q-2"] })], agenda);
   const rail = await screen.findByRole("group", { name: "Briefing, schedule and mail" });
   await within(rail).findByText("Print sync");
-  expect(rail.querySelectorAll("button[data-key='primary'], .btn.primary")).toHaveLength(0);
+  expect(rail.querySelectorAll("button[data-key='primary'], [data-variant='primary']")).toHaveLength(0);
   expect(within(rail).getByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
 });
 

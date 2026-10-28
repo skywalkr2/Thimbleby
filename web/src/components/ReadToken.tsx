@@ -9,7 +9,7 @@ import { asReference } from "../lib/secret-ref";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { SecretField } from "./SecretField";
-
+import { Button } from "../ui/Button";
 /** The row's way to give the read token for the place an add-on's files are kept: typed here on a local app, where the
  * app keeps it on this computer, or as where it is kept. It goes only to that host. Saved, Install can be pressed again. */
 export function ReadToken(props: {
@@ -50,9 +50,9 @@ export function ReadToken(props: {
   if (!open) {
     return (
       <div>
-        <button type="button" className="btn small" aria-label={t("addons.token.add_named", { name: props.pack.name })} onClick={() => setOpen(true)}>
+        <Button size="sm" aria-label={t("addons.token.add_named", { name: props.pack.name })} onClick={() => setOpen(true)}>
           {t("addons.token.add")}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -100,13 +100,13 @@ export function ReadToken(props: {
       )}
       <div className="row-end">
         {!props.plain && (
-          <button type="button" className="btn quiet" disabled={busy} onClick={() => setOpen(false)}>
+          <Button variant="quiet" disabled={busy} onClick={() => setOpen(false)}>
             {t("action.cancel")}
-          </button>
+          </Button>
         )}
-        <button type="submit" className="btn primary" disabled={!ready || busy}>
+        <Button variant="primary" type="submit" disabled={!ready || busy}>
           {t(busy ? "addons.token.saving" : "addons.token.save")}
-        </button>
+        </Button>
       </div>
     </form>
   );

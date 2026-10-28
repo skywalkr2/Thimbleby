@@ -28,7 +28,8 @@ import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns } from "./SignIns";
 import { Skeleton } from "../ui/Skeleton";
-
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -204,15 +205,13 @@ export function Sources(props: {
           {t("sources.title")}
         </h2>
         <div className="acts">
-          <button
-            type="button"
+          <Button variant="primary"
             id={addButton}
-            className="btn primary"
             aria-expanded={form?.type === "add"}
             onClick={openAdd}
           >
             {t("sources.add")}
-          </button>
+          </Button>
         </div>
       </div>
       <p className="hint">{t("sources.intro")}</p>
@@ -246,21 +245,9 @@ export function Sources(props: {
       {sources.isPending ? (
         <Skeleton />
       ) : sources.isError ? (
-        <p className="empty">
-          {t("sources.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void sources.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("sources.load_failed")} action={{ label: t("action.try_again"), onClick: () => void sources.refetch() }} />
       ) : sources.data.length === 0 ? (
-        <div className="empty">
-          <p>{t("sources.empty")}</p>
-          <p>
-            <button type="button" className="btn" onClick={() => props.onAsk(t("sources.ask_text"))}>
-              {t("sources.empty_ask")}
-            </button>
-          </p>
-        </div>
+        <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
       ) : (
         <ul className="queue">
           {sources.data.map((source) => (
@@ -434,9 +421,9 @@ function SentFolderOffer(props: { source: Source; save: ReturnType<typeof useSou
           </option>
         ))}
       </select>
-      <button type="button" className="btn small" disabled={!folder || busy} onClick={() => void add()}>
+      <Button size="sm" disabled={!folder || busy} onClick={() => void add()}>
         {t("sources.sent.add")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -955,13 +942,13 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
       )}
       <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
       <div className="row-end">
-        <button type="button" className="btn quiet" onClick={props.onClose}>
+        <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
-        </button>
+        </Button>
         {!guided && (
-          <button type="submit" className="btn primary" disabled={!ready}>
+          <Button variant="primary" type="submit" disabled={!ready}>
             {t(busy ? "sources.saving" : adding ? "sources.save_add" : "sources.save_change")}
-          </button>
+          </Button>
         )}
       </div>
     </form>

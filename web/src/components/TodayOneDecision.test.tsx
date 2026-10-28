@@ -205,13 +205,14 @@ test("a held op's label on its change's card says what it would do, and the op t
   expect(screen.queryByText("Closed a to-do")).toBeNull();
 });
 
-test("the lines that stop or ask for something use the queue's columns: one fixed pill column, so every title starts in line", () => {
+test("the lines that stop or ask for something are rows of the queue (ui/Row), so every title starts in line and none keeps a layout of its own", () => {
   const read = (...parts: string[]) => readFileSync(join(__dirname, ...parts), "utf8");
-  for (const css of [read("..", "shell", "HeldLines.module.css"), read("Learned.module.css"), read("..", "ui", "Row.module.css")]) {
-    expect(css).toMatch(/grid-template-columns:\s*var\(--row-pill-w\)\s+minmax\(0,\s*1fr\)\s+auto/);
-  }
-  expect(read("..", "shell", "HeldLines.module.css")).not.toMatch(/\.line\s*\{[^}]*display:\s*flex/);
-  expect(read("Learned.module.css")).not.toMatch(/\.todayLine\s*\{[^}]*display:\s*flex/);
+  for (const code of [read("..", "shell", "HeldLines.tsx"), read("LearnedToday.tsx")]) expect(code).toMatch(/<Row\b/);
+  for (const css of [read("..", "shell", "HeldLines.module.css"), read("Learned.module.css")]) expect(css).not.toMatch(/grid-template-columns:\s*var\(--row-pill-w\)/);
+  // The row has no column held for a mark: the leading slot is drawn only when there is something to put in it.
+  const row = read("..", "ui", "Row.module.css");
+  expect(row).not.toMatch(/--row-pill-w/);
+  expect(row).toMatch(/\.leads \{ grid-template-columns: auto minmax\(0, 1fr\) auto; \}/);
 });
 
 test("an answer to the person's question is a line that starts with Read, opens the answer, and has no approve button", async () => {

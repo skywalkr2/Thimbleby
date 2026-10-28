@@ -89,8 +89,13 @@ def seed_layout(store, cfg, stress: dict[str, str]) -> None:
     pm = cfg.workspace.user.person
     ctx = WriteContext(actor="pm", trust="trusted", op="e2e.layout")
     with store.transaction() as tx:
-        tx.create("project", {"name": stress["title"], "summary": stress["summary"]}, ctx)
+        long_project = tx.create("project", {"name": stress["title"], "summary": stress["summary"]}, ctx).id
         tx.create("person", {"full_name": stress["name"], "role": stress["summary"]}, ctx)
+        # Forty to-dos under the long-named project: every list is laid out with many rows as well as long ones.
+        if pm:
+            for number in range(1, 41):
+                text = f"Item {number:02d} of the long list"
+                tx.create("action", {"text": text, "owners": [{"person": pm}], "project": long_project}, ctx)
         if pm:
             tx.create(
                 "question",

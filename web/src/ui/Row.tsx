@@ -1,15 +1,18 @@
-// A list row (design 7.14): [pill] title (wrapping in full; `clamp` keeps it to two lines for a compact list) and meta, then the one primary action, then the menu at the
-// right edge. The pill column is a fixed width, empty when there is no exception, so titles align on every row of every
-// list. `tag` is a second, quieter mark that sits under the pill (what came from outside). `oneLine` keeps the meta to one
-// line, cut with an ellipsis, for a list that must stay short (Today). `data-row` puts it in the keyboard loop. Rows are
-// separated by hairlines, never cards.
+// A list row (design 7.14): an optional leading slot, then the title with one meta line, then the actions at the right edge.
+// The leading slot (`lead`: a round check box, a dot) takes no width when it is empty, so titles start at the left edge of a
+// list that has none. A mark the group heading does not already say (`pill`) sits in the title's line, never in a column of
+// its own, so titles line up whether or not a row has one. A row's actions are never solid: the one
+// primary draws as an outline. The row the cursor is on has a soft fill and a bar at its left edge. `clamp` keeps a title to
+// two lines for a compact list; `oneLine` keeps the meta to one line, cut with an ellipsis. `data-row` puts it in the keyboard
+// loop. Rows are separated by hairlines, never cards.
 import { Children, type HTMLAttributes, type ReactNode, type Ref } from "react";
 import styles from "./Row.module.css";
 
 export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
+  /** A control or marker that leads the row: a round check box, an unread dot. */
+  lead?: ReactNode;
+  /** A mark that says something the group heading does not; it stands before the title. */
   pill?: ReactNode;
-  /** A second mark under the pill, in the same column. */
-  tag?: ReactNode;
   title: ReactNode;
   meta?: ReactNode;
   /** Keep the meta to one line, cut with an ellipsis. */
@@ -18,18 +21,20 @@ export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   clamp?: string;
   primary?: ReactNode;
   menu?: ReactNode;
+  /** The row has the cursor, or is open in the pane. */
   selected?: boolean;
-  /** Content under the row, indented to the title column (an expanded row's items). */
+  /** Content under the row, across its full width (an expanded row's items). */
   children?: ReactNode;
-  /** Use a list item inside a list (the default) or a plain block. */
-  as?: "li" | "div";
+  /** Use a list item inside a list (the default), a plain block, or a labelled section. */
+  as?: "li" | "div" | "section";
   /** The row's element, whichever tag it is drawn as. */
-  ref?: Ref<HTMLLIElement & HTMLDivElement>;
+  ref?: Ref<HTMLLIElement & HTMLDivElement & HTMLElement>;
 }
 
 export function Row(props: RowProps) {
-  const { pill, tag, title, meta, oneLine, clamp, primary, menu, selected, children, as = "li", className, ...rest } = props;
+  const { lead, pill, title, meta, oneLine, clamp, primary, menu, selected, children, as = "li", className, ...rest } = props;
   const Tag = as;
+  const leads = !!lead;
   return (
     <Tag
       tabIndex={-1}
@@ -37,14 +42,16 @@ export function Row(props: RowProps) {
       data-row=""
       data-selected={selected ? "" : undefined}
       aria-current={selected ? "true" : undefined}
-      className={[styles.row, selected ? styles.selected : "", className ?? ""].filter(Boolean).join(" ")}
+      className={[styles.row, leads ? styles.leads : "", selected ? styles.selected : "", className ?? ""].filter(Boolean).join(" ")}
     >
-      <div className={styles.pill}>
-        {pill}
-        {tag}
-      </div>
+      {leads && (
+        <div className={styles.lead} data-row-lead="">
+          {lead}
+        </div>
+      )}
       <div className={styles.main}>
         <div className={clamp ? `${styles.title} ${styles.clamp}` : styles.title} title={clamp}>
+          {pill && <span className={styles.mark}>{pill}</span>}
           {title}
         </div>
         {meta && (

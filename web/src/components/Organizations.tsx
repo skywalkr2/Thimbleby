@@ -15,6 +15,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { Field } from "./PersonForm";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
+import { EmptyState } from "../ui/EmptyState";
 export function Organizations() {
   const { t } = useWords();
   const act = useAct();
@@ -45,14 +46,14 @@ export function Organizations() {
     <section className="panel-section" aria-labelledby="organizations-title">
       <div className="heading">
         <h2 id="organizations-title">{t("setup.organizations")}</h2>
-        <Button variant="primary" onClick={() => setAdding(true)}>
+        <Button onClick={() => setAdding(true)}>
           {t("setup.add_organization")}
         </Button>
       </div>
       {orgs.isPending ? (
         <Skeleton />
       ) : rows.length === 0 ? (
-        <p className="empty">{t("setup.no_organizations")}</p>
+        <EmptyState text={t("setup.no_organizations")} />
       ) : (
         <RecordsTable
           label={t("setup.organizations")}

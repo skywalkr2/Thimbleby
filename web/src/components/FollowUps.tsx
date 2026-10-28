@@ -56,6 +56,9 @@ import { CurrentCopy } from "./SameDocument";
 import { plainTitle } from "../lib/title-dates";
 import { Pill } from "../ui/Pill";
 
+import { EmptyState } from "../ui/EmptyState";
+import { PageHeader } from "../ui/PageHeader";
+import { TabStrip } from "../ui/TabStrip";
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
 const FILTERS: Filter[] = ["send", "later", "waiting"];
@@ -105,7 +108,6 @@ export function FollowUps(props: { compact?: boolean }) {
   const compact = !!props.compact;
   // The full screen counts as time spent looking over the assistant's work; the compact one on Today is part of that screen.
   useReviewTime("followups", !compact);
-  const Heading = compact ? "h3" : "h1";
   const [filter, setFilter] = useState<Filter>("send");
   const [group, setGroup] = useState<Group>("person");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
@@ -212,49 +214,46 @@ export function FollowUps(props: { compact?: boolean }) {
 
   return (
     <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
-      <div className="heading">
-        <Heading id="followups-title">{t("followups.title")}</Heading>
-        <SideFilter waiting="followups" />
-        {!compact && !justMe && !nothingAnywhere && (
-          <SegmentedControl
-            label={t("followups.group")}
-            value={group}
-            onChange={setGroup}
-            options={[
-              { value: "person", label: t("followups.group.person") },
-              { value: "project", label: t("followups.group.project") },
-            ]}
-          />
-        )}
-        {!nothingAnywhere && (
-          <div className="filters" role="group" aria-label={t("followups.filter")}>
-            {FILTERS.map((f) => (
-              <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-                {t(`followups.filter.${f}`)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        id="followups-title"
+        level={compact ? 3 : 1}
+        title={t("followups.title")}
+        tabs={
+          !nothingAnywhere ? (
+            <TabStrip label={t("followups.filter")} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ value: f, label: t(`followups.filter.${f}`) }))} />
+          ) : undefined
+        }
+        filters={
+          <>
+            {!compact && !justMe && !nothingAnywhere && (
+              <SegmentedControl
+                label={t("followups.group")}
+                value={group}
+                onChange={setGroup}
+                options={[
+                  { value: "person", label: t("followups.group.person") },
+                  { value: "project", label: t("followups.group.project") },
+                ]}
+              />
+            )}
+            <SideFilter waiting="followups" />
+          </>
+        }
+      />
       {followups.isPending ? (
         <Skeleton />
       ) : followups.isError ? (
-        <p className="empty">
-          {t("followups.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void followups.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("followups.load_failed")} action={{ label: t("action.try_again"), onClick: () => void followups.refetch() }} />
       ) : sections.length === 0 && actRows.length === 0 ? (
-        <p className="empty">{present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")}</p>
+        <EmptyState text={present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")} />
       ) : byProject ? (
         projectSections.length === 0 ? (
-          <p className="empty">{t(`followups.empty_${filter}`)}</p>
+          <EmptyState text={t(`followups.empty_${filter}`)} />
         ) : (
           <FollowUpsByProject sections={projectSections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
         )
       ) : shown.length === 0 && actRows.length === 0 ? (
-        <p className="empty">{t(`followups.empty_${filter}`)}</p>
+        <EmptyState text={t(`followups.empty_${filter}`)} />
       ) : reviewing && phone && reviewable.length > 0 ? (
         <ReviewMode
           own
@@ -293,9 +292,9 @@ export function FollowUps(props: { compact?: boolean }) {
             <ol className="queue" aria-labelledby={actRows.length > 0 ? "followups-messages-title" : undefined}>
               {phone && reviewable.length > 0 && (
                 <li className="review-start">
-                  <button type="button" className="btn primary" onClick={() => setReviewing(true)}>
+                  <Button variant="primary" onClick={() => setReviewing(true)}>
                     {t("followups.review.start")}
-                  </button>
+                  </Button>
                 </li>
               )}
               {shown.map((s) => (
@@ -315,12 +314,7 @@ export function FollowUps(props: { compact?: boolean }) {
         </ListDetail>
       )}
       {!compact && !byProject && filter === "send" && acts.isError && (
-        <p className="empty">
-          {t("outgoing.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void acts.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("outgoing.load_failed")} action={{ label: t("action.try_again"), onClick: () => void acts.refetch() }} />
       )}
       {!compact && !byProject && filter === "send" && acts.isSuccess && <SentActs />}
       {!compact && !byProject && filter === "send" && <MessageStyle />}
@@ -430,9 +424,9 @@ function FollowListRow(props: {
         </button>
         {kind === "send" && (
           <div className="acts">
-            <button type="button" className="btn primary" onClick={() => toDetail("primary")}>
+            <Button variant="primary" onClick={() => toDetail("primary")}>
               {props.copied ? t("followups.mark_sent") : t("followups.copy_message")}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -572,9 +566,9 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
             </label>
             <textarea id={`ans-${q.id}`} className="short" value={answer} onChange={(e) => setAnswer(e.target.value)} />
             <div className="row-end">
-              <button type="submit" className="btn primary" data-key="primary" disabled={!answer.trim()}>
+              <Button variant="primary" type="submit" data-key="primary" disabled={!answer.trim()}>
                 {t("followups.answer")}
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -758,9 +752,9 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
 
   const buttons = (
     <div className="acts">
-      <button type="button" className="btn primary" onClick={primary}>
+      <Button variant="primary" onClick={primary}>
         {copied ? t("followups.mark_sent") : t("followups.copy_message")}
-      </button>
+      </Button>
       <RowMenu label={s.name} actions={menu} />
     </div>
   );
@@ -854,13 +848,13 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 <div className="row-end">
                   <span className="hint">{t("followups.clean_copy")}</span>
                   {draft !== null && (
-                    <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
+                    <Button variant="quiet" onClick={() => setDraft(null)}>
                       {t("followups.reset")}
-                    </button>
+                    </Button>
                   )}
-                  <button type="button" className="btn primary" onClick={primary} disabled={!!s.withheld}>
+                  <Button variant="primary" onClick={primary} disabled={!!s.withheld}>
                     {copied ? t("followups.mark_sent") : t("followups.copy_message")}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </>
@@ -1006,16 +1000,14 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
   if (!open)
     return (
       <div className="nudge-start">
-        <button
-          type="button"
-          className="btn primary"
+        <Button variant="primary"
           onClick={() => {
             setFocusBox(true);
             setOpen(true);
           }}
         >
           {t("followups.nudge.draft")}
-        </button>
+        </Button>
       </div>
     );
   return (
@@ -1072,18 +1064,18 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
         <div className="row-end">
           <span className="hint">{round}</span>
           {draft !== null && (
-            <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
+            <Button variant="quiet" onClick={() => setDraft(null)}>
               {t("followups.reset")}
-            </button>
+            </Button>
           )}
           {!copied && (
-            <button type="button" className="btn quiet" onClick={() => void markSent()} disabled={!!nudge.withheld}>
+            <Button variant="quiet" onClick={() => void markSent()} disabled={!!nudge.withheld}>
               {t("followups.mark_sent")}
-            </button>
+            </Button>
           )}
-          <button type="button" className="btn primary" onClick={() => void (copied ? markSent() : copy())} disabled={!!nudge.withheld}>
+          <Button variant="primary" onClick={() => void (copied ? markSent() : copy())} disabled={!!nudge.withheld}>
             {copied ? t("followups.mark_sent") : t("followups.nudge.copy")}
-          </button>
+          </Button>
           <RowMenu label={s.name} actions={[{ id: "copy-plain", label: t("followups.copy_plain"), run: () => void copyPlainText() }]} />
         </div>
       </div>
@@ -1143,9 +1135,9 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
       </div>
       <div className="acts">
         {!replying && (
-          <button type="button" className="btn" onClick={() => setReplying(true)}>
+          <Button onClick={() => setReplying(true)}>
             {t("followups.record_reply")}
-          </button>
+          </Button>
         )}
         <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
       </div>
@@ -1174,12 +1166,12 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
             }}
           />
           <div className="row-end">
-            <button type="button" className="btn quiet" onClick={() => setReplying(false)}>
+            <Button variant="quiet" onClick={() => setReplying(false)}>
               {t("action.cancel")}
-            </button>
-            <button type="submit" className="btn primary" disabled={!text.trim()}>
+            </Button>
+            <Button variant="primary" type="submit" disabled={!text.trim()}>
               {t("followups.reply_go")}
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -1242,9 +1234,9 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
         <OriginLink origin={a.origin} />
       </div>
       <div className="acts">
-        <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
+        <Button variant="primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
-        </button>
+        </Button>
         <RowMenu label={a.text} actions={[chase ? finish : chased, note, ...(a.version != null && a.owners ? [reassign.entry] : []), hold.entry, change.entry, drop.entry]} />
       </div>
       {noting && (

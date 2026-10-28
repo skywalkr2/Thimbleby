@@ -37,7 +37,7 @@ later:
   expect:
   - op: action.add
     text_has: [carrier survey]
-    owners: [PER-7]
+    owners: [PER-2002]  # the next id after the long-name fixture person, PER-2001
     due: '2026-10-30'
   forbid:
   - new_person: true

@@ -52,6 +52,11 @@ import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
 import { plainTitle } from "../lib/title-dates";
 
+import { EmptyState } from "../ui/EmptyState";
+import { FilterChip } from "../ui/FilterChip";
+import { PageHeader } from "../ui/PageHeader";
+import { RoundCheck } from "../ui/RoundCheck";
+import { TabStrip } from "../ui/TabStrip";
 type Tab = "actions" | "questions";
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -95,49 +100,55 @@ export function OpenItems() {
 
   return (
     <section className="panel-section" aria-labelledby="open-title" data-open-items="">
-      <div className="heading">
-        <h1 id="open-title">{t("open.title")}</h1>
-        <SideFilter waiting="open" />
-        <div className="filters" role="group" aria-label={t("open.tabs")}>
-          <button type="button" aria-pressed={tab === "actions"} onClick={() => choose("actions")}>
-            {t("open.tab.actions", { n: actions.length })}
-          </button>
-          <button type="button" aria-pressed={tab === "questions"} onClick={() => choose("questions")}>
-            {t("open.tab.questions", { n: questions.length })}
-          </button>
-        </div>
-        {!items.isPending && actions.length + questions.length > 0 && (
-          <Button variant="secondary" size="sm" icon="plus" onClick={addTodo.open}>
-            {t("addtodo.open")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        id="open-title"
+        title={t("open.title")}
+        primary={
+          !items.isPending && actions.length + questions.length > 0 ? (
+            <Button variant="primary" icon="plus" onClick={addTodo.open}>
+              {t("addtodo.open")}
+            </Button>
+          ) : undefined
+        }
+        tabs={
+          <TabStrip
+            label={t("open.tabs")}
+            value={tab}
+            onChange={choose}
+            options={[
+              { value: "actions", label: t("open.tab.actions"), count: actions.length },
+              { value: "questions", label: t("open.tab.questions"), count: questions.length },
+            ]}
+          />
+        }
+        filters={
+          <>
+            {!items.isPending && !items.isError && actions.length + questions.length > 0 && (
+              <>
+                <Choice id={`${ids}-person`} label={t("open.filter.person")} value={filters.person} onChange={(v) => set({ person: v })} none={t("person.everyone")} options={personChoices.map((p) => [p.id, p.name])} />
+                <Choice id={`${ids}-state`} label={t("open.filter.state")} value={filters.state} onChange={(v) => set({ state: v })} none={t("open.filter.any_state")} options={states.map((s) => [s, t(`open.${tab === "actions" ? "state" : "qstate"}.${s}`)])} />
+                <Choice id={`${ids}-project`} label={t(justMe ? "open.filter.area" : "open.filter.project")} value={filters.project} onChange={(v) => set({ project: v })} none={t(justMe ? "open.filter.all_areas" : "open.filter.all_projects")} options={projectChoices.map((p) => [p.id, p.name])} />
+              </>
+            )}
+            <SideFilter waiting="open" />
+          </>
+        }
+      />
       {addTodo.form}
       {items.isPending ? (
         <Skeleton />
       ) : items.isError ? (
-        <p className="empty">
-          {t("open.load_failed")}{" "}
-          <button type="button" className="btn" onClick={() => void items.refetch()}>
-            {t("action.try_again")}
-          </button>
-        </p>
+        <EmptyState icon="alert" text={t("open.load_failed")} action={{ label: t("action.try_again"), onClick: () => void items.refetch() }} />
       ) : actions.length + questions.length === 0 ? (
-        <div className="empty">
-          <p>{side.choice === "all" ? t("open.empty") : t("sides.empty.open", { side: side.named })}</p>
-          <Button variant="primary" icon="plus" onClick={addTodo.open}>
-            {t("addtodo.open")}
-          </Button>
-        </div>
+        <EmptyState
+          icon="check"
+          text={side.choice === "all" ? t("open.empty") : t("sides.empty.open", { side: side.named })}
+          action={{ label: t("addtodo.open"), onClick: addTodo.open, primary: true }}
+        />
       ) : (
         <>
-          <div className={styles.bar} role="group" aria-label={t("open.filters")}>
-            <Choice id={`${ids}-project`} label={t(justMe ? "open.filter.area" : "open.filter.project")} value={filters.project} onChange={(v) => set({ project: v })} none={t(justMe ? "open.filter.all_areas" : "open.filter.all_projects")} options={projectChoices.map((p) => [p.id, p.name])} />
-            <Choice id={`${ids}-person`} label={t("open.filter.person")} value={filters.person} onChange={(v) => set({ person: v })} none={t("person.everyone")} options={personChoices.map((p) => [p.id, p.name])} />
-            <Choice id={`${ids}-state`} label={t("open.filter.state")} value={filters.state} onChange={(v) => set({ state: v })} none={t("open.filter.any_state")} options={states.map((s) => [s, t(`open.${tab === "actions" ? "state" : "qstate"}.${s}`)])} />
-          </div>
           {shown === 0 ? (
-            <p className="empty">{t("open.none_match")}</p>
+            <EmptyState text={t("open.none_match")} />
           ) : tab === "actions" ? (
             <ul className="queue" aria-label={t("open.list.actions")}>
               {shownActions.map((a) => (
@@ -161,19 +172,7 @@ export function OpenItems() {
 function Choice(props: { id: string; label: string; value: string; onChange: (v: string) => void; none: string; options: Array<[string, string]> }) {
   // A filter with fewer than two real choices besides "all" changes nothing; one already set stays so the person can clear it.
   if (props.options.length < 2 && !props.value) return null;
-  return (
-    <div className="field">
-      <label htmlFor={props.id}>{props.label}</label>
-      <select id={props.id} value={props.value} onChange={(e) => props.onChange(e.target.value)}>
-        <option value="">{props.none}</option>
-        {props.options.map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
+  return <FilterChip label={props.label} value={props.value} onChange={props.onChange} options={[["", props.none], ...props.options]} />;
 }
 
 /** The pieces of a meta line, with a dot between them. */
@@ -257,6 +256,9 @@ function ActionRow(props: { action: OpenAction }) {
   return (
     <Row
       ref={ref}
+      lead={
+        unowned ? undefined : <RoundCheck label={t("followups.mark_done")} data-key="primary" onClick={() => void done()} />
+      }
       pill={pillOf(a, t)}
       title={title}
       meta={
@@ -266,17 +268,11 @@ function ActionRow(props: { action: OpenAction }) {
         </>
       }
       primary={
-        unowned ? (
-          a.owner_question ? (
-            <button type="button" className="btn primary" data-key="primary" aria-expanded={asking} onClick={() => setAsking(!asking)}>
-              {t("queue.act.pick_owner")}
-            </button>
-          ) : null
-        ) : (
-          <button type="button" className="btn primary" data-key="primary" onClick={() => void done()}>
-            {t("followups.mark_done")}
-          </button>
-        )
+        unowned && a.owner_question ? (
+          <Button variant="primary" data-key="primary" aria-expanded={asking} onClick={() => setAsking(!asking)}>
+            {t("queue.act.pick_owner")}
+          </Button>
+        ) : undefined
       }
       menu={<RowMenu label={a.text} actions={menu} />}
     >
@@ -363,9 +359,9 @@ function QuestionRow(props: { question: OpenQuestion }) {
         </>
       }
       primary={
-        <button type="button" className="btn primary" data-key="primary" onClick={open}>
+        <Button variant="primary" data-key="primary" onClick={open}>
           {t(label)}
-        </button>
+        </Button>
       }
       menu={<RowMenu label={q.title} actions={[...menu.entries, change.entry]} />}
     >

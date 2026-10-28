@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { useFocusAfterRender } from "../lib/focus-after-render";
-
+import { Button } from "../ui/Button";
 /** The choice that opens the add field; no organization id can look like it. */
 const ADD = "\u0001add";
 
@@ -106,12 +106,12 @@ export function OrgSelect(props: {
               }
             }}
           />
-          <button type="button" className="btn primary" disabled={!text.trim() || busy} onClick={() => void add()}>
+          <Button variant="primary" disabled={!text.trim() || busy} onClick={() => void add()}>
             {t("org.add")}
-          </button>
-          <button type="button" className="btn quiet" onClick={stop}>
+          </Button>
+          <Button variant="quiet" onClick={stop}>
             {t("action.cancel")}
-          </button>
+          </Button>
         </div>
       )}
     </div>

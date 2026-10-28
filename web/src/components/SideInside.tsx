@@ -7,7 +7,8 @@ import { useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Row } from "../ui/Row";
-
+import { ButtonLink } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 export function SideInside(props: { id: string }) {
   const { t, tn } = useWords();
   const { personal, sides } = useSides();
@@ -23,7 +24,7 @@ export function SideInside(props: { id: string }) {
         {inside.length > 0 && <span className="hint">{inside.length}</span>}
       </div>
       {inside.length === 0 ? (
-        <p className="empty">{t(`side.${part}.empty`)}</p>
+        <EmptyState text={t(`side.${part}.empty`)} />
       ) : (
         <ul className="queue">
           {inside.map((p) => (
@@ -41,9 +42,9 @@ export function SideInside(props: { id: string }) {
       )}
       {!isPersonal && (
         <p>
-          <a className="btn" href={viewHref("records/projects")}>
+          <ButtonLink href={viewHref("records/projects")}>
             {t("side.projects.all")}
-          </a>
+          </ButtonLink>
         </p>
       )}
     </section>
