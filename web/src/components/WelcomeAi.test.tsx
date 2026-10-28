@@ -263,7 +263,7 @@ test("choosing Something else opens three lines, one note each, and each opens i
   expect(document.querySelector(".else-line")).toBeNull();
 });
 
-test("a note is one short line on its card, the whole note stays in the tooltip and shows once the kind is chosen", async () => {
+test("a note is shown whole, once, on its card: never cut off with dots and never repeated under the choices", async () => {
   const user = userEvent.setup();
   const long = "Uses your Google account through its command-line tool. It refuses personal free accounts, so a key or a paid plan is needed. Its documentation says it asks before writing files or running commands; it names no option that stops it reading files.";
   api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, note: long } : k)) });
@@ -271,12 +271,11 @@ test("a note is one short line on its card, the whole note stays in the tooltip 
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   await user.click(await screen.findByRole("button", { name: /^An app you're signed in to/ }));
   const card = screen.getByRole("radio", { name: /App B/ }).closest("label") as HTMLElement;
-  const note = card.querySelector(".hint") as HTMLElement;
-  expect(note.textContent).toBe("Uses your Google account through its command-line tool.");
-  expect(note).toHaveAttribute("title", long);
-  expect(document.querySelector("[data-full-note]")).toBeNull();
+  expect((card.querySelector(".hint") as HTMLElement).textContent).toBe(long);
   await user.click(screen.getByRole("radio", { name: /App B/ }));
-  expect(document.querySelector("[data-full-note]")).toHaveTextContent(long);
+  expect(document.querySelector("[data-full-note]")).toBeNull();
+  expect(screen.getAllByText(long)).toHaveLength(1);
+  expect(document.body.textContent).not.toContain("…");
 });
 
 test("the step shows no empty AI accounts block, and lists the accounts once there are some", async () => {
@@ -309,7 +308,7 @@ test("the chosen service has four numbered steps, each with a button to its page
   await pick(user, "Service A");
   expect(screen.getByRole("heading", { name: "Connect Service A" })).toBeInTheDocument();
   const steps = screen.getAllByRole("listitem").filter((li) => li.classList.contains("numbered-step"));
-  expect(steps.map((li) => li.querySelector("strong")?.textContent)).toEqual(["Make an account", "Add credit", "Make a key and copy it", "Paste it here"]);
+  expect(steps.map((li) => li.querySelector("strong")?.textContent)).toEqual(["Make an account", "Add credit if it asks for it", "Make a key and copy it", "Paste it here"]);
   const signup = screen.getByRole("link", { name: /Open the sign-up page/ });
   expect(signup).toHaveAttribute("href", `${WEB}console.service-a.example.com/signup`);
   expect(signup).toHaveAttribute("target", "_blank");
@@ -325,7 +324,9 @@ test("the credit step says about what to add, from the day limit the app starts 
   api();
   open();
   await pick(user, "Service A");
-  expect(await screen.findByText(/About \$10 is plenty to start; the app stops for the day at \$2 whatever you add\./)).toBeInTheDocument();
+  expect(await screen.findByText(/if yours asks for credit, add about \$10\. The app stops for the day at \$2 whatever you add\./)).toBeInTheDocument();
+  // It never says a key with no credit won't work: some services have a free tier.
+  expect(document.body.textContent).not.toMatch(/no credit won/);
 });
 
 test("a step with no page to open has no button", async () => {
@@ -464,68 +465,15 @@ test("a service that lists no models asks for the model's name, and the check wa
 
 // ---- the model: chosen for each kind of work, its picker in Advanced ---------------------------------------------------
 
-test("the model is picked for each kind of work and its name is never shown outside Advanced", async () => {
+test("the model is picked for each kind of work and never shown in the guide: its picker is in Settings", async () => {
   const user = userEvent.setup();
   api();
   open();
   await pasted(user);
-  expect(screen.getByText("A fitting model is picked for each kind of work. You can change it under Advanced.")).toBeInTheDocument();
-  const advanced = screen.getByText("Advanced").closest("details")!;
-  const everyday = within(advanced).getByLabelText("AI model for everyday work", { selector: "select" });
-  expect(everyday).toHaveValue("model-a");
-  const outside = (document.body.textContent ?? "").replace(advanced.textContent ?? "", "");
-  expect(outside).not.toMatch(/model-a|model-b/);
-});
-
-test("the pickers under Advanced list the models with what each costs, and a new choice is checked again", async () => {
-  const user = userEvent.setup();
-  const calls = api();
-  open();
-  await pasted(user);
-  const advanced = screen.getByText("Advanced").closest("details")!;
-  const everyday = within(advanced).getByLabelText("AI model for everyday work");
-  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["model-a", "model-b", "model-c"]);
-  expect(screen.getByText(/Reads up to about 200,000 text units at once\. Per million text units: \$3\.00 to read, \$15\.00 to write\./)).toBeInTheDocument();
-  const harder = within(advanced).getByLabelText("AI model for harder work (optional)");
-  expect(within(harder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Same as the everyday model", "model-a", "model-b", "model-c"]);
-  await user.selectOptions(harder, "model-b");
-  await waitFor(() => expect(checks(calls)).toHaveLength(2));
-  expect(checks(calls)[1].body).toMatchObject({ models: { everyday: "model-a", harder: "model-b" }, use: { routine: "everyday", deep: "harder" } });
-  await user.selectOptions(everyday, "model-c");
-  await waitFor(() => expect(checks(calls)).toHaveLength(3));
-  expect(screen.getByText("Reading costs $0.25 per million text units.")).toBeInTheDocument();
-});
-
-test("a long list of models can be narrowed by typing, under Advanced", async () => {
-  const user = userEvent.setup();
-  const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${String(i).padStart(2, "0")}` }));
-  api({ "POST ai/models": () => ({ models: many }) });
-  open();
-  await pasted(user);
-  const everyday = screen.getByLabelText("AI model for everyday work");
-  const harder = screen.getByLabelText("AI model for harder work (optional)");
-  expect(everyday).toHaveValue("model-00");
-  await user.selectOptions(harder, "model-05");
-  await user.type(screen.getByLabelText("Find a model"), "model-1");
-  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(Array.from({ length: 10 }, (_, i) => `model-${10 + i}`));
-  expect(everyday).toHaveValue("model-10");
-  expect(harder).toHaveValue("model-10");
-  await user.clear(screen.getByLabelText("Find a model"));
-  expect(within(everyday).getAllByRole("option")).toHaveLength(20);
-});
-
-test("when nothing matches the search there is no model to pick and Save waits", async () => {
-  const user = userEvent.setup();
-  const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${String(i).padStart(2, "0")}` }));
-  api({ "POST ai/models": () => ({ models: many }) });
-  open();
-  await ready(user);
-  expect(save()).toBeEnabled();
-  await user.type(screen.getByLabelText("Find a model"), "zzz");
-  expect(screen.getByText("No model matches.")).toBeInTheDocument();
-  expect(save()).toBeDisabled();
-  await user.clear(screen.getByLabelText("Find a model"));
-  expect(save()).toBeEnabled();
+  expect(screen.getByText("A fitting model is picked for each kind of work. You can change it later in Settings.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("AI model for everyday work")).toBeNull();
+  expect(visibleText(document.body)).not.toMatch(/model-a|model-b|model-c/);
+  expect(document.body.textContent).not.toMatch(/model-a|model-b|model-c/);
 });
 
 // ---- the question about what the account may read ----------------------------------------------------------------------------
@@ -538,7 +486,7 @@ test("the question says exactly what Allow covers, names the account and its sig
   const question = await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." });
   // Private mail is covered and said so; the words "work mail" never appear on the step, whoever it is for.
   expect(within(question).getByText("Your personal mail is private. Only accounts you allow can read it.")).toBeInTheDocument();
-  expect(within(question).getByText("The service is Service A account, signed in as sam@example.com.")).toBeInTheDocument();
+  expect(within(question).getByText("The service is Service A, signed in as sam@example.com.")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/work mail/i);
   const allow = within(question).getByRole("radio", { name: /^Allow/ });
   const notPrivate = within(question).getByRole("radio", { name: /^Not my private mail/ });
@@ -569,8 +517,10 @@ test("where the account's sign-in can't be told the question says so in plain wo
   open();
   await pasted(user);
   expect(await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." })).toBeInTheDocument();
-  expect(screen.getByText("The service is Service A account.")).toBeInTheDocument();
-  expect(screen.getByText("We can't tell who it is signed in as: the service doesn't say whose account the key belongs to.")).toBeInTheDocument();
+  expect(screen.getByText("The service is Service A.")).toBeInTheDocument();
+  expect(screen.getByText("We can't tell which account it is signed in to. Check in that app that it is the one you mean.")).toBeInTheDocument();
+  // What the server found about the program's answer is never put on the screen.
+  expect(document.body.textContent).not.toMatch(/the service doesn't say whose account/);
 });
 
 test("the question isn't asked before the key works", async () => {
@@ -602,32 +552,20 @@ test("Allow lets the account read open, internal and private material; Not now l
   expect(body(again).work_data).toBe("not_now");
 });
 
-test("the three levels stay under Advanced, with Open the only one ticked until the person says more", async () => {
+test("privacy is asked once in the guide, as Allow or Not my private mail: Advanced holds no levels, no model list and no environment name", async () => {
   const user = userEvent.setup();
   api();
   open();
   await pasted(user);
   const advanced = screen.getByText("Advanced").closest("details")!;
-  const levels = within(advanced).getByRole("group", { name: "What it may see" });
-  expect(within(levels).getByLabelText("Open material")).toBeChecked();
-  expect(within(levels).getByLabelText("Internal material")).not.toBeChecked();
-  expect(within(levels).getByLabelText("Restricted material")).not.toBeChecked();
-  expect(within(levels).getByText("Material goes only to AI accounts you've allowed for its privacy level.")).toBeInTheDocument();
-  expect(within(levels).getByText("Your mail is private and your notes and meetings are internal, so the assistant can work on them only once both are ticked.")).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: /^Allow/ }));
-  expect(within(levels).getByLabelText("Internal material")).toBeChecked();
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
-  expect(within(levels).getByLabelText("Internal material")).not.toBeChecked();
-});
-
-test("no level at all stops Save", async () => {
-  const user = userEvent.setup();
-  api();
-  open();
-  await ready(user, "Not my private mail");
-  expect(save()).toBeEnabled();
-  await user.click(within(screen.getByText("Advanced").closest("details")!).getByLabelText("Open material"));
-  expect(save()).toBeDisabled();
+  expect(within(advanced).queryByRole("group", { name: "What it may see" })).toBeNull();
+  expect(within(advanced).queryByLabelText("AI model for everyday work")).toBeNull();
+  expect(within(advanced).queryByLabelText("Use a saved access key instead")).toBeNull();
+  expect(within(advanced).queryByLabelText("Use it for my work")).toBeNull();
+  expect(advanced.textContent).not.toMatch(/environment variable|text units|Open|Confidential|Private/);
+  expect(within(advanced).getByLabelText("Account name")).toBeInTheDocument();
+  // The one question is the whole answer: Allow reads every level, the other reads open material only.
+  expect(screen.getAllByRole("radio", { name: /^(Allow|Not my private mail)/ })).toHaveLength(2);
 });
 
 // ---- spending as a sentence --------------------------------------------------------------------------------------------
@@ -774,13 +712,12 @@ test("Save says what is missing until a service is chosen, and when one already 
   expect(save()).toBeEnabled();
 });
 
-test("when the guide step was already done, using it for my work starts unticked, under Advanced, and sends no use", async () => {
+test("when the guide step was already done, the new account is added without taking the work over", async () => {
   const user = userEvent.setup();
   const calls = api();
   open({ done: true });
   await ready(user);
-  const advanced = screen.getByText("Advanced").closest("details")!;
-  expect(within(advanced).getByLabelText("Use it for my work")).not.toBeChecked();
+  expect(screen.queryByLabelText("Use it for my work")).toBeNull();
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).use).toBeUndefined();
@@ -836,21 +773,16 @@ test("a name the person typed under Advanced makes its own id", async () => {
   expect(body(calls).label).toBe("My AI");
 });
 
-test("Advanced holds the account name, the fixed address read-only and the key's other home", async () => {
+test("Advanced holds only the account's name: the address, the saved key and the rest are in Settings", async () => {
   const user = userEvent.setup();
-  const calls = api();
+  api();
   open();
-  await pick(user, "Service A");
+  await ready(user);
   const advanced = screen.getByText("Advanced").closest("details")!;
   expect(advanced).not.toHaveAttribute("open");
-  const address = within(advanced).getByLabelText("Service address", { selector: "input", exact: true });
-  expect(address).toHaveValue(`${WEB}api.service-a.example.com/v1`);
-  expect(address).toHaveAttribute("readonly");
-  await user.type(within(advanced).getByLabelText("Use a saved access key instead"), "env:MODEL_KEY{Enter}");
-  expect(screen.getByLabelText("Access key")).toBeDisabled();
-  expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
-  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
-  expect(checks(calls)[0].body).toMatchObject({ key_ref: "env:MODEL_KEY" });
+  expect(within(advanced).queryByLabelText("Service address")).toBeNull();
+  expect(within(advanced).queryByLabelText("Use a saved access key instead")).toBeNull();
+  expect(save()).toBeEnabled();
   await user.clear(within(advanced).getByLabelText("Account name", { selector: "input" }));
   expect(save()).toBeDisabled();
 });
@@ -865,7 +797,7 @@ test("a server found on this computer is offered first, checked at once with no 
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   await user.click(await screen.findByRole("button", { name: /^One on this computer/ }));
-  expect(await screen.findByText("Found A server on this computer on this computer with 2 models. Nothing leaves this computer.")).toBeInTheDocument();
+  expect(await screen.findByText("Found A server on this computer on this computer with 2 models.")).toBeInTheDocument();
   expect(document.querySelector('input[name^="ai-kind"][value="local-box"]')).toBeNull();
   const use = screen.getByRole("button", { name: "Use it" });
   expect(use).toHaveAttribute("aria-pressed", "false");
@@ -898,15 +830,28 @@ test("a server found with no models says so, never \"0 models\"", async () => {
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   await user.click(await screen.findByRole("button", { name: /^One on this computer/ }));
-  expect(await screen.findByText(/Found A server on this computer on this computer, but it has no models yet/)).toBeInTheDocument();
+  expect(await screen.findByText(/Found A server on this computer on this computer, but it has no models yet\./)).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 models?\b/);
 });
 
-test("a kind on this computer that isn't running is listed under Something else and checked at once with no key", async () => {
+test("a kind on this computer that isn't running says to start it and press Check, with no error before the first check", async () => {
   const user = userEvent.setup();
-  const calls = api();
+  let answer: unknown = { models: [], problem: "The service couldn't be reached. Check the address, or start it if it runs on this computer." };
+  const calls = api({ "POST ai/models": () => answer, "GET ai/endpoints": () => KINDS.map((k) => (k.id === "local-box" ? { ...k, install_url: `${WEB}download.example.com/box` } : k)) });
   open();
   await pickElse(user, "A server on this computer");
+  // Nothing is asked of the service, and nothing is red, until the person presses Check.
+  expect(await screen.findByText("Start it on this computer first, then press Check.")).toBeInTheDocument();
+  expect(modelsAsked(calls)).toHaveLength(0);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByText("Start it on this computer, then press Check to go on.")).toBeInTheDocument();
+  expect(save()).toBeDisabled();
+  expect(screen.getByRole("link", { name: /Open the download page/ })).toHaveAttribute("href", `${WEB}download.example.com/box`);
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("couldn't be reached");
+  // Once it runs, the same button finds it.
+  answer = { models: [{ id: "small-1" }], problem: null, suggested: "small-1" };
+  await user.click(screen.getByRole("button", { name: "Check" }));
   expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "local-box" });
   expect(screen.queryByLabelText("Access key")).toBeNull();
@@ -1069,24 +1014,30 @@ test("an app that picks its own model and names no examples asks for no model", 
   expect(screen.getByText("Change the model in that app's settings.")).toBeInTheDocument();
 });
 
-test("an app's example models are offered as Recommended, Stronger and Faster, and the app's own name for the choice is only in the hint", async () => {
+test("an app's example models are offered as Recommended, Stronger and Faster, and the program's own name for one is never shown", async () => {
   const user = userEvent.setup();
   api();
   open();
   await pickElse(user, "App A");
   const model = screen.getByLabelText("AI model");
-  // Left to the app first: no name to match, so no hint.
-  expect(screen.queryByText(/The app calls this one/)).toBeNull();
   await user.selectOptions(model, "beta");
-  const hint = screen.getByText(/The app calls this one/);
-  expect(hint).toHaveTextContent(`The app calls this one "beta". Use that name if you need to match the app's own settings.`);
-  expect(model).toHaveAccessibleDescription(hint.textContent ?? "");
-  // The program's names are in the hint and nowhere else: not in the choices, the labels or any other line.
-  const outside = (document.body.textContent ?? "").replace(hint.textContent ?? "", "");
-  expect(outside).not.toMatch(/alpha|beta/);
-  expect(screen.queryByText("AI model: alpha")).toBeNull();
+  expect(screen.queryByText(/The app calls this one/)).toBeNull();
+  expect(model).not.toHaveAccessibleDescription(/beta/);
+  expect(document.body.textContent).not.toMatch(/alpha|beta/);
   await user.selectOptions(model, "alpha");
-  expect(screen.getByText(/The app calls this one/)).toHaveTextContent(`"alpha"`);
+  expect(document.body.textContent).not.toMatch(/alpha|beta/);
+});
+
+test("two examples with the same purpose are told apart by a number, not by the program's name for them", async () => {
+  const user = userEvent.setup();
+  api({
+    "GET ai/endpoints": () =>
+      KINDS.map((k) => (k.id === "app-a" ? { ...k, model_examples: ["alpha", "beta", "gamma"], model_roles: { alpha: "recommended", beta: "stronger", gamma: "stronger" } } : k)),
+  });
+  open();
+  await pickElse(user, "App A");
+  const options = within(screen.getByLabelText("AI model")).getAllByRole("option").map((o) => o.textContent);
+  expect(options).toEqual(["Let the app choose", "Recommended", "Stronger 1", "Stronger 2", "Another AI model"]);
 });
 
 test("an example the catalog gives no role is offered by number, never by its name", async () => {
@@ -1187,7 +1138,7 @@ test("an account whose sign-in the app can read is asked about by that sign-in",
   open();
   await pickElse(user, "App A");
   expect(await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." })).toBeInTheDocument();
-  expect(screen.getByText("The service is App A account, signed in as pat@example.com.")).toBeInTheDocument();
+  expect(screen.getByText("The service is App A, signed in as pat@example.com.")).toBeInTheDocument();
 });
 
 test("a model the service retired is described by its work, offered its replacement with one button, and leaves the list", async () => {
@@ -1215,4 +1166,71 @@ test("a model the service retired is described by its work, offered its replacem
   expect(asked).toBe(2);
   expect((checks(calls)[1].body as S["AiAccountCheck"]).models.everyday).toBe("model-b");
   expect(screen.queryByRole("option", { name: /model-a/ })).toBeNull();
+});
+
+// ---- no model's name on screen --------------------------------------------------------------------------------------
+
+/** What a person can read: the text of the page without what a closed "more" line holds (its summary stays). */
+function visibleText(root: HTMLElement): string {
+  let out = "";
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += `${node.textContent} `;
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    if (node instanceof HTMLDetailsElement && !node.open) {
+      for (const child of Array.from(node.children)) if (child.tagName === "SUMMARY") walk(child);
+      return;
+    }
+    node.childNodes.forEach(walk);
+  };
+  walk(root);
+  return out;
+}
+
+/** Every model name the fixtures give: what the services list and the examples a program accepts. */
+const MODEL_NAMES = [...MODELS.map((m) => m.id), ...KINDS.flatMap((k) => k.model_examples ?? [])];
+
+const ACCOUNT_ROW = {
+  name: "service-a",
+  label: "",
+  kind: "service-a",
+  adapter: "adapter-one",
+  models: { everyday: "model-a", harder: "model-b" },
+  used_for: ["routine", "deep"],
+  backup_for: [],
+  has_key: true,
+  key_state: "saved",
+  key_ending: false,
+  spent_today_usd: 0,
+} as unknown as S["AiAccountView"];
+
+test("no model's name is on the setup step for any service, once it is chosen and checked", async () => {
+  for (const kind of KINDS) {
+    const user = userEvent.setup();
+    api({ "GET ai/accounts": () => [ACCOUNT_ROW], "GET ai/local": () => [] });
+    const { unmount } = open();
+    if (kind.id === "service-a" || kind.id === "service-b") await pick(user, kind.name);
+    else await pickElse(user, kind.name);
+    if (kind.needs_key) {
+      await user.click(await screen.findByLabelText("Access key"));
+      await user.paste("secret-value");
+      await screen.findByText("Works. Ready to use.");
+    } else if (kind.local) {
+      await user.click(await screen.findByRole("button", { name: "Check" }));
+    }
+    await screen.findByRole("group", { name: /Which AI should/ });
+    const text = visibleText(document.body);
+    for (const name of MODEL_NAMES) expect(text, `${kind.name} shows ${name}`).not.toContain(name);
+    unmount();
+  }
+});
+
+test("no model's name is on the account rows, nor in the line that offers to change the models", async () => {
+  api({ "GET ai/accounts": () => [ACCOUNT_ROW] });
+  open();
+  await screen.findByRole("heading", { name: /AI accounts/ });
+  const text = visibleText(document.body);
+  for (const name of MODEL_NAMES) expect(text).not.toContain(name);
 });

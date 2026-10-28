@@ -12,8 +12,8 @@ import { BusinessSides } from "./BusinessSides";
 const SHOP = "Hale Upholstery";
 const DAY = "Day job";
 const sides: S["SideView"][] = [
-  { project: "PRJ-shop", kind: "business", name: SHOP, removable: false },
-  { project: "PRJ-day", kind: "job", name: DAY, removable: false },
+  { project: "PRJ-shop", kind: "business", name: SHOP, removable: false, filed: 0 },
+  { project: "PRJ-day", kind: "job", name: DAY, removable: false, filed: 0 },
 ];
 
 function show() {

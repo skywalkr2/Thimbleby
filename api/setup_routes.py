@@ -92,12 +92,24 @@ from api.schemas import (
     WatchSourceIn,
     WorkIn,
 )
-from engine import act_accounts, audit, kept_secrets, mail_services, references, setup, sides, templates
+from engine import (
+    act_accounts,
+    audit,
+    kept_secrets,
+    mail_services,
+    references,
+    setup,
+    sides,
+    source_trial,
+    templates,
+    watch,
+)
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
 from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource, WorkspaceFile
+from engine.connectors import declared_reads, reads
 from engine.drop_notes import dropped_actions, note_the_drops
 from engine.money import usd
 from engine.names import People
@@ -109,6 +121,8 @@ from engine.workspace import Workspace
 
 log = logging.getLogger(__name__)
 
+#: The header that names the setting a refused source is about, so the screen shows the reason beside that field.
+FIELD = "X-Cockpit-Field"
 #: What a hosted app says to a pasted key: keys stay in the app's own environment, given by their reference.
 HOSTED_FILE = "A hosted app can't read a file on your computer. Give the calendar's link instead."
 #: The longest a request waits for the first backup it started, so a slow drive never holds the screen.
@@ -409,6 +423,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     summary=(view.get("project", s.project).data.get("summary") or None),
                     organization=s.organization,
                     removable=open_to_change and sides.removable_side(view, s.project),
+                    filed=sides.filed_under(view, s.project),
                 )
                 for s in listed
             ],
@@ -725,6 +740,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     plugin=plugin,
                     accounts=accounts_of(ws, store, plugin) if plugin else None,
                     first_run=NEW_SOURCE_FIRST_RUN,
+                    reads=reads(name, declared_reads(source_kinds())),
                     items=[SettingItem(**vars(i)) for i in items],
                 )
             )
@@ -747,10 +763,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
         except ValueError as err:
-            first = err.errors()[0] if hasattr(err, "errors") else {"loc": (), "msg": str(err)}
-            raise HTTPException(
-                status_code=400, detail=f"{'.'.join(map(str, first['loc'])) or 'settings'}: {first['msg']}"
-            ) from None
+            first = err.errors()[0] if hasattr(err, "errors") else {"loc": (), "msg": str(err), "type": "value_error"}
+            field = ".".join(map(str, first["loc"])) or None
+            if first.get("type") in ("missing", "string_too_short"):
+                text = watch.advice_sentence("sources.refuse.fill_in")
+            elif first.get("type") == "value_error":
+                said = str(first["msg"]).removeprefix("Value error, ").strip()
+                text = said[:1].upper() + said[1:] + ("" if said.endswith((".", "!", "?")) else ".")
+            else:
+                text = watch.advice_sentence("sources.refuse.not_allowed")
+            raise HTTPException(status_code=400, detail=text, headers={FIELD: field} if field else None) from None
 
     def checked_project(project: str) -> str:
         """A project's id from its id or its name; the source follows the id, so a rename never detaches it."""
@@ -927,7 +949,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         new = {
             "id": source_id,
             "connector": body.connector,
-            "label": body.label.strip() or source_kinds()[body.connector].label,
+            "label": body.label.strip(),
             "every_minutes": body.every_minutes,
             "settings": settings,
         }
@@ -945,7 +967,17 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             # With nothing beside the person's own life, a new connection serves it, so it takes that side's level.
             new["sides"] = [own]
         fresh = keep_all(to_keep, f"source:{source_id}")
+        if not new["label"]:
+            # Named after what it reads; a typed link is read from where it was just kept.
+            new["label"] = source_trial.default_label(body.connector, settings, source_kinds()[body.connector].label)
         listed = None
+        if service is None:
+            try:
+                refuse_an_unreadable_source(body.connector, settings)
+            except HTTPException:
+                for path in fresh:
+                    path.unlink(missing_ok=True)
+                raise
         if service is not None:
             # The sign-in is tried before anything is saved, so a refusal is said here, naming the service's steps.
             try:
@@ -985,7 +1017,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         try:
             return list_folders(settings)
         except ConnectorError as err:
-            raise HTTPException(status_code=409, detail=err.detail or str(err)) from None
+            raise HTTPException(status_code=409, detail=source_trial.plain_reason(err, settings.host)) from None
 
     def taken_folders(settings: Any) -> list[str]:
         from engine.connectors.mailbox import MailboxSettings
@@ -1113,6 +1145,15 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 ) from None
         except ValueError:
             return
+
+    def refuse_an_unreadable_source(connector: str, settings: dict[str, Any]) -> None:
+        """A source of a core kind that its first read couldn't get through is refused before it is kept, in plain
+        words beside the setting it is about (`engine/source_trial.py`)."""
+        found = source_trial.refusal_for(connector, settings, ws=ws, cfg=current(), store=store)
+        if found is not None:
+            raise HTTPException(
+                status_code=400, detail=found.text, headers={FIELD: found.field} if found.field else None
+            )
 
     @r.get("/watch/{source_id}/folders")
     def watch_folders(source_id: str) -> MailFoldersView:
@@ -1246,6 +1287,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found["data_level"] = body.data_level
         fresh = keep_all(to_keep, f"source:{source_id}")
         try:
+            if body.settings is not None or body.secrets:
+                refuse_an_unreadable_source(found["connector"], found["settings"])
             return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
         except HTTPException:
             for path in fresh:
@@ -2293,6 +2336,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail="On a hosted app, models are listed only for known services.")
         if not base_url:
             return AiModelsView(problem="Enter the service's address first.")
+        if not kind["base_url"] and (bad := setup.address_problem(base_url)):
+            return AiModelsView(problem=bad)
         if body.key and body.key_ref:
             raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
         if body.key and not local:
@@ -2341,6 +2386,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         base_url = kind["base_url"] or (body.base_url or "").strip()
         if not kind["base_url"] and not kind["program"] and not base_url and body.agent is None:
             return AiAccountChecked(ok=False, reason="failed", message="Enter the service's address first.")
+        if base_url and not kind["base_url"] and (bad := setup.address_problem(base_url)):
+            return AiAccountChecked(ok=False, reason="failed", message=bad)
         try:
             key = body.key.strip() if body.key else (resolve_secret(body.key_ref) if body.key_ref else None)
         except SecretError as err:

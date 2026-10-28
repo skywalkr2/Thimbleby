@@ -18,6 +18,7 @@ const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
   theme: "system",
   density: "comfortable",
   language: "en-US",
+  timezone: "UTC",
   pm: null,
   shortcuts: { undo: "u", hand_in: "n", help: "?", ask: "/" },
   toast_seconds: 0,
@@ -77,14 +78,39 @@ test("Connect on Today's empty card opens Sources with the add form open, and on
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Connect a calendar" }));
   expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
-  expect(await screen.findByRole("form", { name: "Add a connection" })).toBeInTheDocument();
+  expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
   // Going away and coming back by the views doesn't open it again.
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
   await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Settings" }));
   await user.click(await within(await screen.findByRole("navigation", { name: "Settings sections" })).findByRole("link", { name: "Connections" }));
   expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
-  expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
+  expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
+});
+
+test("Connect a mailbox on Today shows the services to sign in to when there are some, and the form only when there are none", async () => {
+  const service: S["SignInView"] = {
+    name: "demo/account",
+    label: "Demo account",
+    status: "signed_out",
+    ready: true,
+    callback: "http://localhost:8080/auth/demo/callback",
+    app: "workspace",
+    can_paste: false,
+    needs_secret: false,
+    set_aside: false,
+    several: false,
+    default_unusable: false,
+    can_act: false,
+    own_app_steps: [],
+  };
+  fakeApi({ ...today, "GET sign-ins": () => [service] });
+  renderApp(<App rc={rc()} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Connect a mailbox" }));
+  const title = await screen.findByRole("heading", { name: "Accounts" });
+  await waitFor(() => expect(title).toHaveFocus());
+  expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
 });
 
 test("the workspace name goes to Today from any screen", async () => {

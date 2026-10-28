@@ -166,6 +166,44 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   const draftGroup = (key: number, group: Group) => setDrafts((all) => all.map((d) => (d.key === key ? { ...d, group } : d)));
   const rows = savedBusinesses.length + drafts.length;
 
+  /** What a saved business can still be given: its description and more projects, with the optional group. */
+  const savedFields = (side: Side) => (
+    <div className="field" data-more-for={side.project}>
+      <div className="field">
+        <label htmlFor={`work-about-${side.project}`}>{t("walkthrough.work.about", { name: side.name })}</label>
+        <textarea
+          id={`work-about-${side.project}`}
+          rows={2}
+          value={side.project in moreAbout ? moreAbout[side.project] : (side.summary ?? "")}
+          aria-describedby="work-about-hint"
+          onChange={(e) => setMoreAbout((all) => ({ ...all, [side.project]: e.target.value }))}
+        />
+        <p className="hint" id="work-about-hint">
+          {t("walkthrough.work.about_hint")}
+        </p>
+      </div>
+      <label htmlFor={`work-more-${side.project}`}>{t("walkthrough.work.more_works_on", { name: side.name })}</label>
+      <textarea
+        id={`work-more-${side.project}`}
+        rows={3}
+        value={more[side.project] ?? ""}
+        aria-describedby={`work-more-${side.project}-hint`}
+        onChange={(e) => setMore((all) => ({ ...all, [side.project]: e.target.value }))}
+      />
+      <p className="hint" id={`work-more-${side.project}-hint`}>
+        {t("walkthrough.work.works_on_hint", { name: side.name })}
+      </p>
+      <GroupThem
+        id={`work-more-${side.project}`}
+        business={side.name}
+        lines={workLines(more[side.project] ?? "")}
+        group={moreGroup[side.project] ?? noGroup()}
+        onChange={(group) => setMoreGroup((all) => ({ ...all, [side.project]: group }))}
+      />
+    </div>
+  );
+
+
   return (
     <form
       onSubmit={(e) => {
@@ -212,22 +250,24 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
       {saved.length > 0 && (
         <section aria-labelledby="work-added" data-added="">
           <h3 id="work-added">{t("walkthrough.work.added")}</h3>
-          <ul className="queue">
-            {saved.map((side, position) => (
-              <SavedSide
-                key={side.project}
-                side={side}
-                position={position}
-                inside={insideLines(projects.data ?? [], side.project, (name, jobs) => t("walkthrough.work.group_line", { name, jobs }))}
-                onChanged={refresh}
-                onProblem={sayProblem}
-                onClear={() => {
-                  setProblem("");
-                  setRetry(null);
-                }}
-              />
-            ))}
-          </ul>
+          {saved.map((side, position) => (
+            <div key={side.project} className="saved-side" data-saved-side={side.project}>
+              <ul className="queue">
+                <SavedSide
+                  side={side}
+                  position={position}
+                  inside={insideLines(projects.data ?? [], side.project, (name, jobs) => t("walkthrough.work.group_line", { name, jobs }))}
+                  onChanged={refresh}
+                  onProblem={sayProblem}
+                  onClear={() => {
+                    setProblem("");
+                    setRetry(null);
+                  }}
+                />
+              </ul>
+              {businessTicked && side.kind === "business" && savedFields(side)}
+            </div>
+          ))}
         </section>
       )}
 
@@ -254,48 +294,12 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
       )}
 
       {businessTicked &&
-        savedBusinesses.map((side) => (
-          <div className="field" key={side.project} data-more-for={side.project}>
-            <div className="field">
-              <label htmlFor={`work-about-${side.project}`}>{t("walkthrough.work.about", { name: side.name })}</label>
-              <textarea
-                id={`work-about-${side.project}`}
-                rows={2}
-                value={side.project in moreAbout ? moreAbout[side.project] : (side.summary ?? "")}
-                aria-describedby="work-about-hint"
-                onChange={(e) => setMoreAbout((all) => ({ ...all, [side.project]: e.target.value }))}
-              />
-              <p className="hint" id="work-about-hint">
-                {t("walkthrough.work.about_hint")}
-              </p>
-            </div>
-            <label htmlFor={`work-more-${side.project}`}>{t("walkthrough.work.more_works_on", { name: side.name })}</label>
-            <textarea
-              id={`work-more-${side.project}`}
-              rows={3}
-              value={more[side.project] ?? ""}
-              aria-describedby={`work-more-${side.project}-hint`}
-              onChange={(e) => setMore((all) => ({ ...all, [side.project]: e.target.value }))}
-            />
-            <p className="hint" id={`work-more-${side.project}-hint`}>
-              {t("walkthrough.work.works_on_hint", { name: side.name })}
-            </p>
-            <GroupThem
-              id={`work-more-${side.project}`}
-              business={side.name}
-              lines={workLines(more[side.project] ?? "")}
-              group={moreGroup[side.project] ?? noGroup()}
-              onChange={(group) => setMoreGroup((all) => ({ ...all, [side.project]: group }))}
-            />
-          </div>
-        ))}
-
-      {businessTicked &&
         drafts.map((draft) => {
           const id = `work-business-${draft.key}`;
           const label = draft.name.trim();
           return (
-            <section key={draft.key} className="field" data-business-draft="">
+            <section key={draft.key} className="field" data-business-draft="" aria-labelledby={`${id}-title`}>
+              <h3 id={`${id}-title`}>{label || t("walkthrough.work.new_business")}</h3>
               <div className="field">
                 <label htmlFor={`${id}-name`}>{t("walkthrough.work.business_name")}</label>
                 <input
@@ -462,11 +466,11 @@ export function SavedSide(props: {
   onChanged: () => Promise<unknown>;
   onProblem: (err: unknown, again?: () => void) => void;
   onClear: () => void;
-  /** "setup": Remove while nothing is filed under the side. "ask": Remove at any time, asking what happens to its projects
-   * and to-dos. */
+  /** "setup": Remove at once while nothing is filed under the side, and asking what happens to what is filed when something
+   * is. "ask": always asking what happens to its projects and to-dos. */
   removal?: "setup" | "ask";
 }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const { side } = props;
   const { push } = useToasts();
   const [renaming, setRenaming] = useState(false);
@@ -474,7 +478,8 @@ export function SavedSide(props: {
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
   const base = `work-side-${side.project}`;
-  const ask = props.removal === "ask";
+  // Something filed under the side is never lost without the person saying where it goes.
+  const ask = props.removal === "ask" || !side.removable;
 
   const rename = async () => {
     const next = name.trim();
@@ -573,8 +578,11 @@ export function SavedSide(props: {
           <span className="sub">
             {props.inside.length > 0
               ? t("walkthrough.work.projects", { names: props.inside.join(", ") })
-              : t("walkthrough.work.no_projects")}
+              : (side.filed ?? 0) === 0
+                ? t("walkthrough.work.no_projects")
+                : null}
           </span>
+          {(side.filed ?? 0) > 0 && <span className="sub">{tn("walkthrough.work.filed", side.filed ?? 0)}</span>}
         </div>
         <div className="acts">
           {renaming ? (
@@ -606,18 +614,16 @@ export function SavedSide(props: {
               >
                 {t("walkthrough.work.rename")}
               </button>
-              {(ask || side.removable) && (
-                <button
-                  type="button"
-                  className="btn quiet small"
-                  disabled={busy}
-                  aria-expanded={ask ? asking : undefined}
-                  aria-label={t("walkthrough.work.remove_named", { name: side.name })}
-                  onClick={() => (ask ? setAsking((on) => !on) : void remove())}
-                >
-                  {t("walkthrough.work.remove")}
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn quiet small"
+                disabled={busy}
+                aria-expanded={ask ? asking : undefined}
+                aria-label={t("walkthrough.work.remove_named", { name: side.name })}
+                onClick={() => (ask ? setAsking((on) => !on) : void remove())}
+              >
+                {t("walkthrough.work.remove")}
+              </button>
             </>
           )}
         </div>

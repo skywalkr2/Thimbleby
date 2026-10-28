@@ -1,5 +1,27 @@
 // Dates and ages in the reader's locale. Wording around them comes from the sheet.
+//
+// A moment (an instant: when something ran, was received, was sent) is written on the person's own clock, the time zone
+// they set, whatever the computer showing it is set to (`setClockZone`). A calendar day and a time of day the server wrote
+// on that clock (`wallTime`) are written as they are, since they are already the person's.
+const pad = (n: number) => String(n).padStart(2, "0");
+let clockZone: string | undefined;
+
+/** The time zone moments are written in: the person's own (an IANA name). Nothing, or a name the browser doesn't know,
+ * leaves them on the computer's clock. */
+export function setClockZone(zone: string | null | undefined): void {
+  try {
+    if (zone) new Intl.DateTimeFormat(undefined, { timeZone: zone });
+    clockZone = zone || undefined;
+  } catch {
+    clockZone = undefined;
+  }
+}
+
+/** A formatter for moments, on the person's clock. */
+const onClock = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(undefined, { ...options, timeZone: clockZone });
+
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+/** A time of day written from numbers (a wall time), with no zone to move it by. */
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
 export function day(iso: string | null | undefined): string {
@@ -24,13 +46,57 @@ export function longDay(when: Date): string {
   return longDayFormat.format(when);
 }
 
+/** A moment as its day and time on the person's clock: "Wed, Oct 28, 7:37 AM". */
 export function dayAndTime(iso: string): string {
   const when = new Date(iso);
-  return `${dayFormat.format(when)}, ${timeFormat.format(when)}`;
+  return `${onClock({ weekday: "short", month: "short", day: "numeric" }).format(when)}, ${time(when)}`;
 }
 
+/** A moment's time of day on the person's clock: "7:37 AM". */
 export function time(when: Date): string {
-  return timeFormat.format(when);
+  return onClock({ hour: "numeric", minute: "2-digit" }).format(when);
+}
+
+/** The numbers of a moment on the person's clock. */
+function clockParts(when: Date): { year: number; month: number; day: number; hour: number; minute: number } {
+  const parts = Object.fromEntries(
+    onClock({ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", hourCycle: "h23" })
+      .formatToParts(when)
+      .map((p) => [p.type, Number(p.value)]),
+  );
+  return { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour % 24, minute: parts.minute };
+}
+
+/** The pieces of a moment on the person's clock: its date as yyyy-mm-dd and the minutes since midnight. */
+export function onTheClock(when: Date): { date: string; minutes: number } {
+  const c = clockParts(when);
+  return { date: `${String(c.year).padStart(4, "0")}-${pad(c.month)}-${pad(c.day)}`, minutes: c.hour * 60 + c.minute };
+}
+
+/** A moment as the text a `datetime-local` box takes, on the person's clock. */
+export function inputOn(when: Date): string {
+  const c = onTheClock(when);
+  return `${c.date}T${pad(Math.floor(c.minutes / 60))}:${pad(c.minutes % 60)}`;
+}
+
+/** The moment a `datetime-local` box's text is on the person's clock (the other way from `inputOn`), or none when it isn't one. */
+export function momentOf(local: string): Date | null {
+  const found = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!found) return null;
+  const [y, m, d, h, mi] = found.slice(1).map(Number);
+  const wanted = Date.UTC(y, m - 1, d, h, mi);
+  let guess = wanted;
+  // Two passes settle it, even across a change of clocks: move by how far the clock shown is from the one wanted.
+  for (let pass = 0; pass < 2; pass += 1) {
+    const c = clockParts(new Date(guess));
+    guess += wanted - Date.UTC(c.year, c.month - 1, c.day, c.hour, c.minute);
+  }
+  return new Date(guess);
+}
+
+/** The date of a moment on the person's clock, as yyyy-mm-dd: what "today" is for them. */
+export function todayOn(when: Date): string {
+  return onTheClock(when).date;
 }
 
 /** A time the server wrote as an ISO string, day and time in the reader's locale; empty if it can't be read. */
@@ -41,7 +107,6 @@ export function whenText(iso: string | null | undefined): string {
 }
 
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
-const pad = (n: number) => String(n).padStart(2, "0");
 
 /** The date on this computer's clock, as yyyy-mm-dd. */
 export function localDate(when: Date): string {

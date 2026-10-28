@@ -319,10 +319,23 @@ def found(store: Any, cfg: Any, limit: int, today: date | None = None) -> FirstP
     with the message the Follow-ups screen composes for them (never one to the person themselves)."""
     reader = store.read()
     people = People(store, cfg)
+    # What the look back read: the inputs of the requests it made. A to-do the person owes that came out of them is a
+    # promise they made, even when it says no one it was promised to.
+    read_inputs = {
+        r.data.get("source")
+        for r in reader.list("request")
+        if r.data.get("intake") and not r.data.get("dismissed") and r.data.get("source")
+    }
+    me = people.pm
+
+    def counts(data: dict[str, Any]) -> bool:
+        owed_by_me = me is not None and any(o.get("person") == me for o in data.get("owners") or [])
+        return promises.is_promise(data) or (owed_by_me and data.get("source") in read_inputs)
+
     open_promises = [
         a
         for a in reader.list("action")
-        if a.data.get("status") == "open" and not standing_hold(reader, a.data) and promises.is_promise(a.data)
+        if a.data.get("status") == "open" and not standing_hold(reader, a.data) and counts(a.data)
     ]
     # A date still to be checked sorts as no date: it isn't a deadline.
     firm = lambda a: None if a.data.get("due_check") else a.data.get("due")  # noqa: E731

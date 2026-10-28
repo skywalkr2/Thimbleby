@@ -452,9 +452,9 @@ test("a request stopped because no account may see its level offers one action t
   renderApp(<WhatChanged />);
   const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
   expect(within(row).queryByRole("button", { name: "Try again" })).toBeNull();
-  expect(within(row).queryByRole("button", { name: "Let first see internal material" })).toBeNull();
-  await choose(user, "Let first see internal material", row);
-  expect(await screen.findByText("first can now see internal material. Trying again.")).toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: "Let first see confidential material" })).toBeNull();
+  await choose(user, "Let first see confidential material", row);
+  expect(await screen.findByText("first can now see confidential material. Trying again.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "POST requests/REQ-9/allow-data")).toHaveLength(1);
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { [key]: ["open"] }, reset: [], fingerprint: "fp-2" }));

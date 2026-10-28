@@ -87,20 +87,21 @@ test.describe.serial("journey: the owner's first evening", () => {
     expect(await widerThanWindow(page, "Your AI account")).toEqual([]);
     await main.getByRole("radio", { name: /Something else/ }).check();
     await main.getByRole("button", { name: /^Another service/ }).click();
-    await main.getByLabel(/^Another service that speaks/).check();
+    await main.getByLabel(/^Another service/).check();
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.getByRole("textbox", { name: "Service address" }).blur();
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
-    await main.getByText("Advanced", { exact: true }).click();
-    const everyday = main.getByLabel("AI model for everyday work");
-    await expect(everyday).not.toHaveValue(RETIRED);
-    await expect(everyday).toHaveValue(/^fake-(small|large)$/);
-    expect(await everyday.locator("option").evaluateAll((o) => o.map((x) => (x as HTMLOptionElement).value))).not.toContain(RETIRED);
+    // The model is picked for the person and never shown here; the account that is saved holds a usable one.
+    await expect(main.getByLabel("AI model for everyday work")).toHaveCount(0);
     await expect(main.getByText(/no longer offered|has been deprecated/)).toHaveCount(0);
     await main.getByRole("radio", { name: /^Allow/ }).check();
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
+    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    const saved = JSON.stringify(await page.evaluate(async () => (await fetch("api/ai/accounts", { credentials: "same-origin" })).json()));
+    expect(saved).not.toContain(RETIRED);
+    expect(saved).toMatch(/fake-(small|large)/);
 
     // 3. Mail and calendar: the row is one line and one Connect button; one click adds the add-on, restarts once and opens the sign-in in a
     // popup; the app's window never goes to the service.

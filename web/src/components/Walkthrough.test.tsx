@@ -91,7 +91,7 @@ const SETTINGS = [
 const PERSONAL = "PRJ-1";
 const [EMPLOYER, SHOP, STUDIO] = ["Employer Example", "Shop Example", "Studio Example"];
 const WORKS_ON = ["First thing", "Second thing", "Third thing"];
-const side = (project: string, kind: "job" | "business", name: string, removable = false): S["SideView"] => ({ project, kind, name, removable });
+const side = (project: string, kind: "job" | "business", name: string, removable = false): S["SideView"] => ({ project, kind, name, removable, filed: 0 });
 const stateWith = (sides: S["SideView"][], chosen: "me" | "work" | null = "work"): S["BusinessState"] => ({
   business: sides.length > 0,
   name: sides[0]?.name ?? null,
@@ -601,7 +601,7 @@ describe("a way back to the step", () => {
     const connect = await screen.findByRole("button", { name: "Connect one" });
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
     await user.click(connect);
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     // Still setup: never the app's side bar, header or Settings menu, and no way back to leave for.
     expect(screen.getByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Views" })).toBeNull();
@@ -610,7 +610,7 @@ describe("a way back to the step", () => {
     expect(await screenTitle()).toHaveTextContent("Mail and calendar");
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
     expect(await screen.findByRole("button", { name: "Connect one" })).toBeInTheDocument();
-    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Views" })).toBeNull();
   });
 
@@ -1017,6 +1017,26 @@ describe("each screen", () => {
     ]);
   });
 
+  test("Work: ticking a project into a group never rewrites the typed list: not a line removed, none moved", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "work" }));
+    open();
+    await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    const box = await screen.findByLabelText(`Which projects does ${SHOP} have?`);
+    await user.click(box);
+    await user.paste(WORKS_ON.join("\n"));
+    const before = (box as HTMLTextAreaElement).value;
+    await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    await user.type(screen.getByLabelText("Group name"), "Trade customers");
+    for (const name of [WORKS_ON[1], WORKS_ON[0]]) {
+      await user.click(screen.getByRole("checkbox", { name: `${name}, in Trade customers` }));
+      expect((screen.getByLabelText(`Which projects does ${SHOP} have?`) as HTMLTextAreaElement).value).toBe(before);
+    }
+    await user.click(screen.getByRole("checkbox", { name: `${WORKS_ON[1]}, in Trade customers` }));
+    expect((screen.getByLabelText(`Which projects does ${SHOP} have?`) as HTMLTextAreaElement).value).toBe(before);
+  });
+
   test("Work: a group named with none of its jobs ticked holds Continue back and says so, so a typed name is never lost without a word", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
@@ -1037,7 +1057,7 @@ describe("each screen", () => {
     await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
     await user.type(screen.getByLabelText("Group name"), "Trade customers");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
-    expect(screen.getByText("Tick the jobs that are in Trade customers, or clear its name.")).toBeInTheDocument();
+    expect(screen.getByText("Tick the projects that are in Trade customers, or clear its name.")).toBeInTheDocument();
     // Clearing the name lets it go on, and makes only the projects.
     await user.clear(screen.getByLabelText("Group name"));
     expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
@@ -1127,10 +1147,60 @@ describe("each screen", () => {
     expect(screen.getByRole("checkbox", { name: "A job" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "A job" })).toBeDisabled();
     expect(screen.getByRole("checkbox", { name: "My own business" })).toBeChecked();
-    // Remove is offered only for a side the server says can still be taken back out.
-    expect(within(rows[0]).queryByRole("button", { name: /^Remove/ })).toBeNull();
+    // Remove is always offered, so what the screen says about it is so.
+    expect(within(rows[0]).getByRole("button", { name: `Remove ${EMPLOYER}` })).toBeInTheDocument();
     expect(within(rows[1]).getByRole("button", { name: `Remove ${SHOP}` })).toBeInTheDocument();
     expect(screen.getByText(/stays part of this/)).toBeInTheDocument();
+  });
+
+  test("Work: a side with something filed under it keeps Remove, says what is filed, and asks where it goes", async () => {
+    const user = userEvent.setup();
+    const filed = { ...side("PRJ-2", "job", EMPLOYER), filed: 2 };
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/business": () => stateWith([filed]),
+          "POST sides/PRJ-2/remove": () => ({ changeset: "CS-9", acts: [], names: [] }),
+        },
+        CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
+        { step: "work" },
+      ),
+    );
+    open();
+    const added = await screen.findByRole("region", { name: "Added so far" });
+    // Never "Nothing under it yet" while a person is filed there.
+    expect(within(added).queryByText("Nothing under it yet.")).toBeNull();
+    expect(within(added).getByText("2 people and items are filed under it.")).toBeInTheDocument();
+    expect(screen.getByText(/if anything is filed under it, you choose where that goes/)).toBeInTheDocument();
+    await user.click(within(added).getByRole("button", { name: `Remove ${EMPLOYER}` }));
+    const ask = await within(added).findByRole("group", { name: "What happens to the projects and to-dos in Employer Example?" });
+    expect(ask).toBeInTheDocument();
+    await user.click(within(ask).getByRole("button", { name: /^Move them to/ }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-2/remove")?.body).toEqual({ where: "personal" }));
+  });
+
+  test("Work: each business is its own block, its name with Remove beside it and its own boxes under it, and a new one has a heading too", async () => {
+    const user = userEvent.setup();
+    fakeApi(
+      routes(
+        { "GET setup/business": () => stateWith([side("PRJ-3", "business", SHOP, true), side("PRJ-4", "business", STUDIO, true)]) },
+        CORE.map((id) => step(id, id === "work" ? { done: true } : {})),
+        { step: "work" },
+      ),
+    );
+    open();
+    const added = await screen.findByRole("region", { name: "Added so far" });
+    const blocks = Array.from(added.querySelectorAll<HTMLElement>("[data-saved-side]"));
+    expect(blocks.map((b) => b.getAttribute("data-saved-side"))).toEqual(["PRJ-3", "PRJ-4"]);
+    // The first business's Remove is in its own block, and the boxes after it belong to it, not to the next business.
+    expect(within(blocks[0]).getByRole("button", { name: `Remove ${SHOP}` })).toBeInTheDocument();
+    expect(within(blocks[0]).getByLabelText(`Add more projects to ${SHOP}`)).toBeInTheDocument();
+    expect(within(blocks[0]).queryByRole("button", { name: `Remove ${STUDIO}` })).toBeNull();
+    expect(within(blocks[1]).getByRole("button", { name: `Remove ${STUDIO}` })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add another business" }));
+    expect(await screen.findByRole("heading", { level: 3, name: "A new business" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("What is your business called?"), "Third Example");
+    expect(screen.getByRole("heading", { level: 3, name: "Third Example" })).toBeInTheDocument();
   });
 
   test("Work: going Back and changing a name renames the side's project and never posts the name again", async () => {
@@ -1940,7 +2010,7 @@ describe("Mail and calendar", () => {
     expect(screen.queryByText("Service mail-addon", { selector: "strong" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Connect another" }));
     expect(await screen.findByText("Services you can connect")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Another mail or calendar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
   });
 
@@ -2339,13 +2409,13 @@ describe("Mail and calendar", () => {
     expect(await screen.findByText("Service mail-addon")).toBeInTheDocument();
     expect(screen.queryByText("Service other-addon")).toBeNull();
     expect(screen.queryByText("Service no-sign-in-addon")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Another mail or calendar" }));
+    await user.click(screen.getByRole("button", { name: "Add mail, calendar or folder" }));
     // The form opens inside the step, which comes back when it is cancelled.
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect(screen.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeInTheDocument();
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
     expect(await screen.findByText("Service mail-addon")).toBeInTheDocument();
-    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
   });
 
   test("with no service listed and nothing read the step is one sentence and one button, and the way out is the step's own skip", async () => {
@@ -2362,7 +2432,70 @@ describe("Mail and calendar", () => {
     const buttons = within(document.querySelector<HTMLElement>("[data-mail-none]")!).getAllByRole("button");
     expect(buttons.map((b) => b.textContent)).toEqual(["Connect one"]);
     await user.click(buttons[0]);
-    expect(await screen.findByRole("form", { name: "Add a connection" })).toBeInTheDocument();
+    expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
+  });
+
+  test("Another mailbox goes straight to the mailbox's own fields: no list of kinds and no list of services again", async () => {
+    const user = userEvent.setup();
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET watch/kinds": () => [
+        {
+          name: "mailbox",
+          label: "Your mailbox (address and app password)",
+          plugin: null,
+          first_run: "intake",
+          reads: ["mail"],
+          items: [
+            { key: "host", file: "source", group: "", description: "The mail server's name.", type: "text", options: [], value: "", default: "", source: "default", locked: false, basic: false, editable: true },
+          ],
+        },
+      ],
+      "GET watch/authors": () => [],
+      "GET watch/mail-services": () => [
+        { id: "svc", name: "Example Mail", user_hint: "", app_password_steps: ["Make one."], app_password_page: "", calendar_steps: [] },
+      ],
+    });
+    open();
+    await user.selectOptions(await screen.findByLabelText("Mail service"), "other");
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
+    expect(within(form).getByLabelText("The mail server's name.")).toBeInTheDocument();
+    expect(within(form).queryByRole("radio")).toBeNull();
+    expect(within(form).queryByLabelText("Mail service")).toBeNull();
+    expect(within(form).getByText("About the mailbox")).toBeInTheDocument();
+  });
+
+  test("a connection read here can be removed right here, with Undo", async () => {
+    const user = userEvent.setup();
+    const mailbox = {
+      id: "work-mail",
+      label: "ada@example.com",
+      connector: "mailbox",
+      connector_label: "Your mailbox",
+      enabled: true,
+      every_minutes: 60,
+      items: 0,
+      last: null,
+      read_at: null,
+      failures: 0,
+      problem: null,
+      reads: ["mail"],
+    };
+    const calls = fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET watch": () => [mailbox],
+      "POST watch/sources/work-mail/remove": () => ({
+        changes: [{ key: "watch.sources", before: [{ id: "work-mail" }], after: [], was_default: false, is_default: false }],
+        fingerprint: "fp-2",
+        needs_restart: false,
+      }),
+      "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
+    });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Remove ada@example.com" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST watch/sources/work-mail/remove")?.body).toEqual({ fingerprint: "fp-1" }));
+    expect(await screen.findByText("Removed ada@example.com. What it already brought in stays.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
   });
 
   test("a service the app can't install from here points to the Add-ons screen", async () => {
@@ -2657,6 +2790,15 @@ describe("one list of seven steps", () => {
       expect(await screen.findByText(`${label} · ${n} of 7`)).toBeInTheDocument();
       unmount();
     }
+  });
+
+  test("Your promises' intro claims no follow-up and no Start: the screen says those itself when they are so", async () => {
+    fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: "promises" }), "GET watch": () => [] });
+    open();
+    expect(await screenTitle()).toHaveTextContent("Your promises");
+    const main = screen.getByRole("main");
+    expect(main).not.toHaveTextContent(/follow-up ready/i);
+    expect(main).not.toHaveTextContent(/You press Start first/);
   });
 
   test("the step list is the seven counted steps and Done, each with the standing the server gave it", async () => {

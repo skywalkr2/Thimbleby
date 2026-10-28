@@ -552,6 +552,7 @@ def test_a_calendar_takes_a_typed_address_or_a_file_on_this_computer_not_both(tm
     assert both.status_code == 400 and address not in both.text
     assert not (ws.private_dir / "keys").exists() and "team" not in source_ids(ws)
     # A file needs no secret, so nothing is kept for it.
+    (tmp_path / "team.ics").write_text("BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR\n")
     file_only = c.post(
         f"{api}/watch/sources",
         json={

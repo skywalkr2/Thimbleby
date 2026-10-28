@@ -33,6 +33,8 @@ export function SettingRow(props: {
   problem?: string | null;
   /** Lays the row out with its help (the description and the default) in a column beside the field. */
   beside?: boolean;
+  /** Leaves out what only the Settings screen needs: the "Changed · Reset" mark and the default value. */
+  plain?: boolean;
   /** Added to the control's id, so two forms on a screen never share one. */
   idPrefix?: string;
   disabled: boolean;
@@ -70,7 +72,7 @@ export function SettingRow(props: {
   // value setup wrote is the person's answer to a question, not a change.
   const edited = !readOnly && !item.locked ? fromDraft(item, draft, locale) : null;
   const changed = isChanged(item, edited);
-  const showDefault = changed && item.type !== "other";
+  const showDefault = changed && item.type !== "other" && !props.plain;
   const problem = props.problem || null;
   const waiting = props.gate ? t(props.gate.type === "yes_no" ? "settings.needs_on" : "settings.needs_value", { label: labelOf(props.gate, t, has) }) : null;
   const describedBy = [
@@ -140,6 +142,7 @@ export function SettingRow(props: {
         onPaste={(value) => secret.onPaste(item.key, value)}
         disabled={off}
         describedBy={describedBy}
+        offerWhere={secret.offerWhere}
       />
     );
   } else if (readOnly) {
@@ -323,7 +326,7 @@ export function SettingRow(props: {
       <div className="setting-main" data-main>
         <div className="setting-head">
           {labelNode}
-          {changed && props.onReset && (
+          {changed && props.onReset && !props.plain && (
             <span className="setting-changed">
               <span>{t("settings.changed")}</span>
               <span aria-hidden="true"> · </span>
@@ -409,6 +412,10 @@ export function ItemFields(props: {
   idPrefix: string;
   /** Lets secret settings be typed (a source's form); left out, they are plain text boxes for where they are kept. */
   secret?: SecretInput;
+  /** What a refused save said about a setting, by its key, shown on that setting's own row. */
+  problems?: Record<string, string>;
+  /** A form for adding or changing something (not the Settings screen): no "Changed · Reset" and no "Default: …" beside a value. */
+  plain?: boolean;
 }) {
   const { t } = useWords();
   const canList = useFolderListing(props.items.some((i) => i.picker));
@@ -428,6 +435,8 @@ export function ItemFields(props: {
           gate={gate && isOff(gate, props.edits) ? gate : null}
           canList={canList}
           secret={props.secret}
+          problem={props.problems?.[item.key] ?? null}
+          plain={props.plain}
           beside
         />
       );
@@ -438,7 +447,7 @@ export function ItemFields(props: {
     <>
       {rows(props.items.filter((i) => !i.advanced))}
       {technical.length > 0 && (
-        <details className="more-options advanced">
+        <details className="more-options advanced" open={technical.some((i) => props.problems?.[i.key]) || undefined}>
           <summary>{t("settings.advanced_items")}</summary>
           {rows(technical)}
         </details>

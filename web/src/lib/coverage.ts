@@ -3,7 +3,7 @@
 // here, so no screen shows one as the other.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "./api";
-import { addDays, day, dayAndTime, localDate, time, wallTime } from "./dates";
+import { addDays, day, dayAndTime, todayOn, time, wallTime } from "./dates";
 import { latestRead } from "./sources";
 
 type Source = S["WatchSourceView"];
@@ -61,9 +61,9 @@ export function useCoverage(): Coverage | null {
 export function whenWords(iso: string, now: Date, t: T, wall = false): string {
   const parsed = new Date(iso.replace(" ", "T"));
   if (!wall && Number.isNaN(parsed.getTime())) return "";
-  const date = wall ? iso.slice(0, 10) : localDate(parsed);
+  const date = wall ? iso.slice(0, 10) : todayOn(parsed);
   const clock = wall ? wallTime(iso) : time(parsed);
-  const today = localDate(now);
+  const today = todayOn(now);
   if (date === today) return clock;
   if (date === addDays(today, -1)) return t("coverage.yesterday", { time: clock });
   return wall ? `${day(iso)}, ${clock}` : dayAndTime(parsed.toISOString());

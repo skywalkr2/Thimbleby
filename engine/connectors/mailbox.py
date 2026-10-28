@@ -247,16 +247,16 @@ def _open(settings: MailboxSettings) -> imaplib.IMAP4_SSL:
         server = imaplib.IMAP4_SSL(
             settings.host, settings.port, ssl_context=ssl.create_default_context(), timeout=settings.timeout_seconds
         )
-    except (socket.gaierror, ConnectionError, OSError) as err:
-        raise ConnectorError("offline", f"couldn't reach the mail server: {err}") from None
+    except (socket.gaierror, ConnectionError, OSError):
+        raise ConnectorError("offline", "couldn't reach the mail server") from None
     try:
         server.login(settings.user, password or "")
     except imaplib.IMAP4.error as err:
         _close(server)
         raise _refusal(err, settings.host) from None
-    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
+    except (imaplib.IMAP4.abort, TimeoutError, OSError):
         _close(server)
-        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+        raise ConnectorError("outage", "the mail server stopped answering") from None
     return server
 
 
@@ -293,8 +293,8 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
         # A first read that returned as many messages as it may take stopped at its cap, not at the end of the mail.
         capped = not last and bool(settings.first_read) and len(uids) >= settings.first_read
         return Poll(items, {"validity": validity, "last_uid": newest, "capped": capped}, complete=False)
-    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
-        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    except (imaplib.IMAP4.abort, TimeoutError, OSError):
+        raise ConnectorError("outage", "the mail server stopped answering") from None
     finally:
         _close(server)
 
@@ -323,8 +323,8 @@ def count_older(settings: MailboxSettings, since: date, before: date, limit: int
     server = _open(settings)
     try:
         return min(len(_older_uids(server, settings, since, before)), limit)
-    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
-        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    except (imaplib.IMAP4.abort, TimeoutError, OSError):
+        raise ConnectorError("outage", "the mail server stopped answering") from None
     finally:
         _close(server)
 
@@ -342,8 +342,8 @@ def read_older(
             if status == "OK" and raw and (item := message_item(raw)) is not None:
                 items.append(item)
         return items
-    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
-        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    except (imaplib.IMAP4.abort, TimeoutError, OSError):
+        raise ConnectorError("outage", "the mail server stopped answering") from None
     finally:
         _close(server)
 
@@ -403,8 +403,8 @@ def list_folders(settings: MailboxSettings) -> Folders:
         if status != "OK":
             raise ConnectorError("outage", "the mail server didn't list its folders")
         return parse_folders(list(data or []))
-    except (imaplib.IMAP4.abort, imaplib.IMAP4.error, TimeoutError, OSError) as err:
-        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    except (imaplib.IMAP4.abort, imaplib.IMAP4.error, TimeoutError, OSError):
+        raise ConnectorError("outage", "the mail server stopped answering") from None
     finally:
         _close(server)
 

@@ -72,14 +72,11 @@ test.describe.serial("journeys", () => {
     await expect(main.getByText(/It asks you before anything over/)).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).check();
     await main.getByRole("button", { name: /^Another service/ }).click();
-    await main.getByLabel(/^Another service that speaks/).check();
+    await main.getByLabel(/^Another service/).check();
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.getByRole("textbox", { name: "Service address" }).blur();
     // The check runs by itself, for every kind of work, before anything is saved.
-    await expect(main.getByText("Works. Ready to use.")).toBeVisible();
-    await main.getByText("Advanced", { exact: true }).click();
-    await main.getByLabel("AI model for everyday work").selectOption("fake-small");
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
     // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
     await main.getByRole("radio", { name: /^Allow/ }).check();
@@ -207,24 +204,26 @@ test.describe.serial("journeys", () => {
     // Connections: add a folder, pointing at the folder the test put the file in.
     await openView(page, "Connections");
     await expect(page.getByRole("heading", { level: 2, name: "Connections" })).toBeVisible();
-    await page.getByRole("button", { name: /Add a connection/ }).first().click();
-    await page.getByLabel("A folder", { exact: true }).check();
+    await page.getByRole("button", { name: /Add mail, calendar or folder/ }).first().click();
+    await page.getByRole("radio", { name: /^A folder on this computer/ }).check();
     await page.getByLabel(/^The folder/).fill(info.source_folder);
+    // With no name typed, the connection is named after what it reads: the folder's own name.
+    const name = info.source_folder.split(/[\\/]/).filter(Boolean).pop() ?? "";
     await visit(page);
     await page.getByRole("button", { name: "Add connection", exact: true }).click();
-    await expect(page.getByRole("listitem", { name: "A folder" })).toBeVisible();
+    await expect(page.getByRole("listitem", { name })).toBeVisible();
     await visit(page);
 
     // The connection's own menu has Read now: Today's Came in card is drawn only when mail arrived, so an empty folder has no
     // Check now there. The first read only notes what is there, so nothing is handed in yet.
-    const folder = page.getByRole("listitem", { name: "A folder" });
+    const folder = page.getByRole("listitem", { name });
     const readNow = async () => {
       await folder.getByRole("button", { name: /^More actions for / }).click();
       await page.getByRole("menuitem", { name: "Read now" }).click();
     };
     const before = await requests();
     await readNow();
-    await expect(page.getByText(/^A folder: /).last()).toBeVisible();
+    await expect(page.getByText(new RegExp(`^${name}: `)).last()).toBeVisible();
     await visit(page);
     expect(await requests()).toEqual(before);
 

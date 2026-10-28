@@ -7,6 +7,7 @@
 #   key_url            where the person makes a key ("" when it needs none)
 #   signup_url         where the person makes an account with the service ("" when the setup steps don't offer a link)
 #   credit_url         where the person adds credit to it ("" when the setup steps don't offer a link)
+#   install_url        for a server on this computer: where the person gets it ("" when there is no such page)
 #   recommended        the one service the setup guide offers first, with a "Recommended" tag (at most one entry)
 #   alternative        the one other service the guide offers beside it (at most one entry)
 #                      Every other entry is offered under "Something else".
@@ -125,28 +126,30 @@ endpoints:
     name: Ollama on this computer
     adapter: openai-compatible
     base_url: http://localhost:11434/v1
+    install_url: https://ollama.com/download
     needs_key: false
     local: true
     settings:
       effort_param: reasoning_effort
     allowed_data: [open, internal, restricted]
-    note: Nothing leaves this computer. Start Ollama first.
+    note: Runs on this computer. Start Ollama first, then press Check.
   - id: lm-studio
     name: LM Studio on this computer
     adapter: openai-compatible
     base_url: http://localhost:1234/v1
+    install_url: https://lmstudio.ai
     needs_key: false
     local: true
     settings:
       json_mode: false   # its documented request fields have no JSON-object mode
     allowed_data: [open, internal, restricted]
-    note: Nothing leaves this computer. Start LM Studio's server first.
+    note: Runs on this computer. Start LM Studio's server first, then press Check.
   - id: other
-    name: Another service that speaks the common chat format
+    name: Another service
     adapter: openai-compatible
     base_url: ""
     needs_key: false
-    note: Enter its address from the service's own documentation. Add a key only if the service asks for one.
+    note: Any service that works the way the big ones do. Enter its address from its own documentation, and a key only if it asks for one.
   - id: claude-code
     name: Claude Code
     adapter: cli-agent
@@ -240,4 +243,4 @@ endpoints:
     adapter: cli-agent
     base_url: ""
     needs_key: false
-    note: Give the command that starts it with its locked-down options; Test also checks the lockdown.
+    note: Give the command that starts it, with the options that turn its tools off. The app checks that they are off before it uses it.

@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { localDate, wallTime, weekday } from "../lib/dates";
+import { todayOn, wallTime, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
 import { anyReading } from "../lib/sources";
 import { viewHref } from "../lib/views";
@@ -81,7 +81,7 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const handled = useQuery({ queryKey: ["handled", "counts"], queryFn: api.handledCounts });
   const handledToday = handled.data?.today ?? 0;
   const now = useNow();
-  const today = localDate(now);
+  const today = todayOn(now);
   const items = arrived.data?.items ?? [];
   const { setAside: moveToFolder } = useSetAside();
   const sourceName = useSourceNames(items.map((m) => m.source));

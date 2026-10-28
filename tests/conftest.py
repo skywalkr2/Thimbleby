@@ -130,6 +130,35 @@ def _no_product_feed(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_real_network_in_the_trial(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never reach a mail server or a web address: the trial read that checks a source before it is added sees a
+    mailbox with an inbox and a sent folder, and finds a web address readable. A test that stands in for the network
+    itself (by replacing the mail library or the web client) is asked, as the product is; a file or a folder is real."""
+    import imaplib
+    from types import SimpleNamespace
+
+    import engine.connectors.mailbox as mailbox
+    import engine.net as net
+    import engine.source_trial as source_trial
+
+    real_list, real_imap, real_web = mailbox.list_folders, imaplib.IMAP4_SSL, net.WebClient.request
+    real_read = source_trial._read_once
+
+    def folders(settings):
+        if mailbox.list_folders is not real_list or imaplib.IMAP4_SSL is not real_imap:
+            return mailbox.list_folders(settings)
+        return SimpleNamespace(names=("INBOX", "Sent"), sent="Sent")
+
+    def read_once(connector, settings, **where):
+        if connector.network and not getattr(settings, "file", "").strip() and net.WebClient.request is real_web:
+            return None
+        return real_read(connector, settings, **where)
+
+    monkeypatch.setattr(source_trial, "mailbox_folders", folders)
+    monkeypatch.setattr(source_trial, "_read_once", read_once)
+
+
+@pytest.fixture(autouse=True)
 def _client_at_the_apps_address(monkeypatch: pytest.MonkeyPatch) -> None:
     """The app answers only to its own address (design 12.1), so a test client built on an app starts at that address,
     read from the app's own settings, unless the test names another one. This is the one place the tests follow the

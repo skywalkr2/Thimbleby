@@ -217,7 +217,7 @@ def test_a_server_that_marks_no_sent_folder_is_searched_by_the_configured_names(
     assert read_here(ws) == [None, "Gesendet"]
 
 
-def test_a_mailbox_with_no_sent_folder_unreachable_or_with_no_person_is_connected_with_the_inbox_alone(
+def test_a_mailbox_with_no_sent_folder_or_no_person_connects_with_the_inbox_alone_and_a_refused_sign_in_not_at_all(
     tmp_path, monkeypatch
 ):
     stand_in(monkeypatch, [b'(\\HasNoChildren) "/" "INBOX"', b'(\\HasNoChildren) "/" "Elsewhere"'])
@@ -229,8 +229,18 @@ def test_a_mailbox_with_no_sent_folder_unreachable_or_with_no_person_is_connecte
     stand_in(monkeypatch, refuse=b"[AUTHENTICATIONFAILED] no")
     ws, cfg, store = make(tmp_path / "refused")
     c, api = client(ws, cfg, store)
-    connect(c, api)
-    assert read_here(ws) == [None]  # the server can't be asked now: connecting still works
+    refused = c.post(
+        f"{api}/watch/sources",
+        json={
+            "connector": "mailbox",
+            "label": "Work mail",
+            "settings": {"host": N["mail_host"], "user": N["mail_user"], "password": "env:MAIL_PASSWORD"},
+            "fingerprint": c.get(f"{api}/settings").json()["fingerprint"],
+        },
+    )
+    # A sign-in the server refuses is said before anything is added (the same words as the screens' trial read).
+    assert refused.status_code == 400 and "didn't accept that user name and password" in refused.json()["detail"]
+    assert read_here(ws) == []
 
     stand_in(monkeypatch)
     ws, cfg, store = make(tmp_path / "nobody")

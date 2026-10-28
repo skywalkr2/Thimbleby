@@ -108,9 +108,9 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     setFromSetup(true);
     go();
   };
-  const openAddSource = (plugin: string | null = null) => {
+  const openAddSource = (plugin: string | null = null, services = false) => {
     ownFocus.current = true;
-    setAddSource({ plugin, n: Date.now() });
+    setAddSource({ plugin, n: Date.now(), services });
     setView(settingsView("connections"));
   };
   const openGuide = (step?: string) => {
@@ -214,7 +214,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           <Today
             workspace={rc.workspace_name}
             onView={setView}
-            onAddSource={() => openAddSource()}
+            onAddSource={() => openAddSource(null, true)}
             onOpenRecord={openRecord}
             onOpenGuide={openGuide}
             onHandIn={() => setHandIn(true)}

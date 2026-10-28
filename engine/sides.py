@@ -811,6 +811,18 @@ def removable_side(view: Any, project_id: str) -> bool:
     )
 
 
+def filed_under(view: Any, project_id: str) -> int:
+    """How many records outside the side's own projects are filed under it or the projects inside it: people, items,
+    sources and the rest. Zero is what `removable_side` calls nothing filed."""
+    family = {project_id, *_below(view, project_id)}
+    return sum(
+        1
+        for pid in family
+        for kind, other in referrers(view, "project", pid)
+        if not (kind == "project" and other in family)
+    )
+
+
 def remove_side(ws: Any, store: Any, cfg: Any, project_id: str, *, env: dict[str, str] | None = None) -> list[str]:
     """Take a side back out before setup is finished: delete its project and the projects inside it, and drop it from
     `project.sides`. Refused in plain words while anything is filed under it, or when it is not a side. Returns the ids

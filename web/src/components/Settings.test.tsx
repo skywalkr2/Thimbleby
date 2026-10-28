@@ -1218,6 +1218,68 @@ test("a time zone is picked by its city, with a search, and the setting still ho
   expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.timezone": "America/New_York" } });
 });
 
+test("the line that reads back a saved time zone says its city, never the id the settings hold", async () => {
+  const user = userEvent.setup();
+  const zone = item("workspace.user.timezone", {
+    group: "workspace.user",
+    type: "choice",
+    choices: "time_zones",
+    options: ["America/New_York", "UTC"],
+    value: "UTC",
+    default: "UTC",
+    description: "The time zone your own dates and times are read in.",
+  });
+  api([zone], {
+    "POST settings": () => ({
+      changes: [{ key: "workspace.user.timezone", before: "UTC", after: "America/New_York", was_default: true, is_default: false }],
+      fingerprint: "fp-2",
+      needs_restart: false,
+    }),
+  });
+  open();
+  const select = await screen.findByLabelText("Your time zone");
+  await user.click(select);
+  await user.click(within(screen.getByRole("listbox")).getByRole("option", { name: /New York/ }));
+  const toast = await screen.findByText(/Saved/);
+  expect(toast).toHaveTextContent("New York (Eastern time)");
+  expect(toast.textContent).not.toMatch(/America\//);
+});
+
+test("a time zone typed that is no place in the list is not silently dropped: the box keeps it, says so and says what the zone still is", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [
+      item("workspace.user.timezone", {
+        group: "workspace.user",
+        type: "choice",
+        choices: "time_zones",
+        options: ["Europe/Lisbon", "America/New_York", "America/Los_Angeles", "UTC"],
+        value: "America/Los_Angeles",
+        default: "UTC",
+        source: "file",
+        description: "The time zone your own dates and times are read in.",
+      }),
+    ],
+    { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
+  );
+  open();
+  const select = await screen.findByLabelText("Your time zone");
+  await user.click(select);
+  await user.keyboard("Narnia");
+  expect(screen.getByText("No time zone matches. Try another spelling.")).toBeInTheDocument();
+  await user.tab();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Narnia isn't a place in the list, so your time zone is still Los Angeles (Pacific time). Pick a city from the list.");
+  expect(select).toHaveValue("Narnia");
+  expect(posted(calls)).toHaveLength(0);
+  // Typing again clears it, and a zone's whole name typed and left is that zone.
+  await user.clear(select);
+  await user.keyboard("utc");
+  await user.tab();
+  expect(screen.queryByRole("alert")).toBeNull();
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.timezone": "UTC" } });
+});
+
 test("a rarely changed setting is in its page's closed More settings fold, and not among the settings shown at once", async () => {
   api([
     item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "Never start more than this in a day." }),

@@ -18,8 +18,8 @@ import { Today } from "./Today";
 type Line = S["QueueLineView"];
 
 const PERSONAL = project("PRJ-personal", "Personal");
-const FIRST: S["SideView"] = { project: "PRJ-first", kind: "business", name: "Orchard Press", removable: false };
-const SECOND: S["SideView"] = { project: "PRJ-second", kind: "job", name: "Lantern Works", removable: false };
+const FIRST: S["SideView"] = { project: "PRJ-first", kind: "business", name: "Orchard Press", removable: false, filed: 0 };
+const SECOND: S["SideView"] = { project: "PRJ-second", kind: "job", name: "Lantern Works", removable: false, filed: 0 };
 
 const items = [unfiledItem("note", "N-1", "Printer prefers PDF/X files."), unfiledItem("action", "A-1", "Send the proof to the printer"), unfiledItem("question", "Q-1", "Which week suits the printer?")];
 

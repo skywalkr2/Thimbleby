@@ -1560,6 +1560,12 @@ class RuntimeConfig(BaseModel):
     logo: bool = Field(False, description="The workspace has a logo, served at the API's brand/logo address.")
     theme: Literal["system", "light", "dark"] = Field("system", description="The workspace's default theme.")
     density: Literal["comfortable", "compact"] = Field("comfortable", description="The workspace's default density.")
+    timezone: str = Field(
+        "UTC",
+        description="The person's time zone (workspace.user.timezone), an IANA name: the screens write every time of "
+        "day "
+        "on that clock, whatever the computer showing them is set to.",
+    )
     language: str = Field(
         "en-US",
         description="The workspace's language tag (workspace.language): the screens write numbers and amounts of money "
@@ -4221,6 +4227,9 @@ class EndpointView(BaseModel):
     key_url: str = Field("", description="Where the person makes a key, to open in a new tab; empty when none.")
     signup_url: str | None = Field(None, description="Where the person makes an account with the service, if anywhere.")
     credit_url: str | None = Field(None, description="Where the person adds credit to the account, if anywhere.")
+    install_url: str | None = Field(
+        None, description="For a server that runs on this computer: where the person gets it, if anywhere."
+    )
     needs_key: bool = False
     local: bool = Field(False, description="A server on this computer: nothing leaves it.")
     recommended: bool | None = Field(
@@ -5909,6 +5918,11 @@ class SideView(BaseModel):
         description="Setup is not finished and nothing is filed under the side or its projects, so setup can take it "
         "back out.",
     )
+    filed: int = Field(
+        0,
+        description="How many people, items and other records are filed under the side or the projects inside it, so "
+        "the screen never says there is nothing under it while something is.",
+    )
 
 
 class SideRestoreIn(BaseModel):
@@ -6061,6 +6075,10 @@ class WatchKindView(BaseModel):
         description="What the first read of a source of this kind added here does: intake takes it in quietly (one "
         "summary and one list to look over), baseline only notes what is there, recent also hands in the last day's, "
         "all hands everything in.",
+    )
+    reads: list[str] = Field(
+        default_factory=list,
+        description='What the kind reads, for the words a form uses: "mail" or "calendar"; empty for any other kind.',
     )
     items: list[SettingItem]
 

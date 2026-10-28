@@ -489,6 +489,9 @@ def test_a_side_made_in_setup_is_removable_until_something_is_filed_under_it_or_
         tx.create("action", {"text": "Order the thread", "project": keep, "owners": [{"person": owner}]}, _PM)
     state = c.get("/api/setup/business").json()
     assert [(s["project"], s["removable"]) for s in state["sides"]] == [(keep, False), (drop, True)]
+    # What is filed under a side is counted, so the screen never says there is nothing under it while there is: the
+    # to-do is one, the project inside the other side is not (it is part of that side).
+    assert [(s["project"], s["filed"]) for s in state["sides"]] == [(keep, 1), (drop, 0)]
     refused = c.post(f"/api/setup/sides/{keep}/remove")
     assert refused.status_code == 409 and "filed" in refused.json()["detail"]
     gone = c.post(f"/api/setup/sides/{drop}/remove")

@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { localDate, monthDay } from "../lib/dates";
+import { todayOn, monthDay } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { LoadFailed } from "../ui/LoadFailed";
@@ -56,7 +56,7 @@ function CountForm(props: { view: View; focusFirst: boolean }) {
   const act = useAct();
   const base = useId();
   const dateField = useRef<HTMLInputElement>(null);
-  const today = props.view.until || localDate(new Date());
+  const today = props.view.until || todayOn(new Date());
   const [date, setDate] = useState("");
   const [present, setPresent] = useState("");
   const [missed, setMissed] = useState("");
@@ -164,7 +164,7 @@ function SampleRow(props: { sample: NonNullable<View["sample"]>; item: NonNullab
   return (
     <li data-sample-item={item.source}>
       <form className={styles.form} onSubmit={(e) => void submit(e)}>
-        <p>{t("quality.sample.received", { subject, day: monthDay(localDate(new Date(item.received_at))) })}</p>
+        <p>{t("quality.sample.received", { subject, day: monthDay(todayOn(new Date(item.received_at))) })}</p>
         <div className="field">
           <label htmlFor={`${base}-present`}>{t("quality.sample.present", { subject })}</label>
           <input id={`${base}-present`} type="number" inputMode="numeric" min={0} step={1} value={present} onChange={(e) => setPresent(e.target.value)} />

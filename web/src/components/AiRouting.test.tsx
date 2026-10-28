@@ -264,7 +264,7 @@ test("the rules are rows with pick lists; changing one saves the whole list in o
   expect(rule.getByLabelText("Kind of work")).toHaveValue("notes");
   expect(rule.getByLabelText("Quotes more earlier messages than")).toHaveValue("3");
   expect(rule.getByLabelText("Longer than (characters)")).toHaveValue("");
-  expect(within(rule.getByLabelText("How private it is")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Any", "Open material", "Internal material", "Restricted material"]);
+  expect(within(rule.getByLabelText("How private it is")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Any", "Open", "Confidential", "Private"]);
   await user.selectOptions(rule.getByLabelText("How private it is"), "restricted");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toEqual({

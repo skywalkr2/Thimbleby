@@ -330,6 +330,7 @@ def create_app(
             theme=cfg.ui.theme,
             density=cfg.ui.density,
             language=cfg.workspace.language,
+            timezone=cfg.workspace.user.timezone or "UTC",
         )
 
     @inner.get("/api/brand/logo", include_in_schema=False)

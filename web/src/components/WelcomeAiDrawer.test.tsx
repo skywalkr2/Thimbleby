@@ -286,3 +286,87 @@ test("the drawer asks to close as soon as the account is saved, before any check
   expect(screen.queryByRole("button", { name: /Adding/ })).toBeNull();
   await act(async () => release());
 });
+
+test("the line that opens the model choice names no model, and a closed choice shows none", async () => {
+  const user = userEvent.setup();
+  api([MAIN]);
+  open();
+  await keyed(user);
+  const summary = screen.getByText(/The models are chosen for you/);
+  const details = summary.closest("details") as HTMLDetailsElement;
+  expect(details.open).toBe(false);
+  expect(summary.textContent).toBe("The models are chosen for you. Choose them yourself");
+  // The names are in the choice only; the screen outside it holds none.
+  const outside = (document.body.textContent ?? "").replace(details.textContent ?? "", "");
+  expect(outside).not.toMatch(/model-[ab]/);
+});
+
+test("the button that adds says why it can't be pressed yet, and the reason follows what is missing", async () => {
+  const user = userEvent.setup();
+  api([MAIN]);
+  open();
+  await user.click(await screen.findByRole("radio", { name: /Service A/ }));
+  const add = screen.getByRole("button", { name: /^Add and check/ });
+  expect(add).toBeDisabled();
+  expect(screen.getByText("Paste your key to go on.")).toBeInTheDocument();
+  expect(add).toHaveAccessibleDescription(/Paste your key to go on\./);
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
+  // With a key typed but its models not listed, it says to press Check, and the reason goes once they are.
+  expect(await screen.findByText(/Press Check to list its models/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  await screen.findByLabelText("AI model for everyday work");
+  expect(screen.queryByText(/Press Check to list its models/)).toBeNull();
+  expect(screen.getByRole("button", { name: /^Add and check/ })).toBeEnabled();
+});
+
+test("the levels use the app's words, Open, Confidential and Private, and ticking more than Open says what that lets the account read", async () => {
+  const user = userEvent.setup();
+  api([MAIN]);
+  open();
+  await keyed(user);
+  const levels = screen.getByRole("group", { name: "What it may see" });
+  expect(within(levels).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual(["Open", "Confidential", "Private"]);
+  expect(document.querySelector("[data-level-warning]")).toBeNull();
+  await user.click(within(levels).getByLabelText("Private"));
+  expect(within(levels).getByRole("status")).toHaveTextContent("An account ticked for Confidential or Private can read that material.");
+});
+
+/** The line that opens the choice of models, opened. */
+async function openModels(user: ReturnType<typeof userEvent.setup>) {
+  const details = screen.getByText(/The models are chosen for you/).closest("details") as HTMLDetailsElement;
+  await user.click(screen.getByText(/The models are chosen for you/));
+  return details;
+}
+
+test("the pickers list the models with what each costs", async () => {
+  const user = userEvent.setup();
+  api([MAIN], { "POST ai/models": () => ({ models: [{ id: "model-a", context_tokens: 200000, input_per_million: 3, output_per_million: 15 }, { id: "model-b" }] }) });
+  open();
+  await keyed(user);
+  const details = await openModels(user);
+  const everyday = within(details).getByLabelText("AI model for everyday work");
+  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["model-a", "model-b"]);
+  expect(within(details).getByText(/Reads up to about 200,000 text units at once\. Per million text units: \$3\.00 to read, \$15\.00 to write\./)).toBeInTheDocument();
+  const harder = within(details).getByLabelText("AI model for harder work (optional)");
+  expect(within(harder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Same as the everyday model", "model-a", "model-b"]);
+});
+
+test("a long list of models can be narrowed by typing, and when nothing matches the button says so", async () => {
+  const user = userEvent.setup();
+  const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${String(i).padStart(2, "0")}` }));
+  api([MAIN], { "POST ai/models": () => ({ models: many }) });
+  open();
+  await keyed(user);
+  const details = await openModels(user);
+  const everyday = within(details).getByLabelText("AI model for everyday work");
+  expect(everyday).toHaveValue("model-00");
+  await user.type(within(details).getByLabelText("Find a model"), "model-1");
+  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(Array.from({ length: 10 }, (_, i) => `model-${10 + i}`));
+  expect(everyday).toHaveValue("model-10");
+  await user.clear(within(details).getByLabelText("Find a model"));
+  await user.type(within(details).getByLabelText("Find a model"), "zzz");
+  expect(screen.getAllByText("No model matches.").length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: /^Add and check/ })).toBeDisabled();
+  await user.clear(within(details).getByLabelText("Find a model"));
+  expect(screen.getByRole("button", { name: /^Add and check/ })).toBeEnabled();
+});

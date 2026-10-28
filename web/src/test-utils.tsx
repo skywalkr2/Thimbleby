@@ -84,6 +84,7 @@ export function rcFixture(extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeCo
     theme: "system",
     density: "comfortable",
     language: "en-US",
+    timezone: "UTC",
     pm: null,
     shortcuts: { undo: "u", hand_in: "n", help: "?", ask: "/" },
     toast_seconds: 0,

@@ -583,7 +583,7 @@ test("Keep it records the new sign-in for the account, says so, and the line goe
 test("work above the levels a sign-in is set for says so, with how much waits, and opens the account", async () => {
   const { onOpenAiAccounts } = show([identityLine({ key: "identity:second:level", state: "level", subject: null, count: 2, names: ["restricted"] })]);
   const row = await screen.findByRole("region", { name: "Check a sign-in" });
-  expect(row).toHaveTextContent("The second agent runs as sam@example.com, which isn't set for restricted material");
+  expect(row).toHaveTextContent("The second agent runs as sam@example.com, which isn't set for private material");
   expect(row).toHaveTextContent("2 pieces of work wait.");
   expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Open the account"]);
   await userEvent.setup().click(within(row).getByRole("button", { name: "Open second" }));

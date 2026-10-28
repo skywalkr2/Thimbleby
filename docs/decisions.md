@@ -5,6 +5,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-28: A connection is tried before it is added; one privacy question in setup; no model names in setup; every moment on the person's clock
+
+**Decided:** (1) A mailbox, a calendar link or file, a feed or a folder is read once before it is saved (a change to one too);
+one that can't be read is refused in plain words beside the setting it is about, said from the kind of the error and what is
+being read, never from the error's own words. A connection's name, when left empty, is what it reads. (2) A to-do the person
+owes that the look back found is one of their promises. (3) Setup asks one privacy question (Allow or Not my private mail);
+the three levels are worded Open, Confidential and Private everywhere and are ticked in Settings; lowering a connection's
+level, or ticking more than Open for an account, warns first. (4) Setup shows no model name and no model picker; the picker is
+in Settings' form for an account, the only place a model's name shows. (5) A server on this computer is not checked until the
+person presses Check. (6) Remove is always there in setup for a job or a business, asking where what is filed goes when
+something is. (7) The time zone list holds one name per place, and every moment on every screen is written on the person's own
+clock, whatever the computer's is set to.
+
+**Decided by:** the UI/UX sweep's reviewer (X07 to X11, X15, X16); the builder's choices for review: a mailbox or link the
+trial can't reach is refused rather than added (an offline person retries), "Confidential" and "Private" as the one
+vocabulary (already the hand-in and add-on words), moving the model picker out of setup (the design had it under Advanced).
+
+**Why:** a nonsense mailbox was added and failed later with the wrong reason; privacy was asked twice in three vocabularies; the
+model's own name was on screen; the Schedule and Today wrote the same moment two ways.
+
+**Impact:** Design 6.20, 7.8 and 7.15 and CHANGES section 258. New: `engine/source_trial.py`, the `X-Cockpit-Field` header,
+`SideView.filed`, `WatchKindView.reads`, `EndpointView.install_url`, `RuntimeConfig.timezone`. The catalog's generic service is
+"Another service". Not reproduced: X15's "ticking deletes the line from the typed box" (a test now guards it) and D-P2-22's
+"account 2". No change to scope. Change log: section 258.
+
 ## 2026-10-28: Setup can always be left; its state is read from the records; Backups says where they go
 
 **Decided:** (1) Setup can always be left, whatever is skipped: Finish later, Go to Today, an address that names Today and

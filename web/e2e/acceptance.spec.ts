@@ -900,17 +900,20 @@ test.describe.serial("acceptance scenario", () => {
     const sources = page.getByRole("main").locator("ul.queue").first();
     // One row per source, each saying it reads by itself and when it last did.
     await expect(sources.getByRole("listitem").first()).toContainText(/Read every \d+ minutes · /);
-    await page.getByRole("button", { name: "Add a connection" }).click();
-    const form = page.getByRole("form", { name: "Add a connection" });
+    await page.getByRole("button", { name: "Add mail, calendar or folder" }).click();
+    const form = page.getByRole("form", { name: "Add mail, calendar or folder" });
     await expect(form).toBeVisible();
     // The cursor starts in the form's first field: the kind of source to add (design 7.0).
     await expect(form.getByRole("radio").first()).toBeFocused();
     await form.getByRole("radio").first().check();
     await expect(form.getByLabel("Name", { exact: true })).toBeVisible();
+    // How often, the area and who writes in it are options, kept behind one line.
+    await expect(form.getByLabel("How often to read")).toBeHidden();
+    await form.getByText("More options").click();
     await expect(form.getByLabel("How often to read")).toBeVisible();
     await checkAccessibility(page);
     await form.getByRole("button", { name: "Cancel" }).click();
-    await expect(page.getByRole("button", { name: "Add a connection" })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Add mail, calendar or folder" })).toBeFocused();
     // A row's menu: read now, change, turn off or on, remove; Change opens the same form filled in.
     const first = sources.getByRole("listitem").first();
     await first.getByRole("button", { name: /^More actions for / }).click();

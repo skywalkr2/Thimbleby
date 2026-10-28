@@ -3,6 +3,7 @@
 // nothing changes there before it. Only an event that is the person's own is offered, and only when acting is on for its account
 // and the account's service does it.
 import { useId, useState, type ReactNode } from "react";
+import { inputOn, momentOf } from "../lib/dates";
 import { useActOptions, useDraftAct } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
@@ -14,19 +15,17 @@ export interface EventActs {
   form: ReactNode;
 }
 
-/** A moment as the text a `datetime-local` box takes, in the person's own time. A day with no time starts at nine. */
+/** A moment as the text a `datetime-local` box takes, on the person's own clock. A day with no time starts at nine. */
 export function localInput(iso: string | null | undefined): string {
   if (!iso) return "";
-  const when = new Date(iso.length === 10 ? `${iso}T09:00` : iso);
-  if (Number.isNaN(when.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${when.getFullYear()}-${p(when.getMonth() + 1)}-${p(when.getDate())}T${p(when.getHours())}:${p(when.getMinutes())}`;
+  if (iso.length === 10) return `${iso}T09:00`;
+  const when = new Date(iso);
+  return Number.isNaN(when.getTime()) ? "" : inputOn(when);
 }
 
-/** What a `datetime-local` box holds as ISO text, or nothing when it holds no moment. */
+/** What a `datetime-local` box holds as ISO text, on the person's own clock, or nothing when it holds no moment. */
 export function isoInput(local: string): string {
-  const when = new Date(local);
-  return Number.isNaN(when.getTime()) ? "" : when.toISOString();
+  return momentOf(local)?.toISOString() ?? "";
 }
 
 /** The acts on the calendar entry `entry`, whose own start and end are `current`. `enabled` false asks the server nothing. */

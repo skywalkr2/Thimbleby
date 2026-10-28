@@ -78,14 +78,11 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).check();
     await main.getByRole("button", { name: /^Another service/ }).click();
-    await main.getByLabel(/^Another service that speaks/).check();
+    await main.getByLabel(/^Another service/).check();
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.getByRole("textbox", { name: "Service address" }).blur();
     // The check runs by itself, for every kind of work, before anything is saved.
-    await expect(main.getByText("Works. Ready to use.")).toBeVisible();
-    await main.getByText("Advanced", { exact: true }).click();
-    await main.getByLabel("AI model for everyday work").selectOption("fake-small");
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
     // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
     await main.getByRole("radio", { name: /^Allow/ }).check();

@@ -309,14 +309,45 @@ def _with_current(options: list[str], value: Any) -> list[str]:
     return [*options, value] if isinstance(value, str) and value and value not in options else options
 
 
+def _canonical_zones() -> set[str]:
+    """The zones the time zone data lists for a place (one per region of each country), from its `zone.tab`: the names
+    a person knows, with none of the old aliases ("US/Pacific", "Asia/Calcutta"), fixed-offset or legacy ones. Empty
+    when
+    the table can't be read."""
+    import contextlib
+    import importlib.resources
+    import zoneinfo
+
+    candidates: list[str] = []
+    with contextlib.suppress(ModuleNotFoundError, FileNotFoundError, OSError):
+        candidates.append((importlib.resources.files("tzdata.zoneinfo") / "zone.tab").read_text(encoding="utf-8"))
+    for folder in zoneinfo.TZPATH:
+        try:
+            candidates.append((Path(folder) / "zone.tab").read_text(encoding="utf-8"))
+        except OSError:
+            continue
+    for text in candidates:
+        found = {
+            cols[2]
+            for line in text.splitlines()
+            if line.strip() and not line.startswith("#") and len(cols := line.split("\t")) >= 3
+        }
+        if found:
+            return found
+    return set()
+
+
 def _time_zones() -> list[str]:
-    """The time zones this computer knows, by their IANA names, for a setting that holds one."""
+    """The time zones a person can pick, by their IANA names, for a setting that holds one: those the data lists for a
+    place, with UTC. Where that list can't be read, every name this computer knows."""
     import zoneinfo
 
     try:
-        return sorted(zoneinfo.available_timezones())
+        known = zoneinfo.available_timezones()
     except Exception:  # no time zone data on this computer: the setting stays a typed name
         return []
+    canonical = _canonical_zones() & known
+    return sorted({*canonical, "UTC"} & known) if canonical else sorted(known)
 
 
 def _times_of_day() -> list[str]:

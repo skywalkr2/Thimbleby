@@ -10,6 +10,7 @@ import { WordingProvider, useWords } from "./lib/wording";
 import { OwnRequestsProvider } from "./components/HandIn";
 import { Button } from "./ui/Button";
 import { initAppearance } from "./lib/theme";
+import { setClockZone } from "./lib/dates";
 
 const client = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 } },
@@ -34,6 +35,8 @@ function Problem(props: { signedOut: boolean }) {
 function LiveWording(props: { rc: S["RuntimeConfig"]; children: ReactNode }) {
   const fresh = useQuery({ queryKey: ["runtime-config"], queryFn: api.runtimeConfig, initialData: props.rc, staleTime: Infinity });
   const rc = fresh.data;
+  // Every moment on every screen is written on the person's own clock, not the computer's.
+  setClockZone(rc.timezone);
   return (
     <WordingProvider
       overrides={rc.wording}

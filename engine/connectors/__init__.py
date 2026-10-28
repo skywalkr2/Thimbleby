@@ -381,16 +381,30 @@ def reads(connector: str, declared: Mapping[str, str | None] | None = None) -> l
 class FolderSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    path: str = Field(min_length=1, description="The folder: a full path, or one inside the workspace's folder.")
+    path: str = Field(
+        min_length=1,
+        description="The folder to read. Choose it from the list; a folder inside the workspace can be given by "
+        "its name.",
+        json_schema_extra={"picker": "folder"},
+    )
     patterns: list[str] = Field(
         default_factory=lambda: ["*.txt", "*.md"],
         description="Which files to read, as name patterns. Documents, spreadsheets, presentations and PDFs are read "
         "as text too.",
+        json_schema_extra={"advanced": True},
     )
-    subfolders: bool = Field(True, description="Read the folders inside it too.")
-    max_kb: int = Field(512, ge=1, description="Files larger than this are listed as too large and not read.")
+    subfolders: bool = Field(True, description="Read the folders inside it too.", json_schema_extra={"advanced": True})
+    max_kb: int = Field(
+        512,
+        ge=1,
+        description="Files larger than this many kilobytes are listed as too large and not read.",
+        json_schema_extra={"advanced": True},
+    )
     max_audio_mb: float = Field(
-        25, gt=0, description="Voice notes (sound files) larger than this, in megabytes, are listed as too large."
+        25,
+        gt=0,
+        description="Voice notes (sound files) larger than this many megabytes are listed as too large.",
+        json_schema_extra={"advanced": True},
     )
 
 
@@ -399,6 +413,7 @@ class CaptureFolderSettings(FolderSettings):
         default_factory=lambda: ["*.txt", "*.md", "*.m4a", "*.mp3", "*.wav", "*.ogg", "*.webm", "*.flac", "*.aac"],
         description="Which files to take in, as name patterns. Notes and documents are read as your own words; a "
         "sound file is a voice note, turned into text by an account that takes speech.",
+        json_schema_extra={"advanced": True},
     )
 
 

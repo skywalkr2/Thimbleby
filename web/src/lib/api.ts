@@ -10,6 +10,8 @@ export class ApiError extends Error {
     public detail: string,
     /** What the server says would fix it, when it says (the `X-Cockpit-Needs` header): "read-token". */
     public needs: string | null = null,
+    /** The setting a refused form is about (the `X-Cockpit-Field` header), so the reason is shown beside it. */
+    public field: string | null = null,
   ) {
     super(detail || `HTTP ${status}`);
   }
@@ -25,7 +27,7 @@ async function send<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, 
     } catch {
       detail = "";
     }
-    throw new ApiError(response.status, detail, response.headers.get("X-Cockpit-Needs"));
+    throw new ApiError(response.status, detail, response.headers.get("X-Cockpit-Needs"), response.headers.get("X-Cockpit-Field"));
   }
   return (await response.json()) as T;
 }

@@ -467,3 +467,16 @@ def test_the_message_style_the_glossary_and_the_catalog_fields_are_saved_through
         },
     )
     assert refused.status_code in (400, 422), refused.text
+
+
+def test_the_time_zones_offered_are_places_a_person_knows_with_no_aliases_or_legacy_names():
+    from engine.settings import _time_zones
+
+    zones = _time_zones()
+    # One name for each place: the aliases and legacy names the data also carries are not offered.
+    for wanted in ("America/Los_Angeles", "Asia/Kolkata", "Europe/London", "Australia/Sydney", "UTC"):
+        assert wanted in zones
+    for alias in ("US/Pacific", "Asia/Calcutta", "Canada/Eastern", "Etc/GMT+8", "EST5EDT", "Zulu", "localtime"):
+        assert alias not in zones
+    assert zones == sorted(set(zones))
+    assert 300 < len(zones) < 500

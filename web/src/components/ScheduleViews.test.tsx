@@ -351,8 +351,8 @@ describe("an entry's details", () => {
 });
 
 describe("the side filter", () => {
-  const FIRST: S["SideView"] = { project: "PRJ-first", kind: "business", name: "Orchard Press", removable: false };
-  const SECOND: S["SideView"] = { project: "PRJ-second", kind: "job", name: "Lantern Works", removable: false };
+  const FIRST: S["SideView"] = { project: "PRJ-first", kind: "business", name: "Orchard Press", removable: false, filed: 0 };
+  const SECOND: S["SideView"] = { project: "PRJ-second", kind: "job", name: "Lantern Works", removable: false, filed: 0 };
   const sides: Routes = { "GET setup/business": () => ({ business: true, name: FIRST.name, personal: "PRJ-personal", sides: [FIRST, SECOND], chosen: "work" }) };
   const onSides: Content = (date) =>
     date === TODAY

@@ -206,6 +206,27 @@ def test_when_every_request_has_finished_it_is_ready_with_the_promises_soonest_d
     assert shown.promises[0].promised_to == [people.name(me)] and shown.promises[1].mine
 
 
+def test_a_to_do_the_look_back_found_for_the_person_counts_as_a_promise_but_one_from_elsewhere_does_not(env):
+    ws, cfg, store = env
+    read(env)
+    first_promises.go(ws, store, cfg)
+    for r in requests_of(store, intake="m"):
+        with_changeset(store, r.id, [("action.add", "applied")])
+    me = cfg.workspace.user.person
+    source = next(r.data["source"] for r in store.read().list("request") if r.data.get("intake"))
+    with store.transaction() as tx:
+        # A to-do of theirs with no "promised to" and no basis, from the person's own sent mail.
+        own = tx.create(
+            "action", {"text": "Send the revised budget", "owners": [{"person": me}], "source": source}, _TEST
+        ).id
+        # A to-do of theirs the look back didn't find, and one it found for someone else, are not promises of theirs.
+        tx.create("action", {"text": "Water the plants", "owners": [{"person": me}]}, _TEST)
+        tx.create("action", {"text": "Sweep the hall", "owners": [{"person": other(cfg)}], "source": source}, _TEST)
+    shown = stage(env)
+    assert [p.action for p in shown.promises] == [own] and shown.promises[0].mine
+    assert shown.messages_read == 0 and shown.meetings_week == 0  # not asked for when something was found
+
+
 def test_it_shows_only_as_many_as_the_setting_says_and_counts_the_rest(env):
     ws, cfg, store = env
     read(env)

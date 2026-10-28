@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { addDays, day, localDate, time, wallTime } from "../lib/dates";
+import { addDays, day, todayOn, time, wallTime } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
 import { useWords } from "../lib/wording";
 import { AgendaItems } from "./AgendaList";
@@ -80,7 +80,7 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
   const span = useQuery({ queryKey: ["today", "agenda-span"], queryFn: api.agendaSpan });
   const now = useNow();
-  const today = localDate(now);
+  const today = todayOn(now);
   const tomorrow = addDays(today, 1);
   const events = agenda.data ?? [];
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));

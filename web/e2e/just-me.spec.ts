@@ -253,9 +253,9 @@ test.describe('"Just me" sees no work words', () => {
     // Connections: the form to add one.
     await go(page, "settings/connections");
     await heading(page, "Connections", 2);
-    await page.getByRole("button", { name: "Add a connection" }).first().click();
-    await expect(page.getByRole("heading", { name: "Add a connection" })).toBeVisible(LOADED);
-    await read("Add a connection");
+    await page.getByRole("button", { name: "Add mail, calendar or folder" }).first().click();
+    await expect(page.getByRole("heading", { name: "Add mail, calendar or folder" })).toBeVisible(LOADED);
+    await read("Add mail, calendar or folder");
     await close();
 
     // Files: the form to add one.

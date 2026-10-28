@@ -2365,8 +2365,8 @@ A person who adds an account gets every tier filled in, so routine work never la
   and settings the account never set change.
 - Where it shows (owner, 2026-10-21): setup asks nothing about tiers; adding an account loads its preset silently and
   setup says only that it is ready. Settings holds the rest: the three tiers in plain words with an estimated cost per
-  day, each changeable, and "Measure", which offers the measured recommendation. The model's name shows only in
-  Advanced.
+  day, each changeable, and "Measure", which offers the measured recommendation. The model's name shows only where the
+  person chooses models themselves, in the form for an account in Settings (sweep X10; never in setup, never in a summary).
 
 **Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
 run's changeset still fails an invariant after its one fix round, or would be held for a lint, the request is re-run once on the

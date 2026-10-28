@@ -63,14 +63,11 @@ test.describe.serial("journey: mail", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).check();
     await main.getByRole("button", { name: /^Another service/ }).click();
-    await main.getByLabel(/^Another service that speaks/).check();
+    await main.getByLabel(/^Another service/).check();
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.getByRole("textbox", { name: "Service address" }).blur();
     // The check runs by itself, for every kind of work, before anything is saved.
-    await expect(main.getByText("Works. Ready to use.")).toBeVisible();
-    await main.getByText("Advanced", { exact: true }).click();
-    await main.getByLabel("AI model for everyday work").selectOption("fake-small");
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
     // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
     await main.getByRole("radio", { name: /^Allow/ }).check();
@@ -151,7 +148,8 @@ test.describe.serial("journey: mail", () => {
     expect((await requests()).work).toBe(0);
 
     // Start: one request for each item taken in, each item once, and the offer gives way to what was found. The stand-in
-    // rules find no promise in these messages, so the screen says so plainly and offers "Missed something?".
+    // rules find the person's own to-dos in these messages (mail from their own inbox), and a to-do of theirs the look back
+    // found is one of their promises, so the screen lists them as what they owe.
     await offer.getByRole("button", { name: "Start", exact: true }).click();
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
@@ -161,9 +159,10 @@ test.describe.serial("journey: mail", () => {
       expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
     }
     for (const title of aside) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
-    const none = main.locator('[data-first-promises="none"]');
-    await expect(none).toContainText("No open promises found in the mail it looked over.", { timeout: 60_000 });
-    await expect(none.getByRole("button", { name: "Missed something?" })).toBeVisible();
+    const promises = main.locator('[data-first-promises="found"]');
+    await expect(promises.getByRole("heading", { level: 3, name: "Promises found" })).toBeVisible({ timeout: 60_000 });
+    await expect(promises.getByText("You owe this").first()).toBeVisible();
+    await expect(main.locator('[data-first-promises="none"]')).toHaveCount(0);
     await visit(page);
 
     // Backups and People are left for later, and Done names what was skipped.

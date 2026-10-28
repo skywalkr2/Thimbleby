@@ -305,3 +305,49 @@ def test_the_result_is_json_the_screen_can_read(tmp_path, monkeypatch):
     got = c.post(f"{api}/ai/account-check", json=check_body(HOSTED[0]))
     assert set(got.json()) == {"ok", "reason", "message", "identity", "identity_unknown", "model", "next_model"}
     json.dumps(got.json())
+
+
+# ---- a service the person gives an address for: what is wrong with it is said -----------------------------------
+
+
+def test_a_typed_address_that_is_not_a_web_address_is_said_so_before_the_service_is_asked(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    asked = []
+
+    def reached(*args, **kwargs):  # pragma: no cover - must not run
+        asked.append(args)
+        raise AssertionError("the service was asked")
+
+    for bad in ("my service", "ftp://host.example.com/v1", "not-a-url", "http://"):
+        got = c.post(f"{api}/ai/models", json={"endpoint": "other", "base_url": bad})
+        assert got.status_code == 200 and got.json()["problem"].startswith("That isn't a web address"), bad
+        checked = c.post(
+            f"{api}/ai/account-check",
+            json={"endpoint": "other", "base_url": bad, "models": {"everyday": "m"}, "use": {"routine": "everyday"}},
+        )
+        assert checked.json()["ok"] is False and checked.json()["message"].startswith("That isn't a web address"), bad
+    assert asked == []
+
+
+def test_a_typed_address_that_can_t_be_reached_names_its_host_and_a_known_services_words_stay_as_they_were():
+    from engine import setup
+
+    other = next(e for e in known_endpoints() if e["id"] == "other")
+    said = setup.list_problem(other, "provider_down", f"{WEB}models.example.com:8080/v1/chat")
+    assert said.startswith("Couldn't reach models.example.com.") and "8080" not in said and "/v1" not in said
+    hosted = HOSTED[0]
+    assert (
+        setup.list_problem(hosted, "provider_down", hosted["base_url"]) == setup.HOSTED_LIST_PROBLEMS["provider_down"]
+    )
+    assert setup.address_problem(f"{WEB}models.example.com/v1") is None
+    assert setup.address_problem("http://localhost:11434/v1") is None
+
+
+def test_the_catalog_gives_the_generic_service_a_short_name_and_a_server_on_this_computer_a_page_to_get_it_from():
+    kinds = {e["id"]: e for e in known_endpoints()}
+    assert len(kinds["other"]["name"]) <= 20 and "common chat format" not in kinds["other"]["name"]
+    for entry in kinds.values():
+        assert "common chat format" not in entry["note"] and "Test also checks" not in entry["note"]
+        if entry["local"]:
+            assert entry["install_url"].startswith("https://")

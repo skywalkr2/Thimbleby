@@ -51,16 +51,6 @@ const isService = (kind: Kind) => kind.needs_key && kind.base_url !== "" && !kin
 /** A command-line program the app knows how to start: the person names no command. */
 const isBuiltin = (kind: Kind) => (kind.program ?? "") !== "" && !takesAddress(kind);
 
-/** A kind's note as one short line: its first sentence, cut at a word when that is still long. The whole note stays in the
- * tooltip, and under the choices once the kind is chosen. */
-const NOTE_MAX = 80;
-function shortNote(note: string): string {
-  const first = (note.split(/(?<=[.!?])\s/)[0] ?? note).trim();
-  if (first.length <= NOTE_MAX) return first;
-  const cut = first.slice(0, NOTE_MAX);
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 1)).replace(/[,;:\s]+$/, "")}…`;
-}
-
 /** The three words a program's example models are offered by, in the order they are listed; the catalog says which example
  * is which, and the program's own name for one is only ever a hint. */
 const MODEL_ROLE_ORDER = ["recommended", "stronger", "faster"] as const;
@@ -153,7 +143,8 @@ export function WelcomeAi(props: {
   const [elseOpen, setElseOpen] = useState(false);
   // Which of the three lines under Something else is open: null until one is pressed (the chosen kind's line is open then).
   const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const [useForWork, setUseForWork] = useState(!props.done);
+  // Setup makes the account the assistant's own while none does the work yet; another account is added from Settings.
+  const useForWork = !props.done;
   const [customModel, setCustomModel] = useState(false);
   const [command, setCommand] = useState("");
   const [packetVia, setPacketVia] = useState<"stdin" | "file">("stdin");
@@ -177,6 +168,13 @@ export function WelcomeAi(props: {
   const builtin = !!kind && isBuiltin(kind);
   const generic = agent && !builtin;
   const examples = builtin ? examplesOf(kind) : [];
+  // Each example is named by what it is for; two with the same purpose are told apart by a number, never by the program's own name.
+  const roleLabel = (model: string, at: number) => {
+    const role = kind?.model_roles?.[model];
+    if (!role) return t("welcome.ai.model_choice_n", { n: at + 1 });
+    const same = examples.filter((m) => kind?.model_roles?.[m] === role);
+    return same.length > 1 ? t("welcome.ai.role_numbered", { role: t(`welcome.ai.role.${role}`), n: same.indexOf(model) + 1 }) : t(`welcome.ai.role.${role}`);
+  };
   const optional = builtin && !!kind.model_optional;
   // The program picks its own model when none is named and the person has not typed one.
   const programPicks = optional && !customModel && everyday.trim() === "";
@@ -191,7 +189,8 @@ export function WelcomeAi(props: {
   const labels = new Set((accounts.data ?? []).map((a) => accountName(a, endpoints.data?.find((e) => e.id === a.kind), t)));
   const defaultLabel = (() => {
     if (!kind) return "";
-    const base = t("ai_accounts.default_name", { service: kind.name });
+    const at = asksAddress(kind) && address.trim() ? domainOf(address.trim()) : null;
+    const base = at ?? t("ai_accounts.default_name", { service: kind.name });
     let n = 2;
     let found = base;
     while (labels.has(found)) found = `${base} ${n++}`;
@@ -396,13 +395,13 @@ export function WelcomeAi(props: {
     setElseOpen(!picked.recommended && !picked.alternative);
     if (!drawer) {
       // The check runs by itself as soon as the kind has all it needs from the person: nothing, for a server or a program.
-      if (!picked.needs_key && (picked.base_url !== "" || isBuiltin(picked))) {
+      if (!picked.needs_key && !picked.local && (picked.base_url !== "" || isBuiltin(picked))) {
         void verify(picked, { model: isBuiltin(picked) && !picked.model_optional ? firstExample(picked) : "" });
       }
       return;
     }
     // A service with an address and no key needs nothing more from the person: its models are listed at once.
-    if (picked.base_url !== "" && !picked.needs_key) void check(picked, {});
+    if (picked.base_url !== "" && !picked.needs_key && !picked.local) void check(picked, {});
   };
 
   const chooseFound = (endpoint: string) => {
@@ -462,6 +461,20 @@ export function WelcomeAi(props: {
   const mains = (accounts.data ?? []).filter((a) => roleOf(a) === "work");
   const mainName = mains[0] ? accountName(mains[0], endpoints.data?.find((e) => e.id === mains[0].kind), t) : "";
   const chosenFor: For = forWhat ?? (mains.length ? "backup" : "work");
+
+  /** Why the drawer's button can't be pressed yet, in words; nothing when it can. */
+  const drawerWhy = (() => {
+    if (!drawer || !kind || ready || busy) return "";
+    if (shownLabel.trim() === "") return t("ai_add.why.name");
+    if (generic && command.trim() === "") return t("welcome.advanced.why_command");
+    if (asksAddress(kind) && address.trim() === "") return t("welcome.ai.why.address");
+    if (agent ? false : !keyReady) return t("welcome.ai.why.key");
+    if (!programPicks && everyday.trim() === "") return t(manualModel || builtin ? "welcome.ai.why.model" : "ai_add.why.models");
+    if (noMatch) return t("welcome.ai.model_none");
+    if (levels.length === 0) return t("ai_add.why.levels");
+    if (!settings.data) return t("ai_add.why.loading");
+    return t("ai_add.why.other");
+  })();
 
   /** About what checking the new account costs: the check's calls priced with the dearest model it will use. */
   const checkUsd = (() => {
@@ -638,10 +651,11 @@ export function WelcomeAi(props: {
     if (!kind) return props.done ? "" : t("welcome.ai.why.kind");
     if (added) return "";
     if (builtin && kind.installed === false) return t("welcome.ai.why.app");
+    if (kind.local && !usingFound && verdict.state === "idle") return t("welcome.ai.why.local");
     if (!keyReady) return t("welcome.ai.why.key");
     if (asksAddress(kind) && address.trim() === "") return t("welcome.ai.why.address");
     if (generic && command.trim() === "") return t("welcome.advanced.why_command");
-    if (verdict.state === "checking") return t("welcome.ai.why.checking");
+    if (verdict.state === "checking") return t(kind.needs_key ? "welcome.ai.why.checking" : "welcome.ai.why.checking_plain");
     if (verdict.state === "failed") return t("welcome.ai.why.failed");
     if (verdict.state === "idle" && (manualModel || (!builtin && list.length === 0 && asked)) && everyday.trim() === "") return t("welcome.ai.why.model");
     if (verdict.state === "idle") return t("welcome.ai.why.not_checked");
@@ -679,11 +693,7 @@ export function WelcomeAi(props: {
       <span>
         {e.recommended && guide && <Pill tone="ok" className="tag-recommended">{t("welcome.ai.recommended")}</Pill>}
         <strong>{e.name}</strong>
-        {e.note && (
-          <span className="hint block" title={e.note}>
-            {shortNote(e.note)}
-          </span>
-        )}
+        {e.note && <span className="hint block">{e.note}</span>}
       </span>
     </label>
   );
@@ -804,6 +814,11 @@ export function WelcomeAi(props: {
         ))}
       </div>
       <p className="hint">{t("welcome.ai.data_hint")}</p>
+      {levels.some((level) => level !== "open") && (
+        <p className="hint" role="status" data-level-warning="">
+          {t("welcome.ai.data_warn")}
+        </p>
+      )}
       <p className="hint" data-internal-note="">
         {t("welcome.ai.data_internal_note")}
       </p>
@@ -813,7 +828,7 @@ export function WelcomeAi(props: {
   /** How the check of a new account stands, as a line: checking, "Works", or what to do about it. */
   const verdictLine = (
     <div role="status" aria-live="polite" className="verdict">
-      {verdict.state === "checking" && <p className="hint">{t("welcome.ai.checking_key")}</p>}
+      {verdict.state === "checking" && <p className="hint">{t(kind?.needs_key ? "welcome.ai.checking_key" : "welcome.ai.checking_plain")}</p>}
       {verdict.state === "works" && (
         <p className="check-ok" data-works="">
           <Icon name="check" size={14} />{" "}
@@ -1021,11 +1036,6 @@ export function WelcomeAi(props: {
                 )}
               </div>
             )}
-            {kind?.note && shortNote(kind.note) !== kind.note && (
-              <p className="hint" data-full-note="">
-                {kind.note}
-              </p>
-            )}
           </fieldset>
           {kind && (
             <>
@@ -1074,6 +1084,23 @@ export function WelcomeAi(props: {
                   >
                     {t("welcome.ai.check")}
                   </button>
+                </div>
+              )}
+              {kind.local && !usingFound && (
+                <div className="check-row" data-local-start="">
+                  <p className="hint" id="ai-local-status">
+                    {t("welcome.ai.local_start")}
+                  </p>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={guide ? verdict.state === "checking" : !canCheck}
+                    aria-describedby="ai-local-status"
+                    onClick={() => void (guide ? verify(kind, { model: "" }) : check(kind))}
+                  >
+                    {t("welcome.ai.check")}
+                  </button>
+                  {link(kind.install_url, t("welcome.ai.local_get"))}
                 </div>
               )}
               {generic && (
@@ -1194,7 +1221,7 @@ export function WelcomeAi(props: {
                 </section>
               )}
               {guide && verdictLine}
-              {canList && !guide && (
+              {canList && !guide && !kind.local && (
                 <div className="check-row">
                   <button type="button" className="btn" disabled={!canCheck} onClick={() => void check(kind)}>
                     {t("welcome.ai.check")}
@@ -1202,6 +1229,16 @@ export function WelcomeAi(props: {
                   <div role="status" aria-live="polite">
                     {listing && <p className="hint">{t("welcome.ai.checking")}</p>}
                   </div>
+                  {listProblem && (
+                    <p className="problem-note" role="alert">
+                      {listProblem}
+                    </p>
+                  )}
+                </div>
+              )}
+              {canList && !guide && kind.local && (
+                <div role="status" aria-live="polite">
+                  {listing && <p className="hint">{t("welcome.ai.checking")}</p>}
                   {listProblem && (
                     <p className="problem-note" role="alert">
                       {listProblem}
@@ -1244,7 +1281,6 @@ export function WelcomeAi(props: {
                         <label htmlFor="ai-model">{t("welcome.ai.model_choice")}</label>
                         <select
                           id="ai-model"
-                          aria-describedby={!customModel && examples.includes(everyday) ? "ai-model-name-hint" : undefined}
                           value={customModel ? OTHER_MODEL : everyday}
                           onChange={(e) => {
                             const other = e.target.value === OTHER_MODEL;
@@ -1256,16 +1292,11 @@ export function WelcomeAi(props: {
                           {optional && <option value="">{t("welcome.ai.model_program_picks")}</option>}
                           {examples.map((m, i) => (
                             <option key={m} value={m}>
-                              {kind.model_roles?.[m] ? t(`welcome.ai.role.${kind.model_roles[m]}`) : t("welcome.ai.model_choice_n", { n: i + 1 })}
+                              {roleLabel(m, i)}
                             </option>
                           ))}
                           <option value={OTHER_MODEL}>{t("welcome.ai.model_other")}</option>
                         </select>
-                        {!customModel && examples.includes(everyday) && (
-                          <p className="hint" id="ai-model-name-hint">
-                            {t("welcome.ai.model_role_hint", { name: everyday })}
-                          </p>
-                        )}
                       </div>
                       {customModel && (
                         <div className="field">
@@ -1303,7 +1334,7 @@ export function WelcomeAi(props: {
                         open={modelsOpen || noMatch}
                         onToggle={(e) => setModelsOpen((e.currentTarget as HTMLDetailsElement).open)}
                       >
-                        <summary>{t("welcome.ai.models_summary", { model: everyday || list[0].id })}</summary>
+                        <summary>{t("welcome.ai.models_summary")}</summary>
                         {modelFields}
                       </details>
                     )
@@ -1317,10 +1348,10 @@ export function WelcomeAi(props: {
                   <p className="hint">{t("welcome.ai.allow.private")}</p>
                   <p className="hint">
                     {verdict.identity
-                      ? t("welcome.ai.allow.account", { account: shownLabel, identity: verdict.identity })
-                      : t("welcome.ai.allow.account_unknown", { account: shownLabel })}
+                      ? t("welcome.ai.allow.account", { service: kind.name, identity: verdict.identity })
+                      : t("welcome.ai.allow.account_unknown", { service: kind.name })}
                   </p>
-                  {!verdict.identity && verdict.unknown && <p className="hint">{t("welcome.ai.allow.unknown", { reason: verdict.unknown })}</p>}
+                  {!verdict.identity && verdict.unknown && <p className="hint">{t("welcome.ai.allow.unknown")}</p>}
                   {(["allow", "not_now"] as const).map((answer) => (
                     <label key={answer} className="radio kind-choice">
                       <input type="radio" name="ai-work-data" value={answer} checked={workData === answer} onChange={() => chooseWorkData(answer)} />
@@ -1379,7 +1410,7 @@ export function WelcomeAi(props: {
                 </>
               ) : null}
               {guide && spend.node}
-              <details className="more-options advanced">
+              <details className="more-options advanced" data-advanced="">
                 <summary>{t("welcome.ai.advanced")}</summary>
                 {!drawer && (
                   <div className="field">
@@ -1400,21 +1431,13 @@ export function WelcomeAi(props: {
                     </p>
                   </div>
                 )}
-                {guide && !builtin && !manualModel && list.length > 0 && modelFields}
-                {guide && levelFields}
-                {guide && (
-                  <label className="check-line">
-                    <input type="checkbox" checked={useForWork} onChange={(e) => setUseForWork(e.target.checked)} />
-                    <span>{t("welcome.ai.everyday")}</span>
-                  </label>
-                )}
-                {takesAddress(kind) && !asksAddress(kind) && (
+                {!guide && takesAddress(kind) && !asksAddress(kind) && (
                   <div className="field">
                     <label htmlFor="ai-address-fixed">{t("welcome.ai.address")}</label>
                     <input id="ai-address-fixed" type="text" value={kind.base_url} readOnly />
                   </div>
                 )}
-                {!agent && (props.local || !hasKeyField) && (
+                {!guide && !agent && (props.local || !hasKeyField) && (
                   <div className="field">
                     <label htmlFor="ai-key-ref">{t("welcome.ai.key_ref")}</label>
                     <input
@@ -1448,7 +1471,12 @@ export function WelcomeAi(props: {
                   <button type="button" className="btn quiet" disabled={busy} onClick={drawer.onCancel}>
                     {t("ai_add.cancel")}
                   </button>
-                  <button type="button" className="btn primary" disabled={!ready} onClick={addOrAsk}>
+                  {drawerWhy && (
+                    <p className="hint" id="ai-add-why">
+                      {drawerWhy}
+                    </p>
+                  )}
+                  <button type="button" className="btn primary" disabled={!ready} aria-describedby={drawerWhy ? "ai-add-why" : undefined} onClick={addOrAsk}>
                     {busy
                       ? t("ai_add.adding")
                       : chosenFor === "none"

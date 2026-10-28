@@ -613,11 +613,11 @@ MODEL_ROLES = ("recommended", "stronger", "faster")
 
 def known_endpoints() -> list[dict[str, Any]]:
     """The kinds of AI account the Add account screen offers, from the product's catalog: id, name, adapter,
-    base_url, key_url, signup_url, credit_url, needs_key, local, recommended, alternative, allowed_data, settings (a new
-    account's starting provider settings), model_examples with model_roles (what each is for, only for an example the
-    entry lists), tier_presets (the model family and effort each tier takes, by tier name) and a note. Entries missing
-    an id, a name or an adapter are left out. At most one entry is the recommended one and at most one the alternative:
-    the first marked, so the guide never offers two."""
+    base_url, key_url, signup_url, credit_url, install_url, needs_key, local, recommended, alternative, allowed_data,
+    settings (a new account's starting provider settings), model_examples with model_roles (what each is for, only for
+    an example the entry lists), tier_presets (the model family and effort each tier takes, by tier name) and a note.
+    Entries missing an id, a name or an adapter are left out. At most one entry is the recommended one and at most one
+    the alternative: the first marked, so the guide never offers two."""
     try:
         data = load_yaml(CATALOG.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError):
@@ -646,6 +646,7 @@ def known_endpoints() -> list[dict[str, Any]]:
                 "key_url": str(e.get("key_url") or ""),
                 "signup_url": str(e.get("signup_url") or ""),
                 "credit_url": str(e.get("credit_url") or ""),
+                "install_url": str(e.get("install_url") or ""),
                 "needs_key": bool(e.get("needs_key", False)),
                 "local": bool(e.get("local", False)),
                 "recommended": picks["recommended"],
@@ -695,11 +696,33 @@ HOSTED_LIST_PROBLEMS = {
 }
 
 
-def list_problem(entry: dict[str, Any], kind: str) -> str:
-    """What the screen says about a failure to list a service's models, in words that fit the kind of account."""
+def address_problem(address: str) -> str | None:
+    """Why an address a person typed for a service isn't one (not a web address at all), or None. The service is not
+    reached to say so."""
+    from urllib.parse import urlsplit
+
+    text = address.strip()
+    parts = urlsplit(text)
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname or re.search(r"\s", text):
+        return "That isn't a web address. It starts with https:// (or http:// for one on this computer)."
+    return None
+
+
+def list_problem(entry: dict[str, Any], kind: str, base_url: str = "") -> str:
+    """What the screen says about a failure to list a service's models, in words that fit the kind of account. For an
+    address the person typed, a service that can't be reached is named by its host."""
     hosted = entry["needs_key"] and bool(entry["base_url"]) and not entry["local"]
     if hosted and kind in HOSTED_LIST_PROBLEMS:
         return HOSTED_LIST_PROBLEMS[kind]
+    if kind == "provider_down" and not entry["base_url"]:
+        from urllib.parse import urlsplit
+
+        host = urlsplit(base_url.strip()).hostname
+        if host:
+            return (
+                f"Couldn't reach {host}. Check the address and that this computer is online; "
+                "if it runs on this computer, start it first."
+            )
     return LIST_PROBLEMS.get(kind, "The service answered with an error. Check the address and the key.")
 
 
@@ -721,7 +744,7 @@ def list_models(entry: dict[str, Any], base_url: str, key: str | None) -> tuple[
             return [], None  # this kind of account doesn't list models: the person names one
         models = adapter.list_models()
     except AiError as err:
-        return [], list_problem(entry, err.kind)
+        return [], list_problem(entry, err.kind, base_url)
     return sorted(models.items()), None
 
 

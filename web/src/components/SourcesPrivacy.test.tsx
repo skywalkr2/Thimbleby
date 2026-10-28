@@ -92,6 +92,22 @@ test("choosing a level saves it with the connection, and following its side send
   await waitFor(() => expect(calls.find((c) => c.route === "POST watch/sources/a")?.body).toMatchObject({ data_level: "open", fingerprint: "fp-1" }));
 });
 
+test("making a connection less private says what that lets through before it is saved, and making it more private does not", async () => {
+  const user = userEvent.setup();
+  open([source("a")]);
+  const form = await change(user, "Source a");
+  const pick = within(form).getByLabelText("Privacy");
+  expect(within(form).queryByText(/Making this/)).toBeNull();
+  await user.selectOptions(pick, "Open");
+  expect(within(form).getByRole("status")).toHaveTextContent("Making this open lets every AI account you have allowed for open material read what it brings in.");
+  await user.selectOptions(pick, "Confidential");
+  expect(within(form).getByRole("status")).toHaveTextContent("Making this confidential lets every AI account you have allowed for confidential material read what it brings in.");
+  await user.selectOptions(pick, "Private");
+  expect(within(form).queryByText(/Making this/)).toBeNull();
+  await user.selectOptions(pick, "");
+  expect(within(form).queryByText(/Making this/)).toBeNull();
+});
+
 test("a connection that serves no side offers the usual level instead, and saving without touching it sends no level", async () => {
   const user = userEvent.setup();
   const calls = open([source("a", { data_level: "internal", data_level_from: "default", data_level_sides: [], data_level_side_level: null })]);

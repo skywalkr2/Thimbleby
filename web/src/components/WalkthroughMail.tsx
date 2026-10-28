@@ -5,7 +5,7 @@
 // the visible "Restart to finish connecting" stays, never made on its own. Once a service is connected the step leads with
 // the result: what is connected and read, one question for who it is for, the set-aside choice as one line and Continue;
 // the services list folds behind "Connect another". The core's own mail folder and calendar address are offered as
-// "Another mail or calendar". With no service listed and nothing read yet, the step is one sentence, one button and the way
+// "Add mail, calendar or folder". With no service listed and nothing read yet, the step is one sentence, one button and the way
 // out the walkthrough already has (skip it).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +22,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { addonOfSignIn } from "./SignIns";
 import { Icon } from "../ui/Icon";
 import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
+import { useSourceSave } from "./Sources";
 import { ReadToken } from "./ReadToken";
 
 type Pack = S["PackView"];
@@ -328,7 +329,7 @@ function SetAsideLine() {
 }
 
 export function WalkthroughMail(props: {
-  onChooseSource: (plugin: string | null) => void;
+  onChooseSource: (plugin: string | null, kind?: string) => void;
   onOpenAddons: () => void;
   /** Moves on to the next screen. With it, the step draws its Continue under the result of a connection. */
   onContinue?: () => void;
@@ -337,6 +338,7 @@ export function WalkthroughMail(props: {
 }) {
   const { t } = useWords();
   const client = useQueryClient();
+  const save = useSourceSave();
   const restart = useRestart();
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
@@ -488,7 +490,7 @@ export function WalkthroughMail(props: {
         </div>
       )}
       {/* The common mail services by name: the steps for an app password, then only an address and that password. */}
-      {!folded && <MailServiceConnect selectId={MAIL_GUIDE_PICK} onPick={(id) => id === OTHER_MAILBOX && props.onChooseSource(null)} />}
+      {!folded && <MailServiceConnect selectId={MAIL_GUIDE_PICK} onPick={(id) => id === OTHER_MAILBOX && props.onChooseSource(null, "mailbox")} />}
       {!folded && services.length > 0 && (
         <div className="field">
           <div className="row-end">
@@ -513,7 +515,16 @@ export function WalkthroughMail(props: {
           </span>
           <ul className="plain-list" aria-labelledby="mail-read">
             {others.map((source) => (
-              <li key={source.id}>{source.label}</li>
+              <li key={source.id}>
+                <span>{source.label}</span>
+                <button
+                  type="button"
+                  className="btn quiet"
+                  onClick={() => void save((fingerprint) => api.removeSource(source.id, fingerprint), t("sources.removed_toast", { label: source.label }))}
+                >
+                  {t("sources.remove")} <span className="sr">{source.label}</span>
+                </button>
+              </li>
             ))}
           </ul>
           {!hasResult && <p className="hint">{t("walkthrough.mail.first_go")}</p>}

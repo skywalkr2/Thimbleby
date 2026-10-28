@@ -267,11 +267,11 @@ test("Connections holds only accounts and sources: nothing closed or set aside i
 describe("adding a source", () => {
   const post = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
-  test("Add a connection offers the kinds by label, add-on kinds under their add-on, then that kind's form", async () => {
+  test("Add mail, calendar or folder offers the kinds by label, add-on kinds under their add-on, then that kind's form", async () => {
     const user = userEvent.setup();
     open([source("a")]);
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect(within(form).getByRole("group", { name: "Built in" })).toHaveTextContent("A folder");
     const demo = within(form).getByRole("group", { name: "Demo" });
     expect(within(demo).getAllByRole("radio").map((r) => r.parentElement?.textContent)).toEqual(["A calendar", "A mailbox"]);
@@ -299,12 +299,12 @@ describe("adding a source", () => {
       ],
       "GET setup": () => ({ local: true }),
     });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     // Other kinds show no mail services.
-    await user.click(within(form).getByRole("radio", { name: "A folder" }));
+    await user.click(within(form).getByRole("radio", { name: /^A folder on this computer/ }));
     expect(within(form).queryByLabelText("Mail service")).toBeNull();
-    await user.click(within(form).getByRole("radio", { name: "Plain mailbox" }));
+    await user.click(within(form).getByRole("radio", { name: /^A mailbox\s*Mail from/ }));
     await user.selectOptions(await within(form).findByLabelText("Mail service"), "svc-a");
     expect(within(form).getByText("Make one.")).toBeInTheDocument();
     expect(within(form).getByLabelText("Your address")).toHaveFocus();
@@ -317,17 +317,17 @@ describe("adding a source", () => {
     expect(calls.some((c) => c.route === "POST watch/sources")).toBe(false);
   });
 
-  test("Add a connection always opens the form and puts the cursor in its first field, also when the form is already open", async () => {
+  test("Add mail, calendar or folder always opens the form and puts the cursor in its first field, also when the form is already open", async () => {
     const user = userEvent.setup();
     const scrolled = vi.fn();
     Element.prototype.scrollIntoView = scrolled;
     open([source("a")], {}, { add: { plugin: null, n: 1 } });
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     // The cursor was moved on from the form (to the screen's heading) before the button is pressed.
     screen.getByRole("heading", { level: 2, name: "Connections" }).focus();
     scrolled.mockClear();
-    await user.click(screen.getByRole("button", { name: "Add a connection" }));
-    expect(await screen.findByRole("form", { name: "Add a connection" })).toBe(form);
+    await user.click(screen.getByRole("button", { name: "Add mail, calendar or folder" }));
+    expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBe(form);
     await waitFor(() => expect(within(form).getAllByRole("radio")[0]).toHaveFocus());
     expect(scrolled).toHaveBeenCalled();
   });
@@ -336,45 +336,68 @@ describe("adding a source", () => {
     const user = userEvent.setup();
     open([source("a")]);
     await screen.findByRole("listitem", { name: "Source a" });
-    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Add a connection" }));
-    expect(await screen.findByRole("form", { name: "Add a connection" })).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Add mail, calendar or folder" }));
+    expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
   });
 
   test("a kind whose first read only notes what is there says so, read from how the kind starts, not its name", async () => {
     const user = userEvent.setup();
     open([]);
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect(form.querySelector("[data-first-read]")).toBeNull();
-    await user.click(within(form).getByRole("radio", { name: "A folder" }));
+    await user.click(within(form).getByRole("radio", { name: /^A folder on this computer/ }));
     expect(within(form).getByText("Existing items aren't sent to the assistant. New items are. Choose Look at the last day to include recent arrivals and changes.")).toBeInTheDocument();
     // A kind that also hands in the recent past has nothing to explain.
     await user.click(within(form).getByRole("radio", { name: "A mailbox" }));
     expect(form.querySelector("[data-first-read]")).toBeNull();
   });
 
-  test("a kind that is taken in quietly says what the first read does: one list to look over, and older mail isn't read", async () => {
+  test("a kind that is taken in quietly says what the first read does, and only a kind that reads mail says anything about mail", async () => {
     const user = userEvent.setup();
-    open([], { "GET watch/kinds": () => [kind("folder", "A folder", null, [field("path", "text")], "intake")] });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    const form = await screen.findByRole("form", { name: "Add a connection" });
-    await user.click(within(form).getByRole("radio", { name: "A folder" }));
+    const mail = { ...kind("mailbox", "Your mailbox", null, [field("host", "text")], "intake"), reads: ["mail"] };
+    open([], { "GET watch/kinds": () => [kind("folder", "A folder", null, [field("path", "text")], "intake"), mail] });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
+    await user.click(within(form).getByRole("radio", { name: /^A folder on this computer/ }));
+    expect(within(form).getByText(/What is already there is taken in quietly\. What is new or changes is read from then on/)).toBeInTheDocument();
+    expect(within(form).queryByText(/Older mail/)).toBeNull();
+    await user.click(within(form).getByRole("radio", { name: /^A mailbox\s*Mail from/ }));
     expect(within(form).getByText(/taken in quietly: you get one list to look over, not a line for each item/)).toBeInTheDocument();
     expect(within(form).getByText(/Older mail isn't read, and Today says how far back it looked/)).toBeInTheDocument();
+  });
+
+  test("a form for adding keeps how often and the like under More options, and shows no Changed or Default marks beside what was typed", async () => {
+    const user = userEvent.setup();
+    open([], { "GET watch/kinds": () => [kind("folder", "A folder", null, [field("path", "text", { default: "" , value: ""}), field("max_kb", "integer", { advanced: true, value: 512, default: 512 })])] });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
+    await user.click(within(form).getByRole("radio", { name: /^A folder on this computer/ }));
+    await user.type(within(form).getByLabelText("About path"), "docs");
+    await user.clear(within(form).getByLabelText("About max_kb"));
+    await user.type(within(form).getByLabelText("About max_kb"), "100");
+    expect(within(form).queryByText("Changed")).toBeNull();
+    expect(within(form).queryByText(/^Default:/)).toBeNull();
+    expect(within(form).queryByRole("button", { name: /^Reset/ })).toBeNull();
+    const more = within(form).getByText("More options").closest("details") as HTMLElement;
+    expect(within(more).getByLabelText("How often to read")).toBeInTheDocument();
+    expect(within(form).getByText("About the folder")).toBeInTheDocument();
+    // The name's hint says what an empty name becomes.
+    expect(within(form).getByText("Leave empty to name it after what it reads.")).toBeInTheDocument();
   });
 
   test("how often is 15, 30, 60 or 240 minutes", async () => {
     const user = userEvent.setup();
     open([]);
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A feed" }));
     const every = screen.getByLabelText("How often to read");
     expect(within(every).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "every 15 minutes",
       "every 30 minutes",
-      "every 60 minutes",
-      "every 240 minutes",
+      "every hour",
+      "every 4 hours",
     ]);
   });
 
@@ -385,7 +408,7 @@ describe("adding a source", () => {
       "POST watch/sources": () => SAVED([], [{ id: "work-calendar" }]),
       "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
     });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A calendar" }));
     await user.type(screen.getByLabelText("Name"), "Work calendar");
     await user.type(screen.getByLabelText("About address"), "env:WORK_ADDRESS");
@@ -407,7 +430,7 @@ describe("adding a source", () => {
     });
     expect(await screen.findByText("Added Work calendar. It is read within a minute, then every 15 minutes.")).toBeInTheDocument();
     // The form closes and focus goes back to the button that opened it.
-    await waitFor(() => expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull());
     await user.click(screen.getByRole("button", { name: "Undo" }));
     await waitFor(() => expect(post(calls, "POST settings")).toEqual({ changes: {}, reset: ["watch.sources"], fingerprint: "fp-2" }));
   });
@@ -431,8 +454,8 @@ describe("adding a source", () => {
       }),
       "POST watch/sources": () => SAVED([], [{ id: "work-file" }]),
     });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    await user.click(await screen.findByRole("radio", { name: "A calendar file" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    await user.click(await screen.findByRole("radio", { name: /^A calendar\s*Your events/ }));
     await user.type(screen.getByLabelText("Name"), "Work file");
     await user.click(await screen.findByRole("button", { name: /Choose a file…/ }));
     const dialog = await screen.findByRole("dialog", { name: "Choose a file" });
@@ -460,16 +483,37 @@ describe("adding a source", () => {
       "GET watch/kinds": () => [...KINDS, calendar],
       "GET setup/folders": () => new Refuse(403, "Folders on the server can't be browsed; type the path."),
     });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    await user.click(await screen.findByRole("radio", { name: "A calendar file" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    await user.click(await screen.findByRole("radio", { name: /^A calendar\s*Your events/ }));
     expect(await screen.findByLabelText("About file")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("button", { name: /Choose a file/ })).toBeNull());
+  });
+
+  test("a refusal that names a setting is said beside that setting, in the server's words, and goes when it is changed", async () => {
+    const user = userEvent.setup();
+    open([], {
+      "POST watch/sources": () =>
+        new Refuse(400, "Nothing is at that address. Check the link, or make a new one in the service's own settings.", {
+          "X-Cockpit-Field": "address",
+        }),
+    });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    await user.click(await screen.findByRole("radio", { name: "A calendar" }));
+    await user.type(screen.getByLabelText("About address"), "https-ish");
+    await user.click(screen.getByRole("button", { name: "Add connection" }));
+    const note = await screen.findByText(/Nothing is at that address/);
+    expect(screen.getByLabelText("About address")).toHaveAccessibleDescription(/Nothing is at that address/);
+    expect(note.closest("[data-key]")).toHaveAttribute("data-key", "address");
+    // It is not also said at the foot of the form, and it goes once the setting is changed.
+    expect(screen.getAllByText(/Nothing is at that address/)).toHaveLength(1);
+    await user.type(screen.getByLabelText("About address"), "x");
+    await waitFor(() => expect(screen.queryByText(/Nothing is at that address/)).toBeNull());
   });
 
   test("a refusal that names a field is shown on the form, which stays open with what was typed", async () => {
     const user = userEvent.setup();
     open([], { "POST watch/sources": () => new Refuse(400, "address: Field required") });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A calendar" }));
     await user.type(screen.getByLabelText("Name"), "Mine");
     await user.click(screen.getByRole("button", { name: "Add connection" }));
@@ -481,7 +525,7 @@ describe("adding a source", () => {
   test("a number field that isn't a number is said so and can't be saved", async () => {
     const user = userEvent.setup();
     open([]);
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A calendar" }));
     await user.clear(screen.getByLabelText("About days_ahead"));
     await user.type(screen.getByLabelText("About days_ahead"), "soon");
@@ -492,14 +536,14 @@ describe("adding a source", () => {
   test("from a sign-in, only the kinds of that add-on are offered, and a lone kind is already chosen", async () => {
     const user = userEvent.setup();
     open([source("a")], {}, { add: { plugin: "other", n: 1 } });
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect(await within(form).findAllByRole("radio")).toHaveLength(1);
     expect(within(form).getByRole("radio", { name: "A feed" })).toBeChecked();
     expect(within(form).getByLabelText("About url")).toBeInTheDocument();
     // With one add-on there is no heading to tell groups apart.
     expect(within(form).queryByRole("group", { name: "Other" })).toBeNull();
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
   });
 
   test("adding another calendar from a signed-in service shows the add form and no sign-in return address anywhere", async () => {
@@ -522,7 +566,7 @@ describe("adding a source", () => {
     };
     open([source("a")], { "GET sign-ins": () => [signedIn] });
     await user.click(await screen.findByRole("button", { name: "Choose what to read from Demo service" }));
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect(form).toBeInTheDocument();
     // Nothing on the screen is the registration's return address: it is only for someone making their own registration.
     expect(screen.queryByLabelText("Address to allow")).toBeNull();
@@ -531,21 +575,21 @@ describe("adding a source", () => {
 
   test("an add-on with several kinds offers just those", async () => {
     open([], {}, { add: { plugin: "demo", n: 1 } });
-    const form = await screen.findByRole("form", { name: "Add a connection" });
+    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect((await within(form).findAllByRole("radio")).map((r) => r.parentElement?.textContent)).toEqual(["A calendar", "A mailbox"]);
   });
 
   test("asking to add one tells the app the request was taken up, so it isn't repeated", async () => {
     const onAddOpened = vi.fn();
     open([], {}, { add: { plugin: null, n: 5 }, onAddOpened });
-    await screen.findByRole("form", { name: "Add a connection" });
+    await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     expect(onAddOpened).toHaveBeenCalled();
   });
 
   test("with no kinds running, the form says what to turn on", async () => {
     const user = userEvent.setup();
     open([], { "GET watch/kinds": () => [] });
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     expect(await screen.findByText(/Turn on a mail or calendar add-on, then sign in to add a connection/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add connection" })).toBeDisabled();
   });
@@ -720,7 +764,7 @@ describe("a source's menu", () => {
     await user.type(within(form).getByLabelText("Name"), "Renamed");
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     const lines = await within(form).findByRole("status", { name: "Refreshed from what is saved now" });
-    expect(lines).toHaveTextContent(/refreshed: How often to read is now every 240 minutes, changed elsewhere at .*\d/);
+    expect(lines).toHaveTextContent(/refreshed: How often to read is now every 4 hours, changed elsewhere at .*\d/);
     expect(lines).toHaveTextContent(/refreshed: About path is now elsewhere, changed elsewhere at/);
     expect(lines).not.toHaveTextContent("Name");
     await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("elsewhere"));
@@ -735,8 +779,8 @@ describe("a source's menu", () => {
   test("the form for a new source opens with the cursor in its first field, and the form for changing one in its name", async () => {
     const user = userEvent.setup();
     open([source("a", { connector: "folder" })]);
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
-    const adding = await screen.findByRole("form", { name: "Add a connection" });
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const adding = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     await waitFor(() => expect(adding.contains(document.activeElement) && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement!.tagName)).toBe(true));
     expect(within(adding).getAllByRole("radio")[0]).toHaveFocus();
     await user.click(within(adding).getByRole("button", { name: "Cancel" }));
@@ -760,10 +804,10 @@ describe("a source's menu", () => {
     expect(within(await row("Source a")).getByText(/Written by Robin Example/)).toBeInTheDocument();
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    const pick = await within(form).findByLabelText("Whose work it holds");
+    const pick = await within(form).findByLabelText("Whose writing this is");
     expect(pick).toHaveValue("p2");
     expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "Different people",
+      "Several people",
       "Casey Example (you)",
       "Robin Example",
       "Design team",
@@ -786,7 +830,7 @@ describe("a source's menu", () => {
         "GET watch/kinds": () => withAccounts(["pat@example.com", "sam@example.com"]),
         "POST watch/sources": () => SAVED([], [{ id: "a" }]),
       }, { add: { plugin: "demo", n: 1 } });
-      const form = await screen.findByRole("form", { name: "Add a connection" });
+      const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
       const pick = await within(form).findByLabelText("Account to read");
       expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual([
         "Choose an account",
@@ -825,7 +869,7 @@ describe("a source's menu", () => {
 
     test("a kind with no accounts has no account list and sends none", async () => {
       open([], { "GET watch/kinds": () => KINDS }, { add: { plugin: "other", n: 1 } });
-      const form = await screen.findByRole("form", { name: "Add a connection" });
+      const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
       await screen.findByLabelText("How often to read");
       expect(within(form).queryByLabelText("Account to read")).toBeNull();
     });
@@ -924,7 +968,7 @@ describe("a secret setting typed on the screen", () => {
   test("on a local app it is a password box, and what is typed goes apart from the settings", async () => {
     const user = userEvent.setup();
     const calls = open([], routes()).calls;
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     await user.type(screen.getByLabelText("Name"), "Work mail");
     await user.type(screen.getByLabelText("About host"), "mail.example.com");
@@ -941,23 +985,19 @@ describe("a secret setting typed on the screen", () => {
     expect(JSON.stringify(post(calls, "POST watch/sources"))).not.toContain('"password":"file');
   });
 
-  test("Where it is kept instead shows a text box for the reference, and nothing typed is sent", async () => {
+  test("a form for a new connection doesn't offer to keep a secret somewhere else: it is typed or pasted", async () => {
     const user = userEvent.setup();
     const calls = open([], routes()).calls;
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
-    await user.type(await screen.findByLabelText("Where the password is kept, as a reference."), "abandoned");
-    await user.click(screen.getByRole("button", { name: "Where it is kept instead" }));
-    const where = screen.getByLabelText("Where the password is kept, as a reference.");
-    expect(where).toHaveAttribute("type", "text");
-    expect(where).toHaveValue("");
-    await user.type(where, "env:MAIL_PASSWORD");
+    await user.type(await screen.findByLabelText("Where the password is kept, as a reference."), "typed-here");
+    expect(screen.queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
     await user.type(screen.getByLabelText("About host"), "mail.example.com");
     await user.click(screen.getByRole("button", { name: "Add connection" }));
     await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
     const sent = post(calls, "POST watch/sources") as { settings: unknown; secrets: unknown };
-    expect(sent.settings).toEqual({ host: "mail.example.com", password: "env:MAIL_PASSWORD" });
-    expect(sent.secrets).toBeUndefined();
+    expect(sent.settings).toEqual({ host: "mail.example.com" });
+    expect(sent.secrets).toEqual({ password: "typed-here" });
   });
 
   test("a secret the app keeps shows Kept on this computer, and Replace takes a new one", async () => {
@@ -997,7 +1037,7 @@ describe("a secret setting typed on the screen", () => {
     ]);
     const address = "https" + "://calendar.example.com/private/token-9.ics";
     const calls = open([], { ...routes(), "GET watch/kinds": () => [CALENDAR] }).calls;
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     const box = await screen.findByLabelText("The calendar's link.");
     expect(box).toHaveAttribute("type", "password");
     await user.type(box, address);
@@ -1012,7 +1052,7 @@ describe("a secret setting typed on the screen", () => {
   test("on a hosted app only the box for where it is kept is offered", async () => {
     const user = userEvent.setup();
     open([], routes(false));
-    await user.click(await screen.findByRole("button", { name: "Add a connection" }));
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     const box = await screen.findByLabelText("Where the password is kept, as a reference.");
     await waitFor(() => expect(box).toHaveAttribute("type", "text"));

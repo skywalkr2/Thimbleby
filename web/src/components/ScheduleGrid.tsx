@@ -3,7 +3,7 @@
 // overlapping ones side by side. The hours are the configured ones, grown to hold an entry outside them. A line marks now on
 // today's column. Today is named in words in its heading, never only by color.
 import { gridHours, minutesOf, placeOverlaps, SHORT, type Span } from "../lib/calendar";
-import { day, wallTime } from "../lib/dates";
+import { day, onTheClock, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { EntryButton, entryKey, type Calendars, type Entry } from "./ScheduleEntry";
 import styles from "./Schedule.module.css";
@@ -45,7 +45,7 @@ export function TimeGrid(props: {
     props.endsAt,
   );
   const hours = Array.from({ length: to - from }, (_, n) => from + n);
-  const nowMinutes = props.now.getHours() * 60 + props.now.getMinutes();
+  const nowMinutes = onTheClock(props.now).minutes;
   const label = (date: string) => (date === props.today ? t("schedule.day_today", { date: day(date) }) : t("schedule.day_plain", { date: day(date) }));
   return (
     <div className={styles.grid} style={{ ["--cols" as string]: props.days.length, ["--rows" as string]: to - from }} data-grid="">

@@ -1,4 +1,4 @@
-import { zoneChoices, zoneCity, zoneLabel, zoneMatches } from "./time-zones";
+import { zoneChoices, zoneCity, zoneLabel, zoneMatches, zoneSearch } from "./time-zones";
 
 test("a zone is its city and its general name, never its id", () => {
   expect(zoneCity("America/Argentina/Buenos_Aires")).toBe("Buenos Aires");
@@ -32,4 +32,17 @@ test("typing also matches the region and the offset from UTC", () => {
   expect(zoneMatches(la, "america")).toBe(true);
   expect(zoneMatches(la, "utc-")).toBe(true);
   expect(zoneMatches({ id: "Europe/Paris", label: zoneLabel("Europe/Paris") }, "utc-8")).toBe(false);
+});
+
+test("searching lists the well-known cities of a zone first, then the other places that match, then the region and offset matches", () => {
+  const ids = ["Pacific/Auckland", "America/Tijuana", "America/Vancouver", "America/Los_Angeles", "America/Whitehorse", "Europe/Paris"];
+  const found = zoneSearch(zoneChoices(ids), "pacific");
+  const order = found.map((c) => c.id);
+  // The cities of Pacific time lead, the best known first; the zone only named Pacific by its region comes last.
+  expect(order[0]).toBe("America/Los_Angeles");
+  expect(order.indexOf("America/Vancouver")).toBeLessThan(order.indexOf("America/Tijuana"));
+  expect(order[order.length - 1]).toBe("Pacific/Auckland");
+  expect(order).not.toContain("Europe/Paris");
+  // With nothing typed it is the whole list by label.
+  expect(zoneSearch(zoneChoices(ids), "  ").map((c) => c.id)).toEqual(zoneChoices(ids).map((c) => c.id));
 });

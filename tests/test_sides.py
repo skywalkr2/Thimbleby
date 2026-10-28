@@ -635,7 +635,10 @@ def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_
     assert client.get("/api/setup/business").json() == empty
     ids, other = seed_both_sides(client, store, ws.config(env={}))
     business = ids["business"]["home"]
-    assert client.get("/api/setup/business").json() == {
+    shown = client.get("/api/setup/business").json()
+    # What the seeding filed under the business is counted, however many records that is.
+    assert shown["sides"][0].pop("filed") > 0
+    assert shown == {
         "business": True,
         "name": BUSINESS_NAME,
         "personal": personal_id,

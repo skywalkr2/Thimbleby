@@ -17,6 +17,8 @@ export type SecretInput = {
   held: Record<string, SecretState>;
   pasted: Record<string, string>;
   onPaste: (key: string, value: string) => void;
+  /** Whether "where it is kept instead" is offered. Left out it is; a form for adding something leaves it out. */
+  offerWhere?: boolean;
 };
 
 export function SecretField(props: {
@@ -35,6 +37,8 @@ export function SecretField(props: {
   describedBy?: string;
   /** Put the cursor in the box when the field first shows (a form that has just opened). */
   autoFocus?: boolean;
+  /** Whether "where it is kept instead" is offered beside the box (always when the setting already holds a place). */
+  offerWhere?: boolean;
   /** Told which way the person is giving it: typed here, or as a place it is kept. */
   onMode?: (mode: "type" | "where" | "held") => void;
 }) {
@@ -125,7 +129,7 @@ export function SecretField(props: {
             {t("secret.keep_current")}
           </button>
         )}
-        {mode !== "where" && (
+        {mode !== "where" && props.offerWhere !== false && (
           <button type="button" className="btn quiet small" disabled={props.disabled} onClick={() => go("where")}>
             {t("secret.where_instead")}
           </button>

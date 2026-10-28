@@ -10,7 +10,7 @@ import { useReviewTime } from "../lib/review-time";
 import { useAct } from "../lib/act";
 import { actTitle, useWaitingActs } from "../lib/acts";
 import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
-import { day, localDate, monthDay, sinceDay } from "../lib/dates";
+import { day, todayOn, monthDay, sinceDay } from "../lib/dates";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
 import { sendKeyTo, useRowKeys, type RowKey } from "../lib/keys";
 import { choiceRow, useListChoice, type ListChoice } from "../lib/list-choice";
@@ -686,7 +686,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     due_day: day,
     asked_day: monthDay,
   };
-  const tables = tablesOf(s, words, localDate(new Date()));
+  const tables = tablesOf(s, words, todayOn(new Date()));
   const preview = useRef<HTMLDivElement>(null);
   // If the browser won't copy, the table on screen is selected so the person can copy it by hand.
   const blocked = () => {
@@ -962,7 +962,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
   const [copied, setCopied] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const text = draft ?? nudge.text;
-  const today = localDate(new Date());
+  const today = todayOn(new Date());
   const questions = s.questions.filter((q) => nudge.question_ids.includes(q.id));
   const actions = s.actions.filter((a) => nudge.action_ids.includes(a.id));
   const first = s.name.split(" ")[0];

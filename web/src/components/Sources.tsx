@@ -35,6 +35,9 @@ type Kind = S["WatchKindView"];
 export interface AddRequest {
   plugin: string | null;
   n: number;
+  /** From Today's "Connect a mailbox": with services to sign in to, the list of them is shown (their one button is the way
+   * in) and the form opens only when there is none. */
+  services?: boolean;
 }
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -87,9 +90,23 @@ type Form = { type: "add"; plugin: string | null } | { type: "change"; id: strin
 /** How often a source can be read, in minutes. */
 const EVERY_CHOICES = [15, 30, 60, 240];
 
+/** How often, in the person's words: whole hours as hours ("every 4 hours"), anything else as minutes. */
+export function everyText(minutes: number, tn: (key: string, n: number) => string): string {
+  return minutes >= 60 && minutes % 60 === 0 ? tn("sources.every_hours", minutes / 60) : tn("sources.every", minutes);
+}
+
+/** The name the new source was given: the one the person typed, else the one the app made from what it reads (the first
+ * source the save added). */
+function addedLabel(saved: S["SettingsSaved"], typed: string, fallback: string): string {
+  const change = saved.changes.find((c) => c.key === "watch.sources");
+  const before = new Set(((change?.before as Array<{ id?: string }> | undefined) ?? []).map((x) => x.id));
+  const added = ((change?.after as Array<{ id?: string; label?: string }> | undefined) ?? []).find((x) => !before.has(x.id));
+  return typed.trim() || added?.label || fallback;
+}
+
 /** Saving a change to the list of sources: the fresh fingerprint, the save, then the read-back with Undo. A refusal is
  * said in a toast. */
-function useSourceSave() {
+export function useSourceSave() {
   const { t } = useWords();
   const { push } = useToasts();
   const afterSave = useAfterSave();
@@ -131,13 +148,30 @@ export function Sources(props: {
     refetchInterval: (query) => (query.state.data?.some((s) => s.enabled && !s.last) ? 15_000 : false),
   });
   const kinds = useQuery({ queryKey: ["watch-kinds"], queryFn: api.watchKinds });
-  const [form, setForm] = useState<Form | null>(() => (props.add ? { type: "add", plugin: props.add.plugin } : null));
+  const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
+  const [form, setForm] = useState<Form | null>(() => (props.add && !props.add.services ? { type: "add", plugin: props.add.plugin } : null));
   const [seen, setSeen] = useState(props.add?.n ?? 0);
+  // A request that asks for the services first waits for the list of them: with some, the list is brought into view; with
+  // none, the form opens.
+  const [servicesFirst, setServicesFirst] = useState(props.add?.services === true);
   // Another request to add one (from Today or a sign-in) opens the form again, on its kinds.
   if (props.add && props.add.n !== seen) {
     setSeen(props.add.n);
-    setForm({ type: "add", plugin: props.add.plugin });
+    setServicesFirst(props.add.services === true);
+    if (!props.add.services) setForm({ type: "add", plugin: props.add.plugin });
   }
+  useEffect(() => {
+    if (!servicesFirst || signIns.isPending) return;
+    setServicesFirst(false);
+    if (signIns.data && signIns.data.length > 0) {
+      const title = document.getElementById("sign-ins-title");
+      title?.scrollIntoView?.({ block: "start" });
+      title?.setAttribute("tabindex", "-1");
+      title?.focus({ preventScroll: true });
+    } else {
+      setForm({ type: "add", plugin: null });
+    }
+  }, [servicesFirst, signIns.isPending, signIns.data]);
   const { add, onAddOpened } = props;
   useEffect(() => {
     if (add) onAddOpened?.();
@@ -414,12 +448,13 @@ const CALENDAR_COLORS = ["blue", "teal", "green", "orange", "red", "pink", "purp
 const FOLDER_SETTINGS = ["sent_folder", "archive_folder"];
 
 /** The form that adds a connection, for a screen that isn't Connections (setup's own frame). Kinds are read here. */
-export function AddConnection(props: { plugin: string | null; onClose: () => void }) {
+export function AddConnection(props: { plugin: string | null; kind?: string; onClose: () => void }) {
   const kinds = useQuery({ queryKey: ["watch-kinds"], queryFn: api.watchKinds });
-  return <SourceForm mode={{ type: "add", plugin: props.plugin }} kinds={kinds.data} kindsFailed={kinds.isError} onClose={props.onClose} />;
+  return <SourceForm mode={{ type: "add", plugin: props.plugin, kind: props.kind }} kinds={kinds.data} kindsFailed={kinds.isError} onClose={props.onClose} />;
 }
 
-type Mode = { type: "add"; plugin: string | null } | { type: "change"; source: Source };
+/** `kind` is a kind already chosen (the mailbox of "Another mailbox"): its fields show at once, with no list of kinds. */
+type Mode = { type: "add"; plugin: string | null; kind?: string } | { type: "change"; source: Source };
 
 /** The form for adding a source or changing one: the kind (adding only), a name, how often, a project (adding only)
  * and the settings that kind takes, as the Settings screen shows them. */
@@ -444,11 +479,16 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
 
   const available = (props.kinds ?? []).filter((k) => mode.type !== "add" || !mode.plugin || k.plugin === mode.plugin);
   const [picked, setPicked] = useState<string | null>(null);
-  const chosen = source ? source.connector : (picked ?? (available.length === 1 ? available[0].name : ""));
+  const given = mode.type === "add" ? mode.kind : undefined;
+  const chosen = source ? source.connector : (given ?? picked ?? (available.length === 1 ? available[0].name : ""));
   const kind = (props.kinds ?? []).find((k) => k.name === chosen);
   // A mailbox connected through one of the mail services by name takes its own two fields, so the full form steps aside.
   const [guide, setGuide] = useState("");
   const guided = adding && chosen === "mailbox" && guide !== "" && guide !== OTHER_MAILBOX;
+  // With mail services on offer, a mailbox added from the list of kinds starts at that list and shows its own fields only
+  // once "Another mailbox" is chosen; a mailbox already chosen as "Another mailbox" shows its fields at once.
+  const mailServices = useQuery({ queryKey: ["mail-services"], queryFn: api.mailServices, enabled: adding && chosen === "mailbox" && !given });
+  const listFirst = adding && chosen === "mailbox" && !given && (mailServices.data?.length ?? 0) > 0 && guide === "";
 
   const [label, setLabel] = useState(source?.label ?? "");
   const [every, setEvery] = useState(String(source?.every_minutes ?? 60));
@@ -465,6 +505,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [pasted, setPasted] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  // What a refused add or change said about one setting, shown on that setting's own row until it is changed.
+  const [fieldProblems, setFieldProblems] = useState<Record<string, string>>({});
   // The settings as they were when the form opened: what the typed values were made from. A save sends this one, so a
   // change made meanwhile is refused rather than overwritten; it moves on only after the person was told.
   const [opened, setOpened] = useState<string | null>(null);
@@ -534,7 +576,11 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     local: setup.data?.local ?? true,
     held: Object.fromEntries((source?.secrets ?? []).map((x) => [x.field, { where: x.where, name: x.name }])),
     pasted,
-    onPaste: (key: string, value: string) => setPasted((all) => ({ ...all, [key]: value })),
+    offerWhere: false,
+    onPaste: (key: string, value: string) => {
+      setPasted((all) => ({ ...all, [key]: value }));
+      setFieldProblems((all) => (key in all ? {} : all));
+    },
   };
 
   const groups = (() => {
@@ -551,6 +597,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     return [...order.filter((g) => g.id === ""), ...order.filter((g) => g.id !== "")];
   })();
 
+  const kindTitle = (k: Kind) => (has(`sources.kind.${k.name}`) ? t(`sources.kind.${k.name}`) : k.label);
   const everyOptions = [...new Set([...EVERY_CHOICES, Number(every)])].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
   // A kind from an add-on that signs in as the person has a list of accounts to read: the only one is chosen already,
   // and with several one must be chosen. The source's own account stays in the list when it was signed out since.
@@ -561,6 +608,9 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const calendarSource = source?.reads?.includes("calendar") ?? false;
   const mailSource = source?.reads?.includes("mail") ?? false;
   const accountMissing = accountList !== null && accountList.length > 1 && accountChosen === "";
+  // Choosing a level less private than the one the connection has now is warned about before it is saved.
+  const privacyRank: Record<string, number> = { open: 0, internal: 1, restricted: 2 };
+  const lowering = !!source && level !== "" && (privacyRank[level] ?? 1) < (privacyRank[source.data_level ?? "internal"] ?? 1);
   const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null && !accountMissing;
 
   /** After a refusal: what the person didn't touch takes what is saved now and is listed; what they typed stays. */
@@ -584,7 +634,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
       const words: Record<string, string> = { label: t("sources.field.label"), every: t("sources.field.every"), author: t("sources.field.author"), account: t("sources.field.account"), color: t("sources.field.color") };
       for (const key of out.refreshed) {
         const value =
-          key === "every" ? tn("sources.every", now.every_minutes) : key === "color" && now.color ? t(`sources.color.${now.color}`) : saved[key as keyof typeof saved] || t("settings.empty");
+          key === "every" ? everyText(now.every_minutes, tn) : key === "color" && now.color ? t(`sources.color.${now.color}`) : saved[key as keyof typeof saved] || t("settings.empty");
         lines.push({ label: words[key], value });
       }
       const list2 = view.items.find((i) => i.key === "watch.sources")?.value;
@@ -609,6 +659,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     if (!ready || !kind || opened === null) return;
     setBusy(true);
     setProblem("");
+    setFieldProblems({});
     try {
       const fp = opened;
       const minutes = Number(every);
@@ -625,7 +676,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
           fingerprint: fp,
         });
-        await afterSave(saved, { message: t("sources.added_toast", { label: name || kind.label, every: tn("sources.every", minutes) }) });
+        await afterSave(saved, { message: t("sources.added_toast", { label: addedLabel(saved, name, kind.label), every: everyText(minutes, tn) }) });
       } else {
         const saved = await api.changeSource(mode.source.id, {
           ...(name ? { label: name } : {}),
@@ -654,6 +705,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           // Without a current fingerprint the form can't save, and the next look at the settings finds the cause.
         }
         if (source && kind) await refreshForm(source, kind);
+      } else if (err instanceof ApiError && err.field && err.detail && items.some((i) => i.key === err.field)) {
+        setFieldProblems({ [err.field]: err.detail });
       } else {
         setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
       }
@@ -676,7 +729,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
       <h3 id={titleId} tabIndex={-1} ref={heading}>
         {source ? t("sources.change_title", { label: source.label }) : t("sources.add_title")}
       </h3>
-      {adding && (
+      {adding && !given && (
         <fieldset className="details">
           <legend>{t("sources.kind_title")}</legend>
           {props.kindsFailed ? (
@@ -707,10 +760,13 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                             setPicked(k.name);
                             setEdits({});
                             setPasted({});
+                            setProblem("");
+                            setFieldProblems({});
                           }}
                         />
                         <span>
-                          <strong>{k.label}</strong>
+                          <strong>{kindTitle(k)}</strong>
+                          {has(`sources.kind_desc.${k.name}`) && <span className="hint">{t(`sources.kind_desc.${k.name}`)}</span>}
                         </span>
                       </label>
                     ))}
@@ -721,8 +777,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           )}
         </fieldset>
       )}
-      {adding && chosen === "mailbox" && <MailServiceConnect onPick={setGuide} onConnected={props.onClose} />}
-      {kind && !guided && (
+      {adding && chosen === "mailbox" && !given && <MailServiceConnect onPick={setGuide} onConnected={props.onClose} />}
+      {kind && !guided && !listFirst && (
         <>
           <div className="field">
             <label htmlFor={`${base}-label`}>{t("sources.field.label")}</label>
@@ -738,29 +794,10 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               {t("sources.field.label_hint")}
             </p>
           </div>
-          <div className="field">
-            <label htmlFor={`${base}-every`}>{t("sources.field.every")}</label>
-            <select id={`${base}-every`} value={every} onChange={(e) => setEvery(e.target.value)}>
-              {everyOptions.map((n) => (
-                <option key={n} value={String(n)}>
-                  {tn("sources.every", n)}
-                </option>
-              ))}
-            </select>
-          </div>
           {adding && (kind.first_run === "baseline" || kind.first_run === "intake") && (
             <p className="hint" data-first-read="">
-              {t(kind.first_run === "intake" ? "sources.first_read_intake" : "sources.first_read_noted")}
+              {t(kind.first_run === "baseline" ? "sources.first_read_noted" : (kind.reads ?? []).includes("mail") ? "sources.first_read_intake" : "sources.first_read_other")}
             </p>
-          )}
-          {adding && (projects.data ?? []).length > 0 && (
-            <div className="field">
-              <label htmlFor={`${base}-project`}>{t(justMe ? "sources.field.area" : "sources.field.project")}</label>
-              <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
-                <option value="">{t(justMe ? "sources.field.no_area" : "sources.field.no_project")}</option>
-                <PlaceOptions projects={projects.data ?? []} />
-              </select>
-            </div>
           )}
           {accountList !== null && (
             <div className="field">
@@ -781,6 +818,42 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               <p className="hint" id={`${base}-account-hint`}>
                 {t("sources.field.account_hint")}
               </p>
+            </div>
+          )}
+          {items.length > 0 && (
+            <fieldset className="details">
+              <legend>{has(`sources.details.${kind.name}`) ? t(`sources.details.${kind.name}`) : t("sources.details")}</legend>
+              <ItemFields items={items} edits={edits} onEdit={(key, draft) => {
+                  setEdits((all) => ({ ...all, [key]: draft }));
+                  setFieldProblems((all) => (key in all ? {} : all));
+                }}
+                disabled={busy}
+                idPrefix={`${base}-`}
+                secret={secret}
+                plain
+                problems={fieldProblems}
+              />
+            </fieldset>
+          )}
+          <details className="more-options" data-more="">
+            <summary>{t("sources.more")}</summary>
+          <div className="field">
+            <label htmlFor={`${base}-every`}>{t("sources.field.every")}</label>
+            <select id={`${base}-every`} value={every} onChange={(e) => setEvery(e.target.value)}>
+              {everyOptions.map((n) => (
+                <option key={n} value={String(n)}>
+                  {everyText(n, tn)}
+                </option>
+              ))}
+            </select>
+          </div>
+          {adding && (projects.data ?? []).length > 0 && (
+            <div className="field">
+              <label htmlFor={`${base}-project`}>{t(justMe ? "sources.field.area" : "sources.field.project")}</label>
+              <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
+                <option value="">{t(justMe ? "sources.field.no_area" : "sources.field.no_project")}</option>
+                <PlaceOptions projects={projects.data ?? []} />
+              </select>
             </div>
           )}
           {calendarSource && (
@@ -843,6 +916,11 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               <p className="hint" id={`${base}-level-hint`}>
                 {t("sources.field.level_hint")}
               </p>
+              {lowering && (
+                <p className="problem-note" role="status" data-level-warning="">
+                  {t("sources.level_warn", { level: t(`sources.level.${level}`).toLowerCase() })}
+                </p>
+              )}
             </div>
           )}
           {(authors.data?.length ?? 0) > 0 && (
@@ -866,13 +944,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               </p>
             </div>
           )}
+          </details>
           {waitingForSettings && <Skeleton rows={1} />}
-          {items.length > 0 && (
-            <fieldset className="details">
-              <legend>{t("sources.details")}</legend>
-              <ItemFields items={items} edits={edits} onEdit={(key, draft) => setEdits((all) => ({ ...all, [key]: draft }))} disabled={busy} idPrefix={`${base}-`} secret={secret} />
-            </fieldset>
-          )}
         </>
       )}
       {problem && (

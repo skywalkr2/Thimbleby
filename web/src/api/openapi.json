@@ -9413,6 +9413,18 @@
             "title": "Id",
             "type": "string"
           },
+          "install_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a server that runs on this computer: where the person gets it, if anywhere.",
+            "title": "Install Url"
+          },
           "installed": {
             "anyOf": [
               {
@@ -25678,6 +25690,12 @@
             "title": "Theme",
             "type": "string"
           },
+          "timezone": {
+            "default": "UTC",
+            "description": "The person's time zone (workspace.user.timezone), an IANA name: the screens write every time of day on that clock, whatever the computer showing them is set to.",
+            "title": "Timezone",
+            "type": "string"
+          },
           "toast_seconds": {
             "title": "Toast Seconds",
             "type": "number"
@@ -27667,6 +27685,12 @@
       "SideView": {
         "description": "One side of the person's work beside their own life: the id of its top project, what it is and its name.",
         "properties": {
+          "filed": {
+            "default": 0,
+            "description": "How many people, items and other records are filed under the side or the projects inside it, so the screen never says there is nothing under it while something is.",
+            "title": "Filed",
+            "type": "integer"
+          },
           "kind": {
             "enum": [
               "job",
@@ -31364,6 +31388,14 @@
             ],
             "description": "The add-on it comes from; None for the app's own.",
             "title": "Plugin"
+          },
+          "reads": {
+            "description": "What the kind reads, for the words a form uses: \"mail\" or \"calendar\"; empty for any other kind.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reads",
+            "type": "array"
           }
         },
         "required": [

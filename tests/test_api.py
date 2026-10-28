@@ -34,6 +34,8 @@ def test_bearer_token_works(client):
     assert body["api_base"] == f"{prefix}/api"
     assert body["assistant_name"] == cfg.workspace.assistant_name
     assert body["assistant_named"] is True  # the fixture's assistant has a name of its own
+    # The person's own time zone is given, so every screen writes times on their clock rather than the computer's.
+    assert body["timezone"] == cfg.workspace.user.timezone
 
 
 def test_the_runtime_config_says_whether_the_assistant_has_a_name_of_its_own(tmp_path):

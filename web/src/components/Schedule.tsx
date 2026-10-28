@@ -7,7 +7,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
 import { moveBy, rangeOf, rememberView, storedView, VIEWS, type CalendarView } from "../lib/calendar";
-import { fullDay, localDate, monthDayLong, monthDayYear, monthYear } from "../lib/dates";
+import { fullDay, todayOn, monthDayLong, monthDayYear, monthYear } from "../lib/dates";
 import { typing } from "../lib/keys";
 import { useMediaQuery, useWidth } from "../lib/media";
 import { onSide, useSideFilter } from "../lib/sides";
@@ -68,7 +68,7 @@ export function Schedule() {
   const fits = (v: CalendarView) => (v === "week" ? room >= WEEK_MIN : v === "work_week" ? room >= WORK_WEEK_MIN : true);
   const view: CalendarView = fits(pick) ? pick : "day";
 
-  const today = means.today ?? localDate(now);
+  const today = means.today ?? todayOn(now);
   const date = anchor ?? today;
   const range = useMemo(() => rangeOf(view, date, means.week_starts_on, means.work_days), [view, date, means.week_starts_on, means.work_days]);
   const page = useQuery({ queryKey: ["today", "schedule", range.first, range.days], queryFn: () => api.schedule(range.first, range.days), placeholderData: keepPreviousData });

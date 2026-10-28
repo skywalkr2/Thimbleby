@@ -1,7 +1,7 @@
 // A time zone picked from one searchable list (design 7.8, 7.9): type to narrow it by city, region or offset ("Pacific",
 // "UTC-8"), then choose "Los Angeles (Pacific time)". The setting holds the zone's id; the person only ever sees cities.
 import { useId, useMemo, useState } from "react";
-import { zoneChoices, zoneLabel, zoneMatches, zoneOffset } from "../lib/time-zones";
+import { zoneChoices, zoneLabel, zoneOffset, zoneSearch } from "../lib/time-zones";
 import { useWords } from "../lib/wording";
 
 export function TimeZoneSelect(props: {
@@ -19,11 +19,14 @@ export function TimeZoneSelect(props: {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const all = useMemo(() => zoneChoices(props.options.includes(props.value) || !props.value ? props.options : [props.value, ...props.options]), [props.options, props.value]);
-  const shown = typed === null ? all : all.filter((c) => zoneMatches(c, typed));
+  const shown = typed === null ? all : zoneSearch(all, typed);
+  // What was typed that is no place in the list stays on show, with what the zone still is, until it is changed or cleared.
+  const [kept, setKept] = useState(false);
   const chosenLabel = props.value ? zoneLabel(props.value) : "";
   const pick = (id: string) => {
     props.onChange(id);
     setTyped(null);
+    setKept(false);
     setOpen(false);
   };
   return (
@@ -49,11 +52,21 @@ export function TimeZoneSelect(props: {
         onClick={(e) => {
           if (typed === null) e.currentTarget.select();
         }}
+        aria-invalid={kept || undefined}
         onBlur={() => {
           setOpen(false);
-          setTyped(null);
+          const text = (typed ?? "").trim().toLowerCase();
+          const exact = shown.filter((c) => c.label.toLowerCase() === text);
+          if (text && exact.length === 1) {
+            pick(exact[0].id);
+          } else if (text) {
+            setKept(true);
+          } else {
+            setTyped(null);
+          }
         }}
         onChange={(e) => {
+          setKept(false);
           setTyped(e.target.value);
           setActive(0);
           setOpen(true);
@@ -71,6 +84,7 @@ export function TimeZoneSelect(props: {
             pick(shown[active].id);
           } else if (e.key === "Escape") {
             setOpen(false);
+            setKept(false);
             setTyped(null);
           }
         }}
@@ -99,6 +113,11 @@ export function TimeZoneSelect(props: {
       {open && typed !== null && typed.trim() !== "" && shown.length === 0 && (
         <p className="hint" role="status">
           {t("timezone.none")}
+        </p>
+      )}
+      {kept && !open && typed !== null && (
+        <p className="problem-note" role="alert">
+          {t("timezone.kept", { typed: typed.trim(), zone: chosenLabel })}
         </p>
       )}
     </div>

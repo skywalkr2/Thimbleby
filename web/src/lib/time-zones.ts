@@ -54,3 +54,32 @@ export function zoneMatches(choice: { id: string; label: string }, typed: string
     zoneOffset(choice.id).toLowerCase().includes(wanted)
   );
 }
+
+/** The zones of the cities most people are in, the best known first. A search lists these ahead of the rest, so the city a
+ * person means is near the top and not thirtieth in an alphabetical run. */
+const COMMON = [
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Phoenix", "America/Anchorage",
+  "Pacific/Honolulu", "America/Toronto", "America/Vancouver", "America/Mexico_City", "America/Sao_Paulo",
+  "America/Argentina/Buenos_Aires", "America/Bogota", "America/Lima", "America/Santiago", "Europe/London", "Europe/Dublin",
+  "Europe/Lisbon", "Europe/Paris", "Europe/Berlin", "Europe/Madrid", "Europe/Rome", "Europe/Amsterdam", "Europe/Stockholm",
+  "Europe/Athens", "Europe/Helsinki", "Europe/Istanbul", "Europe/Moscow", "Africa/Cairo", "Africa/Johannesburg", "Africa/Lagos",
+  "Africa/Nairobi", "Asia/Dubai", "Asia/Tehran", "Asia/Karachi", "Asia/Kolkata", "Asia/Dhaka", "Asia/Bangkok", "Asia/Jakarta",
+  "Asia/Singapore", "Asia/Hong_Kong", "Asia/Shanghai", "Asia/Manila", "Asia/Seoul", "Asia/Tokyo", "Australia/Perth",
+  "Australia/Sydney", "Australia/Melbourne", "Pacific/Auckland", "UTC",
+];
+
+/** The zones that match what was typed, the likeliest first: the well-known cities, then those matching by the city or the
+ * zone's name, then those matching only by their region or offset, each group by label. With nothing typed, all of them by
+ * label. */
+export function zoneSearch(choices: { id: string; label: string }[], typed: string): { id: string; label: string }[] {
+  const wanted = typed.trim().toLowerCase();
+  if (!wanted) return choices;
+  const rank = (c: { id: string; label: string }) => {
+    const known = COMMON.indexOf(c.id);
+    const named = c.label.toLowerCase().includes(wanted);
+    return [named ? (known >= 0 ? 0 : 1) : 2, known >= 0 ? known : COMMON.length] as const;
+  };
+  return choices
+    .filter((c) => zoneMatches(c, typed))
+    .sort((a, b) => rank(a)[0] - rank(b)[0] || rank(a)[1] - rank(b)[1] || a.label.localeCompare(b.label, "en"));
+}

@@ -2,7 +2,7 @@
 // never mistaken for "couldn't check". Read sources are said in the quiet style; a source that couldn't be read is said
 // in its own words and style, never as "nothing new".
 import { useCoverage, whenWords, type Coverage } from "../lib/coverage";
-import { day, localDate } from "../lib/dates";
+import { day, todayOn } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import styles from "./Today.module.css";
 
@@ -20,7 +20,7 @@ function useParts(found: Coverage): Part[] {
   const parts: Part[] = [];
   if (found.read.length > 0 && found.last) {
     const when = whenWords(found.last, now, t);
-    const today = localDate(new Date(found.last)) === localDate(now);
+    const today = todayOn(new Date(found.last)) === todayOn(now);
     parts.push({ kind: "read", key: "read", text: today ? tn("coverage.read", found.read.length, { when }) : tn("coverage.read_earlier", found.read.length, { when }) });
   }
   // Said once for each day, however many mailboxes were taken in from it.

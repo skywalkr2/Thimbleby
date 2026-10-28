@@ -33,7 +33,7 @@ export interface Handlers {
   onOpenPeople: () => void;
   onOpenAddons: () => void;
   onHandIn: () => void;
-  onChooseSource: (plugin: string | null) => void;
+  onChooseSource: (plugin: string | null, kind?: string) => void;
 }
 
 /** What the screen is given: adding a connection happens inside the step itself, so it asks for no way to leave. */
@@ -62,7 +62,7 @@ export function Walkthrough(
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   // The form that adds a connection, shown in the step's own place while it is open, then back to the step.
-  const [adding, setAdding] = useState<{ plugin: string | null } | null>(null);
+  const [adding, setAdding] = useState<{ plugin: string | null; kind?: string } | null>(null);
   // On a phone the list of steps is behind a Steps button; this is whether it is showing.
   const [listOpen, setListOpen] = useState(false);
   // What Continue does on this screen, as the screen says (see `useContinue`): kept in a ref and only drawn again when what
@@ -260,7 +260,7 @@ export function Walkthrough(
     onOpenPeople: props.onOpenPeople,
     onOpenAddons: props.onOpenAddons,
     onHandIn: props.onHandIn,
-    onChooseSource: (plugin: string | null) => setAdding({ plugin }),
+    onChooseSource: (plugin: string | null, kind?: string) => setAdding({ plugin, kind }),
   };
 
   return (
@@ -323,7 +323,7 @@ export function Walkthrough(
           </h2>
           <p className={styles.why}>{why}</p>
           <div className={styles.body}>
-          {adding && <AddConnection plugin={adding.plugin} onClose={() => setAdding(null)} />}
+          {adding && <AddConnection plugin={adding.plugin} kind={adding.kind} onClose={() => setAdding(null)} />}
           {!adding && (
           <>
           {current === "welcome" && <WalkthroughWelcome />}

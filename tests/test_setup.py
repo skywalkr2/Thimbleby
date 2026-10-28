@@ -1089,7 +1089,7 @@ def test_a_source_is_added_changed_and_removed_from_the_screens_without_a_restar
         f"{api}/watch/sources",
         json={"connector": folder_kind["name"], "label": "Shared notes", "settings": {}, "fingerprint": fingerprint},
     )
-    assert bad.status_code == 400 and "path" in bad.text
+    assert bad.status_code == 400 and bad.headers["X-Cockpit-Field"] == "path"
     added = c.post(
         f"{api}/watch/sources",
         json={
