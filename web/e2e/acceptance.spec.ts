@@ -154,7 +154,7 @@ async function go(page: Page, label: string) {
   if (label === "Connections" || label === "Add-ons") {
     await go(page, "Settings");
     await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: label, exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 2, name: label, exact: true })).toBeVisible({ timeout: 20_000 });
     return;
   }
   const nav = page.getByRole("navigation", { name: "Views" });

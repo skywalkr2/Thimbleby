@@ -117,7 +117,8 @@ export async function showSteps(page: Page) {
 
 /** A screen the person sees: it names no settings file, secret reference or command, and passes the accessibility checks. */
 export async function visit(page: Page) {
-  const text = await readScreen(page);
+  // Web addresses the person typed (a catalog's, say) are theirs to see whole; file names of the app's own are not.
+  const text = (await readScreen(page)).replace(/https?:\/\/\S+/g, "");
   expect(text).not.toMatch(/\.ya?ml\b/i);
   expect(text).not.toMatch(/\benv:/);
   expect(text).not.toMatch(/\bfile:\//);
@@ -149,7 +150,8 @@ export async function openView(page: Page, label: string) {
   if (label === "Connections" || label === "Add-ons") {
     await openView(page, "Settings");
     await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: label, exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible();
+    // Every Settings page sits in one frame titled Settings, with the page's own name as its section heading.
+    await expect(page.getByRole("heading", { level: 2, name: label, exact: true })).toBeVisible();
     return;
   }
   const nav = page.getByRole("navigation", { name: "Views" });

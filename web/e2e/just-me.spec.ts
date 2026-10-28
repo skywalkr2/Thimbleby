@@ -251,7 +251,7 @@ test.describe('"Just me" sees no work words', () => {
 
     // Connections: the form to add one.
     await go(page, "settings/connections");
-    await heading(page, "Connections");
+    await heading(page, "Connections", 2);
     await page.getByRole("button", { name: "Add a connection" }).first().click();
     await expect(page.getByRole("heading", { name: "Add a connection" })).toBeVisible(LOADED);
     await read("Add a connection");
