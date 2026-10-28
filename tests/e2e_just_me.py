@@ -5,6 +5,8 @@ Personal."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from engine.storage import WriteContext
 from tests.conftest import DEMO_B, fixture_records
 
@@ -46,3 +48,25 @@ def seed_just_me(store, cfg):
         "todo": {"id": todo, "text": TODO},
         "question": {"id": question, "title": QUESTION},
     }
+
+
+def seed_first_go(store) -> str:
+    """One run held for the person's first go, as a first read leaves it, so Today has the line that offers the go.
+    Nothing else is made: the rest of the workspace is what a person has on the first day. Returns the request's id."""
+    from engine.dispatcher import FIRST_GO
+
+    ctx = WriteContext(actor="pm", trust="trusted", op="e2e.first-day")
+    with store.transaction() as tx:
+        return tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "input",
+                "state": "needs_you",
+                "waiting": FIRST_GO,
+                "approval": "required",
+                "estimate_usd": 0.3,
+                "created_at": datetime.now(UTC).isoformat(),
+            },
+            ctx,
+        ).id

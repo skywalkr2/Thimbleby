@@ -37,7 +37,7 @@ from engine.setup import keep_walkthrough, note_set_by_setup
 from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
-from tests.e2e_just_me import seed_just_me, the_person
+from tests.e2e_just_me import seed_first_go, seed_just_me, the_person
 from tests.e2e_meetings import seed_meetings
 from tests.roundtrip import round_trip
 
@@ -268,6 +268,13 @@ def main() -> None:
         "work words; /__e2e/just-me says what was seeded",
     )
     parser.add_argument(
+        "--first-day",
+        action="store_true",
+        help="make the workspace as --just-me does but seed nothing except one run waiting for the person's first go, "
+        "so Today has the line that offers it: what a person sees on the first day after setup, for the captures and "
+        "the check on rows of empty parts",
+    )
+    parser.add_argument(
         "--plain-stages",
         action="store_true",
         help="leave the stage list as the files hold it (no stage that starts work), so a side added while the app "
@@ -294,7 +301,7 @@ def main() -> None:
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
     atexit.register(shutil.rmtree, tmp, ignore_errors=True)
-    if args.just_me:
+    if args.just_me or args.first_day:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
         ws = init_workspace(tmp / "ws", git=False, you=the_person(), name=f"{the_person().split()[0]}'s")
@@ -394,6 +401,8 @@ def main() -> None:
     acts = seed_acts(ws, store, cfg) if args.acts else None
     meetings = seed_meetings(store, cfg) if args.meetings else None
     just_me = seed_just_me(store, cfg) if args.just_me else None
+    if args.first_day:
+        seed_first_go(store)
 
     async def case_list(_request):
         return JSONResponse(cases)
