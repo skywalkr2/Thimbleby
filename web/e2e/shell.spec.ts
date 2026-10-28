@@ -1011,7 +1011,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await page.route("**/api/followups", (route) => route.fulfill({ json: [section] }));
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page, "work/followups");
-    await page.getByRole("button", { name: /^Robin Sample/ }).click();
+    // With one person to write to, their follow-ups show in place: nothing to open first.
     await page.getByRole("radio", { name: "Table" }).click();
     const tables = page.getByRole("table");
     await expect(tables).toHaveCount(2);

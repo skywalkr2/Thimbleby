@@ -192,8 +192,8 @@ def test_always_set_aside_records_a_signal_and_the_row_carries_its_link(app):
 
 CASE_IDS = (
     "bill-statement-becomes-a-reminder",
-    "order-confirmation-is-watched-until-it-arrives",
-    "shipping-notice-updates-the-watched-order",
+    "order-confirmation-is-a-delivery-entry",
+    "shipping-notice-moves-the-same-delivery",
     "not-work-one-time-code",
 )
 
