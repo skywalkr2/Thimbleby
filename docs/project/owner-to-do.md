@@ -4,7 +4,7 @@ Kept current by the build session; finished items leave the list.
 
 ## Today (2026-10-28)
 
-0. **Start from scratch after the sides batch lands** (the session says when it is pushed):
+0. **Start from scratch once everything from the first evening is fixed** (owner, 2026-10-28: "i would prefer all thse things i have informed to be fixed before i do a fresh review": open promises P77 to P89; the session says when the last is pushed):
    `cd ~/dev/Thimbleby && git pull && uv sync --inexact && npm --prefix web ci && npm --prefix web run build`, then
    `uv run cockpit init ~/Thimbleby-try6` and `uv run cockpit serve -w ~/Thimbleby-try6` (keep try5 as it is). Check:
    the business step asks "What is it?" apart from its projects; the business opens as a group (no target date,
