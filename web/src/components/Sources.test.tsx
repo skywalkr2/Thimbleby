@@ -885,7 +885,7 @@ describe("a source's menu", () => {
       "POST watch/sources/a/remove": () => ({ ...SAVED([{ id: "a" }], []), kept_secrets_going: 1, kept_secrets_undo_minutes: 10 }),
     });
     await choose(user, "Source a", "Remove");
-    expect(await screen.findByText(/Removed Source a\. Its saved password or key is deleted from this computer in 10 minutes; Undo until then brings it back\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Removed Source a\. What it already brought in stays\. Its saved password or key is deleted from this computer in 10 minutes; Undo until then brings it back\./)).toBeInTheDocument();
   });
 
   test("Remove with no wait says the saved password or key was deleted", async () => {
@@ -894,7 +894,7 @@ describe("a source's menu", () => {
       "POST watch/sources/a/remove": () => ({ ...SAVED([{ id: "a" }], []), kept_secrets_going: 2, kept_secrets_undo_minutes: 0 }),
     });
     await choose(user, "Source a", "Remove");
-    expect(await screen.findByText(/Removed Source a\. Its 2 saved passwords or keys were deleted from this computer\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Removed Source a\. What it already brought in stays\. Its 2 saved passwords or keys were deleted from this computer\./)).toBeInTheDocument();
   });
 
   test("a refusal is said in a toast, and the source stays as it was", async () => {

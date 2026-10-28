@@ -79,7 +79,7 @@ for (const scheme of ["light", "dark"] as const) {
         }
         // The money boxes read as currency with two decimals.
         await open(page, "settings/ai");
-        await expect(page.getByLabel("Most to spend in a day")).toHaveValue(/^\$\d[\d,]*\.\d{2}$/);
+        await expect(page.getByRole("textbox", { name: "Most to spend in a day" })).toHaveValue(/^\$\d[\d,]*\.\d{2}$/);
         await open(page, "settings/advanced");
         const toggles = page.locator(".settings-topic .topic-toggle");
         for (let n = 0; n < (await toggles.count()); n += 1) {
