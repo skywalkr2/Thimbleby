@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: A date without a year takes the year the way a person would
+
+**Decided:** A date written without a year ("Oct 30-Nov 5", "Friday the 7th", "Jan 3") is read the way a person
+reading the message would read it: the next such date on or after the day the message came, or the latest one before
+it when the text says it already happened ("delivered Oct 25"). A range that crosses the new year ("Dec 28-Jan 3") ends
+in the next year. This holds for events, actions' dates and recorded facts alike; only a date that stays truly
+ambiguous after that is left out. The year is worked out by the app from the day the message came, the same way every
+time, never left to the model's guess.
+
+**Decided by:** the owner ("we can assume it was becuase the year wasnt there, but be real we shoudl support that with
+grade school logic").
+
+**Why:** a delivery window with no year was dropped, and a to-do with no date was held instead; the guidance said a
+date with no year is not recorded.
+
+**Impact:** the notes prompt and guidance, the applier (resolving a month and day against the received day), design
+6.7 when built with the deliveries fix (P85). Change log: none.
+
 ## 2026-10-28: Add-ons live in their own folder, and moving on from People passes it
 
 **Decided:** Add-ons installed from the Add-ons screen go into a folder of their own in the app's data place for this
