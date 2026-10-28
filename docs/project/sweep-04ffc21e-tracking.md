@@ -82,7 +82,47 @@ Where **Done when** is blank, the README's Fix for that item is the bar: a brows
 | Y05 | P2 | Polish | People page polish | D-P2-13, B-F49, B-F50 |  | To do | | | |
 | Y06 | P2 | Polish | Restart and status wording | T-P2-4, D-P2-21, S-P2-18 |  | To do | | | |
 
-## Exit criteria (README section 3)
+
+## Visual review (visual/README.md)
+
+One row per shared component (VC) and per screen (VS). Seen at `04ffc21e`. Fold each VS row into the batch touching its master X ids.
+
+| ID | Sev | Area | Title | Sources | Done when | Status | Commit | Test | Checked |
+|---|---|---|---|---|---|---|---|---|---|
+| VC01 | Visual | Shared component | Row | V2-1, V2-14, V2-18, V2-27, V1-8, V3-1, V3-2 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC02 | Visual | Shared component | PageHeader and filter bar | V2-3, V2-7, V2-9, V2-11, V2-24, V3-18, V3-20 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC03 | Visual | Shared component | Button | V1-2, V2-4, V2-15, V3-12, V3-17 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC04 | Visual | Shared component | EmptyState | V2-12, V3-5, V3-9, V3-10, V3-15, V3-21, V3-32, V3-33, V1-19 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC05 | Visual | Shared component | FormField, Select, DateField, FileDrop, CheckboxGroup | V1-1, V1-4, V1-13, V1-17, V2-5, V2-16, V3-11, V3-23, V3-24, V3-25, V3-27 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC06 | Visual | Shared component | The overlay family | V1-9, V1-11, V1-12, V1-24, V1-26, V1-27, V2-13, V2-23, V3-22 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC07 | Visual | Shared component | Toast | V1-28, V2-26, V3-29 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC08 | Visual | Shared component | Link and type tokens | V1-13, V1-14, V2-17, V2-25, V3-16, V3-31 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC09 | Visual | Shared component | Dark-mode accents and elevation | V1-25, V2-28, V3-30 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC10 | Visual | Shared component | Record-page parts | V3-6, V3-7, V3-19 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC11 | Visual | Shared component | RadioCard / choice card | V1-3, V1-4 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC12 | Visual | Shared component | Wizard shell and StepFooter | V1-2, V1-5, V1-6, V1-20, V1-21 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC13 | Visual | Shared component | Header status | V1-22, V1-23, V2-3 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VS01 | Visual | Setup: Your AI account | Follow the `setup-ai` mockup: three top cards, a 3-step checklist panel, privacy as two choice cards, the spend line as one row | V1-3, V1-4, V1-5 (masters X10, X11) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS02 | Visual | Setup: Mail and calendar | A provider list with one Connect per row. Sides as one chip group with "Set separately". Another mail as a modal with only the chosen kind's | V1-1, V1-15, V1-16, V1-17 (masters X01, X08, X09) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS03 | Visual | Setup: What it's for, Promises, Backups, People, Done | The warning banner under "A job". Promises as a list of sources plus a summary strip. A folder chooser with breadcrumbs and New folder. Peop | V1-7, V1-8, V1-18, V1-19, V1-20 (masters X03, X07, X14, X15, X58) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS04 | Visual | Header, menus, Ask, Hand in, feedback, shortcuts | A command-palette search with a fixed width. The user menu: profile, quality link, appearance. Shortcuts in two grouped columns with real ke | V1-9, V1-10, V1-11, V1-12, V1-24, V1-26 (masters X27, X61, X62) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS05 | Visual | Today | Follow the `today` mockup: group headers with counts, the opened line as an inset card with one primary and "Not right" links, the brief as  | V2-1, V2-2, V2-3, V2-4 (masters X18–X28) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS06 | Visual | Schedule | A 64px hour gutter with no clipped labels. Entries at least 28px tall. Opens scrolled to now. A now-dot. A two-row toolbar. Month cells whit | V2-6, V2-7, V2-13, V2-19, V2-20, V2-21, V2-22, V2-28 (masters X45) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS07 | Visual | What changed, Since yesterday | Group by time. Collapse identical runs ("×4"). Learning shown as a muted line in its row. No inner card in the pane | V2-8, V2-24 (masters X29, X65) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS08 | Visual | Handled for you | Tabs with counts, a 280px search with an icon, "Group by" as a dropdown, one-line rows | V2-11 (masters X30) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS09 | Visual | Follow-ups | The status tabs as the only tabs. One "Copy message". "You" as a link row. Message style in a drawer | V2-9 (masters X31) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS10 | Visual | To-dos and questions | Follow the `todos` mockup: a round checkbox, one meta line, an inline add row, filter chips, a sectioned menu with Drop in red, one editor a | V2-5, V2-10 (masters X33) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS11 | Visual | Stages | An EmptyState that says what a stage is | V2-12 (masters Y04) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS12 | Visual | Projects, a side's page, Add a project | Hide columns that are empty for every row. Size columns by content. Sides as group headers. Short drawer, with "More details" folded | V3-4, V3-5, V3-23 (masters X43) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS13 | Visual | People, person, organization and record pages | Follow the `person` mockup: PageHeader, overview tabs, a sticky details panel, a timeline, the composer at the bottom | V3-6, V3-7, V3-19, V3-20, V3-22, V3-34 (masters X37, X40, X41) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS14 | Visual | Files, Knowledge, Rules to look over | A drop-zone empty state. Knowledge as panels with inline add rows | V3-9, V3-10 (masters X39, X46) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS15 | Visual | How Reginald is doing | Follow the `quality` mockup: 4 stat tiles, a weekly table, a "mistakes to look at" list, your own count as a small card, empty sections in o | V3-8 (masters X59) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS16 | Visual | Handover | An EmptyState with an "In sync" pill, the last sync time and Check now | V3-15 (masters X63) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS17 | Visual | Settings shell and sections | A grouped Settings menu (You / Assistant / Your data / More), with add-on pages under Add-ons. Setting rows that stack on a phone. One synce | V3-3, V3-12, V3-13, V3-26, V3-27, V3-28, V3-32, V3-33 (masters X51, X54, X57, X58, Y03) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS18 | Visual | Settings › Connections | Follow the `connections` mockup: an account card with a status pill and a sources table. Adding is a two-step drawer | V3-1, V3-2, V3-11 (masters X09, X53) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+| VS19 | Visual | Settings › Add-ons | Each card: name, publisher, one line, status pill, one action. Details in a disclosure | V3-14 (masters X52) | Screen re-scores at least 3.5, no point below 3 | To do | | | |
+
+## Exit criteria (README section 3, plus visual E9–E12)
 
 | # | Criterion | Status | Evidence | Checked |
 |---|---|---|---|---|
@@ -94,3 +134,7 @@ Where **Done when** is blank, the README's Fix for that item is the bar: a brows
 | E6 | Fresh captures of every inventory screen, empty and with data, at 1440 and 390, day and night, with an index | To do | | |
 | E7 | A hand-over listing every X and Y id with status, commit and test, and anything built differently, with why | To do | | |
 | E8 | Reviewer re-sweep with the same four-area method: no P0, no new or reopened P1, and a coverage row for every inventory screen | To do | | |
+| E9 | Every inventory screen re-scores at least 3.5 overall, no point below 3, day, night and phone (same 8-point rubric) | To do | | |
+| E10 | VC01–VC13 built as shared components or tokens and used everywhere; the style guide shows each in both themes | To do | | |
+| E11 | The six mockup screens built to their mockup (or an owner-approved variant), shown side by side in the hand-over | To do | | |
+| E12 | Visual guards in CI: no native unstyled fieldset/select/date/time/file; no paragraph under 13px; no autofocus on page load; at most one solid primary per region; no empty leading column in a row | To do | | |
