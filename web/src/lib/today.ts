@@ -3,6 +3,7 @@
 // folded away (the week) is not counted.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "./api";
+import { chosenArea, inArea, useStoredArea } from "./area-filter";
 import { onSide, type SideChoice } from "./sides";
 import { useStageToday } from "../components/StageToday";
 import { useActToday } from "./acts";
@@ -44,10 +45,15 @@ export const hasSomething = (line: QueueLine): boolean => !COUNTED.has(line.kind
 
 /** The queue's lines; with a side picked, only that side's and the lines that belong to neither (the app's own). */
 export function useQueue(side: SideChoice = "all") {
+  const picked = useStoredArea();
   return useQuery({
     queryKey: ["today", "queue"],
     queryFn: api.todayQueue,
-    select: (lines) => lines.filter((line) => hasSomething(line) && onSide(line.side, side)),
+    // The area filter narrows to one area of life when the person picked one that some line is in.
+    select: (lines) => {
+      const area = chosenArea(lines, picked);
+      return lines.filter((line) => hasSomething(line) && onSide(line.side, side) && inArea(line, area));
+    },
   });
 }
 

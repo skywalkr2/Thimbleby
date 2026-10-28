@@ -28,23 +28,25 @@ export const canApprove = (a: Act): boolean => APPROVABLE.includes(a.status);
 /** Whether the person carries this one out themselves: the copy channel, whose send is their own. */
 export const isByHand = (a: Act): boolean => a.channel === "copy";
 
-/** Every outward act, newest first; callers pick the states they show. */
-export function useActs() {
-  return useQuery({ queryKey: ["acts"], queryFn: api.acts, select: (r) => r.acts });
+/** The states Today's lines are made from: an act that failed, can't be told apart from sent, or went stale. */
+const NEEDS_A_LOOK: readonly ActState[] = ["stale", "failed", "uncertain"];
+/** The states the list of what went out reads: sent, and taken back after. */
+const WENT_OUT: readonly ActState[] = ["sent", "undone"];
+
+/** The acts in some states, newest first, as the server filters them (`status`, and `limit` where only the latest are shown). The
+ * key starts with `acts`, so a change anywhere makes every list read again. */
+function useActsIn(name: string, status: readonly ActState[], limit?: number) {
+  return useQuery({ queryKey: ["acts", name], queryFn: () => api.acts({ status, limit }), select: (r) => r.acts });
 }
 
 /** The acts that wait: draft, approved, sending, stale, failed and uncertain. */
 export function useWaitingActs() {
-  return useQuery({ queryKey: ["acts"], queryFn: api.acts, select: (r) => r.acts.filter((a) => WAITING.includes(a.status)) });
+  return useActsIn("waiting", WAITING);
 }
 
 /** The acts that went out, newest first, with those taken back after: what Waiting to go out lists under what waits. */
 export function useSentActs() {
-  return useQuery({
-    queryKey: ["acts"],
-    queryFn: api.acts,
-    select: (r) => r.acts.filter((a) => a.status === "sent" || a.status === "undone").slice(0, SENT_SHOWN),
-  });
+  return useActsIn("sent", WENT_OUT, SENT_SHOWN);
 }
 
 /** How many of the acts that went out the list shows. */
@@ -65,6 +67,12 @@ export function useActOptions(record: string | null, enabled = true) {
     enabled: enabled && !!record,
     staleTime: 30_000,
   });
+}
+
+/** The connected calendar accounts a new event can be put on after the person's yes: acting is on and the account's service
+ * creates events. Empty when none can, which is when the screen offers nothing. */
+export function useCalendarOptions(enabled = true) {
+  return useQuery({ queryKey: ["act-calendar-options"], queryFn: api.actCalendarOptions, enabled, staleTime: 30_000 });
 }
 
 /** Whether a new message the person writes can be carried out after their yes, and by which account. */
@@ -126,7 +134,7 @@ function wordsKey(a: Act, family: "title" | "what"): string {
   if (a.kind === "mailbox" && MAIL_CHANGES.includes(a.action) && family === "title") {
     return `outgoing.title.mailbox.${a.action}.${(a.about ?? []).length === 1 ? "one" : "other"}`;
   }
-  if (a.kind === "calendar" && a.action === "create") return `outgoing.${family}.calendar.create`;
+  if (a.kind === "calendar" && (a.action === "create" || a.action === "move" || a.action === "cancel")) return `outgoing.${family}.calendar.${a.action}`;
   if (a.kind === "calendar" && a.action === "answer" && a.answer) {
     return family === "title" ? `outgoing.title.calendar.answer.${a.answer}` : "outgoing.what.calendar.answer";
   }
@@ -154,6 +162,15 @@ export function messageLine(about: S["ActAboutView"], t: T): string {
 export function changedWords(a: Act, t: T): string {
   const known = (a.why ?? []).filter((code) => ["channel", "target", "about", "account", "content", "template"].includes(code));
   return known.length > 0 ? list(known.map((code) => t(`outgoing.changed.${code}`))) : t("outgoing.changed.unknown");
+}
+
+/** What a change in a stale act is called: a content part by its name, a thing it is about by its title, else the sheet's word for the
+ * field ("Sent to", "When"). */
+export function changeLabel(c: S["ActChangeView"], t: T, has: (key: string) => boolean): string {
+  if (c.part === "content") return partLabel(c.field, t, has);
+  if (c.part === "about") return c.name || t("outgoing.changed.about");
+  const key = `outgoing.change_field.${c.part === "target" ? c.field : c.part}`;
+  return has(key) ? t(key) : partLabel(c.field, t, has);
 }
 
 /** The name of a part of the content ("Subject", "Message"): the sheet's when it has one, else the part's own name. */
@@ -191,7 +208,7 @@ export interface ActLine {
 /** One Today line for each act that failed, can't be told apart from sent, or went stale. Failed and unsure ones are at risk;
  * a stale one is a decision (look again, then say yes). */
 export function useActToday() {
-  const acts = useActs();
+  const acts = useActsIn("today", NEEDS_A_LOOK);
   const lines: ActLine[] = (acts.data ?? []).flatMap((act): ActLine[] =>
     act.status === "failed" || act.status === "uncertain" ? [{ act, group: "risk" }] : act.status === "stale" ? [{ act, group: "decide" }] : [],
   );

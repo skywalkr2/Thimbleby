@@ -14,12 +14,13 @@ Nothing here reaches a service, and nothing but the prep note calls AI."""
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from engine import entry_rules
+from engine import areas, entry_rules
 from engine.meeting_guests import Guest, guests, window, with_others
 from engine.names import People
 from engine.people_memory import Item, Touch, action_item, last_in_touch, open_with
@@ -99,7 +100,14 @@ class Line:
 
 
 def _left_open(
-    view: Any, cfg: Any, person: str, entry_id: str, now: datetime, here: ZoneInfo, mine: tuple[set[str], set[str]]
+    view: Any,
+    cfg: Any,
+    person: str,
+    entry_id: str,
+    now: datetime,
+    here: ZoneInfo,
+    mine: tuple[set[str], set[str]],
+    hide: Callable[[Mapping[str, Any]], bool] | None = None,
 ) -> tuple[Any, list[Item]] | None:
     """The latest ended entry other than `entry_id` that the person was on, and what is still open on it."""
     latest = None
@@ -117,18 +125,25 @@ def _left_open(
     today = now.astimezone(here).date()
     items: list[Item] = []
     for action in view.list("action"):
-        if action.data.get("event") == entry.id and action.data.get("status") == "open":
+        if (
+            action.data.get("event") == entry.id
+            and action.data.get("status") == "open"
+            and (hide is None or not hide(action.data))
+        ):
             items.append(action_item(view, "left_open", action, today, here))
     for question in view.list("question"):
         d = question.data
-        if d.get("event") == entry.id and d.get("status") in ("open", "sent"):
+        if d.get("event") == entry.id and d.get("status") in ("open", "sent") and (hide is None or not hide(d)):
             items.append(Item("left_open", "question", question.id, str(d["title"]), source=d.get("source")))
     return entry, items
 
 
-def prep(store: Any, cfg: Any, entry_id: str, now: datetime) -> Prep | None:
+def prep(
+    store: Any, cfg: Any, entry_id: str, now: datetime, hide: Callable[[Mapping[str, Any]], bool] | None = None
+) -> Prep | None:
     """The prep for one entry, or None when there is no such entry. An entry nobody else is on has an empty list of
-    people coming."""
+    people coming. A draft built from it passes `hide` (the records outside the area the entry is in, `areas.outside`),
+    so what it reads stops at that area; the entry's page passes none."""
     view = store.read()
     entry = view.get("event", entry_id)
     if entry is None:
@@ -144,7 +159,7 @@ def prep(store: Any, cfg: Any, entry_id: str, now: datetime) -> Prep | None:
     for guest in coming:
         if guest.person is None:
             continue
-        items = open_with(view, pm, guest.person, today, here)
+        items = open_with(view, pm, guest.person, today, here, hide)
         # The cap is for each person over the four kinds together, in the order below; what is cut is counted.
         total = sum(len(v) for v in items.values())
         trimmed: dict[str, list[Item]] = {}
@@ -153,7 +168,7 @@ def prep(store: Any, cfg: Any, entry_id: str, now: datetime) -> Prep | None:
             trimmed[kind] = items[kind][: max(0, cap - kept)]
             kept += len(trimmed[kind])
         touch, _ = last_in_touch(view, cfg, people, guest.person, now)
-        left = _left_open(view, cfg, guest.person, entry_id, now, here, mine)
+        left = _left_open(view, cfg, guest.person, entry_id, now, here, mine, hide)
         left_open = None
         if left is not None:
             counted = {i.id for group in items.values() for i in group}
@@ -395,11 +410,13 @@ def _marked(text: str) -> str:
     return text.replace("</untrusted", "</ untrusted")
 
 
-def facts(store: Any, cfg: Any, entry_id: str, now: datetime) -> str:
+def facts(
+    store: Any, cfg: Any, entry_id: str, now: datetime, hide: Callable[[Mapping[str, Any]], bool] | None = None
+) -> str:
     """What the prep note is written from, as the assistant is shown it: the entry, who is coming and, for each person,
     what is open with them, the last time in touch and what the last entry with them left open. Plain lines from the
-    records; data, never instruction."""
-    found = prep(store, cfg, entry_id, now)
+    records; data, never instruction. With `hide`, nothing filed outside the area the entry is in is read."""
+    found = prep(store, cfg, entry_id, now, hide)
     if found is None:
         return ""
     people = People(store, cfg)
@@ -457,11 +474,22 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
         raise PacketRefused("the calendar entry this note was for is gone")
     note = req.data.get("note") or ""
     moment = datetime.combine(today, datetime.min.time(), tzinfo=zone(cfg)) + timedelta(hours=12)
-    shown = facts(store, cfg, found.id, moment)
+    # A prep note for an entry in an area reads what the area reaches and no more: what is open with the people coming
+    # that is filed under another area is left out, like everything else a draft about an area draws on.
+    reach = areas.reach(store.read(), [found.data.get("project")])
+    hide = areas.outside(reach)
+    shown = facts(store, cfg, found.id, moment, hide)
     kept = current(store.read(), "event", found.id, "prep")
     kept_text = read_text(store, kept.data["sha256"]) if kept is not None else ""
     learned = _learned(
-        store, cfg, kind, People(store, cfg), projects=[], source=None, text=f"{shown}\n{note}", today=today
+        store,
+        cfg,
+        kind,
+        People(store, cfg),
+        projects=[found.data["project"]] if found.data.get("project") else [],
+        source=None,
+        text=f"{shown}\n{note}",
+        today=today,
     )
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     stable = "\n\n".join(
@@ -470,7 +498,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
             "# Practice\n" + _guidance(kind),
             learned.stable,
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store, cfg),
+            "# Projects\n" + _projects(store, cfg, None, reach),
         )
         if part.strip()
     )

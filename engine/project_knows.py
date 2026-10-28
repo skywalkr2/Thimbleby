@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from engine import areas
+from engine import area_readers, areas
 from engine.config import Config
 from engine.knowledge_section import (
     _active,
@@ -180,11 +180,22 @@ def _asked(view: Any, q: Any) -> dict[str, Any]:
 def _reading(view: Any, cfg: Config, project_id: str) -> dict[str, Any]:
     """Which accounts may read the project's material and whether reading it sends anything away from this computer."""
     found = areas.reading(view, cfg, project_id)
+    project = view.get("project", project_id)
     return {
         "state": found.state,
         "levels": list(found.levels),
         "readers": [{"account": r.account, "name": r.name, "leaves": r.leaves} for r in found.readers],
+        "choices": (
+            [vars(c) for c in area_readers.choices(view, cfg, project_id)]
+            if project is not None and project.data.get("area")
+            else []
+        ),
     }
+
+
+def reading_of(view: Any, cfg: Config, project_id: str) -> dict[str, Any]:
+    """Who may read the project's material now, with, for an area, the accounts to pick from."""
+    return _reading(view, cfg, project_id)
 
 
 def knows(view: Any, project_id: str, cfg: Config) -> dict[str, Any] | None:

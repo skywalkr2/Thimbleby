@@ -22,8 +22,17 @@ export function actFixture(over: Partial<Act> = {}): Act {
     withheld: null,
     failure: null,
     why: [],
+    changes_known: false,
     made_by: "assistant",
     sensitivity: "internal",
     ...over,
   };
+}
+
+/** What the server's list of acts answers for a request: only the states asked for (`status`, repeated) and at most `limit`, in the order given. */
+export function actsAnswer(acts: Act[], query: URLSearchParams = new URLSearchParams()): { acts: Act[] } {
+  const states = query.getAll("status");
+  const limit = query.get("limit");
+  const found = acts.filter((a) => states.length === 0 || states.includes(a.status));
+  return { acts: limit ? found.slice(0, Number(limit)) : found };
 }

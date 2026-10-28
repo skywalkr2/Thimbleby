@@ -2058,7 +2058,7 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `knowledge.searches[].words` | str | `''` | The words searched for. |
 | `knowledge.searches[].kinds` | list[str] | `[]` | The kinds searched: facts, inputs, records, knowledge. |
 | `knowledge.searches[].results` | int | `0` | How many results came back. |
-| `knowledge.pack_searches` | list[PackSearch] | `[]` | The searches the add-on's own packet function made while building it. |
+| `knowledge.pack_searches` | list[PackSearch] | `[]` | The searches made while building its packet: the add-on's own packet function's, or the core's for the older history a conversation on a record brings in. |
 | `knowledge.pack_searches[].words` | str | `''` | The words searched for. |
 | `knowledge.pack_searches[].kinds` | list[str] | `[]` | The places searched: facts, inputs, records, knowledge. |
 | `knowledge.pack_searches[].projects` | list[str] | `[]` | The projects it was limited to; none means all. |
@@ -2448,6 +2448,11 @@ One thing the app does outside the workspace on the person's behalf (design 6.12
 | `approved.at` | AwareDatetime | required | When they said it. |
 | `approved.acknowledged` | list[str] | `[]` | The recipients called out that the yes acknowledged, by key. |
 | `approved.standing_yes` | str \| None | `None` | Set when the yes is the person's standing yes for reminders rather than their click on this act. |
+| `approved.shown` | dict[str, Any] \| None | `None` | The exact content and target the yes was given on, in plain values (see `engine/acts.py`), kept so that an act gone stale can say what is different now. None on a yes given before it was kept. |
+| `was_approved` | ActWasApproved \| None | see below | The yes that stopped covering the act, kept while it is stale so the screen can show what changed; cleared by an edit, a new yes or taking it back. |
+| `was_approved.by` | str | required | The person who said yes. |
+| `was_approved.at` | AwareDatetime | required | When they said it. |
+| `was_approved.shown` | dict[str, Any] \| None | `None` | The content and target the yes was given on; None for a yes given before it was kept. |
 | `attempt_key` | str \| None | `None` | The key the channel was called with for the latest attempt. |
 | `attempt_at` | AwareDatetime \| None | `None` | When the latest attempt started. |
 | `service_id` | str \| None | `None` | The id the service gave the sent act. |

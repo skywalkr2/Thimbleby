@@ -488,6 +488,16 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
     place = conversation.about(req)
     record_block = conversation.record_text(store, cfg, *place) if place else ""
     earlier_block = conversation.earlier(store, cfg, req) if place else ""
+    # Older history the message needs, found by the core's own search at the level the answering accounts may see.
+    from engine.dispatcher import _data_level
+
+    older = conversation.history(ws, store, cfg, req, *place, _data_level(store, req.data)) if place else None
+    saved, saved_outside = conversation.saved_text(ws, store, cfg, *place) if place else ("", False)
+    if saved:
+        # A saved input's own words are shown as what they are: outside text when it came from outside, never guidance.
+        shown = f'<untrusted source="{place[1]}">{saved}</untrusted>' if saved_outside else saved
+        record_block = f"{record_block}\n\nThe words of it:\n{shown}"
+    older_block = older.text if older is not None else ""
     if place and not about_project:
         found = store.read().get(*place)
         about_project = found.id if place[0] == "project" else (found.data.get("project") if found else None)
@@ -535,14 +545,25 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
             *((learned.per_input,) if learned.per_input else ()),
             "# From the user guide\n" + sections,
             *((f"# The record this conversation is about\n{record_block}",) if record_block else ()),
+            *((f"# Older things the workspace already holds that may matter\n{older_block}",) if older_block else ()),
             *((f"# Earlier in this conversation\n{earlier_block}",) if earlier_block else ()),
             f"<question>\n{question}\n</question>",
         )
     )
-    material = "\n\n".join((install, configured, records, sections, record_block, earlier_block))
-    task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())
+    material = "\n\n".join((install, configured, records, sections, record_block, older_block, earlier_block))
+    log = learned.log
+    if older is not None:
+        log = log.model_copy(update={"pack_searches": [PackSearch(**older.log)]})
+    task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=log.model_dump())
     return Packet(
-        task, material, Cleaned("", 0, 0, False, 0), question, too_long=False, cites="help", knowledge=learned.log
+        task,
+        material,
+        Cleaned("", 0, 0, False, 0),
+        question,
+        too_long=False,
+        untrusted_material=(older is not None and older.untrusted) or saved_outside,
+        cites="help",
+        knowledge=log,
     )
 
 

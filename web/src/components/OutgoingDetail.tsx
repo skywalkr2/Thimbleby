@@ -11,6 +11,7 @@ import {
   calledOut,
   canApprove,
   canTakeBack,
+  changeLabel,
   changedWords,
   isByHand,
   messageLine,
@@ -93,6 +94,25 @@ export function OutgoingDetail(props: {
       )}
       {mustLook && <p role="status">{t("outgoing.stale.text", { what: actPhrase(act, t), changed: changedWords(act, t) })}</p>}
       {stale && props.looked && <p role="status">{t("outgoing.stale.looked")}</p>}
+      {stale && (
+        <section className={styles.section} aria-label={t("outgoing.changes.title")} data-changes="">
+          <h3>{t("outgoing.changes.title")}</h3>
+          {!act.changes_known && <p className="hint">{t("outgoing.changes.not_kept")}</p>}
+          {(act.changes ?? []).map((c) => (
+            <div key={`${c.part}:${c.field}`} className={styles.part} data-change={`${c.part}:${c.field}`}>
+              <p className={styles.partName}>{changeLabel(c, t, has)}</p>
+              <p className={styles.text} data-before="">
+                <span className="hint">{t("outgoing.changes.before")}: </span>
+                {c.before ?? t("outgoing.changes.nothing")}
+              </p>
+              <p className={styles.text} data-after="">
+                <span className="hint">{t("outgoing.changes.now")}: </span>
+                {c.after ?? t("outgoing.changes.nothing")}
+              </p>
+            </div>
+          ))}
+        </section>
+      )}
       {act.status === "uncertain" && <p>{t("outgoing.uncertain.text")}</p>}
       {act.status === "sending" && <p>{t("outgoing.sending.text")}</p>}
       {blocked && (
@@ -146,6 +166,8 @@ export function OutgoingDetail(props: {
             {act.proposed_start && act.proposed_end && <li>{t("outgoing.proposed_line", { start: act.proposed_start, end: act.proposed_end })}</li>}
             {act.action === "create" && act.title && <li>{t("outgoing.event_title_line", { title: act.title })}</li>}
             {act.action === "create" && act.start && act.end && <li>{t("outgoing.event_when_line", { start: act.start, end: act.end })}</li>}
+            {act.action === "move" && act.start && <li>{act.end ? t("outgoing.move_line", { start: act.start, end: act.end }) : t("outgoing.move_line.start", { start: act.start })}</li>}
+            {act.action === "cancel" && <li>{t("outgoing.cancel_line")}</li>}
             {act.alarm_minutes != null && <li>{t("outgoing.alarm_line", { minutes: act.alarm_minutes })}</li>}
           </ul>
         </section>
@@ -157,7 +179,7 @@ export function OutgoingDetail(props: {
           {(act.recipients ?? []).map((r) => (
             <li key={r.key}>{t("outgoing.recipient", { role: t(`outgoing.role.${r.role}`), name: r.name, address: r.address })}</li>
           ))}
-          {act.calendar && <li>{t("outgoing.calendar_line", { calendar: act.calendar })}</li>}
+          {act.calendar && <li>{act.calendar === "own" ? t("outgoing.calendar_own", { account: act.account_label ?? "" }) : t("outgoing.calendar_line", { calendar: act.calendar })}</li>}
           {act.when && <li>{t("outgoing.when_line", { when: act.when })}</li>}
           {act.folder && <li>{t("outgoing.folder_line", { folder: act.folder })}</li>}
           {act.label && <li>{t("outgoing.label_line", { label: act.label })}</li>}

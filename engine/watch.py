@@ -20,7 +20,7 @@ import json
 import os
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -265,8 +265,25 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     taking_in = not read_before and not own and source.first_run == "intake"
     baseline = not read_before and not own and source.first_run in ("baseline", "recent", "intake")
     recent = timedelta(hours=source.first_run_hours) if baseline and source.first_run == "recent" else None
+    mine = capture.own_mail_keys(cfg, source, poll.items)
     if own:
         result = capture.compare(ws, store, cfg, source, poll, now)
+    elif mine:
+        # Mail the person put in a capture folder or sent to a capture address from their own address is their own
+        # words; everything else the source read goes through the ordinary comparison, as outside content.
+        rest = replace(poll, items=[i for i in poll.items if i.key not in mine])
+        result = _compare(ws, store, cfg, source, rest, now, baseline, recent, router)
+        taken = capture.compare(
+            ws,
+            store,
+            cfg,
+            source,
+            replace(poll, items=[i for i in poll.items if i.key in mine], complete=poll.complete),
+            now,
+            everything={i.key for i in poll.items},
+        )
+        result.new.extend(taken.new)
+        result.changed.extend(taken.changed)
     else:
         result = _compare(ws, store, cfg, source, poll, now, baseline, recent, router)
     from engine import source_entries, source_intake
@@ -378,8 +395,15 @@ def _compare(
     recent: timedelta | None = None,
     router: Any = None,
 ) -> Result:
+    from engine import capture
+
     result = Result(source.id, "ok")
-    seen = {s.data["key"]: s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]}
+    # Mail handed in as the person's own capture is not this comparison's: it isn't outside content to compare again.
+    seen = {
+        s.data["key"]: s
+        for s in store.read().find("snapshot", {"source": source.id})
+        if not s.data["gone"] and s.data.get("closed_by") != capture.CAPTURED
+    }
     listed = set()
     entries: list[_Entry] = []
     unplaced: dict[str, dict[str, Any]] = {}
@@ -1156,6 +1180,7 @@ def _hand_in_window(
     """Hand the assistant the items a source holds that were never handed in and that `accept` takes (it is given
     the snapshot's data), with the usual triage and, when `sort`, the assistant's sorting of mail. `extra` goes on
     each request made."""
+    from engine import capture
     from engine.connectors import EventDetails
 
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
@@ -1173,6 +1198,8 @@ def _hand_in_window(
         data = snap.data
         if data.get("gone") or data.get("deleted") or data.get("set_aside") or data["key"] in handed:
             continue
+        if data.get("closed_by") == capture.CAPTURED:
+            continue  # handed in already, as the person's own capture
         if not accept(data):
             continue
         item = SourceItem(

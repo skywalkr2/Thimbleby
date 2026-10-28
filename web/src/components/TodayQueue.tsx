@@ -23,6 +23,7 @@ import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/qu
 import { showRow } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { useActToday } from "../lib/acts";
+import { mixesAreas } from "../lib/area-filter";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
 import { useSideFilter, useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -287,6 +288,7 @@ export function TodayQueue(props: {
 
   const lineTitle = useLineTitle();
   const mixed = mixesProjects(lines);
+  const areasMixed = mixesAreas(lines);
   const shown = display.map((d) => d.line);
   const ghosts = new Set(display.filter((d) => d.ghost).map((d) => d.line.key));
   const empty = count === 0 && !queue.isPending;
@@ -358,6 +360,7 @@ export function TodayQueue(props: {
                         selection={props.selected?.key === line.key ? props.selected : null}
                         beside={props.beside}
                         mixed={mixed}
+                        areasMixed={areasMixed}
                         onSelect={props.onSelect}
                         handlers={props.handlers}
                       />
@@ -476,6 +479,8 @@ function LineItem(props: {
   selection: Selection | null;
   beside: boolean;
   mixed: boolean;
+  /** Today's lines are in more than one place (two areas of life, or an area and none), so a line names its area. */
+  areasMixed: boolean;
   onSelect: (selection: Selection | null) => void;
   handlers: QueueHandlers;
 }) {
@@ -715,6 +720,7 @@ function QueueRow(props: {
   selection: Selection | null;
   beside: boolean;
   mixed: boolean;
+  areasMixed: boolean;
   onSelect: (selection: Selection | null) => void;
   handlers: QueueHandlers;
 }) {
@@ -1195,6 +1201,7 @@ function QueueRow(props: {
   // A suggestion can be put off until something about it changes; what is due cannot.
   const menu: MenuAction[] = SUGGESTION_KINDS.has(line.kind) ? [...d.menu, { id: "not-now", label: t("queue.notnow"), run: () => notNow(line.key) }] : d.menu;
   useRowKeys(ref, { toggle: props.beside ? choose : opens ? () => select(!open) : undefined });
+  const area = props.areasMixed && line.area_name ? <span className={styles.tag} data-area={line.area}>{t("queue.area_tag", { area: line.area_name })}</span> : null;
   const project = props.mixed && (line.project_name || line.side_name) ? <ProjectTag name={line.project_name} parent={line.parent_name} side={line.side_name} className={styles.tag} /> : null;
   const onClick = (event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest("button, a, input, textarea, select, [role='menuitem']")) return;
@@ -1253,6 +1260,7 @@ function QueueRow(props: {
       title={
         <>
           <span id={`${detailId}-title`} title={line.notes ?? undefined}>
+            {area}
             {project}
             {title}
           </span>

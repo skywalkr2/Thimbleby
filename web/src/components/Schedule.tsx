@@ -15,6 +15,7 @@ import { IconButton } from "../ui/IconButton";
 import { Pill } from "../ui/Pill";
 import { Skeleton } from "../ui/Skeleton";
 import { AddMeeting } from "./ScheduleCard";
+import { NewEvent } from "./NewEvent";
 import { SafeLink } from "./SafeText";
 import styles from "./Schedule.module.css";
 
@@ -187,6 +188,8 @@ export function Schedule() {
         <div className={styles.tools}>
           {/* Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. */}
           {data && <AddMeeting today={data.today} />}
+          {/* A connected calendar that can add events after the person's yes offers a new event on it. */}
+          {data && <NewEvent today={data.today} />}
           <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
             <IconButton icon="chevron" label={t("schedule.back")} className={styles.back} variant="secondary" isDisabled={!first} onPress={() => go(-1)} />
             <Button onClick={() => setFrom(null)}>{t("schedule.today")}</Button>

@@ -42,6 +42,29 @@ def area_of(view: Any, project_id: str | None) -> str | None:
     return None
 
 
+def area_of_line(view: Any, line: Any) -> str | None:
+    """The area a line of Today's queue is in: that of its project, else the one area every record it names is in. A
+    line about records in several areas, or in none, is in no area."""
+    if area := area_of(view, getattr(line, "project", None)):
+        return area
+    found: set[str] = set()
+    refs = [("question", getattr(line, "question", None))]
+    refs += [("action", i) for i in getattr(line, "actions", None) or []]
+    refs += [("question", i) for i in getattr(line, "questions", None) or []]
+    for kind, record_id in refs:
+        record = view.get(kind, record_id) if record_id else None
+        if record is None:
+            continue
+        for project in _projects_named(record.data):
+            if area := area_of(view, project):
+                found.add(area)
+    return next(iter(found)) if len(found) == 1 else None
+
+
+def _projects_named(data: Mapping[str, Any]) -> list[str]:
+    return [p for p in sides.projects_of(dict(data)) if p]
+
+
 def _inside(view: Any, top: str) -> set[str]:
     """The project and every project inside it, at any depth."""
     children: dict[str, list[str]] = {}

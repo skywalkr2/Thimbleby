@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { Act } from "../lib/acts";
-import { actFixture, recipient } from "../lib/acts-fixtures";
+import { actFixture, actsAnswer, recipient } from "../lib/acts-fixtures";
 import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 
@@ -15,7 +15,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 function show(acts: Act[], extra: Routes = {}, options: { unnamed?: boolean } = {}) {
   besidePane();
-  const calls = fakeApi({ "GET acts": () => ({ acts }), "GET followups": () => [], ...extra });
+  const calls = fakeApi({ "GET acts": (_b, q) => actsAnswer(acts, q), "GET followups": () => [], ...extra });
   renderApp(<FollowUps />, {}, options);
   return calls;
 }

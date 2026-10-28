@@ -201,6 +201,19 @@ def test_an_adapter_that_cannot_transcribe_refuses_a_voice_note_and_never_guesse
             cls(settings, "key").run(task, "m")
 
 
+def test_which_adapters_take_speech_is_decided_for_each_one_and_a_new_adapter_must_be_decided_too():
+    """Speech-to-text is a capability of one path: the common chat-format one (and the stand-in used in tests).
+    The native adapter's service has no speech-to-text, and a command-line agent is given text to work on, so both
+    refuse a voice note. A new adapter has to be put in one list or the other here, so the choice is never silent."""
+    from engine.ai.adapters import ADAPTERS, GENERIC_ADAPTER
+
+    takes = {"stub", GENERIC_ADAPTER}
+    refuses = {"cli-agent"}
+    native = set(ADAPTERS) - takes - refuses
+    assert len(native) == 1, f"decide for each new adapter whether its service takes speech: {sorted(native)}"
+    assert set(ADAPTERS) == takes | refuses | native
+
+
 def test_the_generic_adapter_sends_the_sound_to_the_speech_path_and_reads_the_words():
     import httpx
 

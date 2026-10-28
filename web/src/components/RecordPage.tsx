@@ -26,6 +26,7 @@ import { Attendees } from "./Attendees";
 import { MeetingPrep } from "./MeetingPrep";
 import { PersonMemory } from "./PersonMemory";
 import { useInvitationActs } from "./InvitationActs";
+import { useEventActs } from "./EventActs";
 import { useMessageActs } from "./MessageActs";
 import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
@@ -84,6 +85,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const versions = useVersionActs(kind === "source" ? id : null);
   // An invitation on a calendar entry can be answered the same way.
   const invite = useInvitationActs(id, kind === "event" && record.data?.fields.invitation === true);
+  // An event that is the person's own on a connected calendar can be moved or cancelled, each through the same yes.
+  const eventActs = useEventActs(id, { start: record.data?.fields.start as string | undefined, end: record.data?.fields.end as string | null | undefined }, kind === "event");
   const [editing, setEditing] = useState(false);
   // A person and a project are edited in the same drawer as on their own screens.
   const drawer = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : kind === "project" ? (projects.data ?? []).find((p) => p.id === id) : undefined;
@@ -156,6 +159,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
             {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
             {invite.buttons}
+            {eventActs.menu.length > 0 && <RowMenu label={t("acts.event.menu")} actions={eventActs.menu} />}
             {waitingOnYou && <AnswerOnToday question={id} />}
             {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
           </div>
@@ -165,6 +169,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && message.form}
       {data && versions.form}
       {data && invite.form}
+      {data && eventActs.form}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
       {data && ownSide && (

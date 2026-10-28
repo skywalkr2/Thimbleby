@@ -8,6 +8,7 @@ import { day, monthDay } from "../lib/dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AgendaSection } from "./AgendaList";
+import { RecordConversation } from "./RecordConversation";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
@@ -47,6 +48,7 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
             <div className="record-main">
               <AgendaSection items={data.agenda ?? []} id="series-agenda" />
               <NextMeeting page={data} />
+              <RecordConversation kind="series" id={props.id} />
               <Past page={data} />
             </div>
             <aside className="record-side" aria-label={t("record.details")}>

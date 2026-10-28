@@ -764,6 +764,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail="Choose a person or a team from the list.")
         return author
 
+    def checked_capture(connector: str, capture: bool | None, address: str | None) -> dict[str, Any]:
+        """What a mail source holds of the person's own capture: whether everything in it is, and an address mail to
+        which is. Only a source that reads mail takes either; the address must be one (a name, an @ and a domain)."""
+        from engine.connectors import declared_reads, reads
+
+        wanted = (address or "").strip()
+        if (capture or wanted) and "mail" not in reads(connector, declared_reads(source_kinds())):
+            raise HTTPException(status_code=400, detail="Only a source that reads mail can hold your own capture.")
+        if wanted and not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", wanted):
+            raise HTTPException(status_code=400, detail="That doesn't look like an email address.")
+        return {"capture": bool(capture), "capture_address": wanted or None}
+
     def checked_account(connector: str, account: str | None) -> str | None:
         """The account a source of this kind reads: one signed in (by address, in any case), else the only one when
         none is named. Several signed in and none named is refused, as is an account that isn't signed in."""
@@ -923,6 +935,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["account"] = account
         if body.color:
             new["color"] = body.color
+        capture = checked_capture(body.connector, body.capture, body.capture_address)
+        new.update({k: v for k, v in capture.items() if v})
         if own := sides.alone_with_personal(current()):
             # With nothing beside the person's own life, a new connection serves it, so it takes that side's level.
             new["sides"] = [own]
@@ -1118,6 +1132,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found["account"] = checked_account(found["connector"], body.account)
         if "color" in body.model_fields_set:
             found["color"] = body.color
+        if "capture" in body.model_fields_set or "capture_address" in body.model_fields_set:
+            asked = checked_capture(
+                found["connector"],
+                found.get("capture", False) if body.capture is None else body.capture,
+                found.get("capture_address")
+                if "capture_address" not in body.model_fields_set
+                else body.capture_address,
+            )
+            found["capture"] = asked["capture"]
+            found["capture_address"] = asked["capture_address"]
         if "data_level" in body.model_fields_set:
             found["data_level"] = body.data_level
         fresh = keep_all(to_keep, f"source:{source_id}")

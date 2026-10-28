@@ -373,7 +373,7 @@ def create_app(
     inner.include_router(build_knowledge_router(cfg, store, events, worker))
     inner.include_router(build_quality_router(ws, cfg, store, events, worker))
     inner.include_router(build_feedback_router(ws, cfg, store, worker))
-    inner.include_router(build_records_router(cfg, store, events, worker))
+    inner.include_router(build_records_router(ws, cfg, store, events, worker))
     inner.state.worker = worker
     inner.state.store = store
     inner.state.events = events

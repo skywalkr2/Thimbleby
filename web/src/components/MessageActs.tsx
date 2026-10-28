@@ -74,7 +74,7 @@ export function useMessageActs(record: string | null, subject: string, enabled =
   if (options && asking === "reply") form = <TextForm label={t("acts.reply.label")} go={t("acts.reply.go")} onCancel={close} onSubmit={async (text) => done(await reply("reply", text))} />;
   if (options && asking === "reply_all") form = <TextForm label={t("acts.reply.label")} go={t("acts.reply.go")} onCancel={close} onSubmit={async (text) => done(await reply("reply_all", text))} />;
   if (options && asking === "forward") form = <ForwardForm onCancel={close} onSubmit={async (text, to) => done(await reply("forward", text, to))} />;
-  if (options && asking === "move") form = <MoveForm source={options.folder_source ?? null} onCancel={close} onSubmit={async (folder) => done(await change("move", { folder }))} />;
+  if (options && asking === "move") form = <MoveForm source={options.folder_source ?? null} account={options.account_label ?? null} onCancel={close} onSubmit={async (folder) => done(await change("move", { folder }))} />;
   if (options && asking === "label") form = <LabelForm onCancel={close} onSubmit={async (label) => done(await change("label", { label }))} />;
 
   return {
@@ -166,8 +166,9 @@ function ForwardForm(props: { onCancel: () => void; onSubmit: (text: string, to:
   );
 }
 
-/** The folder to move to, from the mailbox's own folders. */
-function MoveForm(props: { source: string | null; onCancel: () => void; onSubmit: (folder: string) => Promise<void> }) {
+/** The folder to move to, from the account's own folders. An account that can't list its folders (`source` none) says so and takes
+ * the folder's name as the person types it. */
+export function MoveForm(props: { source: string | null; account?: string | null; onCancel: () => void; onSubmit: (folder: string) => Promise<void> }) {
   const { t } = useWords();
   const id = useId();
   const folders = useQuery({
@@ -187,28 +188,42 @@ function MoveForm(props: { source: string | null; onCancel: () => void; onSubmit
         e.preventDefault();
         if (!folder || busy) return;
         setBusy(true);
-        void props.onSubmit(folder).finally(() => setBusy(false));
+        void props.onSubmit(folder.trim()).finally(() => setBusy(false));
       }}
       onKeyDown={(e) => {
         if (e.key === "Escape") props.onCancel();
       }}
     >
-      <label className="hint" htmlFor={id}>
-        {t("acts.move.label")}
-      </label>
-      <select id={id} autoFocus value={folder} onChange={(e) => setFolder(e.target.value)}>
-        <option value="">{t("acts.move.choose")}</option>
-        {(folders.data?.folders ?? []).map((f) => (
-          <option key={f} value={f}>
-            {f}
-          </option>
-        ))}
-      </select>
+      {props.source ? (
+        <>
+          <label className="hint" htmlFor={id}>
+            {t("acts.move.label")}
+          </label>
+          <select id={id} autoFocus value={folder} onChange={(e) => setFolder(e.target.value)}>
+            <option value="">{t("acts.move.choose")}</option>
+            {(folders.data?.folders ?? []).map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : (
+        <>
+          <p className="hint" role="note" data-folders-not-listed="">
+            {t("acts.move.not_listed", { account: props.account ?? "" })}
+          </p>
+          <label className="hint" htmlFor={id}>
+            {t("acts.move.name_label")}
+          </label>
+          <input id={id} type="text" autoFocus autoComplete="off" value={folder} onChange={(e) => setFolder(e.target.value.trimStart())} />
+        </>
+      )}
       <div className="row-end">
         <button type="button" className="btn quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </button>
-        <button type="submit" className="btn primary" disabled={!folder || busy}>
+        <button type="submit" className="btn primary" disabled={!folder.trim() || busy}>
           {t("acts.move.go")}
         </button>
       </div>
@@ -217,7 +232,7 @@ function MoveForm(props: { source: string | null; onCancel: () => void; onSubmit
 }
 
 /** The label to put on the messages: a few words typed, since a mailbox has no list of its labels to pick from. */
-function LabelForm(props: { onCancel: () => void; onSubmit: (label: string) => Promise<void> }) {
+export function LabelForm(props: { onCancel: () => void; onSubmit: (label: string) => Promise<void> }) {
   const { t } = useWords();
   const id = useId();
   const [label, setLabel] = useState("");

@@ -388,6 +388,42 @@ new review pane were not counted, and the independent reading had no instrument.
 `dispatch.knowledge.sample_consent`, `sample_size` and `language.messages.called_off_subject` with demo values in both
 workspaces; the plugin guide is regenerated (a core record). Change log: section 235.
 
+## 2026-10-28: The daily steward's remaining items, group two (roadmap S1b, S4, S5)
+
+**Decided:** (1) The person's yes keeps the exact content and target it was given on (`approved.shown`), and an act that
+goes stale keeps that yes (`was_approved`) so its page can show each thing that differs with the words then and now; an
+edit, a new yes or taking it back clears it. (2) Several messages selected from a list of saved mail (Handled for you) are
+each their own act, drafted in one change with one Undo and approved with one yes that approves and sends each in turn; a
+message that can't be acted on is named with its reason and never dropped silently. (3) Move to is offered for any account
+whose channel declares `move`; where the account can't list its folders the screen says so and takes the folder's name as
+typed. (4) Events are put on a calendar, moved and cancelled through the channel's declared actions, each shown as exact
+content and waiting for the yes; only an event that is the person's own is offered for move and cancel. (5) Who reads an
+area is content levels seen from the accounts: the area gets a level of its own the first time an account is left out, and
+a level the project above carries is never changed. The prep note and any draft built from people memory read the area's
+reach; the pages the person reads read everything. (6) Today carries each line's area and a choice of area; a line in no
+area shows under All only. (7) A watched mail source is marked as capture by two settings on the source (`capture`,
+`capture_address`); only mail from the person's own address there is their own words, and everything else stays
+untrusted. (8) A conversation on a record is offered for every kind of record with a page and in the panes beside People
+and Projects, and each message brings in the best older matches from the core's search as evidence (at most
+`steward.conversation.history_results`, 5), at the accounts' data level and the area's reach.
+
+**Decided by:** the owner's roadmap items (S1b-1, S1b-2, S4, S5 "Left" lines, P91); the details above were settled while
+building and are for review: where several messages are selected (Handled for you's lists are the only saved mail a person
+can tick), that a typed folder name is offered where a list can't be, that an account locked out by a level above is shown
+rather than hidden, that a conversation's search uses only the person's own words, and that a capture alias counts only
+from the person's own address.
+
+**Why:** each is a "Left" line the roadmap carried; the facts that rest on a judgment are the ones listed. The mail
+add-on 0.1.1 declares the message and event acts, so the roadmap's lines that said these waited for an add-on were out of
+date.
+
+**Impact:** Design 6.12, 6.25, 6.32 and 7.4, the roadmap, the plugin guide (core records `act` gained `was_approved` and
+`approved.shown`; no new plugin API surface), and the API schema (`ActView.changes`, the batch routes, `event_actions`,
+`folders_listed`, `ReaderChoice`, `QueueLineView.area`, the capture settings). New settings: `steward.conversation.history_results`
+and, on a watched source, `capture` and `capture_address`. Not built, said with why: Archive, Move to, Label and Mark as
+read for the mail add-on (it declares none), dropping the wider access (a plugin API change, on hold), the global shortcut
+and tray (phase I), speech-to-text on `anthropic-messages` and `cli-agent`. Change log: section 251.
+
 ## 2026-10-28: The second pass's leftovers, the reviewer's H1 to H8 and the checklist's partials (roadmap A2, A2b, A4)
 
 **Decided:** (1) Notes stored before the title rule are re-titled once at start, through the core's title function, from

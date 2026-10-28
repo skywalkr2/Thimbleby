@@ -199,6 +199,93 @@ def what_changed(covered: Mapping[str, str], now: Mapping[str, str]) -> list[str
     return [name for name in names if covered.get(name) != now.get(name)]
 
 
+def shown(view: Any, data: Mapping[str, Any], template_now: str | None = None) -> dict[str, Any]:
+    """The act as the person saw it when they said yes, in plain values: the content by part, each recipient's address
+    as it resolved, the other target fields, the things it is about as they stood, the template and its version, the
+    account and the channel. Kept on the yes so an act that went stale can say what is different now; the fingerprint
+    is what decides, this is only for showing."""
+    target = data["target"]
+    template = data.get("template")
+    fields = {
+        name: str(target[name])
+        for name in ("action", "calendar", "when", "folder", *EVENT_FIELDS)
+        if target.get(name) not in (None, "")
+    }
+    about: dict[str, dict[str, str]] = {}
+    for ref in about_refs(view, data):
+        if ref.get("missing"):
+            text = "missing"
+        elif "uid" in ref:
+            text = f"{ref.get('start') or ''} - {ref.get('end') or ''}" + (
+                " (cancelled)" if ref.get("cancelled") else ""
+            )
+        else:
+            text = str(ref.get("service_id") or "")
+        found = view.get("source", ref["id"]) or view.get("event", ref["id"])
+        about[ref["id"]] = {"title": (found.data.get("title") or "") if found is not None else "", "text": text}
+    return {
+        "channel": data["channel"],
+        "account": data.get("account"),
+        "parts": dict(data.get("parts") or {}),
+        "recipients": [
+            {"role": r["role"], "address": current_address(view, r)} for r in target.get("recipients") or []
+        ],
+        "target": fields,
+        "about": about,
+        "template": None if not template else f"{template['name']} {template_now or template['version']}",
+    }
+
+
+def current_shown(view: Any, plugins: Any, data: Mapping[str, Any]) -> dict[str, Any]:
+    """`shown` for an act now, with the template at the version its channel has now."""
+    return shown(view, data, template_version_now(plugins, data))
+
+
+@dataclass(frozen=True)
+class Difference:
+    """One thing that is different now from what the yes covered: the part of the yes it belongs to (`content`,
+    `target`, `about`, `account`, `channel`, `template`), the field within it (a content part's name, `to`, `cc`, a
+    target field, or an id for a thing the act is about), what it was and what it is, as plain text."""
+
+    part: str
+    field: str
+    before: str | None
+    after: str | None
+    name: str | None = None
+
+
+def _addresses(recipients: list[Mapping[str, Any]], role: str) -> str | None:
+    found = [r["address"] for r in recipients if r["role"] == role]
+    return ", ".join(found) if found else None
+
+
+def differences(before: Mapping[str, Any], now: Mapping[str, Any]) -> list[Difference]:
+    """What changed between the content and target a yes was given on and the act now, one entry per field, in the
+    order of the yes's parts. Text is compared as it is, so a changed word shows as that part's before and after."""
+    found: list[Difference] = []
+    for name in sorted(set(before["parts"]) | set(now["parts"])):
+        old, new = before["parts"].get(name), now["parts"].get(name)
+        if old != new:
+            found.append(Difference("content", name, old, new))
+    for role in ("to", "cc"):
+        old, new = _addresses(before["recipients"], role), _addresses(now["recipients"], role)
+        if old != new:
+            found.append(Difference("target", role, old, new))
+    for name in sorted(set(before["target"]) | set(now["target"])):
+        old, new = before["target"].get(name), now["target"].get(name)
+        if old != new:
+            found.append(Difference("target", name, old, new))
+    for rid in sorted(set(before["about"]) | set(now["about"])):
+        old, new = before["about"].get(rid), now["about"].get(rid)
+        if old != new:
+            title = (new or old or {}).get("title") or None
+            found.append(Difference("about", rid, old and old["text"], new and new["text"], title))
+    for key in ("account", "channel", "template"):
+        if before.get(key) != now.get(key):
+            found.append(Difference(key, key, before.get(key), now.get(key)))
+    return found
+
+
 @dataclass(frozen=True)
 class Callout:
     """A recipient the person must look at before their yes, with why: `new` (never written to before), `outside` (not
@@ -599,7 +686,7 @@ def _clear_yes(found: Any, tx: Tx, changes: dict[str, Any], w: WriteContext) -> 
     tx.update(
         "act",
         found.id,
-        {**changes, "status": "draft", "approved": None, "failure": None, "why": []},
+        {**changes, "status": "draft", "approved": None, "was_approved": None, "failure": None, "why": []},
         w,
         read_version=found.version,
     )
@@ -683,7 +770,9 @@ def _approve(tx: Tx, op: ActApproveOp, ctx: Any, w: WriteContext) -> list[dict[s
                 "at": ctx.store.clock(),
                 "acknowledged": sorted(k for k in op.acknowledged if k in keys),
                 "standing_yes": op.by_standing,
+                "shown": current_shown(tx, ctx.store.plugins, data),
             },
+            "was_approved": None,
             "failure": None,
             "why": [],
         },
@@ -696,7 +785,9 @@ def _approve(tx: Tx, op: ActApproveOp, ctx: Any, w: WriteContext) -> list[dict[s
 def _withdraw(tx: Tx, op: ActWithdrawOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
     found = _get(tx, op.id)
     _need(found, EDITABLE, "it can't be taken back")
-    tx.update("act", found.id, {"status": "withdrawn", "approved": None}, w, read_version=found.version)
+    tx.update(
+        "act", found.id, {"status": "withdrawn", "approved": None, "was_approved": None}, w, read_version=found.version
+    )
     return [{"kind": "act", "id": found.id}]
 
 
@@ -727,7 +818,13 @@ def _resend(tx: Tx, op: ActResendOp, ctx: Any, w: WriteContext) -> list[dict[str
     covered = found.data["approved"]
     if covered is None or now != covered["fingerprint"]:
         changed = what_changed(covered["covers"] if covered else {}, parts) or ["content"]
-        tx.update("act", found.id, {"status": "stale", "approved": None, "why": changed}, w, read_version=found.version)
+        tx.update(
+            "act",
+            found.id,
+            {"status": "stale", "approved": None, "was_approved": _was_approved(found), "why": changed},
+            w,
+            read_version=found.version,
+        )
     else:
         tx.update("act", found.id, {"status": "approved", "why": []}, w, read_version=found.version)
     return [{"kind": "act", "id": found.id}]
@@ -783,11 +880,23 @@ def _uncertain(tx: Tx, op: ActUncertainOp, ctx: Any, w: WriteContext) -> list[di
     return [{"kind": "act", "id": found.id}]
 
 
+def _was_approved(found: Any) -> dict[str, Any] | None:
+    """The yes an act is losing, kept with what it was given on, so a stale act can say what changed."""
+    yes = found.data.get("approved")
+    if not yes:
+        return None
+    return {"by": yes["by"], "at": yes["at"], "shown": yes.get("shown")}
+
+
 def _stale(tx: Tx, op: ActStaleOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
     found = _get(tx, op.id)
     _need(found, ("approved",), "it can't go stale")
     tx.update(
-        "act", found.id, {"status": "stale", "approved": None, "why": list(op.why)}, w, read_version=found.version
+        "act",
+        found.id,
+        {"status": "stale", "approved": None, "was_approved": _was_approved(found), "why": list(op.why)},
+        w,
+        read_version=found.version,
     )
     return [{"kind": "act", "id": found.id}]
 

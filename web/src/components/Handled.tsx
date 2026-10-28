@@ -24,6 +24,8 @@ import { SideFilter } from "./SideFilter";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useVersionActs } from "./SameDocument";
 import { useAct } from "../lib/act";
+import { useSelection } from "../lib/act-batch";
+import { MailSelectionBar } from "./MailSelection";
 
 type Tab = S["HandledView"]["tab"];
 type Group = S["HandledView"]["group"];
@@ -44,6 +46,8 @@ export function Handled() {
   const [typed, setTyped] = useState("");
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<Set<string>>(new Set());
+  // Saved mail ticked in either list, to archive, move, label or mark as read together.
+  const picked = useSelection();
   const search = useRef<HTMLInputElement>(null);
   // What is new here counts from when the person last left this screen.
   useLookedAt("handled");
@@ -90,6 +94,7 @@ export function Handled() {
           onChange={(name) => {
             setTab(name);
             setItem(null);
+            picked.clear();
           }}
         />
       </div>
@@ -114,6 +119,7 @@ export function Handled() {
           ))}
         </div>
       ) : null}
+      {picked.selected.size > 0 && <MailSelectionBar records={[...picked.selected]} onClear={picked.clear} />}
       {list.isPending ? (
         <Skeleton />
       ) : list.isError ? (
@@ -156,7 +162,7 @@ export function Handled() {
                 {open && (
                   <ul className="queue" id={`${ids}-group-${index}`}>
                     {g.items.slice(0, limit).map((row) => (
-                      <HandledRow key={row.id} item={row} />
+                      <HandledRow key={row.id} item={row} picked={row.saved && row.item === "mail" && row.tab !== "closed" ? { on: picked.selected.has(row.saved), toggle: () => picked.toggle(row.saved ?? "") } : undefined} />
                     ))}
                     {g.items.length > limit && (
                       <li className="line">
@@ -177,7 +183,7 @@ export function Handled() {
   );
 }
 
-function HandledRow(props: { item: Row }) {
+function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => void } }) {
   const { t } = useWords();
   const act = useAct();
   const { isWork, isPersonal, isSide, alwaysLikeThis } = useSetAside();
@@ -274,6 +280,9 @@ function HandledRow(props: { item: Row }) {
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
       <div className="row">
+        {props.picked && (
+          <input type="checkbox" className={styles.pick} checked={props.picked.on} aria-label={t("batch.select_named", { title: item.title })} onChange={props.picked.toggle} />
+        )}
         <span className="kind k-done" data-item={item.item}>
           {t(`handled.item.${item.item}`)}
         </span>

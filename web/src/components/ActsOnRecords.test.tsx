@@ -33,6 +33,7 @@ function options(over: Partial<S["ActOptionsView"]> = {}): S["ActOptionsView"] {
     answers: [],
     propose_refusal: null,
     folder_source: SOURCE,
+    folders_listed: true,
     ...over,
   };
 }
@@ -190,6 +191,30 @@ describe("a saved message", () => {
     await user.click(screen.getByRole("button", { name: "Draft the move" }));
     await waitFor(() => expect(post(calls)).toHaveLength(1));
     expect(post(calls)[0].body).toEqual({ kind: "mailbox", action: "move", about: [MESSAGE], folder: "Projects" });
+  });
+
+  test("Move to for a signed-in account that can't list its folders says so plainly and takes the folder's name", async () => {
+    const user = userEvent.setup();
+    const calls = open(
+      "source",
+      message,
+      routes({
+        [`GET acts/options?record=${MESSAGE}`]: () => options({ account: "demo-service:pat@example.com", account_label: "Demo service (pat@example.com)", folder_source: null, folders_listed: false }),
+        "POST acts": () => drafted({ kind: "mailbox", action: "move", folder: "Receipts", parts: {} }),
+      }),
+    );
+    await menu(user, "The proofs");
+    await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    expect(await screen.findByText("Demo service (pat@example.com) doesn't list its folders. Type the folder's name exactly as it is called there.")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    const name = screen.getByRole("textbox", { name: "Name of the folder" });
+    expect(name).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Draft the move" })).toBeDisabled();
+    await user.type(name, "Receipts");
+    await user.click(screen.getByRole("button", { name: "Draft the move" }));
+    await waitFor(() => expect(post(calls)).toHaveLength(1));
+    expect(post(calls)[0].body).toEqual({ kind: "mailbox", action: "move", about: [MESSAGE], folder: "Receipts" });
+    expect(calls.some((c) => c.route.startsWith("GET watch/"))).toBe(false);
   });
 
   test("Label asks for the label with the cursor in it", async () => {

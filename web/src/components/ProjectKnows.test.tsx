@@ -218,3 +218,50 @@ test("a fact from mail with a local address shows a short label, never the full 
   expect(within(facts).queryByText(/127\.0\.0\.1/)).toBeNull();
   expect(within(facts).getByText(/pages\.example\.com/)).toBeInTheDocument();
 });
+
+describe("the accounts that may read an area", () => {
+  const choices: S["ReaderChoice"][] = [
+    { account: "localbox", name: "Local server", reads: true, leaves: false },
+    { account: "hosted", name: "Hosted service", reads: true, leaves: true },
+    { account: "stub", name: "Stand-in account", reads: false, leaves: true, locked: "parent" },
+  ];
+  const area = (over: Partial<S["ProjectReading"]> = {}, choose = choices) =>
+    knows({ area: true, reading: { state: "away", levels: [], readers: [{ account: "localbox", name: "Local server", leaves: false }], choices: choose, ...over } });
+
+  test("each account is a box ticked when it may read the area, saying in words whether reading sends it away", async () => {
+    show(area());
+    const group = await screen.findByRole("group", { name: "Accounts that may read this area" });
+    expect(within(group).getByRole("checkbox", { name: "Local server: stays on this computer" })).toBeChecked();
+    expect(within(group).getByRole("checkbox", { name: "Hosted service: sends it away from this computer" })).toBeChecked();
+    const locked = within(group).getByRole("checkbox", { name: "Stand-in account: sends it away from this computer" });
+    expect(locked).not.toBeChecked();
+    expect(locked).toBeDisabled();
+    expect(within(group).getByText("kept out by the privacy of the project above this area")).toBeInTheDocument();
+  });
+
+  test("unticking an account saves who may read the area at once, and Undo asks for who read it before", async () => {
+    const user = userEvent.setup();
+    const after: S["ProjectReading"] = { state: "local", levels: ["area-harbor"], readers: [{ account: "localbox", name: "Local server", leaves: false }], choices: choices.map((c) => (c.account === "hosted" ? { ...c, reads: false } : c)) };
+    const calls = show(area(), { "POST projects/PRJ-1/readers": () => after });
+    await user.click(await screen.findByRole("checkbox", { name: "Hosted service: sends it away from this computer" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST projects/PRJ-1/readers")).toHaveLength(1));
+    expect(calls.find((c) => c.route === "POST projects/PRJ-1/readers")?.body).toEqual({ accounts: ["localbox"] });
+    expect(await screen.findByText("Changed which accounts may read Harbor.")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST projects/PRJ-1/readers")).toHaveLength(2));
+    expect(calls.filter((c) => c.route === "POST projects/PRJ-1/readers")[1].body).toEqual({ accounts: ["localbox", "hosted"] });
+  });
+
+  test("a refusal says why and a project that isn't an area has no boxes", async () => {
+    const user = userEvent.setup();
+    show(area(), { "POST projects/PRJ-1/readers": () => new Refuse(409, "Local server can't read this area") });
+    await user.click(await screen.findByRole("checkbox", { name: "Local server: stays on this computer" }));
+    expect(await screen.findByText(/Local server can't read this area/)).toBeInTheDocument();
+  });
+
+  test("a project that is not an area offers no choice of accounts", async () => {
+    show(knows({ area: false, reading: { state: "away", levels: [], readers: [], choices: [] } }));
+    await screen.findByText("Who reads it:", { exact: false });
+    expect(screen.queryByRole("group", { name: "Accounts that may read this area" })).toBeNull();
+  });
+});

@@ -17,6 +17,7 @@ inferred fact) is never shown as something they said or care about. Reads only."
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
@@ -199,13 +200,22 @@ def _order(items: list[Item]) -> list[Item]:
     return sorted(items, key=lambda i: (i.due is None, i.due or date.max, i.text.casefold(), i.id))
 
 
-def open_with(view: Any, pm: str | None, person: str, today: date, here: ZoneInfo) -> dict[str, list[Item]]:
+def open_with(
+    view: Any,
+    pm: str | None,
+    person: str,
+    today: date,
+    here: ZoneInfo,
+    hide: Callable[[Mapping[str, Any]], bool] | None = None,
+) -> dict[str, list[Item]]:
     """What is open between the person and one other, by `kind` (promised_to, promised_by, asked_of, asked_by): earliest
-    day first, an item with none last. A promise someone else made to a third person is not between them."""
+    day first, an item with none last. A promise someone else made to a third person is not between them. `hide` is a
+    test for the records a draft must not draw on (those outside the area it is about, `areas.outside`); the screens
+    pass none."""
     found: dict[str, list[Item]] = {"promised_to": [], "promised_by": [], "asked_of": [], "asked_by": []}
     for record in view.list("action"):
         d = record.data
-        if d.get("status") != "open":
+        if d.get("status") != "open" or (hide is not None and hide(d)):
             continue
         owners = {o.get("person") for o in d.get("owners") or []}
         promised = list(d.get("promised_to") or [])
@@ -218,6 +228,8 @@ def open_with(view: Any, pm: str | None, person: str, today: date, here: ZoneInf
             found["promised_by"].append(action_item(view, "promised_by", record, today, here))
     for record in view.list("question"):
         d = record.data
+        if hide is not None and hide(d):
+            continue
         if d.get("asker") == person and d.get("to") == pm and d.get("status") == "open":
             found["asked_by"].append(
                 Item(
@@ -388,10 +400,17 @@ def _next_on(month: int, day: int, today: date) -> date | None:
     return None
 
 
-def facts_about(view: Any, people: Any, person: str, cfg: Any, today: date) -> tuple[list[Dated], list[Kept]]:
+def facts_about(
+    view: Any,
+    people: Any,
+    person: str,
+    cfg: Any,
+    today: date,
+    hide: Callable[[Mapping[str, Any]], bool] | None = None,
+) -> tuple[list[Dated], list[Kept]]:
     """The facts the person kept that name this person, split into their dates and what matters to them. A fact the
     assistant only inferred, one from outside content, one someone else said and one that a newer fact replaced are
-    left out."""
+    left out, and so is one `hide` says a draft must not draw on."""
     from engine.today import zone
 
     rules = cfg.steward.people
@@ -404,6 +423,8 @@ def facts_about(view: Any, people: Any, person: str, cfg: Any, today: date) -> t
     for fact in facts:
         d = fact.data
         if fact.id in replaced or d.get("trust") == "untrusted" or d.get("basis") not in (None, "person"):
+            continue
+        if hide is not None and hide(d):
             continue
         if person not in people.mentioned_in(str(d["text"])):
             continue
@@ -440,8 +461,11 @@ def _as_of(data: dict[str, Any], view: Any, fact_id: str, here: ZoneInfo) -> dat
 # ---- the whole page ----------------------------------------
 
 
-def memory(store: Any, cfg: Any, person_id: str, now: datetime) -> Memory | None:
-    """What the records say about one person, or None when there is no such person."""
+def memory(
+    store: Any, cfg: Any, person_id: str, now: datetime, hide: Callable[[Mapping[str, Any]], bool] | None = None
+) -> Memory | None:
+    """What the records say about one person, or None when there is no such person. A draft built from it passes `hide`
+    (the records outside the area it is about), so what it reads stops at that area; the page passes none."""
     from engine.names import People
     from engine.today import zone
 
@@ -452,10 +476,10 @@ def memory(store: Any, cfg: Any, person_id: str, now: datetime) -> Memory | None
     people = People(store, cfg)
     here = zone(cfg)
     today = now.astimezone(here).date()
-    items = open_with(view, cfg.workspace.user.person, person_id, today, here)
+    items = open_with(view, cfg.workspace.user.person, person_id, today, here, hide)
     touch, written_from = last_in_touch(view, cfg, people, person_id, now)
     record_for_touch = touch.record if touch is not None and touch.kind == "from" else None
-    dates, matters = facts_about(view, people, person_id, cfg, today)
+    dates, matters = facts_about(view, people, person_id, cfg, today, hide)
     return Memory(
         person_id,
         str(record.data["full_name"]),

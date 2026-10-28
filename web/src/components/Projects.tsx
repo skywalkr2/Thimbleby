@@ -20,6 +20,7 @@ import { Pill } from "../ui/Pill";
 import { RecordsTable, type TableColumn, type TableGroup } from "../ui/RecordsTable";
 import { Skeleton } from "../ui/Skeleton";
 import { ProjectDrawer } from "./ProjectForm";
+import { RecordConversation } from "./RecordConversation";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Unfiled } from "./Unfiled";
@@ -248,6 +249,7 @@ function ProjectDetail(props: { project: Project; parent?: Project; total: (n: n
           {t("setup.edit")}
         </Button>
       </div>
+      <RecordConversation key={p.id} kind="project" id={p.id} />
     </>
   );
 }

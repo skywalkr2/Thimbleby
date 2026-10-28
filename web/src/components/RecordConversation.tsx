@@ -1,5 +1,5 @@
-// A conversation on a record (design 6.25, 6.32): a box on a to-do, question, person, project or meeting to ask the
-// assistant about it or to ask for something to be done to it. The conversation is kept on the record, oldest first. An
+// A conversation on a record (design 6.25, 6.32): a box on every record that has a page, and in the pane or drawer that shows
+// one, to ask the assistant about it or to ask for something to be done to it. The conversation is kept on the record, oldest first. An
 // answer is prose that shows the words it rests on; when it proposes changes they are listed under it, each kept or
 // dropped here (an applied one is dropped with Undo, one held for the person is kept or dropped). Work above the amount
 // the person asked to be asked about waits for their go, shown with its estimate.
@@ -15,8 +15,23 @@ import { SafeText } from "./SafeText";
 type Turn = S["AskView"];
 type Op = S["OpView"];
 
-/** The kinds of record a conversation can be about. */
-export const CONVERSATION_KINDS: ReadonlySet<string> = new Set(["action", "question", "person", "project", "event"]);
+/** The kinds of record a conversation can be about: every kind that has a page of its own (the engine's list). */
+export const CONVERSATION_KINDS: ReadonlySet<string> = new Set([
+  "action",
+  "question",
+  "person",
+  "organization",
+  "team",
+  "project",
+  "event",
+  "series",
+  "source",
+  "fact",
+  "note",
+  "rule",
+  "lesson",
+  "glossary_entry",
+]);
 
 export function RecordConversation(props: { kind: string; id: string }) {
   const { t } = useWords();

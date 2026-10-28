@@ -1879,6 +1879,26 @@ class ProjectReader(BaseModel):
     leaves: bool = Field(description="Whether reading the material sends it away from this computer to reach it.")
 
 
+class ReaderChoice(BaseModel):
+    """An account the picker on an area's page offers: whether it may read the area now, whether reading sends the
+    material away from this computer, and `locked` when it can't be ticked (`parent`: a level the project above carries
+    keeps it out)."""
+
+    account: str = Field(description="The account's short name.")
+    name: str = Field(description="The name the person gave the account, as it is shown.")
+    reads: bool = Field(description="Whether it may read the area's material now.")
+    leaves: bool = Field(description="Whether reading sends the material away from this computer to reach it.")
+    locked: Literal["parent"] | None = Field(None, description="Why it can't be ticked, when it can't.")
+
+
+class AreaReadersIn(BaseModel):
+    """POST /api/projects/{id}/readers: the accounts that may read the area, as the person ticked them."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    accounts: list[str] = Field(description="The short names of the accounts that may read it; the rest may not.")
+
+
 class ProjectReading(BaseModel):
     """Who may read a project's material (design 6.32): `state` is none (no account may), local (each that may runs
     on this computer) or away (at least one sends what it reads away from this computer). `levels` are the content
@@ -1887,6 +1907,11 @@ class ProjectReading(BaseModel):
     state: Literal["none", "local", "away"]
     levels: list[str]
     readers: list[ProjectReader]
+    choices: list[ReaderChoice] = Field(
+        default_factory=list,
+        description="For an area: every account that could read it, ticked when it may, for the picker on its page. "
+        "Empty for a project that isn't an area.",
+    )
 
 
 class ProjectKnowsView(BaseModel):
@@ -3109,6 +3134,12 @@ class QueueLineView(BaseModel):
         "personal project's or another side's), or none for neither (the screen's side filter shows such lines "
         "under every choice).",
     )
+    area: str | None = Field(
+        None,
+        description="Which area of life the line is in, from its project: the id of that area's project, or none "
+        "for a line in no area, which Today's area filter shows only under All.",
+    )
+    area_name: str | None = Field(None, description="The area's name, for the tag on the line.")
     due: date | None = None
     waiting_days: int | None = None
     waiting: ScreenText | None = Field(None, description="Why the work stopped, in plain words.")
@@ -4840,6 +4871,16 @@ class WatchSourceView(BaseModel):
     color: CalendarColor | None = Field(
         None, description="For a calendar: the color of its mark on the schedule, from a short named list."
     )
+    capture: bool | None = Field(
+        None,
+        description="For a mail source: whether everything it reads is mail the person sent themselves to keep track "
+        "of; the mail in it from their own address is handed in as their own words.",
+    )
+    capture_address: str | None = Field(
+        None,
+        description="For a mail source: an address such as an alias of their own, mail to which from their own address "
+        "is handed in as their own words.",
+    )
     items: int = Field(description="Items it held at the last read.")
     data_level: Literal["open", "internal", "restricted"] | None = Field(
         None, description="How sensitive what it holds is: its items go only to AI accounts allowed this level."
@@ -5944,6 +5985,12 @@ class WatchSourceIn(BaseModel):
         "Required when several are signed in; the only one is used when it is left out.",
     )
     color: CalendarColor | None = Field(None, description="For a calendar: the color of its mark on the schedule.")
+    capture: bool | None = Field(
+        None, description="For a mail source: whether everything it reads is the person's own capture."
+    )
+    capture_address: str | None = Field(
+        None, description="For a mail source: an address mail to which from the person's own address is their capture."
+    )
     service: str | None = Field(
         None,
         description="For a mailbox: a mail service from GET /api/watch/mail-services. Its server, port and sent folder "
@@ -5976,6 +6023,16 @@ class WatchSourceChange(BaseModel):
     )
     color: CalendarColor | None = Field(
         None, description="For a calendar: the color of its mark on the schedule; null, when sent, clears it."
+    )
+    capture: bool | None = Field(
+        None,
+        description="For a mail source: whether everything it reads is the person's own capture (mail in a folder or "
+        "label they move mail to); sent, it is set or cleared.",
+    )
+    capture_address: str | None = Field(
+        None,
+        description="For a mail source: an address mail to which from the person's own address is their capture, such "
+        "as name+capture@example.com; empty, when sent, clears it.",
     )
     data_level: Literal["open", "internal", "restricted"] | None = Field(
         None,
@@ -6888,6 +6945,20 @@ class ActAboutView(BaseModel):
     end: str | None = Field(None, description="For an event, when it ends.")
 
 
+class ActChangeView(BaseModel):
+    """One thing in a stale act that is different now from what the person's yes was given on: the part of the yes it
+    belongs to, the field, and the text then and now (none when it wasn't there)."""
+
+    part: Literal["content", "target", "about", "account", "channel", "template"]
+    field: str = Field(
+        description="The name of a content part, `to` or `cc` for recipients, a target field (calendar, when, folder, "
+        "start, end, title...), or the id of the thing the act is about."
+    )
+    name: str | None = Field(None, description="For a thing the act is about, what it is called.")
+    before: str | None = Field(None, description="What it said when the person said yes; none when it wasn't there.")
+    after: str | None = Field(None, description="What it says now; none when it is gone.")
+
+
 class ActView(BaseModel):
     """One outward act: its exact content and target, its state, the fingerprint a yes would cover and the recipients
     called out."""
@@ -6945,6 +7016,16 @@ class ActView(BaseModel):
     )
     failure: ActFailureView | None = None
     why: list[str] = Field(default_factory=list, description="Codes for why it is stale or uncertain.")
+    changes: list[ActChangeView] = Field(
+        default_factory=list,
+        description="For a stale act: each thing that is different now from what the yes was given on, with both "
+        "texts. Empty when it isn't stale or the yes was given before the exact content was kept.",
+    )
+    changes_known: bool = Field(
+        False, description="Whether the exact content the yes was given on is kept, so `changes` is the whole answer."
+    )
+    approved_before_by: str | None = Field(None, description="For a stale act, whose yes stopped covering it.")
+    approved_before_at: datetime | None = Field(None, description="For a stale act, when that yes was given.")
     service_id: str | None = None
     sent_at: datetime | None = None
     sent_by: Literal["publisher", "person"] | None = None
@@ -6985,6 +7066,19 @@ class ActDraftIn(BaseModel):
     )
     proposed_start: str | None = Field(None, description="The start a proposed new time suggests, as ISO 8601 text.")
     proposed_end: str | None = Field(None, description="The end a proposed new time suggests, as ISO 8601 text.")
+    calendar: str | None = Field(
+        None,
+        description="The calendar a new event goes on; left out for the account's own calendar.",
+    )
+    when: str | None = Field(None, description="The day or time of a new event, when it has no start and end.")
+    start: str | None = Field(
+        None, description="When a new event starts, or the new start of one that is moved, as ISO 8601 text."
+    )
+    end: str | None = Field(
+        None, description="When a new event ends, or the new end of one that is moved, as ISO 8601 text."
+    )
+    title: str | None = Field(None, description="What a new event is called.")
+    alarm_minutes: int | None = Field(None, ge=0, le=40320, description="Minutes before the start an alarm rings.")
 
 
 class ActOptionsView(BaseModel):
@@ -7013,9 +7107,66 @@ class ActOptionsView(BaseModel):
     propose_refusal: str | None = Field(
         None, description="Why proposing another time isn't offered, when it isn't and an answer is."
     )
+    event_actions: list[Literal["move", "cancel"]] = Field(
+        default_factory=list,
+        description="What the person can do to an event that is theirs on a connected calendar (not an invitation "
+        "from someone else, not called off), when acting is on for its account and its channel declares it.",
+    )
     folder_source: str | None = Field(
         None, description="The mail source whose folders GET /api/watch/{source}/folders lists, for Move to."
     )
+    folders_listed: bool = Field(
+        False,
+        description="Whether Move to has a list of the account's folders to pick from. False for an account whose "
+        "service can't be asked for its folders (an add-on's sign-in), where Move to is offered with the folder named "
+        "by the person and the screen says plainly that the account doesn't list its folders.",
+    )
+
+
+class ActBatchIn(BaseModel):
+    """POST /api/acts/batch: the person drafts one change to their mail for several saved messages at once, selected
+    from a list of saved mail. Each message gets its own act, on the account it came in on, all drafted in one change
+    that Undo takes back together; nothing is carried out until the person's one yes (POST /api/acts/batch/send)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["archive", "move", "label", "mark_read"]
+    about: list[str] = Field(min_length=1, description="The saved messages selected.")
+    folder: str | None = Field(None, description="The folder a move puts the messages in.")
+    label: str | None = Field(None, description="The label a label act puts on the messages.")
+
+
+class ActBatchSkipped(BaseModel):
+    """A selected message no act was drafted for, and why (the screen words it)."""
+
+    record: str
+    title: str = ""
+    why: Literal["gone", "no_account", "acting_off", "cannot"] = Field(
+        description="gone: the message isn't saved any more; no_account: it didn't come in through an account that can "
+        "act on it; acting_off: the person hasn't let the assistant act on its account; cannot: the account's service "
+        "doesn't do this."
+    )
+    account_label: str | None = Field(None, description="For acting_off and cannot: the account's name on screen.")
+
+
+class ActBatchView(BaseModel):
+    """The acts drafted for a selection, one for each message that could be acted on, and those that could not."""
+
+    acts: list[ActView]
+    skipped: list[ActBatchSkipped] = Field(default_factory=list)
+    changeset: str | None = Field(None, description="The one change that drafted them all; Undo takes it back.")
+
+
+class ActBatchOptionsView(BaseModel):
+    """GET /api/acts/batch-options: what Move to can offer for a selection of saved messages: the one account they all
+    came in on, and whether it lists its folders. Messages from several accounts get no folder list, because a folder
+    belongs to one account."""
+
+    account: str | None = Field(None, description="The one account every selected message came in on; none otherwise.")
+    account_label: str | None = None
+    several_accounts: bool = Field(False, description="The messages came in on more than one account.")
+    folder_source: str | None = Field(None, description="The mail source whose folders can be listed, for Move to.")
+    folders_listed: bool = False
 
 
 class ActSendOptionsView(BaseModel):
@@ -7048,6 +7199,13 @@ class ActAccountsView(BaseModel):
     accounts: list[ActAccountView]
 
 
+class ActCalendarOptionsView(BaseModel):
+    """GET /api/acts/calendar-options: the connected calendar accounts a new event can be put on after the person's
+    yes: acting is on for the account and its channel declares `calendar: create`. Empty when none can."""
+
+    accounts: list[ActAccountView]
+
+
 class FreeSlotView(BaseModel):
     """A free time to propose: as long as the invitation, starting a gap in the working week."""
 
@@ -7066,6 +7224,12 @@ class ActApproveIn(BaseModel):
 
     fingerprint: str
     acknowledged: list[str] = Field(default_factory=list)
+
+
+class ActYesOne(ActApproveIn):
+    """The person's yes on one of several acts at once: which act, with the fingerprint their screen showed."""
+
+    id: str
 
 
 class DropNoteDone(BaseModel):
@@ -7091,6 +7255,21 @@ class ActResultView(BaseModel):
     status: Literal["draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone"]
     reason: str | None = None
     changeset: str | None = Field(None, description="The change the person's own choice made, which Undo takes.")
+
+
+class ActBatchYesIn(BaseModel):
+    """POST /api/acts/batch/send: the person's one yes on several acts, each with the fingerprint their screen
+    showed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    acts: list[ActYesOne] = Field(min_length=1)
+
+
+class ActBatchResultView(BaseModel):
+    """What the person's one yes did, act by act: each one's state now and, for a failure, the channel's reason."""
+
+    results: list[ActResultView]
 
 
 class ReminderTextView(BaseModel):

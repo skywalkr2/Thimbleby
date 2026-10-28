@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import type { Act } from "../lib/acts";
-import { actFixture, recipient } from "../lib/acts-fixtures";
+import { actFixture, actsAnswer, recipient } from "../lib/acts-fixtures";
 import { reveal, revealOrKeep } from "../lib/reveal";
 import { besidePane, fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
 import { FollowUps } from "./FollowUps";
@@ -18,7 +18,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 function show(acts: Act[], extra: Routes = {}) {
   besidePane();
-  const calls = fakeApi({ "GET acts": () => ({ acts }), "GET followups": () => [], ...extra });
+  const calls = fakeApi({ "GET acts": (_b, q) => actsAnswer(acts, q), "GET followups": () => [], ...extra });
   renderApp(<FollowUps />);
   return { calls };
 }
@@ -295,10 +295,10 @@ describe("an act that went stale", () => {
     const pane = await screen.findByRole("complementary");
     expect(within(pane).getByText(/changed after you approved it: who it goes to and what will be sent/)).toBeInTheDocument();
     expect(within(pane).queryByRole("button", { name: "Approve and send" })).toBeNull();
-    const before = calls.filter((c) => c.route === "GET acts").length;
+    const before = calls.filter((c) => c.route.startsWith("GET acts?")).length;
     await user.click(within(pane).getByRole("button", { name: "Look again" }));
     expect(await within(pane).findByRole("button", { name: "Approve and send" })).toBeInTheDocument();
-    expect(calls.filter((c) => c.route === "GET acts").length).toBeGreaterThan(before);
+    expect(calls.filter((c) => c.route.startsWith("GET acts?")).length).toBeGreaterThan(before);
     expect(within(pane).getByText(/Here is how it reads now/)).toBeInTheDocument();
   });
 
@@ -360,5 +360,67 @@ describe("opened from Today", () => {
     reveal("act", "XACT-2");
     const pane = await screen.findByRole("complementary", { name: "File for Reports" });
     await waitFor(() => expect(pane.contains(document.activeElement)).toBe(true));
+  });
+});
+
+
+describe("the lists ask the server for the states they show", () => {
+  test("Waiting to go out asks for the states that wait, and what went out for the latest ten that went out or were taken back", async () => {
+    const { calls } = show([actFixture()]);
+    await screen.findByRole("list", { name: "Waiting to go out" });
+    const asked = calls.filter((c) => c.route.startsWith("GET acts?")).map((c) => new URLSearchParams(c.route.split("?")[1]));
+    const waiting = asked.find((q) => q.getAll("status").includes("draft"));
+    expect(waiting?.getAll("status").sort()).toEqual(["approved", "draft", "failed", "sending", "stale", "uncertain"]);
+    expect(waiting?.get("limit")).toBeNull();
+    const went = asked.find((q) => q.getAll("status").includes("sent"));
+    expect(went?.getAll("status").sort()).toEqual(["sent", "undone"]);
+    expect(went?.get("limit")).toBe("10");
+    expect(calls.some((c) => c.route === "GET acts")).toBe(false);
+  });
+});
+
+describe("a stale act shows what changed", () => {
+  const stale = (over: Partial<Act> = {}) =>
+    actFixture({
+      status: "stale",
+      why: ["target", "content"],
+      changes_known: true,
+      changes: [
+        { part: "target", field: "to", name: null, before: "ana@example.com", after: "ana.new@example.com" },
+        { part: "content", field: "body", name: null, before: "The proofs ship on Monday.", after: "The proofs ship on Tuesday." },
+      ],
+      ...over,
+    });
+
+  test("each change names its field and gives the words the yes covered and the words now, before the person looks again", async () => {
+    show([stale()]);
+    const pane = await screen.findByRole("complementary");
+    const section = within(pane).getByRole("region", { name: "What changed since you approved it" });
+    const to = section.querySelector('[data-change="target:to"]') as HTMLElement;
+    expect(within(to).getByText("Sent to")).toBeInTheDocument();
+    expect(to.querySelector("[data-before]")).toHaveTextContent("You approved: ana@example.com");
+    expect(to.querySelector("[data-after]")).toHaveTextContent("Now: ana.new@example.com");
+    const body = section.querySelector('[data-change="content:body"]') as HTMLElement;
+    expect(within(body).getByText("Message")).toBeInTheDocument();
+    expect(body.querySelector("[data-before]")).toHaveTextContent("You approved: The proofs ship on Monday.");
+    expect(body.querySelector("[data-after]")).toHaveTextContent("Now: The proofs ship on Tuesday.");
+  });
+
+  test("a thing that was not there says so, and a yes given before the words were kept says only the kind of change is shown", async () => {
+    show([
+      stale({
+        changes_known: false,
+        changes: [],
+      }),
+    ]);
+    const pane = await screen.findByRole("complementary");
+    expect(within(pane).getByText(/before the exact words were kept/)).toBeInTheDocument();
+    expect(within(pane).getByText(/changed after you approved it: who it goes to and what will be sent/)).toBeInTheDocument();
+  });
+
+  test("an act that is not stale shows no list of changes", async () => {
+    show([actFixture()]);
+    const pane = await screen.findByRole("complementary");
+    expect(within(pane).queryByRole("region", { name: "What changed since you approved it" })).toBeNull();
   });
 });

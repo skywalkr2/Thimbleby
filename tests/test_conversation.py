@@ -99,7 +99,7 @@ def test_a_record_that_isnt_there_a_kind_that_cant_be_talked_about_and_no_words_
     _, _, store = env
     with pytest.raises(StoreError, match="no action"):
         conversation.say(store, "action", "ACT-9999", "Hello")
-    with pytest.raises(StoreError, match="to-do, question"):
+    with pytest.raises(StoreError, match="a page of its own"):
         conversation.say(store, "snapshot", "SNAP-1", "Hello")
     with pytest.raises(StoreError, match="Say something"):
         conversation.say(store, "action", ACTION["id"], "   ")

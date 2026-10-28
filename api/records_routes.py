@@ -3,12 +3,15 @@ and a fact that need more than a record's own fields."""
 
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     Applied,
     AreaKeep,
     AreaKept,
+    AreaReadersIn,
     FilingItem,
     FilingKept,
     FilingMove,
@@ -16,22 +19,32 @@ from api.schemas import (
     FilingQuestion,
     FilingQuestions,
     ProjectKnowsView,
+    ProjectReading,
     SeriesPageView,
     UnfiledFile,
     UnfiledItem,
     UnfiledView,
 )
-from engine import areas, filing, project_knows, series_page
+from engine import area_readers, areas, filing, project_knows, series_page
+from engine import settings as config_screens
 from engine import unfiled as unfiled_module
 from engine.applier import apply_as_person
-from engine.config import Config
+from engine.config import Config, ConfigError, load_config
 from engine.storage import Store, StoreError
 from engine.today import zone
 from engine.worker import Events, Worker
+from engine.workspace import Workspace
 
 
-def build_records_router(cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
+def build_records_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
+
+    def current() -> Config:
+        """The settings as the files hold them now; the running app may have started with older ones."""
+        try:
+            return load_config(ws.config_dir, env=dict(os.environ))
+        except ConfigError:
+            return cfg
 
     @r.get("/unfiled")
     def unfiled() -> UnfiledView:
@@ -143,9 +156,56 @@ def build_records_router(cfg: Config, store: Store, events: Events, worker: Work
         """What the assistant knows about a project: where its inputs come from and the last of each, its facts with
         who they rest on and when, the glossary terms used there, who answers what, and what is still unknown with the
         question asked for it."""
-        found = project_knows.knows(store.read(), project_id, cfg)
+        found = project_knows.knows(store.read(), project_id, current())
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no project {project_id}.")
         return ProjectKnowsView(**found)
+
+    @r.post("/projects/{project_id}/readers")
+    def set_area_readers(project_id: str, body: AreaReadersIn) -> ProjectReading:
+        """Say which AI accounts may read an area: the accounts ticked take the area's own level of content and the rest
+        don't (the area gets a level of its own the first time one is left out), the one way content levels already say
+        who reads what. The settings are saved as the person's own change and the area's levels are a recorded edit with
+        Undo; ticking the same accounts again puts it back. Refused for a project that isn't an area, an account that
+        couldn't read one, and an account a level above the area keeps out."""
+        view = store.read()
+        project = view.get("project", project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail=f"There is no project {project_id}.")
+        if not project.data.get("area"):
+            raise HTTPException(status_code=409, detail="Only an area of life has accounts picked for it.")
+        try:
+            made = area_readers.plan(view, current(), project_id, body.accounts)
+        except ValueError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        if made.changes:
+            changes: dict[str, object] = {}
+            if made.new_level is not None:
+                changes["ai.content_levels"] = {**current().ai.content_levels, made.new_level[0]: made.new_level[1]}
+            for name, levels in made.provider_levels.items():
+                changes[f"ai.providers.{name}.content_levels"] = levels
+            try:
+                config_screens.save(
+                    ws,
+                    cfg,
+                    store,
+                    changes=changes,
+                    reset=[],
+                    read_fingerprint=config_screens.fingerprint(ws.config_dir),
+                    env=dict(os.environ),
+                    allow=("ai.providers.", "ai.content_levels"),
+                )
+                if made.project_levels is not None:
+                    op = {
+                        "op": "record.edit",
+                        "record": {"kind": "project", "id": project_id},
+                        "fields": {"content_levels": made.project_levels},
+                        "read_version": project.version,
+                    }
+                    apply_as_person(store, cfg, [op], "Chose who may read an area")
+            except (StoreError, config_screens.SettingsError) as err:
+                raise HTTPException(status_code=409, detail=str(err)) from None
+            events.changed()
+        return ProjectReading(**project_knows.reading_of(store.read(), current(), project_id))
 
     return r

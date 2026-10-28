@@ -226,6 +226,11 @@ def test_the_projects_knows_page_carries_the_reading_line(tmp_path):
             "state": "local",
             "levels": ["private"],
             "readers": [{"account": "localbox", "name": "localbox", "leaves": False}],
+            "choices": [
+                {"account": "stub", "name": "Stand-in account", "reads": False, "leaves": True, "locked": None},
+                {"account": "localbox", "name": "localbox", "reads": True, "leaves": False, "locked": None},
+                {"account": "hosted", "name": "hosted", "reads": False, "leaves": True, "locked": None},
+            ],
         }
         assert all(u["field"] != "target" for u in found["unknown"] if u["kind"] == "field")
     finally:

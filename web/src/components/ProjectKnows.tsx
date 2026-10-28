@@ -4,6 +4,7 @@
 // one thing it changes is a fact the person confirms. Every row is one thing; a part with nothing in it is not shown, and a
 // page with nothing in any part says so in one line. Who reads it is one plain line, never a part of its own.
 import { useQuery } from "@tanstack/react-query";
+import { useAct } from "../lib/act";
 import type { ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { monthDay } from "../lib/dates";
@@ -49,6 +50,36 @@ function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
         {reading.levels.length > 0 && ` ${t("knows.reading.levels", { levels: reading.levels.join(", ") })}`}
       </p>
     </>
+  );
+}
+
+/** The accounts that may read an area, one box each, saved as the person ticks them with Undo (design 6.32). Each says in words
+ * whether reading sends the area's material away from this computer; one the project above keeps out can't be ticked, and says so. */
+function Readers(props: { project: string; name: string; choices: S["ReaderChoice"][] }) {
+  const { t } = useWords();
+  const act = useAct();
+  const reading = props.choices.filter((c) => c.reads).map((c) => c.account);
+  const change = (account: string, on: boolean) => {
+    const next = on ? [...reading, account] : reading.filter((a) => a !== account);
+    void act(
+      () => api.setAreaReaders(props.project, next),
+      () => ({ message: t("knows.readers.changed", { area: props.name }), undo: () => api.setAreaReaders(props.project, reading) }),
+    );
+  };
+  return (
+    <fieldset data-area-readers="">
+      <legend>{t("knows.readers.title")}</legend>
+      <p className="hint">{t("knows.readers.hint")}</p>
+      {props.choices.map((c) => (
+        <div key={c.account}>
+          <label className="check-line">
+            <input type="checkbox" checked={c.reads} disabled={!!c.locked} onChange={(e) => change(c.account, e.target.checked)} />
+            <span>{t("knows.readers.row", { name: c.name, where: t(c.leaves ? "knows.readers.away" : "knows.readers.local") })}</span>
+          </label>
+          {c.locked && <p className="hint">{t("knows.readers.locked")}</p>}
+        </div>
+      ))}
+    </fieldset>
   );
 }
 
@@ -163,6 +194,7 @@ export function ProjectKnows(props: { id: string; plain?: boolean }) {
       {data && (
         <>
           <Reading reading={data.reading} area={data.area} />
+          {data.area && (data.reading.choices ?? []).length > 0 && <Readers project={props.id} name={data.name} choices={data.reading.choices ?? []} />}
           {nothing && <p className="empty">{t("knows.nothing_yet")}</p>}
           <Sources rows={data.sources} />
           <Facts rows={data.facts} />

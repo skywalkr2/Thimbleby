@@ -11,6 +11,7 @@ import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
 import { CoverageLine, useNoneText } from "./Coverage";
+import { AreaFilter } from "./AreaFilter";
 import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
 import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
@@ -92,6 +93,7 @@ export function Today(props: {
       <div className={styles.head}>
         <h1>{t("nav.home")}</h1>
         <SideFilter />
+        <AreaFilter />
         <p>
           {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
             .filter(Boolean)

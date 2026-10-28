@@ -91,6 +91,7 @@ function options(over: Partial<S["ActOptionsView"]> = {}): S["ActOptionsView"] {
     answers: [],
     propose_refusal: null,
     folder_source: "work",
+    folders_listed: true,
     ...over,
   };
 }

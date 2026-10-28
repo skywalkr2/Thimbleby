@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { Act } from "../lib/acts";
-import { actFixture } from "../lib/acts-fixtures";
+import { actFixture, actsAnswer } from "../lib/acts-fixtures";
 import { forgetLine } from "../lib/today";
 import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
@@ -17,7 +17,7 @@ import { Today } from "./Today";
 function show(acts: Act[], extra: Routes = {}) {
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }));
   const calls = fakeApi({
-    "GET acts": () => ({ acts }),
+    "GET acts": (_b, q) => actsAnswer(acts, q),
     "GET today/queue": () => [],
     "GET changes": () => [],
     "GET followups": () => [],

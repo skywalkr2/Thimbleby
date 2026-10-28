@@ -2998,6 +2998,19 @@ class WatchSource(ConfigModel):
         "picked from a short list. The name is always shown as well, so the color is never the only way to tell "
         "calendars apart. Empty: no mark.",
     )
+    capture: bool = Field(
+        False,
+        description="For a mail source: everything it reads is mail you put there for yourself to keep track of (a "
+        "folder or label you move mail to, set where the source reads). Mail in it from one of your own addresses is "
+        "handed in as your own words, like a note you typed; mail from anyone else is read as usual, as outside "
+        "content.",
+    )
+    capture_address: str | None = Field(
+        None,
+        description="For a mail source: an address that mail to is yours to keep track of, such as an alias of your "
+        "own address (name+capture@example.com). Mail to it from one of your own addresses is handed in as your own "
+        "words; mail to it from anyone else, and mail to any other address, is read as usual.",
+    )
     author: str | None = Field(
         None,
         description="Whose work the source holds when it is all one person's or one team's: a person's id (yours "
@@ -3853,6 +3866,14 @@ class ConversationSettings(ConfigModel):
         le=20000,
         description="The most characters of what is written on the record a conversation is about that are sent with "
         "each message.",
+    )
+    history_results: int = Field(
+        5,
+        ge=0,
+        le=20,
+        description="How many older things the workspace already holds (facts, past inputs, records and what the "
+        "assistant has learned) that match what you say in a conversation on a record are found for each message and "
+        "sent as evidence, only at the privacy level the accounts that answer may see. Zero sends none.",
     )
 
 

@@ -916,7 +916,7 @@ S1. **Promises, and how they end:**
 
 S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
 management (not just read only) lets do it"):
-- [ ] [S1b-1] **The publisher, brought forward from phase C4:** every outward act is shown as its exact content and target
+- [x] [S1b-1] **The publisher, brought forward from phase C4:** every outward act is shown as its exact content and target
   (recipients, the calendar and the time), approved by the person, then carried out with a visible status (sent, failed
   with why, undone where the service allows) and written to the ledger. Recipient checks: a new or outside recipient,
   or one taken from untrusted text, is called out before the yes. It calls `outward.check_outgoing` on every draft before
@@ -931,9 +931,18 @@ management (not just read only) lets do it"):
   `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`; the browser test
   `web/e2e/outgoing.spec.ts`. **Built (S1b-2d, change log 190):** the undo toast after a send and Take back in what went
   out, the count of a list and every kind of act in words, the invitation's name on an answer
-  (`web/src/components/OutgoingActs.test.tsx`). **Left:** before-and-after text of a stale act (an act keeps only hashes of
-  what the yes covered), and the screen using the acts list's `status` values and `limit` (it still reads every act and
-  filters).
+  (`web/src/components/OutgoingActs.test.tsx`). **Built (S1b-1, change log 251):** the before-and-after text of a stale act:
+  the yes keeps the exact content and target it was given on (`approved.shown`) and, once the act goes stale, the act
+  keeps that yes as `was_approved`; the act's view then lists each thing that is different now (a content part, the
+  recipients' addresses, a target field, what the act is about, the account, the channel, the template version) with the
+  words then and now, cleared by an edit, a new yes or taking it back; a yes given before the words were kept says only
+  the kind of change (`tests/test_stale_text.py`: `test_a_yes_keeps_the_exact_content_and_target_it_was_given_on`,
+  `test_a_stale_act_keeps_the_yes_it_lost_and_says_what_changed`, `test_a_template_updated_since_the_yes_shows_its_version_then_and_now`,
+  `test_a_new_yes_or_an_edit_or_taking_it_back_clears_what_was_kept`, `test_the_api_lists_what_changed_with_both_texts_for_a_stale_act_only`,
+  `test_a_yes_given_before_the_content_was_kept_still_goes_stale_and_says_so`; `web/src/components/WaitingToGoOut.test.tsx`
+  "a stale act shows what changed"). And Waiting to go out, what went out and Today's act lines ask the server for the
+  states they show (`status`, and `limit` for the latest ten that went out) instead of reading every act
+  (`web/src/components/WaitingToGoOut.test.tsx` "the lists ask the server for the states they show").
 - [ ] [S1b-2] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
@@ -944,22 +953,38 @@ management (not just read only) lets do it"):
   Archive, Move to, Label and Mark as read from a saved message, Send reply on a reply owed, the sent and archive folders as
   pick lists (`tests/test_act_draft_api.py`, `web/src/components/ActsOnRecords.test.tsx`,
   `web/src/components/TodayReplySend.test.tsx`, `web/src/components/Sources.test.tsx`); the browser test
-  `web/e2e/acts-journey.spec.ts` ran green in the full browser run. **Left:** the add-ons' channels; acting on several selected
-  messages at once (no list of saved messages lets the person select any); Move to for a signed-in account (no folder
-  list for one).
+  `web/e2e/acts-journey.spec.ts` ran green in the full browser run. **Built (S1b-2, change log 251):**
+  *several messages at once:* mail ticked in Handled for you (both lists, the saved mail it lists) is archived, moved,
+  labeled or marked read together: one act for each message on the account it came in on, drafted in one change that Undo
+  takes back, shown in a panel with each message and what will be done, and one yes approves and sends each (one that
+  went stale or that the channel refused says why and doesn't stop the others; Undo in the toast takes back each sent one
+  its channel can); a message nothing could be drafted for (it came in no account, acting is off for its account, the
+  account's service doesn't do this) is named with the reason, never left out silently
+  (`tests/test_act_batch.py`, `web/src/components/MailSelection.test.tsx`). *Move to for a signed-in account:* offered
+  when the account's channel declares `move`; the channel API has no folder list, so the screen says plainly that the
+  account doesn't list its folders and takes the folder's name as the person types it, while a plain mailbox still picks
+  from its own list and a selection from several accounts says a folder belongs to one account
+  (`tests/test_act_batch.py::test_move_to_is_offered_for_a_signed_in_account_that_cannot_list_its_folders_and_says_so`,
+  `web/src/components/ActsOnRecords.test.tsx` "Move to for a signed-in account that can't list its folders ...",
+  `web/src/components/MailSelection.test.tsx`). **Left:** the mail add-on (0.1.1) declares `send`, `reply`, `reply_all` and
+  `forward` for messages and `create`, `move`, `cancel` and `answer` for events, and no mailbox changes, so Archive, Move
+  to, Label and Mark as read are not offered for a signed-in account until its add-on declares them (the guide's
+  `registrar.channel` already has `mailbox: archive, move, label, mark_read`; it is a request to the add-on's builder,
+  not a plugin API change); and the owner's live check of the add-on's replies and forwards on a real account.
 - [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): one choice in Settings: in the app's own calendar (local, with an
   alarm; no act), in the person's calendar on a signed-in calendar account (an event with an alarm), or as a reminder
   mail to their own address, the last two approved once per reminder or by a standing yes for reminders. No third-party
   push service. **Built (S1b-2c):** `tests/test_standing_yes.py`, `tests/test_reminder_acts.py`,
-  `web/src/components/ReminderWhere.test.tsx`. **Left:** the calendar form on a real account waits for an add-on whose
-  channel declares `calendar: create`; a companion phone app (iOS and Android) that receives the desktop's reminders is
-  planned after 1.0 (it needs a relay the apps can reach).
-- [ ] [S1b-2] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
+  `web/src/components/ReminderWhere.test.tsx`. **Left:** the owner's check of the calendar form on a real account (the mail
+  add-on, 0.1.1, now declares `calendar: create`, which the reminder event goes through on the account's own calendar);
+  a companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
+  the apps can reach).
+- [x] [S1b-2] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
   new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
-  Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`); sending it
-  waits for the publisher.
+  Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`), and sending it
+  goes through the publisher after the yes.
   **Built so far (S1b-2a):** the calendar acts' actions, an answer addressed to the organizer, and undo of a created event
   (`tests/test_act_actions.py`). **Built (S1b-2b):** the answer's iTIP reply by mail through the core `mailbox` channel
   (`tests/test_mailbox_channel.py::test_an_answer_goes_as_mail_to_the_organizer_with_the_itip_reply_attached`).
@@ -967,7 +992,16 @@ management (not just read only) lets do it"):
   free times of the working week to pick from (`tests/test_act_draft_api.py`,
   `web/src/components/ActsOnRecords.test.tsx`). **Built (cleanup batch):** a Today line in Decide for an invitation waiting for an answer, opening the entry's page where
   Accept, Maybe, Decline and Propose are (`tests/test_invitation_lines.py`, `web/src/components/MeetingPrep.test.tsx`).
-  **Left:** creating, moving and cancelling events (a calendar service's add-on, and their screens).
+  **Built (S1b-2, change log 251):** the screens for creating, moving and cancelling an event on a connected calendar,
+  through the channel's declared `calendar: create`, `move` and `cancel` (the mail add-on, 0.1.1, declares all three, so
+  nothing waits for an add-on): **Put on a calendar** on the Schedule screen (offered only when acting is on for a
+  calendar account whose channel creates events; what, the calendar account to pick, day, start, end and an optional
+  alarm; the event goes on the account's own calendar), and **Move to another time** and **Cancel this event** in the
+  entry page's menu (offered only for an event that is the person's own on a connected calendar: read from one, not an
+  invitation from someone else, not already called off, with acting on). Each drafts an act that opens in Waiting to go
+  out as exact content (the event, its new time, the calendar it goes on) and waits for the yes; one that changed after
+  the yes goes stale and says what changed (`tests/test_act_calendar.py`, `web/src/components/CalendarActs.test.tsx`; the
+  fake channel stands in for the add-on). **Left:** the owner's live check on a real calendar account.
 - [ ] [S1b-2] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
   reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
   the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
@@ -977,8 +1011,11 @@ management (not just read only) lets do it"):
   an account that is off; `acting_scopes` on a sign-in and `POST /api/sign-ins/{name}/start?acting=true`; `act.undo`
   with the channel's `undo(act, service_id)`: `tests/test_act_actions.py` (see design 6.12, "Built (S1b-2a)").
   **Built (S1b-2d, change log 190):** the Settings switch for each account, which starts the sign-in with acting for a
-  signed-in account and saves for a mailbox (`web/src/components/ActingAccounts.test.tsx`). **Left:** asking the service
-  to drop the wider access when acting is turned off, and the guide's section for the mail add-on's builder to confirm.
+  signed-in account and saves for a mailbox (`web/src/components/ActingAccounts.test.tsx`). **Built:** the guide's section for the add-on's builder is what the mail
+  add-on 0.1.1 was built against (its channels declare the acts above). **Left, not buildable now:** asking the service
+  to drop the wider access when acting is turned off (a plugin API change: the sign-in would have to declare how access is
+  narrowed; the plugin API is on hold, so turning acting off stops the core using the wider access and the person signs in
+  again with the reading scopes to give it back, as the guide says).
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*
@@ -1138,7 +1175,7 @@ S4. **What arrives, and where it may go:**
   full future date and the words for a deadline, a renewal or an expiry (language lists), and offers a dated fact held for the
   person's yes (`engine/dated_scan.py`; `tests/test_dated_scan.py::test_a_date_the_assistant_missed_is_held_for_the_persons_yes_and_kept_with_their_yes`,
   `tests/test_dated_scan.py::test_nothing_is_found_from_words_that_are_not_a_full_future_date_with_one_kind_of_day_and_no_doubt`).
-- [ ] [S4] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
+- [x] [S4] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
   them, and **the separation visible:** each area says which account reads it and whether anything leaves the
   computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
   **Personal, decided** (owner, 2026-10-20; design 6.32 "Personal life"): setup makes one Personal project; areas (no end
@@ -1152,9 +1189,20 @@ S4. **What arrives, and where it may go:**
   computer, or that no account may read it; when `steward.areas.propose_after` items filed under Personal itself share a
   word, one Today suggestion offers an area for them and Start files them as the person's own edits (each a correction)
   with Undo (`engine/areas.py`, `tests/test_areas.py`, `web/src/components/TodayArrives.test.tsx`,
-  `web/src/components/ProjectKnows.test.tsx`). **Left:** a per-area allowed-account
-  picker on the page (the levels are set where content levels are), the meeting-prep and people-memory drafts reading the
-  same reach, and the filter "one Today across them, tagged by area".
+  `web/src/components/ProjectKnows.test.tsx`). **Built (S4, change log 251):** *the picker:* an area's page has a box for
+  each account that could read it, ticked when it may, saying in words whether reading sends the area's material away from
+  this computer; a tick is saved as it is made with Undo, through the one way content levels already say who reads what (the
+  area gets a level of its own the first time an account is left out; the ticked accounts take it; a level the project above
+  carries is never changed, and an account it keeps out is shown, locked, with why) (`engine/area_readers.py`,
+  `tests/test_area_readers.py`, `web/src/components/ProjectKnows.test.tsx` "the accounts that may read an area"). *The same
+  reach for the drafts:* the prep note for an entry in an area reads that area's reach (what is open with the people
+  coming, what the last meeting left open, the projects and the knowledge), and `people_memory.memory`, `open_with` and
+  `facts_about` take the same test for any draft built from them; the entry's page and a person's page are the person's own
+  and show everything (`tests/test_area_prep_reach.py`; people memory has no AI draft of its own: it is rules over the
+  records, and the follow-up it drafts quotes only the one promise). *One Today across the areas:* each Today line carries
+  its area (`QueueLineView.area`, `area_name`: its project's area, else the one area every record it names is in), a line is
+  tagged with the area's name while Today's lines are in more than one place, and a choice beside the heading narrows Today
+  to one area, remembered on this browser (`tests/test_today_areas.py`, `web/src/components/TodayAreas.test.tsx`).
 - [ ] [S4] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
   capability, the phone page's capture box; the global shortcut with phase I's menu bar and tray app.
   **Built so far (S4, change log 194):** a capture folder is a source of the core's `capture` kind: what lands in it is
@@ -1164,10 +1212,21 @@ S4. **What arrives, and where it may go:**
   never assumed), estimated from the file's size, held for the person's go above the configured amount, recorded as a run,
   and stopped with "This account can't transcribe" when no account can; its words go on as the person's own note. The
   phone already has a capture box: the full-screen Hand in sheet from the + (`engine/capture.py`, `engine/transcribe.py`,
-  `tests/test_capture.py`, `web/src/lib/queue-words.test.ts`). **Left, waiting for phase I:** the forward-to address and the
-  global shortcut with the menu bar and tray app. **Left:** speech-to-text on the native and command-line adapters (they
-  refuse a voice note, and only the common OpenAI-compatible path takes one), and a browser journey in the end-to-end
-  tests.
+  `tests/test_capture.py`, `web/src/lib/queue-words.test.ts`). **Built (S4, change log 251):** *forward-to through mail:* a
+  watched mail source can be marked as capture, from Connections (the source's Change form, "Your own capture"): either
+  everything it reads is capture (`capture`: a folder or label the person moves mail to, set where the source reads), or
+  mail to an address of theirs (`capture_address`, an alias such as `name+capture@example.com`) is. Mail there from one of
+  the person's own addresses is handed in as their own words, like a note they typed (trusted, authored by them, the
+  subject and body without the header lines, even on a first read taken in quietly); mail there from anyone else, and any
+  other mail the source reads, stays outside content, untrusted (`engine/capture.py`, `engine/watch.py`;
+  `tests/test_capture_mail.py`, `tests/test_capture_mail_setting.py`, `web/src/components/SourcesCapture.test.tsx`).
+  **Left, not buildable now:** the global shortcut with the menu bar and tray app needs the packaged app, so it is built
+  with phase I's first installer. Speech-to-text on the other adapters, said for each: `anthropic-messages` (the native
+  vendor interface has no speech-to-text path), and `cli-agent` (a command-line agent is given a prompt of text and offers
+  no way to hand it sound) refuse a voice note, and only the common OpenAI-compatible path (`openai-compatible`) takes one;
+  a vendor adapter whose service offers speech-to-text will take it the day it has the call
+  (`tests/test_capture.py::test_which_adapters_take_speech_is_decided_for_each_one_and_a_new_adapter_must_be_decided_too`).
+  **Left:** a browser journey in the end-to-end tests.
 
 S5. **Manner and proof:**
 - [x] [S5] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the
@@ -1180,13 +1239,22 @@ S5. **Manner and proof:**
   attention budget's cap, the rest named one each in the brief (`tests/test_open_items.py::test_todays_queue_has_one_line_for_each_stale_to_do`,
   `tests/test_patterns.py::test_the_attention_budgets_cap_decides_how_many_stale_lines_show_and_the_rest_wait_for_the_brief`,
   `web/src/components/SuggestionChoices.test.tsx` "each of several stale to-dos is its own line, and a choice names the line it was made on").
-- [ ] [S5] **Talking to Reginald:** the conversation on a record (plugin question 190) as the way to ask for anything, every
+- [x] [S5] **Talking to Reginald:** the conversation on a record (plugin question 190) as the way to ask for anything, every
   proposed change kept or dropped inline.
   **Built so far (S5, change log 195):** a box on a to-do, question, person, project or calendar entry: each message an
   ask about the record with the earlier exchanges, estimated and held for the go, answered with prose and the changes
   listed under it, each kept or dropped there; kept on the record (`tests/test_conversation.py`,
-  `web/src/components/RecordConversation.test.tsx`). **Left:** the core's search (plugin question 207) bringing older
-  history in, and the box on every screen of a record.
+  `web/src/components/RecordConversation.test.tsx`). **Built (S5, change log 251):** *the box on every screen of a record:* every
+  kind of record that has a page (to-do, question, person, organization, team, project, meeting, series, saved input, fact,
+  note, rule, lesson, glossary entry) has the conversation, on its page, on the series page, and in the pane or drawer that
+  shows a person or a project beside its list (`web/src/components/ConversationEverywhere.test.tsx`,
+  `tests/test_conversation_history.py::test_every_kind_of_record_with_a_page_can_be_talked_about`); a conversation on a
+  saved input also sends its words, marked as outside text when it came from outside. *The core's search (plugin question
+  207):* each message is searched against the facts, past inputs, records and knowledge the workspace holds, the best
+  `steward.conversation.history_results` (5, zero is off) that share the person's words are sent as evidence, at the data
+  level the answering accounts may see, never the record itself, only what a draft about it may draw on (its area's reach),
+  outside text marked, a packet carrying any of it untrusted, and the search logged on the run (what was searched for and
+  what was sent) (`engine/conversation.py::history`, `tests/test_conversation_history.py`).
 - [x] [S5] **The core reads as a daily assistant:** screens, prompts and help audited for project-manager wording; what is
   PM-only is listed for the PM pack (phase P). **Built (S5, change log 195):** the wording sheet, the prompts, the
   playbook guidance, the guide and the settings descriptions say "you", "the user" or "the person"; the PM-only concepts

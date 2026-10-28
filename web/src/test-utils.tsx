@@ -8,7 +8,8 @@ import { ToastProvider } from "./lib/toasts";
 import { WordingProvider } from "./lib/wording";
 import { OwnRequestsProvider } from "./components/HandIn";
 
-export type Routes = Record<string, (body: unknown) => unknown>;
+/** A route's handler gets the request's body and its query. A route written without a query answers the same path with one. */
+export type Routes = Record<string, (body: unknown, query?: URLSearchParams) => unknown>;
 
 /** Return this from a route to answer with a refusal, as the server does: a status and its text. */
 export class Refuse {
@@ -27,10 +28,11 @@ export function fakeApi(routes: Routes) {
     // JSON bodies are parsed for the handler; a file's bytes are passed as they are.
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : init?.body;
     calls.push({ route, body, headers: init?.headers });
-    const handler = routes[route];
+    const [bare, query] = path.split("?");
+    const handler = routes[route] ?? (query !== undefined ? routes[`${init?.method ?? "GET"} ${bare}`] : undefined);
     if (!handler) return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
     // A handler may answer later (a promise), to stand for a slow server.
-    const answer = await handler(body);
+    const answer = await handler(body, new URLSearchParams(query ?? ""));
     if (answer instanceof Refuse) return new Response(JSON.stringify({ detail: answer.detail }), { status: answer.status, headers: answer.headers });
     return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
   });

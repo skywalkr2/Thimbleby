@@ -20,6 +20,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { Organizations } from "./Organizations";
 import styles from "./People.module.css";
 import { PersonDrawer } from "./PersonForm";
+import { RecordConversation } from "./RecordConversation";
 import { SideFilter } from "./SideFilter";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
@@ -214,6 +215,7 @@ function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: R
           {t("setup.edit")}
         </Button>
       </div>
+      <RecordConversation key={p.id} kind="person" id={p.id} />
     </>
   );
 }

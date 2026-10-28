@@ -15,14 +15,30 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from engine.names import People
 from engine.record_page import _HIDDEN, display_name
 from engine.storage import StoreError, WriteContext
 
-#: The records a conversation can be about.
-KINDS = ("action", "question", "person", "project", "event")
+#: The records a conversation can be about: every kind of record that has a page of its own.
+KINDS = (
+    "action",
+    "question",
+    "person",
+    "organization",
+    "team",
+    "project",
+    "event",
+    "series",
+    "source",
+    "fact",
+    "note",
+    "rule",
+    "lesson",
+    "glossary_entry",
+)
 _ASK = WriteContext(actor="pm", trust="trusted", op="conversation.say")
 _PERSON = re.compile(r"^[A-Z]+-\d+$")
 #: How much of one answer is repeated to the assistant in a recent exchange.
@@ -35,7 +51,7 @@ def say(store: Any, kind: str, record_id: str, message: str) -> str:
     if not words:
         raise StoreError("Say something to ask.")
     if kind not in KINDS:
-        raise StoreError("A conversation can be about a to-do, question, person, project or calendar entry.")
+        raise StoreError("A conversation can be about a record that has a page of its own.")
     with store.transaction() as tx:
         if tx.get(kind, record_id) is None:
             raise StoreError(f"There is no {kind} {record_id}.")
@@ -114,6 +130,78 @@ def record_text(store: Any, cfg: Any, kind: str, record_id: str) -> str:
             continue
         lines.append(f"{key}: {_short(_value(view, people, value), 300)}")
     return _cut("\n".join(lines), cfg.steward.conversation.record_chars)
+
+
+def saved_text(ws: Any, store: Any, cfg: Any, kind: str, record_id: str) -> tuple[str, bool]:
+    """The words of a saved input a conversation is about (a message, a note, a document), cut at
+    `steward.conversation.record_chars`, and whether they came from outside. Empty for any other record."""
+    found = store.read().get(kind, record_id) if kind == "source" else None
+    if found is None:
+        return "", False
+    path = ws.sources_dir / f"{found.data['content_hash']}.txt"
+    try:
+        words = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return "", False
+    return _cut(words, cfg.steward.conversation.record_chars), found.data.get("trust") == "untrusted"
+
+
+@dataclass(frozen=True)
+class History:
+    """The older things a message found: the lines for the packet, whether any came from outside, and the log entry
+    (what was searched for and which results were sent) for the run's knowledge log."""
+
+    text: str
+    untrusted: bool
+    log: dict[str, Any]
+
+
+def history(ws: Any, store: Any, cfg: Any, request: Any, kind: str, record_id: str, level: str) -> History | None:
+    """What the workspace already holds that matches what the person said about this record, as evidence for the answer:
+    the core's own search over facts, past inputs, records and what has been learned, at the privacy level the answering
+    accounts may see, limited to what a draft about the record may draw on (its area), without the record itself or the
+    saved input it is. At most `steward.conversation.history_results`; None when that is zero or nothing matches."""
+    from engine import areas
+    from engine import search as workspace_search
+
+    limit = cfg.steward.conversation.history_results
+    view = store.read()
+    found = view.get(kind, record_id)
+    if not limit or found is None:
+        return None
+    project = record_id if kind == "project" else found.data.get("project")
+    reach = areas.reach(view, [project])
+    # What the person said is what is searched for: the record itself is already in front of the assistant.
+    words = str(request.data.get("note") or "").strip()
+    query = workspace_search.Query(words=words, projects=tuple(sorted(reach)) if reach is not None else ())
+    # A result must share at least two of the person's words (one when they used only one), so that a word everyone uses
+    # doesn't bring in what has nothing to do with the question.
+    enough = min(2, len(workspace_search.words_of(words)))
+    hits = workspace_search.search(
+        ws,
+        store,
+        query,
+        limit=limit * 3 + 1,
+        level=level,
+        exclude_sources=[record_id] if kind == "source" else (),
+    )
+    hits = [h for h in hits if (h.record_kind, h.id) != (kind, record_id) and h.matched >= enough][:limit]
+    entry = {
+        "words": words,
+        "kinds": list(query.kinds),
+        "projects": list(query.projects),
+        "results": len(hits),
+        "sent": [h.id for h in hits],
+    }
+    if not hits:
+        return History("", False, entry)
+    lines = []
+    for hit in hits:
+        said = f"{hit.id} ({workspace_search._label(hit)}): {hit.text}"
+        if hit.replaced_by:
+            said += f" Replaced by {hit.replaced_by}: {hit.replaced_text}"
+        lines.append(f'- <untrusted source="{hit.id}">{said}</untrusted>' if hit.untrusted else f"- {said}")
+    return History("\n".join(lines), any(h.untrusted for h in hits), entry)
 
 
 def _cut(text: str, chars: int) -> str:

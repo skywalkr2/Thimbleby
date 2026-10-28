@@ -1821,13 +1821,41 @@ for it, that nothing goes out without the PM approving that exact content, alrea
         `web/src/components/ActingAccounts.test.tsx`, `web/src/components/Sources.test.tsx` ("a mailbox's folders"),
         `web/src/components/ReminderWhere.test.tsx` ("Undo after giving the yes ..."); the browser test
         `web/e2e/acts-journey.spec.ts` (ran green in the full browser run).
-    - **Not built (S1b-2):** the add-ons' channels; asking the service to drop the wider access when acting is turned off;
-      an invitation line on Today (an invitation is answered from its calendar entry); acting on several selected
-      messages at once (the API takes a list in `about`, but no list of saved messages lets the person select any);
-      Move to for a signed-in account (the API has no folder list for one); before-and-after text for a stale act (an act
-      keeps only the hashes of what the yes covered); the engine's queue ranking the act lines; the follow-up message
-      moving onto acts (Copy still works as it did); and calling `outward.check_outgoing` for the first export a person
-      hands to someone else.
+    - **Built (S1b-1 and S1b-2, change log 251):**
+      - *What a stale act changed.* `approved.shown` keeps the exact content and target the yes was given on (the
+        content by part, each recipient's address as it resolved, the other target fields, what the act is about as it
+        stood, the account, the channel, the template and its version); when the act goes stale (`act.stale`, or an
+        `act.resend` that finds a difference) the yes it loses is kept as `was_approved` until an edit, a new yes or taking
+        it back clears it. `ActView.changes` sets it against the act now, one entry for each thing that differs (a content
+        part, `to`, `cc`, a target field, a thing the act is about, the account, the channel, the template), each with the
+        words then and now, and `changes_known` says whether the words were kept (a yes given before they were kept names
+        only the kind of change). `tests/test_stale_text.py`.
+      - *The lists ask for what they show.* Waiting to go out, what went out (the latest ten) and Today's act lines read
+        `GET /api/acts` with `status` and `limit`, never every act.
+      - *Several messages at once.* From a list of saved mail (Handled for you), the person ticks messages and chooses
+        Archive, Move to, Label or Mark as read. `POST /api/acts/batch` drafts one act for each message, on the account it
+        came in on, in one change that Undo takes back; a message nothing can be drafted for (it came in no account, acting
+        is off for its account, the account's service doesn't do it, it is gone) is returned in `skipped` with a code the
+        screen words, never dropped silently. The panel shows each message and what will be done; the person's one yes
+        (`POST /api/acts/batch/send`) approves each act as its own (its own change in the ledger) and the publisher sends
+        each in turn; one that is different from what was shown, that the channel refuses or that goes stale says why and
+        stops nothing else; Undo in the toast takes back each sent act its channel can. `tests/test_act_batch.py`.
+      - *Move to for a signed-in account.* Offered when the account's channel declares `move`. The channel API has no folder
+        list, so the screen says plainly that the account doesn't list its folders (`ActOptionsView.folders_listed`) and
+        takes the folder's name as typed; a plain mailbox still picks from its own folders, and a selection from several
+        accounts is refused a folder (`GET /api/acts/batch-options`), a folder belonging to one account.
+      - *Events.* `POST /api/acts` takes `calendar`, `when`, `start`, `end`, `title` and `alarm_minutes`; a new event with no
+        calendar named goes on the account's own calendar. `GET /api/acts/calendar-options` lists the connected calendar
+        accounts a new event can go on (acting on, its channel declares `create`). `ActOptionsView.event_actions` offers
+        `move` and `cancel` for an event that is the person's own (read from a connected calendar, not called off, not an
+        invitation from someone else unless they organize it) when acting is on and the channel declares them. The screens
+        are **Put on a calendar** (Schedule) and **Move to another time** and **Cancel this event** (the entry's page); each
+        opens its act in Waiting to go out as exact content and waits for the yes. `tests/test_act_calendar.py`.
+    - **Not built (S1b-2):** Archive, Move to, Label and Mark as read for a signed-in account, until its add-on declares them
+      (the mail add-on 0.1.1 declares the four message acts and the four event acts only); asking the service to drop the
+      wider access when acting is turned off (a plugin API change, on hold); the engine's queue ranking the act lines; the
+      follow-up message moving onto acts (Copy still works as it did); and calling `outward.check_outgoing` for the first
+      export a person hands to someone else.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
   doesn't show. Never show an empty "+0 −0" draft.
 - **The send step refuses the assistant's name** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): content
@@ -3402,9 +3430,19 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
   listed under it, each kept or dropped there: an applied one is dropped with Undo of that op, a held one is kept or
   dropped (so every drop records its signal), and Keep all marks the whole change looked over. The conversation is kept on
   the record (`GET /api/records/{kind}/{id}/conversation`, oldest first) and is not in the general Ask list. There is no
-  new write path: the ask's changeset goes through the applier. **Left:** the core's search (plugin question 207)
-  bringing older history in, and the box on every screen of a record. `tests/test_conversation.py`,
-  `web/src/components/RecordConversation.test.tsx`.
+  new write path: the ask's changeset goes through the applier. **Built (change log 251):** the box is on every kind of
+  record that has a page (`conversation.KINDS`: to-do, question, person, organization, team, project, meeting, series, saved
+  input, fact, note, rule, lesson, glossary entry), on its page and in the pane or drawer beside a list of people or
+  projects; a conversation on a saved input also sends its words (marked as outside text when it came from outside). Each
+  message is searched against the workspace with the core's own search (`engine/search.py`, plugin question 207): the
+  facts, past inputs, records and knowledge that share at least two of the person's words (one when they used one), at most
+  `steward.conversation.history_results` (5; zero is off), at the data level the answering accounts may see, never the
+  record itself or its own saved input, limited to what a draft about the record may draw on (its area's reach, 6.32),
+  sent as evidence under "Older things the workspace already holds that may matter" with outside text marked, the packet
+  untrusted when any of it is outside, and the search logged on the run's knowledge log (`pack_searches`: what was
+  searched for, the places, how many came back and which were sent). `tests/test_conversation.py`,
+  `tests/test_conversation_history.py`, `web/src/components/RecordConversation.test.tsx`,
+  `web/src/components/ConversationEverywhere.test.tsx`.
 - **A question handed in as a note becomes an ask.** When the person's own note, with nothing pasted, is a question to the
   assistant, the notes run answers `"ask": true` with no ops, and the same request becomes an ask. Only a trusted request
   with no source qualifies; pasted or outside material never turns into an ask.
@@ -3805,10 +3843,21 @@ people and details, and never acts in their name without their yes on the exact 
       adapter sends it to the speech path of the endpoint; the native and command-line adapters refuse it.
     - *The phone.* The Hand in sheet from the + already is the phone's capture box (7.6), and it takes a dropped voice
       note too.
-  - **Left:** the forward-to address and the global shortcut wait for phase I; a booking in mail read through a connector
+  - **Built (S4, forward-to through mail; change log 251):** a watched mail source can be marked as capture, from Connections
+    (the source's Change form, "Your own capture"), by two settings on the source: `capture` (everything it reads is
+    capture: a folder or label the person moves mail to, set where the source reads) and `capture_address` (mail to an
+    address of theirs, an alias such as `name+capture@example.com`, in To or Cc, in any case). Only a source that reads mail
+    takes either, and the address must look like one. Mail there from one of the person's own addresses (`workspace.user.
+    accounts` and the accounts they signed in with, never the app's) is handed in as their own words through the same
+    hand-in as a capture folder (trusted, authored by them, the subject and body without the header lines, `capture:mail`),
+    on the first read too, even while the rest of a first read is taken in quietly; its snapshot is closed with the mark
+    `capture`, so Today's inbox leaves it out and no later read hands it in again. Mail there from anyone else, and any
+    other mail the source reads, goes through the ordinary comparison as outside content, untrusted.
+    `engine/capture.py`, `engine/watch.py`, `tests/test_capture_mail.py`, `tests/test_capture_mail_setting.py`.
+  - **Left:** the global shortcut waits for phase I (it needs the packaged app); a booking in mail read through a connector
     (connectors hand over plain text, so only markup in a pasted or dropped message is read until one carries it); dated
-    a fact's reminder delivered through the person's own calendar or mail; speech-to-text on the native and command-line
-    adapters.
+    a fact's reminder delivered through the person's own calendar or mail; speech-to-text, which the native adapter's service
+    and a command-line agent don't offer and so refuse (`tests/test_capture.py` decides it for each adapter).
   - **Built (S4, dates by rules alone; change log 250):** when the assistant's reading of an input missed one, a pass over
     its new text (never quoted history, a signature, an automated notice or the person's own words) finds a sentence with
     exactly one full future date and the words of one kind of day from the language lists (`dated_deadline_words`,
@@ -4004,8 +4053,26 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     *The reach:* a packet for an input or a draft about a project in an area leaves out the facts, lessons, glossary and
     routing entries scoped to another area, and the open actions, open questions and projects of every project outside
     the area, the projects inside it and the projects above it (`engine/areas.reach`, used by `_learned`, the notes
-    packet and the action-work packet). A record that names no project is not an area's and is not left out. The
-    meeting-prep and people-memory drafts do not read it yet. `tests/test_areas.py`.
+    packet and the action-work packet). A record that names no project is not an area's and is not left out.
+    `tests/test_areas.py`.
+    - **Built (S4, change log 251):** *the same reach for the meeting-prep note:* for an entry in an area, what is open with
+      the people coming, what the last meeting left open, the projects and the knowledge are limited to the area's reach
+      (`meeting_prep.prep(..., hide)`, `facts`, `build`); `people_memory.memory`, `open_with` and `facts_about` take the same
+      test for any draft built from them. Their screens (the entry's page, a person's page) pass none: they are the
+      person's own. People memory has no AI draft of its own, and the follow-up it drafts quotes one promise.
+      `tests/test_area_prep_reach.py`.
+    - *Who may read an area* is a picker on its page: a box for each account that could read it, saying in words whether
+      reading sends its material away from this computer. It is the content levels seen from the accounts: the area gets a
+      level of its own (`area-<name>`, described by its name) the first time an account is left out, the ticked accounts
+      take it (an account that took every level gets an explicit list without it), and unticking everyone leaves "no
+      account may read it". A level the project above carries is never changed: an account it keeps out is shown, locked,
+      with why. `POST /api/projects/{id}/readers` (the accounts that may read it) saves the settings as the person's own
+      change and the area's levels as a recorded edit; asking for the same accounts again puts it back, which is the
+      toast's Undo. `engine/area_readers.py`, `tests/test_area_readers.py`.
+    - *One Today across the areas, tagged by area:* each line of Today's queue carries the area of its project (else the one
+      area every record it names is in); while the lines are in more than one place each line says its area, and a choice
+      beside the heading, All areas or one area, narrows Today to it, remembered on the browser; a line in no area shows
+      under All only. `engine/areas.area_of_line`, `QueueLineView.area`, `tests/test_today_areas.py`.
   - **Offering an area:** when `steward.areas.propose_after` (4; zero is off) open items filed under the Personal project
     itself share a word (matched whole, stems folded, never a word the language uses every day, never one a project
     already names), one Today suggestion offers a new area named for the word ("File 4 items under a new area,

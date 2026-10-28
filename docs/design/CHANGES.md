@@ -1027,6 +1027,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 251. The steward's remaining items, group two: what a stale act changed, several messages at once, events on a connected calendar, who reads an area, forward-to through mail, the box on every record (2026-10-28; S1b, S4, S5)
+
+| Where | Before | Now |
+|---|---|---|
+| A stale act (6.12) | The act kept only hashes of what the yes covered, and said which part changed | The yes keeps the exact content and target it was given on and a stale act keeps that yes, so it lists each thing that differs with the words then and now. Built: `tests/test_stale_text.py` |
+| The acts lists (7.4) | Waiting to go out read every act and filtered | They ask `GET /api/acts` for the states they show, with `limit` for what went out. Built: `web/src/components/WaitingToGoOut.test.tsx` |
+| Mail changes (6.12) | One act for one message, or several messages in one act with nothing to select them from | Ticked saved mail in Handled for you: one act for each message on its own account, in one change with Undo, one yes for all, a reason for each message skipped. Built: `tests/test_act_batch.py`, `web/src/components/MailSelection.test.tsx` |
+| Move to (6.12) | Only for a plain mailbox | Also for an account whose channel declares `move`, saying plainly that it doesn't list its folders. Built: `tests/test_act_batch.py` |
+| Events (6.12, 7.4) | The channel could create, move and cancel; no screen asked | Put on a calendar, Move to another time, Cancel this event, each an act shown as exact content that waits for the yes. Built: `tests/test_act_calendar.py`, `web/src/components/CalendarActs.test.tsx` |
+| Who reads an area (6.32) | Said on the page; set only as content levels | A box for each account on the area's page, saved as made with Undo, through the same content levels. Built: `tests/test_area_readers.py` |
+| The meeting-prep note (6.32) | Read everything open with the people coming | Reads the entry's area reach; people memory takes the same test for any draft. Built: `tests/test_area_prep_reach.py` |
+| Today (6.32, 7.7) | One Today, no area on a line | Each line tagged by its area and a choice of area beside the heading. Built: `tests/test_today_areas.py`, `web/src/components/TodayAreas.test.tsx` |
+| Capture (6.32) | A capture folder only | A mail source marked as capture (a folder or label, or an address of the person's own): their own mail there is their own words, anyone else's stays outside content. Built: `tests/test_capture_mail.py`, `tests/test_capture_mail_setting.py` |
+| Talking to the assistant (6.25, 6.32) | A box on five kinds of record; no history | A box on every kind of record with a page and in the panes beside People and Projects; each message brings the best older matches from the core's search as evidence, at the accounts' data level and the area's reach. Built: `tests/test_conversation_history.py`, `web/src/components/ConversationEverywhere.test.tsx` |
+| Not built now, said with why (roadmap S1b, S4) | "Waits for an add-on" | The mail add-on 0.1.1 declares the message and event acts, so the roadmap no longer waits for it; mailbox changes for a signed-in account wait for the add-on to declare them; dropping the wider access waits for a plugin API change (on hold); the global shortcut and tray need phase I's packaged app; speech-to-text stays with the OpenAI-compatible path, the native adapter's service and command-line agents having none |
+
 ## 250. The steward's remaining items: the invitation's page, dates in the brief, effort for a new to-do, dismissals that teach, a line for each stale to-do, review time everywhere, capture and undo, who asked, dates by rules (2026-10-28; S2 to S5)
 
 | Where | Before | Now |

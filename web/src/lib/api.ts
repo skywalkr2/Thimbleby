@@ -56,8 +56,25 @@ export const api = {
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
   widenSource: (src: string, body: S["SourceWiden"]) => call<S["Applied"]>("POST", `sources/${id(src)}/widen`, body),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
-  /** The outward acts (a message, a calendar entry, a file waiting to go out), newest first; all states, filtered by the caller. */
-  acts: () => call<S["ActListView"]>("GET", "acts"),
+  /** The outward acts (a message, a calendar entry, a file waiting to go out), newest first; the server keeps to the states asked for
+   * and to at most `limit`. */
+  acts: (want: { status?: readonly string[]; limit?: number } = {}) => {
+    const q = new URLSearchParams();
+    (want.status ?? []).forEach((s) => q.append("status", s));
+    if (want.limit) q.set("limit", String(want.limit));
+    const text = q.toString();
+    return call<S["ActListView"]>("GET", text ? `acts?${text}` : "acts");
+  },
+  /** The connected calendar accounts a new event can be put on after the person's yes. */
+  actCalendarOptions: () => call<S["ActCalendarOptionsView"]>("GET", "acts/calendar-options"),
+  /** Say which AI accounts may read an area; the answer is who reads it now. */
+  setAreaReaders: (project: string, accounts: string[]) => call<S["ProjectReading"]>("POST", `projects/${id(project)}/readers`, { accounts }),
+  /** One change to the mail for several selected saved messages: an act for each, drafted in one change; nothing is carried out. */
+  draftActBatch: (body: S["ActBatchIn"]) => call<S["ActBatchView"]>("POST", "acts/batch", body),
+  /** The person's one yes on several acts: each is approved and sent in turn, and each says how it went. */
+  sendActBatch: (body: S["ActBatchYesIn"]) => call<S["ActBatchResultView"]>("POST", "acts/batch/send", body),
+  /** The one account the selected messages came in on and whether it lists its folders, for Move to. */
+  actBatchOptions: (records: string[]) => call<S["ActBatchOptionsView"]>("GET", `acts/batch-options?${records.map((r) => `record=${id(r)}`).join("&")}`),
   /** One act, as its list line reads it. */
   readAct: (a: string) => call<S["ActView"]>("GET", `acts/${id(a)}`),
   /** The person drafts an act (a reply, a change to their mail, an answer to an invitation); nothing is sent. */

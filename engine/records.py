@@ -2228,7 +2228,9 @@ class RunKnowledge(BaseModel):
     )
     searches: list[RunSearch] = Field(default_factory=list, description="The searches it asked for.")
     pack_searches: list[PackSearch] = Field(
-        default_factory=list, description="The searches the add-on's own packet function made while building it."
+        default_factory=list,
+        description="The searches made while building its packet: the add-on's own packet function's, or the core's "
+        "for the older history a conversation on a record brings in.",
     )
     trimmed_chars: int = Field(
         0,
@@ -2530,6 +2532,24 @@ class ActApproval(BaseModel):
         None,
         description="Set when the yes is the person's standing yes for reminders rather than their click on this act.",
     )
+    shown: dict[str, Any] | None = Field(
+        None,
+        description="The exact content and target the yes was given on, in plain values (see `engine/acts.py`), kept "
+        "so that an act gone stale can say what is different now. None on a yes given before it was kept.",
+    )
+
+
+class ActWasApproved(BaseModel):
+    """What a yes covered, kept after the act went stale: who gave it, when, and the exact content and target it was
+    given on, so the screen can show what changed since."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    by: Annotated[str, RefTo("person")] = Field(description="The person who said yes.")
+    at: AwareDatetime = Field(description="When they said it.")
+    shown: dict[str, Any] | None = Field(
+        None, description="The content and target the yes was given on; None for a yes given before it was kept."
+    )
 
 
 class ActFailure(BaseModel):
@@ -2574,6 +2594,11 @@ class Act(Record):
     )
     approved: ActApproval | None = Field(
         None, description="The person's yes; cleared by an edit or when it goes stale."
+    )
+    was_approved: ActWasApproved | None = Field(
+        None,
+        description="The yes that stopped covering the act, kept while it is stale so the screen can show what "
+        "changed; cleared by an edit, a new yes or taking it back.",
     )
     attempt_key: str | None = Field(None, description="The key the channel was called with for the latest attempt.")
     attempt_at: AwareDatetime | None = Field(None, description="When the latest attempt started.")

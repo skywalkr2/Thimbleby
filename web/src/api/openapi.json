@@ -169,6 +169,310 @@
         "title": "ActApproveIn",
         "type": "object"
       },
+      "ActBatchIn": {
+        "additionalProperties": false,
+        "description": "POST /api/acts/batch: the person drafts one change to their mail for several saved messages at once, selected\nfrom a list of saved mail. Each message gets its own act, on the account it came in on, all drafted in one change\nthat Undo takes back together; nothing is carried out until the person's one yes (POST /api/acts/batch/send).",
+        "properties": {
+          "about": {
+            "description": "The saved messages selected.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "About",
+            "type": "array"
+          },
+          "action": {
+            "enum": [
+              "archive",
+              "move",
+              "label",
+              "mark_read"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The folder a move puts the messages in.",
+            "title": "Folder"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The label a label act puts on the messages.",
+            "title": "Label"
+          }
+        },
+        "required": [
+          "action",
+          "about"
+        ],
+        "title": "ActBatchIn",
+        "type": "object"
+      },
+      "ActBatchOptionsView": {
+        "description": "GET /api/acts/batch-options: what Move to can offer for a selection of saved messages: the one account they all\ncame in on, and whether it lists its folders. Messages from several accounts get no folder list, because a folder\nbelongs to one account.",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one account every selected message came in on; none otherwise.",
+            "title": "Account"
+          },
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "folder_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The mail source whose folders can be listed, for Move to.",
+            "title": "Folder Source"
+          },
+          "folders_listed": {
+            "default": false,
+            "title": "Folders Listed",
+            "type": "boolean"
+          },
+          "several_accounts": {
+            "default": false,
+            "description": "The messages came in on more than one account.",
+            "title": "Several Accounts",
+            "type": "boolean"
+          }
+        },
+        "title": "ActBatchOptionsView",
+        "type": "object"
+      },
+      "ActBatchResultView": {
+        "description": "What the person's one yes did, act by act: each one's state now and, for a failure, the channel's reason.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ActResultView"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "ActBatchResultView",
+        "type": "object"
+      },
+      "ActBatchSkipped": {
+        "description": "A selected message no act was drafted for, and why (the screen words it).",
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For acting_off and cannot: the account's name on screen.",
+            "title": "Account Label"
+          },
+          "record": {
+            "title": "Record",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "why": {
+            "description": "gone: the message isn't saved any more; no_account: it didn't come in through an account that can act on it; acting_off: the person hasn't let the assistant act on its account; cannot: the account's service doesn't do this.",
+            "enum": [
+              "gone",
+              "no_account",
+              "acting_off",
+              "cannot"
+            ],
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record",
+          "why"
+        ],
+        "title": "ActBatchSkipped",
+        "type": "object"
+      },
+      "ActBatchView": {
+        "description": "The acts drafted for a selection, one for each message that could be acted on, and those that could not.",
+        "properties": {
+          "acts": {
+            "items": {
+              "$ref": "#/components/schemas/ActView"
+            },
+            "title": "Acts",
+            "type": "array"
+          },
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one change that drafted them all; Undo takes it back.",
+            "title": "Changeset"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/ActBatchSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acts"
+        ],
+        "title": "ActBatchView",
+        "type": "object"
+      },
+      "ActBatchYesIn": {
+        "additionalProperties": false,
+        "description": "POST /api/acts/batch/send: the person's one yes on several acts, each with the fingerprint their screen\nshowed.",
+        "properties": {
+          "acts": {
+            "items": {
+              "$ref": "#/components/schemas/ActYesOne"
+            },
+            "minItems": 1,
+            "title": "Acts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acts"
+        ],
+        "title": "ActBatchYesIn",
+        "type": "object"
+      },
+      "ActCalendarOptionsView": {
+        "description": "GET /api/acts/calendar-options: the connected calendar accounts a new event can be put on after the person's\nyes: acting is on for the account and its channel declares `calendar: create`. Empty when none can.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ActAccountView"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "ActCalendarOptionsView",
+        "type": "object"
+      },
+      "ActChangeView": {
+        "description": "One thing in a stale act that is different now from what the person's yes was given on: the part of the yes it\nbelongs to, the field, and the text then and now (none when it wasn't there).",
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it says now; none when it is gone.",
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it said when the person said yes; none when it wasn't there.",
+            "title": "Before"
+          },
+          "field": {
+            "description": "The name of a content part, `to` or `cc` for recipients, a target field (calendar, when, folder, start, end, title...), or the id of the thing the act is about.",
+            "title": "Field",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a thing the act is about, what it is called.",
+            "title": "Name"
+          },
+          "part": {
+            "enum": [
+              "content",
+              "target",
+              "about",
+              "account",
+              "channel",
+              "template"
+            ],
+            "title": "Part",
+            "type": "string"
+          }
+        },
+        "required": [
+          "part",
+          "field"
+        ],
+        "title": "ActChangeView",
+        "type": "object"
+      },
       "ActDraftIn": {
         "additionalProperties": false,
         "description": "POST /api/acts: the person drafts an act (a reply, a change to their mail, an answer to an invitation) on a saved\nmessage or a calendar entry. `kind` and `action` say what it does and `about` what it is about; `account` is left\nout to use the account the message or entry came in on. A reply or reply all with no `recipients` goes to the\nmessage's sender (reply all: and everyone else on it but the person). The channel is the one that serves the\naccount; when acting is off for the account, Copy carries it and the answer says so (`copied_because`).",
@@ -205,6 +509,20 @@
             "description": "What it does: reply, reply_all, forward or send; archive, move, label or mark_read; answer.",
             "title": "Action"
           },
+          "alarm_minutes": {
+            "anyOf": [
+              {
+                "maximum": 40320.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Minutes before the start an alarm rings.",
+            "title": "Alarm Minutes"
+          },
           "answer": {
             "anyOf": [
               {
@@ -222,6 +540,30 @@
             ],
             "description": "How an invitation is answered.",
             "title": "Answer"
+          },
+          "calendar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The calendar a new event goes on; left out for the account's own calendar.",
+            "title": "Calendar"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When a new event ends, or the new end of one that is moved, as ISO 8601 text.",
+            "title": "End"
           },
           "folder": {
             "anyOf": [
@@ -307,6 +649,42 @@
             },
             "title": "Recipients",
             "type": "array"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When a new event starts, or the new start of one that is moved, as ISO 8601 text.",
+            "title": "Start"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a new event is called.",
+            "title": "Title"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day or time of a new event, when it has no start and end.",
+            "title": "When"
           }
         },
         "required": [
@@ -432,6 +810,18 @@
             "description": "What carries it for the account, when one serves it.",
             "title": "Channel Label"
           },
+          "event_actions": {
+            "description": "What the person can do to an event that is theirs on a connected calendar (not an invitation from someone else, not called off), when acting is on for its account and its channel declares it.",
+            "items": {
+              "enum": [
+                "move",
+                "cancel"
+              ],
+              "type": "string"
+            },
+            "title": "Event Actions",
+            "type": "array"
+          },
           "folder_source": {
             "anyOf": [
               {
@@ -443,6 +833,12 @@
             ],
             "description": "The mail source whose folders GET /api/watch/{source}/folders lists, for Move to.",
             "title": "Folder Source"
+          },
+          "folders_listed": {
+            "default": false,
+            "description": "Whether Move to has a list of the account's folders to pick from. False for an account whose service can't be asked for its folders (an add-on's sign-in), where Move to is offered with the folder named by the person and the screen says plainly that the account doesn't list its folders.",
+            "title": "Folders Listed",
+            "type": "boolean"
           },
           "kind": {
             "enum": [
@@ -797,6 +1193,31 @@
             ],
             "title": "Approved At"
           },
+          "approved_before_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a stale act, when that yes was given.",
+            "title": "Approved Before At"
+          },
+          "approved_before_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a stale act, whose yes stopped covering it.",
+            "title": "Approved Before By"
+          },
           "approved_by": {
             "anyOf": [
               {
@@ -819,6 +1240,20 @@
               }
             ],
             "title": "Calendar"
+          },
+          "changes": {
+            "description": "For a stale act: each thing that is different now from what the yes was given on, with both texts. Empty when it isn't stale or the yes was given before the exact content was kept.",
+            "items": {
+              "$ref": "#/components/schemas/ActChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "changes_known": {
+            "default": false,
+            "description": "Whether the exact content the yes was given on is kept, so `changes` is the whole answer.",
+            "title": "Changes Known",
+            "type": "boolean"
           },
           "channel": {
             "title": "Channel",
@@ -1139,6 +1574,32 @@
           "sensitivity"
         ],
         "title": "ActView",
+        "type": "object"
+      },
+      "ActYesOne": {
+        "description": "The person's yes on one of several acts at once: which act, with the fingerprint their screen showed.",
+        "properties": {
+          "acknowledged": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Acknowledged",
+            "type": "array"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fingerprint",
+          "id"
+        ],
+        "title": "ActYesOne",
         "type": "object"
       },
       "ActionApplied": {
@@ -4702,6 +5163,25 @@
           "started"
         ],
         "title": "AreaKept",
+        "type": "object"
+      },
+      "AreaReadersIn": {
+        "additionalProperties": false,
+        "description": "POST /api/projects/{id}/readers: the accounts that may read the area, as the person ticked them.",
+        "properties": {
+          "accounts": {
+            "description": "The short names of the accounts that may read it; the rest may not.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "AreaReadersIn",
         "type": "object"
       },
       "ArrivedView": {
@@ -19531,6 +20011,14 @@
       "ProjectReading": {
         "description": "Who may read a project's material (design 6.32): `state` is none (no account may), local (each that may runs\non this computer) or away (at least one sends what it reads away from this computer). `levels` are the content\nlevels the material carries, its own and those of the projects above it.",
         "properties": {
+          "choices": {
+            "description": "For an area: every account that could read it, ticked when it may, for the picker on its page. Empty for a project that isn't an area.",
+            "items": {
+              "$ref": "#/components/schemas/ReaderChoice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
           "levels": {
             "items": {
               "type": "string"
@@ -22159,6 +22647,30 @@
             "description": "For a backup line: the hours since the last backup that worked; none when none has.",
             "title": "Age Hours"
           },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which area of life the line is in, from its project: the id of that area's project, or none for a line in no area, which Today's area filter shows only under All.",
+            "title": "Area"
+          },
+          "area_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The area's name, for the tag on the line.",
+            "title": "Area Name"
+          },
           "asleep": {
             "anyOf": [
               {
@@ -23356,6 +23868,52 @@
           "read_version"
         ],
         "title": "ReadVersion",
+        "type": "object"
+      },
+      "ReaderChoice": {
+        "description": "An account the picker on an area's page offers: whether it may read the area now, whether reading sends the\nmaterial away from this computer, and `locked` when it can't be ticked (`parent`: a level the project above carries\nkeeps it out).",
+        "properties": {
+          "account": {
+            "description": "The account's short name.",
+            "title": "Account",
+            "type": "string"
+          },
+          "leaves": {
+            "description": "Whether reading sends the material away from this computer to reach it.",
+            "title": "Leaves",
+            "type": "boolean"
+          },
+          "locked": {
+            "anyOf": [
+              {
+                "const": "parent",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it can't be ticked, when it can't.",
+            "title": "Locked"
+          },
+          "name": {
+            "description": "The name the person gave the account, as it is shown.",
+            "title": "Name",
+            "type": "string"
+          },
+          "reads": {
+            "description": "Whether it may read the area's material now.",
+            "title": "Reads",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account",
+          "name",
+          "reads",
+          "leaves"
+        ],
+        "title": "ReaderChoice",
         "type": "object"
       },
       "RecordDetail": {
@@ -30506,6 +31064,30 @@
             "description": "A person's or team's id, from GET /api/watch/authors; empty, when sent, clears it.",
             "title": "Author"
           },
+          "capture": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mail source: whether everything it reads is the person's own capture (mail in a folder or label they move mail to); sent, it is set or cleared.",
+            "title": "Capture"
+          },
+          "capture_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mail source: an address mail to which from the person's own address is their capture, such as name+capture@example.com; empty, when sent, clears it.",
+            "title": "Capture Address"
+          },
           "color": {
             "anyOf": [
               {
@@ -30637,6 +31219,30 @@
             "description": "A person's or team's id, from GET /api/watch/authors.",
             "title": "Author"
           },
+          "capture": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mail source: whether everything it reads is the person's own capture.",
+            "title": "Capture"
+          },
+          "capture_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mail source: an address mail to which from the person's own address is their capture.",
+            "title": "Capture Address"
+          },
           "color": {
             "anyOf": [
               {
@@ -30762,6 +31368,30 @@
             ],
             "description": "Their name, for showing; empty when none is set or it is gone.",
             "title": "Author Name"
+          },
+          "capture": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mail source: whether everything it reads is mail the person sent themselves to keep track of; the mail in it from their own address is handed in as their own words.",
+            "title": "Capture"
+          },
+          "capture_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a mail source: an address such as an alias of their own, mail to which from their own address is handed in as their own words.",
+            "title": "Capture Address"
           },
           "color": {
             "anyOf": [
@@ -31986,6 +32616,146 @@
           }
         },
         "summary": "Accounts"
+      }
+    },
+    "/api/acts/batch": {
+      "post": {
+        "description": "The person drafts one change to their mail for several selected saved messages: an act for each message, on\nthe account it came in on, all in one change that Undo takes back. A message that can't be acted on (it came in\nno account, acting is off for its account, the account's service doesn't do this) is skipped and named with\nthe reason; nothing is carried out until the person's one yes at `/acts/batch/send`.",
+        "operationId": "draft_batch_api_acts_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActBatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActBatchView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Batch"
+      }
+    },
+    "/api/acts/batch-options": {
+      "get": {
+        "description": "What Move to can offer for several saved messages: the one account they all came in on and whether it lists\nits folders. Messages from several accounts get no list, since a folder belongs to one account.",
+        "operationId": "batch_options_api_acts_batch_options_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "record",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Record",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActBatchOptionsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Batch Options"
+      }
+    },
+    "/api/acts/batch/send": {
+      "post": {
+        "description": "The person's one yes on several acts, each with the fingerprint their screen showed: each is approved as its\nown act (its own change, each in the ledger) and then sent by the publisher, one after another. One that was\ndifferent from what the person saw, or that the channel refused or couldn't do, says why and doesn't stop the\nothers. Each sent one can be taken back with `/acts/{id}/undo` where its channel can.",
+        "operationId": "send_batch_api_acts_batch_send_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActBatchYesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActBatchResultView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Batch"
+      }
+    },
+    "/api/acts/calendar-options": {
+      "get": {
+        "description": "The connected calendar accounts a new event can be put on after the person's yes: acting is on for the\naccount and its channel declares `calendar: create`.",
+        "operationId": "calendar_options_api_acts_calendar_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActCalendarOptionsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Calendar Options"
       }
     },
     "/api/acts/free-slots": {
@@ -39907,6 +40677,56 @@
           }
         },
         "summary": "Project Knows View"
+      }
+    },
+    "/api/projects/{project_id}/readers": {
+      "post": {
+        "description": "Say which AI accounts may read an area: the accounts ticked take the area's own level of content and the rest\ndon't (the area gets a level of its own the first time one is left out), the one way content levels already say\nwho reads what. The settings are saved as the person's own change and the area's levels are a recorded edit with\nUndo; ticking the same accounts again puts it back. Refused for a project that isn't an area, an account that\ncouldn't read one, and an account a level above the area keeps out.",
+        "operationId": "set_area_readers_api_projects__project_id__readers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AreaReadersIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectReading"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Area Readers"
       }
     },
     "/api/promises/{action_id}": {

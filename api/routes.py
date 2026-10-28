@@ -743,7 +743,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/today/queue")
     def today_queue() -> list[QueueLineView]:
         """What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7)."""
-        from engine import line_maker, sides
+        from engine import areas, line_maker, sides
         from engine.today import zone
         from engine.today_queue import queue
 
@@ -773,6 +773,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 side_name=sides.side_name_of(view, cfg, line.project),
                 notes=(about.data.get("notes") or None) if about is not None else None,
                 side=sides.side_of_line(view, cfg, line),
+                area=(area := areas.area_of_line(view, line)),
+                area_name=(view.get("project", area).data["name"] if area else None),
                 made_by=line_maker.of_line(view, line, here),
             )
 

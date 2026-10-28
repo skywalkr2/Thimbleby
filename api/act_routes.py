@@ -19,6 +19,14 @@ from api.schemas import (
     ActAccountsView,
     ActAccountView,
     ActApproveIn,
+    ActBatchIn,
+    ActBatchOptionsView,
+    ActBatchResultView,
+    ActBatchSkipped,
+    ActBatchView,
+    ActBatchYesIn,
+    ActCalendarOptionsView,
+    ActChangeView,
     ActDraftIn,
     ActFailureView,
     ActListView,
@@ -32,7 +40,7 @@ from api.schemas import (
     FreeSlotsView,
     FreeSlotView,
 )
-from engine import act_accounts, acts, propose_times, reply_recipients
+from engine import act_accounts, acts, own_accounts, propose_times, reply_recipients
 from engine.applier import apply_as_person, release
 from engine.channels import COPY
 from engine.channels_mailbox import ANSWERS as MAILBOX_ANSWERS
@@ -43,6 +51,7 @@ from engine.drop_notes import serving as carrier_for
 from engine.names import People
 from engine.ops import ACT_ACTIONS, ACT_REPLY_ACTIONS, ActDraftOp
 from engine.publisher import Publisher
+from engine.reminder_content import OWN_CALENDAR
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -77,6 +86,24 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
                 id=rid, kind="event", title=entry.data["title"], when=entry.data["start"], end=entry.data.get("end")
             )
         return ActAboutView(id=rid, kind="missing", title="")
+
+    def changes_of(view: Any, data: Any) -> list[ActChangeView]:
+        """What is different now in a stale act from what the yes was given on: the exact content and target kept on the
+        yes, set against the act as it resolves now."""
+        was = data.get("was_approved") if data["status"] == "stale" else None
+        if not was or not was.get("shown"):
+            return []
+        out = []
+        for d in acts.differences(was["shown"], acts.current_shown(view, store.plugins, data)):
+            before, after = d.before, d.after
+            if d.part == "account":
+                before, after = (act_accounts.label_of(store, cfg, v) if v else None for v in (before, after))
+            elif d.part == "channel":
+                before, after = (
+                    (c.label if (c := acts.channel_of(store.plugins, v)) is not None else v) for v in (before, after)
+                )
+            out.append(ActChangeView(part=d.part, field=d.field, name=d.name, before=before, after=after))
+        return out
 
     def view_of(found: Any) -> ActView:
         view = store.read()
@@ -144,6 +171,10 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             withheld=acts.name_problem(view, cfg, data),
             failure=ActFailureView(**failure) if failure else None,
             why=list(data.get("why") or []),
+            changes=changes_of(view, data),
+            changes_known=bool(data["status"] == "stale" and (data.get("was_approved") or {}).get("shown")),
+            approved_before_by=(data.get("was_approved") or {}).get("by") if data["status"] == "stale" else None,
+            approved_before_at=(data.get("was_approved") or {}).get("at") if data["status"] == "stale" else None,
             service_id=data.get("service_id"),
             sent_at=data.get("sent_at"),
             sent_by=data.get("sent_by"),
@@ -167,6 +198,17 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         """The saved message or entry a record stands for: a reply owed stands for the message that asked."""
         action = view.get("action", record)
         return (action.data.get("replies_to") or "") if action is not None else record
+
+    def mine(entry: Any) -> bool:
+        """Whether a calendar entry is the person's own on a connected calendar: it was read from one, it isn't called
+        off, and it isn't an invitation from someone else."""
+        data = entry.data
+        if not data.get("source") or not data.get("key") or data.get("cancelled"):
+            return False
+        if not data.get("invitation"):
+            return True
+        organizer = ((data.get("organizer") or {}).get("address") or "").strip().casefold()
+        return bool(organizer) and organizer in {n.casefold() for n in own_accounts.own_names(cfg)}
 
     @r.get("/acts/options")
     def options(record: str) -> ActOptionsView:
@@ -205,13 +247,144 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
                 out.actions += [
                     a
                     for a in ("archive", "move", "label", "mark_read")
-                    if mail is not None and mail.takes("mailbox", a) and (a != "move" or out.folder_source)
+                    if mail is not None and mail.takes("mailbox", a)
                 ]
+                out.folders_listed = bool(out.folder_source)
         elif channel is not None and channel.takes("calendar", "answer"):
             out.can_act = acting
             out.answers = list(MAILBOX_ANSWERS) if mailbox else ["accepted", "tentative", "declined", "propose"]
             out.propose_refusal = NO_PROPOSE if mailbox else None
+        if kind == "event" and account and acting and mine(view.get("event", rid)):
+            for a in ("move", "cancel"):
+                carrier = serving(account, "calendar", a)
+                if carrier is not None and carrier[1].takes("calendar", a):
+                    out.event_actions.append(a)
         return out
+
+    @r.get("/acts/calendar-options")
+    def calendar_options() -> ActCalendarOptionsView:
+        """The connected calendar accounts a new event can be put on after the person's yes: acting is on for the
+        account and its channel declares `calendar: create`."""
+        found = []
+        for info in act_accounts.known(store, cfg):
+            carrier = serving(info.id, "calendar", "create")
+            if info.acting and carrier is not None and carrier[1].takes("calendar", "create"):
+                sign_in = store.plugins.sign_ins().get(act_accounts.kind_of(info.id))
+                found.append(
+                    ActAccountView(
+                        id=info.id,
+                        label=info.label,
+                        acting=True,
+                        sign_in=sign_in.name if sign_in is not None else None,
+                        can_act=True,
+                    )
+                )
+        return ActCalendarOptionsView(accounts=found)
+
+    @r.get("/acts/batch-options")
+    def batch_options(record: Annotated[list[str], Query()]) -> ActBatchOptionsView:
+        """What Move to can offer for several saved messages: the one account they all came in on and whether it lists
+        its folders. Messages from several accounts get no list, since a folder belongs to one account."""
+        view = store.read()
+        accounts = {
+            a.lower(): a for rid in record if (a := act_accounts.of_record(view, store, cfg, message_of(view, rid)))
+        }
+        if len(accounts) > 1:
+            return ActBatchOptionsView(several_accounts=True)
+        account = next(iter(accounts.values()), None)
+        if account is None:
+            return ActBatchOptionsView()
+        listed = act_accounts.kind_of(account) == act_accounts.MAILBOX
+        return ActBatchOptionsView(
+            account=account,
+            account_label=act_accounts.label_of(store, cfg, account),
+            folder_source=act_accounts.name_of(account) if listed else None,
+            folders_listed=listed,
+        )
+
+    @r.post("/acts/batch")
+    def draft_batch(body: ActBatchIn) -> ActBatchView:
+        """The person drafts one change to their mail for several selected saved messages: an act for each message, on
+        the account it came in on, all in one change that Undo takes back. A message that can't be acted on (it came in
+        no account, acting is off for its account, the account's service doesn't do this) is skipped and named with
+        the reason; nothing is carried out until the person's one yes at `/acts/batch/send`."""
+        view = store.read()
+        ops: list[dict[str, Any]] = []
+        skipped: list[ActBatchSkipped] = []
+        for rid in dict.fromkeys(body.about):
+            found = view.get("source", rid)
+            title = (found.data.get("title") or "") if found is not None else ""
+            account = act_accounts.of_record(view, store, cfg, rid) if found is not None else None
+            label = act_accounts.label_of(store, cfg, account)
+            if found is None:
+                skipped.append(ActBatchSkipped(record=rid, why="gone"))
+            elif account is None:
+                skipped.append(ActBatchSkipped(record=rid, title=title, why="no_account"))
+            elif not act_accounts.acting_on(cfg, account):
+                skipped.append(ActBatchSkipped(record=rid, title=title, why="acting_off", account_label=label))
+            elif (carrier := serving(account, "mailbox", body.action)) is None or not carrier[1].takes(
+                "mailbox", body.action
+            ):
+                skipped.append(ActBatchSkipped(record=rid, title=title, why="cannot", account_label=label))
+            else:
+                target = {
+                    "kind": "mailbox",
+                    "action": body.action,
+                    "about": [rid],
+                    "folder": body.folder,
+                    "label": body.label,
+                }
+                ops.append(
+                    {
+                        "op": "act.draft",
+                        "channel": carrier[0],
+                        "account": account,
+                        "target": {k: v for k, v in target.items() if v not in (None, [])},
+                        "parts": {},
+                    }
+                )
+        for op in ops[:1]:
+            try:
+                ActDraftOp.model_validate(op)
+            except ValidationError as err:
+                said = "; ".join(str(e["msg"]).removeprefix("Value error, ") for e in err.errors())
+                raise HTTPException(status_code=409, detail=said) from None
+        if not ops:
+            return ActBatchView(acts=[], skipped=skipped)
+        cs = guard(lambda: apply_as_person(store, cfg, ops, "Drafted acts"))
+        events.changed()
+        made = store.read().get("changeset", cs).data["ops"]
+        return ActBatchView(acts=[view_of(need(m["records"][0]["id"])) for m in made], skipped=skipped, changeset=cs)
+
+    @r.post("/acts/batch/send")
+    def send_batch(body: ActBatchYesIn) -> ActBatchResultView:
+        """The person's one yes on several acts, each with the fingerprint their screen showed: each is approved as its
+        own act (its own change, each in the ledger) and then sent by the publisher, one after another. One that was
+        different from what the person saw, or that the channel refused or couldn't do, says why and doesn't stop the
+        others. Each sent one can be taken back with `/acts/{id}/undo` where its channel can."""
+        for one in body.acts:
+            need(one.id)
+        results: list[ActResultView] = []
+        for one in body.acts:
+            found = need(one.id)
+            cs: str | None = None
+            try:
+                if found.data["status"] != "approved":
+                    op = {
+                        "op": "act.approve",
+                        "id": one.id,
+                        "fingerprint": one.fingerprint,
+                        "acknowledged": one.acknowledged,
+                    }
+                    cs = apply_as_person(store, cfg, [op], "Said yes to an act")
+                elif found.data["approved"]["fingerprint"] != one.fingerprint:
+                    raise StoreError("This act is different from the one you were shown.")
+                sent = Publisher(store, cfg, now=worker.now).send(one.id)
+                results.append(ActResultView(id=one.id, status=sent.status, reason=sent.reason, changeset=cs))
+            except (StoreError, ValueError, KeyError) as err:
+                results.append(ActResultView(id=one.id, status=status_of(one.id), reason=str(err), changeset=cs))
+        events.changed()
+        return ActBatchResultView(results=results)
 
     @r.get("/acts/send-options")
     def send_options() -> ActSendOptionsView:
@@ -301,6 +474,12 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             "answer": body.answer,
             "proposed_start": body.proposed_start,
             "proposed_end": body.proposed_end,
+            "calendar": body.calendar or (OWN_CALENDAR if body.kind == "calendar" and what == "create" else None),
+            "when": body.when,
+            "start": body.start,
+            "end": body.end,
+            "title": body.title,
+            "alarm_minutes": body.alarm_minutes,
         }
         carrier = serving(account, body.kind, what) if account else None
         op: dict[str, Any] = {

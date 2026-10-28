@@ -453,6 +453,9 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [author, setAuthor] = useState(source?.author ?? "");
   const [account, setAccount] = useState(source?.account ?? "");
   const [color, setColor] = useState<string>(source?.color ?? "");
+  // A mail source can hold the person's own capture: a folder or label of it, or mail to an address of theirs.
+  const [capture, setCapture] = useState<boolean>(source?.capture ?? false);
+  const [captureAddress, setCaptureAddress] = useState<string>(source?.capture_address ?? "");
   // The privacy the person set for this connection ("" follows its sides, else the usual).
   const [level, setLevel] = useState<string>(source?.data_level_own ?? "");
   const [edits, setEdits] = useState<Record<string, Draft>>({});
@@ -553,6 +556,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const accountChosen = accountList === null ? "" : account || (accountList.length === 1 ? accountList[0] : "");
   // A calendar can carry a color for its mark on the schedule, picked from a short named list.
   const calendarSource = source?.reads?.includes("calendar") ?? false;
+  const mailSource = source?.reads?.includes("mail") ?? false;
   const accountMissing = accountList !== null && accountList.length > 1 && accountChosen === "";
   const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null && !accountMissing;
 
@@ -625,6 +629,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           every_minutes: minutes,
           author: author || null,
           ...(calendarSource ? { color: (color || null) as Source["color"] } : {}),
+          ...(mailSource && capture !== (mode.source.capture ?? false) ? { capture } : {}),
+          ...(mailSource && captureAddress.trim() !== (mode.source.capture_address ?? "") ? { capture_address: captureAddress.trim() } : {}),
           ...(level !== (mode.source.data_level_own ?? "") ? { data_level: (level || null) as Source["data_level_own"] } : {}),
           ...(accountList !== null && accountChosen ? { account: accountChosen } : {}),
           ...(items.length > 0 ? { settings: nest(sent) } : {}),
@@ -789,6 +795,32 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                 {t("sources.field.color_hint")}
               </p>
             </div>
+          )}
+          {mailSource && (
+            <fieldset className="details" data-capture="">
+              <legend>{t("sources.capture.title")}</legend>
+              <label className="check-line">
+                <input type="checkbox" checked={capture} aria-describedby={`${base}-capture-hint`} onChange={(e) => setCapture(e.target.checked)} />
+                <span>{t("sources.capture.everything")}</span>
+              </label>
+              <p className="hint" id={`${base}-capture-hint`}>
+                {t("sources.capture.everything_hint")}
+              </p>
+              <div className="field">
+                <label htmlFor={`${base}-capture-address`}>{t("sources.capture.address")}</label>
+                <input
+                  id={`${base}-capture-address`}
+                  type="email"
+                  autoComplete="off"
+                  value={captureAddress}
+                  aria-describedby={`${base}-capture-address-hint`}
+                  onChange={(e) => setCaptureAddress(e.target.value)}
+                />
+                <p className="hint" id={`${base}-capture-address-hint`}>
+                  {t("sources.capture.address_hint")}
+                </p>
+              </div>
+            </fieldset>
           )}
           {source && (
             <div className="field">
