@@ -16,12 +16,14 @@ import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, t
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
+import { settingsView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { LookBack } from "./LookBack";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import { firstField } from "../lib/cursor";
 import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
+import { MissingAddon, addonOfConnector } from "./MissingAddon";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns } from "./SignIns";
@@ -115,6 +117,8 @@ export function Sources(props: {
   onAddOpened?: () => void;
   /** Opens Add-ons, from the accounts section when no add-on signs in to a service yet. */
   onOpenAddons?: () => void;
+  /** Opens Quick links, which the line under the introduction points to. */
+  onOpenLinks?: () => void;
 }) {
   const { t } = useWords();
   // A source that has never been read is checked on again soon: it is read within a minute of being added.
@@ -159,7 +163,9 @@ export function Sources(props: {
   return (
     <section className="panel-section" aria-labelledby="sources-title">
       <div className="heading">
-        <h1 id="sources-title">{t("sources.title")}</h1>
+        <h2 id="sources-title" tabIndex={-1} data-section-heading="">
+          {t("sources.title")}
+        </h2>
         <div className="acts">
           <button
             type="button"
@@ -173,6 +179,20 @@ export function Sources(props: {
         </div>
       </div>
       <p className="hint">{t("sources.intro")}</p>
+      <p className="hint">
+        {t("sources.links_pointer")}{" "}
+        <a
+          href={viewHref(settingsView("links"))}
+          onClick={(e) => {
+            // A plain click moves within the app; a modified one (a new tab) keeps its link.
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !props.onOpenLinks) return;
+            e.preventDefault();
+            props.onOpenLinks();
+          }}
+        >
+          {t("sources.links_open")}
+        </a>
+      </p>
       <SignIns
         onOpenAddons={() => props.onOpenAddons?.()}
         onChooseSource={(plugin) => setForm({ type: "add", plugin })}
@@ -213,6 +233,7 @@ export function Sources(props: {
               alert={announce?.has(source.id) ?? false}
               kinds={kinds.data}
               kindsFailed={kinds.isError}
+              onOpenAddons={props.onOpenAddons}
               changing={form?.type === "change" && form.id === source.id}
               onChange={() => setForm({ type: "change", id: source.id })}
               onChanged={() => setForm(null)}
@@ -232,6 +253,7 @@ function SourceRow(props: {
   changing: boolean;
   onChange: () => void;
   onChanged: () => void;
+  onOpenAddons?: () => void;
 }) {
   const { t, tn, has } = useWords();
   const act = useAct();
@@ -310,6 +332,9 @@ function SourceRow(props: {
             <p className="hint" data-unsorted="">
               <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
             </p>
+          )}
+          {!source.connector_label && addonOfConnector(source.connector) && (
+            <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
           )}
           {problem && (
             <p className="problem-note" role={props.alert ? "alert" : undefined}>

@@ -4,6 +4,28 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: Settings in one format; money is currency; chips for word lists; no browser on screen; Quick links
+
+**Decided:** Every page of Settings (Connections and Add-ons too) is drawn in one frame, with its rarely changed settings in
+a closed "More settings" fold at its foot, and Advanced keeps only the topics that have no page of their own, so no setting's
+name appears twice. A setting that holds an amount of money is marked once in the schema (`money`) and shown as currency
+with two decimals in the number format of the workspace's language, typed with or without the sign; every amount on screen
+goes through one writer. A list of words is a chip list. The words that mean each side moved to Advanced, Filing. The
+person's own pages are Quick links, a section of Settings. No wording names a browser (the Notices target is "This
+computer"). The Add-ons screen names the app's own catalog for the app and a sign-in by its label. A connection whose add-on
+is missing offers Install it or Restart now on its row.
+
+**Decided by:** the owner (the six findings of their first real evening, open promises P79 to P84); the number format
+following `workspace.language`, the 300-character threshold for a long hint, the fold's name "More settings" for Add-ons'
+catalog settings, and showing the words that mean each side only once a side exists were the builder's choices and are for
+review.
+
+**Why:** the person found the same setting twice, money typed as a bare number, a textarea for a list of words, "browser" in
+an app that will open in its own window, and Add-ons showing an address and an id.
+
+**Impact:** design 7.9 and 7.15; one schema marker, `SettingItem.money`, `PackFeedView.own`, `RuntimeConfig.language`; no
+new setting; the number format takes effect at the next start. Change log: section 249.
+
 ## 2026-10-28: Where something waits, the app says so; one group shows in place; the person's own page is theirs
 
 **Decided:** Every side-menu entry with something waiting for the person shows its count, from one answer (`GET

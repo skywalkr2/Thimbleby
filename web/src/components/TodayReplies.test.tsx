@@ -141,7 +141,7 @@ test("if the browser blocks copying, nothing is approved and the person is told"
   const row = await rowOf();
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
   await user.click(within(row).getByRole("button", { name: "Copy reply" }));
-  expect(await screen.findByText(/blocked copying/)).toBeInTheDocument();
+  expect(await screen.findByText(/Copying was blocked/)).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST actions/ACT-1/reply")).toBe(false);
 });
 

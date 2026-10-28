@@ -160,7 +160,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     }
     window.scrollTo?.(0, 0);
     // Settings and Handled for you put the cursor in their first field themselves; Connections and Add-ons, which sit in
-    // Settings' frame, take it on their heading like any screen.
+    // Settings' frame, take it on their own heading (the frame's title is the same on every page of Settings).
     const now = parseView(view);
     const ownScreen = now.type === "core" && now.view === "settings" && (now.section === "connections" || now.section === "addons");
     if (now.type === "core" && !ownScreen && (now.view === "settings" || now.view === "work/handled")) {
@@ -171,7 +171,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       ownFocus.current = false;
       return;
     }
-    const heading = document.querySelector<HTMLElement>("main h1");
+    const heading = document.querySelector<HTMLElement>(ownScreen || (now.type === "core" && now.view === "settings/ai-compare") ? "main [data-section-heading]" : "main h1");
     if (heading) {
       heading.tabIndex = -1;
       heading.focus({ preventScroll: true });
@@ -260,6 +260,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
               add={addSource}
               onAddOpened={() => setAddSource(null)}
               onOpenAddons={() => setView(settingsView("addons"))}
+              onOpenLinks={() => setView(settingsView("links"))}
             />,
           );
         }

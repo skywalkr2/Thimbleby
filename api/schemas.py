@@ -1505,6 +1505,11 @@ class RuntimeConfig(BaseModel):
     logo: bool = Field(False, description="The workspace has a logo, served at the API's brand/logo address.")
     theme: Literal["system", "light", "dark"] = Field("system", description="The workspace's default theme.")
     density: Literal["comfortable", "compact"] = Field("comfortable", description="The workspace's default density.")
+    language: str = Field(
+        "en-US",
+        description="The workspace's language tag (workspace.language): the screens write numbers and amounts of money "
+        "in its number format.",
+    )
 
 
 class PluginStatusView(BaseModel):
@@ -3853,11 +3858,17 @@ class SettingItem(BaseModel):
     )
     page: Literal["you", "ai", "today", "backups", "appearance", "business", "advanced"] | None = Field(
         None,
-        description="The page of Settings it is a row of, or advanced for one behind Advanced; empty for a setting "
-        "that is no row (an add-on's, or one a part of a screen edits in its own way).",
+        description="The page of Settings it is a row of, or advanced for one whose topic has no page of its own; "
+        "empty for a setting that is no row (an add-on's, or one a part of a screen edits in its own way). A setting "
+        "with `advanced` set sits in its page's closed More settings fold.",
     )
-    topic: Literal["ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings"] | None = Field(
-        None, description="Behind Advanced: the topic it is listed under."
+    topic: (
+        Literal["ai", "backups", "appearance", "learns", "followups", "notices", "filing", "mail", "meetings"] | None
+    ) = Field(None, description="For an advanced setting: the topic it belongs to.")
+    money: bool | None = Field(
+        None,
+        description="True when the value is an amount of US dollars: the screen shows it as currency with two "
+        'decimals in the person\'s number format and reads "1.5" and "$1.50" alike.',
     )
     by_setup: bool | None = Field(
         None,
@@ -5403,7 +5414,10 @@ class PackAdds(BaseModel):
 
 
 class PackReaches(BaseModel):
-    sign_ins: list[str] = Field(description="Services it signs in to as you, in words.")
+    sign_ins: list[str] = Field(
+        description="Services it signs in to as you, each by the label its add-on gives the sign-in; an entry is empty "
+        "where the add-on isn't running, so its label can't be read."
+    )
     hosts: list[str] = Field(description="Internet hosts it may reach.")
     programs: list[str] = Field(description="Programs it runs on this computer.")
     keys: int = Field(description="How many keys or passwords you provide it.")
@@ -5520,6 +5534,11 @@ class PackFeedView(BaseModel):
     address: str | None = Field(None, description="The catalog's address, as the person gave it.")
     removable: bool | None = Field(
         None, description="The person added it (workspace.plugins.catalog.feeds), so it can be taken off again."
+    )
+    own: bool = Field(
+        False,
+        description="It is the app's own catalog (the one this build came with): the screen names it for the app, "
+        "never by its address.",
     )
 
 

@@ -16890,6 +16890,12 @@
             "title": "Notes",
             "type": "array"
           },
+          "own": {
+            "default": false,
+            "description": "It is the app's own catalog (the one this build came with): the screen names it for the app, never by its address.",
+            "title": "Own",
+            "type": "boolean"
+          },
           "read_at": {
             "anyOf": [
               {
@@ -17070,7 +17076,7 @@
             "type": "array"
           },
           "sign_ins": {
-            "description": "Services it signs in to as you, in words.",
+            "description": "Services it signs in to as you, each by the label its add-on gives the sign-in; an entry is empty where the add-on isn't running, so its label can't be read.",
             "items": {
               "type": "string"
             },
@@ -24574,6 +24580,12 @@
             "description": "Changes every time the app starts, so a screen can tell it restarted.",
             "title": "Instance"
           },
+          "language": {
+            "default": "en-US",
+            "description": "The workspace's language tag (workspace.language): the screens write numbers and amounts of money in its number format.",
+            "title": "Language",
+            "type": "string"
+          },
           "logo": {
             "default": false,
             "description": "The workspace has a logo, served at the API's brand/logo address.",
@@ -25803,6 +25815,18 @@
             "title": "Locked",
             "type": "boolean"
           },
+          "money": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when the value is an amount of US dollars: the screen shows it as currency with two decimals in the person's number format and reads \"1.5\" and \"$1.50\" alike.",
+            "title": "Money"
+          },
           "options": {
             "items": {
               "type": "string"
@@ -25828,7 +25852,7 @@
                 "type": "null"
               }
             ],
-            "description": "The page of Settings it is a row of, or advanced for one behind Advanced; empty for a setting that is no row (an add-on's, or one a part of a screen edits in its own way).",
+            "description": "The page of Settings it is a row of, or advanced for one whose topic has no page of its own; empty for a setting that is no row (an add-on's, or one a part of a screen edits in its own way). A setting with `advanced` set sits in its page's closed More settings fold.",
             "title": "Page"
           },
           "picker": {
@@ -25903,6 +25927,7 @@
                   "learns",
                   "followups",
                   "notices",
+                  "filing",
                   "mail",
                   "meetings"
                 ],
@@ -25912,7 +25937,7 @@
                 "type": "null"
               }
             ],
-            "description": "Behind Advanced: the topic it is listed under.",
+            "description": "For an advanced setting: the topic it belongs to.",
             "title": "Topic"
           },
           "type": {

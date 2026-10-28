@@ -1,5 +1,5 @@
-// Links to the person's own pages (design 7.1, 7.9): the first group of the person's menu ("Your pages"), from the list in
-// Settings (a name and a web address each), so the boards and pages they check daily are a click away. Each opens in a new
+// The person's quick links (design 7.1, 7.9): the first group of the person's menu ("Quick links"), from the list in
+// Settings (a name and a web address each), so the sites they open every day are a click away. Each opens in a new
 // tab. Nothing is shown when the list is empty. Only web addresses are offered: an entry that isn't one is left out, never opened.
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -28,7 +28,7 @@ export function usePageLinks(): PageLink[] {
   return pageLinks(settings.data?.items.find((i) => i.key === "ui.links")?.value);
 }
 
-/** The person's pages as the first group of their menu, each opening in a new tab; null when there are none. */
+/** The person's quick links as the first group of their menu, each opening in a new tab; null when there are none. */
 export function usePagesGroup(): MenuGroup | null {
   const { t } = useWords();
   const links = usePageLinks();

@@ -329,6 +329,7 @@ def create_app(
             logo=_logo(ws, cfg) is not None,
             theme=cfg.ui.theme,
             density=cfg.ui.density,
+            language=cfg.workspace.language,
         )
 
     @inner.get("/api/brand/logo", include_in_schema=False)

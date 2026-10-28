@@ -33,14 +33,22 @@ def test_the_summary_comes_from_the_manifest_not_the_description():
     what = packs.summary(entry.provides, entry.requires)
     assert what["adds"]["item_types"] == ["book", "chapter"] and what["adds"]["screens"] == 1
     assert what["adds"]["ai_work"] == 2 and what["adds"]["today"] == 1
+    # No label can be read for an add-on that isn't running, so the entry is empty rather than the id in words.
     assert what["reaches"] == {
-        "sign_ins": ["print service"],
+        "sign_ins": [""],
         "hosts": ["print.example.com"],
         "programs": ["ebook-checker"],
         "keys": 1,
     }
     assert what["keeps"] == "restricted"
     assert packs.compatible(entry, "0.3.33") is True and packs.compatible(entry, "0.4.0") is False
+
+
+def test_a_sign_in_is_named_by_the_label_its_add_on_declares_never_by_its_id():
+    provides = {"sign_ins": ["print/account", "print/other"]}
+    named = packs.summary(provides, {}, {"print/account": "your Print account"})["reaches"]["sign_ins"]
+    assert named == ["your Print account", ""]
+    assert "account" not in " ".join(packs.summary(provides, {})["reaches"]["sign_ins"])
 
 
 def test_feeds_are_kept_and_read_again_only_when_old_or_asked(tmp_path, monkeypatch):
@@ -116,6 +124,27 @@ def test_the_add_ons_routes_list_available_and_installed(tmp_path, monkeypatch):
     assert off.get(f"{api}/packs").json()["available"] == []
 
 
+def test_the_app_s_own_catalog_is_marked_and_the_ones_the_person_added_are_not(tmp_path, monkeypatch):
+    from api.app import create_app
+    from engine.workspace import init_workspace
+
+    shipped = "https" + "://catalog.example.com/packs.yaml"
+    monkeypatch.setattr(engine.net, "TRANSPORT", httpx.MockTransport(lambda r: httpx.Response(200, text=FEED_TEXT)))
+    monkeypatch.setattr("api.pack_routes.product", lambda: {"pack_catalog": shipped})
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    settings = yaml.safe_load((ws.config_dir / "workspace.yaml").read_text())
+    settings["plugins"]["catalog"]["feeds"] = [FEED]
+    settings["plugins"]["catalog"]["shipped_feed"] = True
+    (ws.config_dir / "workspace.yaml").write_text(yaml.safe_dump(settings))
+    cfg = load_config(ws.config_dir, env={})
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    feeds = c.get(cfg.server.base_path.rstrip("/") + "/api/packs").json()["feeds"]
+    by_address = {f["address"]: f for f in feeds}
+    assert by_address[shipped]["own"] is True and by_address[shipped]["removable"] is False
+    assert by_address[FEED]["own"] is False and by_address[FEED]["removable"] is True
+
+
 def test_the_shipped_feed_template_reads_cleanly():
     template = Path(__file__).parents[1] / "deploy" / "pack-catalog.example.yaml"
     feed = packs.parse(FEED, template.read_text())
@@ -133,3 +162,5 @@ def test_an_add_on_that_signs_in_says_whether_it_is_signed_in(signing):
     assert mine()["enabled"] and mine()["signed_in"] is False
     sign_in(c, api)
     assert mine()["signed_in"] is True
+    # The row says what it signs in to by the label the add-on gave the sign-in, not by the sign-in's id.
+    assert mine()["what"]["reaches"]["sign_ins"] == ["The service"]

@@ -310,7 +310,7 @@ test("when the clipboard is blocked nothing is marked and the card keeps Copy", 
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
   await user.click(underBox());
-  expect(await screen.findByText(/blocked copying/)).toBeInTheDocument();
+  expect(await screen.findByText(/Copying was blocked/)).toBeInTheDocument();
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
   expect(screen.queryByText(/Marked as sent/)).toBeNull();
   expect(screen.queryByText("Copied")).toBeNull();
@@ -770,7 +770,7 @@ test("when the browser can't copy a table the person is told, and nothing is mar
   renderApp(<FollowUps />);
   await showTable(user);
   await user.click(screen.getByRole("button", { name: "Copy as table" }));
-  expect(await screen.findByText(/Your browser blocked copying/)).toBeInTheDocument();
+  expect(await screen.findByText(/Copying was blocked/)).toBeInTheDocument();
   // The table is selected, so the toast is true: it can be copied by hand.
   expect(window.getSelection()?.toString()).toContain("Send the index");
   expect(posts(calls)).toHaveLength(0);

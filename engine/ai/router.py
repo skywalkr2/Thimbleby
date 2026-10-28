@@ -17,6 +17,7 @@ from engine.ai.checked import folder_of
 from engine.ai.pauses import Pauses, pauses_path, waiting_text
 from engine.ai.task import AiError, AiResult, AiTask, CountNotOffered, ModelInfo
 from engine.config import Config
+from engine.money import usd
 from engine.secrets import SecretError, resolve_secret
 from engine.storage import Store, WriteContext
 
@@ -709,18 +710,18 @@ class Router:
             day, month = self.spent_on(kind)
             if limits.per_month_usd is not None and month >= limits.per_month_usd:
                 raise BudgetReached(
-                    f"Paused: this month's budget for this kind of work (${limits.per_month_usd:.2f}) is used up."
+                    f"Paused: this month's budget for this kind of work ({usd(limits.per_month_usd)}) is used up."
                 )
             if limits.per_day_usd is not None and day >= limits.per_day_usd:
                 raise BudgetReached(
-                    f"Paused until tomorrow: today's budget for this kind of work (${limits.per_day_usd:.2f}) "
+                    f"Paused until tomorrow: today's budget for this kind of work ({usd(limits.per_day_usd)}) "
                     "is used up."
                 )
         day, month = self.spent()
         if month >= budgets.per_month_usd:
-            raise BudgetReached(f"Paused: this month's AI budget (${budgets.per_month_usd:.2f}) is used up.")
+            raise BudgetReached(f"Paused: this month's AI budget ({usd(budgets.per_month_usd)}) is used up.")
         if day >= budgets.per_day_usd:
-            raise BudgetReached(f"Paused until tomorrow: today's AI budget (${budgets.per_day_usd:.2f}) is used up.")
+            raise BudgetReached(f"Paused until tomorrow: today's AI budget ({usd(budgets.per_day_usd)}) is used up.")
 
     def _that_transcribe(self, options: list[Choice]) -> list[Choice]:
         """Keep only the accounts whose model is listed as turning speech into text, by the model's catalog entry or

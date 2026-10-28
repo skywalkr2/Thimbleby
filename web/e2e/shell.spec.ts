@@ -542,7 +542,7 @@ test.describe("screen use and the shell", () => {
   });
 
   // Below 1440px the header is one row (design 7.1): the title, Ask, the status chip and the buttons, with the assistant's state in
-  // the chip's popover and "Your pages" in the person's menu; at about 1,000px Ask is an icon. Nothing is clipped by the
+  // the chip's popover and "Quick links" in the person's menu; at about 1,000px Ask is an icon. Nothing is clipped by the
   // window, the workspace's name keeps its room before Ask gives any up, and Missed something? has its words.
   for (const width of [800, 1000, 1100, 1200, 1300]) {
     test(`at ${width}px the header is one row, with every control inside the window and the assistant's state in the status chip`, async ({ page }) => {
@@ -576,9 +576,9 @@ test.describe("screen use and the shell", () => {
           const apart = a.x + a.width <= b.x + 0.5 || b.x + b.width <= a.x + 0.5 || a.y + a.height <= b.y + 0.5 || b.y + b.height <= a.y + 0.5;
           expect(apart, `header controls ${i} and ${j} overlap`).toBe(true);
         }
-      // No assistant line, no "Your pages" and no bare icon for Missed something?.
+      // No assistant line, no "Quick links" and no bare icon for Missed something?.
       await expect(header.getByRole("button", { name: new RegExp(`^${await assistantName(page)}`) })).toHaveCount(0);
-      await expect(header.getByRole("button", { name: "Your pages" })).toHaveCount(0);
+      await expect(header.getByRole("button", { name: "Quick links" })).toHaveCount(0);
       await expect(header.getByRole("button", { name: "Missed something?" })).toHaveText("Missed something?");
       // Where Ask is a field the workspace's name is whole: it gives way only after Ask has.
       if (width >= 1024) {
@@ -660,9 +660,9 @@ test.describe("screen use and the shell", () => {
     await page.goto("#work/outgoing");
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
     await page.goto("#sources");
-    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Connections" })).toBeVisible();
     await page.goto("#addons");
-    await expect(page.getByRole("heading", { level: 1, name: "Add-ons" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Add-ons" })).toBeVisible();
     await page.goto("#setup");
     await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
   });
@@ -727,8 +727,8 @@ test.describe("screen use and the shell", () => {
               // The queue's first line, on a screen whose keyboard starts there.
               const first = queue ? main.querySelector("[data-row]") : null;
               if (first && first.contains(at)) return true;
-              // On the heading, or in a field the screen put the cursor in itself.
-              return at.tagName === "H1" || ["INPUT", "SELECT", "TEXTAREA"].includes(at.tagName);
+              // On the heading (a page of Settings has its own section's heading), or in a field the screen put the cursor in itself.
+              return at.tagName === "H1" || at.tagName === "H2" || ["INPUT", "SELECT", "TEXTAREA"].includes(at.tagName);
             }, !!screen.queue),
           { timeout: 15_000 },
         )
@@ -974,7 +974,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await page.setViewportSize({ width: 1440, height: 900 });
       await signIn(page, "settings/ai");
       await page.getByRole("button", { name: "Compare what they can do" }).click();
-      await expect(page.getByRole("heading", { level: 1, name: "Compare what accounts can do" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: "Compare what accounts can do" })).toBeVisible();
       await expect(page.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", /#settings$/);
       const table = page.getByRole("table");
       await expect(table.getByRole("columnheader")).toHaveText(["Kind of work", "Main account · everyday", "Main account · harder", "Second account · everyday"]);

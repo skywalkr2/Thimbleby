@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from engine.draft_checks import KnownLinks, link_key
+from engine.money import usd
 
 
 def chain(view: Any, project_id: str | None) -> list[Any]:
@@ -86,9 +87,9 @@ def budget_problem(store: Any, request: dict, estimate: float | None) -> str | N
         cost = estimate or 0.0
         if spent + cost > budget:
             name = project.data["name"]
-            about_cost = f" and this would cost about ${cost:.2f}" if cost else ""
+            about_cost = f" and this would cost about {usd(cost)}" if cost else ""
             return (
-                f"{name} has a budget of ${budget:.2f}; ${spent:.2f} is spent{about_cost}. "
+                f"{name} has a budget of {usd(budget)}; {usd(spent)} is spent{about_cost}. "
                 "Raise the budget on the project, or set this aside."
             )
     return None

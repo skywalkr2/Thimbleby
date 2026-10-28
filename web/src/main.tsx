@@ -39,6 +39,7 @@ function LiveWording(props: { rc: S["RuntimeConfig"]; children: ReactNode }) {
       overrides={rc.wording}
       base={{ assistant: rc.assistant_name, workspace: rc.workspace_name }}
       unnamed={rc.assistant_named === false}
+      locale={rc.language}
     >
       {props.children}
     </WordingProvider>

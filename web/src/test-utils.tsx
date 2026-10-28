@@ -38,10 +38,10 @@ export function fakeApi(routes: Routes) {
   return calls;
 }
 
-export function renderApp(ui: ReactNode, overrides: Record<string, string> = {}, options: { unnamed?: boolean } = {}) {
+export function renderApp(ui: ReactNode, overrides: Record<string, string> = {}, options: { unnamed?: boolean; locale?: string } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const rendered = render(
-    <WordingProvider overrides={overrides} base={{ assistant: "Helper" }} unnamed={options.unnamed}>
+    <WordingProvider overrides={overrides} base={{ assistant: "Helper" }} unnamed={options.unnamed} locale={options.locale}>
       <QueryClientProvider client={client}>
         <ToastProvider seconds={0}>
           <OwnRequestsProvider>{ui}</OwnRequestsProvider>
@@ -81,6 +81,7 @@ export function rcFixture(extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeCo
     logo: false,
     theme: "system",
     density: "comfortable",
+    language: "en-US",
     pm: null,
     shortcuts: { undo: "u", hand_in: "n", help: "?", ask: "/" },
     toast_seconds: 0,

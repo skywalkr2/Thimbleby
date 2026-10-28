@@ -121,7 +121,7 @@ test("when copying is blocked it says so and the text stays there to select", as
   await user.type(message(), "Hello");
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
   await user.click(screen.getByRole("button", { name: "Copy" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/Your browser blocked copying/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Copying was blocked/);
   expect(screen.queryByText(/^Copied/)).toBeNull();
   expect(preview().value).toContain("Hello");
   expect(preview()).not.toBeDisabled();

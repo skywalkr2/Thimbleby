@@ -17,6 +17,7 @@ const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
   logo: false,
   theme: "system",
   density: "comfortable",
+  language: "en-US",
   pm: null,
   shortcuts: { undo: "u", hand_in: "n", help: "?", ask: "/" },
   toast_seconds: 0,
@@ -135,7 +136,9 @@ test.each([
   window.location.hash = hash;
   fakeApi({ ...quiet, "GET watch": () => [], "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [] }) });
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name })).toBeInTheDocument();
+  // Every page of Settings has the same title, and its own section is the heading under it.
+  expect(await screen.findByRole("heading", { level: 2, name })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "Settings" })).toBeInTheDocument();
   expect(window.location.hash).toBe(now);
   const sections = screen.getByRole("navigation", { name: "Settings sections" });
   expect(within(sections).getByRole("link", { name: "Connections" })).toBeInTheDocument();

@@ -4,6 +4,7 @@
 // than the window, and the business's Edit details is a small form with a name, other names and a description, never the
 // project form with a target date, a status or a role. The server (`--just-me`) is a workspace made with nothing besides
 // Personal; the test adds the business through the setup route, as setup does, and a project inside it.
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const LOADED = { timeout: 20_000 };
@@ -41,6 +42,32 @@ test.describe("a business is a group, not a project", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("?token=e2e-token");
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+  });
+
+  test("the words that mean each side leave the business page for Advanced, Filing, as chips that work from the keyboard", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await go(page, "settings/business");
+    await expect(page.getByRole("heading", { level: 2, name: "Your business", exact: true })).toBeVisible(LOADED);
+    await expect(page.getByLabel(/^Words that mean/)).toHaveCount(0);
+    await go(page, "settings/advanced");
+    await page.getByRole("button", { name: /Filing$/ }).click();
+    const label = `Words that mean ${SIDE}`;
+    const box = page.getByLabel(label, { exact: true });
+    await expect(box).toBeVisible(LOADED);
+    await box.fill("catalog");
+    await box.press("Enter");
+    const chips = page.getByRole("list", { name: `Words in ${label}`, exact: true });
+    await expect(chips.getByText("catalog", { exact: true })).toBeVisible(LOADED);
+    await expect(box).toHaveValue("");
+    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+    expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
+    expect(await wider(page)).toBeLessThanOrEqual(0);
+    // Each chip is removed from the keyboard, and the word is gone from what is saved.
+    const remove = page.getByRole("button", { name: "Remove catalog", exact: true });
+    await remove.focus();
+    await page.keyboard.press("Enter");
+    await expect(chips).toHaveCount(0, LOADED);
+    await expect(box).toBeFocused();
   });
 
   for (const width of WIDTHS) {

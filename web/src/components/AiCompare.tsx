@@ -184,7 +184,9 @@ export function AiCompare(props: { onBack: () => void }) {
   const header = (
     <>
       <div className="heading">
-        <h1 id="ai-compare-title">{t("ai_compare.title")}</h1>
+        <h2 id="ai-compare-title" tabIndex={-1} data-section-heading="">
+          {t("ai_compare.title")}
+        </h2>
         {accountNames.length > 0 && (
           <div className={styles.actions}>
             <Button variant={anyResult ? "secondary" : "primary"} onClick={() => void measureAll(false)}>

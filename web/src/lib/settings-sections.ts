@@ -3,8 +3,10 @@
 import type { Item } from "./settings";
 import { SETTINGS_SECTIONS, type SettingsSection } from "./views";
 
-/** The topics of Advanced, in the order they are listed. */
-export const TOPICS = ["ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings"] as const;
+/** The topics of settings that are rarely changed, in the order they are listed. A topic that has a page of its own (AI and
+ * spending, Backups, Appearance, Notices) keeps its settings in that page's "More settings" fold; Advanced lists only the
+ * others, so no setting is named twice in Settings. */
+export const TOPICS = ["ai", "backups", "appearance", "learns", "followups", "notices", "filing", "mail", "meetings"] as const;
 
 /** The section a setting is shown in: the page the app places it on, or an add-on's own section. */
 export function sectionOfItem(item: Pick<Item, "plugin" | "page">): SettingsSection {
@@ -14,8 +16,8 @@ export function sectionOfItem(item: Pick<Item, "plugin" | "page">): SettingsSect
 
 /** Settings that a part of their section edits in its own way, so they aren't also listed as rows: the tier each kind of
  * work uses, what a tier tries once more on, the routing rules (Which model does what), the backup key, the keys an
- * add-on needs (password boxes of their own), the notices' address and the list of the person's own pages, and the
- * business, its sides and the words that name them. */
+ * add-on needs (password boxes of their own), the notices' address and the list of the person's quick links, and the
+ * business and its sides. */
 const OWN_PART = [
   "ai.tasks",
   "ai.tiers",
@@ -46,16 +48,29 @@ export const isListed = (item: Pick<Item, "key" | "plugin" | "page">): boolean =
 export const sectionItems = (items: Item[], section: SettingsSection): Item[] =>
   items.filter((i) => isListed(i) && sectionOfItem(i) === section);
 
-/** The sections to list down the side, in order: the pages of the basic settings, Your business where there is one,
- * Lists where a list is left to show there, Connections and Add-ons, the add-on files where there are some, Advanced, then one for each add-on that has settings.
- * AI accounts, Connections and Add-ons are always there: they hold lists of their own rather than settings. */
+/** The sections to list down the side, in order: the pages of the basic settings, Quick links, Your business where there is
+ * one, Lists where a list is left to show there, Connections and Add-ons, the add-on files where there are some, Advanced,
+ * then one for each add-on that has settings. AI accounts, Connections and Add-ons are always there: they hold lists of
+ * their own rather than settings. Quick links is there wherever the app keeps the person's list of them. */
 export function navSections(items: Item[], has: { business: boolean; lists: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
   const present = new Set(items.filter(isListed).map(sectionOfItem));
   // An add-on that needs keys has a section for them even when it has no settings of its own.
   for (const plugin of has.keyed ?? []) present.add(`addon/${plugin}`);
   const out: SettingsSection[] = [];
   for (const id of SETTINGS_SECTIONS) {
-    const shown = id === "ai" || id === "connections" || id === "addons" || (id === "business" ? has.business : id === "lists" ? has.lists : id === "files" ? has.files : present.has(id));
+    const shown =
+      id === "ai" ||
+      id === "connections" ||
+      id === "addons" ||
+      (id === "links"
+        ? items.some((i) => i.key === "ui.links")
+        : id === "business"
+          ? has.business
+          : id === "lists"
+            ? has.lists
+            : id === "files"
+              ? has.files
+              : present.has(id));
     if (shown) out.push(id);
   }
   const addons = [...present].filter((s) => s.startsWith("addon/"));

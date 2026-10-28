@@ -275,14 +275,14 @@ test("the browser is asked only when the person presses the button in Settings",
 test("Settings says when notifications are allowed, blocked or not possible here", () => {
   stubNotification("granted");
   const granted = showNotices();
-  expect(screen.getByText("Notifications are allowed in this browser.")).toBeInTheDocument();
+  expect(screen.getByText("Notifications are allowed on this computer.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Allow notifications" })).toBeNull();
   granted.unmount();
   stubNotification("denied");
   const denied = showNotices();
-  expect(screen.getByText(/Notifications are blocked in this browser/)).toBeInTheDocument();
+  expect(screen.getByText(/Notifications are blocked on this computer/)).toBeInTheDocument();
   denied.unmount();
   vi.stubGlobal("Notification", undefined);
   showNotices();
-  expect(screen.getByText("This browser can't show notifications.")).toBeInTheDocument();
+  expect(screen.getByText("This computer can't show notifications from this app.")).toBeInTheDocument();
 });

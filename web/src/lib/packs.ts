@@ -36,10 +36,17 @@ export function addsLines(adds: Summary["adds"], t: T, tn: Tn): string[] {
   return lines;
 }
 
+/** The line for the services a pack signs in to, each by the label its add-on gives the sign-in ("your Microsoft account"),
+ * never by an id. Where no label can be read (the add-on isn't running) it says only that it signs in to a service. */
+export function signInLine(labels: string[], t: T): string {
+  const named = labels.map((l) => l.trim()).filter(Boolean);
+  return named.length ? t("addons.reaches.sign_ins", { names: named.join(", ") }) : t("addons.reaches.sign_ins_unnamed");
+}
+
 /** What a pack reaches outside the app; one line saying so when it reaches nothing. */
 export function reachesLines(reaches: Summary["reaches"], t: T): string[] {
   const lines: string[] = [];
-  if (reaches.sign_ins.length) lines.push(t("addons.reaches.sign_ins", { names: reaches.sign_ins.join(", ") }));
+  if (reaches.sign_ins.length) lines.push(signInLine(reaches.sign_ins, t));
   if (reaches.hosts.length) lines.push(t("addons.reaches.hosts", { hosts: reaches.hosts.join(", ") }));
   if (reaches.programs.length) lines.push(t("addons.reaches.programs", { programs: reaches.programs.join(", ") }));
   if (reaches.keys) lines.push(t("addons.reaches.keys", { n: reaches.keys }));

@@ -31,6 +31,7 @@ from engine.config import Config
 from engine.extract import AUDIO_EXTENSIONS
 from engine.files import add_file, read_bytes
 from engine.intake import IntakeError, own_words_in
+from engine.money import usd
 from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
 
@@ -162,7 +163,7 @@ def process(
         return needs_you(
             store,
             request_id,
-            f"This would cost about ${estimate:.2f}, above the per-run limit of ${budgets.per_run_usd:.2f}. "
+            f"This would cost about {usd(estimate)}, above the per-run limit of {usd(budgets.per_run_usd)}. "
             "Raise “Most one run may cost” in Settings, AI spending.",
         )
     if over := budget_problem(store, req.data, estimate):

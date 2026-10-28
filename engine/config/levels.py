@@ -50,8 +50,6 @@ BASIC: dict[str, str] = {
     "ui.theme": "appearance",
     "ui.density": "appearance",
     "workspace.project.business": "business",
-    "workspace.project.side_words.personal": "business",
-    "workspace.project.side_words.business": "business",
 }
 
 #: The topic of each advanced setting, in the order its topic lists them. The topics themselves are in `TOPICS`.
@@ -75,6 +73,10 @@ ADVANCED: dict[str, str] = {
     "steward.reminders.allowed_data": "notices",
     "ui.notifications.webhook": "notices",
     "ui.notifications.webhook_app": "notices",
+    # The words that mean each side are learned from where the person files things; they are read here when the
+    # assistant needs a nudge, so they sit with filing, not on the business page.
+    "workspace.project.side_words.personal": "filing",
+    "workspace.project.side_words.business": "filing",
     "watch.automated_mail.set_aside": "mail",
     "watch.mail_kinds.enabled": "mail",
     "watch.sorting": "mail",
@@ -86,8 +88,17 @@ ADVANCED: dict[str, str] = {
     "steward.dates.suggest_reminders": "meetings",
 }
 
-#: The eight topics of Advanced, in the order they are listed.
-TOPICS = ("ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings")
+#: The topics an advanced setting can sit under, in the order they are listed.
+TOPICS = ("ai", "backups", "appearance", "learns", "followups", "notices", "filing", "mail", "meetings")
+
+#: A topic that has a page of its own: its settings sit on that page, in a closed "More settings" fold at the bottom,
+#: and are not listed again under Advanced. Advanced keeps only the topics that are not here.
+TOPIC_PAGES: dict[str, str] = {
+    "ai": "ai",
+    "backups": "backups",
+    "appearance": "appearance",
+    "notices": "today",
+}
 
 #: Listed for the part of a screen that edits them in its own way (a key box, a list of records, a switch on each
 #: account), never as a row of their own.
@@ -386,12 +397,14 @@ def level_of(key: str) -> str | None:
 
 
 def place_of(key: str) -> tuple[str | None, str | None]:
-    """The page and the topic a setting is shown under: a basic setting's page, ("advanced", topic) for an advanced one,
-    and (None, None) for one that is no row."""
+    """The page and the topic a setting is shown under: a basic setting's page; for an advanced one the page its topic
+    has (where it sits in the page's "More settings" fold) or "advanced" for a topic with no page, with the topic; and
+    (None, None) for one that is no row."""
     if key in BASIC:
         return BASIC[key], None
     if key in ADVANCED:
-        return "advanced", ADVANCED[key]
+        topic = ADVANCED[key]
+        return TOPIC_PAGES.get(topic, "advanced"), topic
     return None, None
 
 

@@ -32,7 +32,7 @@ export type CoreView =
 export type MovedView = "work/outgoing" | "sources" | "addons";
 export type PanelGroup = "work" | "records";
 /** The sections of Settings that are always there; an add-on's own is `addon/<name>`. */
-export const SETTINGS_SECTIONS = ["you", "ai", "today", "backups", "appearance", "business", "lists", "connections", "addons", "files", "advanced"] as const;
+export const SETTINGS_SECTIONS = ["you", "ai", "today", "backups", "appearance", "links", "business", "lists", "connections", "addons", "files", "advanced"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number] | `addon/${string}`;
 export type View = CoreView | MovedView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}` | `settings/${SettingsSection}`;
 

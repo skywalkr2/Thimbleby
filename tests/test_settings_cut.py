@@ -32,31 +32,40 @@ def _shown():
 # ---- the walk: how many, and where ---------------------------------------------------------------
 
 
-def _rows(items, page):
+def _rows(items, page, more=False):
     """What a person counts on a page: one row for each setting, except that the settings of one merged row (working
-    hours, the brief's times) are one, plus the rows that edit a record instead of a setting."""
-    keys = [s.key for s in items if s.page == page]
+    hours, the brief's times) are one, plus the rows that edit a record instead of a setting. `more` counts the settings
+    in the page's closed "More settings" fold (the advanced ones) instead of the ones shown at once."""
+    keys = [s.key for s in items if s.page == page and s.advanced == more]
     merged = {key for row in levels.MERGED_ROWS.values() for key in row}
     return (
         len([k for k in keys if k not in merged])
         + len([first for first, row in levels.MERGED_ROWS.items() if set(row) <= set(keys)])
-        + len(levels.RECORD_ROWS.get(page, ()))
+        + (len(levels.RECORD_ROWS.get(page, ())) if not more else 0)
     )
 
 
 def test_the_settings_walk_counts_at_most_26_basic_and_30_advanced():
+    """Advanced is now the rarely changed settings wherever they sit: in a page's More settings fold, or under a
+    topic of Advanced that has no page."""
     shown = _shown()
     without_business = sum(_rows(shown, page) for page in PAGES - {"business"})
     with_business = without_business + _rows(shown, "business")
-    advanced = _rows(shown, "advanced")
+    # Every page's rarely changed settings are in its own "More settings" fold; Advanced holds the topics with no page.
+    more = sum(_rows(shown, page, True) for page in PAGES | {"advanced"})
     assert without_business <= 23 and with_business <= 26, (without_business, with_business)
-    assert advanced <= 30, advanced
+    assert more <= 30, more
     # The name, the working hours, the quiet hours and the one notices switch make room: 18 rows (where reminders go is
-    # one), 21 with a business, 26 behind Advanced.
-    assert (without_business, with_business, advanced) == (18, 21, 26)
-    assert {s.topic for s in shown if s.page == "advanced"} == set(levels.TOPICS)
-    assert all(s.topic is None for s in shown if s.page in PAGES)
-    assert all(s.topic for s in shown if s.page == "advanced")
+    # one), 19 with a business (the words that mean each side moved to Advanced, Filing), and 28 more behind the pages'
+    # folds and Advanced.
+    assert (without_business, with_business, more) == (18, 19, 28)
+    assert {s.topic for s in shown if s.advanced and s.page} == set(levels.TOPICS)
+    assert all(s.topic is None for s in shown if s.page in PAGES and not s.advanced)
+    assert all(s.topic for s in shown if s.advanced and s.page)
+    # A topic with a page of its own sits on that page, and only a topic with none is listed under Advanced.
+    assert {s.topic for s in shown if s.page == "advanced"} == set(levels.TOPICS) - set(levels.TOPIC_PAGES)
+    for topic, page in levels.TOPIC_PAGES.items():
+        assert {s.page for s in shown if s.topic == topic} == {page}, topic
 
 
 def test_working_hours_the_brief_times_quiet_hours_and_where_reminders_go_are_one_row_each_and_keep_their_keys():
@@ -119,7 +128,50 @@ def test_a_setting_is_basic_or_advanced_or_a_part_of_a_screen_or_kept_in_files()
         assert shown[key].page is None, key
     # What is kept only in files is not listed, whatever its kind.
     assert not set(levels.FILES_ONLY) & set(shown)
-    assert all(s.basic == (s.page in PAGES) for s in shown.values())
+    assert all(s.basic == (s.key in levels.BASIC) for s in shown.values())
+
+
+def _name_of(s):
+    """What a row is called on screen: the wording sheet's label, else the first sentence of its description."""
+    label = WORDING.get(f"settings.key.{s.key}")
+    return (label or s.description.split(". ")[0]).strip().rstrip(".").lower()
+
+
+def test_no_setting_name_appears_twice_anywhere_in_settings():
+    """Every page, its More settings fold and Advanced together: a setting is on one of them, under one name. The
+    settings of one merged row (the working hours, the brief's times) are named once, by the row."""
+    merged = {key: first for first, row in levels.MERGED_ROWS.items() for key in row}
+    names: dict[str, list[str]] = {}
+    for s in _shown():
+        if s.page is None or s.key in levels.OWN_PART:
+            continue
+        if s.key in merged and merged[s.key] != s.key:
+            continue  # the row sits where its first setting sits, and is named once
+        names.setdefault(_name_of(s), []).append(s.key)
+    twice = {name: keys for name, keys in names.items() if len(keys) > 1}
+    assert twice == {}
+    # Each setting is listed once in the whole of Settings: on its page (or its page's fold), or under Advanced.
+    keys = [s.key for s in _shown() if s.page is not None]
+    assert len(keys) == len(set(keys))
+
+
+def test_a_topic_that_has_a_page_is_not_a_topic_of_advanced_and_the_words_for_each_side_are_filing():
+    assert set(levels.TOPIC_PAGES) <= set(levels.TOPICS)
+    advanced = {s.topic for s in _shown() if s.page == "advanced"}
+    assert advanced == set(levels.TOPICS) - set(levels.TOPIC_PAGES)
+    # The words that mean each side leave the business page for Advanced, Filing.
+    placed = {s.key: (s.page, s.topic, s.advanced) for s in _shown()}
+    for side in ("personal", "business"):
+        assert placed[f"workspace.project.side_words.{side}"] == ("advanced", "filing", True)
+    assert WORDING["settings.topic.filing"] == "Filing"
+
+
+def test_no_setting_on_a_page_names_a_browser():
+    """The app opens in its own window: no hint, label or heading that a person reads says "browser"."""
+    words = {k: v for k, v in WORDING.items() if k.startswith(("settings.", "notices.", "notify."))}
+    shown = {s.key: s.description for s in _shown() if s.page is not None}
+    found = {k: v for k, v in {**words, **shown}.items() if re.search(r"\bbrowsers?\b", v, re.I)}
+    assert found == {}
 
 
 def test_you_lists_its_settings_in_the_reviewers_order_after_your_name():
@@ -134,9 +186,9 @@ def test_you_lists_its_settings_in_the_reviewers_order_after_your_name():
 
 
 def test_the_pages_list_their_settings_in_the_order_the_pages_do():
-    shown = [s.key for s in _shown() if s.page in PAGES]
+    shown = [s.key for s in _shown() if s.page in PAGES and not s.advanced]
     assert shown == [k for k in levels.BASIC if k in shown]
-    notices = [s.key for s in _shown() if s.page == "today"]
+    notices = [s.key for s in _shown() if s.page == "today" and not s.advanced]
     assert notices[0] == "ui.notifications.enabled" and notices[-1] == "steward.reminders.where_account"
 
 

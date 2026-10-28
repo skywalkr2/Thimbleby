@@ -55,11 +55,11 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
     name: "Connections",
     hash: "settings/connections",
     ready: async (page) => {
-      await heading(page, "Connections");
+      await section(page, "Connections");
       await text(page, strings["mail-01"].slice(0, 12));
     },
   },
-  { name: "Add-ons", hash: "settings/addons", ready: (page) => heading(page, "Add-ons") },
+  { name: "Add-ons", hash: "settings/addons", ready: (page) => section(page, "Add-ons") },
   { name: "Settings", hash: "settings", ready: (page) => heading(page, "Settings") },
   { name: "Quality", hash: "quality", ready: (page) => expect(page.getByRole("heading", { level: 1, name: /^How .+ is doing$/ })).toBeVisible(LOADED) },
   // Each section of Settings, with its help beside the settings or under them.
@@ -77,6 +77,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "Settings: Backups", hash: "settings/backups", ready: (page) => section(page, "Backups") },
   { name: "Settings: Notices", hash: "settings/today", ready: (page) => section(page, "Notices") },
   { name: "Settings: Appearance", hash: "settings/appearance", ready: (page) => section(page, "Appearance") },
+  { name: "Settings: Quick links", hash: "settings/links", ready: (page) => section(page, "Quick links") },
   { name: "Settings: Advanced", hash: "settings/advanced", ready: (page) => section(page, "Advanced") },
 ];
 

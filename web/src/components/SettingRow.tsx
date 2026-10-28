@@ -8,8 +8,11 @@ import { depthOf, fileName, formatValue, fromDraft, isChanged, isOff, labelOf, s
 import { zoneChoices } from "../lib/time-zones";
 import { dateFormatChoices } from "../lib/date-formats";
 import { languageChoices } from "../lib/languages";
+import { useWriteAmount } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { ClampedHint } from "../ui/ClampedHint";
+import { ChipList } from "./ChipList";
+import { MoneyField } from "./MoneyField";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { TimeZoneSelect } from "./TimeZoneSelect";
 import { restoreFocus } from "./ModalPanel";
@@ -40,7 +43,8 @@ export function SettingRow(props: {
   /** Where a secret setting can be typed: given, a setting that holds a secret offers a password box. */
   secret?: SecretInput;
 }) {
-  const { t, has } = useWords();
+  const { t, has, locale } = useWords();
+  const writeAmount = useWriteAmount();
   const [picking, setPicking] = useState(false);
   const chooser = useRef<HTMLButtonElement>(null);
   const { item, draft } = props;
@@ -57,11 +61,12 @@ export function SettingRow(props: {
           : t("settings.changed_in", { file: fileName(item) })
         : null;
   const hint = label !== item.description ? item.description : null;
-  const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft) : null;
-  const invalid = parsed && !parsed.ok ? t(`settings.invalid.${parsed.problem}`) : null;
+  const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft, locale) : null;
+  const invalid =
+    parsed && !parsed.ok ? (item.money === true ? t("settings.invalid.amount", { example: writeAmount(1.5) }) : t(`settings.invalid.${parsed.problem}`)) : null;
   // Changed from the default by the person: what is on screen, so it shows as soon as it is typed and Reset undoes it. A
   // value setup wrote is the person's answer to a question, not a change.
-  const edited = !readOnly && !item.locked ? fromDraft(item, draft) : null;
+  const edited = !readOnly && !item.locked ? fromDraft(item, draft, locale) : null;
   const changed = isChanged(item, edited);
   const showDefault = changed && item.type !== "other";
   const problem = props.problem || null;
@@ -109,7 +114,12 @@ export function SettingRow(props: {
                 : (item.options ?? []).map((o) => ({ tag: o, label: option(o) }));
 
   /** A value in words: a choice by its label (the spelling of English, a city), anything else as the sheet writes values. */
-  const valueWords = (value: unknown) => (item.type === "choice" ? (choices.find((c) => c.tag === String(value))?.label ?? formatValue(value, t)) : formatValue(value, t));
+  const valueWords = (value: unknown) =>
+    item.type === "choice"
+      ? (choices.find((c) => c.tag === String(value))?.label ?? formatValue(value, t))
+      : item.money === true && typeof value === "number"
+        ? writeAmount(value)
+        : formatValue(value, t);
   const typedSecret = !!props.secret && item.secret === true && item.type === "text" && !readOnly && !item.locked;
   let control;
   if (typedSecret && props.secret) {
@@ -204,15 +214,30 @@ export function SettingRow(props: {
       </div>
     );
   } else if (item.type === "list") {
+    // A list of words is chips: a word typed and added with Enter, each one removable, saved as it is made.
     control = (
-      <textarea
+      <ChipList
         id={id}
-        className="short"
+        label={label}
         value={String(draft)}
         disabled={off}
-        aria-describedby={describedBy}
-        onChange={(e) => props.onChange(e.target.value)}
-        onBlur={props.commit ? (e) => props.commit?.(e.target.value) : undefined}
+        describedBy={describedBy}
+        onChange={(next) => {
+          props.onChange(next);
+          props.commit?.(next);
+        }}
+      />
+    );
+  } else if (item.type === "number" && item.money === true) {
+    control = (
+      <MoneyField
+        id={id}
+        value={String(draft)}
+        disabled={off}
+        invalid={!!(invalid || problem)}
+        describedBy={describedBy}
+        onChange={props.onChange}
+        onCommit={props.commit}
       />
     );
   } else {
@@ -319,7 +344,7 @@ export function SettingRow(props: {
         )}
         {item.type === "list" && !readOnly && !ticked && (
           <p className="hint" id={`${id}-list`}>
-            {t("settings.list_hint")}
+            {t("settings.chips_hint")}
           </p>
         )}
         {invalid && (
@@ -395,6 +420,7 @@ export function ItemFields(props: {
           gate={gate && isOff(gate, props.edits) ? gate : null}
           canList={canList}
           secret={props.secret}
+          beside
         />
       );
     });

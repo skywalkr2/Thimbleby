@@ -7,6 +7,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useFirstField } from "../lib/focus";
 import { languageChoices, languageLabel } from "../lib/languages";
+import { parseAmount } from "../lib/money";
 import { placeGroups } from "../lib/project-choices";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -43,7 +44,7 @@ function ProjectFormDrawer(props: {
   onClose: () => void;
   onSaved?: (id: string, name: string) => void;
 }) {
-  const { t } = useWords();
+  const { t, locale } = useWords();
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
@@ -83,7 +84,8 @@ function ProjectFormDrawer(props: {
   const mustChoose = sides.length > 0 && placed && inside === "";
   // An empty language means it follows the project it is inside, so that one's language is what the box suggests.
   const inherited = others.find((x) => x.id === inside)?.language ?? (p && !p.language_own ? p.language : "");
-  const budgetNumber = budget.trim() === "" ? null : Number(budget);
+  // A budget is typed as the person writes an amount: "250", "$250.00" and "250,00" in a language that writes a comma.
+  const budgetNumber = budget.trim() === "" ? null : (parseAmount(budget, locale) ?? Number.NaN);
   const save = async () => {
     const body = {
       parent: inside || null,

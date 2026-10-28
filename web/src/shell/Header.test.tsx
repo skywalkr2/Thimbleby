@@ -215,11 +215,11 @@ test("below 1440px the assistant's state moves into the status chip's popover, a
   expect(alive).toHaveTextContent("no tasks yet");
 });
 
-test("the header has no Your pages button: the links are the first group of the person's menu, each opening in a new tab", async () => {
+test("the header has no Quick links button: the links are the first group of the person's menu, each opening in a new tab", async () => {
   const user = userEvent.setup();
   const address = "https" + "://boards.example.org/plan";
   show({ links: [{ name: "Planning board", address }, { name: "Odd one", address: "not an address" }] });
-  expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Quick links" })).toBeNull();
   await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
   const link = await screen.findByRole("menuitem", { name: "Planning board" });
   expect(link).toHaveAttribute("href", address);
@@ -227,14 +227,14 @@ test("the header has no Your pages button: the links are the first group of the 
   expect(screen.queryByRole("menuitem", { name: "Odd one" })).toBeNull();
   // The links come first, under their own title, then the appearance choices.
   const groups = screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
-  expect(groups.slice(0, 3)).toEqual(["Your pages", "How Helper is doing", "Theme"]);
+  expect(groups.slice(0, 3)).toEqual(["Quick links", "How Helper is doing", "Theme"]);
 });
 
 test("with no links the person's menu is only the appearance choices", async () => {
   const user = userEvent.setup();
   show({ links: [] });
   await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
-  expect(screen.queryByRole("group", { name: "Your pages" })).toBeNull();
+  expect(screen.queryByRole("group", { name: "Quick links" })).toBeNull();
   expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
 });
 

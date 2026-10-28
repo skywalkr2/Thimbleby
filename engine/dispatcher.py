@@ -47,6 +47,7 @@ from engine.cleaning import quoted_messages
 from engine.config import Config
 from engine.learning import offered_ops, request_learns
 from engine.moments import localize_ops
+from engine.money import usd
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import PacketRefused, build, target_of
@@ -243,7 +244,7 @@ def process(
         return needs_you(
             store,
             request_id,
-            f"This would cost about ${estimate:.2f}, above the per-run limit of ${budgets.per_run_usd:.2f}. "
+            f"This would cost about {usd(estimate)}, above the per-run limit of {usd(budgets.per_run_usd)}. "
             "Hand in less, or raise “Most one run may cost” in Settings, AI spending.",
         )
     over = budget_problem(store, req.data, estimate)
@@ -677,7 +678,7 @@ class _Budget:
     def stop(self, store: Store) -> str:
         spent = request_spent(store, self.request_id)
         allowed = "your go covered" if self.granted else "it may spend without your go"
-        return f"Spent ${spent:.2f} of the ${self.cap:.2f} {allowed}. Give another go to finish it."
+        return f"Spent {usd(spent)} of the {usd(self.cap)} {allowed}. Give another go to finish it."
 
 
 def search_request(text: str) -> workspace_search.Query | None:
@@ -865,7 +866,7 @@ def _rounds(
                         return _Outcome(run_id=out.run_id, stop=budget.stop(store), cause={"kind": "spend_cap"})
                     return _Outcome(
                         run_id=out.run_id,
-                        stop=f"Searching first would make this cost about ${again:.2f}, above the amount you allowed. "
+                        stop=f"Searching first would make this cost about {usd(again)}, above the amount you allowed. "
                         "Hand in less, or raise the amount in Settings, AI spending.",
                     )
             result = _call(
@@ -1177,7 +1178,7 @@ def _refused(store: Store, run_id: str | None, reason: str) -> str:
     cost = run.data.get("cost_usd") if run else 0.0
     said = provider_reason(reason)
     why = f" ({said})" if said else ""
-    spent = f" It cost ${cost:.2f}." if cost else ""
+    spent = f" It cost {usd(cost)}." if cost else ""
     return f"{REFUSED}{why}.{spent} Pick another account to try it, change the request, or set it aside."
 
 
@@ -1440,8 +1441,8 @@ def about(low: float, high: float | None, account: str | None = None) -> str:
     priced on when that isn't the one the person set first for the work."""
     on = f" on {account}" if account else ""
     if high is None or round(high, 2) <= round(low, 2):
-        return f"About ${low:.2f}{on}."
-    return f"About ${low:.2f}{on}, at most ${high:.2f}."
+        return f"About {usd(low)}{on}."
+    return f"About {usd(low)}{on}, at most {usd(high)}."
 
 
 def _named_account(cfg: Config, tier: str, account: Any, use: str | None) -> str | None:

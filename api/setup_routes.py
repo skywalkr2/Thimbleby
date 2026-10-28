@@ -99,6 +99,7 @@ from engine import sorting_rules as sorting
 from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource, WorkspaceFile
 from engine.drop_notes import dropped_actions, note_the_drops
+from engine.money import usd
 from engine.names import People
 from engine.organizations import own_organization
 from engine.sign_in_sources import accounts_of
@@ -1622,7 +1623,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 detail="Nothing to measure: this account isn't allowed to see the material of any case.",
             )
         if measure.needs_go(now, plan) and not body.confirmed:
-            cost = "its cost can't be estimated" if plan.usd is None else f"it would cost about ${plan.usd:.2f}"
+            cost = "its cost can't be estimated" if plan.usd is None else f"it would cost about {usd(plan.usd)}"
             raise HTTPException(
                 status_code=409,
                 detail=f"Testing needs your confirmation first: {cost}, and you asked to be asked about that.",

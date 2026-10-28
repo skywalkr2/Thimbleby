@@ -21,14 +21,14 @@ const items = (tokens: Record<string, string> = {}) => [
 const posted = (calls: ReturnType<typeof fakeSettings>) => calls.filter((c) => c.route === "POST settings").map((c) => c.body as { changes: Record<string, unknown> });
 const open = async () => {
   const user = userEvent.setup();
-  await user.click(await screen.findByText("For developers"));
+  await user.click(await screen.findByText("More settings"));
   return user;
 };
 
-test("the catalog settings are a closed section named For developers", async () => {
+test("the catalog settings are a closed section named More settings", async () => {
   fakeSettings(items());
   renderApp(<DeveloperSettings />);
-  const fold = (await screen.findByText("For developers")).closest("details") as HTMLDetailsElement;
+  const fold = (await screen.findByText("More settings")).closest("details") as HTMLDetailsElement;
   expect(fold.open).toBe(false);
   expect(screen.queryByLabelText("List add-ons from catalogs")).not.toBeVisible();
   await open();

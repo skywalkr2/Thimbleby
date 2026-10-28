@@ -269,8 +269,12 @@ def _list(value: Any) -> list[str]:
     return [str(v) for v in value if isinstance(v, (str, int))] if isinstance(value, list) else []
 
 
-def summary(provides: dict[str, Any], requires: dict[str, Any]) -> dict[str, Any]:
-    """What a manifest adds, reaches and keeps, in counts and plain names, for the screen to word."""
+def summary(
+    provides: dict[str, Any], requires: dict[str, Any], sign_in_labels: dict[str, str] | None = None
+) -> dict[str, Any]:
+    """What a manifest adds, reaches and keeps, in counts and plain names, for the screen to word. A sign-in is named by
+    the label its add-on declares for it (`sign_in_labels`, by the sign-in's id); where the add-on isn't running there
+    is no label to read, and the entry is empty, so the screen says only that it signs in to a service, never the id."""
     tools = requires.get("tools") if isinstance(requires.get("tools"), list) else []
     levels = [lvl for lvl in _list(requires.get("data_levels")) if lvl in LEVELS] or ["open", "internal"]
     declared = provides.get("connector_reads")
@@ -286,7 +290,7 @@ def summary(provides: dict[str, Any], requires: dict[str, Any]) -> dict[str, Any
             "sources": len(_list(provides.get("connectors"))),
         },
         "reaches": {
-            "sign_ins": [_words(k) for k in _list(provides.get("sign_ins"))],
+            "sign_ins": [(sign_in_labels or {}).get(k, "") for k in _list(provides.get("sign_ins"))],
             "hosts": _list(requires.get("network")),
             "programs": [str(t.get("name")) for t in tools if isinstance(t, dict) and t.get("name")],
             "keys": len(_list(requires.get("secrets"))),
@@ -298,10 +302,10 @@ def summary(provides: dict[str, Any], requires: dict[str, Any]) -> dict[str, Any
     }
 
 
-def manifest_summary(manifest: Any) -> dict[str, Any]:
+def manifest_summary(manifest: Any, sign_in_labels: dict[str, str] | None = None) -> dict[str, Any]:
     """The same summary for an installed plugin, from its checked manifest."""
     data = manifest.model_dump(mode="json")
-    return summary(data.get("provides") or {}, data.get("requires") or {})
+    return summary(data.get("provides") or {}, data.get("requires") or {}, sign_in_labels)
 
 
 # ---- what its AI work costs here -------------------------------------------------------------------------------------

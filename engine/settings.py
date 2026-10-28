@@ -29,6 +29,7 @@ from engine.config import ConfigError, levels, load_config
 from engine.config.loader import RENAMED_KEYS, plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
+from engine.money import parse_usd
 from engine.references import join_watch_changes
 from engine.secrets import SecretHint
 from engine.storage import StoreError, WriteContext
@@ -81,6 +82,7 @@ class Setting:
     page: str | None = None  # the page of Settings it is a row of (or "advanced"); None for one that is no row
     topic: str | None = None  # behind Advanced: the topic it is listed under
     by_setup: bool = False  # the value now in the files was written by setup, so it reads as set up, not as changed
+    money: bool = False  # an amount of US dollars: shown as currency with two decimals, typed with or without the sign
 
 
 @dataclass
@@ -282,6 +284,7 @@ def _walk(
                 page=levels.place_of(dotted)[0],
                 topic=levels.place_of(dotted)[1],
                 file_types=[str(x) for x in extra.get("file_types") or [] if isinstance(x, str)],
+                money=extra.get("money") is True,
             )
         )
 
@@ -499,6 +502,7 @@ def save(
     shown = {s.key: s for s in describe(cfg, plugins, config_dir)}
     for key in [*changes, *reset]:
         _check_key(key, shown, cfg, allow, models)
+    changes = _amounts(changes, shown)
     try:
         # Records the watch settings name are held by id; a name typed here is resolved, or refused with its own words.
         changes = join_watch_changes(store.read(), changes)
@@ -576,6 +580,21 @@ def save(
     if cfg.storage.export.commit:
         _commit(ws.root, [config_dir / f"{name}.yaml" for name in texts], [c["key"] for c in saved.changes])
     return saved
+
+
+def _amounts(changes: dict[str, Any], shown: dict[str, Setting]) -> dict[str, Any]:
+    """A money setting saved as text ("1.5", "$1.50") is the same amount as the number: it is read here, once, so every
+    way of saving (a screen, the command line, a file) writes the number."""
+    out = dict(changes)
+    for key, value in changes.items():
+        setting = shown.get(key)
+        if setting is None or not setting.money or not isinstance(value, str):
+            continue
+        try:
+            out[key] = parse_usd(value)
+        except ValueError:
+            raise SettingsError(f"{screen_name(setting)} must be an amount of money, such as $1.50") from None
+    return out
 
 
 def _resource_history(store: Any, cfg: Any) -> None:

@@ -11,7 +11,7 @@ import { api, ApiError, type S } from "../lib/api";
 
 import { copyPlain } from "../lib/copy";
 import { day, whenText as when } from "../lib/dates";
-import { useSmallMoney, useTotal } from "../lib/money";
+import { usePrice, useSmallMoney } from "../lib/money";
 import {
   SAFE_ID,
   addsLines,
@@ -50,7 +50,9 @@ export function Addons(props: { onBack?: () => void }) {
   return (
     <section className="panel-section" aria-labelledby="addons-title">
       <div className="heading">
-        <h1 id="addons-title">{t("addons.title")}</h1>
+        <h2 id="addons-title" tabIndex={-1} data-section-heading="">
+          {t("addons.title")}
+        </h2>
         {props.onBack && (
           <button type="button" className="btn" onClick={props.onBack}>
             {t("addons.back")}
@@ -110,7 +112,7 @@ function useSwitch(name: string, label: string) {
 /** Installing, updating or removing an add-on from the screen: acts at once, then the row says a restart is needed until
  * the app has restarted. A refusal is kept for the row to show in the server's own words; `note` is what the row says
  * after a success. */
-function usePackChange(packId: string, name: string, focusRow: () => void, nameOf: (id: string) => string = (id) => id) {
+export function usePackChange(packId: string, name: string, focusRow: () => void, nameOf: (id: string) => string = (id) => id) {
   const { t } = useWords();
   const client = useQueryClient();
   const { push } = useToasts();
@@ -185,7 +187,7 @@ function RestartLine(props: { text: string }) {
 
 /** The row's own Restart now, offered whenever the app can restart itself. Asking is the person's choice: nothing
  * restarts until it is pressed. */
-function RestartNowButton() {
+export function RestartNowButton() {
   const { t } = useWords();
   const restart = useRestart();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
@@ -335,14 +337,13 @@ function PackRow(props: {
   group?: { anyInstalled: boolean; nameOf: (id: string) => string };
 }) {
   const { t } = useWords();
-  const total = useTotal();
+  const price = usePrice();
   const small = useSmallMoney();
   const { pack, index } = props;
   const base = `pack-${index}`;
   const installed = pack.installed_version != null;
   const update = updateOffered(pack);
-  const amount = (value: number, currency: string) =>
-    !currency || currency.toUpperCase() === "USD" ? total(value) : t("money.other", { amount: value.toFixed(2), currency });
+  const amount = (value: number, currency: string) => price(value, currency);
   const compat = pack.compatible === true ? t("addons.compatible.yes") : pack.compatible === false ? t("addons.compatible.no") : "";
   const facts = [
     t(pack.maintainers ? "addons.by_maintainers" : "addons.third_party"),
@@ -496,7 +497,7 @@ function PackGroup(props: {
   onGet: (index: number) => void;
 }) {
   const { t } = useWords();
-  const total = useTotal();
+  const price = usePrice();
   const { slots } = props;
   const first = slots[0];
   const names = slots.map((s) => s.pack.name);
@@ -505,8 +506,7 @@ function PackGroup(props: {
   const change = usePackChange(first.pack.id, names.join(", "), () =>
     restoreFocus(() => document.getElementById(`${base}-row`)),
   );
-  const amount = (value: number, currency: string) =>
-    !currency || currency.toUpperCase() === "USD" ? total(value) : t("money.other", { amount: value.toFixed(2), currency });
+  const amount = (value: number, currency: string) => price(value, currency);
   const pack = first.pack;
   const facts = [
     t(pack.maintainers ? "addons.by_maintainers" : "addons.third_party"),
@@ -797,11 +797,18 @@ function FeedLine(props: { feed: Feed; busy: boolean; onRemove: () => void }) {
   const { t, tn } = useWords();
   const { feed } = props;
   const read = feed.read_at ? when(feed.read_at) : "";
+  // The app's own catalog is named for the app and never by its address; one the person added keeps its domain.
+  const app = t("app.name");
+  const line = feed.own
+    ? read
+      ? t("addons.feed.own", { app, when: read })
+      : t("addons.feed.own_never", { app })
+    : read
+      ? t("addons.feed.read", { domain: feed.domain, when: read })
+      : t("addons.feed.never", { domain: feed.domain });
   return (
     <li className="feed">
-      <span className="hint">
-        {read ? t("addons.feed.read", { domain: feed.domain, when: read }) : t("addons.feed.never", { domain: feed.domain })}
-      </span>
+      <span className="hint">{line}</span>
       {feed.removable && (
         <button type="button" className="btn quiet small" disabled={props.busy} aria-label={t("addons.catalog_remove_named", { domain: feed.domain })} onClick={props.onRemove}>
           {t("addons.catalog_remove")}

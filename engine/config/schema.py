@@ -907,17 +907,33 @@ class Roles(ConfigModel):
     research: RoleSettings = Field(default_factory=RoleSettings, description="Work that gathers from sources.")
 
 
+#: Marks a setting that holds an amount of money, in US dollars: the screens show it as currency with two decimals in
+#: the person's number format, and read "1.5" and "$1.50" as the same amount.
+MONEY: dict[str, bool] = {"money": True}
+
+
 class TaskBudget(ConfigModel):
     per_day_usd: float | None = Field(
-        None, ge=0, description="Stop starting new work of this kind for the day above this total."
+        None,
+        ge=0,
+        description="Stop starting new work of this kind for the day above this total.",
+        json_schema_extra=MONEY,
     )
     per_month_usd: float | None = Field(
-        None, ge=0, description="Stop starting new work of this kind for the month above this total."
+        None,
+        ge=0,
+        description="Stop starting new work of this kind for the month above this total.",
+        json_schema_extra=MONEY,
     )
 
 
 class Budgets(ConfigModel):
-    per_run_usd: float = Field(0.25, ge=0, description="Never start one thing estimated to cost more than this.")
+    per_run_usd: float = Field(
+        0.25,
+        ge=0,
+        description="Never start one thing estimated to cost more than this.",
+        json_schema_extra=MONEY,
+    )
     confirm_unpriced: bool = Field(
         False,
         description="Ask me before starting something whose cost can't be estimated (an account with no prices, such "
@@ -935,28 +951,45 @@ class Budgets(ConfigModel):
         ge=0,
         description="Ask me before the assistant starts something estimated to cost more than this. Below it, it "
         "starts on its own.",
+        json_schema_extra=MONEY,
     )
     per_task: dict[str, TaskBudget] = Field(
         default_factory=dict, description="Limits for one kind of work, on top of the overall ones."
     )
-    per_day_usd: float = Field(2.0, ge=0, description="Stop starting anything new for the day above this total.")
-    per_month_usd: float = Field(30.0, ge=0, description="Stop starting anything new for the month above this total.")
+    per_day_usd: float = Field(
+        2.0,
+        ge=0,
+        description="Stop starting anything new for the day above this total.",
+        json_schema_extra=MONEY,
+    )
+    per_month_usd: float = Field(
+        30.0,
+        ge=0,
+        description="Stop starting anything new for the month above this total.",
+        json_schema_extra=MONEY,
+    )
     warn_at: float = Field(0.8, gt=0, le=1, description="Warn when this share of a budget is used.")
 
 
 class Price(ConfigModel):
-    input_per_million: float = Field(0.0, ge=0, description="Price in USD per million input tokens.")
-    output_per_million: float = Field(0.0, ge=0, description="Price in USD per million output tokens.")
+    input_per_million: float = Field(
+        0.0, ge=0, description="Price in USD per million input tokens.", json_schema_extra=MONEY
+    )
+    output_per_million: float = Field(
+        0.0, ge=0, description="Price in USD per million output tokens.", json_schema_extra=MONEY
+    )
     cached_input_per_million: float | None = Field(
         None,
         ge=0,
         description="Price per million input tokens served from the provider's cache; empty means the input price.",
+        json_schema_extra=MONEY,
     )
     audio_per_minute: float | None = Field(
         None,
         ge=0,
         description="Price in USD per minute of speech, for a model that turns a voice note into text; empty means "
         "the price isn't known, and the run waits for your go first.",
+        json_schema_extra=MONEY,
     )
 
 
@@ -2541,13 +2574,13 @@ class NotificationsSettings(ConfigModel):
     enabled: bool = Field(
         False,
         description="A notice goes out when something needs you, such as a decision waiting, a task that stopped, a "
-        "restart or a failing backup. Never for routine processing, and only to you. It shows in this browser, on "
-        "the computer that runs the app, while the app is open there, once the browser has your permission.",
+        "restart or a failing backup. Never for routine processing, and only to you. It shows on the computer that "
+        "runs the app, while the app is open there, once that computer has allowed notifications from the app.",
     )
     browser: bool = Field(
         True,
-        description="Show the notice in this browser, on the computer that runs the app, while the app is open there. "
-        "Needs the browser's permission.",
+        description="Show the notice on the computer that runs the app, while the app is open there. Needs that "
+        "computer's permission for notifications from the app.",
         json_schema_extra={"enabled_by": "enabled"},
     )
     webhook: str | None = Field(
@@ -3044,8 +3077,8 @@ class VersionFamilies(FileModel):
 class AutomatedMail(FileModel):
     set_aside: bool = Field(
         True,
-        description="Set aside automated notices into the Automated notices section, with no AI run, such as a one-time "
-        "code, a sign-in alert or a security notice from a no-reply address, and bulk mail from an automated "
+        description="Set aside automated notices into the Automated notices section, with no AI run, such as a "
+        "one-time code, a sign-in alert or a security notice from a no-reply address, and bulk mail from an automated "
         "sender or in the mail service's updates category. It applies after the rules above, so a rule that "
         "keeps mail from a sender wins.",
     )

@@ -30,10 +30,12 @@ function item(key: string, extra: Partial<S["SettingItem"]> = {}): S["SettingIte
     editable: true,
     ...extra,
   };
-  // The page the app would place a setting on, by its group; one that is not basic is behind Advanced, in the topic its
-  // test names (AI and spending unless it says).
+  // The page the app would place a setting on, by its group; one that is not basic is a rarely changed one, in the topic its
+  // test names (What the assistant learns unless it says): on its page's More settings fold where its topic has a page, else
+  // behind Advanced.
+  const topicPage: Record<string, S["SettingItem"]["page"]> = { ai: "ai", backups: "backups", appearance: "appearance", notices: "today" };
   const page: S["SettingItem"]["page"] = !made.basic
-    ? "advanced"
+    ? (topicPage[extra.topic ?? "learns"] ?? "advanced")
     : made.group.startsWith("ui.notifications") || made.group.startsWith("steward")
       ? "today"
       : made.group.startsWith("ui")
@@ -43,7 +45,7 @@ function item(key: string, extra: Partial<S["SettingItem"]> = {}): S["SettingIte
           : made.group.startsWith("ai")
             ? "ai"
             : "you";
-  return { page, topic: made.basic ? null : "ai", ...made };
+  return { page, topic: made.basic ? null : "learns", advanced: !made.basic, ...made };
 }
 
 const ITEMS: S["SettingItem"][] = [
@@ -234,12 +236,12 @@ test("choosing a section shows that section's settings and no others; the choice
   expect(chosen).toHaveBeenCalledWith("appearance");
 });
 
-test("behind Advanced, Appearance shows the measured contrast of the text on the accent color, and warns when it fails AA", async () => {
+test("in Appearance's More settings, the measured contrast of the text on the accent color is shown, and warns when it fails AA", async () => {
   const user = userEvent.setup();
   const color = (value: string) => item("ui.brand.color", { group: "ui.brand", value, default: "", description: "The accent color.", basic: false, topic: "appearance" });
   api([...ITEMS, color("#4f46e5")]);
-  open("advanced");
-  await user.click(await screen.findByRole("button", { name: "Appearance" }));
+  open("appearance");
+  await user.click(await screen.findByText("More settings"));
   const line = await screen.findByRole("status", { name: "Contrast of the accent color" });
   expect(line).toHaveTextContent(/Text on your accent color has a contrast of \d+\.\d to 1, which meets the 4\.5 to 1 that WCAG AA asks for\./);
   expect(line).not.toHaveTextContent("under");
@@ -250,12 +252,18 @@ test("behind Advanced, Appearance shows the measured contrast of the text on the
   const warning = await screen.findByRole("status", { name: "Contrast of the accent color" });
   expect(warning).toHaveTextContent(/Warning: text on your accent color has a contrast of \d+\.\d to 1, under the 4\.5 to 1 that WCAG AA asks for\. Choose a lighter or a darker color\./);
 });
-test("Appearance has the list of the person's own pages as a part of its own, not as a read-only row", async () => {
-  const links = item("ui.links", { group: "ui", type: "other", value: [{ name: "Planning board", address: `${WEB}boards.example.org/plan` }], default: [], description: "Links to your own pages." });
+test("Quick links is a section of its own with the list of the person's links as a part of its own, not as a read-only row", async () => {
+  const links = item("ui.links", { group: "ui", type: "other", value: [{ name: "Planning board", address: `${WEB}boards.example.org/plan` }], default: [], description: "Links to your own pages.", page: null });
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." }), links]);
-  open("appearance");
-  expect(await screen.findByRole("heading", { level: 3, name: "Your pages" })).toBeInTheDocument();
-  expect(screen.getByRole("list", { name: "Your pages" })).toHaveTextContent("Planning board");
+  const first = open("appearance");
+  // It is not on Appearance any more, and the section list has it by its own name.
+  expect(await screen.findByRole("link", { name: "Quick links" })).toBeInTheDocument();
+  expect(screen.queryByRole("list", { name: "Quick links" })).toBeNull();
+  first.unmount();
+  open("links");
+  expect(await screen.findByRole("heading", { level: 2, name: "Quick links" })).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "Quick links" })).toHaveTextContent("Planning board");
+  expect(screen.getByText("Sites you open every day, shown as buttons in the header. Helper doesn't read them.")).toBeInTheDocument();
   expect(screen.queryByText("Links to your own pages.")).toBeNull();
 });
 
@@ -301,7 +309,10 @@ test("each type has its own control, with its default shown", async () => {
   expect(screen.getByLabelText("What demo.limit does")).toHaveValue("2");
   expect(screen.getByLabelText("What demo.on does")).toBeChecked();
   expect(screen.getByLabelText("What demo.mode does")).toHaveValue("person");
-  expect(screen.getByLabelText("What demo.names does")).toHaveValue("a\nb");
+  // A list of words is chips, each with its own Remove, and a box to type the next word in.
+  expect(screen.getByLabelText("What demo.names does")).toHaveValue("");
+  expect(within(screen.getByRole("list", { name: "Words in What demo.names does" })).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["a×", "b×"]);
+  expect(screen.queryByText("One choice per line.")).toBeNull();
   // The default is shown only on a value the person changed.
   expect(screen.getByText("Default: Workspace")).toBeInTheDocument();
   expect(screen.queryByText("Default: Yes")).toBeNull();
@@ -380,7 +391,7 @@ test("leaving a field that was not changed saves nothing", async () => {
   expect(posted(calls)).toHaveLength(0);
 });
 
-test("a choice and a yes/no setting save as soon as they change; a list saves when the cursor leaves it", async () => {
+test("a choice and a yes/no setting save as soon as they change; a list of words saves as each word is added or removed", async () => {
   const user = userEvent.setup();
   const calls = api();
   open();
@@ -391,12 +402,20 @@ test("a choice and a yes/no setting save as soon as they change; a list saves wh
   await waitFor(() => expect(posted(calls)).toHaveLength(2));
   expect(posted(calls)[1]).toMatchObject({ changes: { "demo.mode": "rule" } });
   const names = screen.getByLabelText("What demo.names does");
-  await user.clear(names);
-  await user.type(names, "one{Enter}two{Enter}{Enter}three");
-  expect(posted(calls)).toHaveLength(2);
-  await user.tab();
+  await user.type(names, "one{Enter}");
   await waitFor(() => expect(posted(calls)).toHaveLength(3));
-  expect(posted(calls)[2]).toMatchObject({ changes: { "demo.names": ["one", "two", "three"] } });
+  expect(posted(calls)[2]).toMatchObject({ changes: { "demo.names": ["a", "b", "one"] } });
+  // A word already there is not added twice, and a word left in the box is added when the cursor leaves it.
+  await user.type(names, "a{Enter}");
+  expect(posted(calls)).toHaveLength(3);
+  await user.type(names, "two");
+  await user.tab();
+  await waitFor(() => expect(posted(calls)).toHaveLength(4));
+  expect(posted(calls)[3]).toMatchObject({ changes: { "demo.names": ["a", "b", "one", "two"] } });
+  await user.click(screen.getByRole("button", { name: "Remove a" }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(5));
+  expect(posted(calls)[4]).toMatchObject({ changes: { "demo.names": ["b", "one", "two"] } });
+  expect(screen.getByText("Removed a")).toBeInTheDocument();
 });
 
 test("a number that isn't one is refused on screen and nothing is sent", async () => {
@@ -629,6 +648,34 @@ test("Backups and sync holds the synced folder and the scheduled work, so neithe
   expect(jobs).toHaveTextContent("Refresh feeds");
 });
 
+test("each page's More settings fold is its own and starts closed: opening one never leaves the next page's open", async () => {
+  const user = userEvent.setup();
+  api(
+    [
+      ...ITEMS,
+      item("steward.attention.daily_cap", { group: "steward.attention", type: "integer", value: 5, default: 5, basic: false, topic: "notices", description: "Most notices a day." }),
+      item("storage.sync.shared", { group: "storage.sync", type: "yes_no", value: false, default: false, basic: false, topic: "backups", description: "Share the folder." }),
+    ],
+    { "GET sync": () => ({ folder: "", problem: null, stopped: false, changed_outside: [], removed_outside: [], rebuilt: [], outside_edits: [], conflict_copies: [], shared: false, handover: null }), "GET jobs": () => [] },
+  );
+  renderApp(<Settings onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+  await user.click(await within(nav).findByRole("link", { name: "Notices" }));
+  const notices = (await screen.findByText("More settings")).closest("details") as HTMLDetailsElement;
+  expect(notices.open).toBe(false);
+  await user.click(within(notices).getByText("More settings"));
+  expect(notices.open).toBe(true);
+  await user.click(within(nav).getByRole("link", { name: "Backups" }));
+  const backups = (await screen.findByText("More settings")).closest("details") as HTMLDetailsElement;
+  expect(backups.open).toBe(false);
+  expect(backups).toHaveAttribute("data-more", "backups");
+  // It is the last thing on the page, and a page with nothing rarely changed has none.
+  expect(backups.parentElement?.lastElementChild).toBe(backups);
+  await user.click(within(nav).getByRole("link", { name: "You" }));
+  await screen.findByRole("heading", { level: 2, name: "You" });
+  expect(screen.queryByText("More settings")).toBeNull();
+});
+
 const ASK = "Restart to finish this change? It takes a few seconds and keeps anything you're typing elsewhere.";
 
 function RestartHarness() {
@@ -821,22 +868,30 @@ test("the business page holds its sides with Rename, the words that mean it, and
   api(
     [
       ...ITEMS,
-      item("workspace.project.side_words.business", { group: "workspace.project.side_words", type: "list", value: ["spring catalog"], default: [], page: "business" }),
+      item("workspace.project.side_words.business", { group: "workspace.project.side_words", type: "list", value: ["spring catalog"], default: [], basic: false, topic: "filing" }),
     ],
     {
       ...BUSINESS,
       "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] }],
     },
   );
-  open("business");
+  const first = open("business");
   expect(await screen.findByRole("heading", { level: 2, name: "Your business" })).toBeInTheDocument();
   expect(await screen.findByText("Orchard Press")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Rename Orchard Press" })).toBeInTheDocument();
-  // With one side, the words that mean it are named for it.
-  expect(screen.getByLabelText("Words that mean Orchard Press")).toHaveValue("spring catalog");
+  // The words that mean a side are not here: they are with Filing, under Advanced.
+  expect(screen.queryByLabelText("Words that mean Orchard Press")).toBeNull();
   expect(await screen.findByText("Project status")).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Add a choice to Project status" })).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
+  first.unmount();
+  const user = userEvent.setup();
+  open("advanced");
+  await user.click(await screen.findByRole("button", { name: "Filing" }));
+  // With one side, the words that mean it are named for it, as chips.
+  const box = await screen.findByLabelText("Words that mean Orchard Press");
+  expect(box).toHaveValue("");
+  expect(screen.getByRole("list", { name: "Words in Words that mean Orchard Press" })).toHaveTextContent("spring catalog");
 });
 // ---- an add-on's settings ------------------------------------------------------------------------------------------
 
@@ -912,7 +967,7 @@ test("Advanced groups the rest by its topics, each closed until it is opened, an
   const user = userEvent.setup();
   const onOpenKnowledge = vi.fn();
   api([
-    item("ai.budgets.per_run_usd", { type: "number", group: "ai.budgets", value: 1, default: 1, basic: false, topic: "ai", description: "The most one run may cost." }),
+    item("watch.sorting", { type: "yes_no", group: "watch", value: true, default: true, basic: false, topic: "mail", description: "Sort incoming mail." }),
     item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false, topic: "learns", description: "Learn from corrections." }),
   ]);
   renderApp(
@@ -929,7 +984,9 @@ test("Advanced groups the rest by its topics, each closed until it is opened, an
   await user.click(within(region).getByRole("button", { name: "Open Knowledge" }));
   expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
   // The other topic is still closed.
-  expect(screen.getByRole("button", { name: "AI and spending", expanded: false })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Mail", expanded: false })).toBeInTheDocument();
+  // A topic that has a page of its own is not listed here: its settings are in that page's More settings.
+  expect(screen.queryByRole("button", { name: "AI and spending" })).toBeNull();
 });
 const ACCOUNT: S["AiAccountView"] = {
   name: "main",
@@ -1092,16 +1149,74 @@ test("a time zone is picked by its city, with a search, and the setting still ho
   expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.timezone": "America/New_York" } });
 });
 
-test("a technical setting is listed under Advanced and not on its page", async () => {
+test("a rarely changed setting is in its page's closed More settings fold, and not among the settings shown at once", async () => {
   api([
     item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "Never start more than this in a day." }),
     item("ai.budgets.confirm_unpriced", { group: "ai.budgets", type: "yes_no", value: false, default: false, description: "Ask before work whose cost can't be seen.", basic: false, topic: "ai" }),
   ], AI_ROUTES);
   open("ai");
   await screen.findByLabelText("Most to spend in a day");
-  expect(screen.queryByLabelText("Ask me before work whose cost I can't see")).toBeNull();
-  expect(screen.queryByRole("button", { name: "More settings" })).toBeNull();
+  const fold = screen.getByText("More settings").closest("details") as HTMLElement;
+  expect(fold).not.toHaveAttribute("open");
+  expect(within(fold).getByLabelText("Ask me before work whose cost I can't see")).toBeInTheDocument();
+  // Nowhere else: not under Advanced, and not twice on the page.
+  expect(screen.getAllByLabelText("Ask me before work whose cost I can't see")).toHaveLength(1);
 });
+test("a money setting shows as currency with two decimals, and '1.5' and '$1.50' save the same number", async () => {
+  const user = userEvent.setup();
+  const day = item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 2, default: 2, money: true, description: "Never start more than this in a day." });
+  const calls = api([day], AI_ROUTES);
+  open("ai");
+  const box = await screen.findByLabelText("Most to spend in a day");
+  expect(box).toHaveValue("$2.00");
+  await user.clear(box);
+  await user.type(box, "1.5{Enter}");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "ai.budgets.per_day_usd": 1.5 } });
+  await user.tab();
+  expect(box).toHaveValue("$1.50");
+  // The same amount typed with the sign is not a change: nothing more is saved.
+  await user.clear(box);
+  await user.type(box, "$1.50");
+  await user.tab();
+  expect(box).toHaveValue("$1.50");
+  expect(posted(calls)).toHaveLength(1);
+  // Another amount is saved as a number, and the default is shown in the same way.
+  await user.clear(box);
+  await user.type(box, "$3");
+  await user.tab();
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[1]).toMatchObject({ changes: { "ai.budgets.per_day_usd": 3 } });
+  expect(box).toHaveValue("$3.00");
+  expect(screen.getByText("Default: $2.00")).toBeInTheDocument();
+});
+
+test("an amount that isn't one is refused on screen and nothing is sent", async () => {
+  const user = userEvent.setup();
+  const day = item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 2, default: 2, money: true, description: "Never start more than this in a day." });
+  const calls = api([day], AI_ROUTES);
+  open("ai");
+  const box = await screen.findByLabelText("Most to spend in a day");
+  await user.clear(box);
+  await user.type(box, "lots{Enter}");
+  expect(await screen.findByText("Enter an amount, such as $1.50.")).toBeInTheDocument();
+  expect(box).toHaveAttribute("aria-invalid", "true");
+  expect(posted(calls)).toHaveLength(0);
+});
+
+test("a money setting follows the number format of the workspace's language", async () => {
+  const user = userEvent.setup();
+  const day = item("ai.budgets.per_day_usd", { group: "ai.budgets", type: "number", value: 1234.5, default: 2, money: true, description: "Never start more than this in a day." });
+  const calls = api([day], AI_ROUTES);
+  renderApp(<Settings section="ai" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />, {}, { locale: "de-DE" });
+  const box = await screen.findByLabelText("Most to spend in a day");
+  expect(box).toHaveValue("$1.234,50");
+  await user.clear(box);
+  await user.type(box, "2.500,25{Enter}");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "ai.budgets.per_day_usd": 2500.25 } });
+});
+
 test("the notices switch is labelled in the words of what the person gets, and the spending settings use plain words", async () => {
   api(
     [
@@ -1111,22 +1226,24 @@ test("the notices switch is labelled in the words of what the person gets, and t
     AI_ROUTES,
   );
   renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  expect(await screen.findByRole("checkbox", { name: "Tell me when something needs me (in this browser)" })).toBeInTheDocument();
+  expect(await screen.findByRole("checkbox", { name: "Tell me when something needs me (on this computer)" })).toBeInTheDocument();
   expect(document.body.textContent ?? "").not.toMatch(/Turn on “/);
 });
 test("Advanced topics have plain names, in their order, and none is named after a group of the files", async () => {
   const adv = (key: string, topic: S["SettingItem"]["topic"], group: string) => item(key, { type: "yes_no", group, value: true, default: true, basic: false, topic });
   api([
     adv("steward.dates.suggest_reminders", "meetings", "steward.dates"),
+    adv("workspace.project.side_words.personal", "filing", "workspace.project.side_words"),
     adv("dispatch.knowledge.learn", "learns", "dispatch.knowledge"),
     adv("watch.sorting", "mail", "watch"),
     adv("steward.attention.daily_cap", "notices", "steward.attention"),
     adv("ui.followups.question_after_days", "followups", "ui.followups"),
-  ]);
+  ], BUSINESS);
   renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByRole("button", { name: "What the assistant learns" });
   const names = screen.getAllByRole("button", { expanded: false }).map((b) => b.textContent);
-  expect(names).toEqual(["What the assistant learns", "Follow-ups and reminders", "Notices", "Mail", "Meetings"]);
+  // Notices has a page of its own, so its settings are not a topic here.
+  expect(names).toEqual(["What the assistant learns", "Follow-ups and reminders", "Filing", "Mail", "Meetings"]);
   expect(screen.queryByRole("button", { name: /Dispatch|Watch|Steward|^Ui /i })).toBeNull();
 });
 test("a choice setting that doesn't name a list keeps its own order and wording", async () => {
@@ -1171,20 +1288,39 @@ test("what the app keeps only in files is no row on any page, though the API lis
 test("with no side besides Personal the settings that name whose side a project is on are not listed, and with a side they are", async () => {
   const items = [
     ...ITEMS,
-    item("workspace.project.side_words.personal", { group: "workspace.project.side_words", type: "list", description: "Words that mean your own life.", value: [], default: [] }),
+    item("workspace.project.side_words.personal", { group: "workspace.project.side_words", type: "list", description: "Words that mean your own life.", value: [], default: [], basic: false, topic: "filing" }),
   ];
   api(items, {
     "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
     "GET projects": () => [project("PRJ-1", "Personal")],
   });
-  const first = open();
-  expect(await screen.findByText("The display name.")).toBeInTheDocument();
-  await waitFor(() => expect(screen.queryByLabelText("Words that mean personal")).toBeNull());
+  const user = userEvent.setup();
+  const first = open("advanced");
+  // Nothing of Filing is left to show, so the topic is not listed either.
+  expect(await screen.findByRole("heading", { level: 2, name: "Advanced" })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Filing" })).toBeNull());
   first.unmount();
   api(items, BUSINESS);
-  open();
-  expect(await screen.findByText("The display name.")).toBeInTheDocument();
+  open("advanced");
+  await user.click(await screen.findByRole("button", { name: "Filing" }));
   expect(await screen.findByLabelText("Words that mean personal")).toBeInTheDocument();
+});
+
+test("with projects of its own but no side besides Personal, the words that mean each side are not listed either", async () => {
+  api(
+    [
+      ...ITEMS,
+      item("workspace.project.side_words.personal", { group: "workspace.project.side_words", type: "list", description: "Words that mean your own life.", value: [], default: [], basic: false, topic: "filing" }),
+    ],
+    {
+      "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-1", sides: [], chosen: "me" }),
+      "GET projects": () => [project("PRJ-1", "Personal"), { ...project("PRJ-2", "Garden club"), parent: null }],
+    },
+  );
+  open("advanced");
+  expect(await screen.findByRole("heading", { level: 2, name: "Advanced" })).toBeInTheDocument();
+  await screen.findByRole("button", { name: "What the assistant learns" });
+  expect(screen.queryByRole("button", { name: "Filing" })).toBeNull();
 });
 
 // ---- Your name, one row for working hours and the brief's times, and the setup guide link (design 7.9) -------------------
@@ -1279,7 +1415,7 @@ test("a refused working day is told on the row and the choice stays as it was ma
   expect(await within(row).findByRole("alert")).toHaveTextContent("The working day must start before it ends.");
 });
 
-test("the brief's three times are one row behind Advanced, under Notices", async () => {
+test("the brief's three times are one row in the More settings of Notices", async () => {
   const user = userEvent.setup();
   const calls = api([
     ...ITEMS,
@@ -1287,8 +1423,8 @@ test("the brief's three times are one row behind Advanced, under Notices", async
     item("steward.brief.evening_from", { group: "steward.brief", basic: false, topic: "notices", type: "choice", options: ["17:00", "18:00"], value: "17:00", default: "17:00" }),
     item("steward.brief.weekly_day", { group: "steward.brief", basic: false, topic: "notices", type: "choice", options: ["monday", "tuesday"], value: "monday", default: "monday" }),
   ]);
-  renderApp(<Settings section="advanced" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  await user.click(await screen.findByRole("button", { name: "Notices" }));
+  openToday();
+  await user.click(await screen.findByText("More settings"));
   const row = await screen.findByRole("group", { name: "When the brief shows" });
   expect(within(row).getAllByRole("combobox")).toHaveLength(3);
   await user.selectOptions(within(row).getByLabelText("The weekly briefing shows on"), "tuesday");
@@ -1330,7 +1466,7 @@ test("quiet hours are one compact row, '21:00 to 07:00', each end saved as its o
   expect(posted(calls)[0]).toMatchObject({ changes: { "steward.reminders.quiet_end": "09:00" } });
 });
 
-test("a long hint is two lines with More for the rest, and a short one is whole with no button", async () => {
+test("a genuinely long hint is four lines with More for the rest, and a hint that fits is whole with no button", async () => {
   const user = userEvent.setup();
   const long = "A long help text. ".repeat(20).trim();
   api([...ITEMS, item("workspace.language", { description: long, type: "text", value: "", default: "" })]);
@@ -1344,4 +1480,14 @@ test("a long hint is two lines with More for the rest, and a short one is whole 
   expect(screen.getByRole("button", { name: "Less" })).toHaveAttribute("aria-expanded", "true");
   // The text is in the page whole either way, for a screen reader and for find-in-page.
   expect(hint.textContent).toBe(long);
+});
+
+test("a hint of a few lines is shown in full with no More", async () => {
+  const roomy = "A help text of a few lines that has room to be read in full. ".repeat(4).trim();
+  expect(roomy.length).toBeGreaterThan(200);
+  api([...ITEMS, item("workspace.language", { description: roomy, type: "text", value: "", default: "" })]);
+  openToday();
+  const hint = await screen.findByText(roomy);
+  expect(hint).not.toHaveClass("clamped");
+  expect(screen.queryByRole("button", { name: "More" })).toBeNull();
 });

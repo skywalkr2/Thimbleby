@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 249. Settings in one format; money, quick links, word lists, no browser on screen, the Add-ons screen (2026-10-28; owner's first real evening; P79 to P84)
+
+| Where | Before | Now |
+|---|---|---|
+| Money (7.9) | A money setting was a plain number box; amounts were written by several ad hoc formats | **Built** (`tests/test_money.py::test_every_money_setting_is_marked_once_in_the_schema`, `web/src/lib/money.test.tsx`, `web/src/components/Settings.test.tsx`): marked once in the schema (`money`), shown as currency with two decimals in the number format of the workspace's language, "1.5" and "$1.50" save the same number, one writer for every amount a screen shows and one for the server's messages |
+| No "browser" on screen (7.9) | "This browser", "Your browser blocked copying", "(in this browser)" | **Built** (`web/src/wording/wording.test.ts`, `tests/test_wording.py::test_no_screen_wording_or_setting_help_names_the_browser`): the Notices target is "This computer"; the messages are worded without it; a test refuses the word |
+| Quick links (7.9) | "Your pages", under Appearance, read as news feeds | **Built** (`web/src/components/Settings.test.tsx`, `web/src/components/Sources.test.tsx`): a section of its own, "Sites you open every day, shown as buttons in the header. <assistant> doesn't read them."; one line on Connections points to it |
+| Word lists (7.9) | A textarea with "One choice per line"; the side words on the business page; a "More" toggle on short hints | **Built** (`web/src/components/ChipList.test.tsx`, `tests/test_settings_cut.py::test_a_topic_that_has_a_page_is_not_a_topic_of_advanced_and_the_words_for_each_side_are_filing`): chips (Enter adds, each removable, announced), the side words in Advanced, Filing, a hint in full unless over 300 characters |
+| Add-ons screen (7.9, 3.11) | The app's own catalog shown by its address; "Signs in to: account" | **Built** (`web/src/components/Addons.test.tsx`, `tests/test_packs.py::test_a_sign_in_is_named_by_the_label_its_add_on_declares_never_by_its_id`): "<app>'s add-on list" with when it was read; the sign-in's own label |
+| Settings in one format (7.9) | Connections and Add-ons had their own title and no search; "For developers"; settings listed under both a page and Advanced | **Built** (`web/e2e/settings-walk.spec.ts`, `tests/test_settings_cut.py::test_no_setting_name_appears_twice_anywhere_in_settings`): one frame, a "More settings" fold at the foot of each page, Advanced only for topics with no page; a connection whose add-on is missing names it with Install it or Restart now (`web/src/components/Sources.test.tsx`) |
+
 ## 248. The Knowledge screen as one page; bulk notifications are notices; Bring it in (2026-10-28; P94, P78)
 
 | Where | Before | Now |

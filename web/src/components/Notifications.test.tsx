@@ -60,7 +60,7 @@ describe("the ways of getting a notice", () => {
     stubNotification("granted");
     fakeApi(routes());
     renderApp(<Notifications />);
-    expect(await card("This browser")).toBeInTheDocument();
+    expect(await card("This computer")).toBeInTheDocument();
     expect(await card("A chat app or a push topic")).toBeInTheDocument();
     expect(screen.queryByText("Mail to yourself")).toBeNull();
     expect(screen.queryByText(/Comes with mail sending/)).toBeNull();
@@ -96,7 +96,7 @@ describe("the ways of getting a notice", () => {
     fakeApi(routes({ "GET notifications": () => view({ enabled: false }) }));
     renderApp(<Notifications />);
     expect(await screen.findByText(/Notices are off\. Turn them on above/)).toBeInTheDocument();
-    expect(within(await card("This browser")).getByRole("button", { name: "Send me a test" })).toBeEnabled();
+    expect(within(await card("This computer")).getByRole("button", { name: "Send me a test" })).toBeEnabled();
   });
 
   test("the browser's test shows the server's words as a notice, and asks for permission first when there is none", async () => {
@@ -104,16 +104,16 @@ describe("the ways of getting a notice", () => {
     const shown = stubNotification("granted");
     fakeApi(routes({ "POST notifications/test": () => ({ ok: true, message: "A test note", problem: null }) }));
     renderApp(<Notifications />);
-    await user.click(within(await card("This browser")).getByRole("button", { name: "Send me a test" }));
+    await user.click(within(await card("This computer")).getByRole("button", { name: "Send me a test" }));
     await waitFor(() => expect(shown).toEqual([{ title: "A test note" }]));
-    expect(await screen.findByText("A test notice was shown in this browser.")).toBeInTheDocument();
+    expect(await screen.findByText("A test notice was shown on this computer.")).toBeInTheDocument();
   });
 
   test("no test button for the browser until the browser allows notices", async () => {
     stubNotification("default");
     fakeApi(routes());
     renderApp(<Notifications />);
-    const browser = await card("This browser");
+    const browser = await card("This computer");
     expect(within(browser).queryByRole("button", { name: "Send me a test" })).toBeNull();
     expect(within(browser).getByRole("button", { name: "Allow notifications" })).toBeInTheDocument();
   });

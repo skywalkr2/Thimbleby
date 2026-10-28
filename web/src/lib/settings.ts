@@ -1,5 +1,6 @@
 // Settings forms: turning each setting's value into what a control edits and back, grouping, searching and read-backs.
 import type { S } from "./api";
+import { parseAmount } from "./money";
 import { readable } from "./records";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -18,8 +19,9 @@ export function toDraft(item: Item): Draft {
 
 export type Parsed = { ok: true; value: unknown } | { ok: false; problem: "number" | "integer" };
 
-/** What to send for what a control holds, or what is wrong with it. */
-export function fromDraft(item: Item, draft: Draft): Parsed {
+/** What to send for what a control holds, or what is wrong with it. `locale` is the number format a money box was typed
+ * in; a draft a form keeps is already plain digits. */
+export function fromDraft(item: Item, draft: Draft, locale?: string): Parsed {
   switch (item.type) {
     case "yes_no":
       return { ok: true, value: draft === true };
@@ -34,7 +36,8 @@ export function fromDraft(item: Item, draft: Draft): Parsed {
     case "number":
     case "integer": {
       const text = String(draft).trim();
-      const n = Number(text);
+      // An amount of money is typed with or without the sign: "1.5" and "$1.50" are the same number.
+      const n = item.money === true ? (parseAmount(text, locale) ?? Number.NaN) : Number(text);
       if (!text || !Number.isFinite(n)) return { ok: false, problem: item.type };
       if (item.type === "integer" && !Number.isInteger(n)) return { ok: false, problem: "integer" };
       return { ok: true, value: n };

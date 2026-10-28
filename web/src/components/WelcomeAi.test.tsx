@@ -124,6 +124,7 @@ const spendItem = (key: string, value: number): S["SettingItem"] =>
     locked: false,
     basic: true,
     editable: true,
+    money: true,
   }) as S["SettingItem"];
 
 const SPENDING = [spendItem("ai.budgets.confirm_above_usd", 0.1), spendItem("ai.budgets.per_day_usd", 2)];
@@ -674,6 +675,21 @@ test("a changed amount is saved with Save, together with the account, and a bad 
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
   expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { "ai.budgets.per_day_usd": 5 }, reset: [], fingerprint: "fp-1", by_setup: true });
   expect(body(calls)).toBeDefined();
+});
+
+test("an amount typed with the dollar sign is the same amount as the number", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await ready(user);
+  await user.click(screen.getByRole("button", { name: "Change" }));
+  const day = screen.getByLabelText("Stop for the day at");
+  await user.clear(day);
+  await user.type(day, "$5.00");
+  expect(screen.queryByRole("alert")).toBeNull();
+  await user.click(save());
+  await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+  expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { "ai.budgets.per_day_usd": 5 }, reset: [], fingerprint: "fp-1", by_setup: true });
 });
 
 // ---- saving ------------------------------------------------------------------------------------------------------------

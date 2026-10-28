@@ -93,7 +93,7 @@ test("kinds of work down the side, one column for each account and model with th
   expect(headers).toEqual(["Kind of work", "Main account · everyday", "Main account · harder", "Second account · everyday"]);
   const rows = screen.getAllByRole("rowheader").map((r) => r.textContent);
   expect(rows).toEqual(["Pull actions from meeting notes", "Route a question to who decides", "Use a known term", "Write an update in your voice"]);
-  expect(screen.getByRole("heading", { level: 1, name: "Compare what accounts can do" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Compare what accounts can do" })).toBeInTheDocument();
   expect(screen.getByText("Correct answers · cost per correct answer · pass mark 80%")).toBeInTheDocument();
   // The model's own id is never shown.
   expect(document.body).not.toHaveTextContent("m-1");

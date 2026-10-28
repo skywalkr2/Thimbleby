@@ -5,7 +5,7 @@ import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { PageLinks } from "./PageLinks";
 
-// The list of the person's own pages, in Settings → Appearance (design 7.9): a name and a web address each, saved as it is
+// The list of the person's quick links, in Settings → Quick links (design 7.9): a name and a web address each, saved as it is
 // made with Undo. The header shows them (HeaderLinks.test.tsx).
 
 /** Made-up addresses are built from this, so no address is written out whole. */
@@ -50,7 +50,7 @@ const sent = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.route 
 
 test("each saved link is a row with its name and address and a way to remove it", async () => {
   show([board, schedule]);
-  const list = await screen.findByRole("list", { name: "Your pages" });
+  const list = await screen.findByRole("list", { name: "Quick links" });
   const rows = within(list).getAllByRole("listitem");
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("Planning board");
@@ -64,9 +64,9 @@ test("a page is added from a name and an address, saved at once with Undo", asyn
   const name = await screen.findByRole("textbox", { name: "Name" });
   await user.type(name, "Team schedule");
   await user.type(screen.getByRole("textbox", { name: "Address" }), schedule.address);
-  await user.click(screen.getByRole("button", { name: "Add this page" }));
+  await user.click(screen.getByRole("button", { name: "Add this link" }));
   await waitFor(() => expect(sent(calls)).toEqual([{ "ui.links": [board, schedule] }]));
-  expect(await screen.findByText(/Team schedule added to your pages/)).toBeInTheDocument();
+  expect(await screen.findByText(/Team schedule added to your quick links/)).toBeInTheDocument();
   // The form is empty again and the new row is there.
   expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("");
   expect(await screen.findByText(schedule.address)).toBeInTheDocument();
@@ -79,7 +79,7 @@ test("removing a page saves at once with Undo, and leaves the others", async () 
   const calls = show([board, schedule]);
   await user.click(await screen.findByRole("button", { name: "Remove Planning board" }));
   await waitFor(() => expect(sent(calls)).toEqual([{ "ui.links": [schedule] }]));
-  expect(await screen.findByText(/Planning board removed from your pages/)).toBeInTheDocument();
+  expect(await screen.findByText(/Planning board removed from your quick links/)).toBeInTheDocument();
 });
 
 test("an address that is not a web address is told in plain words and nothing is saved", async () => {
@@ -87,7 +87,7 @@ test("an address that is not a web address is told in plain words and nothing is
   const calls = show([]);
   await user.type(await screen.findByRole("textbox", { name: "Name" }), "Odd one");
   await user.type(screen.getByRole("textbox", { name: "Address" }), "javascript:alert(1)");
-  await user.click(screen.getByRole("button", { name: "Add this page" }));
+  await user.click(screen.getByRole("button", { name: "Add this link" }));
   expect(await screen.findByText(/must start with http:\/\/ or https:\/\//)).toBeInTheDocument();
   expect(sent(calls)).toEqual([]);
 });
@@ -95,7 +95,7 @@ test("an address that is not a web address is told in plain words and nothing is
 test("a name or address left empty keeps the button from saving", async () => {
   const user = userEvent.setup();
   const calls = show([]);
-  const add = await screen.findByRole("button", { name: "Add this page" });
+  const add = await screen.findByRole("button", { name: "Add this link" });
   expect(add).toBeDisabled();
   await user.type(screen.getByRole("textbox", { name: "Name" }), "Only a name");
   expect(add).toBeDisabled();
@@ -107,7 +107,7 @@ test("a refusal from the server is shown by the form, with what was typed kept",
   show([], { "POST settings": () => new Refuse(409, "The settings changed since you opened them. Look again, then save.") });
   await user.type(await screen.findByRole("textbox", { name: "Name" }), "Planning board");
   await user.type(screen.getByRole("textbox", { name: "Address" }), board.address);
-  await user.click(screen.getByRole("button", { name: "Add this page" }));
+  await user.click(screen.getByRole("button", { name: "Add this link" }));
   expect(await screen.findByText(/The settings changed since you opened them/)).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("Planning board");
 });

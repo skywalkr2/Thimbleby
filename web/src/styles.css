@@ -305,7 +305,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .kind-choice { align-items: flex-start; padding: var(--space-1) 0; }
 .kind-choice input { margin-top: var(--space-1); }
 .hint.block { display: block; }
-.hint.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.hint.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .hint-more { font-size: var(--text-xs); }
 .unfiled-line { margin: var(--space-3) 0 0; }
 .guide-test { display: grid; gap: var(--space-2); justify-items: start; }
@@ -353,6 +353,18 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .setting.dependent { border-inline-start: 2px solid var(--border); padding-inline-start: var(--space-3); }
 .setting.waiting .setting-label, .setting.waiting .check-line { color: var(--text-muted); }
 .setting-value { margin: 0; overflow-wrap: anywhere; padding: var(--space-2) var(--space-3); background: var(--surface-sunk); border-radius: var(--radius-md); font-size: var(--text-sm); }
+/* A list of words: each word a chip with its own Remove, the box for the next word under them. */
+.chip-list { display: grid; gap: var(--space-2); min-width: 0; }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.chip { display: inline-flex; align-items: center; max-width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-full); background: var(--surface-sunk); font-size: var(--text-sm); line-height: var(--lh-sm); padding-inline-start: var(--space-3); }
+.chip > span { overflow-wrap: anywhere; min-width: 0; padding-block: var(--space-1); }
+.chip-remove { min-width: var(--target-icon); min-height: var(--target-min); align-self: stretch; border: 0; background: none; color: var(--text-muted); cursor: pointer; border-start-end-radius: var(--radius-full); border-end-end-radius: var(--radius-full); font-size: var(--text-md); }
+.chip-remove:hover { color: var(--text); }
+.chip-remove:disabled { cursor: default; }
+/* The rarely changed settings of a page: one closed fold at its foot, the rows inside it set out like the rest of the page. */
+.more-settings { margin: var(--space-2) 0 0; border-top: 1px solid var(--border); }
+.more-settings > summary { padding-block: var(--space-2); }
+.more-settings > .settings-groups { gap: var(--space-3); padding-bottom: var(--space-3); }
 @container settingsform (min-width: 640px) {
   .setting.beside { grid-template-columns: minmax(0, 1fr) minmax(0, 17rem); }
 }

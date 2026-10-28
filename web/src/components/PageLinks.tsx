@@ -1,5 +1,5 @@
-// The person's own pages (design 7.9), in Settings → Appearance: a name and a web address each, shown in the header's "Your
-// pages" menu. A page is added from a name and an address and removed from its row; both are saved at once with Undo, like
+// The person's quick links (design 7.9), a section of Settings of their own: a name and a web address each, shown as buttons
+// in the header. A link is added from a name and an address and removed from its row; both are saved at once with Undo, like
 // every other setting. The server checks the list (how many, how long, a web address); this checks the address first so
 // the person is told in plain words before anything is sent.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -56,8 +56,7 @@ export function PageLinks() {
   };
 
   return (
-    <section className="settings-group" aria-labelledby={`${base}-title`}>
-      <h3 id={`${base}-title`}>{t("pages.title")}</h3>
+    <section className="settings-group" aria-labelledby="settings-section-links">
       <p className="hint">{t("pages.intro")}</p>
       {links.length > 0 && (
         <ul className="plain-list" aria-label={t("pages.list")}>

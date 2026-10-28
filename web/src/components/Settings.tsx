@@ -6,11 +6,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useEffect,
-  useId,
   useRef,
   useState,
   type MouseEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useListsPage, useValueLists } from "../lib/lists";
@@ -47,6 +47,7 @@ import {
   rememberFingerprint,
   useAfterSave,
 } from "../lib/settings-save";
+import { handOffSearch, takeSearch } from "../lib/settings-search";
 import { useSides } from "../lib/sides";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -74,6 +75,8 @@ import { WelcomeAi } from "./WelcomeAi";
 import { restoreFocus } from "./ModalPanel";
 
 type Edits = Record<string, Draft>;
+
+const SEARCH_ID = "settings-search";
 
 const FIRST_FIELD =
   "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled])";
@@ -117,42 +120,77 @@ export function SettingsNav(props: {
   );
 }
 
-/** A screen reached from Settings, shown beside the Settings side bar. */
-export function SettingsFrame(props: {
-  /** The section this page belongs under, marked in the list. */
-  under?: SettingsSection;
-  choose: (section: SettingsSection) => void;
-  children: ReactNode;
-}) {
+/** What the side bar lists and what every page of Settings is built from: the settings the app shows (with the ones that
+ * name a side left out while there is none), and the sections in order once what decides them has loaded. */
+export function useSettingsSections() {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
-  const { sides } = useSides();
+  const { justMe, sides } = useSides();
   const onListsPage = useListsPage();
   const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
-  const keyed = useQuery({
-    queryKey: ["addon-secrets"],
-    queryFn: api.addonSecrets,
-  });
-  const listed = navSections(settings.data?.items ?? [], {
+  // The add-ons that need keys: each gets password boxes in its own section.
+  const keyed = useQuery({ queryKey: ["addon-secrets"], queryFn: api.addonSecrets });
+  // With no side beside Personal, the settings that name which project is whose side are left out: nothing in them can be
+  // changed to any use until there is one.
+  // The words that mean each side are only to tell one side from another: with no side beside Personal there is nothing to tell.
+  const everything = (settings.data?.items ?? []).filter(
+    (i) => !(justMe && i.key.startsWith("workspace.project.")) && !(sides.length === 0 && i.key.startsWith("workspace.project.side_words.")),
+  );
+  const listed = navSections(everything, {
     business: sides.length > 0,
     lists: onListsPage.length > 0,
     files: (forms.data?.length ?? 0) > 0,
-    keyed: (keyed.data ?? [])
-      .filter((a) => a.secrets.length > 0)
-      .map((a) => a.plugin),
+    keyed: (keyed.data ?? []).filter((a) => a.secrets.length > 0).map((a) => a.plugin),
   });
+  return { settings, forms, keyed, sides, justMe, everything, listed };
+}
+
+/** Every page of Settings (Connections, Add-ons and what each account can do included) is built in this one frame: the
+ * title, the search and the list of sections in the same place, the page's content beside them. */
+export function SettingsFrame(props: {
+  /** The section whose page is open, marked in the list; none while the page is a list of search results. */
+  under?: SettingsSection | null;
+  choose: (section: SettingsSection) => void;
+  /** The search of a page that shows results itself (Settings). Without it, typing opens Settings with the search made. */
+  search?: { query: string; onQuery: (query: string) => void };
+  /** What sits beside the title (the setup guide, on the first page). */
+  acts?: ReactNode;
+  contentRef?: Ref<HTMLDivElement>;
+  children: ReactNode;
+}) {
+  const { t } = useWords();
+  const { listed } = useSettingsSections();
   return (
-    <div className="settings-screen">
-      <div className="settings-layout settings-frame">
-        <div className="settings-side">
-          <SettingsNav
-            listed={listed}
-            current={props.under ?? null}
-            choose={props.choose}
-          />
-        </div>
-        <div className="settings-content">{props.children}</div>
+    <section className="panel-section settings-screen" aria-labelledby="settings-title">
+      <div className="heading">
+        <h1 id="settings-title">{t("settings.title")}</h1>
+        {props.acts && <div className="acts">{props.acts}</div>}
       </div>
-    </div>
+      <p className="settings-intro">{t("settings.intro")}</p>
+      <div className="settings-layout">
+        <div className="settings-side">
+          <div className="field">
+            <label htmlFor={SEARCH_ID}>{t("settings.search")}</label>
+            <input
+              id={SEARCH_ID}
+              type="search"
+              value={props.search?.query ?? ""}
+              onChange={(e) => {
+                if (props.search) props.search.onQuery(e.target.value);
+                else if (e.target.value) {
+                  handOffSearch(e.target.value);
+                  props.choose("you");
+                }
+              }}
+              autoComplete="off"
+            />
+          </div>
+          <SettingsNav listed={listed} current={props.under ?? null} choose={props.choose} />
+        </div>
+        <div className="settings-content" ref={props.contentRef}>
+          {props.children}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -175,22 +213,16 @@ export function Settings(props: {
   const { t, tn, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
-  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   // What decides which sections are listed, and when a section that loads its own content is ready to take the cursor.
   const lists = useValueLists();
-  const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
+  const { settings, forms, keyed, sides, everything, listed } = useSettingsSections();
   const accounts = useQuery({
     queryKey: ["ai-accounts"],
     queryFn: api.aiAccounts,
   });
   // The person's own name, on the You page: its row is there once this has answered, so the cursor waits for it.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
-  // The add-ons that need keys: each gets password boxes in its own section.
-  const keyed = useQuery({
-    queryKey: ["addon-secrets"],
-    queryFn: api.addonSecrets,
-  });
   // The form that adds an AI account opens here, as a drawer, so the person never leaves Settings for it.
   const [adding, setAdding] = useState(false);
   const [addDirty, setAddDirty] = useState(false);
@@ -204,7 +236,8 @@ export function Settings(props: {
   }, [requested, acknowledge]);
   const [chosen, setChosen] = useState<SettingsSection>("you");
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [query, setQuery] = useState("");
+  // A search made on another page of Settings (Connections, Add-ons) opens here already made.
+  const [query, setQuery] = useState(takeSearch);
   const [edits, setEdits] = useState<Edits>({});
   const [problems, setProblems] = useState<Record<string, string>>({});
   // What a refused save refreshed from what is saved now, and when it changed, until the next save goes through.
@@ -214,28 +247,14 @@ export function Settings(props: {
   }>({ lines: [], time: "" });
   const editsNow = useRef(edits);
   editsNow.current = edits;
-  const searchId = useId();
   const content = useRef<HTMLDivElement>(null);
 
-  // With no side beside Personal, the settings that name which project is whose side are left out: nothing in them can be
-  // changed to any use until there is one.
-  const { justMe, sides } = useSides();
-  const onListsPage = useListsPage();
-  const everything = (settings.data?.items ?? []).filter((i) => !(justMe && i.key.startsWith("workspace.project.")));
   // The accent color as it stands on screen: what is typed, else what is saved.
   const brand = everything.find((i) => i.key === "ui.brand.color");
   const brandColor = brand
     ? String(brand.key in edits ? edits[brand.key] : (brand.value ?? ""))
     : "";
   const canList = useFolderListing(everything.some((i) => i.picker));
-  const listed = navSections(everything, {
-    business: sides.length > 0,
-    lists: onListsPage.length > 0,
-    files: (forms.data?.length ?? 0) > 0,
-    keyed: (keyed.data ?? [])
-      .filter((a) => a.secrets.length > 0)
-      .map((a) => a.plugin),
-  });
   const wanted = props.section ?? chosen;
   const loaded =
     settings.isSuccess &&
@@ -273,7 +292,15 @@ export function Settings(props: {
     if (!settled) return;
     const root = content.current;
     if (!root) return;
-    const field = root.querySelector<HTMLElement>(FIRST_FIELD);
+    // A search made on another page keeps the cursor in the search box, so typing goes on where it was.
+    const searchBox = document.getElementById(SEARCH_ID);
+    if (query.trim() && searchBox instanceof HTMLInputElement) {
+      searchBox.focus({ preventScroll: true });
+      searchBox.setSelectionRange(searchBox.value.length, searchBox.value.length);
+      return;
+    }
+    // A field inside a closed "More settings" fold can't take the cursor.
+    const field = Array.from(root.querySelectorAll<HTMLElement>(FIRST_FIELD)).find((el) => !el.closest("details:not([open])"));
     const heading = root.querySelector<HTMLElement>("[data-section-heading]");
     const target =
       section === "ai" || section === "files" || section === "lists"
@@ -498,9 +525,9 @@ export function Settings(props: {
   };
 
   /** A page of settings: the rows the app places on it, with a heading for each group only where the page is the AI page
-   * or an add-on's own. */
+   * or an add-on's own. The rarely changed ones are left for the page's "More settings" fold. */
   const form = (id: SettingsSection, lead?: ReactNode) => {
-    const byTopic = topics(sectionItems(everything, id));
+    const byTopic = topics(sectionItems(everything, id).filter((i) => !i.advanced));
     const headings = id === "ai" || (id.startsWith("addon/") && byTopic.length > 1);
     return (
       <div className="settings-groups">
@@ -510,7 +537,25 @@ export function Settings(props: {
     );
   };
 
-  /** Advanced: the settings no other section holds, by topic, each topic closed until it is opened. */
+  /** The foot of every page: its rarely changed settings in one closed fold, and whatever else belongs with them (the
+   * accent color's contrast, where a chat app's address is kept). Nothing when the page has none. */
+  const moreSettings = (id: SettingsSection) => {
+    const items = sectionItems(everything, id).filter((i) => i.advanced);
+    const extra =
+      id === "appearance" ? <BrandContrast color={brandColor} /> : id === "today" ? <Notifications part="webhook" /> : null;
+    if (items.length === 0 && !extra) return null;
+    return (
+      <details key={id} className="more-options more-settings" data-more={id}>
+        <summary>{t("settings.more")}</summary>
+        <div className="settings-groups">
+          {rows(items)}
+          {extra}
+        </div>
+      </details>
+    );
+  };
+
+  /** Advanced: the topics that have no page of their own, each closed until it is opened. */
   const advanced = () =>
     topics(sectionItems(everything, "advanced")).map((topic) => {
       const key = `advanced:${topic.group}`;
@@ -547,8 +592,6 @@ export function Settings(props: {
                 </button>
               </p>
             )}
-            {open[key] && topic.group === "appearance" && <BrandContrast color={brandColor} />}
-            {open[key] && topic.group === "notices" && <Notifications part="webhook" />}
           </div>
         </div>
       );
@@ -608,6 +651,7 @@ export function Settings(props: {
           />
           <AiChoices />
           {form("ai")}
+          {moreSettings("ai")}
         </>
       );
     }
@@ -636,7 +680,7 @@ export function Settings(props: {
       <>
         {heading(section)}
         {form(section, section === "you" ? <YourName /> : undefined)}
-        {section === "appearance" && <PageLinks />}
+        {section === "links" && <PageLinks />}
         {section.startsWith("addon/") && (
           <AddonSecrets
             plugin={section.slice("addon/".length)}
@@ -653,68 +697,44 @@ export function Settings(props: {
             <JobsPanel />
           </>
         )}
+        {moreSettings(section)}
       </>
     );
   };
 
   return (
-    <section
-      className="panel-section settings-screen"
-      aria-labelledby="settings-title"
-    >
-      <div className="heading">
-        <h1 id="settings-title">{t("settings.title")}</h1>
-        {section === "you" && !query.trim() && (
-          <div className="acts">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => props.onOpenGuide()}
-            >
+    <>
+      <SettingsFrame
+        under={!query.trim() ? section : null}
+        choose={choose}
+        search={{ query, onQuery: setQuery }}
+        acts={
+          section === "you" && !query.trim() ? (
+            <button type="button" className="btn" onClick={() => props.onOpenGuide()}>
               {t("settings.open_guide")}
             </button>
-          </div>
+          ) : null
+        }
+        contentRef={content}
+      >
+        {query.trim() && (
+          <p className="hint" role="status">
+            {found.length ? tn("settings.shown", found.length) : ""}
+          </p>
         )}
-      </div>
-      <p className="settings-intro">{t("settings.intro")}</p>
-      <div className="settings-layout">
-        <div className="settings-side">
-          <div className="field">
-            <label htmlFor={searchId}>{t("settings.search")}</label>
-            <input
-              id={searchId}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <SettingsNav
-            listed={listed}
-            current={!query.trim() ? section : null}
-            choose={choose}
-          />
-        </div>
-        <div className="settings-content" ref={content}>
-          {query.trim() && (
-            <p className="hint" role="status">
-              {found.length ? tn("settings.shown", found.length) : ""}
-            </p>
-          )}
-          {settings.isPending ? (
-            <Skeleton />
-          ) : settings.isError ? (
-            <p className="empty">{t("settings.failed")}</p>
-          ) : query.trim() ? (
-            results()
-          ) : (
-            <>
-              <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
-              {body()}
-            </>
-          )}
-        </div>
-      </div>
+        {settings.isPending ? (
+          <Skeleton />
+        ) : settings.isError ? (
+          <p className="empty">{t("settings.failed")}</p>
+        ) : query.trim() ? (
+          results()
+        ) : (
+          <>
+            <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
+            {body()}
+          </>
+        )}
+      </SettingsFrame>
       <Drawer
         open={adding}
         title={t("ai_add.title")}
@@ -746,6 +766,6 @@ export function Settings(props: {
           />
         )}
       </Drawer>
-    </section>
+    </>
   );
 }

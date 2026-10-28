@@ -34,7 +34,7 @@ export interface SpendLine {
 
 /** The spending sentence and what saving it takes. `enabled` false leaves it out (a form that has no such line). */
 export function useSpendLine(enabled = true): SpendLine {
-  const { t } = useWords();
+  const { t, locale } = useWords();
   const amount = useAmount();
   const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled });
@@ -50,7 +50,7 @@ export function useSpendLine(enabled = true): SpendLine {
   let bad = false;
   for (const item of [confirm, day]) {
     if (!item || edits[item.key] === undefined) continue;
-    const parsed = fromDraft(item, edits[item.key]);
+    const parsed = fromDraft(item, edits[item.key], locale);
     if (!parsed.ok) bad = true;
     else if (parsed.value !== item.value) changes[item.key] = parsed.value;
   }
@@ -73,7 +73,7 @@ export function useSpendLine(enabled = true): SpendLine {
 
   const shown = (item: S["SettingItem"]) => edits[item.key] ?? String(item.value ?? "");
   const number = (item: S["SettingItem"]) => {
-    const parsed = fromDraft(item, shown(item));
+    const parsed = fromDraft(item, shown(item), locale);
     return parsed.ok ? Number(parsed.value) : Number(item.value ?? 0);
   };
 
@@ -93,7 +93,7 @@ export function useSpendLine(enabled = true): SpendLine {
             disabled={off}
             autoComplete="off"
             aria-describedby={`${id}-hint`}
-            aria-invalid={bad && edits[item.key] !== undefined && !fromDraft(item, edits[item.key]).ok ? true : undefined}
+            aria-invalid={bad && edits[item.key] !== undefined && !fromDraft(item, edits[item.key], locale).ok ? true : undefined}
             onChange={(e) => {
               const value = e.target.value;
               setEdits((before) => ({ ...before, [item.key]: value }));

@@ -156,6 +156,6 @@ test("when copying the draft is blocked it says so and keeps nothing", async () 
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
   vi.spyOn(navigator.clipboard, "write").mockRejectedValueOnce(new Error("blocked"));
   await user.click(await screen.findByRole("button", { name: "Copy" }));
-  expect(await screen.findByText(/Your browser blocked copying/)).toBeInTheDocument();
+  expect(await screen.findByText(/Copying was blocked/)).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST actions/A-1/work/copied")).toBe(false);
 });

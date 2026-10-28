@@ -324,7 +324,7 @@ describe("adding a source", () => {
     open([source("a")], {}, { add: { plugin: null, n: 1 } });
     const form = await screen.findByRole("form", { name: "Add a connection" });
     // The cursor was moved on from the form (to the screen's heading) before the button is pressed.
-    screen.getByRole("heading", { level: 1, name: "Connections" }).focus();
+    screen.getByRole("heading", { level: 2, name: "Connections" }).focus();
     scrolled.mockClear();
     await user.click(screen.getByRole("button", { name: "Add a connection" }));
     expect(await screen.findByRole("form", { name: "Add a connection" })).toBe(form);
@@ -638,7 +638,9 @@ describe("a source's menu", () => {
     expect(within(form).getByLabelText("Name")).toHaveValue("Source a");
     expect(within(form).getByLabelText("How often to read")).toHaveValue("30");
     await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
-    expect(within(form).getByLabelText("About patterns")).toHaveValue("*.md");
+    // A list of words is chips with a box for the next one.
+    expect(within(form).getByLabelText("About patterns")).toHaveValue("");
+    expect(within(form).getByRole("list", { name: "Words in About patterns" })).toHaveTextContent("*.md");
     await user.clear(within(form).getByLabelText("Name"));
     await user.type(within(form).getByLabelText("Name"), "Renamed");
     await user.selectOptions(within(form).getByLabelText("How often to read"), "240");
@@ -1073,4 +1075,122 @@ test("nothing is offered once the sent folder is read, for another kind of sourc
   await row("Source work-mail");
   await waitFor(() => expect(document.querySelector("[data-sent-offer]")).toBeNull());
   expect(screen.queryByRole("button", { name: "Read it too" })).toBeNull();
+});
+
+// ---- a pointer to Quick links, and a connection whose add-on is missing (design 7.9) --------------------------------------
+
+test("Connections has one line pointing to Quick links, and a plain click opens it inside the app", async () => {
+  const user = userEvent.setup();
+  const onOpenLinks = vi.fn();
+  open([source("a")], {}, { onOpenLinks });
+  const line = (await screen.findByText(/Sites you only open yourself are not connections/)) as HTMLElement;
+  expect(line).toHaveTextContent("Put those under Quick links.");
+  const link = within(line).getByRole("link", { name: "Open Quick links" });
+  expect(link.getAttribute("href")).toMatch(/#settings\/links$/);
+  await user.click(link);
+  expect(onOpenLinks).toHaveBeenCalledTimes(1);
+});
+
+const NOTHING_ADDED = {
+  adds: { item_types: [], screens: 0, today: 0, ai_work: 0, actions: 0, setup_steps: 0, sources: 0 },
+  reaches: { sign_ins: [], hosts: [], programs: [], keys: 0 },
+  keeps: "open" as const,
+};
+
+const listed = (extra: Partial<S["PackView"]> = {}): S["PackView"] => ({
+  id: "gone",
+  name: "Calendar add-on",
+  summary: "Reads a calendar",
+  publisher: "A publisher",
+  maintainers: false,
+  updated: "2026-09-01",
+  version: "1.0.0",
+  price: { model: "free", amount: null, currency: "USD", period: null, note: "" },
+  homepage: null,
+  homepage_domain: null,
+  install: "install it",
+  demo: false,
+  compatible: null,
+  installed_version: null,
+  removable: false,
+  enabled: false,
+  installable: true,
+  feed: "packs.example.com",
+  what: NOTHING_ADDED,
+  costs: [],
+  ...extra,
+});
+
+const packs = (extra: Partial<S["PacksView"]> = {}): S["PacksView"] => ({ enabled: true, feeds: [], available: [], installed: [], ...extra });
+
+const missing = source("m", { connector: "gone/calendar", connector_label: "", label: "Work calendar" });
+
+test("a connection whose add-on isn't installed names the add-on in plain words and offers Install it on its row", async () => {
+  const user = userEvent.setup();
+  let installed = false;
+  const { calls } = open([missing], {
+    "GET packs": () => packs({ available: [listed()] }),
+    "GET status": () => ({ can_restart: true }),
+    "POST packs/gone/install": () => {
+      installed = true;
+      return { name: "gone", version: "1.0.0", needs_restart: true, libraries: [] };
+    },
+  });
+  const item = await row("Work calendar");
+  expect(await within(item).findByText("Calendar add-on isn't installed, so this connection can't be read.")).toBeInTheDocument();
+  expect(item).not.toHaveTextContent("gone/calendar");
+  await user.click(within(item).getByRole("button", { name: "Install Calendar add-on" }));
+  await waitFor(() => expect(installed).toBe(true));
+  expect(calls.filter((c) => c.route === "POST packs/gone/install")).toHaveLength(1);
+  // Installed, it waits for a restart the person chooses: the row says so with Restart now, and never restarts by itself.
+  expect(await within(item).findByText("Calendar add-on is installed. Restart the app to read this connection again.")).toBeInTheDocument();
+  expect(within(item).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(within(item).queryByRole("button", { name: /^Install/ })).toBeNull();
+  expect(calls.filter((c) => c.route === "POST restart")).toHaveLength(0);
+});
+
+test("an add-on that is installed and waits for a restart shows Restart now on the row, not Install it", async () => {
+  open([missing], {
+    "GET packs": () =>
+      packs({
+        available: [listed({ installed_version: "1.0.0", enabled: true })],
+        installed: [{ name: "gone", version: "1.0.0", description: "", enabled: true, state: "off", reason: null, what: NOTHING_ADDED, removable: true }],
+      }),
+    "GET status": () => ({ can_restart: true }),
+  });
+  const item = await row("Work calendar");
+  expect(await within(item).findByText("Calendar add-on is installed. Restart the app to read this connection again.")).toBeInTheDocument();
+  expect(await within(item).findByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(within(item).queryByRole("button", { name: /^Install/ })).toBeNull();
+});
+
+test("an add-on that is installed but off, or that no catalog lists, points to Add-ons instead of installing", async () => {
+  const user = userEvent.setup();
+  const onOpenAddons = vi.fn();
+  open(
+    [missing, source("n", { connector: "unlisted/feed", connector_label: "", label: "Other feed" })],
+    {
+      "GET packs": () =>
+        packs({
+          available: [listed({ installed_version: "1.0.0" })],
+          installed: [{ name: "gone", version: "1.0.0", description: "", enabled: false, state: "off", reason: null, what: NOTHING_ADDED, removable: true }],
+        }),
+    },
+    { onOpenAddons },
+  );
+  const off = await row("Work calendar");
+  expect(await within(off).findByText("Calendar add-on is installed but turned off. Turn it on under Add-ons.")).toBeInTheDocument();
+  const unlisted = await row("Other feed");
+  // No catalog names it, so its name is the add-on's own, made readable.
+  expect(await within(unlisted).findByText("Unlisted isn't installed. Find it under Add-ons.")).toBeInTheDocument();
+  await user.click(within(unlisted).getByRole("button", { name: "Open Add-ons" }));
+  expect(onOpenAddons).toHaveBeenCalledTimes(1);
+  expect(within(unlisted).queryByRole("button", { name: /^Install/ })).toBeNull();
+});
+
+test("a connection the app itself reads has no add-on line", async () => {
+  open([source("a", { connector: "folder", connector_label: "A folder" }), source("b", { connector: "folder", connector_label: "" })]);
+  await row("Source a");
+  await row("Source b");
+  expect(screen.queryByText(/isn't installed/)).toBeNull();
 });

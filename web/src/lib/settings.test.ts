@@ -46,6 +46,18 @@ test("values round trip through what a control edits", () => {
   expect(fromDraft(item({ key: "a.b", type: "integer" }), "12")).toEqual({ ok: true, value: 12 });
 });
 
+test("a money setting is read as an amount: '1.5' and '$1.50' are the same number, in the number format it was typed in", () => {
+  const money = item({ key: "a.limit_usd", type: "number", money: true });
+  expect(fromDraft(money, "1.5")).toEqual({ ok: true, value: 1.5 });
+  expect(fromDraft(money, "$1.50")).toEqual({ ok: true, value: 1.5 });
+  expect(fromDraft(money, " US$ 1,250.00 ")).toEqual({ ok: true, value: 1250 });
+  expect(fromDraft(money, "1,50", "de-DE")).toEqual({ ok: true, value: 1.5 });
+  expect(fromDraft(money, "abc")).toEqual({ ok: false, problem: "number" });
+  expect(fromDraft(money, "")).toEqual({ ok: false, problem: "number" });
+  // A number setting that is not money keeps reading a number as a number.
+  expect(fromDraft(item({ key: "a.b", type: "number" }), "$1.50")).toEqual({ ok: false, problem: "number" });
+});
+
 test("a number control refuses what is not a number, and an integer one what is not whole", () => {
   expect(fromDraft(item({ key: "a.b", type: "number" }), "lots")).toEqual({ ok: false, problem: "number" });
   expect(fromDraft(item({ key: "a.b", type: "number" }), "")).toEqual({ ok: false, problem: "number" });

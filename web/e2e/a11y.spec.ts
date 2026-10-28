@@ -43,6 +43,7 @@ const SCREENS = [
   { name: "Add-ons", hash: "settings/addons" },
   { name: "Settings", hash: "settings" },
   { name: "Settings, Notices", hash: "settings/today" },
+  { name: "Settings, Quick links", hash: "settings/links" },
   { name: "Quality", hash: "quality" },
   { name: "Handover", hash: "handover" },
 ];
@@ -62,6 +63,32 @@ for (const scheme of ["light", "dark"] as const) {
         }
       });
     }
+
+    test(`Settings' pages with their More settings open, and every topic of Advanced open, pass in ${scheme} at four widths`, async ({ page }) => {
+      test.setTimeout(180_000);
+      await page.emulateMedia({ colorScheme: scheme });
+      await signIn(page);
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: HEIGHT });
+        for (const hash of ["settings/ai", "settings/today", "settings/appearance", "settings/backups"]) {
+          await open(page, hash);
+          await page.locator("details.more-settings > summary").click();
+          await expect(page.locator("details.more-settings")).toHaveAttribute("open", "");
+          await expectNoViolations(page);
+          expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), hash).toBeLessThanOrEqual(0);
+        }
+        // The money boxes read as currency with two decimals.
+        await open(page, "settings/ai");
+        await expect(page.getByLabel("Most to spend in a day")).toHaveValue(/^\$\d[\d,]*\.\d{2}$/);
+        await open(page, "settings/advanced");
+        const toggles = page.locator(".settings-topic .topic-toggle");
+        for (let n = 0; n < (await toggles.count()); n += 1) {
+          if ((await toggles.nth(n).getAttribute("aria-expanded")) !== "true") await toggles.nth(n).click();
+        }
+        await expectNoViolations(page);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+      }
+    });
 
     test(`the stages board, with a card's menu open, passes in ${scheme} at four widths`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });

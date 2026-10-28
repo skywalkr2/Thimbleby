@@ -339,7 +339,7 @@ test("the headings of Settings' pages and Advanced's topics are short and use no
     expect(text.length, key).toBeLessThanOrEqual(60);
     expect(text, key).not.toMatch(FILE_WORDS);
   }
-  for (const topic of ["ai", "backups", "appearance", "learns", "followups", "notices", "mail", "meetings"]) {
+  for (const topic of ["ai", "backups", "appearance", "learns", "followups", "notices", "filing", "mail", "meetings"]) {
     expect(words[`settings.topic.${topic}`], topic).toBeTruthy();
   }
 });
@@ -360,4 +360,32 @@ test("one word says that something waits on the person: a state or a pill says N
   const found = Object.entries(words).filter(([, value]) => /^waiting for you$/i.test(value.trim()));
   expect(found).toEqual([]);
   for (const key of ["op.status.held", "text.status.pending", "queue.pill.waiting", "conversation.op.held", "changes.state.needs_you"]) expect(words[key]).toBe("Needs you");
+});
+
+// The app will open in its own window, so no on-screen wording names a browser. A key made only for developers (its name starts
+// with `dev.` or `internal.`) may still say it; none does today. Notifications and pop-ups are worded for "this computer".
+const DEVELOPER_ONLY = /^(dev|internal)\./;
+
+test("no on-screen wording names the browser", () => {
+  const found = Object.entries(words).filter(([key, value]) => !DEVELOPER_ONLY.test(key) && /\bbrowsers?\b/i.test(value));
+  expect(found).toEqual([]);
+  expect(words["notices.browser.title"]).toBe("This computer");
+});
+
+test("the words for a blocked copy, a blocked pop-up and the notification states don't name the browser either", () => {
+  for (const key of Object.keys(words).filter((k) => /copy_blocked$|^sign_in\.window\.blocked$|^notify\.|^notices\.(test_shown|browser)\./.test(k))) {
+    expect(words[key], key).not.toMatch(/browser/i);
+  }
+});
+
+test("the Quick links section is named, and Your pages is gone from the sheet", () => {
+  expect(words["settings.section.links"]).toBe("Quick links");
+  expect(words["pages.intro"]).toBe("Sites you open every day, shown as buttons in the header. {assistant} doesn't read them.");
+  expect(Object.values(words).filter((v) => /\byour pages\b/i.test(v))).toEqual([]);
+});
+
+test("an amount is written through the sheet's one entry, and no screen builds its own dollar sign", () => {
+  expect(words["money.usd"]).toBe("${amount}");
+  const own = [...code.matchAll(/`\$\$\{|"\$"\s*\+|\.toFixed\(2\)/g)].map((m) => m[0]);
+  expect(own).toEqual([]);
 });

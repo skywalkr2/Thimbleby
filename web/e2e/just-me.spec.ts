@@ -69,13 +69,14 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
     },
   },
   { name: "Files", hash: () => "records/files", ready: (page) => heading(page, "Files") },
-  { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections") },
-  { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons") },
+  { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections", 2) },
+  { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons", 2) },
   { name: "Settings: You", hash: () => "settings/you", ready: (page) => section(page, "You") },
   { name: "Settings: AI accounts", hash: () => "settings/ai", ready: (page) => section(page, "AI accounts") },
   { name: "Settings: Backups", hash: () => "settings/backups", ready: (page) => section(page, "Backups") },
   { name: "Settings: Notices", hash: () => "settings/today", ready: (page) => section(page, "Notices") },
   { name: "Settings: Appearance", hash: () => "settings/appearance", ready: (page) => section(page, "Appearance") },
+  { name: "Settings: Quick links", hash: () => "settings/links", ready: (page) => section(page, "Quick links") },
 ];
 
 /** The words a screen shows that a person with no work must not see, each once. */

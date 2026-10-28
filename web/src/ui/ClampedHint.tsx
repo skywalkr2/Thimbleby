@@ -1,10 +1,11 @@
-// A setting's help (design 7.9): two lines, with "More" for the rest. A short hint is shown whole with no button. The full text
-// is always in the page, so a screen reader reads all of it and find-in-page finds it; "More" only opens the clamp.
+// A setting's help (design 7.9): shown in full unless it is genuinely long; a long one is four lines with "More" for the rest.
+// A hint that fits is never clamped and has no button. The full text is always in the page, so a screen reader reads all of
+// it and find-in-page finds it; "More" only opens the clamp.
 import { useState } from "react";
 import { useWords } from "../lib/wording";
 
-/** About two lines of the help column; a hint shorter than this is never clamped. */
-const WHOLE = 150;
+/** Longer than about six lines of the help column: only a hint this long is clamped (to four lines). */
+const WHOLE = 300;
 
 export function ClampedHint(props: { id?: string; text: string }) {
   const { t } = useWords();

@@ -56,7 +56,7 @@ function pack(id: string, extra: Partial<Pack> = {}): Pack {
 }
 
 function feed(extra: Partial<S["PackFeedView"]> = {}): S["PackFeedView"] {
-  return { domain: HOST, error: null, notes: [], read_at: "2026-10-01T09:30:00+00:00", ...extra };
+  return { domain: HOST, error: null, notes: [], read_at: "2026-10-01T09:30:00+00:00", own: false, ...extra };
 }
 
 function view(extra: Partial<Packs> = {}): Packs {
@@ -150,7 +150,7 @@ test("Adds, Reaches and Keeps are short lists in plain words, and zeros are left
         pack("full", {
           what: summary({
             adds: { item_types: ["book", "chapter"], screens: 1, today: 1, ai_work: 2, actions: 3, setup_steps: 1, sources: 2 },
-            reaches: { sign_ins: ["print service"], hosts: [SITE, "files.example.com"], programs: ["ebook-checker"], keys: 1 },
+            reaches: { sign_ins: ["your print service account"], hosts: [SITE, "files.example.com"], programs: ["ebook-checker"], keys: 1 },
             keeps: "restricted",
           }),
         }),
@@ -172,7 +172,7 @@ test("Adds, Reaches and Keeps are short lists in plain words, and zeros are left
   ]);
   const reaches = within(full).getByRole("list", { name: "What it can access" });
   expect(within(reaches).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-    "Signs in to: print service",
+    "Signs in to: your print service account",
     `Websites: ${SITE}, files.example.com`,
     "Programs on this computer: ebook-checker",
     "Access keys you provide: 1",
@@ -245,7 +245,7 @@ test("How to get it shows the install text to copy and the demo line, and Copy p
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
-test("the demo command is under For developers and shows only once that disclosure is opened", async () => {
+test("the demo command is under More settings and shows only once that disclosure is opened", async () => {
   const { user } = open(view({ available: [pack("tool", { demo: true, install: "get-pack tool --yes" })] }));
   await user.click(within(await row("Name of tool")).getByRole("button", { name: "How to get Name of tool" }));
   const dialog = await screen.findByRole("dialog", { name: "How to get Name of tool" });
@@ -253,17 +253,17 @@ test("the demo command is under For developers and shows only once that disclosu
   expect(within(dialog).getByText("get-pack tool --yes")).toBeVisible();
   expect(within(dialog).getByText("cockpit demo --plugin tool")).not.toBeVisible();
   expect(within(dialog).queryByRole("button", { name: "Copy the demo command" })).not.toBeVisible();
-  await user.click(within(dialog).getByText("For developers"));
+  await user.click(within(dialog).getByText("More settings"));
   expect(within(dialog).getByText("cockpit demo --plugin tool")).toBeVisible();
   expect(within(dialog).getByRole("button", { name: "Copy the demo command" })).toBeVisible();
 });
 
-test("copying that the browser blocks says so", async () => {
+test("copying that is blocked says so", async () => {
   const { user } = open(view({ available: [pack("tool")] }));
   await user.click(within(await row("Name of tool")).getByRole("button", { name: "How to get Name of tool" }));
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
   await user.click(await screen.findByRole("button", { name: "Copy the install steps" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/wouldn't copy it/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Copying wasn't allowed/);
 });
 
 test("the demo line is left out when the pack can't be tried in the demo or its name isn't a plain one", async () => {
@@ -350,6 +350,40 @@ test("a catalog with no packs says none are listed yet", async () => {
   open(view());
   expect(await screen.findByText("No add-ons are listed yet.")).toBeInTheDocument();
   expect(screen.getByText(`${HOST} · read`, { exact: false })).toBeInTheDocument();
+});
+
+test("the app's own catalog is shown as its add-on list with when it was read, never its address; catalogs the person added keep their domain", async () => {
+  open(view({ feeds: [feed({ own: true, domain: "shipped.example.net" }), feed({ domain: "more.example.com", removable: true, address: "https://" + "more.example.com/packs.yaml" })] }));
+  expect(await screen.findByText(/^PM Cockpit's add-on list · read /)).toBeInTheDocument();
+  // The address of the app's own catalog is not on the screen at all, in text or in a label.
+  expect(document.body.textContent ?? "").not.toContain("shipped.example.net");
+  expect(screen.queryByRole("button", { name: /shipped\.example\.net/ })).toBeNull();
+  expect(screen.getByText(/^more\.example\.com · read /)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Remove the catalog more.example.com" })).toBeInTheDocument();
+});
+
+test("the app's own catalog that was never read says so by its name, and a wording sheet entry can name the app another way", async () => {
+  fakeApi({ "GET packs": () => view({ feeds: [feed({ own: true, read_at: null, domain: "shipped.example.net" })] }) });
+  renderApp(<Addons />, { "app.name": "Thimbleby" });
+  expect(await screen.findByText("Thimbleby's add-on list · not read yet")).toBeInTheDocument();
+  expect(document.body.textContent ?? "").not.toContain("shipped.example.net");
+});
+
+test("'Signs in to' names each sign-in by the label its add-on gives it, never an id, and says only that it signs in where no label is known", async () => {
+  open(
+    view({
+      available: [
+        pack("known", { what: summary({ reaches: { sign_ins: ["your Example account"] } }) }),
+        pack("unknown", { what: summary({ reaches: { sign_ins: [""] } }) }),
+      ],
+    }),
+  );
+  const known = within(await row("Name of known")).getByRole("list", { name: "What it can access" });
+  expect(known).toHaveTextContent("Signs in to: your Example account");
+  const unknown = within(await row("Name of unknown")).getByRole("list", { name: "What it can access" });
+  expect(unknown).toHaveTextContent("Signs in to a service as you");
+  expect(unknown).not.toHaveTextContent("Signs in to:");
+  expect(document.body.textContent ?? "").not.toMatch(/Signs in to: (account|sign.?in)/i);
 });
 
 test("a catalog that couldn't be read is not described as having no packs, and says why", async () => {

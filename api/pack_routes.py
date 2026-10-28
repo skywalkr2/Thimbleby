@@ -123,6 +123,8 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         # Removed while another add-on of the same file stayed: not installed, unless turned on again by hand.
         gone = pack_install.removed_entries(ws.private_dir) - enabled
         signed = signed_in()
+        # What each running add-on calls its sign-ins, by id; a pack that isn't running has no label to read.
+        labels = {name: sign_in.label for name, sign_in in host.sign_ins().items()}
         files = {e.id: e.release.sha256 for feed in feeds for e in feed.entries if e.release is not None}
         available = []
         for feed in feeds:
@@ -146,7 +148,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                         compatible=packs.compatible(entry, PLUGIN_API_VERSION),
                         installed_version=manifest.version if manifest else None,
                         enabled=entry.id in enabled,
-                        what=PackSummary(**packs.summary(entry.provides, entry.requires)),
+                        what=PackSummary(**packs.summary(entry.provides, entry.requires, labels)),
                         installable=entry.release is not None and cfg.server.mode == "local" and problem is None,
                         libraries=[PackLibrary(name=n, version=v) for n, v in adds],
                         library_problem=problem,
@@ -166,7 +168,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 enabled=name in enabled,
                 state=host.status[name].state if name in host.status else "off",
                 reason=host.status[name].reason if name in host.status else None,
-                what=PackSummary(**packs.manifest_summary(manifest)),
+                what=PackSummary(**packs.manifest_summary(manifest, labels)),
                 removable=name in mine,
                 file=files.get(name),
                 signed_in=signed.get(name) if name in enabled else None,
@@ -185,6 +187,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                     read_at=datetime.fromtimestamp(f.read_at, UTC).isoformat() if f.read_at else None,
                     address=f.url,
                     removable=f.url in settings.feeds,
+                    own=settings.shipped_feed and f.url == product().get("pack_catalog"),
                 )
                 for f in feeds
             ],

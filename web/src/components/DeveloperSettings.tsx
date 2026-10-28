@@ -22,7 +22,7 @@ export function DeveloperSettings() {
   const tokens = edit.item(TOKENS);
   if (!edit.ready || (items.length === 0 && !tokens)) return null;
   return (
-    <details className="more-options developer-settings">
+    <details className="more-options more-settings developer-settings">
       <summary>{t("addons.for_developers")}</summary>
       <div className="settings-groups" aria-label={t("addons.for_developers")} id={base}>
         <p className="hint">{t("addons.dev.intro")}</p>

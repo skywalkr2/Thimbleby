@@ -8,6 +8,7 @@ import { useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText } from "../lib/dates";
+import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { SafeText } from "./SafeText";
 
@@ -100,6 +101,7 @@ export function RecordConversation(props: { kind: string; id: string }) {
 
 function TurnRow(props: { turn: Turn }) {
   const { t, tn } = useWords();
+  const total = useTotal();
   const act = useAct();
   const { turn } = props;
   const answered = turn.answer && (turn.state === "review" || turn.state === "done");
@@ -146,7 +148,7 @@ function TurnRow(props: { turn: Turn }) {
       <div className="body">
         {turn.waiting_for_go && (
           <div className="ask-item">
-            <span className="sub">{turn.estimate_usd != null ? t("conversation.waiting_go_cost", { cost: `$${turn.estimate_usd.toFixed(2)}` }) : t("conversation.waiting_go")}</span>
+            <span className="sub">{turn.estimate_usd != null ? t("conversation.waiting_go_cost", { cost: total(turn.estimate_usd) }) : t("conversation.waiting_go")}</span>
             <div className="acts">
               <button type="button" className="btn primary" onClick={() => void act(() => api.stageGo(turn.id, turn.version), () => ({ message: t("toast.go") }))}>
                 {t("conversation.go")}

@@ -197,7 +197,7 @@ test.describe.serial("journey: mail", () => {
 
     // Connections says what is read without my having chosen it, and who is signed in.
     await openView(page, "Connections");
-    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Connections" })).toBeVisible();
     await expect(page.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     await expect(page.getByText("Your inbox").first()).toBeVisible();
     await expect(page.getByText("Your calendar").first()).toBeVisible();

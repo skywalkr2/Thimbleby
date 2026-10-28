@@ -22,6 +22,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from engine.ai.task import AiError, AiTask
+from engine.money import usd
 from engine.playbook import practice
 from engine.prompts import render
 from engine.tasks import settings, task_kind
@@ -237,7 +238,7 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
     if estimate is None and budgets.confirm_unpriced and not go:
         return _Try(why="its cost can't be estimated and you haven't started it", stop=True)
     if estimate is not None and estimate > budgets.per_run_usd:
-        return _Try(why=f"it would cost about ${estimate:.2f}, above the most one run may cost", stop=True)
+        return _Try(why=f"it would cost about {usd(estimate)}, above the most one run may cost", stop=True)
     if (
         budgets.first_go
         and not go
@@ -247,7 +248,7 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
     ):
         return _Try(why="you haven't started the assistant yet", stop=True)
     if estimate is not None and estimate > budgets.confirm_above_usd and not go:
-        return _Try(why=f"it would cost about ${estimate:.2f} and you haven't started it", stop=True)
+        return _Try(why=f"it would cost about {usd(estimate)} and you haven't started it", stop=True)
     first = _rounds(cfg, router, task, ids, tier, level)
     if first.answers is not None or first.stop:
         return first

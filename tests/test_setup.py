@@ -69,7 +69,9 @@ def test_settings_are_described_for_the_forms(tmp_path, monkeypatch):
     items = {i["key"]: i for i in view["items"]}
     assert items["workspace.name"]["type"] == "text" and items["workspace.name"]["basic"]
     assert items["workspace.name"]["page"] == "you" and items["workspace.name"]["topic"] is None
-    assert items["ui.brand.color"]["page"] == "advanced" and items["ui.brand.color"]["topic"] == "appearance"
+    # A rarely changed setting whose topic has a page sits on that page, in its More settings fold (`advanced`).
+    assert items["ui.brand.color"]["page"] == "appearance" and items["ui.brand.color"]["topic"] == "appearance"
+    assert items["ui.brand.color"]["advanced"] is True
     assert "server.port" not in items  # an address or port is kept only in files
     assert "storage.export.remote" not in items  # not offered until it is built
     assert "storage.export.every_minutes" not in items  # the backup's job in files words: files only
@@ -103,13 +105,15 @@ def test_a_feature_switch_comes_first_and_its_settings_name_it(tmp_path):
     assert all(s.type == "text" for s in found if s.picker)
 
 
-def test_the_appearance_page_holds_light_or_dark_and_density_and_the_brand_is_behind_advanced(tmp_path):
+def test_the_appearance_page_holds_light_or_dark_and_density_and_the_brand_is_in_its_more_settings(tmp_path):
     from engine import settings
 
     _, cfg, store = make(tmp_path)
     store.close()
     found = settings.describe(cfg)
-    assert {s.key for s in found if s.page == "appearance"} == {"ui.theme", "ui.density"}
+    # The brand is on the page too, in its closed "More settings" fold, never listed again under Advanced.
+    assert {s.key for s in found if s.page == "appearance" and not s.advanced} == {"ui.theme", "ui.density"}
+    assert {s.key for s in found if s.page == "appearance" and s.advanced} == {"ui.brand.color", "ui.brand.logo"}
     assert {s.key for s in found if s.topic == "appearance"} == {"ui.brand.color", "ui.brand.logo"}
 
 

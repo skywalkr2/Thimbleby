@@ -186,7 +186,7 @@ describe("what was found", () => {
     const calls = show(found);
     vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
     await user.click(await screen.findByRole("button", { name: "Copy message" }));
-    expect(await screen.findByText(/Your browser blocked copying/)).toBeInTheDocument();
+    expect(await screen.findByText(/Copying was blocked/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy message" })).toBeInTheDocument();
     expect(calls.filter((c) => c.route.startsWith("POST"))).toHaveLength(0);
   });

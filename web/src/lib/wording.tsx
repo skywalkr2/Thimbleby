@@ -5,11 +5,12 @@ import sheet from "../wording/en.json";
 export type Words = Record<string, string>;
 export type Vars = Record<string, string | number>;
 
-const WordsContext = createContext<{ words: Words; base: Vars; overrides: Words; unnamed: boolean }>({
+const WordsContext = createContext<{ words: Words; base: Vars; overrides: Words; unnamed: boolean; locale: string | undefined }>({
   words: sheet,
   base: {},
   overrides: {},
   unnamed: false,
+  locale: undefined,
 });
 
 /** The suffix of a variant of an entry used while the assistant still has the default name. */
@@ -25,6 +26,8 @@ export function WordingProvider(props: {
   base?: Vars;
   /** The assistant still has the default name: an entry with an `.unnamed` variant reads that one. */
   unnamed?: boolean;
+  /** The language tag whose number format the screens write numbers and amounts of money in; none uses the computer's. */
+  locale?: string;
   children: ReactNode;
 }) {
   const value = useMemo(
@@ -33,14 +36,15 @@ export function WordingProvider(props: {
       base: props.base ?? {},
       overrides: props.overrides ?? {},
       unnamed: !!props.unnamed,
+      locale: props.locale || undefined,
     }),
-    [props.overrides, props.base, props.unnamed],
+    [props.overrides, props.base, props.unnamed, props.locale],
   );
   return <WordsContext.Provider value={value}>{props.children}</WordsContext.Provider>;
 }
 
 export function useWords() {
-  const { words, base, overrides, unnamed } = useContext(WordsContext);
+  const { words, base, overrides, unnamed, locale } = useContext(WordsContext);
   return useMemo(() => {
     // A workspace's own wording for an entry wins over the sheet's variant for an unnamed assistant.
     const pick = (key: string) => (unnamed && !(key in overrides) && `${key}${UNNAMED}` in words ? `${key}${UNNAMED}` : key);
@@ -49,6 +53,6 @@ export function useWords() {
     const tn = (key: string, n: number, vars: Vars = {}) =>
       t(`${key}.${n === 0 && `${key}.zero` in words ? "zero" : n === 1 ? "one" : "other"}`, { n, ...vars });
     const has = (key: string) => key in words;
-    return { t, tn, has };
-  }, [words, base, overrides, unnamed]);
+    return { t, tn, has, locale };
+  }, [words, base, overrides, unnamed, locale]);
 }

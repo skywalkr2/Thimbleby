@@ -91,3 +91,22 @@ def test_the_settings_prompts_and_guide_a_person_or_the_assistant_reads_say_the_
                 texts[f"{package}/{path.name}"] = path.read_text(encoding="utf-8")
     found = sorted(name for name, text in texts.items() if _PROJECT_MANAGER.search(_said(text)))
     assert found == []
+
+
+# A key made only for developers (its name starts with `dev.` or `internal.`) may name a browser; none does today.
+_DEVELOPER_ONLY = re.compile(r"^(dev|internal)\.")
+_BROWSER = re.compile(r"\bbrowsers?\b", re.I)
+
+
+def test_no_screen_wording_or_setting_help_names_the_browser():
+    """The app opens in its own window: what the screens say about copying, pop-ups and notifications is worded for
+    "this computer", and so is every setting's help a person reads."""
+    from engine import settings
+    from engine.config import load_config
+
+    words = json.loads(WORDING.read_text(encoding="utf-8"))
+    said = {k: v for k, v in words.items() if isinstance(v, str) and not _DEVELOPER_ONLY.search(k)}
+    shown = {s.key: s.description for s in settings.describe(load_config(None, env={})) if s.page is not None}
+    found = {k: v for k, v in {**said, **shown}.items() if _BROWSER.search(v)}
+    assert found == {}
+    assert words["notices.browser.title"] == "This computer"
