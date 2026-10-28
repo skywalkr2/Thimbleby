@@ -4,6 +4,28 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-28: The Knowledge screen is what Reginald has learned about how you work, and where you control it
+
+**Decided:** The Knowledge screen reads, top to bottom:
+- **Waiting for your OK** (only when something is): each proposed lesson or rule with what it changes and where it
+  came from, and Keep, Change or Drop; Today links here.
+- **What Reginald follows**: what is in use, grouped in plain words (how things are filed, who does what, how to write
+  for you, facts it knows), each with how often it was used and Stop using.
+- **Your words**: the glossary with each word's meaning (answers to "What does X mean here?" included), and adding a
+  word with its meaning.
+- **Not used in a while**, and what was retired, behind a link rather than as tabs.
+
+On a new workspace it says in one line how things arrive ("When you correct Reginald, answer one of its questions or
+tell it a rule, what it learns shows up here for your OK"). The four tabs and their empty messages go.
+
+**Decided by:** the owner ("yes go ahead with your plan on knowledge, if later after it fills up i have another
+opinino i will say"), on the session's proposal after "we probably need to define what this screen is for".
+
+**Why:** the screen showed tabs and empty messages that meant nothing on a new workspace ("Everything active has been
+used" with nothing active) and the glossary as a bare word list.
+
+**Impact:** design 7.18 (the Knowledge screen); no engine or op change; tested with P94. Change log: none until built.
+
 ## 2026-10-28: A business or job you add is also an organization
 
 **Decided:** Adding a business or a job, in setup or later, also makes it an organization on People, the one the
