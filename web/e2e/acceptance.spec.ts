@@ -103,7 +103,7 @@ async function handIn(page: Page, c: Case) {
   const count = lines.filter((line) => ["review", "who_is", "held"].includes(line.kind)).length;
   await expect(made).toHaveCount(count, { timeout: 20_000 });
   const before = await made.allInnerTexts();
-  const known: unknown[] = await (await page.request.get("api/changes")).json();
+  const known: Array<{ changeset?: { id?: string } | null }> = await (await page.request.get("api/changes")).json();
   await page.getByRole("button", { name: "Hand something in" }).first().click();
   const box = page.getByLabel("Paste or type it here");
   if (c.pasted) {
@@ -127,10 +127,16 @@ async function handIn(page: Page, c: Case) {
       { timeout: 20_000 },
     )
     .toBe(true);
+  // The change this hand-in made: the newest one that wasn't there before. Another change landing at the same moment would
+  // otherwise be read in its place.
+  const seen = new Set(known.map((c) => c.changeset?.id).filter(Boolean));
+  const after: Array<{ changeset?: { id?: string } | null }> = await (await page.request.get("api/changes")).json();
+  const mine = after.find((c) => c.changeset?.id && !seen.has(c.changeset.id))?.changeset?.id;
   await go(page, "What changed");
-  // What changed is newest first and titles a change as Today does, so the change just handed in is the top line. Choosing
-  // the line shows the whole change in the detail pane beside the list, which is what the steps read.
-  const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
+  // What changed titles a change as Today does. Choosing the line shows the whole change in the detail pane beside the
+  // list, which is what the steps read.
+  const lines = page.getByRole("main").locator("li.line:not(.in-pane)");
+  const line = mine ? lines.and(page.locator(`[data-changeset="${mine}"]`)).first() : lines.first();
   await expect(line.locator(".kind").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
   const expander = line.locator(".expander").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
