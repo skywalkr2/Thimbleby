@@ -41,13 +41,13 @@ Where **Done when** is blank, the README's Fix for that item is the bar: a brows
 | X29 | P1 | What changed, Handled for you, Follow-ups | What changed is flooded, and shows wrong states | B-F18, B-F19, B-F22, B-F45 |  | To do | | | |
 | X30 | P1 | What changed, Handled for you, Follow-ups | Handled for you contradicts itself | D-P1-19, B-F23, D-P2-8, B-F35, D-P2-7 |  | To do | | | |
 | X31 | P1 | What changed, Handled for you, Follow-ups | Follow-ups lists the person's own to-dos, and its empty state is wrong | D-P1-20, D-P2-9, B-F36, B-F26 |  | To do | | | |
-| X32 | P1 | What changed, Handled for you, Follow-ups | Outgoing messages use office wording and raw dates | D-P1-9 | guard 4 covers outward message text. | To do | | | |
+| X32 | P1 | What changed, Handled for you, Follow-ups | Outgoing messages use office wording and raw dates | D-P1-9 | guard 4 covers outward message text. | Fixed | 6620056 | e2e/internals.spec.ts | |
 | X33 | P1 | To-dos and record pages | The to-do page and to-do editing | D-P1-7, D-P1-11, D-P2-10, B-F15, B-F27, B-F28 |  | To do | | | |
 | X34 | P1 | To-dos and record pages | A long to-do fails with no reason | D-P1-10 |  | To do | | | |
 | X35 | P1 | To-dos and record pages | Reassigning makes the other person "promise" it and queues a send | D-P1-21 |  | To do | | | |
 | X36 | P1 | To-dos and record pages | Hand-added to-dos are missing from the Personal page | D-P1-6 |  | To do | | | |
-| X37 | P1 | To-dos and record pages | Record pages show internal field names and raw values | D-P2-11, B-F29, B-F20 (part), B-F21 |  | To do | | | |
-| X38 | P1 | To-dos and record pages | Internal ids, JSON, raw dates and file names on screen | D-P1-1, B-F02, B-F07, B-F21, T-P1-25, D-P1-7 (dates), D-P1-18 (dates), plus `appendix/auto-checks.md` | guard 4's internals check is clean on every screen and message. | To do | | | |
+| X37 | P1 | To-dos and record pages | Record pages show internal field names and raw values | D-P2-11, B-F29, B-F20 (part), B-F21 |  | Fixed (bookkeeping rows fold under Details in batch 6) | 6620056 | RecordPageReads.test.tsx, e2e/internals.spec.ts | |
+| X38 | P1 | To-dos and record pages | Internal ids, JSON, raw dates and file names on screen | D-P1-1, B-F02, B-F07, B-F21, T-P1-25, D-P1-7 (dates), D-P1-18 (dates), plus `appendix/auto-checks.md` | guard 4's internals check is clean on every screen and message. | Fixed | 6620056 | e2e/internals.spec.ts, lib/internals-scan.test.ts | |
 | X39 | P1 | To-dos and record pages | Notes can't be found | B-F43 |  | To do | | | |
 | X40 | P1 | People, organizations, projects, business | People can't be given contact details or sides, and get work questions | D-P1-4, D-P1-5, B-F30, B-F49, B-F50 (part), D-P2-13, D-P2-14 |  | To do | | | |
 | X41 | P1 | People, organizations, projects, business | The business has two pages | B-F31 |  | To do | | | |
@@ -58,7 +58,7 @@ Where **Done when** is blank, the README's Fix for that item is the bar: a brows
 | X46 | P1 | Schedule, Files, Knowledge | Files | D-P1-13, D-P1-14, B-F42 |  | To do | | | |
 | X47 | P1 | Schedule, Files, Knowledge | Small changes need a restart, and the warning is alarming | D-P1-22, T-P2-4, D-P2-21 |  | To do | | | |
 | X48 | P1 | Settings and admin screens | Appearance changes need a reload, and the theme is set in two places | T-P1-2, T-P2-7, T-P2-6 (part) |  | To do | | | |
-| X49 | P1 | Settings and admin screens | Validation and save messages show raw values | T-P1-3, T-P1-4 |  | To do | | | |
+| X49 | P1 | Settings and admin screens | Validation and save messages show raw values | T-P1-3, T-P1-4 |  | Fixed | 6620056 | tests/test_plain_errors.py, Settings.test.tsx | |
 | X50 | P1 | Settings and admin screens | Reminder destinations dead-end | T-P1-5 |  | To do | | | |
 | X51 | P1 | Settings and admin screens | Compare › Measure | T-P1-9 |  | To do | | | |
 | X52 | P1 | Settings and admin screens | Add-ons: one add-on with three names, and no Remove | T-P1-11, T-P1-12, T-P2-16, T-P2-17 |  | To do | | | |
@@ -89,14 +89,14 @@ One row per shared component (VC) and per screen (VS). Seen at `04ffc21e`. Fold 
 
 | ID | Sev | Area | Title | Sources | Done when | Status | Commit | Test | Checked |
 |---|---|---|---|---|---|---|---|---|---|
-| VC01 | Visual | Shared component | Row | V2-1, V2-14, V2-18, V2-27, V1-8, V3-1, V3-2 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
-| VC02 | Visual | Shared component | PageHeader and filter bar | V2-3, V2-7, V2-9, V2-11, V2-24, V3-18, V3-20 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
-| VC03 | Visual | Shared component | Button | V1-2, V2-4, V2-15, V3-12, V3-17 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
-| VC04 | Visual | Shared component | EmptyState | V2-12, V3-5, V3-9, V3-10, V3-15, V3-21, V3-32, V3-33, V1-19 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC01 | Visual | Shared component | Row | V2-1, V2-14, V2-18, V2-27, V1-8, V3-1, V3-2 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | Fixed (29 expandable lines take the same measures; moved onto Row in V2) | 555e322 | e2e/guards.spec.ts, layout.spec.ts | |
+| VC02 | Visual | Shared component | PageHeader and filter bar | V2-3, V2-7, V2-9, V2-11, V2-24, V3-18, V3-20 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | Fixed | 555e322 | e2e/guards.spec.ts | |
+| VC03 | Visual | Shared component | Button | V1-2, V2-4, V2-15, V3-12, V3-17 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | Fixed (row actions never filled) | 555e322 | e2e/guards.spec.ts (one primary per region) | |
+| VC04 | Visual | Shared component | EmptyState | V2-12, V3-5, V3-9, V3-10, V3-15, V3-21, V3-32, V3-33, V1-19 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | Fixed | 555e322 | e2e/guards.spec.ts | |
 | VC05 | Visual | Shared component | FormField, Select, DateField, FileDrop, CheckboxGroup | V1-1, V1-4, V1-13, V1-17, V2-5, V2-16, V3-11, V3-23, V3-24, V3-25, V3-27 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
 | VC06 | Visual | Shared component | The overlay family | V1-9, V1-11, V1-12, V1-24, V1-26, V1-27, V2-13, V2-23, V3-22 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
 | VC07 | Visual | Shared component | Toast | V1-28, V2-26, V3-29 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
-| VC08 | Visual | Shared component | Link and type tokens | V1-13, V1-14, V2-17, V2-25, V3-16, V3-31 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
+| VC08 | Visual | Shared component | Link and type tokens | V1-13, V1-14, V2-17, V2-25, V3-16, V3-31 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | Fixed | 555e322 | e2e/guards.spec.ts (no text under 13px), theme/dayMode.test.ts | |
 | VC09 | Visual | Shared component | Dark-mode accents and elevation | V1-25, V2-28, V3-30 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
 | VC10 | Visual | Shared component | Record-page parts | V3-6, V3-7, V3-19 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
 | VC11 | Visual | Shared component | RadioCard / choice card | V1-3, V1-4 | Built in web/src/ui and used on every screen; shown in the style guide in both themes | To do | | | |
