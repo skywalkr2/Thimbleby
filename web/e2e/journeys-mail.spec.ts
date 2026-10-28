@@ -172,7 +172,8 @@ test.describe.serial("journey: mail", () => {
     await main.getByRole("button", { name: "I'll do this later" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
     await main.getByRole("button", { name: "I'll do this later" }).click();
-    await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    // Something was passed by, so the last screen says where things stand and is not headed Done.
+    await expect(main.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
     await expect(recap.locator('[data-step="mail"]')).toContainText("Done");
     await expect(recap.locator('[data-step="backup"]')).toContainText("Skipped");

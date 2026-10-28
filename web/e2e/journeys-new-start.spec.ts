@@ -281,7 +281,8 @@ test.describe.serial("journey: new start", () => {
     await main.getByRole("button", { name: "I'll do this later" }).click();
 
     // 8. Done: what was set up and what was skipped, then the optional extras. The last button lands on Today.
-    await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    // Something was passed by, so the last screen says where things stand and is not headed Done.
+    await expect(main.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
     for (const step of ["workspace", "work", "ai", "mail", "promises", "backup"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
     // Moving on from People with nobody added passes it, and says so.

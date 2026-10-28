@@ -61,6 +61,7 @@ import { JobsPanel } from "./JobsPanel";
 import { BrandContrast } from "./BrandContrast";
 import { BusinessSides } from "./BusinessSides";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
+import { BackupsPanel } from "./BackupsPanel";
 import { Notifications } from "./Notifications";
 import { PageLinks } from "./PageLinks";
 import { ActingAccounts } from "./ActingAccounts";
@@ -465,12 +466,18 @@ export function Settings(props: {
       ? t("settings.business.words_named", { name: sides[0].name })
       : undefined;
 
+  // Backing up on its own needs a place to put the copies: with none chosen the switch shows off and says why, whatever the file holds.
+  const noBackupFolder = (() => {
+    const targets = everything.find((i) => i.key === "storage.backups.targets")?.value;
+    return Array.isArray(targets) && targets.length === 0;
+  })();
   const row = (item: Item) => {
     const gate = switchOf(item, everything);
     return (
       <SettingRow
         key={item.key}
         item={item}
+        reason={item.key === "storage.backups.automatic" && noBackupFolder ? t("settings.backups.automatic_needs_folder") : undefined}
         label={sideLabel(item)}
         draft={draftOf(item)}
         onChange={(draft) => edit(item.key, draft)}
@@ -689,6 +696,7 @@ export function Settings(props: {
         {section === "today" && <Notifications part="browser" />}
         {section === "backups" && (
           <>
+            <BackupsPanel local={setup.data?.local ?? false} />
             <BackupKey />
             <SyncPanel />
             <JobsPanel />

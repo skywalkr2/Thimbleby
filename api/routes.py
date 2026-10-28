@@ -44,7 +44,10 @@ from api.schemas import (
     AssistantPaused,
     AssistantStatus,
     AuthorSpan,
+    BackupCopyView,
     BackupStatus,
+    BackupsView,
+    BackupTargetView,
     BatchConfirmed,
     BatchConfirmIn,
     BatchUnconfirmed,
@@ -117,7 +120,9 @@ from api.schemas import (
     PanelRow,
     PanelView,
     PeoplePasteDone,
+    PeoplePasteEntry,
     PeoplePasteIn,
+    PeoplePastePreview,
     PeopleSuggestionsView,
     PersonActionView,
     PersonChoice,
@@ -199,6 +204,7 @@ from engine import (
     review_batches,
     source_intake,
 )
+from engine import backup as backup_module
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -2215,18 +2221,45 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         found = people_suggestions.suggest(store, cfg, cfg.ui.walkthrough.suggested_people)
         return PeopleSuggestionsView(people=[PersonSuggestion(**asdict(f)) for f in found])
 
-    @r.post("/setup/people-paste")
-    def paste_people(body: PeoplePasteIn) -> PeoplePasteDone:
-        """Add a pasted list of people, one per line (a name, or Name <address>), each on the side given and with no
-        relation, which the person sets afterwards. A name already on file is left out and said so."""
+    @r.post("/setup/people-paste/preview")
+    def paste_people_preview(body: PeoplePasteIn) -> PeoplePastePreview:
+        """What a pasted list would add, so the person sees it before anything is added: each line that reads as a
+        person (with how they relate and their address when the line gave them), whether they are on file already, and
+        the lines that don't read as a person. Changes nothing."""
         from engine import people_suggestions
 
+        found = people_suggestions.parse_list(body.text)
+        held = people_suggestions.on_file(store, found.people)
+        return PeoplePastePreview(
+            people=[
+                PeoplePasteEntry(name=p.name, relation=p.relation, address=p.address, on_file=held[p.name])
+                for p in found.people
+            ],
+            left_out=found.left_out,
+        )
+
+    @r.post("/setup/people-paste")
+    def paste_people(body: PeoplePasteIn) -> PeoplePasteDone:
+        """Add a pasted list of people, one per line (a name, or Name <address>, then how they relate when it says),
+        each on the side given. What a line says about how they relate is kept as their relation on the personal side,
+        or their part on a side of work. A name already on file is left out and said so, and so is a line that doesn't
+        read as a person."""
+        from engine import people_suggestions, sides
+
+        found = people_suggestions.parse_list(body.text)
+        written, _why = sides.person_write(
+            store.read(), cfg, {"sides": body.sides} if body.sides else {"side": body.side} if body.side else {}
+        )
+        personal = written.get("side") in (None, "personal")
         added: list[str] = []
         skipped: list[str] = []
-        for line in people_suggestions.parse_pasted(body.text):
+        for line in found.people:
             name = line.name
+            how = {"relation": line.relation} if personal else {"role": line.relation}
             try:
-                create_person(PersonIn(full_name=name, aliases=[], side=body.side, sides=body.sides), line.address)
+                create_person(
+                    PersonIn(full_name=name, aliases=[], side=body.side, sides=body.sides, **how), line.address
+                )
             except HTTPException as err:
                 if err.status_code != 409 or "already exists" not in str(err.detail):
                     raise
@@ -2235,7 +2268,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 added.append(name)
         if added:
             changed()
-        return PeoplePasteDone(added=added, skipped=skipped)
+        return PeoplePasteDone(added=added, skipped=skipped, left_out=found.left_out)
 
     @r.post("/people/{pid}")
     def edit_person(pid: str, body: PersonPatch) -> Ok:
@@ -2461,6 +2494,28 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         run_backup(ws, cfg)
         changed()
         return status()
+
+    @r.get("/backups")
+    def backups() -> BackupsView:
+        """Where backups go and how they stand: the places with how each last went, the newest dated copies found in
+        them, and whether backups run on their own (the setting is on and there is a place to put them)."""
+        found = backup_module.overview(ws, cfg)
+        b = found.state
+        return BackupsView(
+            state=BackupStatus(
+                configured=b.configured,
+                last_success=b.last_success,
+                age_hours=b.age_hours,
+                needs_attention=b.needs_attention,
+                last_error=b.last_error,
+                encrypted=b.encrypted,
+            ),
+            message=b.message,
+            targets=[BackupTargetView(**vars(t)) for t in found.targets],
+            copies=[BackupCopyView(**vars(c)) for c in found.copies],
+            schedule=found.schedule,
+            switch=found.switch,
+        )
 
     @r.get("/events")
     async def stream() -> StreamingResponse:

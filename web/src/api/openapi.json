@@ -5881,6 +5881,49 @@
         "title": "AutoClosedView",
         "type": "object"
       },
+      "BackupCopyView": {
+        "properties": {
+          "encrypted": {
+            "title": "Encrypted",
+            "type": "boolean"
+          },
+          "made_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it was made, from its name.",
+            "title": "Made At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "description": "The dated folder, which `cockpit restore --backup` takes.",
+            "title": "Path",
+            "type": "string"
+          },
+          "target": {
+            "description": "What the place is called (its label, else its folder).",
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "path",
+          "name",
+          "made_at",
+          "encrypted"
+        ],
+        "title": "BackupCopyView",
+        "type": "object"
+      },
       "BackupFolderAdd": {
         "additionalProperties": false,
         "properties": {
@@ -6111,6 +6154,100 @@
           "last_error"
         ],
         "title": "BackupStatus",
+        "type": "object"
+      },
+      "BackupTargetView": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "reachable": {
+            "description": "The folder is there now (a drive that isn't connected is not).",
+            "title": "Reachable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "label",
+          "reachable",
+          "last_success",
+          "last_error"
+        ],
+        "title": "BackupTargetView",
+        "type": "object"
+      },
+      "BackupsView": {
+        "description": "Where backups go and how they stand, for Settings > Backups: the places, the last one made, the newest copies\nfound, and whether backups run on their own. Restoring a backup is\n`cockpit restore --backup <dated folder> <new folder>`, which makes a new workspace and never changes this one;\nrestoring to a moment in time (`--as-of`) isn't built.",
+        "properties": {
+          "copies": {
+            "items": {
+              "$ref": "#/components/schemas/BackupCopyView"
+            },
+            "title": "Copies",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "schedule": {
+            "description": "Backups are made on their own now: the setting is on and there is a place to put them.",
+            "title": "Schedule",
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BackupStatus"
+          },
+          "switch": {
+            "description": "The setting itself, which stays on while there is no folder.",
+            "title": "Switch",
+            "type": "boolean"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/BackupTargetView"
+            },
+            "title": "Targets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "message",
+          "targets",
+          "copies",
+          "schedule",
+          "switch"
+        ],
+        "title": "BackupsView",
         "type": "object"
       },
       "BatchConfirmIn": {
@@ -18444,6 +18581,14 @@
             "title": "Added",
             "type": "array"
           },
+          "left_out": {
+            "description": "The lines left out because they don't read as a person (numbers, marks, a web address).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Left Out",
+            "type": "array"
+          },
           "skipped": {
             "description": "The names left out because someone of that name is on file already.",
             "items": {
@@ -18460,9 +18605,51 @@
         "title": "PeoplePasteDone",
         "type": "object"
       },
+      "PeoplePasteEntry": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on_file": {
+            "description": "Someone of that name or address is on file already, so nothing is added.",
+            "title": "On File",
+            "type": "boolean"
+          },
+          "relation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How they relate (or their part), when the line said.",
+            "title": "Relation"
+          }
+        },
+        "required": [
+          "name",
+          "on_file"
+        ],
+        "title": "PeoplePasteEntry",
+        "type": "object"
+      },
       "PeoplePasteIn": {
         "additionalProperties": false,
-        "description": "A list of people typed or pasted, one per line: a name, or `Name <address>`. They go on the side `side` or\n`sides` names, as PersonIn's do.",
+        "description": "A list of people typed or pasted, one per line: a name, or `Name <address>`, each optionally followed by how\nthey relate (`Name, my sister`). They go on the side `side` or `sides` names, as PersonIn's do.",
         "properties": {
           "side": {
             "anyOf": [
@@ -18504,6 +18691,32 @@
           "text"
         ],
         "title": "PeoplePasteIn",
+        "type": "object"
+      },
+      "PeoplePastePreview": {
+        "description": "What a pasted list would add, shown before it is added; nothing is changed.",
+        "properties": {
+          "left_out": {
+            "description": "The lines that don't read as a person, which would be left out.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Left Out",
+            "type": "array"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PeoplePasteEntry"
+            },
+            "title": "People",
+            "type": "array"
+          }
+        },
+        "required": [
+          "people",
+          "left_out"
+        ],
+        "title": "PeoplePastePreview",
         "type": "object"
       },
       "PeopleSuggestionsView": {
@@ -27341,6 +27554,12 @@
             "title": "Finished",
             "type": "boolean"
           },
+          "first_go_waiting": {
+            "default": 0,
+            "description": "How many runs wait for the person's first go now, which is what Today's Start the assistant line holds; zero once it was pressed. The last screen says what Today shows from this.",
+            "title": "First Go Waiting",
+            "type": "integer"
+          },
           "local": {
             "description": "The app runs on the person's own computer, so folders can be picked here.",
             "title": "Local",
@@ -34904,6 +35123,25 @@
           }
         },
         "summary": "Backup Key Set"
+      }
+    },
+    "/api/backups": {
+      "get": {
+        "description": "Where backups go and how they stand: the places with how each last went, the newest dated copies found in\nthem, and whether backups run on their own (the setting is on and there is a place to put them).",
+        "operationId": "backups_api_backups_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Backups"
       }
     },
     "/api/brief": {
@@ -43977,7 +44215,7 @@
     },
     "/api/setup/people-paste": {
       "post": {
-        "description": "Add a pasted list of people, one per line (a name, or Name <address>), each on the side given and with no\nrelation, which the person sets afterwards. A name already on file is left out and said so.",
+        "description": "Add a pasted list of people, one per line (a name, or Name <address>, then how they relate when it says),\neach on the side given. What a line says about how they relate is kept as their relation on the personal side,\nor their part on a side of work. A name already on file is left out and said so, and so is a line that doesn't\nread as a person.",
         "operationId": "paste_people_api_setup_people_paste_post",
         "requestBody": {
           "content": {
@@ -44012,6 +44250,45 @@
           }
         },
         "summary": "Paste People"
+      }
+    },
+    "/api/setup/people-paste/preview": {
+      "post": {
+        "description": "What a pasted list would add, so the person sees it before anything is added: each line that reads as a\nperson (with how they relate and their address when the line gave them), whether they are on file already, and\nthe lines that don't read as a person. Changes nothing.",
+        "operationId": "paste_people_preview_api_setup_people_paste_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeoplePasteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeoplePastePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paste People Preview"
       }
     },
     "/api/setup/people-suggestions": {

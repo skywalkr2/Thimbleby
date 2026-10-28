@@ -240,7 +240,8 @@ def _handed_in(view: Any, requests: list[Any]) -> bool:
     waiting to be read."""
     for r in requests:
         data = r.data
-        if data.get("origin") != "pm" or data.get("about"):
+        # A question typed to the assistant (Ask) and a kind of work started on a record are not a note handed in.
+        if data.get("origin") != "pm" or data.get("about") or data.get("task") != "notes":
             continue
         if data.get("source"):
             return True
@@ -251,6 +252,18 @@ def _handed_in(view: Any, requests: list[Any]) -> bool:
         elif data.get("state") != "done" and data.get("note"):
             return True
     return False
+
+
+def first_go_waiting(store: Any) -> int:
+    """How many runs wait for the person's first go right now: what Today's first-go line (Start the assistant) holds.
+    Zero once it was pressed, or while nothing has been read yet."""
+    from engine.dispatcher import waits_on_first_go
+
+    return sum(
+        1
+        for r in store.read().list("request")
+        if not r.data.get("dismissed") and r.data.get("state") == "needs_you" and waits_on_first_go(r.data)
+    )
 
 
 def _first_result_reached(state: dict[str, Any]) -> bool:
@@ -434,19 +447,13 @@ class Walkthrough:
     promises_done: bool = False  # the person moved on from the first-result screen
 
 
-def missing_essentials(cfg: Any, found: list[Step]) -> bool:
-    """Whether something the assistant can't work without is missing: the person hasn't named themselves, or no AI
-    account has been chosen for any kind of work. An account that fails its test is said on Today, not here."""
-    named = next((s.done for s in found if s.id == "workspace"), True)
-    return not named or not any(tier.use for tier in cfg.ai.tiers.values())
-
-
 def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
-    """Where the walkthrough stands. It opens by itself on every visit while an essential is missing (naming yourself,
-    choosing an AI account), even after Finish later; otherwise only on the first visit to a workspace whose setup isn't
-    finished, so the optional steps wait on Today's setup line. Never on the sandbox workspaces. It resumes at the
-    screen kept from the last visit, else at the first one with a step still to do; a new start, where nothing was done
-    or skipped and no screen was ever kept, opens on Welcome, shown once: pressing Start keeps the next screen."""
+    """Where the walkthrough stands. It opens by itself while the person is partway through it (a new start, or one
+    left by closing the window), and never after they pressed Finish later or its last button, or once every step that
+    counts is done or skipped: what is left then waits on Today's setup line and its lines, never as a forced return.
+    Never on the sandbox workspaces. It resumes at the screen kept from the last visit, else at the first one with a
+    step still to do; a new start, where nothing was done or skipped and no screen was ever kept, opens on Welcome,
+    shown once: pressing Start keeps the next screen."""
     mine = _walkthrough_state(_state(ws))
     closed, ended, started = bool(mine.get("closed")), bool(mine.get("finished")), bool(mine.get("started"))
     step = mine.get("step")
@@ -461,13 +468,23 @@ def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
         if not started and not any(s.done or s.skipped for s in found if s.counted):
             step = "welcome"
     return Walkthrough(
-        open=not cfg.workspace.demo
-        and (missing_essentials(cfg, found) or not (started or closed or ended or finished(found))),
+        open=not cfg.workspace.demo and not (closed or ended or finished(found)),
         step=step,
         closed=closed,
         finished=ended,
         promises_done=promises_done,
     )
+
+
+def not_reached(ws: Any, screen: str) -> bool:
+    """Whether the person is partway through the walkthrough and has not got to this screen yet: it was shown and not
+    closed or finished, and the screen it is on comes before this one. What a later screen is about is not raised on
+    Today meanwhile."""
+    mine = _walkthrough_state(_state(ws))
+    kept = mine.get("step")
+    if not mine.get("started") or mine.get("closed") or mine.get("finished") or kept not in WALKTHROUGH_STEPS:
+        return False
+    return WALKTHROUGH_STEPS.index(kept) < WALKTHROUGH_STEPS.index(screen)
 
 
 def keep_walkthrough(ws: Any, step: str | None = None, closed: bool | None = None, ended: bool | None = None) -> None:

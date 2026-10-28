@@ -107,7 +107,7 @@ test.describe("the visual system", () => {
         await expectNoViolations(page);
         await pressStart(page);
         const screens = page.getByRole("navigation", { name: "Setup steps" });
-        for (const name of [/^Your AI account/, /^Mail and calendar/, /^Done/]) {
+        for (const name of [/^Your AI account/, /^Mail and calendar/, /^(Done|Where things stand)/]) {
           // On a phone the list is behind the Steps button, and closes once a step is chosen.
           await showSteps(page);
           await screens.getByRole("button", { name }).click();
@@ -293,7 +293,7 @@ test.describe("screen use and the shell", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
       await pressStart(page);
       await showSteps(page);
-      await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Done/ }).click();
+      await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^(Done|Where things stand)/ }).click();
       await page.getByRole("main").getByRole("button", { name: "Go to Today" }).click();
       const line = page.locator('[data-queue-line="first_go"]');
       await expect(line).toBeFocused();

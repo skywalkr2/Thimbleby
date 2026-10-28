@@ -243,6 +243,86 @@ def state(ws: Workspace, cfg: Config, now: datetime | None = None) -> BackupStat
     return BackupState(True, last, round(age, 2), stale, message, errors[0] if errors else None, encrypted)
 
 
+@dataclass(frozen=True)
+class TargetState:
+    """One place backups go: its folder, what the person called it, whether the folder is there now, and how its last
+    try went."""
+
+    path: str
+    label: str
+    reachable: bool
+    last_success: str | None
+    last_error: str | None
+
+
+@dataclass(frozen=True)
+class Copy:
+    """One dated backup found in a target: the folder it is in, when it was made (from its name) and whether it is
+    encrypted."""
+
+    target: str
+    path: str
+    name: str
+    made_at: str | None
+    encrypted: bool
+
+
+@dataclass(frozen=True)
+class Overview:
+    """Everything the Backups page says, read from the settings and the folders themselves: `schedule` is whether
+    backups are made on their own now (the setting is on and there is somewhere to put them), `switch` the setting
+    itself."""
+
+    state: BackupState
+    targets: list[TargetState]
+    copies: list[Copy]
+    schedule: bool
+    switch: bool
+
+
+def _made_at(name: str, root: str) -> str | None:
+    """When a backup folder named `<workspace>-YYYYMMDD-HHMMSS[-n]` was made, as an ISO time, or None."""
+    rest = name.removeprefix(f"{root}-")
+    try:
+        return datetime.strptime(rest[:15], "%Y%m%d-%H%M%S").replace(tzinfo=UTC).isoformat()
+    except ValueError:
+        return None
+
+
+def overview(ws: Workspace, cfg: Config, now: datetime | None = None, limit: int = 10) -> Overview:
+    """The state of backups for the Backups page: the targets with how each last went, the newest dated copies found in
+    them (at most `limit`), and whether backups run on their own."""
+    settings = cfg.storage.backups
+    status = _load(ws)
+    targets, copies = [], []
+    for target in settings.targets:
+        base = Path(target.path).expanduser()
+        entry = status.get(target.path, {})
+        targets.append(
+            TargetState(target.path, target.label, base.is_dir(), entry.get("last_success"), entry.get("last_error"))
+        )
+        if not base.is_dir():
+            continue
+        for folder in sorted((p for p in base.glob(f"{ws.root.name}-*") if p.is_dir()), reverse=True):
+            copies.append(
+                Copy(
+                    target.label or target.path,
+                    str(folder),
+                    folder.name,
+                    _made_at(folder.name, ws.root.name),
+                    backup_crypto.encrypted(folder),
+                )
+            )
+    copies.sort(key=lambda c: c.made_at or "", reverse=True)
+    return Overview(
+        state(ws, cfg, now),
+        targets,
+        copies[: max(0, limit)],
+        settings.automatic and bool(settings.targets),
+        settings.automatic,
+    )
+
+
 def _ago(hours: float) -> str:
     if hours < 1:
         return "less than an hour ago"

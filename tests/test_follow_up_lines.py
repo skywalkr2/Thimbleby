@@ -33,6 +33,20 @@ def test_with_no_backup_folder_the_line_is_at_risk_and_says_unset(env):
     assert (line.group, line.key, line.state, line.age_hours) == ("risk", "backup", "unset", None)
 
 
+def test_no_backup_line_is_raised_for_a_step_setup_has_not_reached_but_is_once_setup_is_left(env):
+    """The person's path: they are on an early screen of setup, so Today doesn't say At risk about backups they haven't
+    been asked about; once they leave setup (Finish later) it does."""
+    from engine import setup
+
+    ws, _, _ = env
+    setup.keep_walkthrough(ws, step="mail")
+    assert backing_up(env, target=False) == []
+    setup.keep_walkthrough(ws, step="backup")
+    assert len(backing_up(env, target=False)) == 1
+    setup.keep_walkthrough(ws, step="mail", closed=True)
+    assert len(backing_up(env, target=False)) == 1
+
+
 def test_with_a_folder_and_no_backup_yet_it_says_never_and_a_failed_try_says_failed(env):
     (line,) = backing_up(env, target=True)
     assert line.state == "never"

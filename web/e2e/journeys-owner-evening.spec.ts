@@ -174,7 +174,8 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(main.getByRole("region", { name: "The people in your life" }).getByRole("listitem").filter({ hasText: friend })).toContainText("my friend");
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
-    await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    // Headed Done when every counted step is done, else where things stand.
+    await expect(main.getByRole("heading", { level: 2, name: /^(Done|Where things stand)$/ })).toBeVisible();
     expect(await widerThanWindow(page, "Done")).toEqual([]);
     const recap = main.getByRole("list", { name: "What was set up" });
     for (const step of ["workspace", "work", "ai", "mail", "backup", "people"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");

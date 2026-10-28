@@ -32,12 +32,14 @@ export function SetupLine(props: { workspace: string; onOpenGuide: (step: string
   const { t, has } = useWords();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const [gone, setGone] = useState(() => hidden(props.workspace));
-  if (gone || !setup.data || setup.data.finished) return null;
-  // The count is the server's, the one the walkthrough and its last screen use: only the steps that count are on the line.
+  if (gone || !setup.data) return null;
+  // The count is worked out from the steps the server serves, the ones that count: done is done, never skipped or still to do.
+  // The line stays while any of them is not done, a skipped one included, so what was passed by is one click away.
   const steps = setup.data.steps.filter((s) => s.counted);
-  const next = steps.find((s) => !s.done && !s.skipped);
+  const next = steps.find((s) => !s.done && !s.skipped) ?? steps.find((s) => !s.done);
   if (!next) return null;
-  const { settled: finished, total } = setup.data;
+  const finished = steps.filter((s) => s.done).length;
+  const total = steps.length;
   const label = next.label || (has(`setup_step.${next.id}`) ? t(`setup_step.${next.id}`) : next.id);
   return (
     <section className={styles.line} aria-label={t("setup_line.label")} data-setup-line="">

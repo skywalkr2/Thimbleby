@@ -16,6 +16,7 @@ import { asReference } from "../lib/secret-ref";
 import { setAccountCheck } from "../lib/account-checks";
 import { useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
+import { useDraftState, useRestored } from "../lib/draft";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { accountName, roleOf } from "../lib/ai-accounts";
@@ -124,17 +125,22 @@ export function WelcomeAi(props: {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
   const checkSize = useQuery({ queryKey: ["ai-check-size"], queryFn: api.aiCheckSize, enabled: !!drawer });
-  const [labelText, setLabelText] = useState("");
-  const [labelTouched, setLabelTouched] = useState(false);
+  // What is typed in the guide stays as a draft in this tab until the account is added, so a reload brings it back. A pasted
+  // key is never kept; the drawer in Settings keeps nothing.
+  const keepDraft = !props.drawer;
+  const [labelText, setLabelText] = useDraftState("ai", "label", "", keepDraft);
+  const [labelTouched, setLabelTouched] = useDraftState("ai", "label-touched", false, keepDraft);
   const [forWhat, setForWhat] = useState<For | null>(null);
-  const [kindId, setKindId] = useState("");
+  const [kindId, setKindId] = useDraftState("ai", "service", "", keepDraft);
   const [usingFound, setUsingFound] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useDraftState("ai", "address", "", keepDraft);
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [keyRef, setKeyRef] = useState("");
+  const [keyRef, setKeyRef] = useDraftState("ai", "key-reference", "", keepDraft);
+  // After the fields above, so it knows whether any of them started from what was typed before.
+  const restoredDraft = useRestored("ai") && keepDraft;
   const [models, setModels] = useState<ModelInfo[] | null>(null);
   const [listProblem, setListProblem] = useState("");
   const [listing, setListing] = useState(false);
@@ -564,11 +570,13 @@ export function WelcomeAi(props: {
             push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }) });
           }
           await client.invalidateQueries({ queryKey: ["ai-accounts"] });
+          await client.invalidateQueries({ queryKey: ["setup"] });
         })();
         return true;
       }
       await afterSave(saved, { message: t("welcome.ai.added", { name: shownLabel.trim() }) });
       await client.invalidateQueries({ queryKey: ["ai-accounts"] });
+      await client.invalidateQueries({ queryKey: ["setup"] });
       const tried = await test();
       return !!tried && tried.length > 0 && tried.every((r) => r.ok);
     } catch (err) {
@@ -928,6 +936,11 @@ export function WelcomeAi(props: {
 
   return (
     <div className="guide-body">
+      {restoredDraft && (
+        <p className="hint" role="status" data-draft-restored="">
+          {t("draft.restored")}
+        </p>
+      )}
       {endpoints.isPending ? (
         <Skeleton />
       ) : endpoints.isError || !endpoints.data?.length ? (

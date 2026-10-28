@@ -184,30 +184,100 @@ def suggest(store: Any, cfg: Any, limit: int) -> list[Suggestion]:
 
 #: The most names one pasted list adds.
 _PASTE_LIMIT = 200
+#: The longest relation or part a pasted line may give after the name.
+_RELATION_LIMIT = 60
+#: A name followed by an address in angle brackets, then optionally how they relate (after a comma, semicolon or dash).
+_ANGLE_FORM = re.compile(
+    r"^(?P<name>[^<>]*?)\s*<(?P<address>[^<>@\s]+@[^<>@\s]+)>\s*(?:[,;]|\s[-\u2013\u2014]\s)?\s*(?P<relation>.*)$"
+)
+#: The mark between a name and how they relate: a comma, a semicolon, or a spaced dash.
+_RELATION_MARK = re.compile(r"\s*(?:[,;]|\s[-\u2013\u2014]\s)\s*")
+_BARE_ADDRESS = re.compile(r"^[^\s@<>,;]+@[^\s@<>,;]+$")
+
+
+def reads_as_a_person(name: str) -> bool:
+    """Whether typed words read as a person's name: one to four words made of letters (a hyphen, apostrophe or full stop
+    inside is fine). Numbers, marks and web addresses don't. The one rule for a name typed or pasted into a list."""
+    parts = name.split()
+    return 1 <= len(parts) <= 4 and all(_PERSON_WORD.match(w) for w in parts)
 
 
 @dataclass(frozen=True)
 class Pasted:
-    """One line of a pasted list: the `name`, and the `address` when the line gave one."""
+    """One line of a pasted list: the `name`, the `address` when the line gave one, and how they relate (or their part)
+    when it said."""
 
     name: str
     address: str | None = None
+    relation: str | None = None
+
+
+@dataclass(frozen=True)
+class PastedList:
+    """What a pasted list holds: the people it reads as, and the lines left out because they don't read as a person."""
+
+    people: list[Pasted]
+    left_out: list[str]
+
+
+def _relation_of(words: str) -> str | None:
+    said = re.sub(r"\s+", " ", words).strip().strip(",;").strip()
+    return said[:_RELATION_LIMIT].strip() if re.search(r"[^\W\d_]", said) else None
+
+
+def _pasted_line(line: str) -> Pasted | None:
+    """The person one cleaned line reads as, or None when it doesn't read as one."""
+    angled = _ANGLE_FORM.match(line)
+    if angled:
+        display, address, rest = angled["name"], angled["address"].strip().lower(), angled["relation"]
+    else:
+        head, rest = (_RELATION_MARK.split(line, maxsplit=1) + [""])[:2]
+        head = head.strip()
+        display, address = ("", head.lower()) if _BARE_ADDRESS.match(head) else (head, "")
+    name = _name_of(display.replace('"', ""), address) if address else display
+    name = re.sub(r"\s+", " ", name).strip()
+    if not reads_as_a_person(name):
+        return None
+    return Pasted(name, address or None, _relation_of(rest))
+
+
+def parse_list(text: str) -> PastedList:
+    """The people in a pasted list, one per line: a name, `Name <address>` or a bare address (the name its words make),
+    each optionally followed by how they relate (`Name, my sister`, `Name - my sister`, `Name; my sister`). Any list
+    mark (a dash, bullet or number) is dropped. A line that doesn't read as a person (numbers, marks, a web address) is
+    left out and listed. Blank lines and repeats of a name or an address (ignoring capitals) are merged; at most
+    `_PASTE_LIMIT` people."""
+    found: list[Pasted] = []
+    left_out: list[str] = []
+    seen: dict[str, int] = {}  # a name or address (lower case) -> where its person is in `found`
+    for raw in text.splitlines():
+        line = re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s*", "", raw).strip().rstrip(",;").strip()
+        if not line:
+            continue
+        person = _pasted_line(line)
+        if person is None:
+            left_out.append(re.sub(r"\s+", " ", line))
+            continue
+        keys = {person.name.lower(), *([person.address] if person.address else [])}
+        earlier = next((k for k in keys if k in seen), None)
+        if earlier is not None:
+            # A repeat is the same person: what it adds (an address, how they relate) is kept on the first.
+            at = seen[earlier]
+            first = found[at]
+            found[at] = Pasted(first.name, first.address or person.address, first.relation or person.relation)
+            seen.update({k: at for k in keys})
+            continue
+        seen.update({k: len(found) for k in keys})
+        found.append(person)
+    return PastedList(found[:_PASTE_LIMIT], left_out)
+
+
+def on_file(store: Any, pasted: list[Pasted]) -> dict[str, bool]:
+    """For each pasted name, whether someone of that name or address is on file already."""
+    addresses, names = _known(store)
+    return {p.name: p.name.lower() in names or bool(p.address and p.address in addresses) for p in pasted}
 
 
 def parse_pasted(text: str) -> list[Pasted]:
-    """The people in a pasted list, one per line: a name, or `Name <address>` (both kept), with any list mark (a dash,
-    bullet or number) and trailing commas dropped. A line that is only an address gives the name its words make. Blank
-    lines and repeats of a name (ignoring capitals) are left out; at most `_PASTE_LIMIT` people."""
-    found: list[Pasted] = []
-    seen: set[str] = set()
-    for line in text.splitlines():
-        line = re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s*", "", line).strip().rstrip(",;").strip()
-        if not line:
-            continue
-        display, address = next(iter(getaddresses([line])), ("", "")) if "@" in line else ("", "")
-        has_address = "@" in address
-        name = _name_of(display, address) if has_address else re.sub(r"\s+", " ", line)
-        if name and name.lower() not in seen:
-            seen.add(name.lower())
-            found.append(Pasted(name, address.strip().lower() if has_address else None))
-    return found[:_PASTE_LIMIT]
+    """The people in a pasted list (see `parse_list`), without the lines left out."""
+    return parse_list(text).people

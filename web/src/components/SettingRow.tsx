@@ -39,6 +39,8 @@ export function SettingRow(props: {
   depth: number;
   /** The switch this setting depends on, when it is off. */
   gate: Item | null;
+  /** Why the row can't be on now (a switch whose folder isn't chosen yet): it shows as off, can't be changed, and says why. */
+  reason?: string;
   canList: boolean;
   /** Where a secret setting can be typed: given, a setting that holds a secret offers a password box. */
   secret?: SecretInput;
@@ -74,6 +76,7 @@ export function SettingRow(props: {
   const describedBy = [
     hint && `${id}-hint`,
     waiting && `${id}-waiting`,
+    props.reason && `${id}-reason`,
     item.type === "list" && (item.options ?? []).length === 0 && `${id}-list`,
     invalid && `${id}-bad`,
     problem && `${id}-problem`,
@@ -82,7 +85,7 @@ export function SettingRow(props: {
   ]
     .filter(Boolean)
     .join(" ");
-  const off = item.locked || props.disabled || props.gate !== null;
+  const off = item.locked || props.disabled || props.gate !== null || !!props.reason;
   const option = (o: string) => (has(`settings.option.${item.key}.${o}`) ? t(`settings.option.${item.key}.${o}`) : o);
   // Lists the person's own records and settings keep show them by name: people, and the tiers by their plain names.
   const people = useQuery({ queryKey: ["people"], queryFn: api.people, enabled: item.choices === "people" });
@@ -150,7 +153,7 @@ export function SettingRow(props: {
       <input
         id={id}
         type="checkbox"
-        checked={draft === true}
+        checked={draft === true && !props.reason}
         disabled={off}
         aria-describedby={describedBy}
         onChange={(e) => {
@@ -340,6 +343,11 @@ export function SettingRow(props: {
         {waiting && (
           <p className="hint" id={`${id}-waiting`}>
             {waiting}
+          </p>
+        )}
+        {props.reason && (
+          <p className="hint" id={`${id}-reason`}>
+            {props.reason}
           </p>
         )}
         {item.type === "list" && !readOnly && !ticked && (

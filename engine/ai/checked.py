@@ -85,6 +85,8 @@ def remember(ws: Workspace, cfg: Config, results: list[SmokeResult]) -> None:
             "params": [list(p) for p in dict.fromkeys(params) if p not in failed],
             "failed": [list(p) for p in dict.fromkeys([*still_failed, *failed])],
             "complete": all(r.ok for r in found if r.part != "call"),
+            # Whether everything this latest check ran passed, whatever earlier checks of other parameters found.
+            "ok": all(r.ok for r in found),
             "at": datetime.now(UTC).isoformat(),
         }
     write_whole(ws.private_dir / CHECKED_FILE, json.dumps(kept, indent=2) + "\n")
@@ -130,6 +132,19 @@ def _take_in_calibration(ws: Workspace, results: list[SmokeResult]) -> None:
             calibration.record_overhead(
                 ws, r.provider, reported=found["reported"], text_tokens=found.get("text_tokens", 0)
             )
+
+
+def answered(ws: Workspace | Folder, cfg: Config, ref: str, since: str | None = None) -> bool:
+    """Whether the account's latest check, as it is set up now, passed in every part (every call answered, and the
+    lockdown probes and learning round-trip passed), and was made at or after `since` when that is given. Any check
+    counts, a one-account Test in Settings as much as the whole test, since both are about the account itself."""
+    found = _read(ws).get(ref)
+    if not isinstance(found, dict) or found.get("fingerprint") != account_fingerprint(cfg, ref):
+        return False
+    passed = found.get("ok")
+    if passed is None:  # kept before the latest check's own result was: read it from what was kept
+        passed = bool(found.get("complete")) and bool(found.get("params")) and not found.get("failed")
+    return bool(passed) and (since is None or str(found.get("at", "")) >= since)
 
 
 def checked_at(ws: Workspace | Folder, cfg: Config, ref: str) -> datetime | None:

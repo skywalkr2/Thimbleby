@@ -734,7 +734,7 @@ def untested_ai_note(ws: Any, cfg: Any, store: Any) -> str | None:
     workspace has no account yet, and its walkthrough adds and tests one, so it gets no note."""
     from engine.ai.smoke import ai_state, untested_since_change
 
-    if not untested_since_change(ws) or ai_state(ws, cfg, store)[0] == "not_set_up":
+    if not untested_since_change(ws, cfg) or ai_state(ws, cfg, store)[0] == "not_set_up":
         return None
     return (
         "Note: the AI account hasn't passed its test since its settings changed. Press Test on its screen, or run "
@@ -896,7 +896,7 @@ def cmd_ai(args: argparse.Namespace) -> int:
         print(f"{'ok  ' if r.ok else 'FAIL'}  {r.tier:<10} {role:<8} {r.account or '-'}: {r.detail}")
         if r.key_source:
             print(f"      ({r.key_source})")
-    record(ws, results)
+    record(ws, results, cfg)
     remember(ws, cfg, results)
     lift_pauses(ws, results)
     lines, every = tier_summary(results)

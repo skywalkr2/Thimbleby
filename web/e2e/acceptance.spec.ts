@@ -295,7 +295,7 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     const line = page.getByRole("region", { name: "Setup", exact: true });
     await expect(line).toBeVisible();
-    await expect(line).toContainText(/Setup \d+ of 7/);
+    await expect(line).toContainText(/\d+ of 7 done/);
     await expect(line).toContainText("Next: Say what you'll use it for");
     // The stand-in assistant is a line in the status popover with a button to the AI step, and no command line.
     const status = await openStatus(page);
@@ -324,11 +324,11 @@ test.describe.serial("acceptance scenario", () => {
     const kept = page.waitForResponse(
       (r) => r.url().includes("setup/walkthrough") && (r.request().postData() ?? "").includes('"done"'),
     );
-    await screens.getByRole("button", { name: /^Done/ }).click();
+    await screens.getByRole("button", { name: /^(Done|Where things stand)/ }).click();
     await kept;
     // Opened fresh at a screen with no field, the cursor is on its heading, which shows no ring: it isn't a control.
     await page.reload();
-    await expect(page.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe("H2");
     expect((await focusRing(page)).shown).toBe(false);
     await page.locator('[data-step="first_note"]').getByRole("button", { name: "Hand something in" }).click();
@@ -401,7 +401,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("dialog", { name: "Choose a folder" })).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await screens.getByRole("button", { name: /^Done/ }).click();
+    await screens.getByRole("button", { name: /^(Done|Where things stand)/ }).click();
     await expect(page.getByRole("region", { name: "Optional extras" })).toBeVisible();
     // The recap is a compact list (a row is one line, not a card) and the extras take the pane's full width.
     const recap = page.getByRole("list", { name: "What was set up" });

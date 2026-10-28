@@ -321,6 +321,7 @@ export const api = {
   theyFinished: (person: string, action: string, note?: string) =>
     call<S["Noted"]>("POST", `followups/${id(person)}/actions/${id(action)}/finished`, note ? { note } : undefined),
   backup: () => call<S["Status"]>("POST", "backup"),
+  backups: () => call<S["BackupsView"]>("GET", "backups"),
 
   /** What the assistant learned from each correction that has something to show, for the line under its card. */
   learned: () => call<S["LearnedView"]>("GET", "knowledge/learned"),
@@ -389,6 +390,7 @@ export const api = {
   editPerson: (p: string, body: S["PersonPatch"]) => call<S["Ok"]>("POST", `people/${id(p)}`, body),
   addSetupPerson: (body: S["SetupPersonIn"]) => call<S["Created"]>("POST", "setup/people-add", body),
   peopleSuggestions: () => call<S["PeopleSuggestionsView"]>("GET", "setup/people-suggestions"),
+  previewPaste: (body: S["PeoplePasteIn"]) => call<S["PeoplePastePreview"]>("POST", "setup/people-paste/preview", body),
   pastePeople: (body: S["PeoplePasteIn"]) => call<S["PeoplePasteDone"]>("POST", "setup/people-paste", body),
   organizations: () => call<S["OrganizationView"][]>("GET", "organizations"),
   addOrganization: (body: Partial<S["OrganizationIn"]> & { name: string }) => call<S["Created"]>("POST", "organizations", body),

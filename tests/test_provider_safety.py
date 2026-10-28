@@ -5,6 +5,7 @@ import json
 from datetime import UTC, datetime
 
 import pytest
+import yaml
 
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
@@ -95,7 +96,11 @@ def test_the_last_smoke_test_is_remembered_until_ai_settings_change(env):
     record(ws, smoke_test(ws.config(env={}), env={}))
     assert not untested_since_change(ws)
     path = ws.config_dir / "ai.yaml"
-    path.write_text(path.read_text() + "\n# changed\n")
+    path.write_text(path.read_text() + "\n# a comment changes nothing the test answered\n")
+    assert not untested_since_change(ws)
+    data = yaml.safe_load(path.read_text())
+    data["providers"]["stub"]["models"]["default"] = "another-model"
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
     assert untested_since_change(ws)
 
 
@@ -188,10 +193,84 @@ def test_the_assistants_state_follows_the_account_the_test_and_the_last_refusal(
     record(ws, smoke_test(cfg, env={}))
     state, detail = ai_state(ws, cfg, store)
     assert state == "failing" and detail and len(detail) == 200
-    # Settings changed since that failure: it no longer says anything about them.
+    # The account in use changed since that failure: it no longer says anything about the new one.
+    changed = _edited(ws, lambda data: data["providers"]["stub"]["models"].update(default="another-model"))
+    assert ai_state(ws, changed, store) == ("untested", None)
+
+
+def _edited(ws, change):
+    """The workspace's settings after `change` was made to its ai.yaml (a dict), as loaded again."""
     path = ws.config_dir / "ai.yaml"
-    path.write_text(path.read_text() + "\n# changed\n")
-    assert ai_state(ws, cfg, store) == ("untested", None)
+    data = yaml.safe_load(path.read_text())
+    change(data)
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    return ws.config(env={})
+
+
+def _tested(ws, cfg):
+    """What pressing Test does: the whole test is kept, and each account's own result with it."""
+    from engine.ai.checked import remember
+
+    results = smoke_test(cfg, env={})
+    record(ws, results, cfg)
+    remember(ws, cfg, results)
+
+
+def test_a_change_that_does_not_touch_the_account_in_use_leaves_the_assistant_tested(env, monkeypatch):
+    """The person's path: the assistant passed its test; they add a backup account and take it away again, rename the
+    account and change a budget. None of that is a reason to say the connection hasn't been tested. Changing the
+    account in use is, and pressing Test on that account's own row in Settings mends it."""
+    from engine.ai.checked import remember
+    from engine.ai.smoke import account_test, ai_state
+
+    ws, store = env
+    monkeypatch.setattr("engine.ai.smoke.stand_in", lambda cfg: False)
+    set_responder(connection_answer)
+    cfg = ws.config(env={})
+    _tested(ws, cfg)
+    assert ai_state(ws, cfg, store) == ("ok", None)
+
+    def add_backup(data):
+        data["providers"]["second"] = {"adapter": "stub", "models": {"default": "scripted"}}
+        for tier in data["tiers"].values():
+            if tier.get("use"):
+                tier["fallback"] = ["second/default"]
+
+    with_backup = _edited(ws, add_backup)
+    assert ai_state(ws, with_backup, store) == ("ok", None), "a backup added is not a change to what was tested"
+    set_responder(connection_answer)
+    _tested(ws, with_backup)
+    without = _edited(ws, lambda data: [t.update(fallback=[]) for t in data["tiers"].values()])
+    assert ai_state(ws, without, store) == ("ok", None), "and taking it away again leaves the first test standing"
+
+    renamed = _edited(ws, lambda data: data["providers"]["stub"].update(label="My assistant"))
+    assert ai_state(ws, renamed, store) == ("ok", None)
+    assert not untested_since_change(ws, renamed)
+
+    changed = _edited(ws, lambda data: data["providers"]["stub"]["models"].update(default="another-model"))
+    assert ai_state(ws, changed, store) == ("untested", None), "the account in use changed"
+    results = account_test(changed, {}, "stub", store=store)
+    remember(ws, changed, results)
+    assert ai_state(ws, changed, store) == ("ok", None), "a Test on the account's own row mends it"
+
+
+def test_a_passing_test_of_the_account_alone_clears_a_failing_whole_test(env, monkeypatch):
+    from engine.ai.checked import remember
+    from engine.ai.smoke import account_test, ai_state
+
+    ws, store = env
+    monkeypatch.setattr("engine.ai.smoke.stand_in", lambda cfg: False)
+    cfg = ws.config(env={})
+
+    def refuse(task):
+        raise AiError("other", "no")
+
+    set_responder(refuse)
+    _tested(ws, cfg)
+    assert ai_state(ws, cfg, store)[0] == "failing"
+    set_responder(connection_answer)
+    remember(ws, cfg, account_test(cfg, {}, "stub", store=store))
+    assert ai_state(ws, cfg, store) == ("ok", None)
 
 
 def test_no_account_for_any_tier_is_not_set_up(tmp_path):

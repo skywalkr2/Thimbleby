@@ -133,12 +133,14 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened
   // something on Today (the hand-in box, Ask, help or feedback), is not taken from it, so nothing they typed is lost.
+  // An address that names Today (#today) is the person asking for Today: setup never takes them from it.
+  const addressNamedAView = useRef(window.location.hash.replace(/^#\/?/, "") !== "");
   const autoOpened = useRef(false);
   useEffect(() => {
     if (autoOpened.current || !setup.data) return;
     autoOpened.current = true;
     const busy = handIn || ask !== null || help || feedback;
-    if (setup.data.walkthrough?.open && shown.type === "core" && shown.view === "today" && !busy) setView("setup");
+    if (setup.data.walkthrough?.open && shown.type === "core" && shown.view === "today" && !busy && !addressNamedAView.current) setView("setup");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup.data]);
   const handlers = useMemo(

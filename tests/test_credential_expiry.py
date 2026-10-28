@@ -194,12 +194,25 @@ def test_work_with_no_account_is_a_line_until_one_does_it(env):
     assert [x.names for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == [["routine"]]
 
 
-def test_a_workspace_with_no_account_at_all_is_left_to_the_setup_line(env):
-    ws, cfg, store = env
-    cfg.ai.providers.clear()
-    for tier in cfg.ai.tiers.values():
-        tier.use = ""
-    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == []
+def test_a_workspace_with_no_account_at_all_says_so_on_today_once_setup_is_left_but_not_before_its_screen(tmp_path):
+    """The person's path: a real workspace (no template) where the AI step was skipped and setup closed. Today says
+    there is no AI account; partway through setup, before that screen, it says nothing yet."""
+    from engine import setup
+
+    ws = init_workspace(tmp_path / "fresh", git=False)
+    cfg = ws.config(env={})
+    assert not any(tier.use for tier in cfg.ai.tiers.values())
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        setup.keep_walkthrough(ws, step="you")  # shown, and the person is on the first screen
+        assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == []
+        setup.keep_walkthrough(ws, step="mail")  # past the AI screen with no account
+        assert [x.names for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] != []
+        setup.keep_walkthrough(ws, step="you", closed=True)  # Finish later
+        [line] = [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"]
+        assert line.group == "risk" and line.tier in cfg.ai.tiers
+    finally:
+        store.close()
 
 
 def test_a_seven_day_sign_in_made_today_warns_a_day_before_its_end_and_not_on_day_one(signing):  # noqa: F811

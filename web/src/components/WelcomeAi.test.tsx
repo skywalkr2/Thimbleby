@@ -767,6 +767,7 @@ test("Save says what is missing until a service is chosen, and when one already 
   await pick(user, "Service A");
   expect(screen.getByText("Paste your key to go on.")).toBeInTheDocument();
   document.body.innerHTML = "";
+  window.sessionStorage.clear(); // a fresh start: nothing typed before
   api();
   open({ done: true });
   await screen.findByRole("radio", { name: /Service A/ });
@@ -928,6 +929,23 @@ test("another service asks for its address, checks it when the cursor leaves, an
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toMatchObject({ name: "other", endpoint: "other", base_url: "http://model-host:8080/v1" });
   expect(body(calls).key).toBeUndefined();
+});
+
+test("a reload keeps the service, its address and the key's reference, says so, and never keeps a pasted key", async () => {
+  const user = userEvent.setup();
+  api();
+  const first = open();
+  await pickElse(user, "Another service");
+  await user.type(screen.getByLabelText("Service address"), "http://model-host:8080/v1");
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
+  first.unmount();
+  // The page is loaded again: the screen starts from the server and what this tab kept.
+  api();
+  open();
+  expect(await screen.findByLabelText("Service address")).toHaveValue("http://model-host:8080/v1");
+  expect(document.querySelector("[data-draft-restored]")).toHaveTextContent("Picked up where you left off");
+  expect(screen.getByLabelText("Access key")).toHaveValue("");
+  expect(JSON.stringify(window.sessionStorage)).not.toContain("secret-value");
 });
 
 test("a kind chosen under Something else stays chosen, and Something else with it: they are separate choices", async () => {

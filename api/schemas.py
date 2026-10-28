@@ -488,6 +488,38 @@ class BackupStatus(BaseModel):
     encrypted: bool = Field(False, description="Whether every backup copy is encrypted (a key is set for it).")
 
 
+class BackupTargetView(BaseModel):
+    path: str
+    label: str
+    reachable: bool = Field(description="The folder is there now (a drive that isn't connected is not).")
+    last_success: str | None
+    last_error: ScreenText | None
+
+
+class BackupCopyView(BaseModel):
+    target: str = Field(description="What the place is called (its label, else its folder).")
+    path: str = Field(description="The dated folder, which `cockpit restore --backup` takes.")
+    name: str
+    made_at: str | None = Field(description="When it was made, from its name.")
+    encrypted: bool
+
+
+class BackupsView(BaseModel):
+    """Where backups go and how they stand, for Settings > Backups: the places, the last one made, the newest copies
+    found, and whether backups run on their own. Restoring a backup is
+    `cockpit restore --backup <dated folder> <new folder>`, which makes a new workspace and never changes this one;
+    restoring to a moment in time (`--as-of`) isn't built."""
+
+    state: BackupStatus
+    message: ScreenText
+    targets: list[BackupTargetView]
+    copies: list[BackupCopyView]
+    schedule: bool = Field(
+        description="Backups are made on their own now: the setting is on and there is a place to put them."
+    )
+    switch: bool = Field(description="The setting itself, which stays on while there is no folder.")
+
+
 class RequestCounts(BaseModel):
     queued: int
     running: int
@@ -1232,8 +1264,8 @@ class PeopleSuggestionsView(BaseModel):
 
 
 class PeoplePasteIn(BaseModel):
-    """A list of people typed or pasted, one per line: a name, or `Name <address>`. They go on the side `side` or
-    `sides` names, as PersonIn's do."""
+    """A list of people typed or pasted, one per line: a name, or `Name <address>`, each optionally followed by how
+    they relate (`Name, my sister`). They go on the side `side` or `sides` names, as PersonIn's do."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -1245,6 +1277,24 @@ class PeoplePasteIn(BaseModel):
 class PeoplePasteDone(BaseModel):
     added: list[str] = Field(description="The names added, in the order given.")
     skipped: list[str] = Field(description="The names left out because someone of that name is on file already.")
+    left_out: list[str] = Field(
+        default_factory=list,
+        description="The lines left out because they don't read as a person (numbers, marks, a web address).",
+    )
+
+
+class PeoplePasteEntry(BaseModel):
+    name: str
+    relation: str | None = Field(None, description="How they relate (or their part), when the line said.")
+    address: str | None = None
+    on_file: bool = Field(description="Someone of that name or address is on file already, so nothing is added.")
+
+
+class PeoplePastePreview(BaseModel):
+    """What a pasted list would add, shown before it is added; nothing is changed."""
+
+    people: list[PeoplePasteEntry]
+    left_out: list[str] = Field(description="The lines that don't read as a person, which would be left out.")
 
 
 class PersonPatch(BaseModel):
@@ -4078,6 +4128,11 @@ class SetupView(BaseModel):
     settled: int = Field(description='How many of the counted steps are done or skipped (Today\'s "Setup n of 7").')
     local: bool = Field(description="The app runs on the person's own computer, so folders can be picked here.")
     walkthrough: WalkthroughView
+    first_go_waiting: int = Field(
+        0,
+        description="How many runs wait for the person's first go now, which is what Today's Start the assistant line "
+        "holds; zero once it was pressed. The last screen says what Today shows from this.",
+    )
 
 
 class TemplateAdds(BaseModel):

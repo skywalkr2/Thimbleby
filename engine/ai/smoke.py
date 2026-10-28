@@ -32,7 +32,7 @@ from engine.ai.task import (
     provider_reason,
     work_in_words,
 )
-from engine.config import Config
+from engine.config import Config, load_config
 from engine.secrets import SecretError, describe_secret, resolve_secret
 from engine.state_file import write_whole
 from engine.storage import Store
@@ -508,9 +508,29 @@ def _is_ok(text: str) -> bool:
         return False
 
 
-def ai_fingerprint(ws: Workspace) -> str:
-    path = ws.config_dir / "ai.yaml"
-    return hashlib.sha256(path.read_bytes() if path.exists() else b"").hexdigest()
+def ai_fingerprint(ws: Workspace, cfg: Config | None = None) -> str:
+    """What the connection test depends on, as it is set up now: for each tier that has an account, the account in use
+    and its backups (each one's address, key reference, model and agent), how the tier asks (effort, thinking) and the
+    parameters of its kinds of work. Labels, budgets, accounts nothing uses and who may see what are not part of it:
+    changing them changes nothing the test answered, so it is not asked again for them."""
+    from engine.ai.checked import account_fingerprint
+
+    cfg = cfg or load_config(ws.config_dir, env={})
+    parts = []
+    for name in sorted(cfg.ai.tiers):
+        tier = cfg.ai.tiers[name]
+        if not tier.use:
+            continue
+        parts.append(
+            [
+                name,
+                [[ref, account_fingerprint(cfg, ref)] for ref in [tier.use, *tier.fallback]],
+                tier.effort,
+                getattr(tier, "thinking", "default"),
+                [list(p) for p in _params_for_tier(cfg, name)],
+            ]
+        )
+    return hashlib.sha256(json.dumps(parts, sort_keys=True, default=str).encode()).hexdigest()
 
 
 def inconclusive(results: list[SmokeResult]) -> bool:
@@ -520,13 +540,14 @@ def inconclusive(results: list[SmokeResult]) -> bool:
     return bool(failed) and all(r.offline for r in failed)
 
 
-def record(ws: Workspace, results: list[SmokeResult]) -> None:
-    """Keep a test's result. A test that only found no network is not kept: the last real result stands."""
+def record(ws: Workspace, results: list[SmokeResult], cfg: Config | None = None) -> None:
+    """Keep a test's result, with what it was a test of (`cfg`, else the settings on disk). A test that only found no
+    network is not kept: the last real result stands."""
     if inconclusive(results):
         return
     passed = tier_summary(results)[1]
     data = {
-        "fingerprint": ai_fingerprint(ws),
+        "fingerprint": ai_fingerprint(ws, cfg),
         "passed": passed,
         "at": datetime.now(UTC).isoformat(),
         "results": [asdict(r) for r in results],
@@ -543,12 +564,24 @@ def lift_pauses(ws: Workspace, results: list[SmokeResult]) -> None:
         pauses.clear(account)
 
 
-def untested_since_change(ws: Workspace) -> bool:
-    """True when ai.yaml changed since the last passing smoke test (or there never was one)."""
+def untested_since_change(ws: Workspace, cfg: Config | None = None) -> bool:
+    """True when what the assistant's work runs on has no passing test: the last whole test passed for the accounts and
+    tiers as they are now, or else every account in use (each tier's main) passed its own check as it is set up now, as
+    a Test on its own row in Settings makes it. A change that touches neither (a backup account added or taken away, a
+    label, a budget) leaves it tested."""
+    cfg = cfg or load_config(ws.config_dir, env={})
     data = last_test(ws)
-    if data is None:
-        return True
-    return not can_run(data) or data.get("fingerprint") != ai_fingerprint(ws)
+    if data is not None and can_run(data) and data.get("fingerprint") == ai_fingerprint(ws, cfg):
+        return False
+    return not _mains_answered(ws, cfg)
+
+
+def _mains_answered(ws: Workspace, cfg: Config, since: str | None = None) -> bool:
+    """Whether every account a tier uses passed its latest check as set up now (at or after `since`), and some does."""
+    from engine.ai.checked import answered
+
+    uses = [tier.use for tier in cfg.ai.tiers.values() if tier.use]
+    return bool(uses) and all(answered(ws, cfg, ref, since) for ref in uses)
 
 
 def can_run(test: dict[str, Any]) -> bool:
@@ -588,8 +621,10 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
     if stand_in(cfg):
         return "stand_in", None
     test = last_test(ws)
-    current = test is not None and test.get("fingerprint") == ai_fingerprint(ws)
-    if test is not None and current and not can_run(test):
+    current = test is not None and test.get("fingerprint") == ai_fingerprint(ws, cfg)
+    # A test of the account on its own that passed after the failing whole test clears the failure.
+    mended = test is not None and _mains_answered(ws, cfg, since=str(test.get("at", "")))
+    if test is not None and current and not can_run(test) and not mended:
         failed = [r for r in test.get("results", []) if not r.get("ok") and not r.get("offline")]
         pick = next((r for r in failed if r.get("main")), failed[0] if failed else None)
         if failed or not test.get("results"):
@@ -604,7 +639,7 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
         passed_since = bool(test and can_run(test) and current and str(test.get("at", "")) >= latest["started_at"])
         if not passed_since:
             return "failing", (provider_reason(latest.get("error_detail") or "")[:DETAIL_LIMIT] or None)
-    if untested_since_change(ws):
+    if untested_since_change(ws, cfg):
         return "untested", None
     return "ok", None
 

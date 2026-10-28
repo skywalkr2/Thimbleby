@@ -1,8 +1,8 @@
 """The new-start walkthrough (design 7.8): the server keeps where it stands (the screen the person is on, closed,
-finished). It opens by itself on every visit while naming yourself or choosing an AI account is missing, otherwise only
-on the first visit, and resumes at the kept screen. The setup steps it is a view
-of are grouped by screen: an add-on that reads mail or a calendar has its sign-in and steps under mail and calendar, and
-the optional extras never count toward finishing."""
+finished). It opens by itself while the person is partway through it (never after Finish later, its last button, or once
+every step is done or skipped: what is left waits on Today's setup line), and resumes at the kept screen. The setup
+steps it is a view of are grouped by screen: an add-on that reads mail or a calendar has its sign-in and steps under
+mail and calendar, and the optional extras never count toward finishing."""
 
 from __future__ import annotations
 
@@ -71,13 +71,14 @@ def test_the_screen_the_person_is_on_is_kept_and_is_where_it_resumes_after_a_res
     assert walk["open"] and walk["step"] == "mail" and not walk["closed"]
 
 
-def test_finish_later_keeps_its_screen_and_it_opens_again_next_visit_while_you_or_an_ai_account_is_missing(tmp_path):
+def test_finish_later_keeps_its_screen_and_it_stays_closed_on_every_later_visit_whatever_is_missing(tmp_path):
     ws, c = _fresh(tmp_path)
     c.post("/api/setup/walkthrough", json={"step": "ai"})
     closed = c.post("/api/setup/walkthrough", json={"closed": True}).json()
     assert closed["closed"] and closed["step"] == "ai"
-    again = _view(_open(ws))  # the next visit, after a restart
-    assert again["walkthrough"]["open"] and again["walkthrough"]["step"] == "ai"
+    for _ in range(3):  # the next visits, after a restart each: neither the name nor an AI account is set
+        again = _view(_open(ws))
+        assert not again["walkthrough"]["open"] and again["walkthrough"]["closed"]
     assert not again["finished"]  # Today's setup line still has work to show
 
 
@@ -86,27 +87,36 @@ def _found(named=True):
     return [setup.Step(i, d, False, group=i, counted=True) for i, d in {"workspace": named, "people": False}.items()]
 
 
-def test_once_you_and_an_ai_account_are_set_it_opens_by_itself_only_on_the_first_visit(tmp_path):
-    """The person's path: they don't add people yet. The walkthrough doesn't come back on later visits; People waits on
-    Today's setup line. Without their name or any AI account chosen, it comes back on every visit."""
+def test_it_opens_by_itself_only_while_the_person_is_partway_through_it(tmp_path):
+    """The person's path: a new start opens it; leaving it by closing the window resumes it; Finish later, the last
+    button and having done or skipped every step each end it, with the name and an AI account still missing."""
     ws, c = _fresh(tmp_path)
     from types import SimpleNamespace
 
-    def settings(use):
-        tiers = {"routine": SimpleNamespace(use=use)}
-        return SimpleNamespace(workspace=SimpleNamespace(demo=False), ai=SimpleNamespace(tiers=tiers))
-
-    cfg, no_account = settings("an-account/a-model"), settings(None)
-    assert setup.walkthrough(ws, cfg, _found()).open  # the first visit
-    c.post("/api/setup/walkthrough", json={"step": "people"})  # it was shown
-    assert not setup.walkthrough(ws, cfg, _found()).open
+    cfg = SimpleNamespace(workspace=SimpleNamespace(demo=False))
+    assert setup.walkthrough(ws, cfg, _found()).open  # a new start
+    c.post("/api/setup/walkthrough", json={"step": "people"})  # it was shown, then the window was closed
+    assert setup.walkthrough(ws, cfg, _found()).open  # the next visit resumes it
+    assert setup.walkthrough(ws, cfg, _found(named=False)).open
+    done = [setup.Step(i, True, False, group=i, counted=True) for i in ("workspace", "people")]
+    assert not setup.walkthrough(ws, cfg, done).open  # every step that counts is done
     c.post("/api/setup/walkthrough", json={"closed": True})
     assert not setup.walkthrough(ws, cfg, _found()).open
-    assert setup.walkthrough(ws, cfg, _found(named=False)).open
-    assert setup.walkthrough(ws, no_account, _found()).open
-    c.post("/api/setup/walkthrough", json={"finished": True})
-    assert setup.walkthrough(ws, no_account, _found()).open
-    assert not setup.walkthrough(ws, cfg, _found()).open
+    assert not setup.walkthrough(ws, cfg, _found(named=False)).open
+    c.post("/api/setup/walkthrough", json={"closed": False, "finished": True})
+    assert not setup.walkthrough(ws, cfg, _found(named=False)).open
+
+
+def test_a_screen_not_reached_is_known_only_partway_through_it(tmp_path):
+    ws, c = _fresh(tmp_path)
+    assert not setup.not_reached(ws, "backup")  # never shown
+    c.post("/api/setup/walkthrough", json={"step": "ai"})
+    assert setup.not_reached(ws, "backup") and setup.not_reached(ws, "mail") and not setup.not_reached(ws, "ai")
+    c.post("/api/setup/walkthrough", json={"step": "people"})
+    assert not setup.not_reached(ws, "backup")
+    c.post("/api/setup/walkthrough", json={"step": "you"})
+    c.post("/api/setup/walkthrough", json={"closed": True})
+    assert not setup.not_reached(ws, "backup")
 
 
 def test_an_unknown_screen_is_refused_and_nothing_is_kept(tmp_path):
@@ -120,12 +130,17 @@ def test_the_sandbox_workspaces_do_not_open_it_by_themselves(tmp_path):
     assert not _view(_open(ws))["walkthrough"]["open"]
 
 
-def test_skipping_every_step_still_brings_it_back_while_you_and_an_ai_account_are_missing(tmp_path):
+def test_skipping_every_step_and_going_to_today_stays_on_today_across_reloads(tmp_path):
+    """The person's path: they skip everything (the name and the AI account too), press Go to Today, and the app is
+    loaded again three times. Setup never reopens by itself; Today's setup line is where it waits."""
     ws, c = _fresh(tmp_path)
     for step in COUNTED:
         c.post(f"/api/setup/{step}/skip")
-    view = _view(c)
-    assert view["finished"] and view["walkthrough"]["open"]
+    assert _view(c)["finished"] and not _view(c)["walkthrough"]["open"]  # every step is settled
+    c.post("/api/setup/walkthrough", json={"finished": True})
+    for _ in range(3):
+        view = _view(_open(ws))
+        assert not view["walkthrough"]["open"] and view["walkthrough"]["finished"]
 
 
 def test_the_screen_to_open_at_is_the_first_with_something_left_when_none_was_kept(tmp_path):
@@ -625,6 +640,15 @@ def test_a_first_note_is_ticked_only_when_something_was_handed_in_not_for_any_ch
     assert not _steps(c)["first_note"]["done"] and not _steps(c)["promises"]["done"]
     assert c.post("/api/handin", json={"note": "Remember to call the plumber on Friday"}).status_code == 200
     assert _steps(c)["first_note"]["done"] and _steps(c)["promises"]["done"]
+
+
+def test_a_question_typed_to_the_assistant_is_no_first_note_and_ticks_nothing(tmp_path):
+    """The person's path: they only asked the assistant something (Ask). That is not a note handed in, so neither the
+    first note nor the first result is ticked, and the last screen has no Done for them."""
+    _, c = _fresh(tmp_path)
+    assert c.post("/api/ask", json={"question": "What can you do for me?"}).status_code == 200
+    steps = _steps(c)
+    assert not steps["first_note"]["done"] and not steps["promises"]["done"]
 
 
 def test_your_promises_is_not_ticked_before_its_screen_was_reached_even_when_the_look_back_ran(tmp_path, monkeypatch):

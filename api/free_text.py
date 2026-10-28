@@ -134,6 +134,7 @@ ROUTES: dict[str, Declared] = {
     ),
     "POST /api/setup/work": _local("a side's description, kept on the side as its own record, never read as a note"),
     "POST /api/setup/people-paste": _local("a list of names the person types, each kept as a person record's name"),
+    "POST /api/setup/people-paste/preview": _local("the same list, read to show what would be added; nothing is kept"),
     "POST /api/watch/sources": _local(_SETTING),
     "POST /api/watch/sources/{source_id}": _local(_SETTING),
 }

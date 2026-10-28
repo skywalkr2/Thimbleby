@@ -537,6 +537,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             settled=sum(1 for s in counted if s.done or s.skipped),
             local=local,
             walkthrough=WalkthroughView(**vars(setup.walkthrough(ws, now, steps))),
+            first_go_waiting=setup.first_go_waiting(store),
         )
 
     @r.post("/setup/walkthrough")
@@ -2419,7 +2420,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             log.warning("The settings couldn't be loaded: %s", err)
             raise HTTPException(status_code=400, detail=err.plain) from None
         results = smoke_test(current, os.environ, store=store)
-        record(ws, results)
+        record(ws, results, current)
         remember(ws, current, results)
         lift_pauses(ws, results)
         release_identity_waits()

@@ -160,7 +160,7 @@ const COMMANDS = [
 const VCS = "pull|push|commit|clone|checkout|status|add|merge|rebase|fetch|log|diff|reset|stash|init|config|remote|tag|branch";
 
 /** Entries that may name a command because they are shown only under a "For developers" disclosure. */
-const COMMAND_ALLOWED = new Set(["addons.demo_command"]);
+const COMMAND_ALLOWED = new Set(["addons.demo_command", "backups.restore.command"]);
 
 function wordingProblems(text: string): string[] {
   const found: string[] = [];

@@ -5,6 +5,35 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-28: Setup can always be left; its state is read from the records; Backups says where they go
+
+**Decided:** (1) Setup can always be left, whatever is skipped: Finish later, Go to Today, an address that names Today and
+having every step done or skipped end it for good, and it opens by itself only while the person is partway through it. This
+replaces the rule of 2026-10-13 that brought it back on every visit while the person's name or an AI account was missing.
+What is left is Today's setup line (shown while any step is not done, counting only the done ones) and the queue's "No AI
+account" line, never a forced return. (2) Setup's ticks, counts and the last screen's words are worked out from the records
+(a question typed to the assistant is not a note handed in; the line to start the assistant is promised only while runs wait
+for that go; the heading is Done only when every step is done). (3) A reload keeps what was typed on a setup screen as a draft
+in the browser tab; a pasted key is never kept there. (4) Paste a list keeps only lines that read as a person, reads a relation
+after the name, shows what it will add first, and the People step can remove a person with Undo. (5) Settings > Backups shows
+where backups go, the last backup, Back up now with its result, the newest copies and how to restore a copy
+(`cockpit restore --backup`); restoring to a moment in time stays designed and not built, and the page says so; the automatic
+switch shows off, with its reason, while no folder is chosen. (6) The assistant reads as untested only when what its work runs
+on has no passing test: a whole test that passed for the accounts in use as set up now, or a passing check of each account in
+use as set up now (a Test on its own row counts); a comment, a label, a budget or a backup account added and taken away don't.
+
+**Decided by:** the UI/UX sweep's reviewer (X02, X03, X04, X12, X13, X14, X17) and the main session's brief, which names the
+leaving rule; the choice of what counts as tested is the builder's, for review.
+
+**Why:** a person who skipped everything could never stay on Today (even `#today` reopened setup), the last screen and the
+ticks claimed things the records didn't show, a harmless change marked the assistant untested, pasted junk became people, and
+nothing on the Backups page said where backups went.
+
+**Impact:** Design 6.16, 7.7, 7.8 and 7.9 and CHANGES section 257. New API: `GET /api/backups`,
+`POST /api/setup/people-paste/preview`, `left_out` on the paste answer, `first_go_waiting` on the setup view. The 2026-10-13 rule
+in 7.8 is gone. A kept test result written before this reads as untested once. A key pasted in the AI step is not kept across a
+reload (a decision for the owner if it should be). No change to scope. Change log: section 257.
+
 ## 2026-10-28: Where the cursor starts
 
 **Decided:** When a screen or a setup step opens, the cursor is on its heading, never in a field and never on a label.

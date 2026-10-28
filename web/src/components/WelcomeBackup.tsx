@@ -22,7 +22,7 @@ function size(mb: number, t: (key: string, vars?: Record<string, string | number
   return mb >= 1024 ? t("welcome.backup.gb", { n: (mb / 1024).toFixed(1) }) : t("welcome.backup.mb", { n: Math.round(mb) });
 }
 
-export function WelcomeBackup(props: { local: boolean }) {
+export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -83,6 +83,7 @@ export function WelcomeBackup(props: { local: boolean }) {
       }
       setChoice(null);
       await client.invalidateQueries({ queryKey: ["status"] });
+      await client.invalidateQueries({ queryKey: ["backups"] });
       return true;
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
@@ -204,7 +205,7 @@ export function WelcomeBackup(props: { local: boolean }) {
         {!hasSlot && (
           <div className="row-end">
             <Button variant="primary" loading={busy} disabled={!!missing || picked === null} reason={missing || undefined} onClick={() => void save()}>
-              {t("welcome.backup.go_here")}
+              {props.saveLabel ?? t("welcome.backup.go_here")}
             </Button>
           </div>
         )}

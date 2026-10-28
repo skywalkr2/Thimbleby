@@ -5,3 +5,6 @@ import { configure } from "@testing-library/react";
 // nothing when it renders sooner.
 configure({ asyncUtilTimeout: 4000 });
 window.scrollTo = () => undefined;
+
+// What a screen keeps as a draft in the tab never carries from one test to the next.
+beforeEach(() => window.sessionStorage.clear());

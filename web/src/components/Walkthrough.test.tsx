@@ -10,6 +10,9 @@ import { App } from "../App";
 import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture } from "../test-utils";
 import { Walkthrough } from "./Walkthrough";
 
+/** Made-up addresses are built from this, so no address is written out whole. */
+const WEB = "http" + "://";
+
 const CORE = ["workspace", "work", "ai", "mail", "promises", "backup", "people", "template", "first_note", "addons"];
 const SETTINGS = [
   {
@@ -310,6 +313,30 @@ describe("opening", () => {
     expect(window.location.hash).not.toBe("#setup");
   });
 
+  test("an address that names Today stays on Today even while the server says setup is open", async () => {
+    window.location.hash = "#today";
+    const calls = fakeApi({
+      ...routes({}, CORE.map((id) => step(id, { skipped: true })), { open: true, step: "you" }),
+      "GET panels": () => [],
+      "GET asks": () => [],
+      "GET changes": () => [],
+      "GET followups": () => [],
+      "GET runtime-config": () => ({ instance: null }),
+      "GET today/agenda": () => [],
+      "GET today/todo": () => [],
+      "GET today/arrived": () => ({ items: [], left_out: 0 }),
+      "GET projects": () => [],
+    });
+    renderApp(<App rc={rcFixture()} />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+    await waitFor(() => expect(calls.some((c) => c.route === "GET setup")).toBe(true));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
+    expect(window.location.hash).toBe("#today");
+    // What was passed by is the setup line on Today, one click from setup again.
+    expect(await screen.findByRole("region", { name: "Setup" })).toHaveTextContent("0 of 7 done");
+  });
+
   test("it does not take the person from a hand-in they already started when setup is read late", async () => {
     const user = userEvent.setup();
     let release: () => void = () => {};
@@ -507,7 +534,7 @@ describe("closing", () => {
     });
     renderApp(<App rc={rcFixture()} />);
     const line = await screen.findByRole("region", { name: "Setup" });
-    expect(line).toHaveTextContent("Setup 3 of 7");
+    expect(line).toHaveTextContent("3 of 7 done");
     expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
     await user.click(within(line).getByRole("button", { name: "Continue setup" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
@@ -539,7 +566,7 @@ describe("a way back to the step", () => {
     });
   }
 
-  test("the list of screens says what the server decided for Your promises: Done when it happened, Skipped (needs mail) when mail was skipped", async () => {
+  test("the list of screens says what the server decided for Your promises: Done when it happened, Waiting for mail when mail was skipped", async () => {
     window.location.hash = "";
     const steps = CORE.map((id) =>
       id === "mail" ? step(id, { skipped: true }) : id === "promises" ? step(id, { skipped: true, reason: "needs_mail" }) : step(id),
@@ -551,7 +578,7 @@ describe("a way back to the step", () => {
     open();
     const item = (await screen.findByRole("button", { name: /Your promises/ })) as HTMLElement;
     expect(item).toHaveAttribute("data-state", "skipped");
-    expect(within(item).getByText("Skipped (needs mail)")).toBeInTheDocument();
+    expect(within(item).getByText("Waiting for mail")).toBeInTheDocument();
     // Moving on from the screen does not tick it: only the step's own thing does.
     expect(within(item).queryByText("Done")).toBeNull();
   });
@@ -686,6 +713,34 @@ describe("each screen", () => {
     expect(screen.getByText(/Saving adds you to People/)).toBeInTheDocument();
   });
 
+  test("what a screen saved is read again at once, so the list of steps and Today's line never lag behind", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes({
+        "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
+        "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+      }),
+    );
+    open();
+    await user.type(await screen.findByLabelText("Your full name"), "Sam Tester");
+    const before = calls.filter((c) => c.route === "GET setup").length;
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "What it's for" })).toBeInTheDocument();
+    await waitFor(() => expect(calls.filter((c) => c.route === "GET setup").length).toBeGreaterThan(before));
+  });
+
+  test("You: a reload keeps the name that was typed and says so", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "you" }));
+    const first = open();
+    await user.type(await screen.findByLabelText("Your full name"), "Avery Stone");
+    first.unmount();
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "you" }));
+    open();
+    expect(await screen.findByLabelText("Your full name")).toHaveValue("Avery Stone");
+    expect(document.querySelector("[data-draft-restored]")).toHaveTextContent("Picked up where you left off");
+  });
+
   test("You: the name is saved on the person's record and a changed time zone as a setting, then it goes on to Work", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
@@ -786,6 +841,40 @@ describe("each screen", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.filter((c) => c.route === "POST setup/business").map((c) => c.body)).toEqual([{ name: SHOP, kind: "business" }]);
     expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
+  });
+
+  test("Work: a reload keeps what was typed (ticks, employer, business, its projects and a group), says so, and a save forgets it", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "POST setup/business": (body) => ({ project: "PRJ-2", name: (body as { name: string }).name, kind: "business", created: true, changeset: "CS-1" }),
+          "POST projects": () => ({ id: "PRJ-9" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "work" },
+      ),
+    );
+    const first = open();
+    await user.click(await screen.findByRole("checkbox", { name: "A job" }));
+    await user.type(screen.getByLabelText(/employer/i), EMPLOYER);
+    await user.click(screen.getByRole("checkbox", { name: "My own business" }));
+    await user.type(screen.getByLabelText("What is your business called?"), SHOP);
+    await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
+    await user.paste(`${WORKS_ON[0]}\n${WORKS_ON[1]}`);
+    // The page is loaded again: the screen is built from nothing but the server and this tab.
+    first.unmount();
+    open();
+    expect(await screen.findByRole("checkbox", { name: "A job" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "My own business" })).toBeChecked();
+    expect(screen.getByLabelText(/employer/i)).toHaveValue(EMPLOYER);
+    expect(screen.getByLabelText("What is your business called?")).toHaveValue(SHOP);
+    expect(screen.getByLabelText(`Which projects does ${SHOP} have?`)).toHaveValue(`${WORKS_ON[0]}\n${WORKS_ON[1]}`);
+    expect(screen.getByRole("status")).toHaveTextContent("Picked up where you left off");
+    // Saving it keeps nothing behind: the next load starts clean.
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/business")).toBe(true));
+    expect(Object.keys(window.sessionStorage).filter((k) => k.startsWith("setup-draft:work"))).toEqual([]);
   });
 
   test("Work: what the business is goes in its own box and is kept as its description; only the projects list becomes projects", async () => {
@@ -1388,19 +1477,87 @@ describe("each screen", () => {
       expect(within(list).queryByRole("button")).toBeNull();
     });
 
-    test("Paste a list is a link under the add row that opens a box with the cursor in it; each line is added with no relation, and what was on file is said", async () => {
+    test("Paste a list is a link under the add row that opens a box with the cursor in it; what will be added is shown first, then each is added, and what was on file is said", async () => {
       const user = userEvent.setup();
-      const calls = personalOnly({ "POST setup/people-paste": () => ({ added: ["Casey Kin", "Lee Kin"], skipped: ["Pat Kin"] }) });
+      const calls = personalOnly({
+        "POST setup/people-paste/preview": () => ({
+          people: [
+            { name: "Casey Kin", relation: null, address: null, on_file: false },
+            { name: "Lee Kin", relation: null, address: "lee@example.com", on_file: false },
+            { name: "Pat Kin", relation: null, address: null, on_file: true },
+          ],
+          left_out: [],
+        }),
+        "POST setup/people-paste": () => ({ added: ["Casey Kin", "Lee Kin"], skipped: ["Pat Kin"], left_out: [] }),
+      });
       open();
       await user.click(await screen.findByRole("button", { name: "Paste a list" }));
-      const box = screen.getByLabelText("One name per line. A line like Name <address> works too.");
+      const box = screen.getByLabelText("One name per line. A line like Name <address> works too, and so does Name, my sister.");
       await waitFor(() => expect(box).toHaveFocus());
       await user.type(box, "Casey Kin{Enter}Lee Kin <lee@example.com>{Enter}Pat Kin");
-      await user.click(screen.getByRole("button", { name: "Add these people" }));
+      await user.click(screen.getByRole("button", { name: "Show who will be added" }));
+      // Nothing is added yet: the list shows who will be.
+      const preview = await screen.findByRole("region", { name: "These will be added" });
+      expect(within(preview).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Casey Kin", "Lee Kin · lee@example.com"]);
+      expect(preview).toHaveTextContent("Already on your list: Pat Kin.");
+      expect(calls.some((c) => c.route === "POST setup/people-paste")).toBe(false);
+      await user.click(within(preview).getByRole("button", { name: "Add 2 people" }));
       await waitFor(() => expect(calls.some((c) => c.route === "POST setup/people-paste")).toBe(true));
       expect(calls.find((c) => c.route === "POST setup/people-paste")!.body).toEqual({ text: "Casey Kin\nLee Kin <lee@example.com>\nPat Kin", side: "personal" });
       expect(await screen.findByRole("status")).toHaveTextContent("Added 2 people. You can say how they relate to you in the list above. Already on your list: Pat Kin.");
-      expect(box).toHaveValue("");
+    });
+
+    test("a pasted list with junk lines shows them as left out and adds only the people, with how they relate", async () => {
+      const user = userEvent.setup();
+      const calls = personalOnly({
+        "POST setup/people-paste/preview": () => ({
+          people: [
+            { name: "Jody Kin", relation: "my sister", address: null, on_file: false },
+            { name: "Drew Kin", relation: "my accountant", address: null, on_file: false },
+          ],
+          left_out: ["12345", "!!!", `${WEB}example.com`],
+        }),
+        "POST setup/people-paste": () => ({ added: ["Jody Kin", "Drew Kin"], skipped: [], left_out: ["12345", "!!!", `${WEB}example.com`] }),
+      });
+      open();
+      await user.click(await screen.findByRole("button", { name: "Paste a list" }));
+      await user.type(screen.getByLabelText(/^One name per line/), "x");
+      await user.click(screen.getByRole("button", { name: "Show who will be added" }));
+      const preview = await screen.findByRole("region", { name: "These will be added" });
+      expect(within(preview).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Jody Kin · my sister", "Drew Kin · my accountant"]);
+      expect(preview).toHaveTextContent(`Left out, since they don't read as a person: 12345, !!!, ${WEB}example.com.`);
+      await user.click(within(preview).getByRole("button", { name: "Change the list" }));
+      expect(screen.getByLabelText(/^One name per line/)).toHaveValue("x");
+      expect(calls.some((c) => c.route === "POST setup/people-paste")).toBe(false);
+    });
+
+    test("a reload keeps a name typed in the add row and a pasted list that was not added", async () => {
+      const user = userEvent.setup();
+      personalOnly();
+      const first = open();
+      await user.type(within(await addRow()).getByLabelText("Name"), "Pat Kin");
+      await user.click(screen.getByRole("button", { name: "Paste a list" }));
+      await user.type(screen.getByLabelText(/^One name per line/), "Casey Kin");
+      first.unmount();
+      personalOnly();
+      open();
+      expect(within(await addRow()).getByLabelText("Name")).toHaveValue("Pat Kin");
+      expect(await screen.findByLabelText(/^One name per line/)).toHaveValue("Casey Kin");
+    });
+
+    test("every person listed has a Remove that acts at once, and the toast's Undo puts them back", async () => {
+      const user = userEvent.setup();
+      const kin = { id: "PER-9", name: "Casey Kin", role: null, aliases: [], status: "active", is_pm: false, relation: "my sister", side: "personal" };
+      const calls = personalOnly({
+        "GET people": () => [kin],
+        "POST people/PER-9/remove": () => ({ ok: "PER-9" }),
+        "POST people/PER-9/restore": () => ({ ok: "PER-9" }),
+      });
+      open();
+      await user.click(await screen.findByRole("button", { name: "Remove Casey Kin" }));
+      await waitFor(() => expect(calls.some((c) => c.route === "POST people/PER-9/remove")).toBe(true));
+      await user.click(await screen.findByRole("button", { name: "Undo" }));
+      await waitFor(() => expect(calls.some((c) => c.route === "POST people/PER-9/restore")).toBe(true));
     });
 
     test("a person added with no relation can be given one from the list", async () => {
@@ -1440,11 +1597,11 @@ describe("each screen", () => {
     expect(options()).not.toContain("manager");
     // The part starts on the first of the list, and picking a side with other parts moves it to that list's first.
     expect(within(row).getByLabelText("Who they are")).toHaveValue("customer");
-    await user.type(within(row).getByLabelText("Name"), "Sam Kin");
+    await user.type(within(row).getByLabelText("Name"), "Drew Kin");
     await user.selectOptions(within(row).getByLabelText("Who they are"), "supplier");
     await user.click(within(row).getByRole("button", { name: "Add" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
-    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Sam Kin", aliases: [], sides: ["PRJ-3"], role: "supplier" });
+    expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Drew Kin", aliases: [], sides: ["PRJ-3"], role: "supplier" });
   });
 
   test("People: with no side of work, only the people in the person's life are asked, saved on the personal side", async () => {
@@ -1461,7 +1618,7 @@ describe("each screen", () => {
     open();
     await screenTitle();
     await user.click(screen.getByRole("button", { name: "I'll do this later" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Done" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Where things stand" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.some((c) => c.route === "POST setup/people/skip")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
@@ -2269,6 +2426,36 @@ describe("Done", () => {
     expect(within(row("workspace")).queryByRole("button")).toBeNull();
   });
 
+  /** The last screen with the setup as given and `waiting` runs held for the person's first go. */
+  const doneWith = (setupSteps: S["SetupStepView"][], waiting: number) =>
+    fakeApi(routes({ "GET setup": () => setupView(setupSteps, { first_go_waiting: waiting, walkthrough: { open: true, step: "done" } }) }, setupSteps, { step: "done" }));
+
+  test("with everything skipped it is not headed Done and promises no line to start the assistant or items to approve", async () => {
+    doneWith(steps(Object.fromEntries(CORE.map((id) => [id, { skipped: true }]))), 0);
+    open();
+    expect(await screen.findByRole("heading", { level: 2, name: "Where things stand" })).toBeInTheDocument();
+    expect(screen.getByText(/Today keeps one setup line for what is left/)).toBeInTheDocument();
+    expect(screen.queryByText(/start the assistant/)).toBeNull();
+    expect(screen.queryByText(/approve the first items/)).toBeNull();
+    expect(screen.getByText(/no AI account yet, so it can't read anything/)).toBeInTheDocument();
+  });
+
+  test("it says Today shows the line to start the assistant only while items wait for that go, and not after Start was pressed", async () => {
+    const done = Object.fromEntries(["workspace", "work", "ai", "mail", "promises", "backup", "people"].map((id) => [id, { done: true }]));
+    doneWith(steps(done), 3);
+    const first = open();
+    expect(await screen.findByRole("heading", { level: 2, name: "Done" })).toBeInTheDocument();
+    expect(screen.getByText(/Today shows one line to start the assistant/)).toBeInTheDocument();
+    expect(screen.getByText(/approve the first items/)).toBeInTheDocument();
+    first.unmount();
+    doneWith(steps(done), 0);
+    open();
+    expect(await screen.findByRole("heading", { level: 2, name: "Done" })).toBeInTheDocument();
+    expect(screen.queryByText(/Today shows one line to start the assistant/)).toBeNull();
+    expect(screen.queryByText(/approve the first items/)).toBeNull();
+    expect(screen.getByText(/you can hand in a note or paste something/)).toBeInTheDocument();
+  });
+
   test("it shows the optional extras and they do not count: the last button is there with them undone", async () => {
     fakeApi(
       routes(
@@ -2532,7 +2719,7 @@ describe("one list of seven steps", () => {
     expect(rows[0]).toHaveTextContent("Done");
     expect(rows[1]).toHaveTextContent("Skipped");
     expect(rows[3]).toHaveTextContent("Skipped");
-    expect(rows[4]).toHaveTextContent("Skipped (needs mail)");
+    expect(rows[4]).toHaveTextContent("Waiting for mail");
     expect(rows[2]).toHaveTextContent("Not set up yet");
   });
 });

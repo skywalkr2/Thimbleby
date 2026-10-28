@@ -652,17 +652,17 @@ def test_a_connection_test_that_finds_no_network_is_not_kept_and_leaves_the_last
 
         return type("A", (), {"run": run})()
 
-    record(ws, smoke_test(cfg, {}, answering))
+    record(ws, smoke_test(cfg, {}, answering), cfg)
     assert ai_state(ws, cfg, store)[0] == "ok"
     passed_at = last_test(ws)["at"]
     results = smoke_test(cfg, {}, cut_off)
     assert results and all(r.offline and not r.ok for r in results if not r.answered)
-    record(ws, results)
+    record(ws, results, cfg)
     assert last_test(ws)["at"] == passed_at and ai_state(ws, cfg, store)[0] == "ok"
     # Never tested and no network: not failing either, only untested.
     last = ws.private_dir / "ai-test.json"
     last.unlink()
-    record(ws, results)
+    record(ws, results, cfg)
     assert not last.exists() and ai_state(ws, cfg, store)[0] == "untested"
 
 
@@ -682,12 +682,12 @@ def test_a_backup_that_passes_every_check_counts_as_set_up_while_the_main_accoun
             out.append(SmokeResult(tier, "backup", False, backup_ok, "ok" if backup_ok else "no", ref="backup/m"))
         return out
 
-    record(ws, results(backup_ok=True))
+    record(ws, results(backup_ok=True), cfg)
     assert ai_state(ws, cfg, store)[0] == "ok"
-    record(ws, results(backup_ok=False))
+    record(ws, results(backup_ok=False), cfg)
     assert ai_state(ws, cfg, store)[0] == "failing"
     # A test kept before backups counted reads the same way: what decides is the results, not the old flag.
-    kept = {"fingerprint": ai_fingerprint(ws), "passed": False, "at": "2026-10-09T13:00:00+00:00"}
+    kept = {"fingerprint": ai_fingerprint(ws, cfg), "passed": False, "at": "2026-10-09T13:00:00+00:00"}
     kept["results"] = [vars(r) for r in results(backup_ok=True)]
     (ws.private_dir / "ai-test.json").write_text(_json.dumps(kept), encoding="utf-8")
     assert ai_state(ws, cfg, store)[0] == "ok"

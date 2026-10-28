@@ -233,6 +233,8 @@ export function Walkthrough(
         setBusy(false);
       }
     }
+    // What the screen saved is what the list of steps and Today's line read, so they are read again now.
+    await client.invalidateQueries({ queryKey: ["setup"] });
     if (next) go(next);
   };
 
@@ -245,6 +247,12 @@ export function Walkthrough(
     props.onDone();
   };
 
+  // The last screen says what is so from the records: its heading and what it promises of Today follow what is set up and
+  // what waits for the person's first go, never a fixed sentence.
+  const left = steps.some((s) => s.counted && !s.done);
+  const waitingGo = data.first_go_waiting > 0;
+  const screenName = (screen: Screen) => t(screen === "done" && left ? "walkthrough.screen.done_left" : `walkthrough.screen.${screen}`);
+  const why = current === "done" ? t(waitingGo ? "walkthrough.why.done" : left ? "walkthrough.why.done_left" : "walkthrough.why.done_all") : t(`walkthrough.why.${current}`);
   const stepData = (id: string) => steps.find((s) => s.id === id);
   const aiDone = !!stepData("ai")?.done;
   const hasMailSteps = steps.some((s) => s.group === "mail" && !!s.plugin && !s.sign_in);
@@ -271,8 +279,8 @@ export function Walkthrough(
             <div className={styles.place}>
               <p data-place="">
                 {placed
-                  ? t("walkthrough.place", { label: t(`walkthrough.screen.${current}`), n: placed.place ?? 0, total: data.total })
-                  : t(`walkthrough.screen.${current}`)}
+                  ? t("walkthrough.place", { label: screenName(current), n: placed.place ?? 0, total: data.total })
+                  : screenName(current)}
               </p>
               <Button size="sm" aria-expanded={listOpen} aria-controls="walkthrough-steps" onClick={() => setListOpen((open) => !open)}>
                 {t("walkthrough.steps")}
@@ -293,7 +301,7 @@ export function Walkthrough(
                       onClick={() => go(screen)}
                     >
                       <span className={styles.label}>
-                        <span>{t(`walkthrough.screen.${screen}`)}</span>
+                        <span>{screenName(screen)}</span>
                         {screen === current && <span className={styles.here}>{t("walkthrough.here")}</span>}
                       </span>
                       {(state === "done" || state === "skipped") && (
@@ -311,9 +319,9 @@ export function Walkthrough(
         )}
         <main id="main" className={styles.step} tabIndex={-1} aria-labelledby="walkthrough-screen-title" data-screen={current}>
           <h2 id="walkthrough-screen-title" ref={heading} tabIndex={-1}>
-            {t(`walkthrough.screen.${current}`)}
+            {screenName(current)}
           </h2>
-          <p className={styles.why}>{t(`walkthrough.why.${current}`)}</p>
+          <p className={styles.why}>{why}</p>
           <div className={styles.body}>
           {adding && <AddConnection plugin={adding.plugin} onClose={() => setAdding(null)} />}
           {!adding && (
@@ -439,7 +447,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           onChooseSource={props.onChooseSource}
         />
       </section>
-      <p className={styles.aside}>{t("walkthrough.done.next")}</p>
+      <p className={styles.aside}>{t(setup.data.first_go_waiting > 0 ? "walkthrough.done.next" : steps.some((s) => s.id === "ai" && s.done) ? "walkthrough.done.next_hand_in" : "walkthrough.done.next_no_ai")}</p>
     </>
   );
 }

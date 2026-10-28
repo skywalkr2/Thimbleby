@@ -13,6 +13,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
+import { clearDrafts, useDraftState, useRestored } from "../lib/draft";
 import { problemText } from "../lib/problem";
 import { useToasts } from "../lib/toasts";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
@@ -34,17 +35,19 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
   const hasSlot = useHasContinueSlot();
   const state = useQuery({ queryKey: ["business"], queryFn: api.business });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  const [jobOn, setJobOn] = useState<boolean | null>(null);
-  const [businessOn, setBusinessOn] = useState<boolean | null>(null);
-  const [jobName, setJobName] = useState("");
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [more, setMore] = useState<Record<string, string>>({});
+  // What is typed here is kept as a draft in this tab until it is saved, so a reload brings it back.
+  const [jobOn, setJobOn] = useDraftState<boolean | null>("work", "job-on", null);
+  const [businessOn, setBusinessOn] = useDraftState<boolean | null>("work", "business-on", null);
+  const [jobName, setJobName] = useDraftState("work", "job-name", "");
+  const [drafts, setDrafts] = useDraftState<Draft[]>("work", "businesses", []);
+  const [more, setMore] = useDraftState<Record<string, string>>("work", "more", {});
   // What a saved business is, once the person has changed it; untouched, the box shows what is saved.
-  const [moreAbout, setMoreAbout] = useState<Record<string, string>>({});
-  const [moreGroup, setMoreGroup] = useState<Record<string, Group>>({});
+  const [moreAbout, setMoreAbout] = useDraftState<Record<string, string>>("work", "more-about", {});
+  const [moreGroup, setMoreGroup] = useDraftState<Record<string, Group>>("work", "more-group", {});
+  const restoredDraft = useRestored("work");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
-  const counter = useRef(0);
+  const counter = useRef(drafts.reduce((most, d) => Math.max(most, d.key), 0));
   const blank = (): Draft => ({ key: ++counter.current, name: "", about: "", lines: "", group: noGroup() });
 
   const answered = state.data?.chosen ?? null;
@@ -137,6 +140,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         }
       }
       await refresh();
+      clearDrafts("work");
       if (!hasSlot && props.onContinue && !props.done) props.onContinue();
       return true;
     } catch (err) {
@@ -169,6 +173,11 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         if (changed && !missing) void save();
       }}
     >
+      {restoredDraft && (
+        <p className="hint" role="status" data-draft-restored="">
+          {t("draft.restored")}
+        </p>
+      )}
       <div className="field work-question" role="group" aria-labelledby="work-question" aria-describedby="work-always">
         <p className="what" id="work-question">
           {t("walkthrough.work.question")}

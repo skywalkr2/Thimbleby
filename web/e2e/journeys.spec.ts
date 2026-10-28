@@ -122,23 +122,32 @@ test.describe.serial("journeys", () => {
     await main.getByRole("button", { name: "I'll do this later" }).click();
 
     // Done: what was set up and what was skipped, then Today.
-    await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    // Something was passed by, so the last screen says where things stand and is not headed Done.
+    await expect(main.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
     await expect(recap.locator('[data-step="ai"]')).toContainText("Done");
     await expect(recap.locator('[data-step="mail"]')).toContainText("Skipped");
     // Done lists all seven, and a step is Done only when its own thing happened: with mail skipped, the first result says why.
     await expect(recap.locator("li")).toHaveCount(7);
     await expect(recap.locator('[data-step="work"]')).toContainText("Done");
-    await expect(recap.locator('[data-step="promises"]')).toContainText("Skipped (needs mail)");
+    await expect(recap.locator('[data-step="promises"]')).toContainText("Waiting for mail");
     // Moving on from People with nobody added passes it, and says so.
     await expect(recap.locator('[data-step="people"]')).toContainText("No one added");
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
-    // It is finished for good: a reload doesn't open it again.
+    // It is finished for good: a reload doesn't open it again, however often, and the address that names Today stays on Today.
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Getting started" })).toHaveCount(0);
+    await page.reload();
+    await page.goto("#today");
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Getting started" })).toHaveCount(0);
+    // What I passed by waits on Today as one setup line that counts only what is done (the name, the work answer, the AI
+    // account and the backup), never as a forced return.
+    await expect(page.getByRole("region", { name: "Setup", exact: true })).toContainText("4 of 7 done");
     await visit(page);
 
     // I hand in a short note of my own.

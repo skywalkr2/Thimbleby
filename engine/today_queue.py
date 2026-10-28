@@ -853,14 +853,17 @@ def _everything(
             )
         )
 
-    # Risk: a kind of work with no AI account to do it, which waits until the person picks one. A workspace with no
-    # account at all is a new one: the setup line says so, so this line is for work an account stopped doing.
+    # Risk: a kind of work with no AI account to do it, which waits until the person picks one. Said whenever it is so,
+    # also for a workspace that never had one (setup was skipped, or closed); not while the person is partway through
+    # setup and has not reached that screen, since setup is asking for it next.
+    from engine import setup as first_run
+
     unserved = [
         name
         for name, tier in cfg.ai.tiers.items()
         if "/" not in name and (not tier.use or tier.use.partition("/")[0] not in cfg.ai.providers)
     ]
-    if unserved and cfg.ai.providers:
+    if unserved and (cfg.ai.providers or not cfg.workspace.demo) and not first_run.not_reached(ws, "ai"):
         lines.append(
             Line(
                 key="no_account",
@@ -893,7 +896,8 @@ def _everything(
     from engine import backup
 
     kept = backup.state(ws, cfg, now)
-    if kept.needs_attention:
+    # Not for a backup the person hasn't been asked about yet: partway through setup, before its screen.
+    if kept.needs_attention and not (not kept.configured and first_run.not_reached(ws, "backup")):
         lines.append(
             Line(
                 key="backup",

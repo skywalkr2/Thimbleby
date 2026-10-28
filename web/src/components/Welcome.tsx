@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { useDraftState, useRestored } from "../lib/draft";
 import { problemText } from "../lib/problem";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
@@ -362,8 +363,10 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   const hasSlot = useHasContinueSlot();
   const settings = { data: props.settings };
   const me = { data: props.me };
-  const [zoneEdit, setZoneEdit] = useState<string | null>(null);
-  const [nameEdit, setNameEdit] = useState<string | null>(null);
+  // What is typed stays as a draft in this tab until it is saved, so a reload brings it back.
+  const [zoneEdit, setZoneEdit] = useDraftState<string | null>("you", "zone", null);
+  const [nameEdit, setNameEdit] = useDraftState<string | null>("you", "name", null);
+  const restoredDraft = useRestored("you");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const fullName = nameEdit ?? me.data.full_name;
@@ -421,6 +424,11 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   const zoneId = "workspace-workspace-user-timezone";
   return (
     <>
+    {restoredDraft && (
+      <p className="hint" role="status" data-draft-restored="">
+        {t("draft.restored")}
+      </p>
+    )}
     <form
       onSubmit={(e) => {
         e.preventDefault();

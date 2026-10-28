@@ -2252,6 +2252,15 @@ A fallback is a switch nobody chose at that moment, so (6.22):
   passes (`engine/ai/checked.py::cannot_stand_in`). The router reads the same list at the moment of use and never falls
   through to such an account; the person's own pick for a tier is never skipped, and when skipping leaves nothing the run
   waits with the usual "no account" stop and its Today line. **Built:** `tests/test_catch_up_learning.py::test_the_router_skips_an_unchecked_or_failed_backup_and_takes_a_checked_or_accepted_one`.
+- **When the assistant reads as untested** (change log 257; `engine/ai/smoke.py::ai_state`): it follows the accounts in use,
+  never the bytes of `ai.yaml`. The whole test is kept with a fingerprint of what it ran on: each tier's account in use and
+  its backups (address, key reference, model, agent), the tier's effort and thinking, and the parameters of its kinds of work.
+  The assistant reads as tested when that whole test passed for what is set up now, or when every tier's account in use passed
+  its own check as it is set up now (`checked.answered`), which a Test on the account's own row in Settings makes as much as
+  the whole test does. A backup account added and taken away, a label, a budget or an account nothing uses leave it tested;
+  changing the account in use does not. A passing check of the account after a failing whole test clears the failure.
+  **Built:** `tests/test_provider_safety.py::test_a_change_that_does_not_touch_the_account_in_use_leaves_the_assistant_tested`,
+  `tests/test_routes.py::test_a_test_on_the_accounts_own_row_clears_the_untested_state_through_the_routes`.
   **Built:** `tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
   `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`,
   `tests/test_knowledge_screen.py::test_an_unchecked_account_in_a_hand_edited_chain_has_a_line_until_its_check_passes`,

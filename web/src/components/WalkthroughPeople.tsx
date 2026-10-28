@@ -7,6 +7,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
+import { useAct } from "../lib/act";
+import { useDraftState } from "../lib/draft";
 import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -171,29 +173,44 @@ function Suggestions(props: { places: Place[]; sided: boolean }) {
   );
 }
 
-/** A pasted list, one name per line (or Name <address>), added to the side chosen in the add row; each is added with no
- * relation or part. It opens from a link under the add row. */
+/** A pasted list, one name per line (or Name <address>, each optionally followed by how they relate), added to the side
+ * chosen in the add row. What it will add is shown first, with the lines that don't read as a person left out and said;
+ * nothing is added until the person says so. It opens from a link under the add row. */
 function PasteList(props: { place: Place; sided: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
+  const [text, setText] = useDraftState("people", "pasted-list", "");
+  const [open, setOpen] = useState(text !== "");
+  const [preview, setPreview] = useState<S["PeoplePastePreview"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [result, setResult] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    if (open) field.current?.focus();
-  }, [open]);
-  const add = async () => {
+    if (open && !preview) field.current?.focus();
+  }, [open, preview]);
+  const where = placementFor([props.place], props.sided);
+  const show = async () => {
     setBusy(true);
     setProblem("");
     setResult("");
     try {
-      const done = await api.pastePeople({ text, ...placementFor([props.place], props.sided) });
+      setPreview(await api.previewPaste({ text, ...where }));
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const add = async () => {
+    setBusy(true);
+    setProblem("");
+    try {
+      const done = await api.pastePeople({ text, ...where });
       const added = done.added.length > 0 ? tn("walkthrough.people.paste.added", done.added.length) : t("walkthrough.people.paste.none");
       setResult([added, done.skipped.length > 0 ? t("walkthrough.people.paste.skipped", { names: done.skipped.join(", ") }) : ""].filter(Boolean).join(" "));
       setText("");
+      setPreview(null);
       await client.invalidateQueries({ queryKey: ["people"] });
       await client.invalidateQueries({ queryKey: ["people-suggestions"] });
       await client.invalidateQueries({ queryKey: ["setup"] });
@@ -203,6 +220,8 @@ function PasteList(props: { place: Place; sided: boolean }) {
       setBusy(false);
     }
   };
+  const fresh = preview?.people.filter((p) => !p.on_file) ?? [];
+  const known = preview?.people.filter((p) => p.on_file) ?? [];
   return (
     <div className="field" data-paste-list="">
       {!open && (
@@ -212,18 +231,47 @@ function PasteList(props: { place: Place; sided: boolean }) {
           </button>
         </div>
       )}
-      {open && (
+      {open && !preview && (
         <>
           <label htmlFor="walkthrough-people-paste">
             {props.sided ? t("walkthrough.people.paste.label_side", { side: props.place.name }) : t("walkthrough.people.paste.label")}
           </label>
           <textarea id="walkthrough-people-paste" ref={field} className="msg" value={text} onChange={(e) => setText(e.target.value)} />
           <div className="row-end">
-            <Button loading={busy} disabled={!text.trim()} onClick={() => void add()}>
-              {t("walkthrough.people.paste.add")}
+            <Button loading={busy} disabled={!text.trim()} onClick={() => void show()}>
+              {t("walkthrough.people.paste.show")}
             </Button>
           </div>
         </>
+      )}
+      {open && preview && (
+        <section aria-labelledby="walkthrough-people-preview-title" data-paste-preview="">
+          <h3 id="walkthrough-people-preview-title">{t("walkthrough.people.paste.preview_title")}</h3>
+          {fresh.length === 0 ? (
+            <p className="hint">{t("walkthrough.people.paste.none")}</p>
+          ) : (
+            <ul>
+              {fresh.map((p) => (
+                <li key={p.name}>
+                  {p.name}
+                  {(p.relation || p.address) && <span className="hint"> · {[p.relation, p.address].filter(Boolean).join(" · ")}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {known.length > 0 && <p className="hint">{t("walkthrough.people.paste.skipped", { names: known.map((p) => p.name).join(", ") })}</p>}
+          {preview.left_out.length > 0 && (
+            <p className="hint">{t("walkthrough.people.paste.left_out", { lines: preview.left_out.join(", ") })}</p>
+          )}
+          <div className="row-end">
+            <Button disabled={busy} onClick={() => setPreview(null)}>
+              {t("walkthrough.people.paste.change")}
+            </Button>
+            <Button variant="primary" loading={busy} disabled={fresh.length === 0} onClick={() => void add()}>
+              {tn("walkthrough.people.paste.add_n", fresh.length)}
+            </Button>
+          </div>
+        </section>
       )}
       {result && <p role="status">{result}</p>}
       {problem && (
@@ -238,9 +286,17 @@ function PasteList(props: { place: Place; sided: boolean }) {
 /** The people already added to one side, each with how they relate (or their part); on Personal, one with no relation yet
  * can be given one from a list. */
 function Listed(props: { whose: Whose; title: string; people: S["PersonView"][] }) {
+  const { t } = useWords();
+  const act = useAct();
   const personal = props.whose.kind === "personal";
   const id = `walkthrough-people-${props.whose.id ?? PERSONAL_KEY}`;
   if (props.people.length === 0) return null;
+  // Taking someone back out acts at once, with an Undo that puts them back.
+  const remove = (p: S["PersonView"]) =>
+    void act(
+      () => api.removePerson(p.id),
+      () => ({ message: t("toast.removed", { name: p.name }), undo: () => api.restorePerson(p.id) }),
+    );
   return (
     <section aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>{props.title}</h3>
@@ -249,7 +305,10 @@ function Listed(props: { whose: Whose; title: string; people: S["PersonView"][] 
           <li key={p.id}>
             {p.name}
             {(personal ? p.relation : p.role) && <span className="hint"> · {personal ? p.relation : p.role}</span>}
-            {personal && !p.relation && <RelationSet person={p} />}
+            {personal && !p.relation && <RelationSet person={p} />}{" "}
+            <Button size="sm" aria-label={t("walkthrough.people.remove_named", { name: p.name })} onClick={() => remove(p)}>
+              {t("setup.remove")}
+            </Button>
           </li>
         ))}
       </ul>
@@ -265,7 +324,7 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
   const personal = props.place.whose.kind === "personal";
   const options: readonly string[] = personal ? RELATIONS : ROLES[props.place.whose.kind as "job" | "business"];
   const group = personal ? "relation" : "role";
-  const [name, setName] = useState("");
+  const [name, setName] = useDraftState("people", "name", "");
   // How people relate to the person starts empty, so nobody is filed under a relation nobody chose; a part at work starts on the first.
   const [pick, setPick] = useState<string>(personal ? NONE : options[0]);
   const [other, setOther] = useState("");

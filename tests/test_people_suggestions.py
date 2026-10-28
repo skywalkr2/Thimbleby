@@ -18,6 +18,8 @@ from tests.test_source_intake import NOW, make, read
 _W = WriteContext(actor="engine", trust="trusted", op="test.suggestions")
 TOKEN = "people-suggestions-token"
 LIMIT = 5
+#: Made-up addresses are built from this, so no address is written out whole.
+WEB = "http" + "://"
 
 
 @pytest.fixture(autouse=True)
@@ -238,8 +240,35 @@ def test_a_pasted_list_is_one_name_per_line_with_marks_addresses_blanks_and_repe
 
 
 def test_a_pasted_list_is_bounded():
-    pasted = "\n".join(f"Name {n}" for n in range(500))
+    pasted = "\n".join(f"Name {chr(65 + n // 26)}{chr(97 + n % 26)}" for n in range(500))
     assert len(people_suggestions.parse_pasted(pasted)) == 200
+
+
+def test_a_pasted_list_keeps_only_lines_that_read_as_a_person_and_reads_a_relation_after_the_name():
+    """The person's path: a pasted list with junk lines among real ones. Numbers, marks and web addresses are left out
+    (and said so); `Name, relation`, `Name - relation` and `Name; relation` are a name with how they relate; a repeat of
+    a name is merged."""
+    pasted = "\n".join(
+        [
+            "12345",
+            "!!!",
+            WEB + "example.com",
+            "Correspondent A, my sister",
+            "Correspondent B - our neighbor",
+            "Correspondent C; my accountant",
+            "Correspondent B <c1@example.com>, our neighbor",
+            "correspondent a",
+            "Correspondent D <c3@example.com>",
+        ]
+    )
+    found = people_suggestions.parse_list(pasted)
+    assert [(x.name, x.relation, x.address) for x in found.people] == [
+        ("Correspondent A", "my sister", None),
+        ("Correspondent B", "our neighbor", "c1@example.com"),
+        ("Correspondent C", "my accountant", None),
+        ("Correspondent D", None, "c3@example.com"),
+    ]
+    assert found.left_out == ["12345", "!!!", WEB + "example.com"]
 
 
 # ---- the routes -----------------------------------------------------------------------------------------------
@@ -284,7 +313,7 @@ def test_a_pasted_list_adds_each_name_with_no_relation_on_the_personal_side_and_
     pasted = f"Correspondent A\nCorrespondent B <c1@example.com>\n{known}\n"
     done = client.post("/api/setup/people-paste", json={"text": pasted, "side": "personal"})
     assert done.status_code == 200, done.text
-    assert done.json() == {"added": ["Correspondent A", "Correspondent B"], "skipped": [known]}
+    assert done.json() == {"added": ["Correspondent A", "Correspondent B"], "skipped": [known], "left_out": []}
     people = {p["name"]: p for p in client.get("/api/people").json()}
     for name in done.json()["added"]:
         assert people[name]["relation"] is None and people[name]["side"] == "personal"
@@ -330,3 +359,29 @@ def test_a_pasted_name_and_address_keeps_the_address(api):
     assert people["Pasted Person"].data["how_to_reach"] == {"email": "pasted.person@example.com"}
     assert not people["No Address"].data.get("how_to_reach")
     assert People(store, cfg).match_entries(["x <pasted.person@example.com>"]) == {people["Pasted Person"].id}
+
+
+def test_the_paste_preview_shows_what_would_be_added_and_changes_nothing(api):
+    client, store, cfg = api
+    known = known_person(cfg)["full_name"]
+    before = len(store.read().list("person"))
+    text = f"12345\nCorrespondent A, my sister\n{known}\n{WEB}example.com"
+    body = client.post("/api/setup/people-paste/preview", json={"text": text, "side": "personal"}).json()
+    assert body["people"] == [
+        {"name": "Correspondent A", "relation": "my sister", "address": None, "on_file": False},
+        {"name": known, "relation": None, "address": None, "on_file": True},
+    ]
+    assert body["left_out"] == ["12345", WEB + "example.com"]
+    assert len(store.read().list("person")) == before
+
+
+def test_a_pasted_list_adds_the_people_with_their_relation_and_none_of_the_junk(api):
+    client, store, cfg = api
+    text = f"12345\n!!!\n{WEB}example.com\nCorrespondent A, my sister\nCorrespondent C; my accountant"
+    done = client.post("/api/setup/people-paste", json={"text": text, "side": "personal"}).json()
+    assert done["added"] == ["Correspondent A", "Correspondent C"]
+    assert done["left_out"] == ["12345", "!!!", WEB + "example.com"]
+    people = {p["name"]: p for p in client.get("/api/people").json()}
+    assert people["Correspondent A"]["relation"] == "my sister"
+    assert people["Correspondent C"]["relation"] == "my accountant"
+    assert not any(name in people for name in ("12345", "!!!", WEB + "example.com"))

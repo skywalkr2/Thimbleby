@@ -516,6 +516,19 @@ def test_status_says_when_the_assistant_is_not_ready(api, tmp_path, monkeypatch)
     assert client.get(f"{base}/status").json()["ai"]["state"] == "ok"
 
 
+def test_a_test_on_the_accounts_own_row_clears_the_untested_state_through_the_routes(api, monkeypatch):
+    """The person's path: Today and the status say the connection hasn't been tested; they press Test on the account in
+    Settings, it answers, and both clear."""
+    client, base, worker = api
+    monkeypatch.setattr("engine.ai.smoke.stand_in", lambda cfg: False)
+    assert client.get(f"{base}/status").json()["ai"]["state"] == "untested"
+    set_responder(connection_answer)
+    name = next(iter(worker.cfg.ai.providers))
+    answered = client.post(f"{base}/ai/accounts/{name}/test").json()
+    assert answered[0]["ok"] is True
+    assert client.get(f"{base}/status").json()["ai"] == {"state": "ok", "detail": None}
+
+
 def _record_run(store, cost: float, when) -> None:
     from engine.storage import WriteContext
 
