@@ -520,7 +520,7 @@ def test_the_packet_says_which_projects_the_person_only_watches(env):
     from engine.packet import _projects
 
     _, cfg, store = env
-    listed = _projects(store, pm_of(cfg)).splitlines()
+    listed = _projects(store, cfg, pm_of(cfg)).splitlines()
     watched = next(line for line in listed if line.startswith(f"- {WATCHED} "))
     plain = next(line for line in listed if line.startswith(f"- {PLAIN} "))
     assert "watch (record facts only)" in watched and "part" not in plain
