@@ -434,6 +434,8 @@ test("a side is a heading with its projects under it, never a row, and the count
   const firm = bodies[1];
   expect(within(firm).getByRole("columnheader", { name: /Orchard Press/ })).toBeInTheDocument();
   expect(within(firm).getByRole("link", { name: "Orchard Press" }).getAttribute("href")).toMatch(/#records\/project\/PRJ-firm$/);
+  // A heading too long for its cell ends in an ellipsis, so the whole name is its title.
+  expect(within(firm).getByRole("link", { name: "Orchard Press" })).toHaveAttribute("title", "Orchard Press");
   expect(within(firm).getAllByRole("row").filter((r) => r.hasAttribute("data-row"))).toHaveLength(2);
   expect(within(firm).getByRole("link", { name: "The spring catalog" })).toBeInTheDocument();
   expect(within(firm).getByRole("link", { name: "Cover art" })).toBeInTheDocument();

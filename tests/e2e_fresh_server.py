@@ -37,7 +37,7 @@ import sys
 import sysconfig
 from pathlib import Path
 
-from engine.addons import ENV_ADDONS_DIR, SITE
+from engine.addons import ENV_ADDONS_DIR, SITE, default_folder
 from engine.cli import add_plugin
 from engine.cli import main as cockpit
 from engine.config.yaml_edit import set_key
@@ -152,6 +152,8 @@ def main() -> None:
         python, project_site = throwaway_python(state)
         info["project_site"] = str(project_site)
         info["install_target"] = str(state / "addons" / SITE)
+        # The computer's own add-ons folder, which the journeys check stays untouched.
+        info["real_install_target"] = str(default_folder() / SITE)
     if args.log:
         info["log"] = str(state / "app.log")
     (state / "info.json").write_text(json.dumps(info), encoding="utf-8")

@@ -21,6 +21,8 @@ export interface Info {
   https_base: string;
   project_site?: string;
   install_target?: string;
+  /** The computer's own add-ons place, which a journey's add-on must never reach. */
+  real_install_target?: string;
   /** Where the app keeps what it prints, when the start-up script was asked to (to count restarts). */
   log?: string;
 }

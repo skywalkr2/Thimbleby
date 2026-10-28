@@ -514,6 +514,8 @@ test.describe.serial("journeys", () => {
     await row.getByRole("button", { name: "Install Example panel" }).click();
     await expect(row.getByText(/is installed\. Restart, then turn it on/)).toBeVisible();
     expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(true);
+    // Nothing reaches the computer's own add-ons place.
+    expect(existsSync(join(String(info.real_install_target), "journey_panel"))).toBe(false);
     await visit(page);
 
     // Restart now: the app comes back on the same address, and the notice says so.

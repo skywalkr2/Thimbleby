@@ -125,6 +125,8 @@ test.describe.serial("journey: new start", () => {
     const [popup] = await Promise.all([page.waitForEvent("popup", { timeout: 60_000 }), signInButton.click()]);
     // It went into the throwaway place the app installs into, and the one restart happened on that click.
     expect(existsSync(installed)).toBe(true);
+    // And nowhere in the computer's own add-ons place.
+    expect(existsSync(join(String(info.real_install_target), "journey_mail"))).toBe(false);
     expect(restarts()).toBe(1);
     // The sign-in is in its own window, and the app's window never left the walkthrough.
     expect(page.url()).toBe(appAddress);
@@ -282,7 +284,8 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
     for (const step of ["workspace", "work", "ai", "mail", "promises", "backup"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
-    await expect(recap.locator('[data-step="people"]')).toContainText("Skipped");
+    // Moving on from People with nobody added passes it, and says so.
+    await expect(recap.locator('[data-step="people"]')).toContainText("No one added");
     const extras = main.getByRole("region", { name: "Optional extras" });
     await expect(extras).toBeVisible();
     expect(await extras.getByRole("listitem").count()).toBeGreaterThan(0);

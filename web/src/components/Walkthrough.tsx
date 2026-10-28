@@ -128,10 +128,13 @@ export function Walkthrough(
     if (!main) return;
     let watcher: MutationObserver | null = null;
     const stop = () => watcher?.disconnect();
-    const place = () => {
+    const place = (arriving = false) => {
       const active = document.activeElement;
-      // A cursor the person put in a field of the screen, or on something else inside it, stays where it is.
-      const parked = !active || active === document.body || active === heading.current || !main.contains(active);
+      // A cursor the person put in a field of the screen, or on something else inside it, stays where it is. The one
+      // thing that does not count is the button that brought them here (Start, Continue or Back are the same button on
+      // every screen, so the cursor is still on it): on arriving, the cursor leaves it for the first field.
+      const arrivedOn = arriving && !!active && !!foot.current?.contains(active);
+      const parked = !active || active === document.body || active === heading.current || !main.contains(active) || arrivedOn;
       if (!parked) return stop();
       const field = main.querySelector<HTMLElement>(
         "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
@@ -142,10 +145,10 @@ export function Walkthrough(
       }
       if (active !== heading.current) heading.current?.focus();
     };
-    place();
+    place(true);
     // The screen's fields can arrive a moment later (a slow answer): the cursor goes to the first one as it appears.
     if (typeof MutationObserver !== "undefined") {
-      watcher = new MutationObserver(place);
+      watcher = new MutationObserver(() => place());
       watcher.observe(main, { childList: true, subtree: true });
     }
     return stop;

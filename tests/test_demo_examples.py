@@ -66,6 +66,20 @@ def test_only_the_demo_opens_on_the_history_and_the_starting_records_stay_as_the
     assert {r["id"] for r in base_records(demo, "action")} < {r["id"] for r in fixture_records(demo, "action")}
 
 
+def test_the_demo_opens_with_the_project_its_settings_name_as_personal_and_a_new_project_is_no_side(env):
+    from engine import sides
+    from engine.storage import WriteContext
+
+    _, cfg, store, demo = env
+    personal = cfg.workspace.project.personal
+    assert personal in by_id(demo, "project") and personal in {r["id"] for r in base_records(demo, "project")}
+    assert store.read().get("project", personal) is not None
+    with store.transaction() as tx:
+        made = tx.create("project", {"name": "Added later"}, WriteContext(actor="pm", trust="trusted", op="test"))
+    assert made.id != personal
+    assert sides.side_ids(store.read(), cfg) == [personal]
+
+
 def test_the_demo_history_round_trips_through_the_export(env, tmp_path):
     _, cfg, store, _ = env
     assert round_trip(store, cfg, tmp_path / "round")["differences"] == []

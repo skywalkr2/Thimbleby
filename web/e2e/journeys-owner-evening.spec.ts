@@ -128,6 +128,9 @@ test.describe.serial("journey: the owner's first evening", () => {
     const signInButton = main.getByRole("button", { name: "Sign in to Example mail", exact: true });
     await expect(signInButton).toBeVisible({ timeout: 120_000 });
     const [popup] = await Promise.all([page.waitForEvent("popup", { timeout: 60_000 }), signInButton.click()]);
+    // The add-on went into the throwaway place this app installs into, and nowhere in the computer's own add-ons place.
+    expect(existsSync(installed)).toBe(true);
+    expect(existsSync(join(String(info.real_install_target), "journey_mail"))).toBe(false);
     expect(restarts()).toBe(1);
     expect(page.url()).toBe(appAddress);
     await popup.waitForEvent("close", { timeout: 60_000 }).catch(() => undefined);
@@ -147,9 +150,14 @@ test.describe.serial("journey: the owner's first evening", () => {
     // An add-on's mail has no sent folder taken by itself (that is for the plain mailbox): the screen says so and offers it.
     await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toBeVisible();
     // The choice opens right there with the usual name first (an add-on's mail can't list its folders), and Cancel leaves it.
-    await main.getByRole("button", { name: "Choose the Sent folder" }).click();
-    // The list waits for the add-on's answer about its folders, which takes longer while the first run is working.
-    await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent", { timeout: 20_000 });
+    // While the first run is working the list of what was read is drawn again as the run moves on, which closes a choice
+    // opened a moment before: press the button again until the choice stays open.
+    await expect(async () => {
+      const choose = main.getByRole("button", { name: "Choose the Sent folder" });
+      if (await choose.isVisible()) await choose.click();
+      // The list waits for the add-on's answer about its folders, which takes longer while the first run is working.
+      await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent", { timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
     await main.getByRole("button", { name: "Cancel" }).click();
     await main.getByRole("button", { name: "Continue" }).click();
@@ -208,13 +216,14 @@ test.describe.serial("journey: the owner's first evening", () => {
     await openView(page, "What changed");
     await expect(page.getByText("Your verification code")).toHaveCount(0);
 
-    // The bill is a to-do with its amount and due day, under Personal.
+    // The bill is a to-do with its amount and due day. Nothing is beside Personal here, so the row has no place words: the
+    // person has no other place it could be.
     await openView(page, "To-dos and questions");
     const bill = page.getByRole("listitem").filter({ hasText: "Pay the water bill" });
     await expect(bill).toHaveCount(1, { timeout: 60_000 });
     await expect(bill).toContainText("$84.20");
     await expect(bill).toContainText(/Nov(ember)? 5|2026-11-05|5 Nov/);
-    await expect(bill).toContainText("Personal");
+    await expect(bill).not.toContainText("Personal");
 
     // Nothing in Knowledge's Proposed tab says it is not known yet.
     await openView(page, "Knowledge");

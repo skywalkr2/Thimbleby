@@ -172,7 +172,12 @@ export function Projects() {
               }
               groupHead={(g) => {
                 const side = g.id.startsWith("side:") ? sides.get(g.id.slice(5)) : undefined;
-                return side ? <a href={viewHref(recordView("project", side.id))}>{side.name}</a> : undefined;
+                // A name too long for the cell ends in an ellipsis, with the whole name as the title.
+                return side ? (
+                  <a href={viewHref(recordView("project", side.id))} title={side.name}>
+                    {side.name}
+                  </a>
+                ) : undefined;
               }}
               rowKey={(p) => p.id}
               selected={chosen}
