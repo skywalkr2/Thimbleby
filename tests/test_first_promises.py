@@ -226,7 +226,7 @@ def test_the_setting_has_a_default_and_a_description():
     assert field.get_default() == 5 and field.description
 
 
-def test_one_follow_up_is_ready_for_someone_who_owes_something_shown(env):
+def test_no_follow_up_is_made_to_send_for_a_promise_someone_made_themselves(env):
     ws, cfg, store = env
     read(env)
     first_promises.go(ws, store, cfg)
@@ -236,10 +236,8 @@ def test_one_follow_up_is_ready_for_someone_who_owes_something_shown(env):
     promise(store, me, "Book the room", "2026-11-09")
     owed = promise(store, they, "Send the floor plan", "2026-11-02")
     shown = stage(env)
-    assert shown.follow_up is not None and shown.follow_up.person == they
-    people = People(store, cfg)
-    assert shown.follow_up.name == people.name(they)
-    assert "Send the floor plan" in shown.follow_up.message and shown.follow_up.to_send >= 1
+    # They know their own promise: there is nothing to send them, so it is only waited on (design 6.33).
+    assert shown.follow_up is None
     assert owed in {p.action for p in shown.promises}
 
 
@@ -489,8 +487,5 @@ def test_the_route_lists_the_promises_and_the_follow_up_when_the_work_is_done(ap
         False,
         "I'll send the floor plan",
     )
-    assert ready["follow_up"]["person"] == they and "Send the floor plan" in ready["follow_up"]["message"]
-    # Copying it is the Follow-ups screen's own route: it keeps the copy as copied.
-    done = client.post(f"/api/followups/{they}/mark-sent", json={"text": ready["follow_up"]["message"]}).json()
-    assert done["actions"] >= 1
-    assert len(store.read().list("copy")) == 1
+    # A promise they made themselves is never something to send them.
+    assert ready["follow_up"] is None

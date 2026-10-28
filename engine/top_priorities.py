@@ -206,7 +206,7 @@ def top_priorities(store: Any, cfg: Any, now: datetime) -> TopPriorities:
                 things.append(Thing("question", q["id"], q["title"], "send", None, None, q["holds_up"]))
         listed = {t.id for t in things}
         for a in section.actions:
-            if a["told"] is None and a["id"] not in listed:
+            if a["to_send"] and a["id"] not in listed:
                 things.append(Thing("action", a["id"], a["text"], "send", None))
         if not (counts["overdue"] or counts["due_soon"] or counts["chase"] or send):
             continue

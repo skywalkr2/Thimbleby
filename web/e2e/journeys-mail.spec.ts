@@ -442,4 +442,53 @@ test.describe.serial("journey: mail", () => {
     expect(await service()).toMatchObject({ unauthorized: 0, refused: 0 });
     expect(trouble.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
   });
+  test("J2c. Choose what else to read: a folder the account doesn't have is refused in plain words, the folder already read is refused, and one more folder is added once", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const trouble: string[] = [];
+    collectProblems(page, trouble);
+    await page.goto(`?token=${info.token}`);
+    const readers = async () =>
+      ((await (await page.request.get("api/watch", { headers: { Authorization: `Bearer ${info.token}` } })).json()) as Array<{ label: string }>).map((x) => x.label);
+    const before = await readers();
+    await openView(page, "Connections");
+    const choose = async () => {
+      await page.getByRole("button", { name: /^Choose what to read/ }).first().click();
+      const form = page.locator("form[data-add-connection]");
+      await expect(form).toBeVisible();
+      await form.getByRole("radio", { name: /Example mail/ }).check();
+      return form;
+    };
+    const tryFolder = async (folder: string) => {
+      const form = await choose();
+      await form.getByRole("textbox", { name: /folder/i }).fill(folder);
+      await form.getByRole("button", { name: "Add connection" }).click();
+      return form;
+    };
+
+    // The account has no such folder: said in plain words, beside the form, and nothing is added.
+    let form = await tryFolder("Nonsense folder 123");
+    await expect(form.getByRole("alert")).toHaveText("This account has no folder called Nonsense folder 123. Choose one it has.");
+    expect(await readers()).toEqual(before);
+    await form.getByRole("button", { name: "Cancel" }).click();
+
+    // The inbox is read already, named by its usual name or typed out.
+    form = await tryFolder("inbox");
+    await expect(form.getByRole("alert")).toHaveText("Your inbox already reads this. Change that one, or choose another folder.");
+    expect(await readers()).toEqual(before);
+    await form.getByRole("button", { name: "Cancel" }).click();
+
+    // A folder the account has is added once; the same folder again is refused, naming the connection that reads it.
+    form = await tryFolder("Archive");
+    await expect(page.getByText(/^Added .+ It is read within a minute/)).toBeVisible();
+    const after = await readers();
+    expect(after).toHaveLength(before.length + 1);
+    await expect(page.locator("form[data-add-connection]")).toHaveCount(0);
+    await dismissToasts(page);
+    form = await tryFolder("Archive");
+    await expect(form.getByRole("alert")).toContainText("already reads this. Change that one, or choose another folder.");
+    expect(await readers()).toEqual(after);
+    expect(trouble.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
+  });
 });

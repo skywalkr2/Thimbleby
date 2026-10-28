@@ -129,7 +129,7 @@ function Harness(props: { id: string }) {
 }
 
 const section = (over: Partial<S["FollowupSection"]>): S["FollowupSection"] => ({ person: "P-2", name: "Robin Sample", is_pm: false, questions: [], actions: [], message: "", to_send: 0, ...over });
-const action = (id: string, text: string): S["FollowupAction"] => ({ id, text, due: null, project_name: "", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 });
+const action = (id: string, text: string): S["FollowupAction"] => ({ id, text, due: null, project_name: "", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 });
 const question = (id: string, title: string): S["FollowupQuestion"] => ({ id, title, text: "", links: [], kind: "question", status: "sent", sent: "2026-10-12", waiting_days: 3, chase_due: false, chases: 0, about: null, options: [] });
 
 const pickerRoutes = {

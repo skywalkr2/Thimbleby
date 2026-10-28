@@ -69,11 +69,28 @@ export function useAfterSave() {
   );
 }
 
+/** The saves of settings that read the fingerprint as they start, one at a time, in the order they were asked for: a save
+ * asked for while another is under way waits for it and then reads the fingerprint that one answered with, so neither is
+ * refused as out of date by the other and neither is dropped. A save that fails doesn't stop the ones behind it. */
+let line: Promise<unknown> = Promise.resolve();
+export function inOrder<T>(run: () => Promise<T>): Promise<T> {
+  const next = line.then(run, run);
+  line = next.catch(() => undefined);
+  return next;
+}
+
+/** The settings as they are now, read fresh, so a save is made on what the server holds and a change made meanwhile is
+ * noticed, not overwritten. The app asks for everything again whenever the server says something changed, and that
+ * cancels a read that is under way; a save that waited on such a read was lost. So the read here is a request of its
+ * own, which nothing cancels, and the screen's copy is brought up to date with its answer. */
+export async function freshSettings(client: QueryClient): Promise<S["SettingsView"]> {
+  const view = await api.settings();
+  client.setQueryData(["settings"], view);
+  return view;
+}
+
 /** The fingerprint of the settings as they are now, read fresh, so a change made meanwhile is noticed, not overwritten. */
 export function useFreshFingerprint() {
   const client = useQueryClient();
-  return useCallback(
-    async () => (await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 })).fingerprint,
-    [client],
-  );
+  return useCallback(async () => (await freshSettings(client)).fingerprint, [client]);
 }

@@ -36,7 +36,7 @@ function followups(questions: S["FollowupQuestion"][]): S["FollowupSection"][] {
       name: "Pat Example",
       is_pm: true,
       questions,
-      actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
+      actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
       message: "",
       to_send: 0,
     },

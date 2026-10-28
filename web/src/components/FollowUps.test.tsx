@@ -33,7 +33,7 @@ const sections: S["FollowupSection"][] = [
     name: "Pat Example",
     is_pm: true,
     questions: [],
-    actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
+    actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
     message: "",
     to_send: 0,
   },
@@ -44,7 +44,7 @@ const sections: S["FollowupSection"][] = [
     questions: [
       { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
     ],
-    actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
+    actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
     message: "Hi Robin,\n\nIs the index final?\n\nAction items with you:\n- Send the index\n\nThanks!",
     to_send: 2,
   },
@@ -348,7 +348,7 @@ test("a card lists only what is still to send, with no buttons or pills on the i
   mixed[1].questions.push({
     id: "Q-2", title: "Did the cover ship?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-08", waiting_days: 2, chase_due: false, chases: 0, about: null, options: [],
   });
-  mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", told_days: 2, followed_up: null, chase_due: false, chases: 0 });
+  mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", to_send: false, told_days: 2, followed_up: null, chase_due: false, chases: 0 });
   mixed[1].to_send = 2;
   fakeApi({ "GET followups": () => mixed, "GET people": () => [] });
   renderApp(<FollowUps />);
@@ -376,6 +376,7 @@ function waitingSections(): S["FollowupSection"][] {
   sent[0].questions[0].sent = "2026-10-08";
   sent[0].questions[0].waiting_days = 2;
   sent[0].actions[0].told = "2026-10-09";
+  sent[0].actions[0].to_send = false;
   sent[0].actions[0].told_days = 1;
   sent[0].message = "";
   sent[0].to_send = 0;
@@ -689,8 +690,8 @@ const tableSections: S["FollowupSection"][] = [
       { id: "Q-2", title: "Who writes the jacket copy?", text: "", links: [], kind: "question", status: "open", project_name: "Book", sent: "2026-10-10", waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
     ],
     actions: [
-      { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Book", links: [], told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 },
-      { id: "ACT-1", text: "Send the index", due: "2020-10-14", project_name: "Book", links: [{ label: "Book page", url: `${WEB}example.com/book` }], told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 },
+      { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Book", links: [], told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 },
+      { id: "ACT-1", text: "Send the index", due: "2020-10-14", project_name: "Book", links: [{ label: "Book page", url: `${WEB}example.com/book` }], told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 },
     ],
     message: "Hi Robin",
     to_send: 4,

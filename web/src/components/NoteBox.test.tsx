@@ -20,7 +20,7 @@ const action = (over: Partial<S["FollowupAction"]> = {}): S["FollowupAction"] =>
   text: "Send the index",
   due: null,
   project_name: "Book",
-  told: null,
+  told: null, to_send: true,
   told_days: null,
   followed_up: null,
   chase_due: false, chases: 0,
@@ -44,7 +44,7 @@ const waiting = (over: Partial<S["FollowupAction"]> = {}) => [
     person: "PER-2",
     name: "Robin Sample",
     is_pm: false,
-    actions: [action({ told: "2026-10-09", told_days: 1, ...over })],
+    actions: [action({ told: "2026-10-09", to_send: false, told_days: 1, ...over })],
   }),
 ];
 

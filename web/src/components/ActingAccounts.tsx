@@ -7,7 +7,7 @@ import { useId, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { rememberReturn } from "../lib/sign-in-return";
-import { rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { freshSettings, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -31,7 +31,7 @@ export function ActingAccounts() {
     setProblem("");
     try {
       // What the setting holds now, not what the list shows: an account signed out since is still named in it.
-      const settings = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const settings = await freshSettings(client);
       const held = settings.items.find((i) => i.key === KEY)?.value;
       const current = Array.isArray(held) ? held.map(String) : [];
       const next = on ? [...current.filter((x) => !sameAccount(x, account.id)), account.id] : current.filter((x) => !sameAccount(x, account.id));

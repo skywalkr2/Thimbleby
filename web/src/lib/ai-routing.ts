@@ -7,7 +7,7 @@ import { api, ApiError, type S } from "./api";
 import { problemText } from "./problem";
 import { changedTime, type Refreshed } from "./refreshed";
 import { readable } from "./records";
-import { knownFingerprint, rememberFingerprint, useAfterSave } from "./settings-save";
+import { freshSettings, knownFingerprint, rememberFingerprint, useAfterSave } from "./settings-save";
 import { useWords } from "./wording";
 
 export type Routing = S["AiRoutingView"];
@@ -133,14 +133,14 @@ export function useRoutingSave() {
         const view = client.getQueryData<S["SettingsView"]>(["settings"]);
         const fingerprint =
           knownFingerprint(client, view?.fingerprint) ??
-          (await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 })).fingerprint;
+          (await freshSettings(client)).fingerprint;
         try {
           const saved = await api.saveSettings({ changes: body.changes ?? {}, reset: body.reset ?? [], fingerprint });
           await afterSave(saved, { message });
           return { ok: true };
         } catch (err) {
           if (err instanceof ApiError && err.status === 409) {
-            const fresh = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+            const fresh = await freshSettings(client);
             rememberFingerprint(client, fresh.fingerprint);
             const was = client.getQueryData<Routing>(["ai-routing"]);
             const now = await client.fetchQuery({ queryKey: ["ai-routing"], queryFn: api.aiRouting, staleTime: 0 });

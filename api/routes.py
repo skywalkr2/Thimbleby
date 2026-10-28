@@ -2778,6 +2778,7 @@ def _section(
             notes=a.get("notes"),
             links=a["links"],
             told=a["told"],
+            to_send=a["to_send"],
             told_days=a["told_days"],
             told_names=_told_names(store, cfg, people, a["id"]),
             ready_since=a.get("ready_since"),

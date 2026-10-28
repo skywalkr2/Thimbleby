@@ -98,7 +98,7 @@ def _to_send(store: Store, cfg: Any, today: date) -> list[str | None]:
         if section.is_pm:
             continue
         found += [q["side"] for q in section.questions if q["status"] == "open"]
-        found += [a["side"] for a in section.actions if a["told"] is None]
+        found += [a["side"] for a in section.actions if a["to_send"]]
     return found
 
 

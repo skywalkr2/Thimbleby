@@ -384,6 +384,20 @@ class _Entry:
     personal: bool = False  # a rule says the mail is personal: handed in and filed under the Personal project
 
 
+def _held_by_twins(store: Any, cfg: Any, source: Any) -> set[str]:
+    """The keys of the items another source of the same add-on connector and account already holds. A message is named
+    by the account's own id for it, so two sources reading folders that both list it (or the same folder twice) see one
+    message, which is taken in once: by whichever source read it first."""
+    if "/" not in source.connector:
+        return set()
+    twins = [
+        s.id
+        for s in cfg.watch.sources
+        if s.id != source.id and s.connector == source.connector and s.account == source.account
+    ]
+    return {snap.data["key"] for sid in twins for snap in store.read().find("snapshot", {"source": sid})}
+
+
 def _compare(
     ws: Any,
     store: Any,
@@ -407,6 +421,7 @@ def _compare(
     listed = set()
     entries: list[_Entry] = []
     unplaced: dict[str, dict[str, Any]] = {}
+    held_by_twins = _held_by_twins(store, cfg, source)
     plain = entry_rules.Plain(store.read(), cfg, source.id)
     folder = source.connector in versions.FOLDER_CONNECTORS and cfg.watch.versions.enabled
     asking = People(store, cfg).pm if folder else None
@@ -457,6 +472,8 @@ def _compare(
             closed = {"rule": VERSION_RULE, "reason": older}
         replaces = families.replaces(item.key) if families and not older else None
         handed = not baseline or (recent is not None and is_recent(details, item.changed_at, now, recent))
+        if handed and before is None and item.message is not None and item.key in held_by_twins:
+            handed = False  # another source of this account took this message in already: one message, one item
         if handed and plain.of(item):
             handed = False  # a plain calendar entry is kept by rule, with no run and no line (design 6.32)
         if closed is None and not kept:

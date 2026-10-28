@@ -235,6 +235,18 @@ mailbox neither floods the queue nor runs up cost on day one:
 calendar), with `first_run: intake` (6.32), so the first read is one total, one go and one "Look over what was found"
 line, not a review line for each item. *Built so far (S1-3):* `tests/test_sign_in_sources.py`.
 
+**One folder, one source; one message, one item** (sweep X05). Adding a source of an add-on's mail (the form behind "Choose
+what to read") is refused, in the wording sheet's words, when another source of the same connector for the same account
+already reads that folder ("<name> already reads this. Change that one, or choose another folder."), and so is changing a
+source's folder to one another reads; a mailbox's own server and user count as its account. The add-on's own read is tried once
+before anything is saved (a read changes nothing): an answer that there is no such folder refuses it ("This account has no
+folder called <name>. Choose one it has."), while a service that is down or a sign-in to renew never blocks adding. A message is
+named by its account's own id, so two sources of one account that both list it take it in once, by whichever read it first (the
+other keeps a note of it and never hands it in); removing a source says what stays: "What it already brought in stays."
+*Not built:* a list of the account's folders to pick from (the add-on has no way to list what a source may read; a plugin API
+change, asked of the owner), and merging items made twice before this rule. *Built:* `tests/test_source_folders_once.py`,
+`web/e2e/journeys-mail.spec.ts` (J2c).
+
 ## 6.5 Triage
 
 Applies triage rules in order before queueing, using registered matchers. The rules live in `watch.yaml`, beside the sources
@@ -4607,6 +4619,11 @@ is held for the person: one line that asks, "Close 'Send the floor plan'?" ("Dro
 '…' as delivered?"), with the words it came from and who said them, and two buttons that name the result ("Close it" and
 "Keep it open"; 7.6), with Change in the menu. One from the person's own note or a button applies at once with Undo. `action.news` changes nothing about the
 promise and applies at once, shown on it. A held ending kept by the person counts as seen (6.32's silent closes).
+
+**One state (sweep X06).** A to-do the person made for someone else that was never sent is *to send* and nothing else; it is
+waited on and chased only once told (Mark sent). A promise someone made themselves is never *to send* (they already know it):
+it is only waited on, and chased when late. `FollowupAction.to_send` says which, and every reading of "to send" (Follow-ups,
+Today's send line, the message to copy, Mark sent, the top priorities) uses it. *Built:* `tests/test_untold_todo_one_state.py`.
 
 **No news by its date.** A promise past its date with no ending and no news is on a line with its choices. For the person's
 own it is a line of its own with Done, New date and Drop. For a waiting-on, it is **on the follow-up line for the person who

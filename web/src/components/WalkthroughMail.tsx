@@ -13,7 +13,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { serviceReachLines, waitsForRestart } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { freshSettings, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
@@ -174,7 +174,7 @@ function SourceSides(props: { sources: Source[]; group?: boolean; what?: string;
 
   const save = async ({ side, on }: Tick) => {
     // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-    const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+    const current = await freshSettings(client);
     const list = (current.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<Record<string, unknown> & { id: string; sides?: string[] }>;
     const withTick = (had: string[] | undefined): string[] => {
       const now = new Set(had ?? []);
@@ -210,7 +210,7 @@ function SourceSides(props: { sources: Source[]; group?: boolean; what?: string;
     }
     if (missed.length > 0) setFailed(missed);
     // Every tick is saved now: the boxes read from the settings again, unless another tick has been made since.
-    await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 }).catch(() => undefined);
+    await freshSettings(client).catch(() => undefined);
     if (!running.current && waiting.current.length === 0) setWanted({});
   };
 
@@ -563,7 +563,7 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
     try {
       if (service.state === "not_installed") await api.installPack(service.id);
       // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const current = await freshSettings(client);
       const saved = await api.packOn(service.id, current.fingerprint);
       if (saved.needs_restart && props.canRestart && oneClick) {
         setAfter(true);

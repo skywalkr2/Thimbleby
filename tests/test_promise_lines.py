@@ -86,11 +86,20 @@ def test_a_promise_someone_else_owes_past_its_date_is_on_that_persons_follow_up_
     assert [x for x in lines(env, kind="promise") if action in x.actions] == []
 
 
-def test_any_dated_action_someone_else_owns_is_waited_on_even_with_no_promise_fields(env):
+def test_a_dated_to_do_someone_else_owns_is_waited_on_once_it_was_sent_and_not_before(env):
     _, cfg, store = env
-    action = make(store, [other(cfg)], due=PAST)
-    (line,) = promise_lines(env, action)
-    assert line.person == other(cfg)
+    them = other(cfg)
+    unsent = make(store, [them], due=PAST)
+    sent = make(
+        store,
+        [them],
+        due=PAST,
+        told={them: (TODAY - cfg.ui.followups.question_after_days * timedelta(days=1)).isoformat()},
+    )
+    # Never told, it is to send and nothing else: no follow-up line says it went out.
+    assert promise_lines(env, unsent) == []
+    (line,) = promise_lines(env, sent)
+    assert line.person == them
 
 
 def test_the_persons_own_promise_has_the_same_line_with_nobody_to_chase(env):
@@ -113,12 +122,14 @@ def test_a_promise_is_never_on_the_overdue_line_as_well_but_a_plain_to_do_still_
 def test_news_since_its_date_a_held_ending_a_hold_or_a_future_date_leave_no_line(env):
     _, cfg, store = env
     them = other(cfg)
-    news = make(store, [them], due=PAST, news=[{"on": TODAY.isoformat(), "text": "Replied, no date"}])
-    old_news = make(store, [them], due=PAST, news=[{"on": (PAST - timedelta(days=2)).isoformat(), "text": "Early"}])
-    held = make(store, [them], due=PAST, on_hold={"waiting_for": "the proof", "since": TODAY.isoformat()})
-    future = make(store, [them], due=TODAY + timedelta(days=cfg.ui.followups.action_due_within_days + 2))
-    undated = make(store, [them], due=None)
-    done = make(store, [them], due=PAST, status="done")
+    news = make(store, [them], due=PAST, news=[{"on": TODAY.isoformat(), "text": "Replied, no date"}], basis="said")
+    old_news = make(
+        store, [them], due=PAST, news=[{"on": (PAST - timedelta(days=2)).isoformat(), "text": "Early"}], basis="said"
+    )
+    held = make(store, [them], due=PAST, on_hold={"waiting_for": "the proof", "since": TODAY.isoformat()}, basis="said")
+    future = make(store, [them], due=TODAY + timedelta(days=cfg.ui.followups.action_due_within_days + 2), basis="said")
+    undated = make(store, [them], due=None, basis="said")
+    done = make(store, [them], due=PAST, status="done", basis="said")
     assert promise_lines(env, news) == [] and promise_lines(env, held) == []
     assert promise_lines(env, future) == [] and promise_lines(env, undated) == [] and promise_lines(env, done) == []
     assert len(promise_lines(env, old_news)) == 1  # news from before the date is not news since
@@ -174,8 +185,8 @@ def test_an_undated_waiting_on_gets_a_line_after_the_undated_days_and_not_a_day_
     _, cfg, store = env
     them, days = other(cfg), 14
     assert cfg.ui.followups.undated_after_days == days
-    early = make(store, [them], due=None, made=TODAY - timedelta(days=13))
-    due = make(store, [them], due=None, made=TODAY - timedelta(days=days))
+    early = make(store, [them], due=None, made=TODAY - timedelta(days=13), basis="said")
+    due = make(store, [them], due=None, made=TODAY - timedelta(days=days), basis="said")
     assert promise_lines(env, early) == []
     (line,) = promise_lines(env, due)
     assert (line.kind, line.person, line.group) == ("nudge", them, "send") and line.waiting_days >= days
@@ -191,9 +202,12 @@ def test_news_or_a_chase_restarts_the_undated_clock(env):
         due=None,
         made=old,
         news=[{"on": (TODAY - timedelta(days=days - 1)).isoformat(), "text": "Replied"}],
+        basis="said",
     )
-    chased = make(store, [them], due=None, made=old, told={them: (TODAY - timedelta(days=days - 1)).isoformat()})
-    quiet = make(store, [them], due=None, made=old)
+    chased = make(
+        store, [them], due=None, made=old, told={them: (TODAY - timedelta(days=days - 1)).isoformat()}, basis="said"
+    )
+    quiet = make(store, [them], due=None, made=old, basis="said")
     own = lambda action: [x for x in lines(env, kind="promise") if action in x.actions]  # noqa: E731
     assert own(heard) == [] and own(chased) == [] and promise_lines(env, heard) == []
     assert promise_lines(env, quiet)[0].waiting_days >= days + 5
@@ -203,8 +217,8 @@ def test_a_dated_waiting_on_gets_a_line_only_within_the_dated_days_before_its_da
     _, cfg, store = env
     them, days = other(cfg), 7
     assert cfg.ui.followups.action_due_within_days == days
-    too_far = make(store, [them], due=TODAY + timedelta(days=8))
-    in_window = make(store, [them], due=TODAY + timedelta(days=days))
+    too_far = make(store, [them], due=TODAY + timedelta(days=8), basis="said")
+    in_window = make(store, [them], due=TODAY + timedelta(days=days), basis="said")
     assert promise_lines(env, too_far) == []
     (line,) = promise_lines(env, in_window)
     assert line.kind == "nudge" and in_window in line.actions

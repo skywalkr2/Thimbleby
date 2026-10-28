@@ -58,7 +58,7 @@ const safe = (url: string) => /^https?:\/\//i.test(url);
 export function tablesOf(section: S["FollowupSection"], w: TableWords, today: string): Table[] {
   const tables: Table[] = [];
   const actions = section.actions
-    .filter((a) => a.told === null)
+    .filter((a) => a.to_send)
     .sort((a, b) => (a.due ?? "9999-99-99").localeCompare(b.due ?? "9999-99-99") || a.text.localeCompare(b.text));
   if (actions.length) {
     tables.push({

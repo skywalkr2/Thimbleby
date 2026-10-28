@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api, ApiError, type S } from "./api";
 import { problemText } from "./problem";
 import { fromDraft, toDraft, type Draft, type Item } from "./settings";
-import { useAfterSave, useFreshFingerprint } from "./settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "./settings-save";
 import { useWords } from "./wording";
 
 export function useSettingEdits() {
@@ -34,9 +34,12 @@ export function useSettingEdits() {
   const save = async (key: string, body: { changes?: Record<string, unknown>; reset?: string[] }, message?: string) => {
     setProblems((all) => ({ ...all, [key]: "" }));
     try {
-      const saved: S["SettingsSaved"] = await api.saveSettings({ changes: body.changes ?? {}, reset: body.reset ?? [], fingerprint: await fingerprint() });
-      forget(key);
-      await afterSave(saved, message ? { message } : {});
+      // One at a time: a change made while an earlier one is being saved is saved after it, on the fingerprint it answered with.
+      await inOrder(async () => {
+        const saved: S["SettingsSaved"] = await api.saveSettings({ changes: body.changes ?? {}, reset: body.reset ?? [], fingerprint: await fingerprint() });
+        forget(key);
+        await afterSave(saved, message ? { message } : {});
+      });
       return true;
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });

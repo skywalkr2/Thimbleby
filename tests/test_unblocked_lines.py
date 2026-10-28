@@ -107,7 +107,7 @@ def test_a_promise_someone_owes_is_chased_again_once_the_blocker_of_its_hold_is_
     them = other(cfg)
     long_ago = TODAY - timedelta(days=cfg.ui.followups.undated_after_days + 30)
     store.clock = lambda: f"{long_ago}T09:00:00+00:00"
-    theirs = make(store, [them], due=None)
+    theirs = make(store, [them], due=None, promised_to=[me(cfg)], basis="said")
     asked = blocked_on_a_question(store, theirs, them)
 
     def chase() -> list[str]:

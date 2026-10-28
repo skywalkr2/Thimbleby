@@ -46,7 +46,14 @@ def reply(day: date, *, non_answer: bool = True, text: str = "Replied without a 
 
 
 def make(store, cfg, *, due: date | None, news: list[dict], made: date | None = None) -> str:
-    data = {"text": "Send the floor plan", "owners": [{"person": other(cfg)}], "due": due.isoformat() if due else None}
+    data = {
+        "text": "Send the floor plan",
+        "owners": [{"person": other(cfg)}],
+        "due": due.isoformat() if due else None,
+        # A promise they made themselves: waited on from the start, never to send (design 6.33).
+        "promised_to": [me(cfg)],
+        "basis": "said",
+    }
     store.clock = lambda: f"{made or TODAY - timedelta(days=30)}T09:00:00+00:00"
     with store.transaction() as tx:
         action_id = tx.create("action", data, _TEST).id

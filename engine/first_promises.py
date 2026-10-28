@@ -344,7 +344,7 @@ def found(store: Any, cfg: Any, limit: int, today: date | None = None) -> FirstP
     ready = [
         s
         for s in followups.sections(store, cfg, today or date.today())
-        if not s.is_pm and s.message and any(a["id"] in shown_ids and a["told"] is None for a in s.actions)
+        if not s.is_pm and s.message and any(a["id"] in shown_ids and a["to_send"] for a in s.actions)
     ]
     follow_up = FollowUp(ready[0].person, ready[0].name, ready[0].message, ready[0].to_send) if ready else None
     return FirstPromises("ready", promises=listed, more=len(open_promises) - len(listed), follow_up=follow_up)

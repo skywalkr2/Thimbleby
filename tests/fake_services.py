@@ -480,6 +480,10 @@ def messages(now: datetime, later: list[dict] | None = None, evening: bool = Fal
 
 #: The folder the mail service keeps the person's own sent mail in, as a read names it.
 SENT_FOLDER = "sent"
+#: A second folder the mailbox has, with nothing in it, so a person can be seen choosing one more folder to read.
+ARCHIVE_FOLDER = "Archive"
+#: The folders the made-up mailbox has, by the names a source reads them by.
+MAIL_FOLDERS = ("inbox", SENT_FOLDER, ARCHIVE_FOLDER)
 #: The promise the person made in mail they sent, which no message they received repeats.
 SENT_PROMISE_FROM = "will send the revised budget by 2026-11-05"
 SENT_SUBJECT = "Revised offsite budget"
@@ -583,7 +587,13 @@ def mail_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["mail_reads"] += 1
-        if request.query_params.get("folder") == SENT_FOLDER:
+        folder = request.query_params.get("folder") or "inbox"
+        if folder not in MAIL_FOLDERS:
+            # A real service says there is no such folder; it never lists the inbox's mail under another name.
+            return JSONResponse({"error": "no such folder"}, status_code=404)
+        if folder == ARCHIVE_FOLDER:
+            return JSONResponse({"messages": []})
+        if folder == SENT_FOLDER:
             # A mailbox with no sent mail has an empty sent folder, never the inbox's mail under another name.
             return JSONResponse({"messages": sent_messages(state.moment) if state.sent_mail else []})
         return JSONResponse({"messages": messages(state.moment, state.later_mail, state.evening)})

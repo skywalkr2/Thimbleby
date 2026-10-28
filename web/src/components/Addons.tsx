@@ -27,7 +27,7 @@ import {
 } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { freshSettings, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
@@ -94,7 +94,7 @@ function useSwitch(name: string, label: string) {
     setProblem("");
     try {
       // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const current = await freshSettings(client);
       const saved = await (on ? api.packOn : api.packOff)(name, current.fingerprint);
       await afterSave(saved, { message: t(on ? "addons.switched_on" : "addons.switched_off", { name: label }) });
       // The list reads which add-ons are on from the saved settings: read it again so the row says what was just saved.

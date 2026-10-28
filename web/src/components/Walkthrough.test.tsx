@@ -1931,6 +1931,69 @@ describe("Mail and calendar", () => {
     expect(await within(inbox).findByRole("status")).toHaveTextContent(`Your inbox is for Personal and ${EMPLOYER}.`);
   });
 
+  test("quick ticks, on a server that checks the fingerprint and answers after a while, all end up saved as the boxes show", async () => {
+    const user = userEvent.setup();
+    service("on", { signed: true });
+    let sources: Array<Record<string, unknown>> = [
+      { id: "s1", connector: "mail-addon/mail", label: "Your inbox", settings: {} },
+      { id: "s2", connector: "mail-addon/mail", label: "Your calendar", settings: {} },
+    ];
+    // The fingerprint is of what is saved, as the server's is of the files, so it repeats when the same list comes back.
+    const fingerprint = () => `fp-${JSON.stringify(sources)}`;
+    const later = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { installed_version: "1.0.0", enabled: true })],
+        installed: [installedPack("mail-addon", { enabled: true, state: "enabled" })],
+      }),
+      "GET sign-ins": () => [signIn("mail-addon/account", { status: "signed_in", account: "me@example.com" })],
+      "GET watch": () => [source("s1", "Your inbox"), source("s2", "Your calendar", { reads: ["calendar"] })],
+      "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
+      "GET settings": async () => {
+        const answer = {
+          fingerprint: fingerprint(),
+          items: [
+            ...SETTINGS,
+            { key: "watch.sources", file: "watch", group: "watch", description: "", type: "other", options: [], value: sources, default: [], source: "file", locked: false, basic: false, editable: false },
+          ],
+        };
+        await later(15);
+        return answer;
+      },
+      "POST settings": async (body) => {
+        await later(25);
+        const sent = body as { fingerprint: string; changes: { "watch.sources": Array<Record<string, unknown>> } };
+        if (sent.fingerprint !== fingerprint()) return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+        const before = sources;
+        sources = sent.changes["watch.sources"];
+        return { changes: [{ key: "watch.sources", before, after: sources, was_default: false, is_default: false }], fingerprint: fingerprint(), needs_restart: false };
+      },
+    });
+    const app = open();
+    // The app's live stream asks for everything again whenever the server says something changed, at any moment.
+    const stream = setInterval(() => void app.client.invalidateQueries(), 9);
+    await user.click(await screen.findByRole("button", { name: "Set them separately" }));
+    const inbox = await screen.findByRole("group", { name: "Your inbox: who is it for?" });
+    // The four clicks of the review: Personal on, the job on, the shop on, the shop off.
+    await user.click(within(inbox).getByRole("checkbox", { name: "Personal" }));
+    await user.click(within(inbox).getByRole("checkbox", { name: EMPLOYER }));
+    await user.click(within(inbox).getByRole("checkbox", { name: SHOP }));
+    await user.click(within(inbox).getByRole("checkbox", { name: SHOP }));
+    const shown = () => within(inbox).getAllByRole("checkbox").map((b) => (b as HTMLInputElement).checked);
+    await later(600);
+    expect(shown()).toEqual([true, true, false]);
+    await waitFor(() => expect((sources[0] as { sides?: string[] }).sides).toEqual([PERSONAL, "PRJ-2"]), { timeout: 3000 });
+    await later(300);
+    // What is saved is what the boxes show, and the boxes still show it once the saves are done.
+    expect((sources[0] as { sides?: string[] }).sides).toEqual([PERSONAL, "PRJ-2"]);
+    expect(shown()).toEqual([true, true, false]);
+    expect(within(inbox).queryByRole("alert")).toBeNull();
+    clearInterval(stream);
+  });
+
   test("ticking and unticking quickly ends with a message that matches the boxes", async () => {
     const user = userEvent.setup();
     let release: () => void = () => undefined;

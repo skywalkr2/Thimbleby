@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, type S } from "./api";
 import type { Account } from "./ai-accounts";
-import { useAfterSave } from "./settings-save";
+import { freshSettings, inOrder, useAfterSave } from "./settings-save";
 
 /** The short name of the model that stands for everyday work, and the one added for harder work. */
 export const EVERYDAY = "everyday";
@@ -31,9 +31,11 @@ export function useAccountActs() {
    * since is refused rather than overwritten), then reads it back with Undo. Throws what the server refused. */
   const save = useCallback(
     async (work: (fingerprint: string) => Promise<S["SettingsSaved"]>, message: string | (() => string), opened?: string) => {
-      const fingerprint = opened ?? (await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 })).fingerprint;
-      const saved = await work(fingerprint);
-      await afterSave(saved, { message: typeof message === "function" ? message() : message });
+      await inOrder(async () => {
+        const fingerprint = opened ?? (await freshSettings(client)).fingerprint;
+        const saved = await work(fingerprint);
+        await afterSave(saved, { message: typeof message === "function" ? message() : message });
+      });
     },
     [client, afterSave],
   );

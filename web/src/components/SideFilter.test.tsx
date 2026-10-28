@@ -206,7 +206,7 @@ const action = (id: string, text: string, side: S["FollowupAction"]["side"]): S[
   text,
   due: null,
   project_name: "",
-  told: null,
+  told: null, to_send: true,
   told_days: null,
   followed_up: null,
   chase_due: false,

@@ -10,7 +10,7 @@ import { problemText } from "../lib/problem";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { addonLabel, formatValue, labelOf } from "../lib/settings";
-import { useAfterSave } from "../lib/settings-save";
+import { freshSettings, useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
 import { emptyReason } from "./Addons";
@@ -246,7 +246,7 @@ function SuggestedSettings(props: { step: Step }) {
     setProblem("");
     try {
       // The fingerprint of the settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const current = await freshSettings(client);
       const saved = await api.applyStepSettings(step.id, current.fingerprint);
       await afterSave(saved);
     } catch (err) {

@@ -30,7 +30,7 @@ from pydantic import BaseModel
 from engine.plugin_api import Poll
 
 class InboxSettings(BaseModel):
-    pass
+    folder: str = 'INBOX'
 
 def who(context):
     token = context.access_token("p18/service")
@@ -308,7 +308,13 @@ def test_the_source_form_offers_the_accounts_and_checks_the_one_chosen(world):
     assert unknown.status_code == 400
     ok = c.post(
         f"{api}/watch/sources",
-        json={"connector": "p18/inbox", "label": "Second", "account": BOB, "settings": {}, "fingerprint": fingerprint},
+        json={
+            "connector": "p18/inbox",
+            "label": "Second",
+            "account": BOB,
+            "settings": {"folder": "Other"},
+            "fingerprint": fingerprint,
+        },
     )
     assert ok.status_code == 200, ok.text
     added = next(s for s in c.get(f"{api}/watch").json() if s["label"] == "Second")

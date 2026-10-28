@@ -10951,6 +10951,12 @@
             "title": "Text",
             "type": "string"
           },
+          "to_send": {
+            "default": true,
+            "description": "Whether it is ready to send to this owner: never told (or changed since), and not a promise they made themselves, which they already know and which is only waited on.",
+            "title": "To Send",
+            "type": "boolean"
+          },
           "told": {
             "anyOf": [
               {

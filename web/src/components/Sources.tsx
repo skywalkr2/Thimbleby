@@ -13,7 +13,7 @@ import { PlaceOptions } from "./PlaceOptions";
 import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { settingsView, viewHref } from "../lib/views";
@@ -97,8 +97,11 @@ function useSourceSave() {
   return useCallback(
     async (run: (fingerprint: string) => Promise<S["SettingsSaved"]>, message: string): Promise<boolean> => {
       try {
-        const saved = await run(await fingerprint());
-        await afterSave(saved, { message });
+        // One at a time, each on the fingerprint the one before answered with.
+        await inOrder(async () => {
+          const saved = await run(await fingerprint());
+          await afterSave(saved, { message });
+        });
         return true;
       } catch (err) {
         const detail = err instanceof ApiError ? err.detail : "";
@@ -565,7 +568,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     try {
       const [list, view] = await Promise.all([
         client.fetchQuery({ queryKey: ["watch"], queryFn: api.watchSources, staleTime: 0 }),
-        client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 }),
+        freshSettings(client),
       ]);
       const now = list.find((x) => x.id === was.id);
       if (!now) return;

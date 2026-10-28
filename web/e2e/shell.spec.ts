@@ -1012,8 +1012,8 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
         { id: "Q-2", title: "Which author bio goes on the jacket?", text: "", links: [], kind: "question", status: "open", project_name: "Sample project", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
       ],
       actions: [
-        { id: "ACT-1", text: "Agree on the back-cover copy", due: "2020-10-14", project_name: "Sample project", links: [{ label: "Book page", url: book }], told: null, told_days: null, followed_up: null, on_hold: null, chase_due: false },
-        { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Sample project", links: [], told: null, told_days: null, followed_up: null, on_hold: null, chase_due: false },
+        { id: "ACT-1", text: "Agree on the back-cover copy", due: "2020-10-14", project_name: "Sample project", links: [{ label: "Book page", url: book }], told: null, to_send: true, told_days: null, followed_up: null, on_hold: null, chase_due: false },
+        { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Sample project", links: [], told: null, to_send: true, told_days: null, followed_up: null, on_hold: null, chase_due: false },
       ],
       message: "Hi Robin",
       to_send: 4,

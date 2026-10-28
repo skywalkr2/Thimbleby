@@ -1455,10 +1455,10 @@ def _everything(
                     project=shared_project(
                         reader,
                         [q["id"] for q in s.questions if q["status"] == "open"],
-                        [a["id"] for a in s.actions if a["told"] is None],
+                        [a["id"] for a in s.actions if a["to_send"]],
                     ),
                     questions=[q["id"] for q in s.questions if q["status"] == "open"],
-                    actions=[a["id"] for a in s.actions if a["told"] is None],
+                    actions=[a["id"] for a in s.actions if a["to_send"]],
                     ready_since=s.ready_since,
                     since=s.name.lower(),
                 )

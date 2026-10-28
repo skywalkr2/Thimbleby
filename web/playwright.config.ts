@@ -113,7 +113,7 @@ export default defineConfig({
         // The panes the shell opens (drawer, Ask pane, the stages board, review mode), and every main screen's accessibility
         // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
         { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },
-        ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /settings-walk\.spec\.ts/, use, dependencies: [s.name] }] : []),
+        ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /(settings-walk|quick-edits)\.spec\.ts/, use, dependencies: [s.name] }] : []),
         ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
         // The schedule at a phone, a tablet and a desktop width, and moving through its days (once, at the root).
         ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /schedule\.spec\.ts/, use, dependencies: [s.name] }] : []),

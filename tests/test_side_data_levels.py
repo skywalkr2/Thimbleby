@@ -82,7 +82,8 @@ def test_a_connection_added_with_nothing_beside_personal_serves_it_and_one_added
     # Once a side exists a new connection says nothing: the mail step asks which side it serves.
     _add_side(c, FIRST_BUSINESS, "business")
     fingerprint = c.get("/api/settings").json()["fingerprint"]
-    body = {"connector": "folder", "label": "Orders", "settings": {"path": str(tmp_path)}, "fingerprint": fingerprint}
+    orders = {"path": str(tmp_path), "patterns": ["*.csv"]}  # not what Notes reads: one folder is one source
+    body = {"connector": "folder", "label": "Orders", "settings": orders, "fingerprint": fingerprint}
     assert c.post("/api/watch/sources", json=body).status_code == 200
     assert load_config(ws.config_dir, env={}).watch.sources[1].sides == []
 

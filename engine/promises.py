@@ -75,7 +75,9 @@ def late(
     """The open actions that need a line, never one on hold or with an ending waiting for the person.
     - The person's own, once read as promises (a plain to-do stays on the overdue line): past their date with no news
       since that day.
-    - Owed by someone else, which the person waits on: with a date, from `ui.followups.action_due_within_days` before
+    - Owed by someone else, which the person waits on (a to-do the person made for them is waited on once it has been
+      sent; before that it is to send and has no line here; a promise they made themselves is waited on from the start):
+      with a date, from `ui.followups.action_due_within_days` before
       it and once it has passed (a past one with no news since its day); with none, after
       `ui.followups.undated_after_days` with no news since it was made or since its latest news. One chased lately
       waits as long again.
@@ -112,6 +114,8 @@ def late(
             found.append(Late(record.id, due, text, None, project, (today - due).days, due))
             continue
         chased = [date.fromisoformat(str(d["told"][p])) for p in owners if (d.get("told") or {}).get(p)]
+        if not chased and not is_promise(d):
+            continue  # a to-do for someone else that was never sent is to send, not waited on: one state (design 6.33)
         if due is not None:
             if (due - today).days > timing.action_due_within_days:
                 continue

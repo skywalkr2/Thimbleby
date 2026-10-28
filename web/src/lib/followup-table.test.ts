@@ -27,7 +27,7 @@ const action = (id: string, text: string, due: string | null, extra: Partial<S["
   due,
   project_name: "Book",
   links: [],
-  told: null,
+  told: null, to_send: true,
   told_days: null,
   followed_up: null,
   on_hold: null,
@@ -85,7 +85,7 @@ test("actions go by due date with the overdue first and undated last; questions 
 });
 
 test("only what the message holds is in the tables: told actions and sent questions are left out, and an empty kind has no table", () => {
-  const found = tablesOf(section([action("A1", "Told", "2026-10-20", { told: "2026-10-01" })], [question("Q1", "Sent", "2026-10-01", { status: "sent" })]), words, TODAY);
+  const found = tablesOf(section([action("A1", "Told", "2026-10-20", { told: "2026-10-01", to_send: false })], [question("Q1", "Sent", "2026-10-01", { status: "sent" })]), words, TODAY);
   expect(found).toEqual([]);
 });
 

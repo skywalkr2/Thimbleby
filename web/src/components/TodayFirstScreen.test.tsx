@@ -117,8 +117,8 @@ test("a person waited on is one follow-up line saying how many are overdue and s
     is_pm: false,
     questions: [],
     actions: [
-      { id: "ACT-2", text: "Send the index", due: "2026-10-13", project_name: "", told: "2026-10-01", told_days: 18, followed_up: null, chase_due: true, chases: 0 },
-      { id: "ACT-3", text: "Book the room", due: "2026-10-15", project_name: "", told: null, told_days: null, followed_up: null, chase_due: true, chases: 0 },
+      { id: "ACT-2", text: "Send the index", due: "2026-10-13", project_name: "", told: "2026-10-01", to_send: false, told_days: 18, followed_up: null, chase_due: true, chases: 0 },
+      { id: "ACT-3", text: "Book the room", due: "2026-10-15", project_name: "", told: null, to_send: false, told_days: null, followed_up: null, chase_due: true, chases: 0 },
     ],
     message: "",
     to_send: 0,

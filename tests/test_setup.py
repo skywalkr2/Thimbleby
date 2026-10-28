@@ -1109,7 +1109,7 @@ def test_a_source_is_added_changed_and_removed_from_the_screens_without_a_restar
         json={
             "connector": folder_kind["name"],
             "label": "Shared notes",
-            "settings": {"path": str(folder)},
+            "settings": {"path": str(folder), "patterns": ["*.md"]},
             "fingerprint": added.json()["fingerprint"],
         },
     )

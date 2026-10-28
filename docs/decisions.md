@@ -17,6 +17,42 @@ when we made that rule was because the cursor twas defaulting to labels").
 cursor on page load surprised the reviewer and moved screen-reader users past the page's heading.
 
 **Impact:** design 7.1; CLAUDE.md's UI rules; the sweep's batch V builds it with its guard (E12). Change log: section 255.
+
+## 2026-10-28: The chase follows design 6.33: untold to-dos are only to send; a promise is never to send
+
+**Decided:** Design 6.33 already says the follow-up covers "actions told by the rule in 6.9, and the promises they owe". The code
+did not: `promises.late()` counted any open action owed by someone else, told or not. Now a plain to-do someone else owns that
+was never told is only "to send" until Mark sent, and is waited on and chased once told. A promise someone made themselves
+(`is_promise`) is never "to send" (they already know it); it is waited on from the start and chased when late. Each is in one
+state and on one Today line. Every consumer of "to send" reads the new `FollowupAction.to_send` instead of `told is None`. Tests
+that gave a never-told plain to-do the waiting-on rules now give the action `told` or the promise fields they mean.
+
+**Decided by:** owner's direction through the main session, from design 6.33; the sweep's X06.
+
+**Why:** a to-do for Priya showed as "Ready to send" and as "Sent today · Follow up" at once, and marking one settled the other.
+
+**Impact:** Design 6.33 and 6.9 (no wording change: the code now matches), `FollowupAction.to_send` in the API and the generated
+types. The first promises step can no longer offer a message to copy for someone's own promise (its `follow_up` is empty for
+promises). No change to scope. Change log: section 256.
+
+## 2026-10-28: Quick changes are never lost, and one folder is one source
+
+**Decided:** (1) A settings save reads the settings it is made on with a request of its own, never through the query cache's
+fetch (which the app's refresh after a server change cancels), and the saves that read the fingerprint as they start run one at a
+time in the order asked. (2) A second source for the same folder of the same account is refused, a folder the account doesn't have
+is refused before saving by trying the add-on's own read once (only a "not found" answer refuses), and a message that two sources
+of one account both list is handed in once. Removing a source says "What it already brought in stays." A list of the account's
+folders to pick from, and merging items made twice before this rule, are not decided: the first needs a way for an add-on to list
+what a source may read (a plugin API change), the second is left to the owner.
+
+**Decided by:** the UI/UX sweep's reviewer (X01, X05) and the builder's choice of mechanism, for review.
+
+**Why:** the review lost a third change and a mailbox tick to a cancelled read, and one typed folder name multiplied Today's items
+(6 to 9) and the to-dos (4 to 10).
+
+**Impact:** Design 6.2 and 7.9 (settings saves). Two sentences in the source advice sheet and the wording sheet. No change to
+scope. Change log: section 256.
+
 ## 2026-10-28: A channel lists an account's folders and labels
 
 **Decided:** Plugin API 0.3.92 adds `folders=` to `registrar.channel`: `fn(account, context)` returns `ChannelFolder(id, name,

@@ -61,10 +61,12 @@ type Filter = "send" | "later" | "waiting";
 const FILTERS: Filter[] = ["send", "later", "waiting"];
 
 const toSendQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "open");
-const toSendActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told === null);
+/** Ready to send to this owner: never told, and not a promise they made themselves (which they know already). */
+const isToSend = (a: S["FollowupAction"]) => a.to_send;
+const toSendActions = (s: S["FollowupSection"]) => s.actions.filter(isToSend);
 const waitingQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "sent");
-// What was told to the person, and what a promise they owe says is late with nothing heard (design 6.33), told or not.
-const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told !== null || a.chase_due);
+// What was told to the person, and the promises they made themselves (design 6.33): one state each, never also to send.
+const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => !isToSend(a));
 
 /** The rows of a section that show under a side choice: those on that side and those on neither. */
 const rowsOnSide = (s: S["FollowupSection"], choice: SideChoice): S["FollowupSection"] => ({

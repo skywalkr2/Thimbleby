@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 256. Quick changes are never lost, one folder is one source, and a to-do has one state (2026-10-28; sweep batch 1, X01, X05 and X06)
+
+| Where | Before | Now |
+|---|---|---|
+| Saving settings (7.9) | A save that first read the settings (the setup tick boxes for who a mailbox is for, a source's list, an account's change, the message style) waited on a read that the app's own refresh after any server change could cancel, so a change made while another was being saved failed with "couldn't save" (the setup box showed the choice, the file kept the old one) | `freshSettings` reads on a request of its own that nothing cancels, and `inOrder` runs those saves one at a time, each on the fingerprint the one before answered with. Built: `Walkthrough.test.tsx`, `Settings.test.tsx`, `MessageStyle.test.tsx`, `web/e2e/quick-edits.spec.ts` |
+| Adding a source (6.2) | Any folder name was accepted, the same folder again added a second source that read the same messages, and a message both read became two items | The same folder of the same account is refused, a folder the account doesn't have is refused before saving (the add-on's own read is tried once), a message two sources of one account list is taken in once, and removing a source says what stays. Built: `tests/test_source_folders_once.py`, `web/e2e/journeys-mail.spec.ts` (J2c) |
+| The chase (6.33, 6.9) | A to-do for someone else was waited on and chased from the day it was dated or old, whether or not it had been sent, so Today said "Sent today · Follow up" about a note never sent and the same to-do was also "to send"; a promise someone made themselves was also counted "to send" | A plain to-do owed by someone else is only "to send" until Mark sent, and is waited on and chased once told; a promise they made themselves (`is_promise`) is never "to send", only waited on and chased when late. `FollowupAction.to_send` carries which; every consumer (Follow-ups, Today's send line, the message, Mark sent, top priorities, the first promises) reads it. Built: `tests/test_untold_todo_one_state.py`, `FollowUps.test.tsx` |
+
 ## 255. Where the cursor starts: a screen on its heading, a form the person opened in its first field (2026-10-28; P96)
 
 - 7.1 (the cursor): a screen or setup step opening puts the cursor on its heading, never in a field or on a label; a

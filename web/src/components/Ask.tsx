@@ -12,7 +12,7 @@ import { whenText } from "../lib/dates";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { problemText } from "../lib/problem";
 import { formatValue, labelOf } from "../lib/settings";
-import { useAfterSave } from "../lib/settings-save";
+import { freshSettings, useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import styles from "./AskPane.module.css";
@@ -309,7 +309,7 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
     setProblem("");
     try {
       // The fingerprint of the settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const current = await freshSettings(client);
       const saved = await api.applyProposal(p.id, { fingerprint: current.fingerprint, read_version: p.version });
       await afterSave(saved);
       // The dialog closes so the read-back's Undo can be reached from the keyboard.

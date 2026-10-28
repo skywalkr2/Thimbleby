@@ -875,7 +875,7 @@ describe("a source's menu", () => {
     });
     await choose(user, "Source a", "Remove");
     await waitFor(() => expect(body(calls, "POST watch/sources/a/remove")).toEqual({ fingerprint: "fp-1" }));
-    expect(await screen.findByText("Removed Source a.")).toBeInTheDocument();
+    expect(await screen.findByText("Removed Source a. What it already brought in stays.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
   });
 

@@ -123,6 +123,8 @@ def actions_to_send(store: Store, cfg: Config) -> set[str]:
             who = owner["person"]
             if who == people.pm or stance_of(view, cfg.steward, who) in UNTOLD_STANCES:
                 continue
+            if promises.is_promise(d):
+                continue  # a promise they made themselves is known to them: never to send, only waited on (design 6.33)
             limit = audience.limit_of_record(view, d)
             if limit is not None and not audience.within(limit, people, who, ""):
                 continue  # no message to them carries it, so it isn't to send
@@ -292,6 +294,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                     "notes": d.get("notes") or None,
                     "links": project_links.get(d.get("project"), []),
                     "told": told,
+                    # Never told, and not a promise the owner made themselves (they know it): the one state "to send".
+                    "to_send": told is None and not (owner["person"] != people.pm and promises.is_promise(d)),
                     "ready_since": None
                     if told
                     else _ready_day(
@@ -325,9 +329,9 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     for s in by_person.values():
         s.actions.sort(key=lambda a: (("9999" if a["due_check"] else a["due"]) or "9999", a["text"]))
         if not s.is_pm:
-            s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["told"] is None for a in s.actions)
+            s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["to_send"] for a in s.actions)
             days = [q["ready_since"] for q in s.questions if q["status"] == "open"] + [
-                a["ready_since"] for a in s.actions if a["told"] is None
+                a["ready_since"] for a in s.actions if a["to_send"]
             ]
             s.ready_since = min((x for x in days if x), default=None)
             s.message = compose(s, cfg, people)
@@ -461,7 +465,7 @@ def changed_since_told(history: list[dict[str, Any]], person: str, current: dict
 def compose(s: Section, cfg: Config, people: People) -> str:
     words = cfg.language.messages
     questions = [q for q in s.questions if q["status"] == "open"]
-    actions = [a for a in s.actions if a["told"] is None]
+    actions = [a for a in s.actions if a["to_send"]]
     if not questions and not actions:
         return ""
     lines = [words.greeting.format(first_name=people.first_name(s.person)), ""]
@@ -566,7 +570,7 @@ def mark_sent(
                 counts["questions"] += 1
                 counts["question_ids"].append(q["id"])
         for a in current.actions:
-            if a["told"] is None:
+            if a["to_send"]:
                 rec = tx.get("action", a["id"])
                 told = {**rec.data.get("told", {}), person: today.isoformat()}
                 if person in rec.data.get("told", {}):

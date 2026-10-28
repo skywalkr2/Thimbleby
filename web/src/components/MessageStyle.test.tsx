@@ -2,7 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fakeSettings, settingItem } from "../lib/settings-fixtures";
-import { renderApp } from "../test-utils";
+import type { S } from "../lib/api";
+import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { MessageStyle } from "./MessageStyle";
 
 const GREETING = "language.messages.greeting";
@@ -58,4 +59,41 @@ test("nothing is shown until the settings are there", async () => {
   fakeSettings([]);
   renderApp(<MessageStyle />);
   await waitFor(() => expect(screen.queryByText("How your messages start and end")).toBeNull());
+});
+
+test("the closing changed while the greeting is still being saved is saved too, after it, not refused as out of date", async () => {
+  const later = (ms: number) => new Promise((done) => setTimeout(done, ms));
+  const state = items();
+  let n = 1;
+  fakeApi({
+    "GET settings": async () => {
+      const answer = { fingerprint: `fp-${n}`, items: JSON.parse(JSON.stringify(state)) };
+      await later(10);
+      return answer;
+    },
+    // The server answers after a while, so the second change starts while the first is being saved.
+    "POST settings": async (body) => {
+      await later(80);
+      const sent = body as S["SettingsSave"];
+      if (sent.fingerprint !== `fp-${n}`) return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+      for (const [key, after] of Object.entries(sent.changes ?? {})) state.find((i) => i.key === key)!.value = after;
+      n += 1;
+      return { changes: Object.entries(sent.changes ?? {}).map(([key, after]) => ({ key, before: "", after, was_default: false, is_default: false })), fingerprint: `fp-${n}`, needs_restart: false };
+    },
+  });
+  renderApp(<MessageStyle />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("How your messages start and end"));
+  await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages start/ }));
+  const greeting = screen.getByLabelText("How your messages start, the pattern");
+  await user.clear(greeting);
+  await user.type(greeting, "Hello {{first_name},");
+  await user.tab();
+  await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages end/ }));
+  const closing = screen.getByLabelText("How your messages end, the pattern");
+  await user.clear(closing);
+  await user.type(closing, "Cheers");
+  await user.tab();
+  await waitFor(() => expect(state.map((i) => i.value)).toEqual(["Hello {first_name},", "Cheers"]), { timeout: 3000 });
+  expect(screen.queryByRole("alert")).toBeNull();
 });

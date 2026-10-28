@@ -32,7 +32,7 @@ import { useMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { asReference } from "../lib/secret-ref";
-import { useFreshFingerprint } from "../lib/settings-save";
+import { freshSettings, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -298,7 +298,7 @@ function AccountRow(props: {
     try {
       const [list, view] = await Promise.all([
         client.fetchQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts, staleTime: 0 }),
-        client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 }),
+        freshSettings(client),
       ]);
       const now = list.find((a) => a.name === account.name);
       if (!now) return;

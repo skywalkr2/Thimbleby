@@ -43,6 +43,7 @@ import {
   topics,
 } from "../lib/settings-sections";
 import {
+  freshSettings,
   knownFingerprint,
   rememberFingerprint,
   useAfterSave,
@@ -386,11 +387,7 @@ export function Settings(props: {
         adopt.current = true;
         const typed = editsNow.current;
         try {
-          const now = await client.fetchQuery({
-            queryKey: ["settings"],
-            queryFn: api.settings,
-            staleTime: 0,
-          });
+          const now = await freshSettings(client);
           rememberFingerprint(client, now.fingerprint);
           const was = view.items;
           setRefreshed({

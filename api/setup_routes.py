@@ -920,6 +920,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             supplied = mail_services.settings_for(service, supplied)
         given, to_keep = with_secrets(body.connector, source_id, supplied, body.secrets, body.settings)
         settings = checked_source(body.connector, given)
+        wanted_account = checked_account(body.connector, body.account)
+        refuse_a_twin(body.connector, wanted_account, settings)
+        refuse_a_missing_folder(body.connector, wanted_account, settings)
         new = {
             "id": source_id,
             "connector": body.connector,
@@ -931,8 +934,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["project"] = checked_project(body.project)
         if body.author:
             new["author"] = checked_author(body.author)
-        if account := checked_account(body.connector, body.account):
-            new["account"] = account
+        if wanted_account:
+            new["account"] = wanted_account
         if body.color:
             new["color"] = body.color
         capture = checked_capture(body.connector, body.capture, body.capture_address)
@@ -1023,6 +1026,92 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             value = getattr(kind.settings.model_validate(other["settings"]), name, None)
             held.update(str(v) for v in (value if isinstance(value, list) else [value]) if v)
         return sorted(held)
+
+    def reading_as(connector: str, account: str | None) -> str | None:
+        """The account a source reads as: the one it names, else the only one signed in."""
+        if not account and "/" in connector:
+            signed = accounts_of(ws, store, connector.split("/", 1)[0]) or []
+            return signed[0] if len(signed) == 1 else None
+        return account
+
+    def twin_of(
+        connector: str, account: str | None, settings: dict[str, Any], *, except_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """The source that already reads what this one would: the same kind, for the same account, of the same
+        folder (a mailbox's own server and user count as its account), or with the same settings where the kind has no
+        folder. None when nothing does."""
+        kind = source_kinds().get(connector)
+        if kind is None:
+            return None
+        where = folder_setting(connector) or (("folder", False) if connector == "mailbox" else None)
+
+        def held(model: Any) -> set[str]:
+            value = getattr(model, where[0], None) if where else None
+            return {str(v) for v in (value if isinstance(value, list) else [value]) if v}
+
+        try:
+            mine = kind.settings.model_validate(settings)
+        except ValueError:
+            return None
+        as_account = reading_as(connector, account)
+        for other in sources_now():
+            if other["id"] == except_id or other["connector"] != connector:
+                continue
+            if reading_as(connector, other.get("account")) != as_account:
+                continue
+            try:
+                theirs = kind.settings.model_validate(other["settings"])
+            except ValueError:
+                continue
+            if connector == "mailbox" and (theirs.host, theirs.user) != (mine.host, mine.user):
+                continue
+            if where is not None:
+                if held(mine) & held(theirs):
+                    return other
+            elif mine == theirs:
+                return other
+        return None
+
+    def refuse_a_twin(
+        connector: str, account: str | None, settings: dict[str, Any], *, except_id: str | None = None
+    ) -> None:
+        """A second source for what one already reads is refused in the screen's own words; it would only read the
+        same messages again and add them twice."""
+        from engine import watch
+
+        found = twin_of(connector, account, settings, except_id=except_id)
+        if found is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=watch.advice_sentence("sources.refuse.same_folder").format(label=found["label"]),
+            )
+
+    def refuse_a_missing_folder(connector: str, account: str | None, settings: dict[str, Any]) -> None:
+        """A folder the account doesn't have is refused before anything is saved, said in plain words. The add-on's
+        own read is tried once (reading changes nothing); only its answer that there is no such thing refuses, so a
+        service that is down or a sign-in to renew never blocks adding a source, and the read says so when it runs."""
+        from datetime import UTC, datetime
+
+        from engine import watch
+        from engine.connectors import ConnectorError
+
+        setting = folder_setting(connector)
+        found = watch.connectors(store).get(connector)
+        if setting is None or found is None:
+            return
+        try:
+            checked = found.settings.model_validate(settings)
+            watch._poll(store, found, checked, {}, ws, current(), datetime.now(UTC), account)
+        except ConnectorError as err:
+            if err.kind == "not_found":
+                value = getattr(checked, setting[0], "")
+                folder = ", ".join(value) if isinstance(value, list) else str(value)
+                raise HTTPException(
+                    status_code=400,
+                    detail=watch.advice_sentence("sources.refuse.no_such_folder").format(folder=folder),
+                ) from None
+        except ValueError:
+            return
 
     @r.get("/watch/{source_id}/folders")
     def watch_folders(source_id: str) -> MailFoldersView:
@@ -1122,6 +1211,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         given, to_keep = with_secrets(found["connector"], source_id, base, body.secrets, body.settings or {})
         if body.settings is not None or body.secrets:
             found["settings"] = checked_source(found["connector"], given)
+            if body.settings is not None:
+                changed_account = (
+                    checked_account(found["connector"], body.account) if "account" in body.model_fields_set else None
+                )
+                refuse_a_twin(
+                    found["connector"],
+                    changed_account or found.get("account"),
+                    found["settings"],
+                    except_id=source_id,
+                )
         for key in ("label", "every_minutes", "enabled"):
             value = getattr(body, key)
             if value is not None:

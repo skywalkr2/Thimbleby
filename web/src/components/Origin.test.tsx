@@ -17,7 +17,7 @@ const action = (over: Partial<S["FollowupAction"]> = {}): S["FollowupAction"] =>
   text: "Approve the proof",
   due: null,
   project_name: "Book",
-  told: null,
+  told: null, to_send: true,
   told_days: null,
   followed_up: null,
   chase_due: false, chases: 0,
@@ -47,7 +47,7 @@ const yours = (actions: S["FollowupAction"][], questions: S["FollowupQuestion"][
 const theirs = (actions: S["FollowupAction"][]): S["FollowupSection"][] => [
   { person: "PER-2", name: "Robin Sample", is_pm: false, questions: [], actions, message: "", to_send: 0 },
 ];
-const sentAction = (over: Partial<S["FollowupAction"]> = {}) => action({ told: "2026-10-09", told_days: 3, ...over });
+const sentAction = (over: Partial<S["FollowupAction"]> = {}) => action({ told: "2026-10-09", to_send: false, told_days: 3, ...over });
 
 const saved: S["SourceView"] = {
   id: "SRC-3",

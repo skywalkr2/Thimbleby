@@ -444,6 +444,56 @@ test("each save carries the fingerprint from the one before it, so saves in a ro
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
+test("three fields changed one after another while the app's live stream keeps asking for the settings again all end up saved", async () => {
+  const user = userEvent.setup();
+  const later = (ms: number) => new Promise((done) => setTimeout(done, ms));
+  const state = ITEMS.map((i) => ({ ...i }));
+  let n = 1;
+  const calls = fakeApi({
+    // The server answers after a while, as a computer under load does.
+    "GET settings": async () => {
+      const answer = { fingerprint: `fp-${n}`, items: JSON.parse(JSON.stringify(state)) };
+      await later(15);
+      return answer;
+    },
+    "POST settings": async (body) => {
+      await later(25);
+      const sent = body as S["SettingsSave"];
+      if (sent.fingerprint !== `fp-${n}`) return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+      const changes: S["SettingChangeView"][] = [];
+      for (const [key, after] of Object.entries(sent.changes ?? {})) {
+        const at = state.find((i) => i.key === key)!;
+        changes.push({ key, before: at.value, after, was_default: same(at.value, at.default), is_default: same(after, at.default) });
+        at.value = after;
+        at.source = "file";
+      }
+      n += 1;
+      return { changes, fingerprint: `fp-${n}`, needs_restart: false };
+    },
+  });
+  const app = open();
+  // Every change the server makes reaches the screen as a request for everything again, at any moment.
+  const stream = setInterval(() => void app.client.invalidateQueries(), 9);
+  const title = await screen.findByLabelText("The display name.");
+  await user.clear(title);
+  await user.type(title, "Harbor");
+  await user.tab();
+  const limit = screen.getByLabelText("What demo.limit does");
+  await user.clear(limit);
+  await user.type(limit, "7");
+  await user.tab();
+  await user.click(screen.getByLabelText("What demo.on does"));
+  await waitFor(() => expect(state.find((i) => i.key === "demo.on")!.value).toBe(false), { timeout: 5000 });
+  await later(300);
+  clearInterval(stream);
+  // Each change reached the server, and the screen shows what the server holds.
+  expect(state.find((i) => i.key === "demo.title")!.value).toBe("Harbor");
+  expect(state.find((i) => i.key === "demo.limit")!.value).toBe(7);
+  expect(posted(calls)).toHaveLength(3);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByLabelText("The display name.")).toHaveValue("Harbor");
+});
+
 test("Undo sends the old values back; after later saves it uses the newest fingerprint, so it still works", async () => {
   const user = userEvent.setup();
   const calls = api();

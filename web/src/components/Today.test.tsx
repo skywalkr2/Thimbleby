@@ -70,7 +70,7 @@ const robin: S["FollowupSection"] = {
   name: "Robin Sample",
   is_pm: false,
   questions: [{ ...decisionQuestion, id: "Q-2", title: "Is the index final?", kind: "question" }],
-  actions: [{ id: "ACT-2", text: "Send the index", due: null, project_name: "", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
+  actions: [{ id: "ACT-2", text: "Send the index", due: null, project_name: "", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
   message: "Hi Robin,\n\nIs the index final?",
   to_send: 2,
 };

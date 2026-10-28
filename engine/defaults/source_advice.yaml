@@ -12,3 +12,5 @@ sources.advice.check_secure_connection: "The service wants a secure connection, 
 sources.advice.review_server_message: "Read what the service said, then check the user name and password in this connection's settings (Change, on Connections). It is read again on its next turn."
 sources.advice.service_app_password: "Follow the steps for {service} above to make an app password, then paste it here. Your usual password won't work for this."
 sources.guide.failed: "Couldn't connect to {service}: {what}"
+sources.refuse.same_folder: "{label} already reads this. Change that one, or choose another folder."
+sources.refuse.no_such_folder: "This account has no folder called {folder}. Choose one it has."

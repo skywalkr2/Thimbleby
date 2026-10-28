@@ -100,7 +100,7 @@ const sectionRobin: S["FollowupSection"] = {
   name: "Robin Sample",
   is_pm: false,
   questions: [{ ...decisionQuestion, id: "Q-2", title: "Is the index final?", kind: "question", status: "sent", sent: "2026-10-04", waiting_days: 7 }],
-  actions: [{ id: "ACT-2", text: "Send the index", due: "2026-10-09", project_name: "Spring book", told: "2026-10-01", told_days: 10, followed_up: null, chase_due: true, chases: 1 }],
+  actions: [{ id: "ACT-2", text: "Send the index", due: "2026-10-09", project_name: "Spring book", told: "2026-10-01", to_send: false, told_days: 10, followed_up: null, chase_due: true, chases: 1 }],
   message: "Hi Robin,\n\nIs the index final?",
   to_send: 2,
 };
@@ -286,7 +286,7 @@ function question(id: string, title: string, over: Partial<S["FollowupQuestion"]
   return { id, title, text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [], ...over };
 }
 function owed(id: string, text: string, over: Partial<S["FollowupAction"]> = {}): S["FollowupAction"] {
-  return { id, text, due: null, project_name: "", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0, ...over };
+  return { id, text, due: null, project_name: "", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0, ...over };
 }
 
 const followSections: S["FollowupSection"][] = [
@@ -311,7 +311,7 @@ const followSections: S["FollowupSection"][] = [
       question("Q-3", "Who prints the cover?", { status: "sent", sent: "2026-10-04", waiting_days: 7, chase_due: true, chases: 1, followed_up: "2026-10-08", project_name: "Spring book" }),
     ],
     actions: [
-      owed("ACT-1", "Send the index", { due: "2026-10-16", project_name: "Spring book", told: "2026-10-01", told_days: 10, chase_due: true, chases: 1, followed_up: "2026-10-09", origin: { kind: "source", source: "SRC-1" } }),
+      owed("ACT-1", "Send the index", { due: "2026-10-16", project_name: "Spring book", told: "2026-10-01", to_send: false, told_days: 10, chase_due: true, chases: 1, followed_up: "2026-10-09", origin: { kind: "source", source: "SRC-1" } }),
       owed("ACT-2", "Check the spine", { due: "2026-10-20" }),
     ],
     message: "Hi Robin,\n\nIs the index final?\n\nThanks!",
@@ -324,7 +324,7 @@ const followSections: S["FollowupSection"][] = [
     name: "Dana Whitlock",
     is_pm: false,
     questions: [],
-    actions: [owed("ACT-3", "Book the printer", { due: "2026-10-12", project_name: "Autumn book", told: "2026-10-02", told_days: 9, on_hold: "the printer's quote" }), owed("ACT-4", "Order the sample copies", { told: "2026-10-03", told_days: 8 })],
+    actions: [owed("ACT-3", "Book the printer", { due: "2026-10-12", project_name: "Autumn book", told: "2026-10-02", to_send: false, told_days: 9, on_hold: "the printer's quote" }), owed("ACT-4", "Order the sample copies", { told: "2026-10-03", to_send: false, told_days: 8 })],
     message: "",
     to_send: 0,
   },

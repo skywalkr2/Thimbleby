@@ -1044,6 +1044,11 @@ class FollowupAction(BaseModel):
         default_factory=list, description="Pages that belong to the action's project, for the copied table."
     )
     told: str | None
+    to_send: bool = Field(
+        True,
+        description="Whether it is ready to send to this owner: never told (or changed since), and not a promise they "
+        "made themselves, which they already know and which is only waited on.",
+    )
     told_days: int | None
     told_names: list[str] = Field(
         default_factory=list,
