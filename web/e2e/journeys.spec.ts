@@ -541,7 +541,7 @@ test.describe.serial("journeys", () => {
     await expect(row).toContainText("Installed (version 0.1.0) and on after a restart");
     await expect(page.getByRole("link", { name: /Example overview/ })).toHaveCount(0);
     await row.getByRole("button", { name: "Restart now" }).first().click();
-    await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("region", { name: "Notifications" }).getByText(/^Restarted with the new settings\./)).toBeVisible({ timeout: 90_000 });
     await connectedAgain(page);
 
     // Its screen is in the sidebar (once the app has told the page about it) and opens. The page learns of it when it
