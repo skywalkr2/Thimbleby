@@ -1197,6 +1197,17 @@ C4. **What the packs need from the core.**
 Moved out of phase C on 2026-10-15, in the same order the owner set: started once the writing pack is complete. The
 writing pack's hand-offs to these packs are built here, when the packs exist (open promise P12, round 50).
 
+**The owner's work version, as input (owner, 2026-10-29):** it reads a team wiki and an issue tracker. For the project
+management pack that means:
+- an add-on per service (a wiki, an issue tracker), through the connector extension point;
+- two generic core features any add-on can use:
+  - watching by person: a source that follows the pages named people create or change, new ones included, each change
+    triaged (rules first, then the assistant) into what is worth tracking;
+  - cross-checking linked items: items a page names (tickets) go on a list and their descriptions and dates are checked
+    against the records, through the fact lookups of design 6.19.
+- a page the person names as the source of truth for a kind of fact: what it says updates the records instead of
+  raising a question (a standing rule from the person's answer, as the work version does).
+
 **Exit test:** in the owner's own workspace:
 - the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
   late or at risk;
