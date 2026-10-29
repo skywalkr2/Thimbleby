@@ -178,7 +178,8 @@ test.each([
 });
 
 test("the projects and people views open the people and projects screen at their own part", async () => {
-  fakeApi({ ...quiet, "GET people": () => [], "GET organizations": () => [], "GET projects": () => [], "GET notes": () => [], "GET sync": () => ({}), "GET jobs": () => [] });
+  // Someone who hasn't said their life is all personal gets the Projects table (personal only opens Personal's page).
+  fakeApi({ ...quiet, "GET setup/business": () => ({ business: false, name: null, personal: null, sides: [], chosen: null }), "GET people": () => [], "GET organizations": () => [], "GET projects": () => [], "GET notes": () => [], "GET sync": () => ({}), "GET jobs": () => [] });
   window.location.hash = "#records/projects";
   const { unmount } = renderApp(<App rc={rc()} />);
   expect(await screen.findByRole("heading", { level: 1, name: "Projects" })).toBeInTheDocument();

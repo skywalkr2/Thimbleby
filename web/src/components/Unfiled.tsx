@@ -35,7 +35,7 @@ export function useFile() {
       () => api.fileUnfiled({ project, items: items.map((i) => ({ kind: i.kind, id: i.id, read_version: i.version })) }),
       (done) => ({
         // Filing on a side of work says it is now visible with that side's work; on Personal it just says where.
-        message: found?.side ? tn(found.id === personal ? "unfiled.filed_in" : "unfiled.filed_side", items.length, { project: where }) : tn("unfiled.filed", items.length, { project: where }),
+        message: found?.side ? (found.id === personal ? tn("unfiled.filed_in", items.length, { project: where }) : tn("unfiled.filed_side", items.length, { project: where })) : tn("unfiled.filed", items.length, { project: where }),
         undo: async () => {
           const report = await api.undo(done.changeset);
           if (!report.restored.length) throw new Error("not undone");
