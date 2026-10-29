@@ -15,7 +15,9 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Impact:** Design 7 (the Schedule and the record page's entry actions), 6.12 (the reasons for an act that isn't offered). New routes `POST /api/events/{id}/move` and `/cancel`; `MailFoldersView.reason`; `ActOptionsView.event_own` and `event_why`. Header status: a connection that is failing or retrying is a state of its own. Change log: section 263.
 The header's status reading the connections (VP05) is batch V2's, which this batch's own version gave way to on merge (change
-log 261).
+log 261). A restart notice no longer takes the toast's place from the message about the person's own change and its Undo; it
+shows only while no other message does, since the status chip and Today carry it (main session, from a browser test that
+failed when a save's Undo was replaced).
 
 ## 2026-10-29: Which side a thing is on is worked out once; a person with only their own life meets no work concepts (sweep batch 5)
 

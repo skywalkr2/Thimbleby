@@ -1036,6 +1036,8 @@ yet follow, that it is *designed*, with its phase.
 - **Saves in order (4.0, 7):** the notification, kept-key, read-token, synced-folder, held-line, model-line, catalog and
   reminder-place forms save through the ordered save, reading their fingerprint as the save starts.
 - **Folders (6.12):** a mailbox whose settings can't be read answers with no folders and a plain reason.
+- **Toasts (7.12):** a notice of the app's own that the status chip and Today also carry (a restart waiting) shows only
+  while no other message does, so it never takes the place of the person's own message and its Undo.
 
 ## 262. One side model on every record and source, and personal only means no work concepts (2026-10-29; sweep batch 5, X18, X20, X23, X36, X43, X44)
 

@@ -209,7 +209,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   // A change that needs a restart says so with a toast that holds the button; the status chip keeps it afterwards.
   useEffect(() => {
     if (restart.phase !== "asking") return;
-    push({ message: t("restart.toast"), action: { label: t("restart.now"), run: () => restartNow.current() } });
+    push({ message: t("restart.toast"), action: { label: t("restart.now"), run: () => restartNow.current() }, yields: true });
   }, [restart.phase, push, t]);
 
   const body = (() => {

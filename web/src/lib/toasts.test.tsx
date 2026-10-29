@@ -335,3 +335,34 @@ test("an Undo that fails without saying so shows a warning", async () => {
   await user.click(within(region()).getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(region().querySelector('[data-tone="warn"]')).not.toBeNull());
 });
+
+function Notice() {
+  const { push } = useToasts();
+  return (
+    <>
+      <button type="button" onClick={() => push({ message: "Saved the name.", undo: () => undefined })}>
+        save
+      </button>
+      <button type="button" onClick={() => push({ message: "A notice of the app's own.", action: { label: "Act", run: () => undefined }, yields: true })}>
+        notice
+      </button>
+    </>
+  );
+}
+
+test("a notice of the app's own never takes the place of the message about what the person just did", async () => {
+  const user = userEvent.setup();
+  render(
+    <ToastProvider seconds={0}>
+      <Notice />
+    </ToastProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "save" }));
+  await user.click(screen.getByRole("button", { name: "notice" }));
+  expect(region()).toHaveTextContent("Saved the name.");
+  expect(within(region()).getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  expect(region()).not.toHaveTextContent("A notice of the app's own.");
+  await user.click(within(region()).getByRole("button", { name: "Dismiss" }));
+  await user.click(screen.getByRole("button", { name: "notice" }));
+  expect(region()).toHaveTextContent("A notice of the app's own.");
+});

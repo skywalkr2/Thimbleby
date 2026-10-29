@@ -21,6 +21,9 @@ export interface ToastInput {
   key?: string;
   /** What the message is: done (the default, a check) or a warning (a sign that something did not work). */
   tone?: "done" | "warn";
+  /** A notice of the app's own that the status chip and Today also carry: shown only while no other message is, so it
+   * never takes the place of the message about what the person just did (and that message's Undo). */
+  yields?: boolean;
 }
 
 interface Toast extends ToastInput {
@@ -86,6 +89,7 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
     const token = toast.undo ? nextToken.current++ : 0;
     if (toast.undo) undos.current.push({ token, run: toast.undo });
     setToasts((shown) => {
+      if (toast.yields && shown.length) return shown;
       const replaced = toast.key ? shown.filter((x) => x.key === toast.key) : [];
       const gone = new Set(replaced.flatMap((x) => x.undoTokens));
       if (gone.size) undos.current = undos.current.filter((u) => !gone.has(u.token));
