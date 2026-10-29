@@ -449,6 +449,23 @@ test("a waiting question takes its reply right on its line", async () => {
   );
 });
 
+test("a reply handed in while Today waits for Start says it waits until the person chooses Start", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET followups": () => waitingSections(),
+    "GET people": () => [],
+    "GET today/queue": () => [{ key: "first_go", group: "decide", kind: "first_go", count: 2, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} }],
+    "POST questions/Q-1/reply": () => ({ request: "REQ-5", source: "SRC-5" }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await user.click(screen.getByRole("button", { name: "Record reply" }));
+  await user.type(screen.getByRole("textbox", { name: /Robin's reply/ }), "Yes, the index is final.");
+  await user.click(screen.getByRole("button", { name: "Add reply" }));
+  expect(await screen.findByText("Handed in. It waits until you choose Start on Today.")).toBeInTheDocument();
+  expect(screen.queryByText(/is on it/)).toBeNull();
+});
+
 const finishRoutes = {
   "POST followups/PER-2/actions/ACT-1/finished": () => ({ ok: "ACT-1" }),
   "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }),

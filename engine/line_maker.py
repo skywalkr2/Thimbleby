@@ -9,6 +9,7 @@ screens: it is built only here, for the line, and is never written into a record
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -43,7 +44,9 @@ def _source(view: Any, source_id: str | None) -> dict[str, Any] | None:
     origin = source_origin(source)
     if source is None or origin is None or origin["kind"] not in (LINK, SOURCE):
         return None
-    return {"title": source.data.get("title") or "", "origin": origin}
+    # A pasted message's title can begin with its header label; the screen words "From {source}" itself.
+    named = re.sub(r"^\s*from:\s*", "", source.data.get("title") or "", flags=re.IGNORECASE)
+    return {"title": named, "origin": origin}
 
 
 def _maker_of_changeset(cs: Any) -> str | None:

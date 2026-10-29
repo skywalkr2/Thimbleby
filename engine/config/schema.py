@@ -2736,6 +2736,13 @@ class UiFile(FileModel):
         le=1200,
         description="Below this width the screen uses the phone layout: one pane and a bottom bar.",
     )
+    afternoon_from_hour: int = Field(
+        12,
+        ge=0,
+        le=23,
+        description="The hour of the person's day (0 to 23, on their clock) from which the brief that opens the day "
+        "is called the afternoon brief.",
+    )
     toast_seconds: float = Field(
         7,
         ge=0,

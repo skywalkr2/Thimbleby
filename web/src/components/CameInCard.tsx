@@ -8,16 +8,16 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { todayOn, wallTime, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
+import { useSides } from "../lib/sides";
 import { anyReading } from "../lib/sources";
-import { viewHref } from "../lib/views";
+import { recordView, viewHref } from "../lib/views";
 import { Button } from "../ui/Button";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSources";
-import { RowMenu } from "./RowMenu";
+import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
-import { Pill } from "../ui/Pill";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -84,7 +84,19 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const now = useNow();
   const today = todayOn(now);
   const items = arrived.data?.items ?? [];
-  const { setAside: moveToFolder } = useSetAside();
+  const { setAside: moveToFolder, isPersonal, isSideCorrection } = useSetAside();
+  const { justMe, personal, sides } = useSides();
+  // Treat as: brought in under a side by name, as Handled for you offers it for mail read with nothing to do. With only
+  // Personal there is one choice; with nothing beside Personal and no work words, none.
+  const named = sides.map((side) => ({ id: side.project, name: side.name }));
+  const asSides = [...(personal ? [{ id: personal, name: t("sides.filter.personal") }] : []), ...named];
+  const treatAs = (message: S["ArrivedView"]): MenuAction[] => {
+    const mail = { id: message.snapshot, title: message.title, version: message.version ?? 0, tab: "read" as const };
+    if (justMe) return [];
+    return named.length > 0
+      ? asSides.map((side) => ({ id: `side-${side.id}`, label: t("setaside.treat_as", { side: side.name }), run: () => void isSideCorrection(side)(mail) }))
+      : [{ id: "personal", label: t("setaside.personal"), run: () => void isPersonal(mail) }];
+  };
   const sourceName = useSourceNames(items.map((m) => m.source));
   const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
   const settled = !arrived.isPending && !watch.isPending;
@@ -136,8 +148,20 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
               <li key={`${message.snapshot}:${i}`} className={message.unread ? "tb-row unread" : "tb-row"}>
                 <div className="tb-what">
                   <div className="tb-title">
-                    {message.unread && <Pill tone="need" className="pill-gap">{t("today.arrived.new")}</Pill>}
-                    <span>{message.link ? <SafeLink label={message.title} url={message.link} /> : message.title}</span>
+                    {message.unread && (
+                      <span className="tb-unread-dot" data-unread-dot="">
+                        <span className="sr">{t("today.arrived.new")}</span>
+                      </span>
+                    )}
+                    <span>
+                      {message.saved ? (
+                        <a href={viewHref(recordView("source", message.saved))}>{message.title}</a>
+                      ) : message.link ? (
+                        <SafeLink label={message.title} url={message.link} />
+                      ) : (
+                        message.title
+                      )}
+                    </span>
                   </div>
                   {meta && (
                     <div className="tb-meta" title={message.sender_address ?? undefined}>
@@ -151,7 +175,11 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
                 <RowMenu
                   label={message.title}
                   actions={[
+                    ...treatAs(message),
                     { id: "sales", label: t("setaside.menu_sales"), run: () => void moveToFolder({ id: message.snapshot, title: message.title }, "sales") },
+                    ...(message.saved && message.link
+                      ? [{ id: "open", label: t("setaside.open"), run: () => void window.open(message.link ?? "", "_blank", "noopener,noreferrer") }]
+                      : []),
                   ]}
                 />
               </li>

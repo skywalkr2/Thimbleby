@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { dayAndTime, inputOn, momentOf, nextMonday, onTheClock, setClockZone, sinceDay, time, todayOn, whenText } from "./dates";
+import { dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, sinceDay, time, todayOn, whenText } from "./dates";
 
 test("the coming Monday is never the day itself: a Monday holds for the Monday a week on", () => {
   // The 19th of October is a Monday in this year.
@@ -75,4 +75,17 @@ test("with no zone set, or a name the browser doesn't know, moments stay on the 
   expect(time(new Date(MOMENT))).toBe("2:37 PM");
   setClockZone("Narnia/Cair_Paravel");
   expect(time(new Date(MOMENT))).toBe("2:37 PM");
+});
+
+test("the afternoon starts at the configured hour on the person's clock", () => {
+  setClockZone("UTC");
+  const at = (hour: number, minute = 0) => new Date(Date.UTC(2026, 9, 20, hour, minute));
+  expect(isAfternoon(at(11, 59), 12)).toBe(false);
+  expect(isAfternoon(at(12), 12)).toBe(true);
+  expect(isAfternoon(at(12), 14)).toBe(false);
+  expect(isAfternoon(at(14), 14)).toBe(true);
+  setClockZone("Asia/Tokyo");
+  expect(isAfternoon(at(2, 59), 12)).toBe(false);
+  expect(isAfternoon(at(3), 12)).toBe(true);
+  setClockZone(undefined);
 });

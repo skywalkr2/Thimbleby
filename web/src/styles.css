@@ -384,6 +384,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .meeting-line [data-field]:first-child { flex-basis: 12rem; }
 .meeting-line [data-variant] { flex: none; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
+/* The unread mark: a dot before the title, and no slot at all once the message is read. */
+.tb-unread-dot { display: inline-block; width: 8px; height: 8px; margin-inline-end: var(--space-2); border-radius: var(--radius-full); background: var(--accent); flex: none; }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }
 .tb-row [data-variant] { flex: none; }
 .reminder-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }

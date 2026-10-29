@@ -134,8 +134,8 @@ test("a clash line names both meetings with their times and calendars and offers
     ],
     { "POST suggestions/not-now": () => ({ signal: "SIG-1" }) },
   );
-  const text = await screen.findByText(/^Sort out the clash on .*: Site visit \(.*from Work calendar\) and Supplier call \(.*from your notes\)/);
-  expect(text).toBeInTheDocument();
+  // The title is short: the day and the two meetings. The times and calendars are in what the line opens.
+  expect(await screen.findByText(/^Sort out the clash on [^:]*: Site visit and Supplier call$/)).toBeInTheDocument();
   expect(screen.getByText("They overlap by 30 minutes")).toBeInTheDocument();
   expect(row("clash").className).toMatch(/plain/);
   await user.click(within(row("clash")).getByRole("button", { name: "Open Site visit" }));
@@ -184,4 +184,62 @@ test("a suggestion has Not now in its menu, which puts it off with Undo; what is
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST suggestions/not-now/SIG-9/undo")).toBe(true));
   expect(within(row("capacity")).queryByRole("button", { name: /More|menu/i })).toBeNull();
+});
+
+test("a clash line opens both entries, each with when it is, its calendar, Move and Open", async () => {
+  const user = userEvent.setup();
+  const own = (record: string): S["ActOptionsView"] => ({
+    record,
+    kind: "event",
+    account: null,
+    account_label: null,
+    acting: false,
+    can_act: false,
+    channel_label: null,
+    actions: [],
+    answers: [],
+    propose_refusal: null,
+    folder_source: null,
+    folders_listed: false,
+    event_actions: [],
+    event_own: true,
+    event_why: null,
+  });
+  show(
+    [
+      line("clash", {
+        key: "clash:a:b:2026-10-27",
+        text: "Site visit",
+        other: "Supplier call",
+        state: "overlap",
+        minutes: 30,
+        due: "2026-10-27",
+        at: "2026-10-27T11:00:00+00:00",
+        starts: "2026-10-27T10:30:00+00:00",
+        ends: "2026-10-27T11:30:00+00:00",
+        other_starts: "2026-10-27T11:00:00+00:00",
+        other_ends: "2026-10-27T12:00:00+00:00",
+        source_name: "Work calendar",
+        other_source_name: null,
+        entry: "EVT-3",
+        other_entry: "EVT-4",
+      }),
+    ],
+    {
+      "GET acts/options?record=EVT-3": () => own("EVT-3"),
+      "GET acts/options?record=EVT-4": () => own("EVT-4"),
+      "GET record?kind=event&id=EVT-3": () => ({ kind: "event", id: "EVT-3", version: 1, fields: { id: "EVT-3", title: "Site visit", start: "2026-10-27T10:30:00+00:00", end: "2026-10-27T11:30:00+00:00" }, long_text: [] }),
+      "GET record?kind=event&id=EVT-4": () => ({ kind: "event", id: "EVT-4", version: 1, fields: { id: "EVT-4", title: "Supplier call", start: "2026-10-27T11:00:00+00:00", end: "2026-10-27T12:00:00+00:00" }, long_text: [] }),
+    },
+  );
+  await user.click(await screen.findByRole("button", { name: /More|menu/i }));
+  await user.click(await screen.findByRole("menuitem", { name: "Look closer" }));
+  const first = await screen.findByRole("group", { name: "Site visit" });
+  const second = screen.getByRole("group", { name: "Supplier call" });
+  expect(within(first).getByText("Work calendar")).toBeInTheDocument();
+  expect(within(second).getByText("The app's own calendar")).toBeInTheDocument();
+  expect(within(first).getByRole("link", { name: "Open" })).toBeInTheDocument();
+  expect(within(second).getByRole("link", { name: "Open" })).toBeInTheDocument();
+  expect(await within(first).findByRole("button", { name: /Move/ })).toBeInTheDocument();
+  expect(await within(second).findByRole("button", { name: /Move/ })).toBeInTheDocument();
 });

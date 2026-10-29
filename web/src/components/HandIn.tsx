@@ -16,6 +16,7 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
 import { FormBlock } from "../ui/FormBlock";
+import { useHandedToast, useWaitsForStart } from "../lib/handed-toast";
 
 const OwnContext = createContext<{ ids: Set<string>; add: (id: string) => void }>({
   ids: new Set(),
@@ -59,6 +60,8 @@ export function HandIn(props: { onClose: () => void }) {
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  const waitsForStart = useWaitsForStart();
+  const toast = useHandedToast();
   const first = useRef<HTMLTextAreaElement>(null);
   useEffect(() => first.current?.focus(), []);
 
@@ -69,9 +72,14 @@ export function HandIn(props: { onClose: () => void }) {
     const body: S["HandIn"] = { ...words };
     if (sensitivity) body.data_level = sensitivity;
     if (project) body.project = project;
+    let waits = false;
     const handed = await act(
-      () => api.handIn(body),
-      () => ({ message: t("toast.handed_in") }),
+      async () => {
+        const made = await api.handIn(body);
+        waits = await waitsForStart();
+        return made;
+      },
+      () => toast(waits, t("toast.handed_in"), t("toast.handed_in_waiting")),
     );
     setBusy(false);
     if (handed) {

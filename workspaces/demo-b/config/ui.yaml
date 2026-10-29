@@ -4,6 +4,7 @@ wording: {}
 shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, move: m, undo: u, hand_in: n, help: "?", ask: /, next_pane: "]", previous_pane: "[", show_new: "N"}
 narrow_below_px: 640   # below this width: the phone layout, with a bottom bar
 toast_seconds: 7
+afternoon_from_hour: 13   # the hour of your day from which the opening brief is called the afternoon brief
 links: [{name: Planning board, address: "https://planning-board.example.com/spring"}, {name: Shared schedule, address: "https://shared-schedule.example.com/team"}]   # links to your own pages, shown in the header
 feedback_to: feedback@example.com   # where the feedback button writes
 handled_group: kind   # how Handled for you groups what it lists to start with: kind, reason or sender

@@ -23,6 +23,8 @@ from engine.names import People
 _HEAD_CHARS = 4000
 _HEAD_LINES = 40
 TOPIC_WORDS = 8
+#: The kind of source the words typed to answer a question are kept as.
+ANSWER_NOTE = "note:answered"
 
 _HEADER = re.compile(r"^\s*(from|subject)\s*:\s*(.+?)\s*$", re.IGNORECASE)
 _ADDRESS = re.compile(r"\s*<[^>]*>\s*|\s*\([^)]*\)\s*")
@@ -79,7 +81,8 @@ def title_for(
             watched_kind or "change", person, shown, _clean_subject(source.get("title") or "") or topic_from(head)
         )
     if source.get("trust") == "trusted":
-        return Title("note", None, None, topic_from(head))
+        # The words typed to answer a question are the person's answer, though they are kept as a note.
+        return Title("answer" if source.get("kind") == ANSWER_NOTE else "note", None, None, topic_from(head))
     headers = _headers(head)
     if "from" in headers or "subject" in headers:
         person, shown = _who(headers.get("from"), people)

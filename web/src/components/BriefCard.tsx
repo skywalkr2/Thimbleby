@@ -4,12 +4,12 @@
 // which is remembered in this browser only and is no signal of anything. The Monday form also holds the week's goals
 // (kept as confirmed) and the message to whoever the person reports to.
 import { useQuery } from "@tanstack/react-query";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useIsNarrow } from "../lib/media";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { copyMessage } from "../lib/copy";
-import { day, wallTime } from "../lib/dates";
+import { day, isAfternoon, wallTime } from "../lib/dates";
 import { durationWords } from "../lib/duration";
 import { chooseFilters } from "../lib/open-items";
 import { onSide, useSideFilter } from "../lib/sides";
@@ -18,7 +18,7 @@ import { useMoney } from "../lib/money";
 import { reveal } from "../lib/reveal";
 import { useDraftAct, useSendOptions } from "../lib/acts";
 import { useToasts } from "../lib/toasts";
-import { useQueue, type QueueLine } from "../lib/today";
+import { useQueue, useTodayCount, type QueueLine } from "../lib/today";
 import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -34,8 +34,10 @@ type Tn = ReturnType<typeof useWords>["tn"];
 
 const KEY = "brief-closed";
 
+
 /** Whether the card for a form was closed for this day in this browser. A browser that blocks storage shows it every time. */
 function closedFor(workspace: string, form: string, on: string): boolean {
+  if (closedNow.has(`${workspace}:${form}:${on}`)) return true;
   try {
     return window.localStorage.getItem(`${KEY}:${workspace}:${form}:${on}`) === "1";
   } catch {
@@ -43,12 +45,45 @@ function closedFor(workspace: string, form: string, on: string): boolean {
   }
 }
 
+// What was closed when this browser won't keep it, so Undo and the way back work in that case too.
+const closedNow = new Set<string>();
+const listeners = new Set<() => void>();
+let version = 0;
+const tell = () => {
+  version += 1;
+  for (const listener of listeners) listener();
+};
+
 function closeFor(workspace: string, form: string, on: string) {
   try {
     window.localStorage.setItem(`${KEY}:${workspace}:${form}:${on}`, "1");
   } catch {
-    // Storage can be blocked; the card then comes back, which is harmless.
+    // Storage can be blocked; the close then lasts until the page is closed.
+    closedNow.add(`${workspace}:${form}:${on}`);
   }
+  tell();
+}
+
+/** Brings a brief closed for the day back. */
+function reopenFor(workspace: string, form: string, on: string) {
+  closedNow.delete(`${workspace}:${form}:${on}`);
+  try {
+    window.localStorage.removeItem(`${KEY}:${workspace}:${form}:${on}`);
+  } catch {
+    // Storage can be blocked.
+  }
+  tell();
+}
+
+/** Draws the caller again whenever a brief is closed or brought back. */
+export function useBriefClosings(): number {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => version,
+  );
 }
 
 export function useBrief(form: Form | null) {
@@ -59,7 +94,14 @@ export function useBrief(form: Form | null) {
  * with no message and no goals (a card with nothing in it is not drawn). */
 export function hasBrief(data: Brief | undefined, workspace: string): boolean {
   if (!data || data.form === null || closedFor(workspace, data.form, data.day)) return false;
-  return !data.quiet || !!data.message || !!data.goals || data.sections.length > 0;
+  return briefHasContent(data);
+}
+
+const briefHasContent = (data: Brief) => !data.quiet || !!data.message || !!data.goals || data.sections.length > 0;
+
+/** Whether the brief is due, has something in it and was closed for the day: the card then leaves a button to bring it back. */
+export function briefClosed(data: Brief | undefined, workspace: string): boolean {
+  return !!data && data.form !== null && closedFor(workspace, data.form, data.day) && briefHasContent(data);
 }
 
 const clock = (at: string | null | undefined) => (at ? wallTime(`T${at}`) : "");
@@ -235,7 +277,7 @@ function LineRow(props: { line: Line; queue: QueueLine | undefined; onOpenRecord
     if (line.link) props.onOpenRecord(line.link.kind, line.link.id);
   };
   const opens = !offer && (Boolean(line.queue) || Boolean(line.link) || Boolean(view && props.onOpenView));
-  const meta = [line.kind === "own_due" && line.person_name ? t("brief.line.own_due.for", { name: line.person_name }) : "", line.kind === "week_promise" && line.you && line.person_name ? t("brief.line.week.to", { name: line.person_name }) : "", line.ready ? t("brief.ready") : ""].filter(Boolean);
+  const meta = [line.kind === "own_due" && line.person_name ? t("brief.line.own_due.for", { name: line.person_name }) : "", line.kind === "week_promise" && line.you && line.person_name ? t("brief.line.week.to", { name: line.person_name }) : "", line.on_today_line ? t("brief.line.on_today_marked") : "", line.ready ? t("brief.ready") : ""].filter(Boolean);
   return (
     <li className={styles.line} data-kind={line.kind}>
       <span className={styles.what}>{words(line, props.queue)}</span>
@@ -502,21 +544,32 @@ export function BriefCard(props: {
   const { t, tn } = useWords();
   const act = useAct();
   const [asked, setAsked] = useState<Form | null>(null);
-  const [, shut] = useState(0);
+  useBriefClosings();
   // On the phone the card is folded to its title until it is opened.
   const narrow = useIsNarrow();
   const [unfolded, setUnfolded] = useState(false);
   const found = useBrief(asked);
   const queue = useQueue();
   const filter = useSideFilter();
+  // How many things need the person is Today's own count (the heading's), so the two never disagree.
+  const needing = useTodayCount(filter.choice);
   const id = useId();
   const data = found.data;
   if (!data || data.form === null) return null;
   const form = data.form;
-  if (closedFor(props.workspace, form, data.day)) return null;
+  if (closedFor(props.workspace, form, data.day)) {
+    if (!briefHasContent(data)) return null;
+    return (
+      <p className={styles.reopen} data-brief-closed={form}>
+        <Button variant="quiet" onClick={() => reopenFor(props.workspace, form, data.day)}>
+          {form === "morning" ? t("brief.show.morning") : form === "evening" ? t("brief.show.evening") : t("brief.show.monday")}
+        </Button>
+      </p>
+    );
+  }
   const byKey = new Map((queue.data ?? []).map((line) => [line.key, line]));
   const others = data.forms.filter((f) => f !== form);
-  const title = form === "morning" ? t("brief.title.morning") : form === "evening" ? t("brief.title.evening") : t("brief.title.monday");
+  const title = form === "morning" ? t(isAfternoon(new Date(), data.afternoon_from_hour) ? "brief.title.afternoon" : "brief.title.morning") : form === "evening" ? t("brief.title.evening") : t("brief.title.monday");
   const showWords = (f: Form) => (f === "morning" ? t("brief.show.morning") : f === "evening" ? t("brief.show.evening") : t("brief.show.monday"));
   const quiet = form === "morning" ? t("brief.quiet.morning") : form === "evening" ? t("brief.quiet.evening") : t("brief.quiet.monday");
   if (narrow && !unfolded) {
@@ -565,30 +618,38 @@ export function BriefCard(props: {
             </Button>
           )}
           <Button
+            variant="quiet"
             onClick={() => {
               closeFor(props.workspace, form, data.day);
-              shut((n) => n + 1);
               props.onClosed?.();
+              void act(
+                async () => undefined,
+                () => ({ message: t("brief.closed"), undo: async () => reopenFor(props.workspace, form, data.day) }),
+              );
             }}
           >
             {t("brief.close")}
           </Button>
         </div>
       </div>
+      {data.on_today > 0 && (
+        <p className={styles.summary} data-brief-summary="">
+          {tn("brief.on_today", data.on_today)}
+        </p>
+      )}
       {data.message && (data.message.state === "ask" ? <WhoFor message={data.message} /> : <Message message={data.message} />)}
       {data.sections.map((section) => ({ section, lines: section.lines.filter((line) => onSide(line.side, filter.choice)) })).filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0).map(({ section, lines }) => (
         <div key={section.key} className={styles.section} data-section={section.key}>
           <h3 className={styles.sub}>{heading(section.key, t)}</h3>
           <ul className={styles.lines}>
             {lines.map((line) => (
-              <LineRow key={line.key} line={line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
+              <LineRow key={line.key} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
             ))}
           </ul>
           {section.more > 0 && <p className="hint">{tn("brief.more", section.more)}</p>}
         </div>
       ))}
       {data.quiet && <p className={styles.quiet}>{quiet}</p>}
-      {data.on_today > 0 && <p className="hint">{tn("brief.on_today", data.on_today)}</p>}
       {data.goals && <Goals goals={data.goals} />}
     </section>
   );

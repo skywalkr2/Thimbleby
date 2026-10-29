@@ -3,7 +3,8 @@
 In order of what exists: the original page, when the input the item came from has an address a browser can open; else
 the saved text of that input; else the change that created the item, with the request behind it. An item is made from
 an input by its `source`; a piece of knowledge names it in its evidence. An item none of those
-reach (made by the engine itself, or imported without its history) has no origin, and the screen shows no link.
+reach (made by the engine itself, or imported without its history) has no origin, and the screen shows no link. A to-do
+the person typed themselves has none either: there is nothing to go back to but their own typing.
 """
 
 from __future__ import annotations
@@ -49,6 +50,7 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
     if not wanted:
         return {}
     created: dict[str, tuple[str | None, str | None]] | None = None
+    typed: dict[str, tuple[str, str]] = view.creators(kind) if kind == "action" else {}
     out: dict[str, dict[str, Any] | None] = {}
     for record_id in wanted:
         record = view.get(kind, record_id, include_deleted=True)
@@ -57,6 +59,9 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
         found = source_origin(source)
         if found is not None:
             out[record_id] = found
+            continue
+        if typed.get(record_id, ("", ""))[0] == "pm":
+            out[record_id] = None
             continue
         if created is None:
             created = view.creations(kind)

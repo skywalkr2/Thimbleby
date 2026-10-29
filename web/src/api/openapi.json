@@ -5370,6 +5370,18 @@
             "title": "Received",
             "type": "string"
           },
+          "saved": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the saved copy of the message, when it was handed in; its page is where a row opens.",
+            "title": "Saved"
+          },
           "sender": {
             "anyOf": [
               {
@@ -5416,6 +5428,12 @@
               }
             ],
             "title": "Unread"
+          },
+          "version": {
+            "default": 0,
+            "description": "The version of the saved message read, for a correction made from the list.",
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -6710,6 +6728,12 @@
             "description": "For the capacity line: the effort, in minutes, of the to-dos due today or late. For a clash with too little travel time: the minutes the travel between the two meetings needs.",
             "title": "Needed Minutes"
           },
+          "on_today_line": {
+            "default": false,
+            "description": "Today already has a line for this one (a late or due-today to-do, say); it is marked.",
+            "title": "On Today Line",
+            "type": "boolean"
+          },
           "other": {
             "anyOf": [
               {
@@ -7001,6 +7025,11 @@
       "BriefView": {
         "description": "A form of the brief (GET /api/brief). `form` is none when nothing is due yet today; `forms` are the forms that\ncan show now, the one to open with first. `quiet` is a day with nothing to say. `on_today` counts what the Monday\nbriefing left out because Today holds it. `goals` carry the week's goals (the Monday briefing always, the morning\nbrief once they are confirmed); `message` is present when the person reports to someone.",
         "properties": {
+          "afternoon_from_hour": {
+            "description": "`ui.afternoon_from_hour`: the hour of the person's day from which the morning form is called the afternoon brief.",
+            "title": "Afternoon From Hour",
+            "type": "integer"
+          },
           "day": {
             "format": "date",
             "title": "Day",
@@ -7076,7 +7105,8 @@
           "day",
           "forms",
           "sections",
-          "quiet"
+          "quiet",
+          "afternoon_from_hour"
         ],
         "title": "BriefView",
         "type": "object"
@@ -13387,12 +13417,13 @@
         "description": "An item's title in parts (design 7.14); the screen puts them into words: \"{kind} from {person} \u00b7 {topic}\".",
         "properties": {
           "kind": {
-            "description": "email, calendar or change (another watched item); note: the person's own words; pasted: someone else's words handed in; task: work the app started.",
+            "description": "email, calendar or change (another watched item); note: the person's own words; answer: the words typed to answer a question; pasted: someone else's words handed in; task: work the app started.",
             "enum": [
               "email",
               "calendar",
               "change",
               "note",
+              "answer",
               "pasted",
               "task"
             ],
@@ -23412,6 +23443,18 @@
             ],
             "description": "For a review line that covers one applied op: what it did, as the op's name and the item's own words, which the screen says in the past tense; null when the line groups several."
           },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a `batch_item` that is a draft: the drafted text, shown so it can be approved.",
+            "title": "Draft"
+          },
           "due": {
             "anyOf": [
               {
@@ -26365,11 +26408,88 @@
         "title": "Scope",
         "type": "object"
       },
+      "SearchHit": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A few more words to tell it from another, when there are any.",
+            "title": "Detail"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "project",
+              "action",
+              "file",
+              "lesson",
+              "glossary_entry",
+              "routing_entry",
+              "style_note"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "description": "The name or words that matched.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title"
+        ],
+        "title": "SearchHit",
+        "type": "object"
+      },
+      "SearchResults": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "SearchResults",
+        "type": "object"
+      },
       "SendBack": {
         "properties": {
           "note": {
             "title": "Note",
             "type": "string"
+          },
+          "ops": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Indices of the items the note is about; only they are undone. All of the change when left out.",
+            "title": "Ops"
           },
           "undo_first": {
             "default": true,
@@ -38509,6 +38629,56 @@
         "summary": "Handled Personal"
       }
     },
+    "/api/handled/{snapshot_id}/treat-as": {
+      "post": {
+        "description": "Treat as, on mail the assistant already handled with a result: what it did with the mail is undone, the\nmail is filed as chosen (under the `side`, or where its people and words place it), and a correction is\nrecorded. The plain Treat as work refuses such mail.",
+        "operationId": "handled_treat_as_api_handled__snapshot_id__treat_as_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TreatAsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandledDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handled Treat As"
+      }
+    },
     "/api/handled/{snapshot_id}/undo": {
       "post": {
         "description": "Undo Treat as work or Treat as personal on a mail read with nothing to do, while the assistant hasn't\nstarted on it: the mail is listed as read with nothing to do again.",
@@ -43892,6 +44062,47 @@
           }
         },
         "summary": "Schedule Event"
+      }
+    },
+    "/api/search": {
+      "get": {
+        "description": "What matches the typed words, up to a few of each kind; nothing for empty words.",
+        "operationId": "find_api_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Find"
       }
     },
     "/api/series/{series_id}/page": {

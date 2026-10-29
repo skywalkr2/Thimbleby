@@ -233,55 +233,14 @@ test("a note typed on Mark done reaches the assistant with the act", async () =>
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/A-1/status")?.body).toEqual({ status: "done", note: "Done, the printer has it" }));
 });
 
-test("Reassign picks a person from a list and changes the owner, with Undo", async () => {
-  const user = userEvent.setup();
-  const calls = api();
-  renderApp(<OpenItems />);
-  const [first] = await rows();
-  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Reassign…" }));
-  const picker = await screen.findByRole("combobox", { name: "Reassign to" });
-  await waitFor(() => expect(picker).toHaveFocus());
-  await user.selectOptions(picker, "P-3");
-  await waitFor(() =>
-    expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({
-      kind: "action",
-      id: "A-1",
-      read_version: 3,
-      fields: { owners: [{ person: "P-3" }] },
-    }),
-  );
-  expect(await screen.findByText("Reassigned to Sam Twin.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
-});
-
-test("on a shared to-do, Reassign changes one owner and leaves the rest", async () => {
-  const user = userEvent.setup();
-  const shared = action("A-7", "Agree on the back-cover copy", {
-    owners: [
-      { person: "P-1", name: "Quinn Sample" },
-      { person: "P-2", name: "Robin Sample" },
-    ],
-  });
-  const calls = api({}, { actions: [shared] });
-  renderApp(<OpenItems />);
-  const [row] = await rows();
-  await user.click(within(row).getByRole("button", { name: /More actions for Agree on the back-cover copy/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Reassign…" }));
-  await user.selectOptions(await screen.findByRole("combobox", { name: "Whose part" }), "P-2");
-  await user.selectOptions(await screen.findByRole("combobox", { name: "Reassign to" }), "P-3");
-  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-1" }, { person: "P-3" }] } }));
-});
-
 test("Edit changes the words and the due date from the row, sending only what changed", async () => {
   const user = userEvent.setup();
   const calls = api();
   renderApp(<OpenItems />);
   const [first] = await rows();
   await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Edit…" }));
-  const text = await screen.findByRole("textbox", { name: "What to do" });
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  const text = await screen.findByRole("textbox", { name: "Title" });
   await waitFor(() => expect(text).toHaveFocus());
   await user.clear(text);
   await user.type(text, "Send the corrected proof to the printer");
@@ -295,6 +254,39 @@ test("Edit changes the words and the due date from the row, sending only what ch
     }),
   );
   expect(await screen.findByText("Saved.")).toBeInTheDocument();
+});
+
+test("Edit changes the owner from a list, with Undo, and keeps the team the owner acted for", async () => {
+  const user = userEvent.setup();
+  const teamed = action("A-6", "Print the proofs", { owners: [{ person: "P-1", name: "Quinn Sample (Print)", team: "T-1" }] });
+  const calls = api({}, { actions: [teamed] });
+  renderApp(<OpenItems />);
+  const [row] = await rows();
+  await user.click(within(row).getByRole("button", { name: /More actions for Print the proofs/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Owner" }), "P-3");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3", team: "T-1" }] } }));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
+});
+
+test("on a shared to-do, Edit changes the first owner and leaves the rest", async () => {
+  const user = userEvent.setup();
+  const shared = action("A-7", "Agree on the back-cover copy", {
+    owners: [
+      { person: "P-1", name: "Quinn Sample" },
+      { person: "P-2", name: "Robin Sample" },
+    ],
+  });
+  const calls = api({}, { actions: [shared] });
+  renderApp(<OpenItems />);
+  const [row] = await rows();
+  await user.click(within(row).getByRole("button", { name: /More actions for Agree on the back-cover copy/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Owner" }), "P-3");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3" }, { person: "P-2" }] } }));
 });
 
 test("a to-do that nearly repeats another offers Merge with it, at once and with one Undo; one that doesn't offers nothing", async () => {
@@ -342,18 +334,6 @@ test("with nothing open the screen says so, and a failed load offers to try agai
   api({}, { actions: [], questions: [] });
   renderApp(<OpenItems />);
   expect(await screen.findByText("Nothing is open. To-dos and questions appear here as they are made.")).toBeInTheDocument();
-});
-
-test("reassigning keeps the team the owner acted for", async () => {
-  const user = userEvent.setup();
-  const teamed = action("A-6", "Print the proofs", { owners: [{ person: "P-1", name: "Quinn Sample (Print)", team: "T-1" }] });
-  const calls = api({}, { actions: [teamed] });
-  renderApp(<OpenItems />);
-  const [row] = await rows();
-  await user.click(within(row).getByRole("button", { name: /More actions for Print the proofs/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Reassign…" }));
-  await user.selectOptions(await screen.findByRole("combobox", { name: "Reassign to" }), "P-3");
-  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3", team: "T-1" }] } }));
 });
 
 test("with no side besides Personal the filters say Area, never Project, and the state list has no No owner", async () => {
@@ -460,19 +440,6 @@ test("Drop on a to-do that reached people reads Drop it and tell them, says a no
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-9/undo"]));
 });
 
-test("a to-do's menu has Change this, which posts the person's note about that action", async () => {
-  const user = userEvent.setup();
-  const calls = api({ "POST items/action/A-1/change": () => ({ ok: "A-1", request: "REQ-7", signal: "SIG-1" }) });
-  renderApp(<OpenItems />);
-  const [first] = await rows();
-  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
-  await user.click(screen.getByRole("menuitem", { name: "Change this" }));
-  await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Due on Friday instead");
-  await user.click(screen.getByRole("button", { name: "Ask for the change" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST items/action/A-1/change")?.body).toEqual({ note: "Due on Friday instead" }));
-  expect(await screen.findByText("Helper will look at it.")).toBeInTheDocument();
-});
-
 test("what is being learned from a change asked for on a to-do shows on that row", async () => {
   api({
     "GET knowledge/learned": () => ({
@@ -545,4 +512,11 @@ test("the overdue line's link shows the person's own overdue to-dos and no one e
   expect(listed).toHaveLength(2);
   expect(listed.map((r) => r.textContent).join(" ")).toMatch(/Send the proof to the printer.*Pay the invoice|Pay the invoice.*Send the proof/);
   expect(screen.queryByText("Order the sample copies")).toBeNull();
+});
+
+test("the screen says how many need you in the words the side menu uses, from the same answer", async () => {
+  api({ "GET waiting": () => ({ changed: { total: 0, sides: [] }, handled: { total: 0, sides: [] }, followups: { total: 0, sides: [] }, open: { total: 4, sides: [] } }) });
+  renderApp(<OpenItems />);
+  expect(await screen.findByText("4 need you")).toBeInTheDocument();
+  expect(screen.queryByText(/shown/)).not.toBeInTheDocument();
 });

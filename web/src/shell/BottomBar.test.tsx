@@ -13,6 +13,7 @@ function show(handlers: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeed
       current="today"
       version="9.8.7"
       onHandIn={handlers.onHandIn ?? noop}
+      onOpenRecord={noop}
       onAsk={handlers.onAsk ?? noop}
       onHelp={handlers.onHelp ?? noop}
       onFeedback={handlers.onFeedback ?? noop}
@@ -21,25 +22,36 @@ function show(handlers: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeed
   );
 }
 
-test("the bar has Today, Work, a plus for handing something in, Ask and More", () => {
+test("the bar has Today, Work, a plus for handing something in, Search and More", () => {
   show();
   const bar = screen.getByRole("navigation", { name: "Views" });
   expect(within(bar).getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
   expect(within(bar).getByRole("button", { name: "Work" })).toBeInTheDocument();
   expect(within(bar).getByRole("button", { name: "Hand something in" })).toBeInTheDocument();
-  expect(within(bar).getByRole("button", { name: "Ask" })).toBeInTheDocument();
+  expect(within(bar).getByRole("button", { name: "Search" })).toBeInTheDocument();
   expect(within(bar).getByRole("button", { name: "More" })).toBeInTheDocument();
 });
 
-test("the plus and Ask run the same actions as the header's", async () => {
+test("the bar carries the same search field, which ends with Ask", async () => {
+  const user = userEvent.setup();
+  const onAsk = vi.fn();
+  show({ onAsk });
+  await user.click(screen.getByRole("button", { name: "Search" }));
+  const field = screen.getByRole("searchbox");
+  expect(field).toHaveAttribute("placeholder", "Search or ask Helper");
+  await user.click(field);
+  await user.click(screen.getByRole("button", { name: "Ask Helper" }));
+  expect(onAsk).toHaveBeenCalledWith("");
+});
+
+test("the plus runs the same action as the header's", async () => {
   const user = userEvent.setup();
   const onHandIn = vi.fn();
   const onAsk = vi.fn();
   show({ onHandIn, onAsk });
   await user.click(screen.getByRole("button", { name: "Hand something in" }));
-  await user.click(screen.getByRole("button", { name: "Ask" }));
   expect(onHandIn).toHaveBeenCalledTimes(1);
-  expect(onAsk).toHaveBeenCalledTimes(1);
+  expect(onAsk).not.toHaveBeenCalled();
 });
 
 test("Work opens a sheet with its views, as links", async () => {
@@ -80,7 +92,7 @@ test("with no side besides Personal the phone's bar says Your day, not Work, and
     "GET projects": () => [project("PRJ-personal", "Personal")],
   });
   const noop = () => undefined;
-  renderApp(<BottomBar current="today" version="9.8.7" onHandIn={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />);
+  renderApp(<BottomBar current="today" version="9.8.7" onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />);
   const bar = screen.getByRole("navigation", { name: "Views" });
   await user.click(await within(bar).findByRole("button", { name: "Your day" }));
   const sheet = await screen.findByRole("dialog", { name: "Your day" });

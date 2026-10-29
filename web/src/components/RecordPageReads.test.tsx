@@ -58,14 +58,15 @@ test("while a page's names are on their way it shows no id: not in its heading a
 });
 
 test("a map keyed by records says each by its name, and an id the page can't name is not a label", async () => {
+  // A project's page: a to-do's page hides the internal map, so the generic page is read through another kind.
   serve(
-    "action",
-    "ACT-1",
-    { text: "Send the index", told: { "PER-3": "2026-10-28", "PER-9": "2026-10-29" } },
-    [field("text", "long_text"), field("told", "other")],
-    () => page("action", "ACT-1", "Send the index", [{ field: "told", value: "", type: "map", refs: [{ kind: "person", id: "PER-3", name: "Sam Okoro", removed: false }] }]),
+    "project",
+    "PRJ-2",
+    { name: "Send the index", told: { "PER-3": "2026-10-28", "PER-9": "2026-10-29" } },
+    [field("name", "text"), field("told", "other")],
+    () => page("project", "PRJ-2", "Send the index", [{ field: "told", value: "", type: "map", refs: [{ kind: "person", id: "PER-3", name: "Sam Okoro", removed: false }] }]),
   );
-  renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
+  renderApp(<RecordPage kind="project" id="PRJ-2" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText(`Sam Okoro: ${day("2026-10-28")}`);
   expect(within(details).getByText("Who was told")).toBeInTheDocument();
@@ -77,13 +78,14 @@ test("a to-do's page writes a date in its words as a day, in the heading and the
   serve(
     "action",
     "ACT-2",
-    { text: "Lend us the trailer on 2026-11-07", evidence: { quote: "Sam will lend us the trailer on 2026-11-07", source: "note" } },
+    { text: "Lend us the trailer on 2026-11-07", due: "2026-11-09", evidence: { quote: "Sam will lend us the trailer on 2026-11-07", source: "note" } },
     [field("text", "long_text"), field("evidence", "other")],
     () => page("action", "ACT-2", "Lend us the trailer on 2026-11-07"),
   );
   renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
   expect(await screen.findByRole("heading", { level: 1, name: `Lend us the trailer on ${day("2026-11-07")}` })).toBeInTheDocument();
   const details = await screen.findByRole("region", { name: "Details" });
-  expect(details.textContent).toContain(`Sam will lend us the trailer on ${day("2026-11-07")}`);
+  // The to-do page's Due line writes the date as a day; its evidence quote is internal and not shown there.
+  expect(details.textContent).toContain(`Due${day("2026-11-09")}`);
   expect(document.body.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
 });

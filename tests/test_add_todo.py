@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.app import create_app
+from engine.origin import origins
 from engine.today import zone
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B
@@ -164,3 +165,11 @@ def test_what_is_not_clear_is_said_and_nothing_is_saved(api):
         if result.status_code == 409:
             assert said in result.json()["detail"], body
     assert len(store.read().list("action")) == before
+
+
+def test_a_typed_to_do_has_no_where_it_came_from(api):
+    client, store, cfg = api
+    made = client.post("/api/todos", json={"text": TEXT, "owners": [pm_of(cfg)]}).json()
+    action_id = made["action"]
+    assert client.get("/api/record", params={"kind": "action", "id": action_id}).json()["origin"] is None
+    assert origins(store.read(), "action", [action_id]) == {action_id: None}

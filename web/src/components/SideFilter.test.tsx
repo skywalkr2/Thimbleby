@@ -37,7 +37,7 @@ const line = (kind: Line["kind"], over: Partial<Line> = {}): Line => ({
 const personal = line("decision", { key: "question:Q-1", text: "Pick the family photo", question: "Q-1", side: PERSONAL_ID });
 const work = line("decision", { key: "question:Q-2", text: "Approve the invoice run", question: "Q-2", side: BUSINESS_ID });
 const restart = line("restart", { key: "restart", count: 2 });
-const sort = line("unfiled", { key: "unfiled", group: "review", count: 3, state: "which_side", subject: BUSINESS });
+const sort = line("unfiled", { key: "unfiled", group: "review", count: 3, state: "which_side", subject: BUSINESS, side: PERSONAL_ID });
 
 const hasBusiness: Routes = {
   "GET setup/business": () => ({ business: true, name: BUSINESS, personal: PERSONAL_ID, sides: [{ project: BUSINESS_ID, kind: "business", name: BUSINESS }] }),
@@ -146,7 +146,8 @@ test("picking Personal hides the business lines and keeps the app's own lines an
   await user.click(screen.getByRole("radio", { name: BUSINESS }));
   expect(await screen.findByText("Approve the invoice run", { selector: "li *" })).toBeInTheDocument();
   expect(screen.queryByText("Pick the family photo", { selector: "li *" })).toBeNull();
-  expect(lineKeys().sort()).toEqual(["decision", "restart", "unfiled"]);
+  // The question says the items wait under Personal, so it is not on the business's tab.
+  expect(lineKeys().sort()).toEqual(["decision", "restart"]);
 });
 
 test("a side with nothing on it says which side it is", async () => {

@@ -32,6 +32,8 @@ export function AskChooser(props: {
   const [noting, setNoting] = useState(false);
   const [adding, setAdding] = useState(false);
   const word = ask.about === "owner" ? t("ask.add_owner") : t("ask.use_person");
+  // A name that is the person's own (their mailbox, their signature) is answered in one click, first among the choices.
+  const me = ask.about === "held-op" ? people.data?.find((p) => p.is_pm) : undefined;
   const near = ask.about === "owner" && props.fold ? ask.suggestion : null;
   const foldInto = near?.fold_into && near.fold_version != null ? { id: near.fold_into, version: near.fold_version, text: near.fold_into_text ?? "" } : null;
   const fold = () => {
@@ -42,10 +44,10 @@ export function AskChooser(props: {
     );
   };
   // The note goes with the choice, on the same route; with no note the body is only the person.
-  const choose = (note?: string) =>
+  const choose = (note?: string, who = person, name = chosen) =>
     act(
-      () => api.answer(ask.id, note ? { person, text: note } : { person }),
-      (done) => ({ message: noted(t(ask.about === "owner" ? "toast.owner_set" : "toast.person_set", { name: chosen }), done.request) }),
+      () => api.answer(ask.id, note ? { person: who, text: note } : { person: who }),
+      (done) => ({ message: noted(t(ask.about === "owner" ? "toast.owner_set" : "toast.person_set", { name }), done.request) }),
     );
   return (
     <div className="ask-chooser">
@@ -61,7 +63,12 @@ export function AskChooser(props: {
       />
       {foldInto && <span className="hint">{t("ask.fold_hint")}</span>}
       <Actions align="end">
-        <Button variant="primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
+        {me && (
+          <Button variant="primary" data-key="primary" onClick={() => void choose(undefined, me.id, me.name)}>
+            {t("ask.this_is_me")}
+          </Button>
+        )}
+        <Button variant={me ? "secondary" : "primary"} data-key={me ? undefined : "primary"} disabled={!person} onClick={() => void choose()}>
           {word}
         </Button>
         {foldInto && (

@@ -1667,7 +1667,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/changesets/{cs_id}/send-back")
     def sendback(cs_id: str, body: SendBack) -> Requeued:
         need("changeset", cs_id)
-        new = guard(lambda: send_back(store, cs_id, body.note, undo_first=body.undo_first))
+        new = guard(lambda: send_back(store, cs_id, body.note, undo_first=body.undo_first, ops=body.ops))
         changed()
         worker.poke()
         return Requeued(request=new)

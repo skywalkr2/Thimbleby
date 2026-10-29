@@ -17,6 +17,7 @@ import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
 import { AiCompare } from "./components/AiCompare";
 import { Ask } from "./components/Ask";
+import { SEARCH_FIELD } from "./components/SearchBox";
 import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
@@ -68,6 +69,11 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
 const styleGuideShown = (rc: S["RuntimeConfig"]) => rc.demo || import.meta.env.DEV;
 
 /** The first visible element that matches, so a control that exists twice (a field and an icon) is found where it shows. */
+/** The search key: the cursor goes to the search field that is showing. */
+function focusSearch() {
+  visible(`[${SEARCH_FIELD}]`)?.focus();
+}
+
 function visible(selector: string): HTMLElement | null {
   const all = Array.from(document.querySelectorAll<HTMLElement>(selector));
   return all.find((el) => el.getClientRects().length > 0) ?? all[0] ?? null;
@@ -144,7 +150,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup.data]);
   const handlers = useMemo(
-    () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true), show_new: showNewLines }),
+    () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: focusSearch, help: () => setHelp(true), show_new: showNewLines }),
     [undoLast],
   );
   const keys = rc.shortcuts;
@@ -325,7 +331,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           feedbackTo={rc.feedback_to}
           onClose={() => {
             setAsk(null);
-            restoreFocus(() => visible("[data-ask-button]"));
+            restoreFocus(() => visible(`[${SEARCH_FIELD}], [data-ask-button]`));
           }}
         />
       )}
@@ -386,7 +392,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           narrow={narrow}
           shortcuts={keys}
           onHandIn={() => setHandIn(true)}
-          onAsk={() => setAsk({})}
+          onOpenRecord={openRecord}
+          onAsk={(question) => setAsk(question ? { question } : {})}
           onHelp={() => setHelp(true)}
           onFeedback={openFeedback}
           onOpenGuide={openGuide}
@@ -417,7 +424,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             feedbackTo={rc.feedback_to}
             onClose={() => {
               setAsk(null);
-              restoreFocus(() => visible("[data-ask-button]"));
+              restoreFocus(() => visible(`[${SEARCH_FIELD}], [data-ask-button]`));
             }}
           />
         )}
@@ -427,7 +434,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           current={navView}
           version={rc.version}
           onHandIn={() => setHandIn(true)}
-          onAsk={() => setAsk({})}
+          onOpenRecord={openRecord}
+          onAsk={(question) => setAsk(question ? { question } : {})}
           onHelp={() => setHelp(true)}
           onFeedback={openFeedback}
           onOpenGuide={() => openGuide()}

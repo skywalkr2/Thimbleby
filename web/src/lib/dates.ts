@@ -21,6 +21,11 @@ export function setClockZone(zone: string | null | undefined): void {
 const onClock = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(undefined, { ...options, timeZone: clockZone });
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+/** Whether a moment is at or past the given hour of the person's day, on the person's clock. */
+export function isAfternoon(when: Date, fromHour: number): boolean {
+  return onTheClock(when).minutes >= fromHour * 60;
+}
+
 /** A time of day written from numbers (a wall time), with no zone to move it by. */
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 

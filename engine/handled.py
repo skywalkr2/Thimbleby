@@ -426,6 +426,62 @@ def treat_read(
     return made
 
 
+def _earlier_work(view: Any, snapshot_id: str) -> tuple[Any, Any] | None:
+    """The latest request for a held message and its changeset, when that changeset recorded something."""
+    snap = view.get("snapshot", snapshot_id)
+    if snap is None or not snap.data.get("message"):
+        return None
+    live = [
+        r for r in _mail_requests(view).get((snap.data["source"], snap.data["key"]), []) if not r.data.get("dismissed")
+    ]
+    earlier = live[-1] if live else None
+    cs = (
+        view.get("changeset", earlier.data["changeset"])
+        if earlier is not None and earlier.data.get("changeset")
+        else None
+    )
+    if earlier is None or cs is None or not cs.data["ops"] or earlier.data.get("set_aside"):
+        return None
+    return earlier, cs
+
+
+def acted_on(store: Any, snapshot_id: str) -> bool:
+    """Whether the assistant already handled this message with a result (something it recorded)."""
+    return _earlier_work(store.read(), snapshot_id) is not None
+
+
+def treat_handled(
+    ws: Any, store: Any, cfg: Any, snapshot_id: str, *, project: str | None, now: datetime | None = None
+) -> str:
+    """Correct mail the assistant already handled with a result: what was done with it is undone, and the mail is
+    handed in again as work (or, with `project`, filed under that project). Records the correction against the earlier
+    work. Returns the new request. Raises `StoreError` for mail that has no earlier work to correct."""
+    from engine.dispatcher import signal, undo_changeset
+    from engine.watch import hand_in_snapshot
+
+    found = _earlier_work(store.read(), snapshot_id)
+    if found is None:
+        raise StoreError("The assistant hasn't done anything with that message that could be taken back.")
+    earlier, cs = found
+    cs_id = cs.id
+    undo_changeset(store, cs_id)
+    made = hand_in_snapshot(ws, store, cfg, snapshot_id, now)
+    if made is None:
+        raise StoreError("The source this message came from isn't set up any more, so it can't be read again.")
+    if project:
+        with store.transaction() as tx:
+            req = tx.get("request", made)
+            tx.update("request", made, {"project": project}, _PM, read_version=req.version)
+    signal(
+        store,
+        "pulled_back",
+        [earlier.id],
+        "Handled with a result" + ("; treated as filed under another project" if project else "; treated as work"),
+        changeset=cs_id,
+    )
+    return made
+
+
 def take_back_read(store: Any, snapshot_id: str) -> None:
     """Undo `treat_read` while the new read hasn't started: the request is set aside without trying again, so the mail
     is listed as read with nothing to do again. Raises `StoreError` once the assistant has started on it."""

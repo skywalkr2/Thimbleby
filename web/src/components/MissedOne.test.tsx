@@ -34,7 +34,7 @@ function header(routes: Parameters<typeof fakeApi>[0] = {}) {
   renderApp(
     <RestartProvider hellos={1}>
       <MissedOneProvider>
-        <Header rc={rc} live={{ state: "live", lastUpdate: null, refresh: noop }} narrow={false} shortcuts={rc.shortcuts} onHandIn={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} onOpenQuality={noop} />
+        <Header rc={rc} live={{ state: "live", lastUpdate: null, refresh: noop }} narrow={false} shortcuts={rc.shortcuts} onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} onOpenQuality={noop} />
       </MissedOneProvider>
     </RestartProvider>,
   );
@@ -120,7 +120,7 @@ test("on a phone it is in the More sheet", async () => {
   fakeApi({ "GET panels": () => [], "GET changes": () => [{ id: "REQ-1" }], "GET followups": () => [] });
   renderApp(
     <MissedOneProvider>
-      <BottomBar current="today" version="9.8.7" onHandIn={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />
+      <BottomBar current="today" version="9.8.7" onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />
     </MissedOneProvider>,
   );
   await user.click(screen.getByRole("button", { name: "More" }));

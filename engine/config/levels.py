@@ -293,6 +293,7 @@ FILES_ONLY = (
     "dispatch.knowledge.pack_searches",
     "ui.handled_group",
     "ui.handled_rows_shown",
+    "ui.afternoon_from_hour",
     "watch.versions.enabled",
     "watch.versions.ignore_words",
     "watch.versions.archive_folders",

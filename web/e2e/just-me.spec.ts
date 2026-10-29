@@ -288,7 +288,11 @@ test.describe('"Just me" sees no work words', () => {
     await read("Hand something in");
     await close();
     await expect(page.getByRole("dialog", { name: "Hand something in" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Ask", exact: true }).first().click();
+    // The search field says what it finds in a personal life's words, and its last row opens Ask.
+    const search = page.getByRole("searchbox");
+    await expect(search).toHaveAttribute("placeholder", "A person or a to-do");
+    await search.click();
+    await page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / }).click();
     await expect(page.getByRole("dialog", { name: /^Ask / }).or(page.getByRole("complementary", { name: /^Ask / }))).toBeVisible(LOADED);
     await read("Ask");
     // Keeping track of something of one's own: the templates offered are the ones for a personal life.
@@ -336,7 +340,7 @@ test.describe('"Just me" sees no work words', () => {
       await heading(page, "To-dos and questions");
       // At a phone width the menu is the sheet behind the work button.
       if (size.width < 1024) await page.getByRole("button", { name: "Your day", exact: true }).click();
-      const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ waiting on you$/ });
+      const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ needs? you$/ });
       await expect(entry).toBeVisible(LOADED);
       // The figure is drawn and the words are the link's name; nothing waits on What changed here, so it has no count.
       await expect(entry.locator('[class*="count"]')).toHaveText(/^\d+$/);

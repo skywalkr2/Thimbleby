@@ -5,6 +5,68 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: Today's count, search, Undo and redo wording (sweep batch 4)
+
+Treat as on mail the assistant already handled takes the earlier work back with an Undo, which has no Undo of its own, so its
+message says so and offers none (main session: an Undo that took back only the new read would misstate what happened).
+Change log: section 265
+
+**Decided:** (1) Today counts what needs the person; nothing the person does adds a line. A line made by the person's own act
+replaces the line it came from (a reassign's to-do line becomes "Tell <name>"; "Write the weekly message" becomes "Send the
+weekly message"). (2) The side menu's To-dos number counts what waits on the person; the To-dos screen says the same number in
+words ("N need you") beside the full list. (3) What changed folds only identical edits of the same record on the same day;
+otherwise one row per edit; moving something the assistant filed stays a correction (6.22). (4) Only "Undo everything" (many
+records at once) confirms; every other Undo acts at once. (5) The whole-task redo of a sent-back item stays for now and says
+before it runs "Runs the whole note again with your note", with its cost estimate; redoing one item is deferred to a later
+batch. (6) "Treat as" on mail the assistant already handled is a correction: undo what was done with that mail, file it as
+chosen, record the signal; refused first with 409. (7) "Your promises this week" lists overdue and due-today items too, marked
+"on Today", and includes weekend items. (8) `/` opens the header field, which searches people, projects, to-dos, files and kept
+knowledge with no AI call; its last row is "Ask about …"; the placeholder is "Search or ask <assistant name>"; the phone bar has
+the same field; the Ask pane stays a pane that does not block the page. (9) A source that serves some sides is kept as it is and
+shown under every tab. (10) The Afternoon brief's start hour is `ui.afternoon_from_hour` (recorded in the entry below).
+
+**Decided by:** the owner's answers to the batch-4 open items; these close the "Open" list of the entry below on the
+count, the To-dos number and the weekly message.
+
+
+## 2026-10-29: The Afternoon hour is a setting; Answer stays the submit label (sweep batch 4)
+
+Change log: section 265
+
+**Decided:** (1) The hour the opening brief is called the afternoon brief is the config key `ui.afternoon_from_hour`,
+default 12, read on the person's clock; it is no longer fixed in the screen's code. (2) "Answer" stays the submit label;
+the line's button opens the form. The batch-4 answers came from the main session.
+
+## 2026-10-29: Sweep batch 4 (Today and To-dos): one line per item, a review item sent back by itself, search from the header (sweep batch 4)
+
+Change log: section 264
+
+**Decided:** (1) Today keeps one line per item and a guard checks it after each of the person's actions (answer, Undo, set aside,
+open, hand in). (2) "Not right" in a review sends back that one item; the others stay in the review. (3) The header field
+searches people, projects and open to-dos as the person types, with no AI call; "Ask … about" is the last row. (4) The
+which-side question lives on the Personal side. (5) The brief's need count is Today's header count. (6) Close for today has Undo.
+
+**Decided by:** the owner's sweep brief, batch 4 (review items X06, X18 to X29, cause 5).
+
+**Open, for the host to decide (not decided here):**
+- The form's submit label vs the line's "Answer" button (both say Answer today).
+- Whether reassigning a to-do, or drafting the weekly message, should raise Today's count.
+- What the side menu's To-dos number counts (waiting on you, or all open to-dos).
+- Folding the person's own on-screen edits into one What changed row per record per day, and what Undo does on a folded row.
+- Whether moving an item the assistant filed is a correction (it makes learning rows today) and whether learning rows fold per correction.
+- Which Undos need a confirmation, and the wording.
+- Redo of one sent-back item reruns the whole task with the note; should it restrict itself to that item?
+- "Treat as" on Came in mail the assistant already acted on (the handled routes refuse it today).
+- Which promises appear in "Your promises this week" (overdue and due-today items on Today, weekend items).
+- A line whose source serves some but not all sides shows under every tab (the line carries one side id, not a list).
+- The "Afternoon brief" cutoff (12 in the code) should be config, computed on the server in the person's zone.
+- The brief's need count includes the late and clash lines, so it can say "9 things" and "1 clash" together.
+- Search shortcut: "/" still opens Ask; search needs a key or "/" moves.
+- Placeholder: "Ask Reginald or search…" vs "Search or ask".
+- The phone bottom bar opens Ask with no search.
+- Search covers people, projects and to-dos only; files and knowledge are not included.
+- The Ask pane covers the right of Today at 1440 px (it does not push; it overlaps).
+
 ## 2026-10-29: The person's own calendar entries move and cancel at once with Undo; a connected event says why it can't be changed here (sweep batch 7)
 
 **Decided:** (1) An entry the app keeps itself can be moved (a new start, end or both) and cancelled from its record page and the Schedule's details pane. Both act at once with an Undo toast; Undo is the changeset's undo. (2) Cancel is a removal (`record.delete`, with the version read), refused in words when another record still refers to the entry. (3) A connected entry is changed only through its account's act, drafted and sent after the person says yes to the exact change, through the publisher. (4) When that act is not offered, the reason is stated from the declared acts and settings: acting turned off for the account (with an offer to turn it on) or a channel that declares neither move nor cancel ("Change it in your calendar app", with the event's link when it has one). (5) Folders for a mailbox whose settings can't be read answer with no folders and a plain reason, not a server error.

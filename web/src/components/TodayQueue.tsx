@@ -174,6 +174,13 @@ export function TodayQueue(props: {
         const next = successorOf(key, base);
         return next ? [next] : ghostable(key) ? [key] : [];
       });
+      // A line the person settled here and then took back (Undo) redraws in its place: it is theirs, not a new line to wait behind "Show".
+      for (const [at, { key }] of queue.data.entries()) {
+        if (after.includes(key) || !touched.current.has(key)) continue;
+        const before = queue.data.slice(0, at).map((line) => line.key).filter((k) => after.includes(k));
+        const place = before.length === 0 ? 0 : after.indexOf(before[before.length - 1]) + 1;
+        after = [...after.slice(0, place), key, ...after.slice(place)];
+      }
       setFrozen(after.length === base.length && frozen && after.every((key, i) => key === frozen[i]) ? frozen : after);
       // The line that had the cursor is gone: the cursor goes to the line now in its place, not to the top of the page.
       const active = document.activeElement;
@@ -648,21 +655,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         const time = durationWords(line.minutes ?? 0, tn);
         return line.count > 0 ? tn("queue.capacity", line.count, { time }) : t("queue.capacity.none", { time });
       }
-      case "clash": {
-        const part = (start: string | null | undefined, end: string | null | undefined, name: string | null | undefined) =>
-          t("queue.clash.part", {
-            from: start ? wallTime(start) : "",
-            to: end ? wallTime(end) : "",
-            calendar: name ? t("queue.clash.from", { name }) : t("queue.clash.own"),
-          });
-        return t("queue.clash", {
-          text: line.text ?? "",
-          first: part(line.starts, line.ends, line.source_name),
-          other: line.other ?? "",
-          second: part(line.other_starts, line.other_ends, line.other_source_name),
-          when: day(line.due),
-        });
-      }
+      case "clash":
+        return t("queue.clash", { text: line.text ?? "", other: line.other ?? "", when: day(line.due) });
       case "promise": {
         const vars = { name, text: plainTitle(line.text ?? "", line.due).replace(/[.!?\s]+$/, ""), date: line.due ? day(line.due) : "" };
         if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
@@ -730,6 +724,8 @@ function QueueRow(props: {
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const { line } = props;
   const open = props.selection !== null;
+  // The row the keyboard focus is in is the cursor row: a soft fill and a bar at its left edge.
+  const [cursor, setCursor] = useState(false);
   const opens = opensItems(line);
   const inPlace = open && !props.beside;
   const detailId = `detail-${line.key.replace(/[^A-Za-z0-9_-]/g, "-")}`;
@@ -1053,7 +1049,7 @@ function QueueRow(props: {
           tone: "warn",
           meta: line.state === "travel" ? travel : tn("queue.clash.meta.overlap", line.minutes ?? 0),
           primary: { label: first.label, run: first.run },
-          menu: rest,
+          menu: [show, ...rest],
         };
       }
       case "pattern": {
@@ -1241,7 +1237,11 @@ function QueueRow(props: {
     <Row
       as="div"
       ref={ref}
-      selected={open}
+      selected={open || cursor}
+      onFocus={() => setCursor(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCursor(false);
+      }}
       className={line.kind === "clash" ? styles.plain : undefined}
       data-queue-line={line.kind}
       data-line-key={line.key}
@@ -1299,7 +1299,7 @@ function QueueRow(props: {
       {(inPlace || promiseRow.form) && (
         <>
           {inPlace && (
-            <div id={detailId} className={styles.detail}>
+            <div id={detailId} className={styles.detail} data-inset="">
               <LineDetail line={line} sendBack={props.selection?.sendBack} onOpenGuide={props.handlers.onOpenGuide} />
               <div className={styles.detailEnd}>
                 <Button size="sm" variant="quiet" onClick={() => select(false)}>

@@ -57,6 +57,10 @@ class Arrived:
     #: The bare address when `sender` is shown as a name (the name the message gives, or that of the person on file with
     #: that address); none when the sender is all there is to show.
     sender_address: str | None = None
+    #: The version of the saved message that was read, for a correction made from the list.
+    version: int = 0
+    #: The saved copy of the message the assistant was handed, when it was handed in: the page the row opens.
+    saved: str | None = None
 
 
 @dataclass
@@ -313,6 +317,9 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
         for v in (p.data.get("how_to_reach") or {}).values()
         if "@" in str(v)
     }
+    from engine.handled import _mail_requests
+
+    handed = _mail_requests(view)
     for snap in view.list("snapshot"):
         data = snap.data
         message = data.get("message")
@@ -334,6 +341,7 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
             left_out += 1
             continue
         sender, address = _sender_shown(message.get("sender"), known)
+        held = [r for r in handed.get((data["source"], data["key"]), []) if r.data.get("source")]
         found.append(
             Arrived(
                 snapshot=snap.id,
@@ -344,6 +352,8 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
                 unread=message.get("unread"),
                 link=data.get("link"),
                 sender_address=address,
+                version=snap.version,
+                saved=held[-1].data["source"] if held else None,
             )
         )
     found.sort(key=lambda a: moment(a.received), reverse=True)

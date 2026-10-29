@@ -107,6 +107,13 @@ describe("Hand something in", () => {
   });
 });
 
+/** The Ask key now puts the cursor in the header search; Ask opens from its last row, "Ask about ...". */
+async function openAskFromSearch(user: ReturnType<typeof userEvent.setup>) {
+  await user.keyboard("/");
+  await user.type(await screen.findByRole("searchbox"), "ladder");
+  await user.click(await screen.findByRole("button", { name: /Ask Helper about/ }));
+}
+
 describe("Ask", () => {
   test("as a pane it is a side area named by its heading, with the cursor in the question, and Escape closes it", async () => {
     const user = userEvent.setup();
@@ -120,12 +127,12 @@ describe("Ask", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  test("on a wide screen the Ask key opens the pane beside the screen, not a dialog", async () => {
+  test("on a wide screen asking from the header search opens the pane beside the screen, not a dialog", async () => {
     const user = userEvent.setup();
     windowWidth(1600);
-    fakeApi(today);
+    fakeApi({ ...today, "GET search": () => ({ results: [] }) });
     renderApp(<App rc={rc()} />);
-    await user.keyboard("/");
+    await openAskFromSearch(user);
     expect(await screen.findByRole("complementary", { name: "Ask Helper" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
     // The screen it was opened from is not covered or made inert.
@@ -137,9 +144,9 @@ describe("Ask", () => {
   test("on a narrower screen it is a dialog", async () => {
     const user = userEvent.setup();
     windowWidth(1200);
-    fakeApi(today);
+    fakeApi({ ...today, "GET search": () => ({ results: [] }) });
     renderApp(<App rc={rc()} />);
-    await user.keyboard("/");
+    await openAskFromSearch(user);
     expect(await screen.findByRole("dialog", { name: "Ask Helper" })).toBeInTheDocument();
     expect(screen.queryByRole("complementary", { name: "Ask Helper" })).toBeNull();
   });

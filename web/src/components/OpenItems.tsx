@@ -21,10 +21,11 @@ import {
   type OpenQuestion,
 } from "../lib/open-items";
 import { useSaid } from "../lib/repeat";
+import { useWaiting, waitingUnder } from "../lib/waiting";
 import { revealOrKeep } from "../lib/reveal";
 import { openOnToday } from "./AnswerOnToday";
 import { onSide, useSideFilter, useSides } from "../lib/sides";
-import { toHash } from "../lib/views";
+import { recordView, toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
@@ -46,7 +47,6 @@ import { useHandToAssistant } from "./HandToAssistant";
 import { usePlaceText } from "../lib/place";
 import { ProjectTag } from "./ProjectTag";
 import { NotesTitle } from "./ActionNotes";
-import { useReassign } from "./ReassignAction";
 import { dateAndTime, useRemindMe } from "./ReminderLine";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
@@ -72,6 +72,9 @@ export function OpenItems() {
   const addTodo = useAddTodo();
   // With a side beside Personal, the list can be narrowed to one side; what is on no side shows under every choice.
   const side = useSideFilter();
+  // How many wait on the person: the side menu's number, from the same answer, under the same side choice.
+  const waiting = useWaiting();
+  const needYou = waiting ? waitingUnder(waiting.open, side.choice) : null;
   const actions = (items.data?.actions ?? []).filter((a) => onSide(a.side, side.choice));
   const questions = (items.data?.questions ?? []).filter((q) => onSide(q.side, side.choice));
 
@@ -162,7 +165,7 @@ export function OpenItems() {
               ))}
             </RowList>
           )}
-          <p className="hint">{tn("open.count", shown)}</p>
+          {needYou !== null && <p className="hint">{tn("nav.count.open", needYou)}</p>}
         </>
       )}
     </section>
@@ -194,15 +197,26 @@ function ActionRow(props: { action: OpenAction }) {
   const a = props.action;
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const focus = () => ref.current?.focus();
-  const [noting, setNoting] = useState(false);
-  const [asking, setAsking] = useState(false);
+  // One editor is open on a to-do at a time: choosing another closes the first, and Escape closes it from any field.
+  const [active, setActive] = useState<string | null>(null);
+  const closeEditor = () => {
+    setActive(null);
+    focus();
+  };
+  const noting = active === "note";
+  const asking = active === "owner";
+  const opens = (name: string, entry: MenuAction): MenuAction => ({
+    ...entry,
+    run: () => {
+      setActive(name);
+      entry.run?.();
+    },
+  });
   const hold = useHold(a);
-  const change = useChangeThis({ kind: "action", id: a.id }, focus);
-  const drop = useDropAction(a, focus);
-  const reassign = useReassign(a, focus);
-  const hand = useHandToAssistant(a, focus);
-  const edit = useEditAction(a, focus);
-  const remind = useRemindMe(a.id, a.remind_at, focus);
+  const drop = useDropAction(a, closeEditor);
+  const hand = useHandToAssistant(a, closeEditor);
+  const edit = useEditAction(a, closeEditor);
+  const remind = useRemindMe(a.id, a.remind_at, closeEditor);
   const stopRepeat = useStopRepeat(a);
   const said = useSaid();
   const done = (note?: string) =>
@@ -223,17 +237,15 @@ function ActionRow(props: { action: OpenAction }) {
       }
     : null;
   const unowned = a.state === "no_owner";
-  useRowKeys(ref, { primary: unowned ? () => setAsking(true) : () => void done() });
+  useRowKeys(ref, { primary: unowned ? () => setActive("owner") : () => void done() });
+  // The menu's sections: what changes the to-do, then when it comes back, then taking it away (in red, last).
   const menu: MenuAction[] = [
-    ...(unowned ? [] : [{ id: "note", label: t("note.add"), run: () => setNoting(true) } satisfies MenuAction]),
-    ...(unowned ? [] : [edit.entry, reassign.entry]),
+    ...(unowned ? [] : [{ id: "note", label: t("note.add"), run: () => setActive("note") } satisfies MenuAction]),
+    opens("edit", edit.entry),
     ...(merge ? [merge] : []),
-    ...(unowned || !hand.entry ? [] : [hand.entry]),
-    ...(unowned ? [] : [...remind.entries, hold.entry]),
-    ...(stopRepeat ? [stopRepeat] : []),
-    change.entry,
-    drop.entry,
+    ...(unowned || !hand.entry ? [] : [opens("hand", hand.entry)]),
   ];
+  const timing: MenuAction[] = [...(unowned ? [] : [...remind.entries.map((e) => opens("remind", e)), opens("hold", hold.entry)]), ...(stopRepeat ? [stopRepeat] : [])];
   const meta = join([
     a.owners.length > 0 ? a.owners.map((o) => o.name).join(", ") : t("open.nobody"),
     a.to_send && (
@@ -252,7 +264,11 @@ function ActionRow(props: { action: OpenAction }) {
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
-  const title = <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>;
+  const title = (
+    <NotesTitle notes={a.notes}>
+      <a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>
+    </NotesTitle>
+  );
   return (
     <Row
       ref={ref}
@@ -269,30 +285,34 @@ function ActionRow(props: { action: OpenAction }) {
       }
       primary={
         unowned && a.owner_question ? (
-          <Button variant="primary" data-key="primary" aria-expanded={asking} onClick={() => setAsking(!asking)}>
+          <Button variant="primary" data-key="primary" aria-expanded={asking} onClick={() => setActive(asking ? null : "owner")}>
             {t("queue.act.pick_owner")}
           </Button>
         ) : undefined
       }
-      menu={<RowMenu label={a.text} actions={menu} />}
-    >
-      {asking && a.owner_question && <AskChooser ask={{ id: a.owner_question, about: "owner", options: [], suggestion: null }} />}
-      {noting && (
-        <NoteBox
-          sends={[{ label: t("followups.mark_done"), run: done }]}
-          onClose={() => {
-            setNoting(false);
-            focus();
-          }}
+      menu={
+        <RowMenu
+          label={a.text}
+          actions={menu}
+          groups={[
+            { id: "timing", entries: timing },
+            { id: "remove", entries: [opens("drop", drop.entry)] },
+          ]}
         />
+      }
+    >
+      {active && (
+        <div onKeyDown={(e) => e.key === "Escape" && closeEditor()}>
+          {asking && a.owner_question && <AskChooser ask={{ id: a.owner_question, about: "owner", options: [], suggestion: null }} />}
+          {noting && <NoteBox sends={[{ label: t("followups.mark_done"), run: done }]} onClose={closeEditor} />}
+          {active === "edit" && edit.form}
+          {active === "hand" && hand.form}
+          {active === "remind" && remind.form}
+          {active === "hold" && hold.form}
+          {active === "drop" && drop.form}
+        </div>
       )}
-      {edit.form}
-      {reassign.form}
-      {hand.form}
-      {remind.form}
-      {hold.form}
-      {change.form}
-      {drop.form}
+      {hand.line}
       <LearnedLines records={[a.id]} />
     </Row>
   );

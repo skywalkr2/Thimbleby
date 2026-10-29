@@ -41,7 +41,7 @@ export function useCorrectPromise(action: string) {
 /** The promise's why block. `quiet` leaves a plain to-do alone; `omitQuote` and `omitOrigin` are for a place that already
  * shows the words, or the link to where they came from. `line` is for a list of many: one meta line ("Ana Person · due Fri,
  * Oct 16 · promised to no one") whose parts are each a button that opens a small popover to change it. */
-export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?: boolean; omitOrigin?: boolean; line?: boolean }) {
+export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?: boolean; omitOrigin?: boolean; line?: boolean; skip?: Field[] }) {
   const { t } = useWords();
   const found = useQuery({ queryKey: ["promise", props.action], queryFn: () => api.promise(props.action) });
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -92,7 +92,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
             </dd>
           </Definition>
         )}
-        {row(
+        {!props.skip?.includes("owner") && row(
           "owner",
           t("promise.owner"),
           view.owners.map((o) => o.name).join(", "),
@@ -117,7 +117,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
             onCancel={() => setEditing(null)}
           />,
         )}
-        {row(
+        {!props.skip?.includes("due") && row(
           "due",
           t("promise.due"),
           <>

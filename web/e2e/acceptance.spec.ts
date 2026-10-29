@@ -949,9 +949,11 @@ test.describe.serial("acceptance scenario", () => {
     // Connections holds only accounts and sources: what a rule closed is on Handled for you.
     await expect(page.getByRole("heading", { name: "Set aside by rules" })).toHaveCount(0);
     await checkAccessibility(page);
-    // The Ask box: focus goes to the question, Escape closes it, and focus returns to the button that opens it.
-    const opener = page.getByRole("button", { name: "Ask", exact: true });
-    await opener.click();
+    // The Ask box opens from the search field's last row: focus goes to the question, Escape closes it, and focus returns to the field.
+    const field = page.getByRole("searchbox");
+    const askRow = page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / });
+    await field.click();
+    await askRow.click();
     const dialog = page.getByRole("dialog", { name: /^Ask / });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel("Your question")).toBeFocused();
@@ -959,11 +961,15 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(opener).toBeFocused();
-    // The shortcut opens it too, but not while typing in a field.
+    await expect(field).toBeFocused();
+    // The search key puts the cursor in the field, but not while typing in one; what is typed there goes to Ask with the row.
+    await field.blur();
     await page.keyboard.press("/");
+    await expect(field).toBeFocused();
+    await field.fill("a/b");
+    await expect(field).toHaveValue("a/b");
+    await askRow.click();
     await expect(dialog).toBeVisible();
-    await dialog.getByLabel("Your question").fill("a/b");
     await expect(dialog.getByLabel("Your question")).toHaveValue("a/b");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);

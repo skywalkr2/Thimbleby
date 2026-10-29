@@ -671,6 +671,7 @@ describe("the history: rows are past tense, have no button, and keep their choic
     renderApp(<WhatChanged />);
     await user.click(await screen.findByRole("button", { name: "All" }));
     await choose(user, "Undo everything it did");
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Undo everything" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-2/undo")).toBe(true));
   });
 
@@ -791,6 +792,25 @@ test("a change made from what the person typed is titled Your note, with their w
   await screen.findByRole("listitem", { name: "Your note" });
   expect(await within(await findPane()).findByText("Mark 'Settle the endpaper color' closed; the Print sync will cover it.")).toBeInTheDocument();
   expect(within(await findPane()).getByText("Your note", { selector: ".what" })).toBeInTheDocument();
+});
+
+test("words typed to answer a question are titled You answered, not Your note (sweep X22)", async () => {
+  const item = change("REQ-6", { source: null, source_title: null, title: { kind: "answer", topic: "" }, note: "Soft-touch, please." });
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  await screen.findByRole("listitem", { name: "You answered" });
+  expect(within(await findPane()).getByText("You answered", { selector: ".what" })).toBeInTheDocument();
+  expect(screen.queryByText("Your note")).toBeNull();
+});
+
+test("a change the person undid says Undone, not Done (sweep X29)", async () => {
+  const base = change("REQ-8", { state: "done" });
+  const undone = { ...base, changeset: { ...base.changeset!, status: "undone", ops: base.changeset!.ops.map((o) => ({ ...o, status: "undone" as const })) } };
+  fakeApi({ "GET changes": () => [undone] });
+  renderApp(<WhatChanged />);
+  const row = await screen.findByRole("listitem", { name: /Email from the printer/ });
+  expect(within(row).getByText("Undone")).toBeInTheDocument();
+  expect(within(row).queryByText("Done")).toBeNull();
 });
 
 test("a change from an email is titled by Today's rule, never by the first line of what came in", async () => {
@@ -915,4 +935,31 @@ test("an item the assistant added that waits only for an owner is information wi
   expect(await within(pane).findByText("Needs an owner")).toBeInTheDocument();
   expect(within(pane).queryByRole("combobox")).toBeNull();
   expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
+});
+
+test("Undo this on one item acts at once with the Undo toast and no confirm", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [change("REQ-1")],
+    "POST changesets/CS-REQ-1/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: /More actions for Proof copies ship Nov 5/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Undo this" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-REQ-1/undo")?.body).toEqual({ ops: [0] }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("Undo everything asks first, and only the confirm undoes the change", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [change("REQ-1")],
+    "POST changesets/CS-REQ-1/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  renderApp(<WhatChanged />);
+  await choose(user, "Undo everything it did");
+  const dialog = await screen.findByRole("dialog");
+  expect(calls.some((c) => c.route === "POST changesets/CS-REQ-1/undo")).toBe(false);
+  await user.click(within(dialog).getByRole("button", { name: "Undo everything" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-1/undo")).toBe(true));
 });

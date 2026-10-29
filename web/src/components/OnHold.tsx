@@ -30,8 +30,8 @@ function useBlockers(except: string, enabled: boolean) {
 }
 
 /** The row menu's entry for an action, and the small form it opens to ask what the action waits for: words, or a person, a
- * to-do or a question picked from a list. */
-export function useHold(action: { id: string; on_hold?: string | null; blocker?: Blocker | null }): { entry: MenuAction; form: ReactNode } {
+ * to-do or a question picked from a list. A repeating chore waits for nothing: it is asked only why it is paused. */
+export function useHold(action: { id: string; on_hold?: string | null; blocker?: Blocker | null; repeat?: unknown }): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
   const act = useAct();
   const [asking, setAsking] = useState(false);
@@ -76,7 +76,7 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
       }}
     >
       <label className="hint" htmlFor={`hold-${action.id}`}>
-        {t("hold.label")}
+        {t(action.repeat ? "hold.label_repeat" : "hold.label")}
       </label>
       <input
         id={`hold-${action.id}`}
@@ -88,39 +88,43 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
           if (e.key === "Escape") setAsking(false);
         }}
       />
-      <label className="hint" htmlFor={`hold-on-${action.id}`}>
-        {t("hold.on_label")}
-      </label>
-      <Select id={`hold-on-${action.id}`} value={on} onChange={(e) => setOn(e.target.value)}>
-        <option value="">{t("hold.on_none")}</option>
-        {options.people.length > 0 && (
-          <optgroup label={t("hold.on_people")}>
-            {options.people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {options.actions.length > 0 && (
-          <optgroup label={t("hold.on_actions")}>
-            {options.actions.map(([id, text]) => (
-              <option key={id} value={id}>
-                {text}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {options.questions.length > 0 && (
-          <optgroup label={t("hold.on_questions")}>
-            {options.questions.map(([id, title]) => (
-              <option key={id} value={id}>
-                {title}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </Select>
+      {!action.repeat && (
+        <>
+          <label className="hint" htmlFor={`hold-on-${action.id}`}>
+            {t("hold.on_label")}
+          </label>
+          <Select id={`hold-on-${action.id}`} value={on} onChange={(e) => setOn(e.target.value)}>
+            <option value="">{t("hold.on_none")}</option>
+            {options.people.length > 0 && (
+              <optgroup label={t("hold.on_people")}>
+                {options.people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {options.actions.length > 0 && (
+              <optgroup label={t("hold.on_actions")}>
+                {options.actions.map(([id, text]) => (
+                  <option key={id} value={id}>
+                    {text}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {options.questions.length > 0 && (
+              <optgroup label={t("hold.on_questions")}>
+                {options.questions.map(([id, title]) => (
+                  <option key={id} value={id}>
+                    {title}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </Select>
+        </>
+      )}
       <Actions align="end">
         <Button variant="quiet" onClick={() => setAsking(false)}>
           {t("action.cancel")}

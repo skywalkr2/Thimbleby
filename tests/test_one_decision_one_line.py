@@ -159,3 +159,17 @@ def test_the_queue_carries_the_new_fields_through_the_api(tmp_path):
         deciding=["held:CS-1:0"],
     )
     assert shown.did.op == "action.drop" and shown.deciding == ["held:CS-1:0"]
+
+
+def test_a_question_the_assistant_asks_the_person_is_on_its_own_line_and_not_also_in_the_review_line(env):
+    """A question put to the person is answered on its Decide line, so the review line of the change that asked it
+    counts only what else was done, and links to the question's line like a held op (sweep X22)."""
+    ws, cfg, store = env
+    ask = {"op": "question.add", "to": pm_of(cfg), "title": "Which finish for the cover?", "kind": "decision"}
+    cs_id = ran(env, [add_op(cfg), ask])
+    (question,) = [line for line in queue(ws, store, cfg, NOW) if line.question and line.text == ask["title"]]
+    (review,) = [line for line in lines_of(env, "review") if line.changeset == cs_id]
+    assert review.count == 1 and review.outcome == {"actions_added": 1}
+    assert [item.text for item in review.items] != [ask["title"]]
+    assert all(item.text != ask["title"] for item in review.items)
+    assert review.deciding == [question.key]

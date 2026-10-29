@@ -591,3 +591,28 @@ test("leaving Handled for you marks it looked at, so what came after counts as n
   cleanup();
   await waitFor(() => expect(body(calls, "POST waiting/looked")).toEqual({ screen: "handled" }));
 });
+
+const FIRST_GO = { key: "first_go", group: "decide", kind: "first_go", count: 2, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} };
+
+test("Bring it in while Today waits for Start says it waits until the person chooses Start, never that the assistant is on it", async () => {
+  const user = userEvent.setup();
+  open({
+    "GET today/queue": () => [FIRST_GO],
+    "POST handled/a/work": () => done("a"),
+    "POST mail/a/set-aside": () => ({ id: "a", version: 6, section: "sales", address: addr("a"), domain: null }),
+    "POST watch/sorting": () => SAVED,
+  });
+  const sales = await open_(user, SALES);
+  await user.click(within(sales).getByRole("button", { name: "Bring it in: Offer a" }));
+  expect(await screen.findByText("Handed in. It waits until you choose Start on Today.")).toBeInTheDocument();
+  expect(screen.queryByText(/is on it/)).toBeNull();
+});
+
+test("Take a closer look while Today waits for Start says it waits until the person chooses Start", async () => {
+  const user = userEvent.setup();
+  open({ "GET today/queue": () => [FIRST_GO], "POST requests/REQ-a/closer-look": () => ({ id: "REQ-a" }), "POST requests/REQ-a/closer-look/undo": () => ({ id: "REQ-a" }) });
+  const files = await open_(user, /^Files · 2$/);
+  await user.click(within(files).getByRole("button", { name: "Take a closer look at Plan a" }));
+  expect(await screen.findByText("Handed in. It waits until you choose Start on Today.")).toBeInTheDocument();
+  expect(screen.queryByText(/is on it/)).toBeNull();
+});

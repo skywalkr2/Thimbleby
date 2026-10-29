@@ -263,3 +263,19 @@ def test_check_now_counts_everything_handed_in_not_only_what_lists_in_came_in(tm
     assert body["items"] == [] and body["new_items"] == 2  # files go to What changed, and still count
     assert len(c.get(f"{api}/changes").json()) == 2
     assert c.post(f"{api}/today/arrived/check").json()["new_items"] == 0
+
+
+def test_what_came_in_carries_the_version_read_and_the_saved_page_to_open(tmp_path):
+    from engine.today import arrived
+    from engine.watch import refresh
+
+    items = [message("recent", (NOW - timedelta(hours=2)).isoformat(), sender="B")]
+    ws, cfg, store = make(tmp_path, items)
+    try:
+        refresh(ws, store, cfg, "s", NOW)
+        (shown,) = arrived(store, cfg, NOW).items
+        snap = store.read().get("snapshot", shown.snapshot)
+        assert shown.version == snap.version
+        assert shown.saved is not None and store.read().get("source", shown.saved) is not None
+    finally:
+        store.close()

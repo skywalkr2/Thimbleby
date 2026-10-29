@@ -390,3 +390,21 @@ test("a standing verdict shows pressed, and the other button replaces it", async
   await user.click(within(row).getByRole("button", { name: "Not helpful" }));
   await waitFor(() => expect(sent(calls, "POST asks/Q-7/verdict")).toEqual({ helpful: false }));
 });
+
+test("the link to a list of your own has a sentence saying what it is for", async () => {
+  fakeApi({ "GET asks": () => [] });
+  renderApp(<Ask onClose={() => undefined} />);
+  const link = await screen.findByRole("button", { name: "Keep track of something of your own" });
+  expect(link.parentElement).toHaveTextContent(/start a list of your own/);
+});
+
+test("asking while Today waits for Start says it waits for Start, with a way to Today", async () => {
+  const firstGo = { key: "first_go", group: "decide", kind: "first_go", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} };
+  open([], { "POST ask": () => ({ id: "r1" }), "GET today/queue": () => [firstGo] });
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("Your question"), "What is due?");
+  await user.click(screen.getByRole("button", { name: "Ask" }));
+  expect(await screen.findByText(/waits until you choose Start/)).toBeInTheDocument();
+  expect(screen.queryByText(/is on it/)).toBeNull();
+  expect(screen.getByRole("button", { name: "Go to Today" })).toBeInTheDocument();
+});

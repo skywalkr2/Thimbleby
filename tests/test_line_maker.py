@@ -127,6 +127,15 @@ def test_a_suggested_question_names_the_assistant_the_input_and_has_no_answer_ye
     assert made["source"]["origin"] == {"kind": "link", "url": PAGE, "source": source}
 
 
+def test_the_input_is_named_without_its_header_label(store):
+    """A pasted message's title can begin with its header label; the screen says "From" itself, so it is said once."""
+    source = make_source(store, url=PAGE, title="From: Sam Example")
+    change, request = make_change(store, source)
+    question = make_question(store, change=change, request=request, source=source)
+    made = line_maker.of_line(store.read(), FakeLine("decision", question=question))
+    assert made["source"]["title"] == "Sam Example"
+
+
 def test_a_question_the_person_answered_says_how_and_when(store):
     source = make_source(store)
     change, request = make_change(store, source)

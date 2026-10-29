@@ -20,6 +20,7 @@ import { hasSeenMessage, markMessageSeen } from "../lib/seen-messages";
 import { onSide, useSideFilter, useSides, type SideChoice } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { viewHref } from "../lib/views";
+import { useHandedToast, useWaitsForStart } from "../lib/handed-toast";
 import { useWords } from "../lib/wording";
 import { AfterMoveAnswers } from "./AfterMoveAnswers";
 import { AnswerOnToday } from "./AnswerOnToday";
@@ -507,8 +508,8 @@ function YourQuestionRow(props: { question: S["FollowupQuestion"] }) {
 }
 
 /** A question the person is asked. After a move, `check` gives it its own two answers in place of the answer form; `move` is
- * what it came after. */
-export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number; check?: S["AfterMoveCheck"] | null; move?: S["AfterMove"] | null }) {
+ * what it came after. `inLine`: the row sits under the line that already says the question, so it is not said again. */
+export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number; check?: S["AfterMoveCheck"] | null; move?: S["AfterMove"] | null; inLine?: boolean }) {
   const { t } = useWords();
   const act = useAct();
   const noted = useNoted();
@@ -525,9 +526,10 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
   return (
     <Item row ref={ref}>
       <div>
-        <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
-        <div className="title">{q.title}</div>
-        {q.text && <SafeText text={q.text} />}
+        {!props.inLine && <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>}
+        {!props.inLine && <div className="title">{q.title}</div>}
+        {/* Words that only repeat the title are not shown a second time. */}
+        {q.text && q.text.trim() !== q.title.trim() && <SafeText text={q.text} />}
         {q.links.map((l) => (
           <div key={l.url}>
             <SafeLink label={l.label} url={l.url} />
@@ -1103,10 +1105,17 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
   const menu = useQuestionMenu(q, { canMarkSent: false, onClosed: () => row.current?.focus() });
   const change = useChangeThis({ kind: "question", id: q.id }, () => row.current?.focus());
   const first = props.person.split(" ")[0];
+  const waitsForStart = useWaitsForStart();
+  const toast = useHandedToast();
   const submit = async () => {
+    let waits = false;
     const handed = await act(
-      () => api.reply(q.id, text),
-      () => ({ message: t("toast.reply_handed_in", { name: first }) }),
+      async () => {
+        const made = await api.reply(q.id, text);
+        waits = await waitsForStart();
+        return made;
+      },
+      () => toast(waits, t("toast.reply_handed_in", { name: first }), t("toast.handed_in_waiting")),
     );
     if (handed) {
       addOwn(handed.request);

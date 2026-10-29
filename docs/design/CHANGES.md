@@ -1027,6 +1027,38 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 265. Sweep batch 4, second part: The Afternoon hour is a setting; Answer stays the submit label
+
+- The hour from which the morning form of the brief is called the afternoon brief is `ui.afternoon_from_hour` (0 to 23,
+  default 12), read on the person's clock like every other moment. The brief carries it to the screen (design 6.32, 7).
+- "Answer" stays the label on the form's submit; the line's own button opens the form (design 7.7).
+- Today counts what needs the person; nothing the person does adds a line. A line made by the person's own act replaces the
+  line it came from: a reassign's to-do line becomes "Tell <name>", "Write the weekly message" becomes "Send the weekly message" (7.7).
+- The side menu's To-dos number counts what waits on the person; the To-dos screen says the same number in words ("N need you") (7.1).
+- What changed folds only identical edits of the same record on the same day, otherwise one row per edit. Moving something the
+  assistant filed stays a correction (6.22; 7.7).
+- Undo: only "Undo everything" (many records at once) confirms; every other Undo acts at once (7.1).
+- Redo of one sent-back item: the whole-task redo stays for now and says before it runs "Runs the whole note again with your
+  note", with its cost estimate. A redo of one item is deferred to a later batch (7.3).
+- "Treat as" on mail the assistant already handled is a correction: undo what was done with that mail, file it as chosen,
+  record the signal; refused first with 409 (7.20).
+- "Your promises this week" lists overdue and due-today items too, marked "on Today", and includes weekend items (no design
+  paragraph to correct; recorded here and in the decision entry only).
+- The search field: `/` opens the header field; it searches people, projects, to-dos, files and kept knowledge with no AI call;
+  its last row is "Ask about …"; the placeholder is "Search or ask <assistant name>"; the phone bar has the same field. The Ask
+  pane stays a pane that does not block the page (7.1).
+- A source that serves some sides is kept as it is and shown under every tab.
+- The Afternoon brief's start hour is `ui.afternoon_from_hour` (above).
+
+## 264. Sweep batch 4: Today and To-dos (review sweep-04ffc21e, section 4 P1 Today and reviews)
+
+Not part of the design text yet: the change is in the app, and the design's Today and review sections need a pass to say it
+(a review is per item; a question has one line; a side filter applies to the brief, the clash line and the which-side line).
+Built: the Today state guard (cause 5), "Not right" per item, owner and draft in reviews, the one question line, "Undone" in What
+changed, "You answered", the header search (people, projects, open to-dos; no AI call), the which-side line on Personal, the
+brief's count from Today's count, a settled clash out of the brief, Close for today with Undo, "Afternoon brief", the clash
+line's detail, Came in rows opening the message. Left, needing decisions listed in docs/decisions.md under the same citation.
+
 ## 263. Sweep batch 7: own calendar entries move and cancel; saves in order.
 
 - **The Schedule and the record page (7, 6.12):** the person's own calendar entries move (a new start or end) and cancel

@@ -51,7 +51,21 @@ test("the Ask key comes from the configured shortcuts", async () => {
   await user.keyboard("/");
   expect(screen.queryByRole("dialog")).toBeNull();
   await user.keyboard("g");
-  expect(await screen.findByRole("dialog", { name: "Ask Helper" })).toBeInTheDocument();
+  expect(screen.getAllByRole("searchbox")[0]).toHaveFocus();
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("the slash key puts the cursor in the header search field, and Ask is its last row", async () => {
+  fakeApi({ "GET panels": () => [], "GET asks": () => [], "GET search": () => ({ results: [{ kind: "person", id: "P-1", title: "Priya Example", detail: null }] }) });
+  renderApp(<App rc={rc()} />);
+  const user = userEvent.setup();
+  await user.keyboard("/");
+  const field = screen.getAllByRole("searchbox")[0];
+  expect(field).toHaveFocus();
+  await user.keyboard("pri");
+  expect(field).toHaveValue("pri");
+  const rows = await screen.findAllByRole("button", { name: /Priya Example|Ask Helper about/ });
+  expect(rows[rows.length - 1]).toHaveTextContent("Ask Helper about “pri”");
 });
 
 beforeEach(() => {

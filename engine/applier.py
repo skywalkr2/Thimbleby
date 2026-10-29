@@ -4354,6 +4354,37 @@ def release(
     _release_one(store, cfg, changeset_id, index, person=person, now=now, ws=ws, routed=routed, instead=instead)
     for other in others:
         _release_one(store, cfg, changeset_id, other, person=person, now=now, ws=ws)
+    if person is not None and name is not None:
+        _release_same_name_elsewhere(store, cfg, changeset_id, person, name, now=now, ws=ws)
+
+
+def _release_same_name_elsewhere(
+    store: Store, cfg: Config, changeset_id: str, person: str, name: str, *, now: datetime, ws: Workspace | None
+) -> None:
+    """A name asked about in more than one input is answered once: the held items of the other changesets waiting on the
+    same name are released with the same person. One that can't be released now stays waiting on its own question."""
+    for q in store.read().find("question", {"kind": "routing", "status": "open"}):
+        r = q.data.get("resolves") or {}
+        if r.get("kind") != "held-op" or r.get("changeset") == changeset_id or not _same_name(r.get("name"), name):
+            continue
+        other = store.read().get("changeset", r["changeset"])
+        if other is None:
+            continue
+        held = [o["index"] for o in other.data["ops"] if o["status"] == "held" and o.get("question") == q.id]
+        for n, index in enumerate(held):
+            try:
+                _release_one(
+                    store,
+                    cfg,
+                    r["changeset"],
+                    index,
+                    person=person,
+                    now=now,
+                    ws=ws,
+                    routed={"question": q.id, "person": person, "name": name} if n == 0 else None,
+                )
+            except StoreError:
+                continue
 
 
 def _release_one(

@@ -10,7 +10,8 @@ import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
 import { inReadingOrder, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
 import { reconcile, type Refreshed } from "../lib/refreshed";
-import { time } from "../lib/dates";
+import { day, time } from "../lib/dates";
+import { useAct } from "../lib/act";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AnswerOnToday } from "./AnswerOnToday";
@@ -34,6 +35,7 @@ import { SideInside } from "./SideInside";
 import { useSideOf, useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { PromiseWhy } from "./PromiseWhy";
+import { useNoted } from "./NoteBox";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
 import { CONVERSATION_KINDS, RecordConversation } from "./RecordConversation";
@@ -101,6 +103,14 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const invite = useInvitationActs(id, kind === "event" && record.data?.fields.invitation === true);
   // An event that is the person's own on a connected calendar can be moved or cancelled, each through the same yes.
   const eventActs = useEventActs(id, { start: record.data?.fields.start as string | undefined, end: record.data?.fields.end as string | null | undefined }, kind === "event");
+  // A to-do that is open can be marked done from its page, with Undo.
+  const act = useAct();
+  const noted = useNoted();
+  const markDone = () =>
+    void act(
+      () => api.actionStatus(id, "done"),
+      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(id, "open") }),
+    );
   const [editing, setEditing] = useState(false);
   // A person and a project are edited in the same drawer as on their own screens.
   const drawer = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : kind === "project" ? (projects.data ?? []).find((p) => p.id === id) : undefined;
@@ -131,13 +141,16 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // The record's name, never its id: the page says it (a person is named by their full name).
   // While what resolves the names is still on its way the page has no name yet, and no detail: an id is never shown.
   const settled = !page.isPending && !people.isPending && !projects.isPending;
-  const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "") : "";
+  const due = kind === "action" && typeof data?.fields.due === "string" ? data.fields.due : null;
+  const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "", due) : "";
   const ownOrganization = kind === "project" ? sides.find((s) => s.project === id) : undefined;
   const rows = data && settled
     ? inReadingOrder(
         Object.entries(data.fields)
           // The id of the input an item came from is shown as its "Where it came from" link instead.
           .filter(([name]) => !isSide || SIDE_FIELDS.has(name))
+          // A to-do's page says its owner and day once, in words, and keeps what only the app uses out of sight.
+          .filter(([name]) => !(kind === "action" && TODO_HIDDEN.has(name)))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
           // The app's own bookkeeping about a person, and how someone relates to you, are not the person's details about themselves.
           .filter(([name]) => !(isSelf && SELF_HIDDEN.has(name)))
@@ -167,6 +180,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter((row) => row.lines.length > 0),
       )
     : [];
+  if (data && settled && kind === "action") {
+    const owners = (Array.isArray(data.fields.owners) ? data.fields.owners : []) as Array<{ person?: string }>;
+    const named = owners.map((o) => (o.person ? names.get(o.person) : undefined)).filter((n): n is string => !!n);
+    const due = typeof data.fields.due === "string" && data.fields.due ? day(data.fields.due) : t("promise.no_date");
+    rows.unshift({ name: "todo_owner", lines: [named.length > 0 ? named.join(", ") : t("open.nobody")], link: undefined }, { name: "todo_due", lines: [due], link: undefined });
+  }
   const heading = isSelf && name ? t("record.you_named", { name }) : name;
 
   return (
@@ -190,6 +209,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         actions={
           data ? (
             <>
+              {kind === "action" && data.fields.status === "open" && (
+                <Button variant="primary" onClick={markDone}>
+                  {t("followups.mark_done")}
+                </Button>
+              )}
               <Offers kind={kind} id={id} />
               {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
               {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
@@ -223,7 +247,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && (
         <div className="record-grid">
           <div className="record-main">
-          {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
+          {kind === "action" && <PromiseWhy action={id} quiet omitOrigin skip={["owner", "due"]} />}
           {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {kind === "event" && <MeetingPrep entry={id} title={heading} />}
@@ -235,7 +259,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "project" && justMe && id === personal && <Unfiled />}
           {kind === "project" && <SideInside id={id} />}
           {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
-          {data.long_text.map((field) => (
+          {data.long_text.filter((field) => !(kind === "action" && TODO_HIDDEN.has(field))).map((field) => (
             <TextSection
               key={field}
               kind={kind}
@@ -322,6 +346,10 @@ const SELF_HIDDEN = new Set<string>(["name_verified", "track_only", "status", "r
 
 /** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
 const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda", "captured_at"]);
+
+/** What a to-do's page does not list as a detail: its words are the heading, owner and day are said once above, and the
+ * rest is the app's own bookkeeping. */
+const TODO_HIDDEN = new Set<string>(["text", "owners", "due", "due_words", "due_check", "due_event", "due_by_person", "evidence", "told", "status"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);

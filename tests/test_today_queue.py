@@ -71,6 +71,17 @@ def test_a_pasted_message_is_titled_by_its_sender_and_subject():
     assert (title.kind, title.person, title.sender, title.topic) == ("email", person["id"], None, "Proof dates")
 
 
+def test_the_persons_answer_to_a_question_is_titled_as_an_answer_not_as_a_note():
+    """The words typed to answer a question are kept as a note for the assistant, but they are the person's answer."""
+    source = {"trust": "trusted", "kind": "note:answered", "title": "Matte"}
+    title = title_for({"origin": "pm"}, source, None, people=_People({}), skip=SKIP, head="Matte")
+    assert title.kind == "answer"
+    plain = title_for(
+        {"origin": "pm"}, {"trust": "trusted", "kind": "note:wrote"}, None, people=_People({}), skip=SKIP, head="Matte"
+    )
+    assert plain.kind == "note"
+
+
 def test_an_unknown_sender_is_kept_as_written_without_address_or_parenthesis():
     head = "From: A Sender (A Bookshop) <a@example.com>\n\nWe can host the reading."
     title = title_for({"origin": "pm"}, {"trust": "untrusted"}, None, people=_People({}), skip=SKIP, head=head)
@@ -153,6 +164,30 @@ def test_a_name_the_assistant_couldnt_place_is_its_own_top_level_line(api):
     assert len(who) == 1 and who[0]["group"] == "decide" and who[0]["request"] == request
     assert who[0]["changeset"] and who[0]["op"] is not None and who[0]["text"]
     assert lines.index(who[0]) < next(i for i, line in enumerate(lines) if line["group"] == "review")
+
+
+def test_the_same_name_in_two_inputs_is_asked_once_and_the_answer_covers_both(api):
+    client, base, worker = api
+    hand_in(client, base, worker, "shared-first-name")
+    hand_in(client, base, worker, "shared-first-name")
+    who = [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "who_is"]
+    assert len(who) == 1, "one line for the name, not one for each input"
+    held = [
+        o
+        for item in client.get(f"{base}/changes").json()
+        for o in (item.get("changeset") or {}).get("ops", [])
+        if o["status"] == "held" and o.get("ask")
+    ]
+    assert len(held) == 2
+    choice = held[0]["ask"]["options"][0]["id"]
+    assert client.post(f"{base}/questions/{who[0]['question']}/answer", json={"person": choice}).status_code == 200
+    after = [
+        o
+        for item in client.get(f"{base}/changes").json()
+        for o in (item.get("changeset") or {}).get("ops", [])
+        if o["status"] == "held" and o.get("ask")
+    ]
+    assert after == []
 
 
 def test_an_action_without_an_owner_asks_for_one_on_its_own_line(api):
