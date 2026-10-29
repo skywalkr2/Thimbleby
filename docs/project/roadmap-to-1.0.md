@@ -1207,6 +1207,10 @@ management pack that means:
     against the records, through the fact lookups of design 6.19.
 - a page the person names as the source of truth for a kind of fact: what it says updates the records instead of
   raising a question (a standing rule from the person's answer, as the work version does).
+- Waiting to go out shows a page's delta before the yes, as the work version does: a count of what changed and what
+  was added per page, each changed field with the old value struck through and the new one marked, added table rows
+  marked, unchanged parts folded, the raw difference behind a fold, and one tick per page so some go and some wait. The
+  add-on's publishing channel supplies the preview; the core shows it.
 
 **Exit test:** in the owner's own workspace:
 - the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
