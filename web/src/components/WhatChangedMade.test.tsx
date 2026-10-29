@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
@@ -59,4 +60,15 @@ test("a change that made nothing shows no Made line", async () => {
   renderApp(<WhatChanged />);
   await screen.findByText("Minutes of the call");
   expect(screen.queryByRole("list", { name: "Made:" })).toBeNull();
+});
+
+test("a note a change filed has a link to the list of notes, where the filed note can be found", async () => {
+  const user = userEvent.setup();
+  const item = changeWith([]);
+  item.changeset!.ops = [{ index: 0, op: "note", status: "applied", reason: null, group: "notes", title: "Call the printer", meta: {}, record: { kind: "note", id: "N-1" } } as S["OpView"]];
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  await user.click((await screen.findAllByRole("button", { name: /Minutes of the call/ }))[0]);
+  const link = await screen.findByRole("link", { name: "See your notes" });
+  expect(link.getAttribute("href")).toMatch(/#records\/notes$/);
 });

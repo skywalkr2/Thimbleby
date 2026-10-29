@@ -91,7 +91,7 @@ export function MeetingPrep(props: { entry: string; title: string }) {
     <InvitationChanges changes={prep.changes ?? []} changedAt={prep.changed_at} />
     <section aria-labelledby="meeting-prep" className="record-section" data-meeting-prep={prep.event}>
       <div className="heading">
-        <h3 id="meeting-prep">{t("meeting.prep.heading")}</h3>
+        <h2 id="meeting-prep">{t("meeting.prep.heading")}</h2>
       </div>
       {fromOutside(prep) && (
         <p className="hint" data-outside-note="">

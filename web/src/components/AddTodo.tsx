@@ -10,6 +10,7 @@ import { day } from "../lib/dates";
 import { saidRepeat, useRepeatCheck } from "../lib/repeat";
 import { useSideFilter, useSides } from "../lib/sides";
 import { useDayCheck } from "../lib/todo-day";
+import { TODO_TEXT_MAX } from "../lib/todo-limits";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -17,6 +18,7 @@ import { EffortField } from "./EffortField";
 import { PersonPicker } from "./PersonPicker";
 import { ProjectPicker } from "./ProjectPicker";
 import { FormField } from "../ui/FormField";
+import styles from "./AddTodo.module.css";
 
 function AddTodoForm(props: { onClose: () => void }) {
   const { t } = useWords();
@@ -44,7 +46,8 @@ function AddTodoForm(props: { onClose: () => void }) {
   const dayOk = !when.trim() || read?.status === "ok";
   const repeatOk = !typedRepeat || readRepeat?.status === "ok";
   const words = text.trim();
-  const ready = !!words && !!who && dayOk && repeatOk && (!asks || !!project);
+  const over = words.length - TODO_TEXT_MAX;
+  const ready = !!words && over <= 0 && !!who && dayOk && repeatOk && (!asks || !!project);
   const save = async () => {
     if (!ready) return;
     const body = { text: words, owners: [who], ...(when.trim() ? { when: when.trim() } : {}), ...(project ? { project } : {}), ...(typedRepeat ? { repeat: typedRepeat } : {}), ...(effort ? { effort_minutes: effort } : {}) };
@@ -84,8 +87,20 @@ function AddTodoForm(props: { onClose: () => void }) {
           void save();
         }}
       >
-        <FormField id={`${id}-text`} label={t("addtodo.text")}>
-          <input id={`${id}-text`} type="text" autoFocus value={text} onChange={(e) => setText(e.target.value)} />
+        <FormField
+          id={`${id}-text`}
+          label={t("addtodo.text")}
+          hint={over > 0 ? <span className={styles.over}>{t("addtodo.too_long", { n: over, max: TODO_TEXT_MAX })}</span> : words.length > TODO_TEXT_MAX * 0.8 ? t("addtodo.count", { n: words.length, max: TODO_TEXT_MAX }) : undefined}
+        >
+          <input
+            id={`${id}-text`}
+            type="text"
+            autoFocus
+            value={text}
+            aria-invalid={over > 0 || undefined}
+            aria-describedby={over > 0 || words.length > TODO_TEXT_MAX * 0.8 ? `${id}-text-hint` : undefined}
+            onChange={(e) => setText(e.target.value)}
+          />
         </FormField>
         <FormField id={`${id}-when`} label={t("addtodo.when")}>
           <input

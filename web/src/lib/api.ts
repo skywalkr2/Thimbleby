@@ -109,8 +109,8 @@ export const api = {
   /** Takes a side back out while setup is open and nothing is filed under it. */
   removeSide: (project: string) => call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/remove`),
   /** Removes a side whenever the person asks: what is filed under it moves to Personal or ends with it, as one change with Undo. */
-  removeSideWithWork: (project: string, where: S["SideRemoveIn"]["where"]) =>
-    call<S["ProjectEndingDone"]>("POST", `sides/${id(project)}/remove`, { where } satisfies S["SideRemoveIn"]),
+  removeSideWithWork: (project: string, where: S["SideRemoveIn"]["where"], organization: S["SideRemoveIn"]["organization"] = "keep") =>
+    call<S["ProjectEndingDone"]>("POST", `sides/${id(project)}/remove`, { where, organization } satisfies S["SideRemoveIn"]),
   /** Undo of removeSide: the side comes back with its projects, as `kind` at `position` among the sides. */
   restoreSide: (project: string, body: S["SideRestoreIn"]) =>
     call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/restore`, body),

@@ -163,7 +163,7 @@ test("a repeating chore's Pause does not ask what it is waiting for", async () =
   renderApp(<OpenItems />);
   await menuOf(user);
   await user.click(await screen.findByRole("menuitem", { name: "Pause" }));
-  const field = await screen.findByRole("textbox", { name: "Why pause it?" });
+  const field = await screen.findByRole("textbox", { name: "Paused until when?" });
   expect(screen.queryByText("What is it waiting for?")).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Or pick what it waits on" })).toBeNull();
   await user.type(field, "away until January");

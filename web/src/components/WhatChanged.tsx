@@ -801,6 +801,11 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         </div>
         <div className="title">{op.op === "fact" ? factLine(op.title, op.meta.said_by) : plainTitle(op.title, op.meta.due)}</div>
         {meta && <div className="meta">{meta}</div>}
+        {op.op === "note" && op.status === "applied" && (
+          <div className="meta">
+            <a href={viewHref("records/notes")}>{t("notes.see")}</a>
+          </div>
+        )}
         {op.reason && op.status !== "applied" && <div className="reason">{op.reason}</div>}
       </div>
       <Actions>

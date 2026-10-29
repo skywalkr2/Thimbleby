@@ -122,7 +122,7 @@ test("a page shows the settings the app places on it, and the ones behind Advanc
   expect(screen.queryByLabelText("A rarely needed thing.")).toBeNull();
   expect(screen.queryByRole("button", { name: "More settings" })).toBeNull();
 });
-test("the section list sits down the side: the pages, Your business only with a business, and no Quality; the open one is marked", async () => {
+test("the section list sits down the side: the pages, Your business (where a job or business is added), and no Quality; the open one is marked", async () => {
   api(
     [
       ...ITEMS,
@@ -171,7 +171,7 @@ test("with projects and no side, the Lists page is listed and holds every list, 
   api([...ITEMS], { ...WITH_PROJECTS, "GET lists": () => [projectList(), otherList()] });
   open("lists");
   const nav = await sectionLinks(null);
-  expect(nav.queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(nav.getByRole("link", { name: "Your business" })).toBeInTheDocument();
   await waitFor(() => expect(nav.getByRole("link", { name: "Lists" })).toHaveAttribute("aria-current", "page"));
   const heading = await screen.findByRole("heading", { level: 2, name: "Lists" });
   await waitFor(() => expect(heading).toHaveFocus());
@@ -184,7 +184,7 @@ test("under Just me with only project lists there is no Lists page, and its addr
   open("lists");
   const nav = await sectionLinks();
   expect(nav.queryByRole("link", { name: "Lists" })).toBeNull();
-  expect(nav.queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(nav.getByRole("link", { name: "Your business" })).toBeInTheDocument();
   expect(nav.getByRole("link", { name: "You" })).toHaveAttribute("aria-current", "page");
   expect(screen.queryByText("Project status")).toBeNull();
 });
@@ -194,7 +194,7 @@ test("under Just me with a list that is not a project's, the Lists page is liste
   const { unmount } = open();
   const nav = await sectionLinks();
   await waitFor(() => expect(nav.getByRole("link", { name: "Lists" })).toBeInTheDocument());
-  expect(nav.queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(nav.getByRole("link", { name: "Your business" })).toBeInTheDocument();
   expect(nav.getByRole("link", { name: "Lists" })).toHaveAttribute("href", expect.stringMatching(/#settings\/lists$/));
   unmount();
   open("lists");

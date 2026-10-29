@@ -100,6 +100,11 @@ class ProjectEndingDone(BaseModel):
     drafts: list[str]
     acts: list[str]
     names: list[str]
+    companions: list[str] = Field(
+        default_factory=list,
+        description="Further changes the removal made (the side's organization going with it): Undo takes these back "
+        "first, then `changeset`.",
+    )
 
 
 class ProjectEndingChoice(BaseModel):
@@ -1234,6 +1239,11 @@ class PersonIn(BaseModel):
     org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
     relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
+    how_to_reach: dict[str, str] | None = Field(
+        None,
+        description="How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the "
+        "address or number. A blank value is left out.",
+    )
     side: Literal["personal", "business", "both"] | None = Field(
         None,
         description="Which side of life they belong to. Refused for business or both when there is more than one "
@@ -1309,6 +1319,11 @@ class PersonPatch(BaseModel):
     aliases: list[str] | None = None
     status: Literal["active", "left"] | None = None
     relation: str | None = Field(None, description="How they relate to the person; null clears it.")
+    how_to_reach: dict[str, str] | None = Field(
+        None,
+        description="How to reach them, replacing what is kept: a kind of contact detail the workspace offers (email, "
+        "phone) mapped to the address or number. A blank value is left out; an empty map clears them all.",
+    )
     side: Literal["personal", "business", "both"] | None = Field(
         None,
         description="Which side they belong to. Refused for business or both when there is more than one side "
@@ -1538,6 +1553,11 @@ class SideRemoveIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     where: Literal["personal", "end"] = Field(
         description="personal: its projects and to-dos move to Personal. end: they end with it."
+    )
+    organization: Literal["keep", "remove"] = Field(
+        "keep",
+        description="What happens to the organization the side made: keep it (the default), or remove it with the "
+        "side, which is refused while other people work for it.",
     )
 
 

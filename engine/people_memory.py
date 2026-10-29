@@ -224,7 +224,9 @@ def open_with(
                 found["asked_by"].append(action_item(view, "asked_by", record, today, here))
         elif pm in owners and person in promised:
             found["promised_to"].append(action_item(view, "promised_to", record, today, here))
-        elif person in owners and pm not in owners and (pm in promised or not promised):
+        elif person in owners and pm not in owners and (pm in promised or (not promised and promises.is_promise(d))):
+            # Theirs because they promised it. A to-do the person handed them is open with them, on their page, but
+            # they didn't promise it, so it isn't listed as a promise.
             found["promised_by"].append(action_item(view, "promised_by", record, today, here))
     for record in view.list("question"):
         d = record.data

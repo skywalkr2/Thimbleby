@@ -27,7 +27,8 @@ test("every literal key exists", () => {
   }
   const plural = new Set<string>();
   for (const m of code.matchAll(/\btn\(\s*"([a-z_]+(?:\.[a-z_]+)+)"/g)) plural.add(m[1]);
-  const missing = [...used].filter((k) => !(k in words) && !plural.has(k));
+  // A key chosen by a condition and said with `tn` is a plural pair, whichever it is.
+  const missing = [...used].filter((k) => !(k in words) && !plural.has(k) && !(`${k}.one` in words && `${k}.other` in words));
   const missingPlural = [...plural].flatMap((k) => [`${k}.one`, `${k}.other`]).filter((k) => !(k in words));
   expect(missing).toEqual([]);
   expect(missingPlural).toEqual([]);

@@ -11,6 +11,7 @@ import { useSaid } from "../lib/repeat";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ActivityList } from "../ui/ActivityList";
+import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { OriginLink, hasOrigin } from "./Origin";
@@ -24,7 +25,7 @@ function Section(props: { id: string; title: string; count?: number; children: R
   return (
     <section aria-labelledby={props.id} className="record-section">
       <div className="heading">
-        <h3 id={props.id}>{props.title}</h3>
+        <h2 id={props.id}>{props.title}</h2>
         {props.count ? <span className="hint">{props.count}</span> : null}
       </div>
       {props.children}
@@ -45,15 +46,28 @@ const joined = (parts: ReactNode[]): ReactNode =>
     .flatMap((part, i) => (i === 0 ? [part] : [" · ", part]))
     .map((part, i) => <span key={i}>{part}</span>);
 
+export type ActivityPart = "open" | "repeat" | "completed" | "facts" | "activity";
+
 /** `part` shows only what is open with the record ("open") or only the rest ("rest": what finished, the facts, the history), so
- * the page can put its own to-dos first, then the conversation, then the history; left out, all of it. */
-export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self?: boolean }) {
+ * the page can put its own to-dos first and the history after; left out, all of it. `show` names the sections to show instead
+ * (a person's tabs split them). `limit` shows only that many open items, then "See all" (`onSeeAll`); `how` says in a few words
+ * how each open item relates to the page (who promised it, whose it is); `shown` is how many history entries show at first. */
+export function RecordActivity(props: {
+  page: Page;
+  part?: "open" | "rest";
+  show?: ActivityPart[];
+  self?: boolean;
+  limit?: number;
+  onSeeAll?: () => void;
+  how?: ReadonlyMap<string, string>;
+  shown?: number;
+}) {
   const { t, tn, has } = useWords();
   const factLine = useFactLine();
   const place = usePlaceText();
   const { page } = props;
-  const showOpen = props.part !== "rest";
-  const showRest = props.part !== "open";
+  const wants = (part: ActivityPart) => (props.show ? props.show.includes(part) : part === "open" ? props.part !== "rest" : props.part !== "open");
+  const showOpen = wants("open");
   const labelOf = useFieldLabel();
   // What the change was, in a word, from the op that made it; one the sheet has no word for is just a change.
   const verb = (op: string) => (has(`record.op.${op.split("#")[0]}`) ? t(`record.op.${op.split("#")[0]}`) : t("record.op.other"));
@@ -80,33 +94,45 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
       {showOpen && open > 0 && (!props.self || page.open_actions.length > 0) && (
         <Section id="record-open" title={props.self ? t("record.open_you") : t("record.open_with", { name: page.name })} count={props.self ? page.open_actions.length : open}>
           <RowList>
-            {page.open_actions.map((a) => (
-              <Row
-                key={a.id}
-                pill={<Pill tone="neutral">{t("unfiled.kind.action")}</Pill>}
-                title={<a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>}
-                meta={joined([
-                  (a.owners ?? []).join(", "),
-                  a.due && t("op.meta.due", { date: day(a.due) }),
-                  page.kind !== "project" && place({ name: a.project_name, side: a.side_name }),
-                  a.series && a.series_title && <MeetingLabel key="m" series={a.series} title={a.series_title} on={a.meeting_on} />,
-                  hasOrigin(a.origin) && <OriginLink key="o" origin={a.origin} inline />,
-                ])}
-              />
-            ))}
-            {!props.self && page.open_questions.map((q) => (
-              <Row
-                key={q.id}
-                pill={<Pill tone="neutral">{t("unfiled.kind.question")}</Pill>}
-                title={<a href={viewHref(recordView("question", q.id))}>{q.title}</a>}
-                meta={joined([
-                  q.to_name && t("record.asked_of", { name: q.to_name }),
-                  q.series && q.series_title && <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
-                  hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} inline />,
-                ])}
-              />
-            ))}
+            {[
+              ...page.open_actions.map((a) => ({ id: a.id, node: (
+                <Row
+                  key={a.id}
+                  pill={<Pill tone="neutral">{t("unfiled.kind.action")}</Pill>}
+                  title={<a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>}
+                  meta={joined([
+                    props.how?.get(a.id),
+                    !props.how?.has(a.id) && (a.owners ?? []).join(", "),
+                    a.due && t("op.meta.due", { date: day(a.due) }),
+                    page.kind !== "project" && place({ name: a.project_name, side: a.side_name }),
+                    a.series && a.series_title && <MeetingLabel key="m" series={a.series} title={a.series_title} on={a.meeting_on} />,
+                    hasOrigin(a.origin) && <OriginLink key="o" origin={a.origin} inline />,
+                  ])}
+                />
+              ) })),
+              ...(props.self ? [] : page.open_questions.map((q) => ({ id: q.id, node: (
+                <Row
+                  key={q.id}
+                  pill={<Pill tone="neutral">{t("unfiled.kind.question")}</Pill>}
+                  title={<a href={viewHref(recordView("question", q.id))}>{q.title}</a>}
+                  meta={joined([
+                    q.to_name && t("record.asked_of", { name: q.to_name }),
+                    q.series && q.series_title && <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
+                    hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} inline />,
+                  ])}
+                />
+              ) }))),
+            ]
+              .slice(0, props.limit)
+              .map((entry) => entry.node)}
           </RowList>
+          {props.limit !== undefined && open > props.limit && props.onSeeAll && (
+            <div>
+              <Button variant="quiet" size="sm" onClick={props.onSeeAll}>
+                {t("record.see_all")}
+              </Button>
+            </div>
+          )}
         </Section>
       )}
       {showOpen && props.self && page.open_questions.length > 0 && (
@@ -125,12 +151,12 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
           </RowList>
         </Section>
       )}
-      {showRest && (page.repeat || earlier.length > 0) && (
+      {wants("repeat") && (page.repeat || earlier.length > 0) && (
         <Section id="record-repeat" title={t("repeat.section")}>
           {page.repeat && <p>{said(page.repeat)}</p>}
           {earlier.length > 0 && (
             <>
-              <h4 className="hint">{t("repeat.earlier")}</h4>
+              <h3 className="hint">{t("repeat.earlier")}</h3>
               <RowList>
                 {earlier.map((e) => (
                   <Row
@@ -144,7 +170,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
           )}
         </Section>
       )}
-      {showRest && completed.length > 0 && (
+      {wants("completed") && completed.length > 0 && (
         <Section id="record-completed" title={t("record.completed")} count={completed.length}>
           <RowList>
             {completed.map((c) => (
@@ -163,7 +189,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
           </RowList>
         </Section>
       )}
-      {showRest && (page.facts ?? []).length > 0 && (
+      {wants("facts") && (page.facts ?? []).length > 0 && (
         <Section id="record-facts" title={t("record.facts")} count={(page.facts ?? []).length}>
           <RowList>
             {(page.facts ?? []).map((f) => (
@@ -176,9 +202,10 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
           </RowList>
         </Section>
       )}
-      {showRest && page.activity.length > 0 && (
+      {wants("activity") && page.activity.length > 0 && (
         <Section id="record-activity" title={t("record.activity")}>
           <ActivityList
+            shown={props.shown}
             entries={page.activity.map((e, i) => ({
               key: `${e.at}-${e.id}-${e.op}-${i}`,
               at: e.at,
@@ -201,7 +228,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
           />
         </Section>
       )}
-      {showRest && open === 0 && completed.length === 0 && !page.repeat && earlier.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}
+      {wants("activity") && wants("completed") && open === 0 && completed.length === 0 && !page.repeat && earlier.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}
       {showOpen && <span className="sr">{tn("record.items_count", open)}</span>}
     </div>
   );

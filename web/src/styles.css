@@ -434,6 +434,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
 .record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
+.muted { color: var(--text-muted); }
+@media (min-width: 1024px) { .record-sticky { position: sticky; top: var(--space-4); } }
 /* A side panel is narrow: each label sits above its value, so no pair wraps beside the other. */
 .unfiled { display: grid; gap: var(--space-3); min-width: 0; }
 .unfiled .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }

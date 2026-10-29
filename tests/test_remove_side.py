@@ -171,3 +171,49 @@ def test_a_small_removal_makes_no_backup(tmp_path):
     backups_to(ws, drive, bulk_change_records=50)
     assert _remove(c, side, "personal").status_code == 200
     assert copies(drive) == []
+
+
+# ---- the organization the side made: removed or kept, by choice (X42) ------------------------------------------------
+
+
+def _organization_of(c, side):
+    return c.app.state.store.read().get("project", side).data.get("organization")
+
+
+def test_removing_a_side_asks_whether_to_remove_its_organization_and_keeps_it_unless_told_to(tmp_path):
+    ws, c, side, _inside, _todos = _world(tmp_path)
+    org = _organization_of(c, side)
+    assert org and c.app.state.store.read().get("organization", org) is not None
+    done = c.post(f"/api/sides/{side}/remove", json={"where": "personal"})
+    assert done.status_code == 200, done.text
+    # Said nothing about it: the organization stays, so nothing is lost without the person saying so.
+    assert c.app.state.store.read().get("organization", org) is not None
+
+
+def test_removing_a_side_can_remove_its_organization_with_it_and_undo_brings_both_back(tmp_path):
+    ws, c, side, _inside, _todos = _world(tmp_path)
+    org = _organization_of(c, side)
+    done = c.post(f"/api/sides/{side}/remove", json={"where": "personal", "organization": "remove"})
+    assert done.status_code == 200, done.text
+    body = done.json()
+    store = c.app.state.store
+    assert store.read().get("organization", org) is None
+    # Nothing is left naming it, and the response says which changes to take back, the organization's first.
+    assert store.read().get("project", side).data.get("organization") is None
+    assert len(body["companions"]) == 1
+    for cs in [*body["companions"], body["changeset"]]:
+        undone = c.post(f"/api/changesets/{cs}/undo", json={"ops": None})
+        assert undone.status_code == 200 and not undone.json()["skipped"], undone.text
+    assert store.read().get("organization", org) is not None
+    assert store.read().get("project", side).data.get("organization") == org
+    assert side in _side_ids(c)
+
+
+def test_an_organization_other_people_work_for_is_not_removed_with_the_side(tmp_path):
+    ws, c, side, _inside, _todos = _world(tmp_path)
+    org = _organization_of(c, side)
+    c.post("/api/people", json={"full_name": "Quinn Supplier", "org": org})
+    refused = c.post(f"/api/sides/{side}/remove", json={"where": "personal", "organization": "remove"})
+    assert refused.status_code == 409
+    assert "Quinn Supplier" in refused.json()["detail"]
+    assert side in _side_ids(c)

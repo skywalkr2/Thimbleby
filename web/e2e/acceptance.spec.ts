@@ -790,6 +790,8 @@ test.describe.serial("acceptance scenario", () => {
     const row = page.locator(`[data-detail-item][data-changeset="${changeset}"]`);
     await row.getByRole("button", { name: /More actions for/ }).first().click();
     await page.getByRole("menuitem", { name: "Undo everything it did" }).click();
+    // Undoing many records at once is the one undo that asks first.
+    await page.getByRole("dialog").getByRole("button", { name: "Undo everything" }).click();
     await expect(row.locator("li[data-item] [data-pill]")).toHaveText(/Undone/i);
 
     // The fact is gone: no screen lists facts yet, so the record route a record's page reads from no longer finds it.
@@ -950,7 +952,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "Set aside by rules" })).toHaveCount(0);
     await checkAccessibility(page);
     // The Ask box opens from the search field's last row: focus goes to the question, Escape closes it, and focus returns to the field.
-    const field = page.getByRole("searchbox");
+    const field = page.getByRole("banner").getByRole("searchbox");
     const askRow = page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / });
     await field.click();
     await askRow.click();

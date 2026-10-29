@@ -19097,6 +19097,21 @@
             "title": "Full Name",
             "type": "string"
           },
+          "how_to_reach": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the address or number. A blank value is left out.",
+            "title": "How To Reach"
+          },
           "org": {
             "anyOf": [
               {
@@ -19291,6 +19306,21 @@
               }
             ],
             "title": "Full Name"
+          },
+          "how_to_reach": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How to reach them, replacing what is kept: a kind of contact detail the workspace offers (email, phone) mapped to the address or number. A blank value is left out; an empty map clears them all.",
+            "title": "How To Reach"
           },
           "org": {
             "anyOf": [
@@ -20129,6 +20159,14 @@
           "changeset": {
             "title": "Changeset",
             "type": "string"
+          },
+          "companions": {
+            "description": "Further changes the removal made (the side's organization going with it): Undo takes these back first, then `changeset`.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Companions",
+            "type": "array"
           },
           "drafts": {
             "items": {
@@ -27690,6 +27728,21 @@
             "title": "Full Name",
             "type": "string"
           },
+          "how_to_reach": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the address or number. A blank value is left out.",
+            "title": "How To Reach"
+          },
           "org": {
             "anyOf": [
               {
@@ -28001,6 +28054,16 @@
         "additionalProperties": false,
         "description": "Remove a side after setup: what happens to the projects and to-dos filed under it.",
         "properties": {
+          "organization": {
+            "default": "keep",
+            "description": "What happens to the organization the side made: keep it (the default), or remove it with the side, which is refused while other people work for it.",
+            "enum": [
+              "keep",
+              "remove"
+            ],
+            "title": "Organization",
+            "type": "string"
+          },
           "where": {
             "description": "personal: its projects and to-dos move to Personal. end: they end with it.",
             "enum": [

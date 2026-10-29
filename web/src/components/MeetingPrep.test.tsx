@@ -8,17 +8,15 @@ import { forgetLine } from "../lib/today";
 import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { MeetingPrep } from "./MeetingPrep";
-import { PersonMemory } from "./PersonMemory";
 import { Today } from "./Today";
 
-// Prep before a calendar entry, capture after it, and what to remember about a person (design 6.32, 7.14): the three lines on
-// Today, the prep on the entry's page and the memory on the person's page. Everything is worked out by rules on the server;
+// Prep before a calendar entry and capture after it (design 6.32, 7.14): the three lines on
+// Today and the prep on the entry's page. Everything is worked out by rules on the server;
 // these tests check what the screens show of it, in plain words, with the cursor where the person types.
 
 type Line = S["QueueLineView"];
 type Item = S["OpenItemView"];
 type Prep = S["MeetingPrepView"];
-type Memory = S["PersonMemoryView"];
 
 const ANA = "Ana Example";
 const line = (kind: Line["kind"], over: Partial<Line> = {}): Line => ({ key: `${kind}:1`, group: "review", kind, count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...over });
@@ -355,49 +353,4 @@ test("an entry still ahead has no capture button", async () => {
   entryPage(prep());
   await screen.findByRole("region", { name: ANA });
   expect(screen.queryByRole("button", { name: "Capture what happened" })).toBeNull();
-});
-
-// ---- a person's page -------------------------------------------------------------------------------------------------
-
-const memory = (over: Partial<Memory> = {}): Memory => ({
-  person: "PER-2",
-  name: ANA,
-  last_in_touch: { kind: "to", on: "2026-10-19", untrusted: false },
-  asked_of: [],
-  asked_by: [],
-  promised_to: [item({ kind: "promised_to", id: "ACT-1", text: "Send the cover", quote: "I'll send the cover" })],
-  promised_by: [],
-  reach: { kept: { email: "ana@example.com", phone: "555-0100" }, replies_on: "email", replies_record: "SRC-1" },
-  dates: [
-    { fact: "FACT-1", text: "Ana Example's birthday is March 3", on: "2027-03-03", yearly: true, quote: "birthday is March 3" },
-    { fact: "FACT-2", text: "Ana Example's contract ends 2027-01-15", on: "2027-01-15", yearly: false },
-  ],
-  matters: [{ fact: "FACT-3", text: "Ana Example prefers short notes", as_of: "2026-10-01", quote: "prefers short notes" }],
-  ...over,
-});
-
-test("a person's page shows each part with the words it rests on: last in touch, what is open, how to reach them, their dates and what matters", async () => {
-  fakeApi({ "GET people/PER-2/memory": () => memory() });
-  renderApp(<PersonMemory person="PER-2" />);
-  const region = await screen.findByRole("region", { name: "What to remember" });
-  expect(region).toHaveTextContent("Last in touch: a message to them on");
-  expect(within(region).getByText("You promised Ana Example")).toBeInTheDocument();
-  expect(region).toHaveTextContent("“I'll send the cover”");
-  expect(region).toHaveTextContent("ana@example.com · email · where they last wrote from");
-  expect(region).toHaveTextContent("555-0100 · phone");
-  expect(region).not.toHaveTextContent("555-0100 · phone · where they last wrote from");
-  expect(region).toHaveTextContent("Ana Example's birthday is March 3 · every year, next on");
-  expect(region).toHaveTextContent("Ana Example's contract ends 2027-01-15 · on");
-  expect(region).toHaveTextContent("Ana Example prefers short notes · as of");
-  expect(within(region).getByText("How to reach them")).toBeInTheDocument();
-  expect(within(region).getByText("What matters to them")).toBeInTheDocument();
-});
-
-test("a part with nothing in it is left out, and a person with nothing on file says so", async () => {
-  fakeApi({ "GET people/PER-2/memory": () => memory({ last_in_touch: null, promised_to: [], reach: { kept: {} }, dates: [], matters: [] }) });
-  renderApp(<PersonMemory person="PER-2" />);
-  expect(await screen.findByText("Nothing is on file about Ana Example yet.")).toBeInTheDocument();
-  expect(screen.queryByText("How to reach them")).toBeNull();
-  expect(screen.queryByText("Dates")).toBeNull();
-  expect(screen.queryByText("What matters to them")).toBeNull();
 });

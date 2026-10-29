@@ -116,8 +116,8 @@ test("a hold with only words still reads Paused, and no hold shows nothing", asy
 
 // ---- the picker on Pause -----------------------------------------------------------------------------------------
 
-function Harness(props: { id: string }) {
-  const hold = useHold({ id: props.id });
+function Harness(props: { id: string; repeats?: boolean }) {
+  const hold = useHold({ id: props.id, repeat: props.repeats ? { phrase: "every Friday" } : undefined });
   return (
     <>
       <button type="button" onClick={hold.entry.run}>
@@ -190,4 +190,17 @@ test("picking a to-do or a question sends its id with whatever words were typed"
   await user.type(screen.getByRole("textbox", { name: "What is it waiting for?" }), "the printer");
   await user.click(screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!);
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "the printer", on: "Q-4" }));
+});
+
+test("pausing a chore that repeats asks until when, not what it is waiting for, and offers no one to wait on", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ ...pickerRoutes, "POST actions/ACT-1/hold": () => ({ ok: "ACT-1", previous: null }) });
+  renderApp(<Harness id="ACT-1" repeats />);
+  await user.click(screen.getByRole("button", { name: "Pause" }));
+  expect(await screen.findByRole("textbox", { name: "Paused until when?" })).toBeInTheDocument();
+  expect(screen.queryByText("What is it waiting for?")).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Or pick what it waits on" })).toBeNull();
+  await user.type(screen.getByRole("textbox", { name: "Paused until when?" }), "after the holidays");
+  await user.click(screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "after the holidays" }));
 });

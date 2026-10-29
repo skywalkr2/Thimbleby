@@ -71,10 +71,9 @@ export function RecordConversation(props: { kind: string; id: string }) {
   const turns = talk.data?.turns ?? [];
   return (
     <section aria-labelledby={`${base}-title`} className="conversation" data-conversation="">
-      <h2 id={`${base}-title`} className="what">
+      <h2 id={`${base}-title`} className="sr">
         {t("conversation.title")}
       </h2>
-      {turns.length === 0 && !talk.isPending ? <p className="hint">{t("conversation.empty")}</p> : null}
       {turns.length > 0 && (
         <RowList>
           {turns.map((turn) => (

@@ -1027,6 +1027,28 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 266. People and record pages: contact details and sides on the person form, one page for a business, one editor for a to-do, a list of notes (2026-10-29; sweep batch 6, X33, X34, X35, X39, X40, X41, X42, with the record-page parts of VC10 and the person mockup)
+
+| Where | Before | Now |
+|---|---|---|
+| A person's form (7.14) | No email, phone, side or relation after setup, so a new person was on every side; a duplicate name was an error in a toast behind the drawer | Email, Phone and any other offered kind of contact detail; Where they belong ticked from the list of sides; Who they are to you on Personal, role and organization on a side of work; a duplicate name said while it is typed; a refusal said in the form; an address someone else holds refused with their name |
+| A person's page (7.14, 6.34) | A stack of sections: What to remember, "promised you" and "Open with" listing the same to-do, "How to reach" twice, Name verified, Side and Sides, and "I manage them / I report to them" asked of a sister | The mockup: crumb, who they are under the name, Edit and a menu; tabs Overview, Open with and Activity; a sticky panel that says each fact once; the work question only for someone from a side of work; Mark as left only for them |
+| Handing a to-do to someone (6.32) | It showed as "<Name> promised you" | Open with them, "<Name> has this to do"; a promise is listed as theirs only when it was read as one; the form says they will be listed under Follow-ups for the person to tell them |
+| A to-do (7.5, 7.14) | The page was headed Action with Wording repeated, an empty Draft and no Mark done; a title didn't open it; Edit, Reassign, Change this and Add a note each opened their own form, together, with no Escape; Pause on a chore asked what it waits for; a typed to-do had "Where it came from"; a 477-character to-do failed with "Try again" | To-do page with Mark done; the title opens it; one Edit with who does it and the project; one editor open at a time and Escape closes it; "Paused until when?"; no origin for a typed to-do; a counter and the reason beside the field |
+| Record pages (7.14) | Evidence, Trust, how it was said and developer help among the facts; the box to ask first, with a "nothing said" line; section headings skipping a level | Bookkeeping under More details; the box last and one line; second-level section headings |
+| A business (7.8, 7.14) | Its project page and its organization page each had a conversation and activity and disagreed; Settings could only Rename and Remove | One page: the organization opens it and its notes and people are rows of it; Settings has Add a business and Add a job (also for a person with only their own life); Remove asks whether the organization goes too, and one Undo brings both back |
+| Notes (7.14) | No list of them | Notes under Files, newest first, linked from What changed |
+| Values in words (7.9) | The setup guide's suggested settings and a connection's refreshed lines showed values as the file holds them | The same words as the Settings rows say them |
+
+Not done here (a design choice is needed first): the Follow-ups line for a to-do handed to someone is kept (design 6.10 lists
+it under To send for the person to copy and send), so the person does not choose whether it is listed; and a person's two
+emails (the record keeps one value for each kind of contact detail).
+
+Built: `tests/test_people_pages.py`, `tests/test_origin.py`, `tests/test_remove_side.py`, `web/src/components/PersonForm.test.tsx`,
+`PersonPage.test.tsx`, `TodoPage.test.tsx`, `OpenItems.test.tsx`, `AddTodo.test.tsx`, `OnHold.test.tsx`, `Notes.test.tsx`,
+`BusinessSides.test.tsx`, `RecordPageNames.test.tsx`, `RecordPageRecords.test.tsx`, `Welcome.test.tsx` and
+`web/e2e/people-records.spec.ts`.
+
 ## 265. Sweep batch 4, second part: The Afternoon hour is a setting; Answer stays the submit label
 
 - The hour from which the morning form of the brief is called the afternoon brief is `ui.afternoon_from_hour` (0 to 23,

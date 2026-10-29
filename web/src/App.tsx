@@ -20,6 +20,7 @@ import { Ask } from "./components/Ask";
 import { SEARCH_FIELD } from "./components/SearchBox";
 import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
+import { Notes } from "./components/Notes";
 import { FollowUps } from "./components/FollowUps";
 import { OpenItems } from "./components/OpenItems";
 import { HandIn } from "./components/HandIn";
@@ -274,6 +275,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <People />;
       case "records/files":
         return <Files />;
+      case "records/notes":
+        return <Notes />;
       case "records/knowledge":
         return <Knowledge onOpenReview={() => setView("records/rules-review")} />;
       case "records/rules-review":

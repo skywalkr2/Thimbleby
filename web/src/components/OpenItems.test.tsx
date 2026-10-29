@@ -233,6 +233,63 @@ test("a note typed on Mark done reaches the assistant with the act", async () =>
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/A-1/status")?.body).toEqual({ status: "done", note: "Done, the printer has it" }));
 });
 
+test("Edit has who does it: it picks a person from a list, saves on Save, and says they will be listed to be told", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  const picker = await screen.findByRole("combobox", { name: "Owner" });
+  await user.selectOptions(picker, "P-3");
+  // Nothing is saved on choosing: the change waits for Save, and the form says what follows from it.
+  expect(calls.some((c) => c.route === "POST records/edit")).toBe(false);
+  expect(screen.getByText("Sam Twin will be listed under Follow-ups, for you to tell them. Nothing is sent.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({
+      kind: "action",
+      id: "A-1",
+      read_version: 3,
+      fields: { owners: [{ person: "P-3" }] },
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
+});
+
+test("on a shared to-do, Edit changes one owner and leaves the rest", async () => {
+  const user = userEvent.setup();
+  const shared = action("A-7", "Agree on the back-cover copy", {
+    owners: [
+      { person: "P-1", name: "Quinn Sample" },
+      { person: "P-2", name: "Robin Sample" },
+    ],
+  });
+  const calls = api({}, { actions: [shared] });
+  renderApp(<OpenItems />);
+  const [row] = await rows();
+  await user.click(within(row).getByRole("button", { name: /More actions for Agree on the back-cover copy/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Whose part" }), "P-2");
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Reassign to" }), "P-3");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-1" }, { person: "P-3" }] } }));
+});
+
+test("editing a to-do keeps the team the owner acted for, and the project can be changed in the same form", async () => {
+  const user = userEvent.setup();
+  const teamed = action("A-6", "Print the posters", { owners: [{ person: "P-1", name: "Quinn Sample", team: "TEAM-1" }] });
+  const calls = api({}, { actions: [teamed] });
+  renderApp(<OpenItems />);
+  const [row] = await rows();
+  await user.click(within(row).getByRole("button", { name: /More actions for Print the posters/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Owner" }), "P-3");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3", team: "TEAM-1" }] } }));
+});
+
 test("Edit changes the words and the due date from the row, sending only what changed", async () => {
   const user = userEvent.setup();
   const calls = api();
@@ -269,24 +326,6 @@ test("Edit changes the owner from a list, with Undo, and keeps the team the owne
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3", team: "T-1" }] } }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
-});
-
-test("on a shared to-do, Edit changes the first owner and leaves the rest", async () => {
-  const user = userEvent.setup();
-  const shared = action("A-7", "Agree on the back-cover copy", {
-    owners: [
-      { person: "P-1", name: "Quinn Sample" },
-      { person: "P-2", name: "Robin Sample" },
-    ],
-  });
-  const calls = api({}, { actions: [shared] });
-  renderApp(<OpenItems />);
-  const [row] = await rows();
-  await user.click(within(row).getByRole("button", { name: /More actions for Agree on the back-cover copy/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
-  await user.selectOptions(await screen.findByRole("combobox", { name: "Owner" }), "P-3");
-  await user.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { owners: [{ person: "P-3" }, { person: "P-2" }] } }));
 });
 
 test("a to-do that nearly repeats another offers Merge with it, at once and with one Undo; one that doesn't offers nothing", async () => {
@@ -438,6 +477,47 @@ test("Drop on a to-do that reached people reads Drop it and tell them, says a no
   expect(await screen.findByText("Dropped. A note to Robin Sample is waiting for your yes.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-9/undo"]));
+});
+
+test("a to-do's menu has one Edit with every field, and no second Reassign or Change this beside it", async () => {
+  const user = userEvent.setup();
+  api();
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Reassign…" })).toBeNull();
+  expect(screen.queryByRole("menuitem", { name: "Change this" })).toBeNull();
+});
+
+test("a to-do's title opens its page", async () => {
+  api();
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  expect(within(first).getByRole("link", { name: /^Send the proof/ }).getAttribute("href")).toMatch(/#records\/action\/A-1$/);
+});
+
+test("only one editor is open at a time, on a row or across rows, and Escape closes it", async () => {
+  const user = userEvent.setup();
+  api();
+  renderApp(<OpenItems />);
+  const [first, second] = await rows();
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  expect(await screen.findAllByRole("button", { name: "Save" })).toHaveLength(1);
+  // A note on the same row closes the edit.
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Add a note" }));
+  expect(within(first).queryByRole("textbox", { name: "Title" })).toBeNull();
+  expect(await within(first).findByRole("textbox", { name: "Your note" })).toBeInTheDocument();
+  // An edit on another row closes that note.
+  await user.click(within(second).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  await waitFor(() => expect(within(first).queryByRole("textbox", { name: "Your note" })).toBeNull());
+  const text = await within(second).findByRole("textbox", { name: "Title" });
+  await user.click(text);
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull());
 });
 
 test("what is being learned from a change asked for on a to-do shows on that row", async () => {

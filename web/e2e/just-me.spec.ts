@@ -77,6 +77,7 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
   { name: "Schedule", hash: () => "schedule", ready: (page) => heading(page, "Schedule") },
   { name: "Knowledge", hash: () => "records/knowledge", ready: (page) => heading(page, "Knowledge") },
   { name: "Files", hash: () => "records/files", ready: (page) => heading(page, "Files") },
+  { name: "Notes", hash: () => "records/notes", ready: (page) => heading(page, "Notes") },
   { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections", 2) },
   { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons", 2) },
   { name: "Settings: You", hash: () => "settings/you", ready: (page) => section(page, "You") },
@@ -141,6 +142,7 @@ test.describe('"Just me" sees no work words', () => {
       "Personal",
       "People",
       "Files",
+      "Notes",
       "Knowledge",
       "Settings",
     ]);
@@ -236,8 +238,8 @@ test.describe('"Just me" sees no work words', () => {
     await expect(page.getByRole("menuitem").first()).toBeVisible(LOADED);
     await read("A to-do's menu");
     await close();
-    // The forms the menu opens (the ones that change nothing until they are saved): edit, reassign and add a note.
-    for (const entry of [/^Edit/, /^Reassign/, /^Add a note/]) {
+    // The forms the menu opens (the ones that change nothing until they are saved): edit (which has who does it too) and add a note.
+    for (const entry of [/^Edit/, /^Add a note/]) {
       await page.getByRole("button", { name: new RegExp(`^More actions for ${seeded.todo.text}`) }).first().click();
       const item = page.getByRole("menuitem", { name: entry });
       // Editing is always offered; the others are read when the menu has them.
@@ -378,7 +380,7 @@ test.describe('"Just me" sees no work words', () => {
     const me = (await (await page.request.get("api/me")).json()) as { person: string; full_name: string };
     await go(page, `records/person/${encodeURIComponent(me.person)}`);
     await expect(page.getByRole("heading", { level: 1, name: `You · ${me.full_name}` })).toBeVisible(LOADED);
-    await expect(page.getByRole("heading", { level: 3, name: "Your details" })).toBeVisible(LOADED);
+    await expect(page.getByRole("heading", { level: 2, name: "Your details" })).toBeVisible(LOADED);
     const text = await settledText(page);
     for (const words of [/You asked/, /Open with/, /No contact on file/, /Who they are to you/, /Name verified/, /Track only/]) {
       expect(text).not.toMatch(words);

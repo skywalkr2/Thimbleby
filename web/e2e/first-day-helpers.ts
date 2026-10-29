@@ -46,6 +46,7 @@ export const screens = (day: FirstDay): Array<{ name: string; hash: string; head
   { name: "People", hash: "records/people", heading: "People" },
   { name: "The person's own page", hash: `records/person/${encodeURIComponent(day.person)}`, heading: /./ },
   { name: "Files", hash: "records/files", heading: "Files" },
+  { name: "Notes", hash: "records/notes", heading: "Notes" },
   { name: "Knowledge", hash: "records/knowledge", heading: "Knowledge" },
   { name: "Settings", hash: "settings", heading: "Settings" },
 ];

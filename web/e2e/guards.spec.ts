@@ -34,6 +34,7 @@ const SCREENS: Array<{ name: string; hash: string; heading: string | RegExp }> =
   { name: "Projects", hash: "records/projects", heading: "Projects" },
   { name: "People", hash: "records/people", heading: "People" },
   { name: "Files", hash: "records/files", heading: "Files" },
+  { name: "Notes", hash: "records/notes", heading: "Notes" },
   { name: "Knowledge", hash: "records/knowledge", heading: "Knowledge" },
   { name: "Connections", hash: "settings/connections", heading: "Settings" },
   { name: "Add-ons", hash: "settings/addons", heading: "Settings" },

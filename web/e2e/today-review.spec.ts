@@ -186,7 +186,7 @@ test.describe("A review happens on Today", () => {
   });
 
   // Sweep batches V1 and V2: a row's action is never filled with the solid accent, even on the line with the cursor: it is an outline
-  // by day (the surface) and tonal by night (the soft accent), the same on every line; the cursor shows as the focus ring on the row.
+  // by day (the surface) and tonal by night (the soft accent), the same on every line; the cursor shows as the focus ring and the 2px bar on the row.
   for (const scheme of ["light", "dark"] as const) {
     test(`in ${scheme} mode no row's action is filled, and only the line with the cursor shows the focus ring`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
@@ -214,6 +214,8 @@ test.describe("A review happens on Today", () => {
           surface: probe("backgroundColor", "var(--surface)"),
           tonal: probe("backgroundColor", "var(--accent-soft)"),
           ring: probe("boxShadow", "inset 0 0 0 2px var(--focus-ring)"),
+          bar: probe("boxShadow", "var(--row-selected-bar)"),
+          barAndRing: probe("boxShadow", "var(--row-selected-bar), inset 0 0 0 2px var(--focus-ring)"),
           backgrounds: buttons.map((b) => (b ? getComputedStyle(b).backgroundColor : null)),
           rowRings: all.map((row) => getComputedStyle(row).boxShadow),
         };
@@ -223,8 +225,9 @@ test.describe("A review happens on Today", () => {
       expect(withButton.filter((b) => b === found.filled), JSON.stringify(found)).toHaveLength(0);
       const resting = scheme === "dark" ? found.tonal : found.surface;
       expect(withButton.filter((b) => b === resting), JSON.stringify(found)).toHaveLength(withButton.length);
-      expect(found.rowRings[0], JSON.stringify(found)).toBe(found.ring);
-      expect(found.rowRings.slice(1).filter((b) => b === found.ring)).toHaveLength(0);
+      // The line with the cursor has the reviewer's 2px bar and the focus ring together; no other line has either.
+      expect(found.rowRings[0], JSON.stringify(found)).toBe(found.barAndRing);
+      expect(found.rowRings.slice(1).filter((b) => b === found.ring || b === found.bar || b === found.barAndRing), JSON.stringify(found)).toHaveLength(0);
       await page.unrouteAll({ behavior: "ignoreErrors" });
     });
   }

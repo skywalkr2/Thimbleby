@@ -3796,7 +3796,8 @@ people and details, and never acts in their name without their yes on the exact 
     **last in touch** is the latest of mail from them and mail the person sent them (read from the watched mailboxes' items,
     the sender and the others on it matched to people by the rules every screen uses), a message the person copied to send
     them, or an entry they were on that has ended, with its day and what it was (a mail's subject is outside text, marked);
-    **open with them** as in the prep, both ways; **how they like to be reached** is the ways kept on their record and the
+    **open with them** as in the prep, both ways (a promise is listed as theirs only when it was read as one: a to-do the
+    person handed them, by reassigning it, is theirs to do and is open with them, never "they promised you"); **how they like to be reached** is the ways kept on their record and the
     one they last wrote from (the channel whose address the latest mail from them came from); **their dates** are facts
     about them with a date word (`steward.people.date_words`, a birthday) and the next day it falls on, and facts about them
     with a full date still ahead; **what matters to them** is the facts the person kept about them (never one the assistant
@@ -4783,7 +4784,10 @@ assistant may draft or ask them. It is the person's own rule, kept per person, b
   four stances, evidence), a system op the learning task may propose: it is held for the person's Keep like every
   system op from the assistant, and never applies on its own. For someone's role there is no op yet.
 - **Choosing a stance.** The person's page has a list of the four meanings (and "Use my default"), saved at once as
-  the person's own edit with Undo. Settings shows `steward.default_stance` as a list and `steward.tracks` as ticks.
+  the person's own edit with Undo. It is asked only of someone from a side of work (a person with an organization, or on a
+  side beside Personal): a sister, a friend or a customer on Personal is never asked whether the person manages or reports to
+  them, and its label is "How you work with them" so it is not mistaken for who they are to you (their `relation`, on
+  Personal). Settings shows `steward.default_stance` as a list and `steward.tracks` as ticks.
 - **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
   is the whole of it.
 

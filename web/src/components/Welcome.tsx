@@ -10,7 +10,8 @@ import { useDraftState, useRestored } from "../lib/draft";
 import { problemText } from "../lib/problem";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
-import { addonLabel, formatValue, labelOf } from "../lib/settings";
+import { addonLabel, labelOf } from "../lib/settings";
+import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
@@ -235,12 +236,19 @@ function SuggestedSettings(props: { step: Step }) {
   const client = useQueryClient();
   const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  // A suggested value is said as the setting says it everywhere: a choice by its label, an amount as money, never the code.
+  const words = useSettingWordsFromCache();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const { step } = props;
   const label = (key: string) => {
     const item = settings.data?.items.find((i) => i.key === key);
     return item ? labelOf(item, t, has) : has(`settings.key.${key}`) ? t(`settings.key.${key}`) : key;
+  };
+
+  const said = (key: string, value: unknown) => {
+    const item = settings.data?.items.find((i) => i.key === key);
+    return item ? words.value(item, value) : words.value({ key, type: "text" }, value);
   };
 
   const apply = async () => {
@@ -265,7 +273,7 @@ function SuggestedSettings(props: { step: Step }) {
       </span>
       <ul className="plain-list" aria-labelledby={`${stepSlug(step.id)}-settings`}>
         {Object.entries(step.settings ?? {}).map(([key, value]) => (
-          <li key={key}>{t("welcome.settings.line", { label: label(key), value: formatValue(value, t) })}</li>
+          <li key={key}>{t("welcome.settings.line", { label: label(key), value: said(key, value) })}</li>
         ))}
         {Object.entries(step.adds ?? {}).map(([key, values]) => (
           <li key={`adds-${key}`}>{t("welcome.settings.adds_line", { label: label(key), values: values.map((v) => String(v)).join(", ") })}</li>

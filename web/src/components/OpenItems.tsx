@@ -33,6 +33,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { AskChooser } from "./AskChooser";
 import { SideFilter } from "./SideFilter";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
+import { closeEditorOf, useOneEditor } from "../lib/one-editor";
 import { useDropAction } from "./DropAction";
 import { useAddTodo } from "./AddTodo";
 import { useEditAction } from "./EditAction";
@@ -197,26 +198,13 @@ function ActionRow(props: { action: OpenAction }) {
   const a = props.action;
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const focus = () => ref.current?.focus();
-  // One editor is open on a to-do at a time: choosing another closes the first, and Escape closes it from any field.
-  const [active, setActive] = useState<string | null>(null);
-  const closeEditor = () => {
-    setActive(null);
-    focus();
-  };
-  const noting = active === "note";
-  const asking = active === "owner";
-  const opens = (name: string, entry: MenuAction): MenuAction => ({
-    ...entry,
-    run: () => {
-      setActive(name);
-      entry.run?.();
-    },
-  });
+  const [noting, setNoting] = useOneEditor(`${a.id}:note`);
+  const [asking, setAsking] = useOneEditor(`${a.id}:owner`);
   const hold = useHold(a);
-  const drop = useDropAction(a, closeEditor);
-  const hand = useHandToAssistant(a, closeEditor);
-  const edit = useEditAction(a, closeEditor);
-  const remind = useRemindMe(a.id, a.remind_at, closeEditor);
+  const drop = useDropAction(a, focus);
+  const hand = useHandToAssistant(a, focus);
+  const edit = useEditAction(a, focus);
+  const remind = useRemindMe(a.id, a.remind_at, focus);
   const stopRepeat = useStopRepeat(a);
   const said = useSaid();
   const done = (note?: string) =>
@@ -237,15 +225,22 @@ function ActionRow(props: { action: OpenAction }) {
       }
     : null;
   const unowned = a.state === "no_owner";
-  useRowKeys(ref, { primary: unowned ? () => setActive("owner") : () => void done() });
+  useRowKeys(ref, { primary: unowned ? () => setAsking(true) : () => void done() });
+  // Escape closes the editor that is open on this row and hands the cursor back to it.
+  const escape = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape" && closeEditorOf(a.id)) {
+      e.stopPropagation();
+      focus();
+    }
+  };
   // The menu's sections: what changes the to-do, then when it comes back, then taking it away (in red, last).
   const menu: MenuAction[] = [
-    ...(unowned ? [] : [{ id: "note", label: t("note.add"), run: () => setActive("note") } satisfies MenuAction]),
-    opens("edit", edit.entry),
+    ...(unowned ? [] : [{ id: "note", label: t("note.add"), run: () => setNoting(true) } satisfies MenuAction]),
+    edit.entry,
     ...(merge ? [merge] : []),
-    ...(unowned || !hand.entry ? [] : [opens("hand", hand.entry)]),
+    ...(unowned || !hand.entry ? [] : [hand.entry]),
   ];
-  const timing: MenuAction[] = [...(unowned ? [] : [...remind.entries.map((e) => opens("remind", e)), opens("hold", hold.entry)]), ...(stopRepeat ? [stopRepeat] : [])];
+  const timing: MenuAction[] = [...(unowned ? [] : [...remind.entries, hold.entry]), ...(stopRepeat ? [stopRepeat] : [])];
   const meta = join([
     a.owners.length > 0 ? a.owners.map((o) => o.name).join(", ") : t("open.nobody"),
     a.to_send && (
@@ -264,6 +259,7 @@ function ActionRow(props: { action: OpenAction }) {
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
+  // The title opens the to-do's own page.
   const title = (
     <NotesTitle notes={a.notes}>
       <a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>
@@ -272,6 +268,7 @@ function ActionRow(props: { action: OpenAction }) {
   return (
     <Row
       ref={ref}
+      onKeyDown={escape}
       lead={
         unowned ? undefined : <RoundCheck label={t("followups.mark_done")} data-key="primary" onClick={() => void done()} />
       }
@@ -285,7 +282,7 @@ function ActionRow(props: { action: OpenAction }) {
       }
       primary={
         unowned && a.owner_question ? (
-          <Button variant="primary" data-key="primary" aria-expanded={asking} onClick={() => setActive(asking ? null : "owner")}>
+          <Button variant="primary" data-key="primary" aria-expanded={asking} onClick={() => setAsking(!asking)}>
             {t("queue.act.pick_owner")}
           </Button>
         ) : undefined
@@ -296,22 +293,26 @@ function ActionRow(props: { action: OpenAction }) {
           actions={menu}
           groups={[
             { id: "timing", entries: timing },
-            { id: "remove", entries: [opens("drop", drop.entry)] },
+            { id: "remove", entries: [drop.entry] },
           ]}
         />
       }
     >
-      {active && (
-        <div onKeyDown={(e) => e.key === "Escape" && closeEditor()}>
-          {asking && a.owner_question && <AskChooser ask={{ id: a.owner_question, about: "owner", options: [], suggestion: null }} />}
-          {noting && <NoteBox sends={[{ label: t("followups.mark_done"), run: done }]} onClose={closeEditor} />}
-          {active === "edit" && edit.form}
-          {active === "hand" && hand.form}
-          {active === "remind" && remind.form}
-          {active === "hold" && hold.form}
-          {active === "drop" && drop.form}
-        </div>
+      {asking && a.owner_question && <AskChooser ask={{ id: a.owner_question, about: "owner", options: [], suggestion: null }} />}
+      {noting && (
+        <NoteBox
+          sends={[{ label: t("followups.mark_done"), run: done }]}
+          onClose={() => {
+            setNoting(false);
+            focus();
+          }}
+        />
       )}
+      {edit.form}
+      {hand.form}
+      {remind.form}
+      {hold.form}
+      {drop.form}
       {hand.line}
       <LearnedLines records={[a.id]} />
     </Row>

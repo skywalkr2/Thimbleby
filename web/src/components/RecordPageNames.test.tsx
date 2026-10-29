@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { person, project } from "../lib/records-fixtures";
@@ -77,15 +78,17 @@ test("a person's details say names, words and a label for a choice, in the order
   renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Quarry House");
-  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Role", "Organization", "How to reach", "Other names", "Team", "Status"]);
+  // How to reach them is one row for each kind (email, phone), the app's own flags are not details, and status says only that someone left.
+  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Email", "Phone", "Role", "Organization", "Team", "Other names"]);
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Organization")).toBe("Quarry House");
   expect(value("Team")).toBe("Quarry Editorial");
-  expect(value("How to reach")).toBe("Email: robin@example.org");
+  expect(value("Email")).toBe("robin@example.org");
+  expect(value("Phone")).toBe("Add phone");
   // The name is the heading's and a flag that is off says nothing: neither is a row.
   expect(within(details).queryByText("Full name")).toBeNull();
   expect(within(details).queryByText("Name verified")).toBeNull();
-  expect(value("Status")).toBe("Active");
+  expect(within(details).queryByText("Status")).toBeNull();
   expect(details.textContent).not.toMatch(/Help for/);
   expect(details.textContent).not.toMatch(/\b[A-Z]{2,5}-\d+\b/);
 });
@@ -154,7 +157,7 @@ const ownSides = (): S["BusinessState"] => ({
   chosen: "work",
 });
 
-test("the page of an organization that is one of the person's own businesses says so and links to that side", async () => {
+test("the page of an organization that is one of the person's own businesses opens that business's page, which is the one page there is", async () => {
   serve(
     "organization",
     "ORG-1",
@@ -163,12 +166,11 @@ test("the page of an organization that is one of the person's own businesses say
     page("organization", "ORG-1", "Quarry House", []),
     { "GET setup/business": ownSides },
   );
+  window.location.hash = "#records/organization/ORG-1";
   renderApp(<RecordPage kind="organization" id="ORG-1" onBack={() => {}} />);
-  const line = await screen.findByTestId("organization-side");
-  expect(line).toHaveTextContent("This is your business.");
-  // The heading says the name; the line does not say it again.
-  expect(line).not.toHaveTextContent("Quarry House");
-  expect(within(line).getByRole("link", { name: "Open its page" })).toHaveAttribute("href", expect.stringContaining("PRJ-7"));
+  await waitFor(() => expect(window.location.hash).toBe("#records/project/PRJ-7"));
+  // Nothing of its own is drawn in the meantime: no second conversation or activity to disagree with the business's.
+  expect(screen.queryByRole("heading", { level: 1, name: "Quarry House" })).toBeNull();
 });
 
 test("the page of any other organization says nothing about a side", async () => {
@@ -180,24 +182,28 @@ test("the page of any other organization says nothing about a side", async () =>
   expect(screen.queryByTestId("organization-side")).toBeNull();
 });
 
-test("the page of a side says its own organization once, as \"Your business\" linking to its page, and its name is not repeated", async () => {
+test("the page of a side is its organization's page too: its notes and who works for it are rows of it, and its name is not repeated", async () => {
   serve(
     "project",
     "PRJ-7",
     { name: "Quarry House", organization: "ORG-1" },
     [field("name", "text", { required: true }), field("organization", "reference", { refers_to: "organization" })],
     page("project", "PRJ-7", "Quarry House", [{ field: "organization", value: "ORG-1", type: "text", refs: [ref("organization", "ORG-1", "Quarry House")] }]),
-    { "GET setup/business": ownSides },
+    {
+      "GET setup/business": ownSides,
+      "GET organizations": () => [{ id: "ORG-1", name: "Quarry House", aliases: [], notes: "Closed on Mondays.", people: 1 }],
+      "GET people": () => [person("PER-1", "Robin Sample", { org: "ORG-1" }), person("PER-2", "Sam Other")],
+    },
   );
   renderApp(<RecordPage kind="project" id="PRJ-7" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
-  const term = await within(details).findByText("Organization");
-  const value = term.closest("[data-definition]")!.querySelector("dd")!;
-  expect(value).toHaveTextContent("Your business");
-  expect(within(value as HTMLElement).getByRole("link", { name: "Your business" })).toHaveAttribute("href", expect.stringContaining("ORG-1"));
-  // The heading is the only place the name is said.
+  await within(details).findByText("Closed on Mondays.");
+  expect(within(details).getByText("Robin Sample")).toBeInTheDocument();
+  expect(within(details).queryByText("Sam Other")).toBeNull();
+  // There is no second page to go to, so no link to one.
+  expect(within(details).queryByRole("link", { name: "Your business" })).toBeNull();
+  expect(within(details).queryByText("Organization")).toBeNull();
   expect(within(details).queryByText("Quarry House")).toBeNull();
-  expect(within(details).queryByText("Name")).toBeNull();
 });
 
 // A yes or no says only what is so (first day, F2): a flag that is off is left out of Details, and one that is on is said in
@@ -237,4 +243,39 @@ test("a person's page does not say the person's name under the heading that says
   expect(within(details).getByText("Editor")).toBeInTheDocument();
   expect(within(details).queryByText("Robin Sample")).toBeNull();
   expect(within(details).queryByText("Full name")).toBeNull();
+});
+
+test("a fact's page keeps where its words came from under More details, never beside what it says", async () => {
+  serve(
+    "fact",
+    "FACT-1",
+    { text: "The spine options are in the shared folder.", as_of: "2026-10-19", basis: "inferred", trust: "untrusted", evidence: { quote: "the spine options are in the shared folder", source: "SRC-1" }, project: "PRJ-1" },
+    [field("text", "text", { required: true }), field("as_of", "date"), field("basis", "choice"), field("trust", "choice"), field("evidence", "other"), field("project", "reference", { refers_to: "project" })],
+    page("fact", "FACT-1", "The spine options are in the shared folder.", []),
+  );
+  renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  await within(details).findByText("Harbor");
+  const fold = details.querySelector("[data-record-fold]")!;
+  expect(fold).not.toBeNull();
+  const inFold = within(fold as HTMLElement).getAllByRole("term").map((x) => x.textContent);
+  expect(inFold).toEqual(expect.arrayContaining(["Evidence", "How it was said", "Where the words come from"]));
+  const outside = within(details).getAllByRole("term").filter((x) => !fold.contains(x)).map((x) => x.textContent);
+  expect(outside).toEqual(["As of", "Project"]);
+  // The fact's own words are the heading, not a row.
+  expect(within(details).queryByText("Wording")).toBeNull();
+});
+
+test("a core record's form shows no help written for developers, but a plugin's own help stays", async () => {
+  const user = userEvent.setup();
+  serve("action", "ACT-1", { text: "Send the headcount", status: "open" }, [field("text", "text", { required: true }), field("status", "text")], page("action", "ACT-1", "Send the headcount", []));
+  const first = renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  const form = await screen.findByRole("form", { name: "Edit details" });
+  expect(form.textContent).not.toMatch(/Help for/);
+  first.unmount();
+  serve("plugin/chapter", "CH-1", { title: "One" }, [field("title", "text", { required: true, description: "What the chapter is called." })], page("plugin/chapter", "CH-1", "One", []));
+  renderApp(<RecordPage kind="plugin/chapter" id="CH-1" onBack={() => {}} />);
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  expect(await screen.findByText("What the chapter is called.")).toBeInTheDocument();
 });

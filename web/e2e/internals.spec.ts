@@ -62,6 +62,7 @@ async function screensToRead(page: Page): Promise<Array<{ name: string; hash: st
     { name: "Projects", hash: "records/projects" },
     { name: "People", hash: "records/people" },
     { name: "Files", hash: "records/files" },
+    { name: "Notes", hash: "records/notes" },
     { name: "Knowledge", hash: "records/knowledge" },
     { name: "Quality", hash: "quality" },
     { name: "Handover", hash: "handover" },

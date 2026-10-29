@@ -1,6 +1,7 @@
 // Correcting what the assistant made, from the row's menu (design 6.8, 7.18). "Change this" takes a note and hands it to
 // the assistant; a question's own menu changes the question itself (reword it, ask someone else, drop it, mark it as
 // already sent), each at once with Undo. Both record the correction the assistant learns from.
+import { useOneEditor } from "../lib/one-editor";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
@@ -21,7 +22,7 @@ export function useChangeThis(target: { kind: ChangeKind; id: string }, onClosed
   const { t } = useWords();
   const act = useAct();
   const addOwn = useAddOwnRequest();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useOneEditor(`${target.id}:change`);
   const send = (note: string) =>
     act(
       () => api.changeThis(target.kind, target.id, note),

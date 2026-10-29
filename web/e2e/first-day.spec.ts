@@ -93,7 +93,8 @@ test.describe("the first day, read as a person reads it", () => {
     const business = page.getByRole("region", { name: "Details", exact: true });
     await expect(business).toBeVisible(LOADED);
     await expect(business.getByText(SIDE, { exact: true })).toHaveCount(0);
-    await expect(business.getByRole("link", { name: "Your business" })).toHaveAttribute("href", /records\/organization\//);
+    // The business is its organization too, on one page: there is no second page to link to.
+    await expect(business.getByRole("link", { name: "Your business" })).toHaveCount(0);
 
     await openScreen(page, `records/person/${encodeURIComponent(day.person)}`, /./);
     const person = page.getByRole("region", { name: "Your details", exact: true });

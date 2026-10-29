@@ -47,14 +47,26 @@ const menuOf = async (user: ReturnType<typeof userEvent.setup>, name: RegExp | s
   return screen.getAllByRole("menuitem").map((m) => m.querySelector('[slot="label"]')?.textContent ?? m.textContent);
 };
 
-const actionPage = (extra: Routes = {}) =>
-  page("action", "ACT-9", { title: "Approve the proof", text: "Approve the proof", status: "open" }, { "POST items/action/ACT-9/change": () => ({ ok: "ACT-9", request: "REQ-5", signal: "SIG-1" }), ...extra });
+// A to-do's row has one Edit and no Change this; the page of the to-do keeps Change this in its menu, beside the box for asking.
+const todoPage = (extra: Routes = {}): Routes => ({
+  "GET record?kind=action&id=ACT-9": () => ({ kind: "action", id: "ACT-9", version: 3, fields: { id: "ACT-9", text: "Approve the proof", status: "open" }, long_text: [] }),
+  "GET kinds/action": () => ({ kind: "action", fields: [] }),
+  "GET record-pages/ACT-9?kind=action": () => ({ kind: "action", id: "ACT-9", version: 3, name: "Approve the proof", details: [], open_actions: [], open_questions: [], completed_actions: [], facts: [], fact_source: null, activity: [] }),
+  "GET people": () => [],
+  "GET projects": () => [],
+  "GET settings": () => ({ fingerprint: "fp", items: [] }),
+  "GET lists": () => [],
+  "GET organizations": () => [],
+  "GET plugin-actions?kind=action&id=ACT-9": () => [],
+  "GET task-kinds?kind=action&id=ACT-9": () => [],
+  ...extra,
+});
 
-test("Change this on an action's page takes a note, posts it, and says the assistant will look at it", async () => {
+test("Change this on an action takes a note, posts it, and says the assistant will look at it", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi(actionPage());
-  renderApp(<RecordPage kind="action" id="ACT-9" onBack={() => undefined} />);
-  expect(await menuOf(user, /More actions for/)).toContain("Change this");
+  const calls = fakeApi(todoPage({ "POST items/action/ACT-9/change": () => ({ ok: "ACT-9", request: "REQ-5", signal: "SIG-1" }) }));
+  renderApp(<RecordPage kind="action" id="ACT-9" onBack={() => {}} />);
+  expect(await menuOf(user, "Approve the proof")).toContain("Change this");
   await user.click(screen.getByRole("menuitem", { name: "Change this" }));
   const box = await screen.findByRole("textbox", { name: "Your note" });
   await waitFor(() => expect(box).toHaveFocus());
@@ -69,9 +81,9 @@ test("Change this on an action's page takes a note, posts it, and says the assis
 
 test("a note that couldn't be sent stays in its box", async () => {
   const user = userEvent.setup();
-  fakeApi(page("action", "ACT-9", { title: "Approve the proof", text: "Approve the proof", status: "open" }));
-  renderApp(<RecordPage kind="action" id="ACT-9" onBack={() => undefined} />);
-  await menuOf(user, /More actions for/);
+  fakeApi(todoPage());
+  renderApp(<RecordPage kind="action" id="ACT-9" onBack={() => {}} />);
+  await menuOf(user, "Approve the proof");
   await user.click(screen.getByRole("menuitem", { name: "Change this" }));
   await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Move it");
   await user.click(screen.getByRole("button", { name: "Ask for the change" }));

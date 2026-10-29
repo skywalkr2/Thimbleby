@@ -563,7 +563,7 @@ test.describe("screen use and the shell", () => {
       expect(box.height).toBe(56);
       const controls = [
         header.getByRole("link", { name: /^Go to Today/ }),
-        header.getByRole("button", { name: "Ask" }).first(),
+        header.getByRole("searchbox"),
         header.getByRole("button", { name: /^App status: / }),
         header.getByRole("button", { name: "Hand something in" }),
         header.getByRole("button", { name: "Help" }),
@@ -646,6 +646,7 @@ test.describe("screen use and the shell", () => {
       "#records/projects": "Projects",
       "#records/people": "People",
       "#records/files": "Files",
+      "#records/notes": "Notes",
       "#records/knowledge": "Knowledge",
       "#settings": "Settings",
     };
@@ -701,6 +702,7 @@ test.describe("screen use and the shell", () => {
     { name: "Projects", hash: "records/projects" },
     { name: "People", hash: "records/people" },
     { name: "Files", hash: "records/files" },
+    { name: "Notes", hash: "records/notes" },
     { name: "Knowledge", hash: "records/knowledge" },
     { name: "Rules review", hash: "records/rules-review" },
     { name: "Connections", hash: "settings/connections" },
@@ -761,7 +763,7 @@ test.describe("screen use and the shell", () => {
     await signIn(page);
     const bar = page.getByRole("navigation", { name: "Views" });
     await expect(bar).toBeVisible();
-    for (const name of ["Today", "Work", "Hand something in", "Ask", "More"]) {
+    for (const name of ["Today", "Work", "Hand something in", "Search", "More"]) {
       await expect(bar.getByRole(name === "Today" ? "link" : "button", { name })).toBeVisible();
     }
     const box = (await bar.boundingBox())!;

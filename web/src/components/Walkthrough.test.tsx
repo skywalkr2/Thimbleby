@@ -1176,7 +1176,7 @@ describe("each screen", () => {
     const ask = await within(added).findByRole("group", { name: "What happens to the projects and to-dos in Employer Example?" });
     expect(ask).toBeInTheDocument();
     await user.click(within(ask).getByRole("button", { name: /^Move them to/ }));
-    await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-2/remove")?.body).toEqual({ where: "personal" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-2/remove")?.body).toEqual({ where: "personal", organization: "keep" }));
   });
 
   test("Work: each business is its own block, its name with Remove beside it and its own boxes under it, and a new one has a heading too", async () => {

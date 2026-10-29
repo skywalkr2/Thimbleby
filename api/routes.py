@@ -2171,12 +2171,39 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if rec.id != except_id and rec.data[field].strip().lower() == value.strip().lower():
                 raise HTTPException(status_code=409, detail=f"{value} already exists.")
 
+    def _reach(given: dict[str, str], except_id: str | None = None) -> dict[str, str]:
+        """The contact details a person is given, kept as the workspace spells each kind and without blanks. A kind the
+        workspace doesn't offer, or an address someone else already holds, is refused in plain words."""
+        from engine.applier import contact_kind
+
+        kept: dict[str, str] = {}
+        for raw_kind, raw_value in given.items():
+            value = " ".join(str(raw_value).split())
+            if not value:
+                continue
+            kind = contact_kind(cfg, raw_kind)
+            if kind is None:
+                offered = ", ".join(cfg.workspace.contact_kinds)
+                raise HTTPException(
+                    status_code=409, detail=f"{raw_kind} isn't a kind of contact detail here; use one of: {offered}."
+                )
+            kept[kind] = value
+        for other in store.read().list("person"):
+            if other.id == except_id:
+                continue
+            held = {" ".join(str(v).split()).casefold() for v in (other.data.get("how_to_reach") or {}).values()}
+            clash = next((v for v in kept.values() if v.casefold() in held), None)
+            if clash is not None:
+                raise HTTPException(status_code=409, detail=f"{clash} is already {other.data['full_name']}'s.")
+        return kept
+
     def create_person(body: PersonIn, address: str | None = None) -> str:
         """Add a person on the side the body names, the way the People screen adds one. An address is kept as their
         email, when the workspace has that kind of contact detail and no one on file has the address already."""
         _same_name("person", "full_name", body.full_name)
         if body.org:
             need("organization", body.org)
+        given = _reach(body.how_to_reach) if body.how_to_reach else {}
 
         from engine import sides
 
@@ -2192,11 +2219,17 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         def do() -> str:
             with store.transaction() as tx:
-                data = {**body.model_dump(exclude={"sides"}), "name_verified": True, **written}
-                if reach and not any(
-                    reach[1].lower() == str(v).strip().lower()
-                    for p in tx.list("person")
-                    for v in (p.data.get("how_to_reach") or {}).values()
+                data = {**body.model_dump(exclude={"sides", "how_to_reach"}), "name_verified": True, **written}
+                if given:
+                    data["how_to_reach"] = given
+                if (
+                    reach
+                    and "how_to_reach" not in data
+                    and not any(
+                        reach[1].lower() == str(v).strip().lower()
+                        for p in tx.list("person")
+                        for v in (p.data.get("how_to_reach") or {}).values()
+                    )
                 ):
                     data["how_to_reach"] = {reach[0]: reach[1]}
                 return tx.create("person", data, _setup("person.add")).id
@@ -2283,6 +2316,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             _same_name("person", "full_name", changes["full_name"], except_id=pid)
         if changes.get("org"):
             need("organization", changes["org"])
+        if "how_to_reach" in changes:
+            changes["how_to_reach"] = _reach(changes["how_to_reach"] or {}, except_id=pid)
         if {"full_name", "first_name", "aliases"} & changes.keys():
             changes["name_verified"] = True  # the person wrote the spelling
         guard(lambda: _edit_on_screen(store, cfg, "person", pid, changes))
@@ -2307,14 +2342,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/organizations")
     def organizations() -> list[OrganizationView]:
         """The organizations people work for, by name."""
-        count: dict[str, int] = {}
-        for p in store.read().list("person"):
-            if p.data.get("org"):
-                count[p.data["org"]] = count.get(p.data["org"], 0) + 1
         from engine import sides
 
         view = store.read()
         own = {s.organization: s for s in sides.side_list(view, cfg) if s.organization}
+        by_side = {s.project: s.organization for s in own.values()}
+        count: dict[str, int] = {}
+        for p in view.list("person"):
+            # A person works for an organization they name; a business is also its people: those on its side.
+            counted = {p.data["org"]} if p.data.get("org") else set()
+            counted |= {by_side[side] for side in sides.person_sides(view, cfg, p.data) if side in by_side}
+            for org_id in counted:
+                count[org_id] = count.get(org_id, 0) + 1
         found = [
             OrganizationView(
                 id=o.id,

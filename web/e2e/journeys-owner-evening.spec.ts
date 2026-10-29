@@ -185,7 +185,13 @@ test.describe.serial("journey: the owner's first evening", () => {
     // 6. Today.
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     const header = page.getByRole("banner");
-    await expect(header).toContainText("Reginald");
+    // The header has no assistant button. This is a person with only their own life, so the search field says what it finds in
+    // those words, and its Ask row (in the list under the field) names the assistant.
+    const search = header.getByRole("searchbox");
+    await expect(search).toHaveAttribute("placeholder", "A person or a to-do");
+    await search.click();
+    await expect(page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask Reginald/ })).toBeVisible();
+    await page.keyboard.press("Escape");
     // Missed something? is an entry of the Help menu (it is no longer a button in the header).
     await header.getByRole("button", { name: "Help" }).click();
     await expect(page.getByRole("menuitem", { name: "Missed something?" })).toBeVisible();

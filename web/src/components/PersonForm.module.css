@@ -1,0 +1,2 @@
+/* The reason a name can't be used, said beside the field in the colour of a problem and never by colour alone. */
+.problem { color: var(--danger); font-weight: var(--weight-semibold); }

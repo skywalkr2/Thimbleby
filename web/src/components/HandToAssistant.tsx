@@ -2,6 +2,7 @@
 // (the cursor is in the field) and hands the action over; the assistant drafts the work (a message, a list, a page) as a
 // pending draft, under the usual estimate and the person's go. The action stays the person's until they close it. The row
 // then says where the work stands: with the assistant, waiting for the go, or a draft ready to review.
+import { useOneEditor } from "../lib/one-editor";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -77,7 +78,7 @@ export function useHandToAssistant(
   const id = useId();
   const handed = useHanded().get(action.id);
   const review = useTextReview();
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useOneEditor(`${action.id}:hand`);
   const [note, setNote] = useState("");
   const close = () => {
     setAsking(false);

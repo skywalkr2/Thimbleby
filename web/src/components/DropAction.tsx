@@ -2,6 +2,7 @@
 // cursor) and acts at once with Undo. A dropped action is never done or credited, and it leaves every list. When the
 // action reached people, the one button reads "Drop it and tell them": it also drafts a note to each, which waits for
 // the person's yes, and Undo takes the notes and the drop back together.
+import { useOneEditor } from "../lib/one-editor";
 import { useId, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -15,7 +16,7 @@ export function useDropAction(action: { id: string; told_names?: string[] }, onC
   const { t } = useWords();
   const act = useAct();
   const id = useId();
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useOneEditor(`${action.id}:drop`);
   const [reason, setReason] = useState("");
   const told = action.told_names ?? [];
   const close = () => {

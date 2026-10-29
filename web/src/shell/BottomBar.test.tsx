@@ -71,7 +71,7 @@ test("More lists Records and Settings, with no Connections or Add-ons beside it,
   show({ onHelp });
   await user.click(screen.getByRole("button", { name: "More" }));
   const sheet = await screen.findByRole("dialog", { name: "More" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Knowledge", "Settings"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Notes", "Knowledge", "Settings"]);
   expect(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Setup guide" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Write feedback" })).toBeInTheDocument();

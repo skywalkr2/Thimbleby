@@ -140,7 +140,8 @@ export function useSettingsSections() {
     (i) => !(justMe && i.key.startsWith("workspace.project.")) && !(sides.length === 0 && i.key.startsWith("workspace.project.side_words.")),
   );
   const listed = navSections(everything, {
-    business: sides.length > 0,
+    // Jobs and businesses are added here, so the page is there for a person with only their own life too.
+    business: true,
     lists: onListsPage.length > 0,
     files: (forms.data?.length ?? 0) > 0,
     keyed: (keyed.data ?? []).filter((a) => a.secrets.length > 0).map((a) => a.plugin),
@@ -262,7 +263,7 @@ export function Settings(props: {
   // An address naming a section that has nothing to show (an add-on turned off) opens the first one. The older address of
   // the Lists page, when no list is left on it, opens the business page where the project lists are.
   const section: SettingsSection =
-    !loaded || listed.includes(wanted) ? wanted : wanted === "lists" && listed.includes("business") ? "business" : "you";
+    !loaded || listed.includes(wanted) ? wanted : wanted === "lists" && sides.length > 0 ? "business" : "you";
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
       ? addonLabel(s.slice("addon/".length), t, has)

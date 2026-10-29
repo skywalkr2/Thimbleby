@@ -129,6 +129,21 @@ def test_an_item_with_no_input_opens_the_change_and_the_request_behind_it(api):
     assert listed[first["request"]]["changeset"]["id"] == first["changeset"]
 
 
+def test_a_to_do_the_person_typed_has_no_origin_because_it_came_from_nothing_to_open(api):
+    client, store, cfg = api
+    me = cfg.workspace.user.person
+    added = client.post("/api/todos", json={"text": "Water the ferns", "owners": [me]})
+    assert added.status_code == 200, added.text
+    action = added.json()["action"]
+    assert client.get("/api/record", params={"kind": "action", "id": action}).json()["origin"] is None
+    listed = next(a for a in client.get("/api/open-items").json()["actions"] if a["id"] == action)
+    assert listed["origin"] is None
+    # What the assistant made from a hand-in still opens the change and the request behind it.
+    handed_in(client, store)
+    made = next(a for a in client.get("/api/open-items").json()["actions"] if a["id"] != action and a["origin"])
+    assert made["origin"]["kind"] in ("source", "link")
+
+
 def test_an_item_nothing_reaches_has_no_origin(api):
     client, store, _ = api
     imported = fixture_records(DEMO_B, "action")[0]["id"]

@@ -71,20 +71,22 @@ export function TextSection(props: { kind: string; id: string; field: string; he
     if (result) stopEdit();
   };
 
+  // A text nobody has written, with no versions waiting, is one line with a way to write it: no help text or empty box over it.
+  const blank = !!data && !editing && !data.text.trim() && data.versions.length === 0;
   const counts = data ? authorshipCounts(data.authorship) : null;
   const pending = (data?.versions ?? []).filter((v) => v.status === "pending");
 
   return (
     <section className="text-section" aria-labelledby={titleId}>
       <div className="heading">
-        <h3 id={titleId}>{labelOf(field)}</h3>
+        <h2 id={titleId}>{labelOf(field)}</h2>
         {data && !editing && (
-          <Button ref={editButton} onClick={startEdit}>
-            {t("text.edit")}
+          <Button ref={editButton} variant={blank ? "quiet" : "secondary"} onClick={startEdit}>
+            {t(blank ? "text.write" : "text.edit")}
           </Button>
         )}
       </div>
-      {props.help && <p className="hint">{props.help}</p>}
+      {props.help && !blank && <p className="hint">{props.help}</p>}
       {text.isPending && <Skeleton />}
       {text.isError && (
         <EmptyState icon="alert" text={t("text.load_failed")} action={{ label: t("action.try_again"), onClick: () => void text.refetch() }} />
@@ -118,7 +120,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
           <div className="text-body">
             <SafeText text={data.text} />
           </div>
-        ) : (
+        ) : blank ? null : (
           <EmptyState text={t("text.empty")} />
         ))}
       {counts && data && data.authorship.length > 0 && (

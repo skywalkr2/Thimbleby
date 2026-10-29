@@ -316,6 +316,19 @@ test("a refused apply is said in words and nothing is read back", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("The settings changed since you looked.");
 });
 
+test("a suggested choice is said by its label, never by the code the settings file holds", async () => {
+  api([step("plugin/tidy", { label: "Connect the tidy-up tool", plugin: "plugin", settings: { "workspace.user.timezone": "Europe/London" } })], {
+    "GET settings": () => ({
+      fingerprint: "fp-1",
+      items: [setting("workspace.name", "Workspace"), setting("workspace.user.timezone", "UTC", { type: "choice", choices: "time_zones", options: ["UTC", "Europe/London"] })],
+    }),
+  });
+  open();
+  const suggested = await screen.findByRole("list", { name: "Suggested settings" });
+  await waitFor(() => expect(suggested).toHaveTextContent("Your time zone: London"));
+  expect(suggested).not.toHaveTextContent("Europe/London");
+});
+
 test("a step that suggests nothing shows no settings", async () => {
   api([step("plugin/tidy", { label: "Connect the tidy-up tool", plugin: "plugin", settings: {} })]);
   open();

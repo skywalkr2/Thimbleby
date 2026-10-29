@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { person, project } from "../lib/records-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
@@ -113,28 +114,64 @@ test("each fact is said once: one Owner and one Due, none of the internal fields
   expect(screen.queryByText("Draft")).toBeNull();
 });
 
-test("Mark done is at the top of an open to-do's page, acts at once and offers Undo", async () => {
-  const calls = fakeApi(routes());
+// A to-do's own page (design 7.5, 7.14): it is a to-do, with Mark done at the top; each fact is said once, so the words that are
+// the heading are not a detail too; and a text nobody has written is one line, not a heading, help and an empty box.
+
+const WORDS = "Send the headcount";
+
+function serve(status: string, extra: Routes = {}, text = { text: "", versions: [] as unknown[] }) {
+  return fakeApi({
+    "GET record?kind=action&id=ACT-2": () => ({ kind: "action", id: "ACT-2", version: 3, fields: { id: "ACT-2", text: WORDS, status, owners: [{ person: "PER-1" }], project: "PRJ-1" }, long_text: ["work"] }),
+    "GET kinds/action": () => ({ kind: "action", fields: [{ name: "text", description: "", type: "text", required: true, editable: true }] }),
+    "GET record-pages/ACT-2?kind=action": () => ({ kind: "action", id: "ACT-2", version: 3, name: WORDS, details: [], open_actions: [], open_questions: [], completed_actions: [], facts: [], fact_source: null, activity: [] }),
+    "GET people": () => [person("PER-1", "Robin Sample")],
+    "GET projects": () => [project("PRJ-1", "Harbor")],
+    "GET settings": () => ({ fingerprint: "fp", items: [] }),
+    "GET lists": () => [],
+    "GET organizations": () => [],
+    "GET plugin-actions?kind=action&id=ACT-2": () => [],
+    "GET task-kinds?kind=action&id=ACT-2": () => [],
+    "GET texts?kind=action&id=ACT-2&field=work": () => ({ text: text.text, versions: text.versions, authorship: [], working_copies: [] }),
+    "GET records/action/ACT-2/conversation": () => ({ kind: "action", id: "ACT-2", turns: [] }),
+    ...extra,
+  });
+}
+
+test("an open to-do has Mark done at the top of its page, which marks it done with Undo", async () => {
   const user = userEvent.setup();
-  renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
-  await user.click(await screen.findByRole("button", { name: "Mark done" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(true));
-  expect(calls.find((c) => c.route === "POST actions/ACT-1/status")?.body).toMatchObject({ status: "done" });
+  const calls = serve("open", { "POST actions/ACT-2/status": () => ({ ok: "ACT-2", request: null }) });
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  expect(await screen.findByRole("heading", { level: 1, name: WORDS })).toBeInTheDocument();
+  const button = await screen.findByRole("button", { name: "Mark done" });
+  expect(button).toHaveAttribute("data-variant", "primary");
+  await user.click(button);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-2/status")?.body).toEqual({ status: "done" }));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST actions/ACT-2/status")[1].body).toEqual({ status: "open" }));
 });
 
-test("a to-do that is already done has no Mark done", async () => {
-  fakeApi(
-    routes({
-      [`GET record?${on}`]: () => ({
-        kind: "action",
-        id: "ACT-1",
-        version: 4,
-        fields: { id: "ACT-1", text: "Send the headcount.", owners: [{ person: "P-2" }], status: "done" },
-        long_text: ["text"],
-      }),
-    }),
-  );
-  renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
-  await screen.findByRole("heading", { level: 1 });
+test("a to-do that is done has no Mark done", async () => {
+  serve("done");
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: WORDS });
   expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
+});
+
+test("the words are the heading and not a detail again, and each fact is one row", async () => {
+  serve("open");
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  await within(details).findByText("Harbor");
+  expect(within(details).queryByText("Wording")).toBeNull();
+  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Owner", "Due", "Project"]);
+});
+
+test("a draft nobody has written is one line with a way to write it, and no help text over an empty box", async () => {
+  serve("open");
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: WORDS });
+  const draft = await screen.findByRole("region", { name: "Draft" });
+  expect(within(draft).getByRole("button", { name: "Write it" })).toBeInTheDocument();
+  expect(within(draft).queryByText("No text yet.")).toBeNull();
+  expect(within(draft).queryByText(/waits for your review/)).toBeNull();
 });

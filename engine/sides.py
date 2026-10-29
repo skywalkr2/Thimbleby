@@ -901,7 +901,18 @@ def remove_side(ws: Any, store: Any, cfg: Any, project_id: str, *, env: dict[str
 REMOVALS = ("personal", "end")
 
 
-def remove_with_work(store: Any, cfg: Any, project_id: str, where: str, *, ws: Any = None) -> str:
+@dataclass(frozen=True)
+class SideRemoval:
+    """What removing a side made: the `changeset` that moved or ended it and, when its organization went with it,
+    the `companions`, further changesets that Undo takes back first (newest first), then the main one."""
+
+    changeset: str
+    companions: tuple[str, ...] = ()
+
+
+def remove_with_work(
+    store: Any, cfg: Any, project_id: str, where: str, *, ws: Any = None, organization: str = "keep"
+) -> SideRemoval:
     """Remove a side after setup, as the person's own change in one changeset with Undo (`apply_as_person`, no new op).
     `where` is what happens to what is filed under it: "personal" moves the side's project inside Personal
     (`record.set` of its parent), so its projects and to-dos are Personal's and none is lost; "end" moves the side's
@@ -909,7 +920,12 @@ def remove_with_work(store: Any, cfg: Any, project_id: str, where: str, *, ws: A
     ending drops what is open on them, nobody credited. Either way the project no longer stands as a side
     (`side_list`), and Undo of the changeset brings the side back whole. A removal that touches many records makes a
     backup first when the workspace is given (`storage.backups`). Returns the changeset id; raises `StoreError` in plain
-    words for a project that isn't a side, a choice that isn't one, or no personal project to move to."""
+    words for a project that isn't a side, a choice that isn't one, or no personal project to move to.
+
+    The side's organization (the same name, kept in step) is kept unless `organization` is "remove": then the person's
+    own record and the side's project stop naming it in the same changeset, and a second changeset deletes it (a change
+    can't delete what it also unlinks), returned as a companion for the one Undo to take back first. It is refused,
+    naming them, while other people work for the organization."""
     from engine.applier import apply_as_person
     from engine.endings import project_ended
 
@@ -919,6 +935,9 @@ def remove_with_work(store: Any, cfg: Any, project_id: str, where: str, *, ws: A
         raise StoreError("That isn't one of your sides.")
     if where not in REMOVALS:
         raise StoreError("Say whether its projects and to-dos move to Personal or end with it.")
+    if organization not in ("keep", "remove"):
+        raise StoreError("Say whether to keep the organization or remove it.")
+    leaving, gone = _organization_ops(view, cfg, project_id) if organization == "remove" else ([], [])
     family = [project_id, *_below(view, project_id)]
     touched = len(family) + sum(1 for pid in family for kind, _ in referrers(view, "project", pid) if kind != "project")
     if ws is not None:
@@ -938,9 +957,57 @@ def remove_with_work(store: Any, cfg: Any, project_id: str, where: str, *, ws: A
             if not project_ended(view, pid)
         ]
     # Ending a side is no comment on the assistant's work, so its drops write no correction.
-    return apply_as_person(
-        store, cfg, ops, f"Removed {side.name}", all_or_nothing=True, corrections=False, side_removal=True
+    main = apply_as_person(
+        store, cfg, [*leaving, *ops], f"Removed {side.name}", all_or_nothing=True, corrections=False, side_removal=True
     )
+    if not gone:
+        return SideRemoval(main)
+    # Nothing refers to the organization now, so it can go: a change of its own, taken back first by the one Undo.
+    org = store.read().get("organization", gone[0]["record"]["id"])
+    if org is None:
+        return SideRemoval(main)
+    delete = [{**gone[0], "read_version": org.version}]
+    return SideRemoval(main, (apply_as_person(store, cfg, delete, f"Removed {side.name}'s organization"),))
+
+
+def _organization_ops(view: Any, cfg: Any, project_id: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The ops that take a side's organization out with it: the person's own record stops naming it and the side's
+    project stops naming it (the first list), and it is deleted (the second, a change of its own). Nothing for a side
+    with none. Refused, naming the people, while others work for it (they keep it in place)."""
+    from engine.records import referrers
+
+    project = view.get("project", project_id)
+    org = view.get("organization", project.data.get("organization")) if project.data.get("organization") else None
+    if org is None:
+        return [], []
+    me = cfg.workspace.user.person
+    others = [
+        str(view.get(kind, rid).data.get("full_name") or rid)
+        for kind, rid in referrers(view, "organization", org.id)
+        if (kind, rid) != ("person", me) and not (kind == "project" and rid == project_id)
+    ]
+    if others:
+        raise StoreError(f"{', '.join(others)} work for {org.data['name']}, so it stays: move them first, or keep it.")
+    ops: list[dict[str, Any]] = []
+    person = view.get("person", me) if me else None
+    if person is not None and person.data.get("org") == org.id:
+        ops.append(
+            {
+                "op": "record.edit",
+                "record": {"kind": "person", "id": person.id},
+                "fields": {"org": None},
+                "read_version": person.version,
+            }
+        )
+    ops.append(
+        {
+            "op": "record.edit",
+            "record": {"kind": "project", "id": project_id},
+            "fields": {"organization": None},
+            "read_version": project.version,
+        }
+    )
+    return ops, [{"op": "record.delete", "record": {"kind": "organization", "id": org.id}, "read_version": org.version}]
 
 
 def restore_side(

@@ -5,6 +5,28 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: People and record pages share one pattern; a business is one page (sweep batch 6)
+
+**Decided:** (1) A person's email, phone and sides are added and changed on the person form after setup; the work question
+("how you work with them") is asked only of someone from a side of work. (2) A person's page is the mockup's: tabs, one panel of
+details that says each fact once, and one list of what is open between the two of them. Every record's page has the same parts,
+with bookkeeping under More details and the box to ask last. (3) A to-do has one Edit with every field and one inline editor
+open at a time; its title opens its page, which has Mark done; a to-do typed by hand has no "where it came from". (4) A to-do
+handed to someone is theirs to do, not a promise they made. (5) A business is one page: its organization opens it. (6) Settings
+has Add a business and Add a job, and removing a side asks whether its organization goes too. (7) Notes are a screen under Files.
+
+**Decided by:** the sweep's findings X33 to X35, X39 to X42, the visual review's person mockup and VC10, and the main session's
+brief; the builder's choices, for review: Change this and Reassign are taken off a to-do's row menu (the box on its page asks
+for changes; Edit changes who does it), the organization is kept unless the person ticks it, the contact details stay one value
+for each kind (the record's shape), and a handed to-do is still listed under To send in Follow-ups (design 6.10).
+
+**Why:** the same fact was said in several places on a page and disagreed (two pages for one business, a promise that nobody
+made, the same to-do under two headings), and a friend was asked a work question.
+
+**Impact:** Design 6.32, 6.34, 7.8, 7.9, 7.14, 5.1 and CHANGES section 266. No new setting. API: `how_to_reach` on a person's
+add and edit, `organization` on removing a side, `companions` in its answer. No change to scope.
+Change log: section 266.
+
 ## 2026-10-29: Today's count, search, Undo and redo wording (sweep batch 4)
 
 Treat as on mail the assistant already handled takes the earlier work back with an Undo, which has no Undo of its own, so its

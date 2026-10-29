@@ -63,6 +63,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Projects",
     "People",
     "Files",
+    "Notes",
     "Knowledge",
     "Contacts",
     "Settings",
@@ -185,6 +186,7 @@ test("with no side besides Personal the first group has no Work heading, and Sta
     "Personal",
     "People",
     "Files",
+    "Notes",
     "Knowledge",
     "Settings",
   ]);
@@ -210,6 +212,7 @@ test("with sides the menu has Personal and each side by its own name, each a lin
     SECOND.name,
     "People",
     "Files",
+    "Notes",
     "Knowledge",
     "Settings",
   ]);
