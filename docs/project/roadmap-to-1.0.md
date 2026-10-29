@@ -1211,6 +1211,11 @@ management pack that means:
   was added per page, each changed field with the old value struck through and the new one marked, added table rows
   marked, unchanged parts folded, the raw difference behind a fold, and one tick per page so some go and some wait. The
   add-on's publishing channel supplies the preview; the core shows it.
+- A delivery scorecard (optional, in the pack): per team and per sprint or week, measures read through the issue
+  tracker's interface (planned at start, final against planned, planned done by close, worked through the flow, estimate
+  and time logged, finished on the last day) for this sprint so far, the last one and the ten before, against targets
+  the person sets in Settings, with a plain line of what changed since the sprint began. A panel and a job; nothing new
+  in the core.
 
 **Exit test:** in the owner's own workspace:
 - the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
