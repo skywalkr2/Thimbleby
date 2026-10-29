@@ -342,6 +342,7 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
   the other answer a visible button.
   *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. *Built (audit A5, then one path on the owner's call 2026-10-28):* "Drop it and tell them" wherever a dropped to-do reached people, with the notes linked to the drop for Undo (`tests/test_drop_and_draft_note.py`, `web/src/components/TodayRecords.test.tsx`; change log 239).
   *Left:* a note box on "Keep it open" (design 7.6 says "Not built"); nothing else of this item.
+  - State (2026-10-29): built: the held ask as a question with its reason and evidence, a button naming the result and the other answer visible (`tests/test_held_ask.py`, `web/src/components/TodayRecords.test.tsx`), and the one drop-and-tell path (`tests/test_drop_and_draft_note.py`); left: a note box on "Keep it open" (no test pins one; design 7.6 still says "Not built").
 
 From the original designer's lessons of 2026-10-14:
 - [ ] [B-6b] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
@@ -351,6 +352,7 @@ From the original designer's lessons of 2026-10-14:
   *Left:* the removed add-on's row and note going together (after Remove the row stays and says "<name> is removed.
   Restart to finish." (`web/src/components/Addons.test.tsx`); whether the row also goes from the list was not checked
   in a browser).
+  - State (2026-10-29): built: the first results as one list with every open question open (`web/src/components/WhatChanged.test.tsx`); left: after Remove the add-on's row stays and says it is removed (`web/src/components/Addons.test.tsx` pins the message, not the row going), so the row and note going together is not built and not checked in a browser.
 - [ ] [I-1] **A launcher for people who never open a terminal** (owner, 2026-10-13): moved to phase I, where the macOS and
   Windows installers give the app icon and Start menu entry.
   The UI/UX reviewer's first-run review (2026-10-20, F1, `reviews/ui-ux-2026-10/first-run/`) sets the bar N1: a person who
@@ -378,6 +380,7 @@ From the original designer's lessons of 2026-10-14:
   SHA-256 in `release` (`tests/test_catalog_screen.py`, `web/src/components/Addons.test.tsx` (adding a catalog from the
   screen, a read token for a private release)). The mail add-on's builder was told to attach its package and give `release` (2026-10-22). *Left:* an install tried against a
   real private release host by the owner.
+  - State (2026-10-29): built: the catalog address field, adding and removing a catalog, and the read token asked for in place (`tests/test_catalog_screen.py`, `web/src/components/Addons.test.tsx`); left: an install tried against a real private release host by the owner.
 - [ ] [B-6a] **Action items and open questions, cleaned up end to end** (owner, 2026-10-13: "the whole action items / open
   issues needs a lot of work"). Starts from L0's audit of design 6.8 to 6.11 against the code, so the list of what is
   wrong comes from the code, not memory. Then one place for each: every open action with its owner, due date, project
@@ -401,21 +404,7 @@ From the original designer's lessons of 2026-10-14:
   (`web/src/components/OpenItems.tsx` uses the same `NotesTitle`). *Left:* the owner's exit check on a laptop and a phone;
   and on a phone, Today's lines that open no detail (a reminder, a reply) reach their notes only through a screen reader,
   since Today's lines keep one line each (B-8 R3).
-- [ ] [S2] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). *Moved to phase
-  S1 (2026-10-17), as the weekly form of the morning brief; the description below stands.* On the first
-  open of the week (the day is a setting), a briefing in this order (the designer's notes, 2026-10-19; design 6.35):
-  a copy-ready message to whoever the person reports to (stance *I report to them*, 6.34; a draft under the draft
-  rules, with its estimate); "this week" through the last working day: promises due by owner with overdue first,
-  questions to send, answers to chase, decisions waiting, built from the records by rules; and three to five goals the
-  person confirms, kept for the week. Nothing already on Today is repeated. Sending it to the person is phase E.
-  **Built so far (S2):** the form on its day (`steward.brief.weekly_day`), offered beside the morning brief on the later
-  working days until the goals are confirmed, with the week's promises by owner, questions to send, answers to chase
-  and decisions waiting, what Today holds counted and not repeated, the three to five goals (a `week_plan` record: proposed
-  from what is due, confirmed or changed by the person, kept for the week, read by the morning brief) and the message
-  to whoever the person reports to as a draft of the core kind `monday-message` (estimated, held for the go, unreviewed
-  until Copy) (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`). **Built (cleanup batch):** Send beside Copy when an account can act, drafting the message as an act through
-  `POST /api/acts` for the person's yes (`tests/test_act_draft_api.py`, `web/src/components/BriefCard.test.tsx`).
-  **Built (audit A5):** asking once who the message is for when nobody is marked (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`).
+  - State (2026-10-29): built: the screens, filters, row edits with Undo, stale and no-owner lines, note boxes and the stands-alone lint (`tests/test_open_items.py`, `tests/test_action_stands_alone.py`, `tests/test_action_row_details.py`, `web/src/components/OpenItems.test.tsx`, `web/src/components/NoteBoxEverywhere.test.tsx`); left: the owner's exit check on a laptop and a phone, and notes for Today's lines that open no detail on a phone.
 - [ ] [B-6b] **What the work version's screens show** (owner's screens, 2026-10-13; the screens hold real names, so only
   what they do is written here). *Built (B-6b), checked off in `roadmap-done.md`:* Follow-ups by person, or by project;
   Projects at a glance; links to the person's own pages; a meeting added in one line; never raw data on screen. Two
@@ -423,6 +412,7 @@ From the original designer's lessons of 2026-10-14:
   - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
     *Built:* the check of what it does today: a pasted picture is told plainly it can't be read yet, and the box keeps
     its words (`web/src/components/HandIn.test.tsx`). *Left:* reading a picture.
+  - State (2026-10-29): built: the check of what the drawer does today, a pasted picture told plainly it can't be read, the box keeping its words (`web/src/components/HandIn.test.tsx`); left: reading a picture (not started; the item says two sub-items are open but lists one).
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.
@@ -434,6 +424,7 @@ From the original designer's lessons of 2026-10-14:
   act approval guard allows only for a reminder under a standing yes, so a notice needs a standing yes of its own there
   (a change to a trust boundary, for the main session; design 6.12); and titles for an allowed data level (`detail`,
   `allowed_data`).
+  - State (2026-10-29): built: opt-in notices as a count, quiet hours, retry with the reason, the browser and webhook targets each with "Send me a test" (`tests/test_notifications.py`, `web/src/components/Notifications.test.tsx`); left: mail to the person themselves (needs a standing yes for notices, a trust-boundary change for the main session; `engine/notifications.py` says it is not there) and titles for an allowed data level.
 - [ ] [B-6b] **Found by the owner's first real use (2026-10-20):**
   - adding a second AI account closes its form once saved; the account's row shows its checks as they run ("Checking for
     harder work…") and the outcome, and an account whose sign-in can't be told apart says so with "Use it anyway"
@@ -473,6 +464,7 @@ From the original designer's lessons of 2026-10-14:
     and the pair harness's practice copies never hold the main account as an unchecked backup (fixed:
     `tests/test_catch_up_learning.py::test_the_main_account_listed_again_as_its_own_backup_is_never_held_as_an_unchecked_backup`);
     *Built (B-7):* the wait (`tests/test_evaluate_network.py`).
+  - State (2026-10-29): built: every sub-bullet's fix with its test (`web/src/components/AccountChecks.test.tsx`, `tests/test_plain_calendar_entries.py`, `tests/test_followup_timing_family.py`, `tests/test_due_phrases.py`, `tests/test_promises.py`, `tests/test_learning_run_b7.py`, `tests/test_evaluate_network.py`); left: the owner's `--case-failed` re-run, which is the acceptance, and the split of a shared task into one promise per owner, which no recorded fix covers.
 
 The journey tests from A3 run against the new screens as they land.
 
@@ -493,6 +485,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     read" and "the rest of the owner's learning run", then the owner re-runs the failed cases with `--case-failed`.
     *Built:* the fixes, each with its test (see "Found by the owner's first real use", B-6b). *Left:* the owner's re-run
     of the failed cases, which is this sub-item's acceptance, and its result.
+  - State (2026-10-29): built: the accepted feedback's items (checked off in `roadmap-done.md`) and the learning-run fixes (`tests/test_due_phrases.py`, `tests/test_promises.py`, `tests/test_learning_run_b7.py`); left: sending the reviewer the commit, the C1 to C53 and N1 to N8 status and the places the build chose differently, and the owner's re-run of the failed cases.
 
 - [ ] [B-10] **The owner's re-run of the failed AI cases** (2026-10-21, at `9e9c3f0`, one account, 3 runs per case:
   the golden set's 41 failing cases at 39% of runs passing, 10 cases passing every run). Each sub-item is done when its
@@ -615,6 +608,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     the correction (`over-application`: a reviewer for the load-test plan became "every plan review"; and
     `another-teams-rows-naming-ours`, the kept lesson over-applied), and no lesson for a correction about another project
     (`other-project`). With the pairs above, one piece of work on how a lesson is proposed and scoped.
+  - State (2026-10-29): built: the rules, checks and instructions each sub-item names, with stub or unit tests (`tests/test_learning_run_b7.py`, `tests/test_thread_promise_lint.py`, `tests/test_promise_as_fact.py`, `tests/test_own_request_lint.py`, `tests/test_learn_correction.py`, `tests/test_evaluate_harness.py`, `tests/test_selfcheck_decisions.py`); left: every case marked "done when the owner's next re-run passes" (the owner's re-run), the trim of the notes packet, and the watched-mail conversation join.
 - [ ] [B-11c] **Every kind of AI account works properly** (owner, 2026-10-21: "Most people will not use API and will
   probably just use subscription but I want them all to work properly"; after S1-4a): (1) an audit of every catalog
   entry against its own documentation, command-line programs first (the options each command accepts, how it takes an
@@ -650,6 +644,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   no packet text, secret or address. *Built:*
   `tests/test_problems.py::test_a_failed_calls_report_holds_the_parameters_and_the_error_and_no_packet_text_secret_or_address`;
   a request's settings are shown as configured when the report is made.
+  - State (2026-10-29): built: parts 1, 2a, 2b, 2c and 3 (`tests/test_catalog_claims.py`, `tests/test_anthropic_messages.py`, `tests/test_estimate_calibration.py`, `tests/test_family.py`, `tests/test_model_watch.py`, `tests/test_native_move.py`, `tests/test_problems.py`); left: `thinking: off` (the service's listing gives no capability), P30 (the owner's captured signed-out messages) and the check of each fix on a low-cost model.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings
@@ -671,6 +666,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   question, and Settings shows the three tiers with a cost per day, changes them and measures. Done when a new account of each preset service gets its tiers filled with no choice made,
   a service with no preset gets them by price, and a measurement test picks the cheapest passing model, each with a
   named test.
+  - State (2026-10-29): built: the presets, tiers filled with no question and by price, effort sent only where an account says how, the effort in the account check, the effort setting only where documentation confirms it, the tiers' cost per day, Measure and the suggestion by cost per passing run (`tests/test_tier_presets.py`, `tests/test_tier_costs.py`, `tests/test_ai_suggest.py`, `tests/test_measure_account.py`, `web/src/components/AiRouting.test.tsx`); left: the model picker's role words (not checked; two examples may still share "stronger"), and the item's own "Left for B-11b" list, which is out of date for the parts named here and should be rewritten by the main session.
 
 ## Phase S: the daily steward (after phase B, before phase I)
 
@@ -730,6 +726,7 @@ management (not just read only) lets do it"):
   (`tests/test_act_batch.py::test_move_to_is_offered_for_a_signed_in_account_that_cannot_list_its_folders_and_says_so`,
   `web/src/components/ActsOnRecords.test.tsx` "Move to for a signed-in account that can't list its folders ...",
   `web/src/components/MailSelection.test.tsx`). **Left:** the mail add-on's Google channel (0.1.1) declares the mailbox changes (`archive`, `move`, `label`, `mark_read`) beside the message acts, so a Google account gets them once acting is on; its Microsoft side has no channel yet (the add-on's 0.2.0); and the owner's live check of acting on a real account. *Built 2026-10-28 (plugin API 0.3.92, change log 254):* a channel lists an account's folders and labels (`registrar.channel(..., folders=fn)`), so Move to picks folders and Label picks labels from the account's list, with the reason and a typed box when the channel can't list (`tests/test_channel_folders.py`, `web/src/components/ActsOnRecords.test.tsx`, `web/src/components/MailSelection.test.tsx`); a channel with no list still takes a typed name; the mail add-on's next release fills it.
+  - State (2026-10-29): built: the acts, the core `mailbox` channel, the screens, several messages at once, and folder and label lists (`tests/test_act_actions.py`, `tests/test_mailbox_channel.py`, `tests/test_act_draft_api.py`, `tests/test_act_batch.py`, `tests/test_channel_folders.py`, `web/src/components/ActsOnRecords.test.tsx`, `web/src/components/MailSelection.test.tsx`); left: the mail add-on's Microsoft channel (add-on 0.0.9 has none) and the owner's live check on a real account.
 - [ ] [S1b-2] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
   reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
   the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
@@ -744,6 +741,7 @@ management (not just read only) lets do it"):
   to drop the wider access when acting is turned off (a plugin API change: the sign-in would have to declare how access is
   narrowed; the plugin API is on hold, so turning acting off stops the core using the wider access and the person signs in
   again with the reading scopes to give it back, as the guide says).
+  - State (2026-10-29): built: channels declare acts and accounts, `watch.acting`, `acting_scopes`, `act.undo`, and the Settings switch (`tests/test_act_actions.py`, `web/src/components/ActingAccounts.test.tsx`); left: asking the service to drop the wider access when acting is turned off (a plugin API change, on hold).
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*
@@ -765,6 +763,7 @@ S2. **Time and attention:**
   `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
   **Left:** sample 7's changed line from the document ("your renewal letter says Friday is the last day to cancel") and
   sample 3's request in words to move a call; neither is a rule yet.
+  - State (2026-10-29): built: the morning brief, evening wrap-up and Today's card, the ten samples as cases, capacity and clashes, dated risks and meeting-tied promises (`tests/test_brief.py`, `tests/test_day_capacity.py`, `web/src/components/BriefCard.test.tsx`); left: sample 7's changed line from the document and sample 3's request in words to move a call.
 
 S3. **People and meetings:**
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
@@ -782,6 +781,7 @@ S3. **People and meetings:**
   (`tests/test_meetings_people.py::test_a_question_someone_put_to_the_person_is_asked_by_them_and_no_other_question_is`,
   `tests/test_meetings_people.py::test_the_assistant_names_who_asked_a_question_by_name_and_it_is_kept_only_for_one_known_person`).
   **Left:** dates from a contact source or in other languages.
+  - State (2026-10-29): built: What to remember with evidence, the quiet-promise line with Send and Snooze, who asked (`tests/test_meetings_people.py`, `tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`, `web/e2e/meetings-journey.spec.ts`); left: dates from a contact source or in other languages.
 
 S4. **What arrives, and where it may go:**
 - [ ] [S4] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
@@ -809,6 +809,7 @@ S4. **What arrives, and where it may go:**
   full future date and the words for a deadline, a renewal or an expiry (language lists), and offers a dated fact held for the
   person's yes (`engine/dated_scan.py`; `tests/test_dated_scan.py::test_a_date_the_assistant_missed_is_held_for_the_persons_yes_and_kept_with_their_yes`,
   `tests/test_dated_scan.py::test_nothing_is_found_from_words_that_are_not_a_full_future_date_with_one_kind_of_day_and_no_doubt`).
+  - State (2026-10-29): built: booking entries, bill dates, dated facts with proposed reminders, and the scan for a missed date (`tests/test_bookings.py`, `tests/test_booking_entries.py`, `tests/test_bill_dates.py`, `tests/test_dated_facts.py`, `tests/test_dated_scan.py`); left: bookings read through a connector, delivering a fact's reminder through the person's calendar or mail (the reminder acts in `engine/reminder_acts.py` cover to-dos only), and a bill's amount (never).
 - [ ] [S4] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
   capability, the phone page's capture box; the global shortcut with phase I's menu bar and tray app.
   **Built so far (S4, change log 194):** a capture folder is a source of the core's `capture` kind: what lands in it is
@@ -833,6 +834,7 @@ S4. **What arrives, and where it may go:**
   a vendor adapter whose service offers speech-to-text will take it the day it has the call
   (`tests/test_capture.py::test_which_adapters_take_speech_is_decided_for_each_one_and_a_new_adapter_must_be_decided_too`).
   **Left:** a browser journey in the end-to-end tests.
+  - State (2026-10-29): built: capture folders, voice notes through `transcribe`, and forward-to through mail (`tests/test_capture.py`, `tests/test_capture_mail.py`, `tests/test_capture_mail_setting.py`, `web/src/components/SourcesCapture.test.tsx`); left: the global shortcut (phase I's packaged app), speech-to-text on the other adapters, and a browser journey (none in `web/e2e`).
 
 S5. **Manner and proof:**
 - [ ] [S5] **The outcome, measured** on the Quality screen (6.20): open promises found that the person kept, false alerts
@@ -844,6 +846,7 @@ S5. **Manner and proof:**
   questions, and Knowledge (`tests/test_outcome.py::test_every_screen_that_looks_over_the_assistants_work_counts_its_time_in_the_same_measure`,
   `web/src/components/Handled.test.tsx`, `web/src/components/FollowUps.test.tsx`, `web/src/components/OpenItems.test.tsx`,
   `web/src/components/Knowledge.test.tsx`). **Left:** the exit is the owner's measured week.
+  - State (2026-10-29): built: the four measures per week and for the window, review time from every review screen (`tests/test_outcome.py`, `web/src/components/Quality.test.tsx`); left: the owner's measured week, which is the exit.
 
 Decided by the owner (2026-10-17): approved mail and calendar management in 1.0 (S1b); reminders reach a sleeping
 person through their own calendar or a mail to themselves, no third-party push, a companion phone app after 1.0; the
@@ -870,6 +873,7 @@ code. Nearly all is built or planned. What is left, in two batches:
   and C43 (queued clicks while offline).
 - Held, not dropped: `includes:` (P62, P39) with the next plugin API release; calendar create, move and cancel and the
   add-on channels with the add-on builders.
+  - State (2026-10-29): built: C13, C15, C21, C22, C25, C36, C41 and C45 (`web/src/lib/keys.test.tsx`, `web/e2e/layout.spec.ts`, `web/src/components/WhatChanged.test.tsx`, `web/src/ui/glyphs.test.ts`, `web/src/ui/loading.test.ts`, `web/src/wording/wording.test.ts`); left: C16, C23, C24, C29, C35 and C43 are carried in `ui-review-status-2026-10-20.md` as Partial with a reason, but the item asks each to be re-marked and line 37 above still lists it open; the main session decides whether that counts.
 
 ## Phase I: installers for Windows and macOS (after phase S)
 

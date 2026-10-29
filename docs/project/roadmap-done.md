@@ -3006,3 +3006,22 @@ personas (`reviews/ui-ux-2026-10/validate-82d24cc/`): G1 to G4 fixed, phase U cl
   for each tier (`tests/test_tier_costs.py`); the 52 `language.*` word lists in shipped data, `engine/defaults/language/en-US.yaml`, each setting an
   optional override that replaces the whole shipped list and applies at once (full-read point 5, change log 236, `tests/test_language_words.py`).
   Nothing is left in this item.
+
+### Phase S: the daily steward, checked against the code (2026-10-29)
+
+- [x] [S2] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). *Moved to phase
+  S1 (2026-10-17), as the weekly form of the morning brief; the description below stands.* On the first
+  open of the week (the day is a setting), a briefing in this order (the designer's notes, 2026-10-19; design 6.35):
+  a copy-ready message to whoever the person reports to (stance *I report to them*, 6.34; a draft under the draft
+  rules, with its estimate); "this week" through the last working day: promises due by owner with overdue first,
+  questions to send, answers to chase, decisions waiting, built from the records by rules; and three to five goals the
+  person confirms, kept for the week. Nothing already on Today is repeated. Sending it to the person is phase E.
+  **Built so far (S2):** the form on its day (`steward.brief.weekly_day`), offered beside the morning brief on the later
+  working days until the goals are confirmed, with the week's promises by owner, questions to send, answers to chase
+  and decisions waiting, what Today holds counted and not repeated, the three to five goals (a `week_plan` record: proposed
+  from what is due, confirmed or changed by the person, kept for the week, read by the morning brief) and the message
+  to whoever the person reports to as a draft of the core kind `monday-message` (estimated, held for the go, unreviewed
+  until Copy) (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`). **Built (cleanup batch):** Send beside Copy when an account can act, drafting the message as an act through
+  `POST /api/acts` for the person's yes (`tests/test_act_draft_api.py`, `web/src/components/BriefCard.test.tsx`).
+  **Built (audit A5):** asking once who the message is for when nobody is marked (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`).
+  **Built (checked against the code, 2026-10-29):** the whole item, each part with its test: the form on its day and the weekly day setting (`tests/test_brief.py::test_the_weekly_day_and_the_times_are_settings`, `::test_the_monday_briefing_is_offered_on_a_later_working_day_until_the_weeks_goals_are_confirmed`); the week by owner, overdue first (`::test_the_week_lists_what_is_due_through_the_last_working_day_by_who_owns_it`, `::test_the_week_lists_late_and_due_today_to_dos_marked_on_today_and_weekend_ones`); questions to send, answers to chase and decisions waiting (`::test_questions_to_send_answers_to_chase_and_decisions_waiting_are_their_own_sections`); nothing on Today repeated (`web/src/components/BriefCard.test.tsx` "the Monday briefing lists the week by who owns it, says how much Today already holds and repeats none of it"); the goals kept for the week and read by the morning brief (`::test_confirmed_goals_are_kept_for_the_week_and_read_by_the_morning_brief`); the message to whoever the person reports to, estimated and unreviewed until Copy (`tests/test_brief_week.py::test_the_message_is_for_the_people_the_person_reports_to_and_nobody_else`, `::test_the_run_is_estimated_and_waits_for_the_go_above_the_amount_to_confirm`, `::test_copying_the_message_makes_the_draft_the_persons_and_the_state_says_kept`).
