@@ -413,6 +413,13 @@ From the original designer's lessons of 2026-10-14:
     *Built:* the check of what it does today: a pasted picture is told plainly it can't be read yet, and the box keeps
     its words (`web/src/components/HandIn.test.tsx`). *Left:* reading a picture.
   - State (2026-10-29): built: the check of what the drawer does today, a pasted picture told plainly it can't be read, the box keeping its words (`web/src/components/HandIn.test.tsx`); left: reading a picture (not started; the item says two sub-items are open but lists one).
+  - Widened (owner, 2026-10-29: "it needs to take almost any attachment, not just pictures"): Hand something in takes
+    almost any attachment. Documents (PDF, word processor, spreadsheet, slides, plain text, a saved mail with its
+    attachments) are read to text by the app itself, with no AI; pictures, screenshots and scans are read by a model only
+    on an account whose model lists image input (from the adapter's `models()`, never from a vendor's name), and when none
+    can, it says so; anything else is kept with a plain "can't be read yet". What is read stays outside content (never a
+    rule or an instruction), each reading shows its estimate first, and the result lands as an input like any hand-in.
+    Before the installers.
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.

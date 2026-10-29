@@ -5,6 +5,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: Hand something in takes almost any attachment, before the installers
+
+**Decided:** Hand something in reads documents to text itself, pictures and scans through a model that lists image input,
+and keeps anything else with a plain note; what it reads stays outside content. It stays before the installers.
+
+**Decided by:** the owner ("it needs to take almost any attachment, not just pictures").
+
+**Why:** the work version's screens and real use put pictures and documents into the assistant's hands every day.
+
+**Impact:** scope widened inside phase B (B-6b), about two days; the design text (hand-in, 6.x and 7.x) is edited with
+the build. No new setting until then. Change log: none.
+
 ## 2026-10-29: The P2 polish: limits, night shifts, one primary button, plainer words (sweep batch 8)
 
 **Decision:** Y01 to Y06 of the review, without the layout items: a text setting may carry a longest length (the
