@@ -3,6 +3,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { pressStart } from "./journey-helpers";
 
+/** Opens Ask the way a person does: the header's search field (on a phone, the bar's Search first), then its Ask row. */
+async function openAsk(page: Page) {
+  const field = page.getByRole("banner").getByRole("searchbox");
+  if (!(await field.isVisible())) await page.getByRole("button", { name: "Search", exact: true }).first().click();
+  await page.getByRole("searchbox").first().click();
+  await page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / }).click();
+}
+
 async function signIn(page: Page, hash = "") {
   await page.goto("?token=e2e-token");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
@@ -91,10 +99,10 @@ test.describe("Ask", () => {
     test(`is a pane over the screen's right edge at ${width}px: the page is not moved, the cursor is in the question, Escape closes it`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page);
-      const opener = page.getByRole("button", { name: "Ask", exact: true }).first();
+      const opener = page.getByRole("banner").getByRole("searchbox");
       // The pane is an overlay on the right edge (the drawer's width and surface): the page behind it is not moved or narrowed.
       const before = (await page.getByRole("main").boundingBox())!;
-      await opener.click();
+      await openAsk(page);
       const pane = page.getByRole("complementary", { name: /^Ask / });
       await expect(pane).toBeVisible();
       await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -121,7 +129,7 @@ test.describe("Ask", () => {
   test("is a dialog below 1440px, as it was", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);
-    await page.getByRole("button", { name: "Ask", exact: true }).first().click();
+    await openAsk(page);
     await expect(page.getByRole("dialog", { name: /^Ask / })).toBeVisible();
     await expect(page.getByRole("complementary", { name: /^Ask / })).toHaveCount(0);
   });

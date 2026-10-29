@@ -21,6 +21,7 @@ People say "panel", "page", "screen", "tab" or "view" for the same thing: a scre
 - Projects: your projects, each with its to-dos, questions, notes and people.
 - People: the people the assistant knows, who they are to you and what they own.
 - Files: the files you added and the ones add-ons made, and the actions they offer.
+- Notes: every note you or the assistant kept, newest first, under the side filter; a note filed by a change says so in What changed.
 - Knowledge: the knowledge panel. What the assistant has learned from your corrections and the rules it follows; you keep, change or retire each one, and review the rules in it.
 - Settings: every setting, the setup walkthrough, accounts, backups and spending. Its Connections section lists the sources the assistant keeps reading, such as your mail and calendar, and whether each is working (set-aside mail is under Handled for you); its Add-ons section lists kinds of work you can add, what each one reaches and stores, and where to turn it on or off.
 - Quality: the quality screen, opened from the menu under your initials as "How the assistant is doing". How well the assistant is doing, counted from the work itself, such as how often you correct it.
