@@ -1216,6 +1216,11 @@ management pack that means:
   and time logged, finished on the last day) for this sprint so far, the last one and the ten before, against targets
   the person sets in Settings, with a plain line of what changed since the sprint began. A panel and a job; nothing new
   in the core.
+- A portfolio screen, as the work version has (owner, 2026-10-29, to be greatly expanded in the pack): one row per
+  project grouped by program, with status, phase, target and when it was last updated (marked once it is older than a
+  set number of days); beside it, milestones to check: dates that passed without being marked done, and what is due in
+  the next two weeks, each naming its project and whether the date is the program's. A project opens on its schedule
+  as a grid, row by row like a spreadsheet (tasks, dates, owners, dependencies, status), edited in place with Undo.
 
 **Exit test:** in the owner's own workspace:
 - the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
