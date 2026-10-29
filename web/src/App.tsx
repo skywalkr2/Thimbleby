@@ -173,11 +173,33 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       ownFocus.current = false;
       return;
     }
-    const heading = document.querySelector<HTMLElement>(ownScreen || (now.type === "core" && now.view === "settings/ai-compare") ? "main [data-section-heading]" : "main h1");
-    if (heading) {
+    const selector = ownScreen || (now.type === "core" && now.view === "settings/ai-compare") ? "main [data-section-heading]" : "main h1";
+    const take = (heading: HTMLElement) => {
       heading.tabIndex = -1;
       heading.focus({ preventScroll: true });
+    };
+    const heading = document.querySelector<HTMLElement>(selector);
+    if (heading) {
+      take(heading);
+      return;
     }
+    // A screen that is still loading has no heading yet: the cursor goes to it when it appears, unless the person has
+    // already put the cursor somewhere in the page, and stops waiting after a few seconds.
+    const main = document.getElementById("main");
+    if (!main || typeof MutationObserver === "undefined") return;
+    const watcher = new MutationObserver(() => {
+      const found = document.querySelector<HTMLElement>(selector);
+      if (!found) return;
+      watcher.disconnect();
+      const at = document.activeElement;
+      if (!at || at === document.body || at === main) take(found);
+    });
+    watcher.observe(main, { childList: true, subtree: true });
+    const stop = window.setTimeout(() => watcher.disconnect(), 5000);
+    return () => {
+      watcher.disconnect();
+      window.clearTimeout(stop);
+    };
   }, [view]);
 
   const restart = useRestart();
