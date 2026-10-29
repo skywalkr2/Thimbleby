@@ -6,7 +6,9 @@ import { pressStart } from "./journey-helpers";
 /** Opens Ask the way a person does: the header's search field (on a phone, the bar's Search first), then its Ask row. */
 async function openAsk(page: Page) {
   const field = page.getByRole("banner").getByRole("searchbox");
-  if (!(await field.isVisible())) await page.getByRole("button", { name: "Search", exact: true }).first().click();
+  const phone = page.getByRole("button", { name: "Search", exact: true }).first();
+  await expect(field.or(phone)).toBeVisible();
+  if (!(await field.isVisible())) await phone.click();
   await page.getByRole("searchbox").first().click();
   await page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / }).click();
 }

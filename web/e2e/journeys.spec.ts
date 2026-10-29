@@ -529,7 +529,7 @@ test.describe.serial("journeys", () => {
 
     // Restart now: the app comes back on the same address, and the notice says so.
     await row.getByRole("button", { name: "Restart now" }).click();
-    await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("region", { name: "Notifications" }).getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
     await connectedAgain(page);
     await visit(page);
 

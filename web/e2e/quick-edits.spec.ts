@@ -3,7 +3,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const LOADED = { timeout: 20_000 };
-const LABELS = ["Ask me before anything over", "Most to spend in a day", "Most to spend in a month"];
+// The month is set before the day, and stays above it: a day limit above the month's is refused.
+const LABELS = ["Ask me before anything over", "Most to spend in a month", "Most to spend in a day"];
+const STEPS = [0, 600, 300];
 
 /** Amounts no earlier run left behind, so a change that was dropped can't look like one that held. */
 let round = 0;
@@ -11,7 +13,7 @@ const nextFields = () => {
   round += 1;
   const base = (Date.now() % 300) + round;
   return LABELS.map((label, n) => {
-    const amount = base + n * 300;
+    const amount = base + STEPS[n];
     return { label, typed: String(amount), shown: `$${amount}.00` };
   });
 };
@@ -81,7 +83,8 @@ test("three Resets pressed one right after another all hold after a reload", asy
   const resets = LABELS.map((label) => page.getByRole("button", { name: `Reset: ${label}` }));
   for (const reset of resets) await expect(reset).toBeVisible(LOADED);
   const before = saves.answered;
-  for (const reset of resets) await reset.click();
+  // The day goes back first, so it is never above the month's limit on the way.
+  for (const reset of [...resets].reverse()) await reset.click();
   await expect.poll(() => saves.answered - before, { timeout: 60_000, message: "every Reset is saved" }).toBe(3);
   expect(saves.refused).toBe(0);
   await page.reload();
