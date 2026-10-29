@@ -259,7 +259,9 @@ class PluginSettings(ConfigModel):
 class WorkspaceFile(FileModel):
     name: str = Field("Workspace", description="The name shown at the top of every screen. Setup names it after you.")
     assistant_name: str = Field(
-        "Reginald", description="The assistant's display name; the only name people see. Setup offers it to rename."
+        "Reginald",
+        max_length=40,
+        description="The assistant's display name; the only name people see. Setup offers it to rename.",
     )
     user: UserSettings = Field(default_factory=UserSettings, description="Who you are.")
     owner_format: str = Field(
@@ -969,6 +971,14 @@ class Budgets(ConfigModel):
         json_schema_extra=MONEY,
     )
     warn_at: float = Field(0.8, gt=0, le=1, description="Warn when this share of a budget is used.")
+
+    @model_validator(mode="after")
+    def _day_within_month(self) -> Budgets:
+        if self.per_day_usd > self.per_month_usd:
+            raise ValueError(
+                "the daily limit can't be above the monthly limit: raise the monthly limit or lower the daily one"
+            )
+        return self
 
 
 class Price(ConfigModel):
@@ -3150,7 +3160,7 @@ class AutomatedMail(FileModel):
         True,
         description="Set aside automated notices into the Automated notices section, with no AI run, such as a "
         "one-time code, a sign-in alert or a security notice from a no-reply address, and bulk mail from an automated "
-        "sender or in the mail service's updates category. It applies after the rules above, so a rule that "
+        "sender or in the mail service's updates category. It applies after your own rules, so a rule that "
         "keeps mail from a sender wins.",
     )
     senders: list[str] = Field(
@@ -3220,7 +3230,7 @@ class MailKinds(FileModel):
         True,
         description="Recognize bills and statements, orders, and shipping and delivery notices by rules, with no AI "
         "run, from the first sign-in. Such mail is never set aside, is not sorted by the assistant's sorting and is "
-        "handed to the assistant as something to do for your own life. It applies after the rules above, so a rule "
+        "handed to the assistant as something to do for your own life. It applies after your own rules, so a rule "
         "that sets mail aside from a sender wins.",
     )
     bill: MailKind = _kind(
@@ -3344,7 +3354,7 @@ class WatchFile(FileModel):
     set_aside_defaults: bool = Field(
         True,
         description="Set aside mail the mail itself says is not work, with no AI run: mailing lists and bulk mail, and "
-        "mail the mail service files under promotions, social or forums. It applies after the rules above, so a rule "
+        "mail the mail service files under promotions, social or forums. It applies after your own rules, so a rule "
         "that keeps mail from a sender wins.",
     )
     versions: VersionFamilies = Field(
@@ -3516,8 +3526,9 @@ class RemindersSettings(ConfigModel):
     working_end: str = Field(
         "17:30",
         description="The time the working day ends. What the assistant adds on its own that came in later waits for "
-        "the next working day, and Later today is left out of the snooze choices once it would fall after it. A "
-        "reminder you set for a later time still comes at that time.",
+        "the next working day, and Later today is left out of the snooze choices once it would fall after it. An end "
+        "before the start means a night shift, which runs past midnight into the next morning. A reminder you set "
+        "for a later time still comes at that time.",
         json_schema_extra={"choices": "times_of_day"},
     )
     working_first_day: Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] = Field(
@@ -3598,8 +3609,9 @@ class RemindersSettings(ConfigModel):
 
     @model_validator(mode="after")
     def _hours_make_sense(self) -> RemindersSettings:
-        if self.working_start >= self.working_end:
-            raise ValueError("working hours must end after they start: pick a later end or an earlier start")
+        # An end before the start is a night shift: the hours run past midnight into the next morning.
+        if self.working_start == self.working_end:
+            raise ValueError("working hours can't start and end at the same time: pick two different times")
         if self.quiet_start == self.quiet_end:
             raise ValueError("quiet hours can't start and end at the same time: pick two different times")
         return self

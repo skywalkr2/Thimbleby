@@ -5,6 +5,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: The P2 polish: limits, night shifts, one primary button, plainer words (sweep batch 8)
+
+**Decision:** Y01 to Y06 of the review, without the layout items: a text setting may carry a longest length (the
+assistant's name, 40); a day limit above the month limit is refused; working hours that end before they start are a night
+shift; a comma that does not group thousands is not an amount where a point is the decimal mark; the You step asks for a
+first and a last name; a screen with a primary button of its own draws Continue plain; Hand something in opens over setup;
+a restart is a warning until it fails; the setup People step starts every relation empty and gives people already added a
+part or relation from a list.
+
+**Decided by:** the owner's brief for batch 8; the choices on a one-word name (asked again, not refused for People), the
+overnight rule (the shift belongs to the day it starts on) and "1,50" (refused, not guessed) are the builder's, for review.
+
+**Why:** Each was a finding that left a person unsure what to do or what the app had done. A one-word name, "1,50" and a
+silent duplicate were kept or ignored without a word; two primary buttons let the look-back be skipped by mistake.
+
+**Impact:** Design 4.0, 6.35, 7.1, 7.7, 7.8, 7.9, 7.18 and CHANGES section 267. API: `SettingItem.max_length`. No new
+setting; `workspace.assistant_name` gains a length limit and `steward.reminders.working_end` may be before the start. A
+night shift has no capacity or proposed-time counts. No change to scope.
+
+Change log: section 267.
+
 ## 2026-10-29: People and record pages share one pattern; a business is one page (sweep batch 6)
 
 **Decided:** (1) A person's email, phone and sides are added and changed on the person form after setup; the work question

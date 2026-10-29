@@ -169,3 +169,26 @@ test("the activity tab has the whole history, and the box to ask about them is o
   expect(await screen.findByRole("region", { name: "Activity" })).toBeInTheDocument();
   expect(screen.queryByRole("region", { name: `Open with ${ANA}` })).toBeNull();
 });
+
+test("the person's own page lists every job and business they keep, not only the organization their record names", async () => {
+  serve(
+    { ...friend, org: "ORG-1", org_name: "Studio" },
+    {
+      "GET me": () => ({ full_name: ANA, person: "PER-2" }),
+      "GET setup/business": () => ({
+        business: true,
+        name: "Shop",
+        personal: "PRJ-personal",
+        sides: [
+          { project: "PRJ-shop", name: "Shop", kind: "business", removable: false, filed: 0 },
+          { project: "PRJ-job", name: "Studio", kind: "job", removable: false, filed: 0 },
+        ],
+        chosen: "work",
+      }),
+      "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", "Shop"), project("PRJ-job", "Studio")],
+    },
+  );
+  renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
+  const row = await screen.findByText("Your jobs and businesses");
+  expect(row.closest("[data-definition]")!.querySelector("dd")!.textContent).toBe("ShopStudio");
+});

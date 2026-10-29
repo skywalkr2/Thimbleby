@@ -360,12 +360,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           at={guideAt}
           onOpenPeople={leaveSetup(() => setView("records/people"))}
           onOpenAddons={leaveSetup(() => setView(settingsView("addons")))}
-          onHandIn={leaveSetup(() => {
-            // The hand-in box takes focus itself.
-            ownFocus.current = true;
-            setView("today");
-            setHandIn(true);
-          })}
+          // The box opens over the setup guide, which stays where it was: handing something in is not leaving setup.
+          onHandIn={() => setHandIn(true)}
           onFinishLater={() => setView("today")}
           onDone={() => {
             setView("today");

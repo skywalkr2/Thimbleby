@@ -1639,3 +1639,26 @@ test("a hint of a few lines is shown in full with no More", async () => {
   expect(hint).not.toHaveClass("clamped");
   expect(screen.queryByRole("button", { name: "More" })).toBeNull();
 });
+
+test("a text setting with a limit stops its box there, so a name that is too long can't be typed", async () => {
+  api([item("workspace.assistant_name", { value: "Reginald", default: "Reginald", description: "The assistant's name.", max_length: 40 })]);
+  open();
+  await screen.findByRole("heading", { level: 2, name: "You" });
+  const box = document.querySelector('[data-key="workspace.assistant_name"] input') as HTMLInputElement;
+  expect(box).toHaveAttribute("maxlength", "40");
+});
+
+test("Your name asks for a last name too, and doesn't save one word", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS], {
+    "GET me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
+    "POST me": (body) => ({ person: "PER-1", full_name: (body as { full_name: string }).full_name }),
+  });
+  open();
+  const name = await screen.findByLabelText("Your name");
+  await user.clear(name);
+  await user.type(name, "Sam");
+  await user.tab();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Add your last name too");
+  expect(calls.some((c) => c.route === "POST me")).toBe(false);
+});

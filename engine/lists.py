@@ -270,7 +270,7 @@ def apply(tx: Any, op: Any, w: WriteContext) -> list[dict[str, Any]]:
         if op.value not in values and op.value not in retired:
             raise StoreError(f"{op.value!r} isn't on the list")
         if to.casefold() in every and every[to.casefold()] != op.value:
-            raise StoreError(f"{every[to.casefold()]!r} is already on the list; retire one of them instead")
+            raise StoreError(f"{every[to.casefold()]!r} is already on the list. Stop offering one of them first.")
         values = [to if v == op.value else v for v in values]
         retired = [to if v == op.value else v for v in retired]
         tones = {(to if k == op.value else k): t for k, t in tones.items()}

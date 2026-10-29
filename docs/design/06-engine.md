@@ -4228,7 +4228,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   - The first read notes everything the source holds. It then hands in the mail of the last `first_run_days` (14) and every
     item of any other kind of source, through the same triage and sorting as any hand-in; each request is marked with the
     source (`intake`). Older mail isn't read, and the source records the day before which it wasn't looked at
-    (`looked_back_to` on its first `watch_run`); the coverage line says "Not looked at before Oct 5".
+    (`looked_back_to` on its first `watch_run`); the coverage line says "Mail from before Oct 5 has not been read yet".
   - The whole intake is priced as one total (the requests' estimates and the sorting run for its mail). When the total is
     known and not above `ai.budgets.confirm_above_usd` it starts by itself; otherwise the requests are held and Today has one
     line for the source ("Take in Inbox: 12 items from the last 14 days", or "<n> items" for a source with no mail) with the
@@ -4396,8 +4396,10 @@ of `engine/learn.py`, so it is never a correction of the assistant (`tests/test_
 lists and live (no restart): the working day's start and end and its first and last day (09:00 to 17:30, Monday to
 Friday), quiet hours (21:00 to 07:00, which may cross midnight), how reminders missed while the computer slept arrive
 (`each` or `summary`), how far Later today and This evening reach, and how long after its time an unshown reminder counts
-as late; working hours that end before they start, and quiet hours with equal ends, are refused in plain words
-(`tests/test_reminder_lines.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
+as late; working hours that start and end at the same time, and quiet hours with equal ends, are refused in plain words
+(`tests/test_reminder_lines.py`). Working hours that end before they start are a night shift: they run past midnight and
+belong to the day they start on (`tests/test_reminders.py`); the free-time counts for a day's capacity and for proposed
+meeting times work within one day's hours, so a night shift has none to count (`tests/test_day_capacity.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
 `engine/reminder_lines.py`: an open action that is not on hold, whose `remind_at` has come, is one Today line,
 `{task} · due now`; one that came due and was not shown for the late-after time is `{task} · overdue · due {time}`, shown
 at once and never dropped, and adds ", while the app wasn't running" only when the app knows it was not

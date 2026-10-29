@@ -28,8 +28,14 @@ test("the worst state wins: offline, then restart, then backup, then spend", () 
   expect(isWarn("offline") && isWarn("restart") && isWarn("backup") && isWarn("spend")).toBe(true);
 });
 
-test("a restart being asked about, or stuck, is a restart to finish, and one under way says so", () => {
-  for (const phase of ["asking", "stuck", "refused"]) expect(worstState({ live: "live", status: status(), restartPhase: phase })).toBe("restart");
+test("a restart being asked about is a restart to finish (a warning), one under way says so, and only one that failed is a danger", () => {
+  expect(worstState({ live: "live", status: status(), restartPhase: "asking" })).toBe("restart");
+  expect(toneOf("restart")).toBe("warn");
+  for (const phase of ["stuck", "refused"]) expect(worstState({ live: "live", status: status(), restartPhase: phase })).toBe("restart_failed");
+  expect(toneOf("restart_failed")).toBe("danger");
+  expect(alive({}, "asking")).toEqual({ kind: "restart", tone: "warn" });
+  expect(alive({}, "stuck")).toEqual({ kind: "restart_failed", tone: "bad" });
+  expect(alive({}, "refused")).toEqual({ kind: "restart_failed", tone: "bad" });
   expect(worstState({ live: "live", status: status(), restartPhase: "waiting" })).toBe("restarting");
   // Done is over: back to what is true now.
   expect(worstState({ live: "live", status: status(), restartPhase: "done" })).toBe("live");

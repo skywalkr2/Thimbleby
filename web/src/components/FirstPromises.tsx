@@ -13,6 +13,7 @@ import { day } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useToasts } from "../lib/toasts";
 import type { Screen } from "../lib/walkthrough";
+import { useContinue } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
@@ -54,6 +55,12 @@ export function FirstPromises(props: { go: (screen: Screen) => void; onHandIn: (
   );
 }
 
+/** Says to the walkthrough that this stage has a primary button of its own, so its Continue is drawn plain beside it. */
+function OwnPrimary() {
+  useContinue({ run: async () => true, quiet: true });
+  return null;
+}
+
 /** What the first result shows at the stage the server says it is at. */
 function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: () => void; picking: Picking }) {
   const { t } = useWords();
@@ -66,6 +73,7 @@ function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: ()
       // does, and connecting mail is the quieter choice beside it.
       return (
         <FormBlock data-first-promises="needs">
+          <OwnPrimary />
           <p>{t("walkthrough.promises.no_mail")}</p>
           <Actions align="end">
             <Button onClick={() => props.go("mail")}>{t("walkthrough.promises.to_mail")}</Button>
@@ -121,6 +129,7 @@ function Offer(props: { data: Result; picking: Picking }) {
   };
   return (
     <FormBlock data-first-promises="offer">
+      <OwnPrimary />
       <h3 id="first-promises-offer">{title}</h3>
       <p role="status">{tn("walkthrough.promises.offer.found", data.count, { cost: costWords(data, estimate, t) })}</p>
       <ReadList data={data} done={false} plan picking={props.picking} />
@@ -142,6 +151,7 @@ function Found(props: { data: Result; onHandIn: () => void; picking: Picking }) 
   if (data.promises.length === 0) {
     return (
       <FormBlock data-first-promises="none">
+        <OwnPrimary />
         <p>{t(unread(data) ? "walkthrough.promises.none_partial" : "walkthrough.promises.none")}</p>
         {data.coverage.length > 0 && (
           <p>
@@ -271,6 +281,7 @@ function FollowUpReady(props: { followUp: NonNullable<Result["follow_up"]> }) {
   };
   return (
     <FormBlock as="section"  data-follow-up={person} aria-labelledby="first-promises-follow-up">
+      {!sent && <OwnPrimary />}
       <h3 id="first-promises-follow-up">{t("walkthrough.promises.follow_up")}</h3>
       <p className="hint">{t("walkthrough.promises.follow_up_to", { name })}</p>
       <label htmlFor="first-promises-message">{t("walkthrough.promises.follow_up_text", { name })}</label>

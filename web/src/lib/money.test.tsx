@@ -68,15 +68,15 @@ test.each([
   ["1,50", "de-DE", 1.5],
   ["1.234,50", "de-DE", 1234.5],
   ["$1,50", "de-DE", 1.5],
-  // A plain number with a point is read as it is, in any language; so is a comma before one or two digits.
+  // A plain number with a point is read as it is, in any language.
   ["1.5", "de-DE", 1.5],
-  ["1,5", "en-US", 1.5],
   ["-2", "en-US", -2],
 ])("%s typed in %s is the amount %d", (text, locale, amount) => {
   expect(parseAmount(text, locale)).toBe(amount);
 });
 
-test.each(["", "abc", "$", "1.2.3,4,5x", "--"])("%j is not an amount", (text) => {
+// A comma that does not group thousands in threes is not part of an amount where a point is the decimal mark.
+test.each(["", "abc", "$", "1.2.3,4,5x", "--", "1,50", "1,5", "$1,000,00"])("%j is not an amount", (text) => {
   expect(parseAmount(text, "en-US")).toBeNull();
 });
 

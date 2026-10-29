@@ -227,7 +227,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     if (role && !who.includes(role)) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
     else if (who === role && role) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
     const org = names.get(String(data.fields.org ?? "")) ?? person?.org_name ?? "";
-    if (org && !sides.some((x) => x.name === org)) personRows.push({ name: "org", label: labelOf("org"), lines: [org] });
+    if (isSelf && !justMe && sides.length > 0) {
+      // The person's own page lists every job and business they keep, not only the one their record names.
+      personRows.push({ name: "org", label: t("person.row.own_orgs"), lines: sides.map((x) => x.name) });
+    } else if (org && !sides.some((x) => x.name === org)) personRows.push({ name: "org", label: labelOf("org"), lines: [org] });
     const team = names.get(String(data.fields.team ?? ""));
     if (team) personRows.push({ name: "team", label: labelOf("team"), lines: [team] });
     if (person && !justMe && sides.length > 0) {

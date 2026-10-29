@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Icon } from "../ui/Icon";
 import { api } from "./api";
 import { problemText } from "./problem";
+import { useToasts } from "./toasts";
 import { useWords } from "./wording";
 import { Button } from "../ui/Button";
 import { Actions } from "../ui/Actions";
@@ -53,6 +54,7 @@ export const RESTART_POLL_SECONDS = 2;
 /** `hellos` is how many times the event stream has connected; the next one is a hint that the app is back. */
 export function RestartProvider(props: { hellos: number; seconds?: number; doneSeconds?: number; pollSeconds?: number; children: ReactNode }) {
   const { t } = useWords();
+  const { push } = useToasts();
   const [phase, setPhase] = useState<Phase>("idle");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
@@ -129,6 +131,8 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
     const finish = () => {
       setPhase("done");
       setRestarts((n) => n + 1);
+      // The status popover that carries the notice is usually closed, so the app says it was done where it can be seen.
+      push({ message: t("restart.done") });
     };
     if (baseline === undefined) return;
     if (baseline === null) {
@@ -138,7 +142,7 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
     if (props.hellos > since) check(mine, baseline, finish);
     const timer = window.setInterval(() => check(mine, baseline, finish), pollSeconds * 1000);
     return () => window.clearInterval(timer);
-  }, [phase, baseline, since, props.hellos, pollSeconds, check]);
+  }, [phase, baseline, since, props.hellos, pollSeconds, check, push, t]);
 
   useEffect(() => {
     if (phase !== "waiting") return;

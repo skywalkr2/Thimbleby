@@ -92,6 +92,7 @@ class Setting:
     topic: str | None = None  # behind Advanced: the topic it is listed under
     by_setup: bool = False  # the value now in the files was written by setup, so it reads as set up, not as changed
     money: bool = False  # an amount of US dollars: shown as currency with two decimals, typed with or without the sign
+    max_length: int | None = None  # the most characters a text setting takes, so its box stops there
 
 
 @dataclass
@@ -294,6 +295,9 @@ def _walk(
                 topic=levels.place_of(dotted)[1],
                 file_types=[str(x) for x in extra.get("file_types") or [] if isinstance(x, str)],
                 money=extra.get("money") is True,
+                max_length=next((m.max_length for m in info.metadata if hasattr(m, "max_length")), None)
+                if kind == "text"
+                else None,
             )
         )
 

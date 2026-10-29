@@ -582,9 +582,9 @@ test("spending is one sentence with the amounts in the workspace's currency, and
   await user.click(within(line).getByRole("button", { name: "Change" }));
   const ask = screen.getByLabelText("Ask me before anything over");
   const day = screen.getByLabelText("Stop for the day at");
-  expect(ask).toHaveValue("0.1");
-  expect(day).toHaveValue("2");
-  expect(ask.closest(".money-field")).toHaveTextContent("$");
+  // The amounts are written as amounts, with the sign and two decimals, never as the bare number "0.1".
+  expect(ask).toHaveValue("$0.10");
+  expect(day).toHaveValue("$2.00");
   expect(document.body.textContent ?? "").not.toMatch(/\(USD\)/);
 });
 

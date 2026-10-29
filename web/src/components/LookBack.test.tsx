@@ -83,7 +83,7 @@ afterEach(() => vi.useRealTimers());
 
 test("a mail source taken in quietly says the day before which it was not looked at", async () => {
   header([mail()]);
-  const note = await screen.findByText(`Not looked at before ${day("2026-10-05")}`);
+  const note = await screen.findByText(`Mail from before ${day("2026-10-05")} has not been read yet`);
   expect(note.getAttribute("data-coverage")).toBe("looked");
   expect(note.closest("[data-coverage-line]")).not.toBeNull();
   // Today's header only says it; the way to look further back is on the source's own page.
@@ -92,18 +92,18 @@ test("a mail source taken in quietly says the day before which it was not looked
 
 test("two mailboxes that were not looked at before the same day say it once, and ones with different days say each day once", async () => {
   header([mail({ id: "a", label: "Work mail" }), mail({ id: "b", label: "Home mail" })]);
-  await screen.findByText(`Not looked at before ${day("2026-10-05")}`);
-  expect(screen.getAllByText(/Not looked at before/)).toHaveLength(1);
+  await screen.findByText(`Mail from before ${day("2026-10-05")} has not been read yet`);
+  expect(screen.getAllByText(/Mail from before .* has not been read yet/)).toHaveLength(1);
   cleanup();
   header([mail({ id: "a" }), mail({ id: "b", label: "Home mail", looked_back_to: "2026-10-12" })]);
-  await screen.findByText(`Not looked at before ${day("2026-10-12")}`);
-  expect(screen.getAllByText(/Not looked at before/)).toHaveLength(2);
+  await screen.findByText(`Mail from before ${day("2026-10-12")} has not been read yet`);
+  expect(screen.getAllByText(/Mail from before .* has not been read yet/)).toHaveLength(2);
 });
 
 test("a source with no look-back date says nothing about it and offers no way to look further back", async () => {
   header([mail({ looked_back_to: null, look_back_choices: [] })]);
   await screen.findByText(/Checked 1 connection/);
-  expect(screen.queryByText(/Not looked at before/)).toBeNull();
+  expect(screen.queryByText(/Mail from before .* has not been read yet/)).toBeNull();
   expect(screen.queryByRole("button", { name: /Look further back/ })).toBeNull();
 });
 

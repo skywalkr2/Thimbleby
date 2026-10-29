@@ -95,19 +95,22 @@ export function Knowledge(props: { onOpenReview: () => void }) {
               {list(sections.waiting, t("knowledge.waiting.title"), "waiting")}
             </section>
           )}
-          <section className={styles.part} aria-labelledby="knowledge-follows">
-            <h2 id="knowledge-follows">{t("knowledge.follows.title")}</h2>
-            {sections.follows.length === 0 ? (
-              <EmptyState text={t(sections.waiting.length > 0 ? "knowledge.follows.none_waiting" : "knowledge.follows.none")} />
-            ) : (
-              sections.follows.map(({ group, items }) => (
-                <div key={group} className={styles.group}>
-                  <h3>{t(`knowledge.group.${group}`)}</h3>
-                  {list(items, t(`knowledge.group.${group}`), "follows")}
-                </div>
-              ))
-            )}
-          </section>
+          {/* With nothing in use and nothing waiting, the part is left out: its heading would stand over nothing. */}
+          {(sections.follows.length > 0 || sections.waiting.length > 0) && (
+            <section className={styles.part} aria-labelledby="knowledge-follows">
+              <h2 id="knowledge-follows">{t("knowledge.follows.title")}</h2>
+              {sections.follows.length === 0 ? (
+                <EmptyState text={t("knowledge.follows.none_waiting")} />
+              ) : (
+                sections.follows.map(({ group, items }) => (
+                  <div key={group} className={styles.group}>
+                    <h3>{t(`knowledge.group.${group}`)}</h3>
+                    {list(items, t(`knowledge.group.${group}`), "follows")}
+                  </div>
+                ))
+              )}
+            </section>
+          )}
         </>
       )}
       {!failed && !loading && <Glossary entries={sections.words} now={now} onActed={() => setActed((n) => n + 1)} />}

@@ -38,7 +38,8 @@ test("each list shows its label, where it is used in plain words, and its values
   renderApp(<ValueLists />);
   expect(await screen.findByRole("heading", { name: "Lists" })).toBeInTheDocument();
   const status = await block("Project status");
-  expect(status).toHaveTextContent("Used for: project status");
+  // A line that only repeats the list's own name says nothing.
+  expect(status).not.toHaveTextContent("Used for");
   expect(within(status).getAllByRole("listitem").map((li) => li.textContent?.replace(/•+/, ""))).toEqual(["On track", "At risk"]);
   expect(within(await block("Project group")).getByText("Nothing is offered yet.")).toBeInTheDocument();
   // Another add-on's field is named from its kind; a list nothing uses says nothing about use.
@@ -184,12 +185,12 @@ test("each value says what it counts as and how it looks, in words as well as co
   renderApp(<ValueLists />);
   const status = await block("Project status");
   const items = within(status).getAllByRole("listitem");
-  expect(items[0]).toHaveTextContent("On trackCounts as: Under way");
+  expect(items[0]).toHaveTextContent("On trackCounts as: Underway");
   expect(items[1]).toHaveTextContent("At riskCounts as: At risk");
   expect(items[2]).toHaveTextContent("ParkedCounts as: Blocked");
   expect(within(items[1]).getByText("Counts as: At risk")).toHaveAttribute("data-tone", "warn");
   const group = await block("Project group");
-  expect(within(group).getByText("Problem")).toBeInTheDocument();
+  expect(within(group).getByText("Shown as: Problem")).toBeInTheDocument();
   expect(within(group).getAllByRole("listitem")[1]).toHaveTextContent(/^Misc/);
   expect(within(group).getAllByRole("listitem")[1]).not.toHaveTextContent("Plain");
 });
@@ -300,4 +301,16 @@ test("the business place shows nothing, not even a heading, when no list is a pr
   renderApp(<ValueLists level={3} place="business" />);
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(screen.queryByRole("heading", { name: "Lists" })).toBeNull();
+});
+
+test("adding a value the list already offers says so, by its name, instead of doing nothing", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  renderApp(<ValueLists />);
+  const row = await block("Project status");
+  const box = within(row).getByRole("textbox", { name: "Add a choice to Project status" });
+  await user.type(box, "at risk{Enter}");
+  expect(await within(row).findByRole("alert")).toHaveTextContent("At risk is already offered in Project status.");
+  expect(calls.some((c) => c.route.startsWith("POST lists/project-status"))).toBe(false);
+  expect(box).toHaveValue("at risk");
 });

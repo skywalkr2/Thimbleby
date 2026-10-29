@@ -513,7 +513,7 @@ export function WalkthroughMail(props: {
       {others.length > 0 && (
         <FormBlock data-reading="">
           <span className="what" id="mail-read">
-            {t("walkthrough.mail.reading")}
+            {t(hasResult ? "walkthrough.mail.reading_also" : "walkthrough.mail.reading")}
           </span>
           <ul className="plain-list" aria-labelledby="mail-read">
             {others.map((source) => (

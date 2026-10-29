@@ -388,6 +388,8 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   const off = !item || item.locked || !item.editable;
   const zoneChanged = !off && zone.trim() !== "" && zone.trim() !== stored;
   const empty = nameChanged && !fullName.trim();
+  // A full name is a first and a last name: one word is asked again, in words, instead of being kept as the full name.
+  const oneWord = nameChanged && !empty && fullName.trim().split(/\s+/).length < 2;
   const pending = nameChanged || zoneChanged;
 
   /** Saves the name and the time zone when they changed. True when it all went through. */
@@ -425,7 +427,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
   };
 
   // Inside the walkthrough the screen's one Continue saves this form (when it has something to save) and moves on.
-  const missing = !props.done && (empty || !pending) ? t(empty ? "welcome.workspace.why_blank" : "welcome.workspace.why") : "";
+  const missing = !props.done && (empty || oneWord || !pending) ? t(empty ? "welcome.workspace.why_blank" : oneWord ? "welcome.workspace.why_one_word" : "welcome.workspace.why") : "";
   useContinue(hasSlot ? { run: async () => (pending ? save() : true), disabled: !!missing, why: missing } : null);
 
   const zoneId = "workspace-workspace-user-timezone";
@@ -439,7 +441,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (pending && !empty) void save();
+        if (pending && !empty && !oneWord) void save();
       }}
     >
       <FormField id="workspace-full-name" label={t("welcome.workspace.full_name")}>
@@ -448,12 +450,17 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
           type="text"
           value={fullName}
           autoComplete="name"
-          aria-describedby="workspace-full-name-hint"
+          aria-describedby={`workspace-full-name-hint${oneWord ? " workspace-full-name-one-word" : ""}`}
           onChange={(e) => setNameEdit(e.target.value)}
         />
         <p className="hint" id="workspace-full-name-hint">
           {t("welcome.workspace.full_name_hint")}
         </p>
+        {oneWord && (
+          <p className="problem-note" id="workspace-full-name-one-word">
+            {t("welcome.workspace.why_one_word")}
+          </p>
+        )}
       </FormField>
       <FormField id={zoneId} label={t("welcome.workspace.timezone")}>
         {item?.type === "choice" && item.options?.length ? (
@@ -489,7 +496,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
       )}
       {!hasSlot && (
         <Actions align="end">
-          <Button type="submit" variant={props.done ? "secondary" : "primary"} disabled={busy || empty || !pending}>
+          <Button type="submit" variant={props.done ? "secondary" : "primary"} disabled={busy || empty || oneWord || !pending}>
             {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
           </Button>
         </Actions>

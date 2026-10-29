@@ -13,6 +13,9 @@ export interface ContinueSpec {
   disabled?: boolean;
   /** What is missing, said under the button while it is disabled. */
   why?: string;
+  /** The screen has a primary button of its own (Start, Hand something in, Copy), so Continue is drawn plain: two primary
+   * buttons would leave the person unsure which one to press, and Continue would let them skip what the screen offers. */
+  quiet?: boolean;
   /** The screen draws its own Continue higher up, so the walkthrough's own at the foot is left out (there is always one). */
   inline?: boolean;
 }

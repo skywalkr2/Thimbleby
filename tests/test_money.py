@@ -26,8 +26,7 @@ def test_an_amount_is_the_sign_and_two_decimals():
         (".5", 0.5),
         ("1,250.00", 1250.0),
         ("$1,250", 1250.0),
-        ("1,5", 1.5),
-        ("1,50", 1.5),
+        ("$1,000,000", 1000000.0),
     ],
 )
 def test_one_point_five_and_one_fifty_with_the_sign_are_the_same_amount(text, amount):
@@ -40,7 +39,7 @@ def test_a_number_format_with_a_decimal_comma_reads_its_own_marks():
     assert money.parse_usd("1.5", decimal=",") == 1.5
 
 
-@pytest.mark.parametrize("text", ["", "abc", "$", "1.2.3,4,5x", "--1", "1e3"])
+@pytest.mark.parametrize("text", ["", "abc", "$", "1.2.3,4,5x", "--1", "1e3", "1,50", "1,5", "12,34,567"])
 def test_what_is_not_an_amount_is_refused(text):
     with pytest.raises(ValueError):
         money.parse_usd(text)

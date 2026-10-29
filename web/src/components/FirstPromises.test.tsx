@@ -457,6 +457,14 @@ describe("in the walkthrough", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
   });
 
+  test("one primary button at a time: Start while the look back is offered, with Continue plain beside it", async () => {
+    shell("promises");
+    const start = await screen.findByRole("button", { name: "Start" });
+    expect(start).toHaveAttribute("data-variant", "primary");
+    expect(screen.getByRole("button", { name: "Continue" })).toHaveAttribute("data-variant", "secondary");
+    expect(document.querySelectorAll('button[data-variant="primary"]')).toHaveLength(1);
+  });
+
   test("it resumes at the first result", async () => {
     shell("promises");
     expect(await screen.findByRole("heading", { level: 2, name: "Your promises" })).toBeInTheDocument();

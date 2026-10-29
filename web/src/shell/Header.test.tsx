@@ -188,7 +188,7 @@ test("on a phone the assistant's state is in the status chip's popover", async (
   const dialog = await screen.findByRole("dialog", { name: "Status" });
   const alive = within(dialog).getByText("Helper", { selector: "p" }).closest("li")!;
   expect(alive).toHaveAttribute("data-state", "alive");
-  expect(alive).toHaveTextContent("no tasks yet");
+  expect(alive).toHaveTextContent("No tasks yet");
 });
 
 test("from a wider screen the assistant's line is beside the chip and the popover doesn't repeat it", async () => {
@@ -209,7 +209,7 @@ test("below 1440px the assistant's state moves into the status chip's popover, a
   const dialog = await screen.findByRole("dialog", { name: "Status" });
   const alive = dialog.querySelector('[data-state="alive"]') as HTMLElement;
   expect(alive).not.toBeNull();
-  expect(alive).toHaveTextContent("no tasks yet");
+  expect(alive).toHaveTextContent("No tasks yet");
 });
 
 test("the header has no Quick links button: the links are the first group of the person's menu, each opening in a new tab", async () => {

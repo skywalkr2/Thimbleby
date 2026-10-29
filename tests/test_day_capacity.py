@@ -510,3 +510,9 @@ def test_the_effort_cases_of_both_workspaces_pass_on_their_stub_answers_includin
             template, stub=True, runs=1, env={}, only=["effort-stated-for-an-open-todo", "effort-stated-for-a-new-todo"]
         ).results
         assert results and all(r.passed and not r.missing and not r.forbidden for r in results), results
+
+
+def test_a_night_shift_has_no_same_day_free_time_to_count(env):
+    _, cfg, store = env
+    cfg.steward.reminders.working_start, cfg.steward.reminders.working_end = "22:00", "06:00"
+    assert day_capacity.free_minutes(store, cfg, NOW) is None

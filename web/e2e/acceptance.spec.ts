@@ -335,7 +335,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await line.getByRole("button", { name: "Continue setup" }).click();
+    // The hand-in box opened over setup, so closing it leaves the person where they were, on the same screen of setup.
+    await expect(page.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     await screens.getByRole("button", { name: /^People/ }).click();
     // The People step lists the people already there, each with an empty relation to pick, above the form to add someone;
     // the cursor is in the first of its fields, the first person's relation.
@@ -1157,7 +1158,8 @@ test.describe.serial("acceptance scenario", () => {
     const lists = page.getByRole("region", { name: "Lists" });
     await expect(lists).toBeVisible();
     const status = lists.locator("[data-row-list] > li", { hasText: "Project status" });
-    await expect(status).toContainText("Used for: project status");
+    // A line that only repeats the list's own name says nothing, so there is none.
+    await expect(status).not.toContainText("Used for");
     await expect(status.getByText("Parked for now", { exact: true })).toBeVisible();
     await checkAccessibility(page);
     await status.getByRole("button", { name: /More actions for Parked for now/ }).click();

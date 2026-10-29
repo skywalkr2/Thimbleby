@@ -223,6 +223,7 @@ export function SettingRow(props: {
         id={id}
         type="text"
         inputMode={item.type === "text" ? undefined : "decimal"}
+        maxLength={item.type === "text" && item.max_length ? item.max_length : undefined}
         value={String(draft)}
         disabled={off}
         aria-invalid={invalid || problem ? true : undefined}

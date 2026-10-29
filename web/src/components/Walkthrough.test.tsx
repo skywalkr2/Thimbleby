@@ -370,6 +370,30 @@ describe("opening", () => {
     expect(screen.getByLabelText("Paste or type it here")).toHaveValue("Minutes from the call.");
   });
 
+  test("Hand something in opens the box over setup and leaves the person where they were", async () => {
+    const user = userEvent.setup();
+    fakeApi({
+      ...routes({}, CORE.map((id) => step(id)), { step: "done" }),
+      "GET panels": () => [],
+      "GET asks": () => [],
+      "GET changes": () => [],
+      "GET followups": () => [],
+      "GET runtime-config": () => ({ instance: null }),
+      "GET today/agenda": () => [],
+      "GET today/todo": () => [],
+      "GET today/arrived": () => ({ items: [], left_out: 0 }),
+    });
+    renderApp(<App rc={rcFixture()} />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
+    await user.click((await screen.findAllByRole("button", { name: /^Hand something in/ }))[0]);
+    expect(await screen.findByLabelText("Paste or type it here")).toBeInTheDocument();
+    // The box is modal, so the guide behind it is hidden from the screen reader but is still the page.
+    expect(screen.getByText("Getting started")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#setup");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Getting started" })).toBeInTheDocument();
+  });
+
   test("it resumes at the screen the server kept", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id)), { step: "backup" }));
     open();
@@ -782,7 +806,7 @@ describe("each screen", () => {
     expect(control.tagName).not.toBe("FIELDSET");
     expect(control).toHaveAccessibleDescription("Your own life is always included.");
     const also = within(control).getByRole("group", { name: "Also keep track of:" });
-    expect(also).toHaveAccessibleDescription("Leave both empty to use it for your own life only.");
+    expect(also).toHaveAccessibleDescription("Leave both empty to go on without either.");
     const boxes = within(also).getAllByRole("checkbox");
     expect(boxes.map((b) => (b.closest("label") as HTMLElement).textContent)).toEqual(["A job", "My own business"]);
     expect(boxes.every((b) => !(b as HTMLInputElement).checked)).toBe(true);
@@ -1324,8 +1348,8 @@ describe("each screen", () => {
     await user.click(within(line).getByRole("button", { name: "Change" }));
     const confirm = screen.getByLabelText("Ask me before anything over");
     const day = screen.getByLabelText("Stop for the day at");
-    expect(confirm).toHaveValue("0.1");
-    expect(day).toHaveValue("2");
+    expect(confirm).toHaveValue("$0.10");
+    expect(day).toHaveValue("$2.00");
     expect(screen.getByText(/Starts at \$0\.10/)).toBeInTheDocument();
     expect(screen.getByText(/Starts at \$2/)).toBeInTheDocument();
     // There is no Save of its own: the screen's Continue is the one button.
@@ -1423,8 +1447,8 @@ describe("each screen", () => {
     const row = await screen.findByRole("form", { name: "Add someone" });
     expect(screen.getAllByRole("form")).toHaveLength(1);
     expect(within(row).getAllByRole("textbox")).toHaveLength(1);
-    expect(within(row).getByLabelText("Side")).toHaveDisplayValue("Personal");
-    expect(within(within(row).getByLabelText("Side")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
+    expect(within(row).getByLabelText("Where they belong")).toHaveDisplayValue("Personal");
+    expect(within(within(row).getByLabelText("Where they belong")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
     await user.type(within(row).getByLabelText("Name"), "Pat Kin");
     await user.selectOptions(within(row).getByLabelText("Who they are"), "sister");
     await user.click(within(row).getByRole("button", { name: "Add" }));
@@ -1447,7 +1471,7 @@ describe("each screen", () => {
       const box = await relationBox();
       expect(box).toHaveValue("");
       expect(within(box).getAllByRole("option")[0]).toHaveTextContent("Choose…");
-      expect(within(await addRow()).queryByLabelText("Side")).toBeNull();
+      expect(within(await addRow()).queryByLabelText("Where they belong")).toBeNull();
       // A name alone can be added: the relation is left empty, never guessed.
       await user.type(within(await addRow()).getByLabelText("Name"), "Pat Kin");
       await user.click(within(await addRow()).getByRole("button", { name: "Add" }));
@@ -1473,6 +1497,33 @@ describe("each screen", () => {
       expect(within(row).getByRole("button", { name: "Add" })).toBeDisabled();
       await user.type(within(row).getByLabelText("How they relate to you, in your words"), "my dentist");
       expect(within(row).getByRole("button", { name: "Add" })).toBeEnabled();
+    });
+
+    test("after Add the relation box is empty again, so the next person is not filed under the last choice", async () => {
+      const user = userEvent.setup();
+      personalOnly({ "POST people": () => ({ id: "PER-9" }) });
+      open();
+      const row = await addRow();
+      await user.type(within(row).getByLabelText("Name"), "Pat Kin");
+      await user.selectOptions(within(row).getByLabelText("Who they are"), "sister");
+      await user.click(within(row).getByRole("button", { name: "Add" }));
+      await waitFor(() => expect(within(row).getByLabelText("Name")).toHaveValue(""));
+      expect(within(row).getByLabelText("Who they are")).toHaveValue("");
+    });
+
+    test("someone added with no relation can be given one from the list, including Someone else in the person's own words", async () => {
+      const user = userEvent.setup();
+      const kin = { id: "PER-9", name: "Casey Kin", role: null, aliases: [], status: "active", is_pm: false, relation: null, side: "personal" };
+      const calls = personalOnly({ "GET people": () => [kin], "POST people/PER-9": () => ({ id: "PER-9" }) });
+      open();
+      const box = await screen.findByLabelText("How Casey Kin relates to you");
+      expect(within(box).getAllByRole("option").map((o) => o.textContent)).toContain("Someone else");
+      await user.selectOptions(box, "other");
+      const words = await screen.findByLabelText("How they relate to you, in your words");
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+      await user.type(words, "my dentist");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(calls.find((c) => c.route === "POST people/PER-9")?.body).toEqual({ relation: "my dentist" }));
     });
 
     const SUGGESTED = { people: [
@@ -1539,12 +1590,35 @@ describe("each screen", () => {
       ]);
     });
 
-    test("with no one to suggest, the section says so in one line", async () => {
+    test("with no mail to suggest from, there is no heading over nothing; once everyone found is added, it says they were all added", async () => {
+      const user = userEvent.setup();
       personalOnly();
+      const first = open();
+      await screen.findByRole("form", { name: "Add someone" });
+      expect(screen.queryByRole("region", { name: "People you write to" })).toBeNull();
+      expect(screen.queryByText(/No one to suggest yet/)).toBeNull();
+      first.unmount();
+      let suggested = SUGGESTED;
+      personalOnly({
+        "GET setup/people-suggestions": () => suggested,
+        "POST setup/people-add": () => {
+          suggested = { people: [] };
+          return { id: "PER-9" };
+        },
+      });
       open();
       const list = await screen.findByRole("region", { name: "People you write to" });
-      expect(list).toHaveTextContent("No one to suggest yet. Add the people you write to below.");
-      expect(within(list).queryByRole("button")).toBeNull();
+      for (const group of within(list).getAllByRole("group")) await user.click(within(group).getByRole("checkbox", { name: "Personal" }));
+      await user.click(within(list).getByRole("button", { name: "Add these" }));
+      expect(await screen.findByText("You've added everyone we found in your mail. Add anyone else below.")).toBeInTheDocument();
+      expect(screen.queryByText(/No one to suggest yet/)).toBeNull();
+    });
+
+    test("each suggestion says what its tick box does, in words you can see", async () => {
+      personalOnly({ "GET setup/people-suggestions": () => SUGGESTED });
+      open();
+      const list = await screen.findByRole("region", { name: "People you write to" });
+      expect(within(list).getByText("Add Casey Kin to")).toBeVisible();
     });
 
     test("Paste a list is a link under the add row that opens a box with the cursor in it; what will be added is shown first, then each is added, and what was on file is said", async () => {
@@ -1658,15 +1732,15 @@ describe("each screen", () => {
     open();
     const row = await screen.findByRole("form", { name: "Add someone" });
     const options = () => within(within(row).getByLabelText("Who they are")).getAllByRole("option").map((o) => o.textContent);
-    await user.selectOptions(within(row).getByLabelText("Side"), EMPLOYER);
+    await user.selectOptions(within(row).getByLabelText("Where they belong"), EMPLOYER);
     expect(options()).toEqual(expect.arrayContaining(["manager", "colleague"]));
-    await user.selectOptions(within(row).getByLabelText("Side"), SHOP);
+    await user.selectOptions(within(row).getByLabelText("Where they belong"), SHOP);
     expect(options()).toEqual(expect.arrayContaining(["customer", "supplier", "staff"]));
     // "customer" stays and "client" is gone: two words for one part left people choosing between them.
     expect(options()).not.toContain("client");
     expect(options()).not.toContain("manager");
-    // The part starts on the first of the list, and picking a side with other parts moves it to that list's first.
-    expect(within(row).getByLabelText("Who they are")).toHaveValue("customer");
+    // Nothing is preselected: the part starts empty on every side, so no one is filed under a part nobody chose.
+    expect(within(row).getByLabelText("Who they are")).toHaveValue("");
     await user.type(within(row).getByLabelText("Name"), "Drew Kin");
     await user.selectOptions(within(row).getByLabelText("Who they are"), "supplier");
     await user.click(within(row).getByRole("button", { name: "Add" }));
@@ -1674,12 +1748,34 @@ describe("each screen", () => {
     expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Drew Kin", aliases: [], sides: ["PRJ-3"], role: "supplier" });
   });
 
+  test("People: someone added to a business or job with no part gets a box to set it, from that side's own list", async () => {
+    const user = userEvent.setup();
+    const drew = { id: "PER-8", name: "Drew Kin", role: null, aliases: [], status: "active", is_pm: false, relation: null, side: "business", sides: ["PRJ-3"] };
+    const calls = fakeApi(
+      routes(
+        {
+          "GET people": () => [drew],
+          "GET setup/business": () => stateWith([side("PRJ-3", "business", SHOP)]),
+          "POST people/PER-8": () => ({ id: "PER-8" }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "people" },
+      ),
+    );
+    open();
+    const box = await screen.findByLabelText("Drew Kin's part");
+    expect(within(box).getAllByRole("option").map((o) => o.textContent)).toEqual(expect.arrayContaining(["customer", "supplier", "staff", "Something else"]));
+    expect(within(box).getAllByRole("option").map((o) => o.textContent)).not.toContain("manager");
+    await user.selectOptions(box, "supplier");
+    await waitFor(() => expect(calls.find((c) => c.route === "POST people/PER-8")?.body).toEqual({ role: "supplier" }));
+  });
+
   test("People: with no side of work, only the people in the person's life are asked, saved on the personal side", async () => {
     fakeApi(routes({ "GET people": () => [] }, CORE.map((id) => step(id)), { step: "people" }));
     open();
     await screen.findByRole("form", { name: "Add someone" });
     expect(screen.queryByRole("heading", { name: /The people at/ })).toBeNull();
-    expect(screen.queryByLabelText("Side")).toBeNull();
+    expect(screen.queryByLabelText("Where they belong")).toBeNull();
   });
 
   test("Skip for now skips the step and moves to the next screen; Back and the list move too, and each is kept", async () => {
@@ -2003,6 +2099,8 @@ describe("Mail and calendar", () => {
     expect(step.firstElementChild).toBe(block);
     expect(within(block).getByText(/Helper is reading: Your inbox and Your calendar\./)).toBeInTheDocument();
     expect(within(block).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
+    // That the reading waits for the first Go is said once on the screen, not again in the step's own lead line.
+    expect(screen.getAllByText(/waits for you to start the assistant/)).toHaveLength(1);
     // Exactly one Continue, right under the result; the list is behind "Connect another" and shows when it is pressed.
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
     expect(block.contains(screen.getByRole("button", { name: "Continue" }))).toBe(true);
@@ -2890,6 +2988,18 @@ describe("names", () => {
       fingerprint: "fp-1",
       by_setup: true,
     });
+  });
+
+  test("the recap marks a done step by its check and does not write Done down the list", async () => {
+    fakeApi({
+      ...routes({}, CORE.map((id) => step(id, { done: true })), { step: "done" }),
+      "GET watch": () => [],
+    });
+    open();
+    const recap = await screen.findByRole("list", { name: "What was set up" });
+    const visible = Array.from(recap.querySelectorAll("li")).flatMap((li) => Array.from(li.querySelectorAll("span:not(.sr)")).filter((n) => n.children.length === 0 && n.textContent === "Done"));
+    expect(visible).toEqual([]);
+    expect(recap.querySelectorAll(".sr").length).toBeGreaterThan(0);
   });
 
   test("Done shows the app's name with Rename", async () => {

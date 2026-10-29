@@ -27363,6 +27363,18 @@
             "title": "Locked",
             "type": "boolean"
           },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a text setting: the most characters it takes, so the box stops there.",
+            "title": "Max Length"
+          },
           "money": {
             "anyOf": [
               {

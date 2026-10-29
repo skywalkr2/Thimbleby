@@ -355,8 +355,11 @@ test("with nothing in use and nothing waiting, one line says how things arrive a
 
 test("when only the person's plain words exist the page is not empty", async () => {
   open({ "GET knowledge": () => [], "GET knowledge/rules": () => [] }, REVIEW, vi.fn(), [settingItem("language.known_terms", { type: "list", value: ["acme"], default: [] })]);
-  expect(await screen.findByText("Nothing is in use yet.")).toBeInTheDocument();
+  expect(await screen.findByLabelText("A word")).toBeInTheDocument();
   expect(screen.queryByText(/When you correct Helper/)).toBeNull();
+  // A heading over nothing is left out: with nothing in use and nothing waiting the part isn't there.
+  expect(sections()).toEqual(["Your words"]);
+  expect(screen.queryByText("Nothing is in use yet.")).toBeNull();
 });
 
 test("after an act the cursor goes to what is now first on the page", async () => {

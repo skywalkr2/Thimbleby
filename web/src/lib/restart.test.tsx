@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { fakeApi } from "../test-utils";
 import { WordingProvider } from "./wording";
 import { RestartNotice, RestartProvider, useRestart } from "./restart";
+import { ToastProvider } from "./toasts";
 
 function Starter() {
   const { begin } = useRestart();
@@ -144,4 +145,23 @@ test("when asking, the notice says what waits for the restart", () => {
   act(() => screen.getByRole("button", { name: "offer" }).click());
   expect(screen.getByRole("status")).toHaveTextContent("Restart to finish this change?");
   expect(screen.getByRole("status")).toHaveTextContent("Restart to use: Backups kept.");
+});
+
+test("a restart that went through says so in a message anyone can see, not only in the closed status popover", async () => {
+  let instance = "one";
+  fakeApi({ "GET runtime-config": () => ({ instance }) });
+  render(
+    <WordingProvider>
+      <ToastProvider seconds={0}>
+        <RestartProvider hellos={1} seconds={60} doneSeconds={0.2} pollSeconds={0.05}>
+          <Starter />
+        </RestartProvider>
+      </ToastProvider>
+    </WordingProvider>,
+  );
+  begin();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  expect(screen.queryByText(DONE)).toBeNull();
+  instance = "two";
+  expect(await screen.findByText(DONE)).toBeInTheDocument();
 });

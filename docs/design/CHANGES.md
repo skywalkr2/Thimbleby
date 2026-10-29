@@ -1027,6 +1027,36 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 267. Sweep batch 8: the P2 polish (setup, People, Settings, empty states, restart wording) (2026-10-29; sweep batch 8, Y01 to Y06 without the layout items)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup, Welcome and What it's for (7.8) | "Reginald" with no "your assistant" and no full stop; the own-life sentence three times | "{assistant}, your assistant, reads ... owed."; said once |
+| Setup, You (7.8, 7.9) | A one-word "full name" was kept | Asked again in words (also in Settings, You); the People step asks only for a name |
+| Setup, AI step (7.8) | "RecommendedService" run together; spend boxes showed "0.1"; "cheaper work starts on its own" | A space between tag, title and words; amounts as "$0.10"; the hint says what waits for the first go and what starts after |
+| Setup, Mail step (7.8) | "Sign in to start reading" and "What it reads waits ..." said twice; two lists headed Now reading | Each said once; the second list reads "Also reading" |
+| Setup, Promises and Done (7.8) | Two primary buttons; Hand something in left setup; "Done" down the recap | One primary (Continue is plain beside a button of the screen's own); the box opens over setup; a check and no word |
+| Setup, People (7.8) | Suggestion boxes labelled only "Personal"; "Side"; "manager" preselected; no "Someone else" or part box for added people; a heading over nothing; "No one to suggest yet" after all were added | The legend is visible; "Where they belong"; nothing preselected; the lists include "Someone else" and a part box for jobs and businesses; no heading with no mail; "You've added everyone we found" |
+| Settings, limits (7.9, 4.0) | A 120-character assistant name scrolled the page; night shifts, "1,50" and a day limit above the month's were not handled | `max_length` 40 sent to the screen and refused in plain words; hours that end before they start run overnight; "1,50" refused, "$1,000,000" read whole; day above month refused |
+| Settings, Lists and Advanced (7.9) | A duplicate add did nothing; "retire one" against "Stop offering"; "Used for" repeating the heading; "Under way"; bare Good and Caution chips; "applies after the rules above"; "set under Details" | The duplicate is said by name; "Stop offering" throughout; the line left out; "Underway"; "Shown as: Caution"; plainer descriptions |
+| Stages, Knowledge, header (7.7, 7.18) | A bare "No items have stages yet."; "What it follows" over nothing; "Not looked at before Wed, Oct 14" | Says what a stage is; the part is left out with nothing in use; "Mail from before ... has not been read yet" |
+| People page (7.14) | The person's own page listed only the one organization their record names | Lists every job and business they keep |
+| Restart and status wording (7.1) | The restart pill alarming; no word when a restart finished; " no AI account yet" | A warning until a restart fails (then a danger, "Restart failed"); a message "Restarted with the new settings."; capital letters, no stray space |
+
+Not done here: the layout items the owner postponed (footer alignment, the phone gap, buttons floating from their field, the
+mail step's plain-looking buttons, radios off their labels, the remove-business alignment, the empty Connections layout,
+the phone card's "..."). A night shift has no free-time count for the capacity check or proposed meeting times, which work
+within one day's hours. The initials badge after renaming the workspace is the initials of the name given and was not
+changed. "Journey mail" in a Settings menu is the add-on of the browser journey tests (`tests/fixtures/plugins/journey_mail`),
+named from its manifest; nothing in the product ships it.
+
+Built: `tests/test_sweep8_settings.py`, `tests/test_money.py`, `tests/test_reminders.py`, `tests/test_reminder_lines.py`,
+`tests/test_day_capacity.py`, `tests/test_list_meanings.py`, `web/src/lib/restart.test.tsx`, `web/src/lib/money.test.tsx`,
+`web/src/shell/status.test.ts`, `web/src/shell/AssistantLine.test.tsx`, `web/src/ui/RadioCard.test.tsx`,
+`web/src/components/Walkthrough.test.tsx`, `FirstPromises.test.tsx`, `Welcome.test.tsx`, `Settings.test.tsx`,
+`ValueLists.test.tsx`, `Stages.test.tsx`, `Knowledge.test.tsx`, `PersonPage.test.tsx`, `LookBack.test.tsx` and
+`web/src/wording/wording.test.ts`.
+
 ## 266. People and record pages: contact details and sides on the person form, one page for a business, one editor for a to-do, a list of notes (2026-10-29; sweep batch 6, X33, X34, X35, X39, X40, X41, X42, with the record-page parts of VC10 and the person mockup)
 
 | Where | Before | Now |

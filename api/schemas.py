@@ -4040,6 +4040,9 @@ class SettingItem(BaseModel):
         description="True when the value is an amount of US dollars: the screen shows it as currency with two "
         'decimals in the person\'s number format and reads "1.5" and "$1.50" alike.',
     )
+    max_length: int | None = Field(
+        None, description="For a text setting: the most characters it takes, so the box stops there."
+    )
     by_setup: bool | None = Field(
         None,
         description="The value held in the files was written by setup, so it reads as set up for the person, never as "

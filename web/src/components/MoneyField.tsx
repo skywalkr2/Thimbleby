@@ -1,5 +1,5 @@
 // A box for an amount of money (design 7.9): shown as currency with two decimals in the person's number format, typed with
-// or without the sign and in that number format ("1.5", "$1.50" and "1,50" where a comma is the decimal mark are the same
+// or without the sign and in that number format ("1.5", "$1.50" and "1,50" where a comma is the decimal mark are the same; "1,50" elsewhere is refused
 // amount). While the cursor is in the box what was typed stays as it was typed; leaving it writes the amount out. The draft
 // the form keeps is the amount as plain digits, or the text typed when it is not an amount yet.
 import { useState } from "react";

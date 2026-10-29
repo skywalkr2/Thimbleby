@@ -234,7 +234,7 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
     there is is handed in as new. Only a source never read is affected;
   - `first_run_hours` (24, 1 to 336): how many hours around the first read count as recent;
   - `first_run_days` (14, 1 to 365): with `intake`, for mail, how many days back the first read looks; older mail isn't
-    read and Today says "Not looked at before <date>". Any other kind of source is taken in whole;
+    read and Today says "Mail from before <date> has not been read yet". Any other kind of source is taken in whole;
   - `report_removed` (true): hand in an item that disappeared from a complete listing;
   - `account` (empty): for a source of an add-on that signs in as the person, which signed-in account it reads, by its
     address (6.27). Empty reads the only account signed in; with several signed in, a source says which. The source form shows

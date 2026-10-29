@@ -81,7 +81,10 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                 <li className={[styles.section, styles.problem].join(" ")} data-section="problem" data-tone={tone}>
                   <p className={styles.heading}>{t("alive.name")}</p>
                   <p className={styles.text}>
-                    <Icon name={ICON[tone]} size={16} /> {say}
+                    <span className={styles.sayIcon}>
+                      <Icon name={ICON[tone]} size={16} />
+                    </span>
+                    <span>{say}</span>
                   </p>
                   {kind === "stuck" && status.data.can_restart && (
                     <Button size="sm" variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
