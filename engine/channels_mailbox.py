@@ -26,6 +26,8 @@ from email.message import EmailMessage
 from email.utils import format_datetime
 from typing import Any
 
+from pydantic import ValidationError
+
 from engine import act_accounts, itip
 from engine.channels import (
     ChannelContext,
@@ -489,7 +491,12 @@ def for_workspace(store: Any, cfg_of: Callable[[], Any]) -> MailboxChannel:
             return None
         name = act_accounts.name_of(account)
         source = next((s for s in cfg_of().watch.sources if s.connector == act_accounts.MAILBOX and s.id == name), None)
-        return MailboxSettings.model_validate(source.settings) if source is not None else None
+        if source is None:
+            return None
+        try:
+            return MailboxSettings.model_validate(source.settings)
+        except ValidationError:  # a mailbox that isn't set up fully is one that can't be used yet
+            return None
 
     def acting_accounts() -> list[str]:
         return [a for a in cfg_of().watch.acting if act_accounts.kind_of(a) == act_accounts.MAILBOX]

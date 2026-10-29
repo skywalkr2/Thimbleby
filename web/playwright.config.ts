@@ -108,6 +108,8 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     launchOptions: { executablePath },
+    // Opt-in only: PW_CHANNEL=chrome runs the tests in the installed Google Chrome instead of the bundled browser.
+    ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}),
     permissions: ["clipboard-read", "clipboard-write"],
     // No entry animations, so accessibility checks never catch a toast half faded in.
     contextOptions: { reducedMotion: "reduce" },

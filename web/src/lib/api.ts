@@ -259,6 +259,10 @@ export const api = {
   /** "All looks good" for a batch on Today: every changeset of it marked reviewed, one signal for each request. */
   confirmBatch: (changesets: string[]) => call<S["BatchConfirmed"]>("POST", "changesets/confirm", { changesets }),
   unconfirmBatch: (done: S["BatchConfirmed"]) => call<S["BatchUnconfirmed"]>("POST", "changesets/unconfirm", done),
+  /** Move the person's own calendar entry; Undo is the changeset it returns. */
+  moveEvent: (event: string, body: S["EventMoveIn"]) => call<S["EventChanged"]>("POST", `events/${id(event)}/move`, body),
+  /** Cancel the person's own calendar entry; Undo brings it back. */
+  cancelEvent: (event: string, body: S["EventCancelIn"]) => call<S["EventChanged"]>("POST", `events/${id(event)}/cancel`, body),
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),
   sendBack: (cs: string, note: string, undoFirst = true) =>
     call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, undoFirst ? { note } : { note, undo_first: false }),

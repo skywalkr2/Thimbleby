@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 263. Sweep batch 7: own calendar entries move and cancel; saves in order.
+
+- **The Schedule and the record page (7, 6.12):** the person's own calendar entries move (a new start or end) and cancel
+  from the entry's page and the Schedule's details pane, at once, with an Undo toast. A connected entry is changed only
+  through its account's act, which the person approves; the reason it isn't offered (acting off, or a calendar app that
+  can't change it) is said in words and links to the setting or the event.
+- **Saves in order (4.0, 7):** the notification, kept-key, read-token, synced-folder, held-line, model-line, catalog and
+  reminder-place forms save through the ordered save, reading their fingerprint as the save starts.
+- **Folders (6.12):** a mailbox whose settings can't be read answers with no folders and a plain reason.
+
 ## 262. One side model on every record and source, and personal only means no work concepts (2026-10-29; sweep batch 5, X18, X20, X23, X36, X43, X44)
 
 | Where | Before | Now |

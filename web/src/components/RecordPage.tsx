@@ -206,6 +206,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && versions.form}
       {data && invite.form}
       {data && eventActs.form}
+      {data && eventActs.note}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
       {data && ownSide && (

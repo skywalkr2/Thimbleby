@@ -7,7 +7,7 @@ import { useId, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { askNotify, notifyState, showNotification, type NotifyState } from "../lib/notify";
 import { problemText } from "../lib/problem";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { heldOf, KeptSecretRow } from "./KeptSecrets";
@@ -101,10 +101,10 @@ function WebhookTarget(props: { local: boolean }) {
             value={chosen?.id ?? ""}
             aria-describedby={chosen ? `${base}-app-where` : undefined}
             onChange={(e) =>
-              void (async () => {
-                const saved = await api.setNotifyApp({ app: e.target.value, fingerprint: await fingerprint() });
+              void (async (app: string) => {
+                const saved = await inOrder(async () => api.setNotifyApp({ app, fingerprint: await fingerprint() }));
                 await afterSave(saved, { message: t("notices.app.saved") });
-              })()
+              })(e.target.value)
             }
           >
             {apps.map((a) => (
@@ -128,7 +128,7 @@ function WebhookTarget(props: { local: boolean }) {
         held={held}
         hint={t("notices.webhook.kept")}
         onSave={async (body) => {
-          const saved = await api.setNotifyWebhook({ ...body, fingerprint: await fingerprint() });
+          const saved = await inOrder(async () => api.setNotifyWebhook({ ...body, fingerprint: await fingerprint() }));
           await afterSave(saved, { message: t("notices.webhook.saved") });
         }}
         more={

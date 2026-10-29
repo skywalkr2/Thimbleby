@@ -9,7 +9,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useAccountNames } from "../lib/account-names";
 import { useMoney } from "../lib/money";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
@@ -44,7 +44,7 @@ export function AccountMoveLine(props: { line: Line }) {
   const move = async () => {
     setStep("working");
     setProblem(null);
-    const done = await act(async () => api.moveAccount(accountId, await fingerprint()));
+    const done = await act(async () => inOrder(async () => api.moveAccount(accountId, await fingerprint())));
     if (done?.moved && done.saved) {
       await afterSave(done.saved, { message: t("queue.account_move.moved", { account }) });
       return;
@@ -148,7 +148,7 @@ export function ModelWatchLine(props: { line: Line }) {
       models[short] = model;
       use[tier] = short;
     }
-    const done = await act(async () => api.switchAndCheck(accountId, { fingerprint: await fingerprint(), models, use }));
+    const done = await act(async () => inOrder(async () => api.switchAndCheck(accountId, { fingerprint: await fingerprint(), models, use })));
     if (done) await afterSave(done.saved, { message: t("queue.model_watch.switched", { work }) });
     setBusy(null);
   };
@@ -198,7 +198,7 @@ export function ModelMovedLine(props: { line: Line }) {
   const sub = change(line.usd_per_day, "queue.model_moved.sub_more", "queue.model_moved.sub_less", "queue.model_moved.sub_same") ?? t("queue.model_moved.sub_same");
   const back = async () => {
     setBusy("back");
-    const saved = await act(async () => api.switchBack(tier, await fingerprint()));
+    const saved = await act(async () => inOrder(async () => api.switchBack(tier, await fingerprint())));
     if (saved) await afterSave(saved, { message: t("queue.model_moved.back_toast", { work }) });
     setBusy(null);
   };

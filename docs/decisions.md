@@ -5,6 +5,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: The person's own calendar entries move and cancel at once with Undo; a connected event says why it can't be changed here (sweep batch 7)
+
+**Decided:** (1) An entry the app keeps itself can be moved (a new start, end or both) and cancelled from its record page and the Schedule's details pane. Both act at once with an Undo toast; Undo is the changeset's undo. (2) Cancel is a removal (`record.delete`, with the version read), refused in words when another record still refers to the entry. (3) A connected entry is changed only through its account's act, drafted and sent after the person says yes to the exact change, through the publisher. (4) When that act is not offered, the reason is stated from the declared acts and settings: acting turned off for the account (with an offer to turn it on) or a channel that declares neither move nor cancel ("Change it in your calendar app", with the event's link when it has one). (5) Folders for a mailbox whose settings can't be read answer with no folders and a plain reason, not a server error.
+
+**Decided by:** the owner's sweep brief, batch 7 (sweep item X45 and VP05).
+
+**Why:** Own entries had no move or cancel at all, and a connected event that couldn't be acted on said nothing useful. The header said "Connected" while a connection was failing or retrying.
+
+**Impact:** Design 7 (the Schedule and the record page's entry actions), 6.12 (the reasons for an act that isn't offered). New routes `POST /api/events/{id}/move` and `/cancel`; `MailFoldersView.reason`; `ActOptionsView.event_own` and `event_why`. Header status: a connection that is failing or retrying is a state of its own. Change log: section 263.
+The header's status reading the connections (VP05) is batch V2's, which this batch's own version gave way to on merge (change
+log 261).
+
 ## 2026-10-29: Which side a thing is on is worked out once; a person with only their own life meets no work concepts (sweep batch 5)
 
 **Decided:** (1) The side of a record, a line of Today's queue, an agenda entry, a clash and a row of the week is worked out in

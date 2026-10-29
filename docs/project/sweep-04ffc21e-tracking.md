@@ -54,7 +54,7 @@ Where **Done when** is blank, the README's Fix for that item is the bar: a brows
 | X42 | P1 | People, organizations, projects, business | No "Add a business" or "Add a job" in Settings, and removal is limited | B-F12, T-P1-18 |  | To do | | | |
 | X43 | P1 | People, organizations, projects, business | The Projects screen and project form | D-P1-16, B-F32, B-F33, B-F34, B-F37, B-F38 |  | To do | | | |
 | X44 | P1 | People, organizations, projects, business | Work words on a personal-only workspace | D-P1-30, D-P1-29 (part), B-F47 |  | To do | | | |
-| X45 | P1 | Schedule, Files, Knowledge | The Schedule | D-P1-17, D-P1-18, B-F20, B-F44, D-P2-2, D-P2-4, D-P2-5, D-P2-6 |  | To do | | | |
+| X45 | P1 | Schedule, Files, Knowledge | The Schedule | D-P1-17, D-P1-18, B-F20, B-F44, D-P2-2, D-P2-4, D-P2-5, D-P2-6 |  | To do | 500d7b11 (part: move and cancel; the rest of the Schedule is open) | tests/test_own_event_changes.py, CalendarOwnEntry.test.tsx, ScheduleViews.test.tsx | |
 | X46 | P1 | Schedule, Files, Knowledge | Files | D-P1-13, D-P1-14, B-F42 |  | To do | | | |
 | X47 | P1 | Schedule, Files, Knowledge | Small changes need a restart, and the warning is alarming | D-P1-22, T-P2-4, D-P2-21 |  | To do | | | |
 | X48 | P1 | Settings and admin screens | Appearance changes need a reload, and the theme is set in two places | T-P1-2, T-P2-7, T-P2-6 (part) |  | To do | | | |
@@ -132,7 +132,7 @@ Stage B items gate E13 (4.0); stage C items gate E14 (4.6). None block the curre
 | VP02 | Visual B | Shared | Row anatomy v2 | PATH-TO-4.6 §4 | Fixed lead slot, titles share one edge, two row heights, 2-line title clamp, owner only when not you, questions not tickable | To do | | | |
 | VP03 | Visual B | Shared | Type scale v2 | PATH-TO-4.6 §4 | 24/16/15/13 steps, meta in text-muted, 11px uppercase group labels, 12px only for pills and column headers | To do | | | |
 | VP04 | Visual B | Shared | Primary discipline | PATH-TO-4.6 §4 | At most one filled button per viewport; two secondary styles; Today's review folded by default | To do | | | |
-| VP05 | Visual B | Shared | Status and state rows | PATH-TO-4.6 §4 | One dot-plus-word status; warn/danger rows with edge and tint; colour never alone; header status agrees with connections | To do | | | |
+| VP05 | Visual B | Shared | Status and state rows | PATH-TO-4.6 §4 | One dot-plus-word status; warn/danger rows with edge and tint; colour never alone; header status agrees with connections | To do | 500d7b11 (part: the header and logic; the look is V2's) | status.test.ts, StatusMenu.test.tsx, SyncPanel.test.tsx |  |
 | VP06 | Visual B | Shared | Night elevation and focus | PATH-TO-4.6 §4 | Surface lifts off canvas by night; focus ring at least 3:1 on every surface incl. tinted rows | To do | | | |
 | VP07 | Visual B | Shared | State sheet per screen | PATH-TO-4.6 §4 | First run, filtered empty, skeleton loading without shift, error, offline, conflict, 0/1/100+ for every inventory screen | To do | | | |
 | VP08 | Visual B | Shared | Phone shell | PATH-TO-4.6 §4 | 56px tab bar with icons and active state, header icons, rows stack actions at 480px and under, filters in one sheet | To do | | | |

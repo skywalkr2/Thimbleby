@@ -6,7 +6,7 @@ import { useId, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { useReminderWhere, whereWords, type Where } from "../lib/reminder-where";
-import { knownFingerprint, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, knownFingerprint, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { undoBody } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -59,7 +59,7 @@ export function ReminderWhere() {
     }
   };
   const save = async (to: Where, acct: string) =>
-    api.saveSettings({ changes: { [WHERE_KEY]: to, [ACCOUNT_KEY]: acct }, reset: [], fingerprint: await fingerprint() });
+    inOrder(async () => api.saveSettings({ changes: { [WHERE_KEY]: to, [ACCOUNT_KEY]: acct }, reset: [], fingerprint: await fingerprint() }));
   const endStanding = async () => {
     const ended = await api.endReminderYes();
     push({ message: t("reminders.where.ended"), undo: () => undoYes(ended.changeset) });

@@ -203,7 +203,8 @@ export function MoveForm(props: { source: string | null; listAccount?: string | 
   });
   const listed = useAccountChoices(props.source ? null : props.listAccount, "folder");
   const choices: Choice[] = props.source ? (folders.data?.folders ?? []).map((f) => ({ value: f, name: f })) : listed.choices;
-  const pick = !!props.source || listed.choices.length > 0;
+  const sourceReason = props.source ? (folders.isError ? "unavailable" : (folders.data?.reason ?? null)) : null;
+  const pick = (!!props.source && !sourceReason) || listed.choices.length > 0;
   const account = props.account ?? "";
   const [folder, setFolder] = useState("");
   const [busy, setBusy] = useState(false);
@@ -240,7 +241,7 @@ export function MoveForm(props: { source: string | null; listAccount?: string | 
       ) : (
         <>
           <p className="hint" role="note" data-folders-not-listed="">
-            {listed.reason ? t(`acts.folders.reason.${listed.reason}`, { account }) : t("acts.move.not_listed", { account })}
+            {(sourceReason ?? listed.reason) ? t(`acts.folders.reason.${sourceReason ?? listed.reason}`, { account }) : t("acts.move.not_listed", { account })}
           </p>
           <label className="hint" htmlFor={id}>
             {t("acts.move.name_label")}

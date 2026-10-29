@@ -5062,6 +5062,11 @@ class MailFoldersView(BaseModel):
         "its folders: `folders` is then the usual names for sent mail, the likeliest first, and the person may name "
         "another.",
     )
+    reason: Literal["unavailable"] | None = Field(
+        None,
+        description="Why `folders` is empty when the mailbox could not be asked (its settings are incomplete); the "
+        "screen words it.",
+    )
 
 
 class SentFolderIn(BaseModel):
@@ -7237,6 +7242,30 @@ class ActDraftIn(BaseModel):
     alarm_minutes: int | None = Field(None, ge=0, le=40320, description="Minutes before the start an alarm rings.")
 
 
+class EventMoveIn(BaseModel):
+    """POST /api/events/{id}/move: the new start, and the new end if the entry has one, of an entry the app keeps
+    itself, with the version of the entry the person read."""
+
+    start: str = Field(min_length=1, description="The new start, as ISO 8601 text.")
+    end: str | None = Field(None, description="The new end, as ISO 8601 text; left out for an entry with no end.")
+    read_version: int = Field(ge=1, description="The version of the entry that was read; the move waits on it.")
+
+
+class EventCancelIn(BaseModel):
+    """POST /api/events/{id}/cancel: remove an entry the app keeps itself, resting on the version the person read."""
+
+    read_version: int = Field(ge=1, description="The version of the entry that was read; the removal waits on it.")
+
+
+class EventChanged(BaseModel):
+    """What moving or cancelling the person's own entry came to: the `changeset` (Undo is POST
+    /api/changesets/{changeset}/undo), or none and `refused` saying in a kind why it was not done: `changed` (the entry
+    changed since it was read) or `referred_to` (another record still needs it). The screen words the kind."""
+
+    changeset: str | None = None
+    refused: Literal["changed", "referred_to"] | None = None
+
+
 class ActOptionsView(BaseModel):
     """GET /api/acts/options: what the person can do about one saved message, calendar entry or reply owed. The
     `account` it came in on (none when it came in another way) and whether acting is on for it; `can_act` is true when
@@ -7267,6 +7296,17 @@ class ActOptionsView(BaseModel):
         default_factory=list,
         description="What the person can do to an event that is theirs on a connected calendar (not an invitation "
         "from someone else, not called off), when acting is on for its account and its channel declares it.",
+    )
+    event_own: bool = Field(
+        False,
+        description="The calendar entry is one the app keeps itself, not read from a connected calendar: the person "
+        "moves or cancels it directly (POST /api/events/{id}/move and /cancel), with Undo.",
+    )
+    event_why: Literal["acting_off", "app_only"] | None = Field(
+        None,
+        description="For the person's own event on a connected calendar that can't be moved or cancelled through its "
+        "account: acting is turned off for the account (`acting_off`), or its service does neither (`app_only`, the "
+        "person changes it in their calendar app). None when the actions are offered or nothing can be said.",
     )
     folder_source: str | None = Field(
         None, description="The mail source whose folders GET /api/watch/{source}/folders lists, for Move to."

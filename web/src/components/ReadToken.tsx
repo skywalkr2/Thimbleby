@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { asReference } from "../lib/secret-ref";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { SecretField } from "./SecretField";
 import { Button } from "../ui/Button";
@@ -40,8 +40,10 @@ export function ReadToken(props: {
     setBusy(true);
     setProblem("");
     try {
-      const fp = await fingerprint();
-      const saved = await api.giveReadToken(props.pack.id, byReference ? { reference: asReference(reference), fingerprint: fp } : { token: typed.trim(), fingerprint: fp });
+      const saved = await inOrder(async () => {
+        const fp = await fingerprint();
+        return api.giveReadToken(props.pack.id, byReference ? { reference: asReference(reference), fingerprint: fp } : { token: typed.trim(), fingerprint: fp });
+      });
       await afterSave(saved, { message: t("addons.token.saved", { host }) });
       props.onSaved();
     } catch (err) {

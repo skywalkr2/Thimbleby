@@ -33,6 +33,7 @@ const entryOptions = (over: Partial<S["ActOptionsView"]> = {}): S["ActOptionsVie
   propose_refusal: null,
   folder_source: null,
   folders_listed: false,
+  event_own: false,
   event_actions: ["move", "cancel"],
   ...over,
 });

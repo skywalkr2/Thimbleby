@@ -16,7 +16,7 @@ import { whenWords } from "../lib/coverage";
 import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -393,7 +393,7 @@ function SwitchFailedLine(props: { line: Line }) {
   const back = async () => {
     setBusy("back");
     await act(
-      async () => api.switchBack(tier, await fingerprint()),
+      async () => inOrder(async () => api.switchBack(tier, await fingerprint())),
       () => ({ message: t("queue.switch_failed.back_toast", { work, previous }) }),
     );
     setBusy(null);
@@ -508,7 +508,7 @@ function WorkAccessLine(props: { line: Line }) {
   const account = nameOf(props.line.account ?? "");
   const allow = async () => {
     setBusy(true);
-    const saved = await act(async () => api.allowWork(props.line.account ?? "", await fingerprint()));
+    const saved = await act(async () => inOrder(async () => api.allowWork(props.line.account ?? "", await fingerprint())));
     if (saved) await afterSave(saved, { message: t("queue.work_access.toast", { account }) });
     setBusy(false);
   };

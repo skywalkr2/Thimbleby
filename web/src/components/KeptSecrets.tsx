@@ -10,7 +10,7 @@ import { copyPlain } from "../lib/copy";
 import { problemText } from "../lib/problem";
 import { readable } from "../lib/records";
 import { asReference } from "../lib/secret-ref";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { SecretField } from "./SecretField";
@@ -136,7 +136,7 @@ export function AddonSecrets(props: { plugin: string; name?: string }) {
           local={local}
           held={heldOf(s)}
           onSave={async (body) => {
-            const saved = await api.giveAddonSecret(props.plugin, s.secret, { ...body, fingerprint: await fingerprint() });
+            const saved = await inOrder(async () => api.giveAddonSecret(props.plugin, s.secret, { ...body, fingerprint: await fingerprint() }));
             await afterSave(saved, { message: t("secrets.addon.saved", { label: labelOf(s.secret), addon }) });
           }}
         />
@@ -165,7 +165,7 @@ export function BackupKey() {
     setMaking(true);
     setProblem("");
     try {
-      const saved = await api.setBackupKey({ make: true, fingerprint: await fingerprint() });
+      const saved = await inOrder(async () => api.setBackupKey({ make: true, fingerprint: await fingerprint() }));
       setMade(saved.made ?? null);
       await afterSave(saved, { message: t("backup_key.made_saved") });
     } catch (err) {
@@ -194,7 +194,7 @@ export function BackupKey() {
         held={held}
         hint={held ? undefined : t("backup_key.none")}
         onSave={async (body) => {
-          const saved = await api.setBackupKey({ ...body, fingerprint: await fingerprint() });
+          const saved = await inOrder(async () => api.setBackupKey({ ...body, fingerprint: await fingerprint() }));
           await afterSave(saved, { message: t("backup_key.saved") });
         }}
         more={

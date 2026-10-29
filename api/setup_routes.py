@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException
+from pydantic import ValidationError
 
 from api.pack_routes import entry_in
 from api.schemas import (
@@ -1021,7 +1022,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
         if found["connector"] != "mailbox":
             raise HTTPException(status_code=409, detail="That source isn't a mailbox.")
-        return found, MailboxSettings.model_validate(found["settings"])
+        try:
+            return found, MailboxSettings.model_validate(found["settings"])
+        except ValidationError:
+            raise HTTPException(
+                status_code=409,
+                detail="This mailbox isn't set up fully, so its folders can't be listed. Open it and fill in its "
+                "server, user name and password.",
+            ) from None
 
     def read_folders(settings: Any) -> Any:
         from engine.connectors import ConnectorError
@@ -1035,15 +1043,17 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def taken_folders(settings: Any) -> list[str]:
         from engine.connectors.mailbox import MailboxSettings
 
-        return sorted(
-            {
-                MailboxSettings.model_validate(s["settings"]).folder
-                for s in sources_now()
-                if s["connector"] == "mailbox"
-                and s["settings"].get("host") == settings.host
-                and s["settings"].get("user") == settings.user
-            }
-        )
+        held: set[str] = set()
+        for s in sources_now():
+            if s["connector"] != "mailbox" or s["settings"].get("host") != settings.host:
+                continue
+            if s["settings"].get("user") != settings.user:
+                continue
+            try:
+                held.add(MailboxSettings.model_validate(s["settings"]).folder)
+            except ValidationError:  # a mailbox that isn't set up fully reads no folder
+                continue
+        return sorted(held)
 
     def source_now(source_id: str) -> dict[str, Any]:
         found = next((s for s in sources_now() if s["id"] == source_id), None)
@@ -1173,7 +1183,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a
         source of its own. Reads the mailbox; nothing there changes. An add-on's mail can't be asked for its folders:
         it gets the usual names for sent mail, the likeliest first, and the person may name another."""
-        from engine.connectors.mailbox import find_sent
+        from engine.connectors.mailbox import MailboxSettings, find_sent
 
         found = source_now(source_id)
         if found["connector"] != "mailbox":
@@ -1183,10 +1193,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             taken = folder_taken(found, setting[0])
             usual = [n for n in current().watch.sent_folder_names if n not in taken]
             return MailFoldersView(folders=usual, sent=usual[0] if usual else None, taken=taken, listed=False)
-        _, settings = mailbox_of(source_id)
+        try:
+            settings = MailboxSettings.model_validate(found["settings"])
+        except ValidationError:  # settings the mailbox can't be read with: no list, and the screen says so
+            return MailFoldersView(folders=[], listed=True, reason="unavailable")
+        taken = taken_folders(settings)
         listed = read_folders(settings)
         sent = find_sent(listed, current().watch.sent_folder_names)
-        return MailFoldersView(folders=list(listed.names), sent=sent, taken=taken_folders(settings))
+        return MailFoldersView(folders=list(listed.names), sent=sent, taken=taken)
 
     def sent_source(found: dict[str, Any], folder: str, label: str) -> dict[str, Any]:
         """The source that reads a mailbox's sent folder: the same mailbox and sign-in, the folder as given, and the

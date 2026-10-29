@@ -94,6 +94,7 @@ def test_a_mailbox_source_offers_its_folders_with_the_sent_one_marked_and_what_i
         "sent": "Sent Items",
         "taken": ["INBOX"],
         "listed": True,
+        "reason": None,
     }
     assert c.get(f"{api}/watch/nope/folders").status_code == 404
     assert c.get(f"{api}/watch/{sources(ws)[0].id}/folders").status_code in (
@@ -286,3 +287,17 @@ def test_a_mailbox_already_read_doesnt_get_a_sent_folder_back_when_another_folde
     )
     assert more.status_code == 200, more.text
     assert read_here(ws) == [None, "Drafts"]  # nothing brought the sent folder back
+
+
+def test_a_mailbox_with_no_settings_answers_with_no_folders_and_a_reason_not_a_server_error(tmp_path, monkeypatch):
+    stand_in(monkeypatch)
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    add_mailbox(c, api, monkeypatch)
+    path = ws.config_dir / "watch.yaml"
+    path.write_text(path.read_text(encoding="utf-8").replace(', "password": "env:MAIL_PASSWORD"', ""))
+    c, api = client(ws, load_config(ws.config_dir, env={}), store)
+    got = c.get(f"{api}/watch/work-mail/folders")
+    assert got.status_code == 200, got.text
+    body = got.json()
+    assert body["folders"] == [] and body["sent"] is None and body["reason"] == "unavailable"

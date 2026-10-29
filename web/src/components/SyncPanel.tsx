@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
-import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
@@ -26,10 +26,11 @@ const SYNC_SHARED = "storage.sync.shared";
 
 /** The synced folder isn't set up yet: what it is for, and a way to choose one that is saved like any other setting.
  * Once a folder is chosen it asks whether anyone else can change the files in it, and saves both answers together. */
-function SyncUnset(props: { fingerprint: string }) {
+function SyncUnset() {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
+  const fresh = useFreshFingerprint();
   const canList = useFolderListing();
   const [picking, setPicking] = useState(false);
   const [typed, setTyped] = useState("");
@@ -48,11 +49,13 @@ function SyncUnset(props: { fingerprint: string }) {
     setBusy(true);
     setProblem("");
     try {
-      const saved = await api.saveSettings({
-        changes: { [SYNC_FOLDER]: path.trim(), [SYNC_SHARED]: others },
-        reset: [],
-        fingerprint: props.fingerprint,
-      });
+      const saved = await inOrder(async () =>
+        api.saveSettings({
+          changes: { [SYNC_FOLDER]: path.trim(), [SYNC_SHARED]: others },
+          reset: [],
+          fingerprint: await fresh(),
+        }),
+      );
       await afterSave(saved);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
@@ -164,7 +167,7 @@ function SharedSwitch(props: { shared: boolean }) {
   const change = async (next: boolean) => {
     setProblem("");
     try {
-      const saved = await api.saveSettings({ changes: { [SYNC_SHARED]: next }, reset: [], fingerprint: await fresh() });
+      const saved = await inOrder(async () => api.saveSettings({ changes: { [SYNC_SHARED]: next }, reset: [], fingerprint: await fresh() }));
       await afterSave(saved);
     } catch (err) {
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
@@ -211,7 +214,7 @@ export function SyncPanel() {
       ) : settings.isError ? (
         <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void settings.refetch() }} />
       ) : !folderSet ? (
-        <SyncUnset fingerprint={settings.data!.fingerprint} />
+        <SyncUnset />
       ) : sync.isError || !data ? (
         <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void sync.refetch() }} />
       ) : !data.folder ? (

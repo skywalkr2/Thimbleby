@@ -291,6 +291,36 @@ describe("an entry's details", () => {
     expect(pane).toHaveTextContent("meet.example.com");
   });
 
+  test("the person's own entry is cancelled from its details at once, with Undo; an event with no entry of the app's says to change it in its calendar app", async () => {
+    room({ beside: true });
+    const user = userEvent.setup();
+    const address = `${"https"}://meet.example.com/room/42`;
+    const own = entry({ title: "Dentist", snapshot: "EVT-7", own: true, source: "" });
+    const { calls } = await open(
+      (date) => (date === TODAY ? { timed: [own, entry({ title: "Design review", source: "cal-home", link: address })] } : {}),
+      {},
+      {
+        "GET acts/options?record=EVT-7": () => ({ record: "EVT-7", kind: "event", acting: false, can_act: false, folders_listed: false, event_own: true, event_actions: [] }),
+        "GET record?kind=event&id=EVT-7": () => ({ kind: "event", id: "EVT-7", version: 4, fields: { id: "EVT-7", title: "Dentist", start: own.start }, long_text: [] }),
+        "POST events/EVT-7/cancel": () => ({ changeset: "CS-3", refused: null }),
+        "POST changesets/CS-3/undo": () => ({ restored: [0], skipped: [] }),
+      },
+    );
+    await user.click(screen.getByRole("button", { name: /Dentist/ }));
+    const pane = await screen.findByRole("complementary", { name: "Dentist" });
+    await user.click(await within(pane).findByRole("button", { name: /More actions for Dentist/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Cancel this event" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST events/EVT-7/cancel")).toHaveLength(1));
+    expect(calls.find((c) => c.route === "POST events/EVT-7/cancel")?.body).toEqual({ read_version: 4 });
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-3/undo")).toBe(true));
+
+    await user.click(screen.getByRole("button", { name: /Design review/ }));
+    const other = await screen.findByRole("complementary", { name: "Design review" });
+    expect(within(other).getByText("Change it in your calendar app.")).toBeInTheDocument();
+    expect(within(other).getByRole("link", { name: "Open in your calendar" })).toHaveAttribute("href", address);
+  });
+
   test("a due date links to its to-do", async () => {
     room({ beside: true });
     const user = userEvent.setup();

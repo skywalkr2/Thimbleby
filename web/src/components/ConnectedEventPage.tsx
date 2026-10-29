@@ -70,6 +70,7 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
       {event && (
         <>
           <p className="hint">{t("schedule.event.note")}</p>
+          <p className="hint">{t("acts.event.why.app_only")}</p>
           <div className="record-grid">
             <div className="record-main">
               <Attendees fields={{ organizer: event.organizer, attendees: event.attendees, invitation: false }} names={new Map()} />

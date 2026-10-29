@@ -263,11 +263,18 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             out.can_act = acting
             out.answers = list(MAILBOX_ANSWERS) if mailbox else ["accepted", "tentative", "declined", "propose"]
             out.propose_refusal = NO_PROPOSE if mailbox else None
-        if kind == "event" and account and acting and mine(view.get("event", rid)):
-            for a in ("move", "cancel"):
-                carrier = serving(account, "calendar", a)
-                if carrier is not None and carrier[1].takes("calendar", a):
-                    out.event_actions.append(a)
+        if kind == "event":
+            entry = view.get("event", rid)
+            out.event_own = not entry.data.get("source") and not entry.data.get("key")
+            if account and mine(entry):
+                for a in ("move", "cancel"):
+                    carrier = serving(account, "calendar", a)
+                    if acting and carrier is not None and carrier[1].takes("calendar", a):
+                        out.event_actions.append(a)
+                if not acting:
+                    out.event_why = "acting_off"
+                elif not out.event_actions:
+                    out.event_why = "app_only"
         return out
 
     @r.get("/acts/calendar-options")

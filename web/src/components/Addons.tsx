@@ -27,7 +27,7 @@ import {
 } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
-import { freshSettings, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
@@ -637,7 +637,7 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
     setBusy(true);
     setProblem("");
     try {
-      const saved = await api.addCatalog(address.trim(), await fingerprint());
+      const saved = await inOrder(async () => api.addCatalog(address.trim(), await fingerprint()));
       // The catalog is read at once, so its add-ons are listed when the form goes.
       client.setQueryData(["packs"], await api.refreshPacks());
       await afterSave(saved, { message: t("addons.catalog_added", { domain: hostOf(address.trim()) }) });
@@ -706,11 +706,12 @@ function Catalog(props: { feeds: Feed[] }) {
   const [problem, setProblem] = useState("");
   const addButton = useRef<HTMLButtonElement>(null);
   const take = async (feed: Feed) => {
-    if (!feed.address) return;
+    const address = feed.address;
+    if (!address) return;
     setBusy(true);
     setProblem("");
     try {
-      const saved = await api.removeCatalog(feed.address, await fingerprint());
+      const saved = await inOrder(async () => api.removeCatalog(address, await fingerprint()));
       client.setQueryData(["packs"], await api.refreshPacks());
       await afterSave(saved, { message: t("addons.catalog_removed", { domain: feed.domain }) });
     } catch (err) {

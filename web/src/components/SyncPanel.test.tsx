@@ -6,6 +6,19 @@ import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { SyncPanel } from "./SyncPanel";
 
+// Every save that reads the fingerprint as it starts goes through the one line that keeps them in order.
+const ordered = vi.hoisted(() => ({ runs: 0 }));
+vi.mock("../lib/settings-save", async (original) => {
+  const real = await original<typeof import("../lib/settings-save")>();
+  return {
+    ...real,
+    inOrder: <T,>(run: () => Promise<T>) => {
+      ordered.runs += 1;
+      return real.inOrder(run);
+    },
+  };
+});
+
 const syncView = (extra: Partial<S["SyncView"]> = {}): S["SyncView"] => ({
   folder: "/shared/Cockpit",
   problem: null,
@@ -239,3 +252,17 @@ test("when the copies need settling the folder panel links to the page that sett
   expect(link.getAttribute("href")).toMatch(/#handover$/);
 });
 
+
+test("switching who can change the folder is saved through the one line that keeps saves in order", async () => {
+  const user = userEvent.setup();
+  ordered.runs = 0;
+  others({
+    "GET sync": () => syncView(),
+    "GET jobs": () => [],
+    "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+  });
+  renderApp(<SyncPanel />);
+  const sync = await section("Synced folder");
+  await user.click(await within(sync).findByRole("checkbox", { name: "Mark this folder as editable by others" }));
+  await waitFor(() => expect(ordered.runs).toBe(1));
+});
