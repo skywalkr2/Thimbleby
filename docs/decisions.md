@@ -5,6 +5,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: Dropping a service's wider access when acting is turned off moves after the installers
+
+**Decided:** asking the mail or calendar service to take back the wider access when the person turns acting off, and the
+plugin API change it needs, are done after the installers with the add-on pack work. Acting off already stops every act.
+
+**Decided by:** the owner ("something we can add to post installer as part of the add on pack work").
+
+**Why:** nothing can act while acting is off; the leftover permission is unused, and the person can remove it in the
+service's own settings meanwhile.
+
+**Impact:** phase S's remaining work shrinks by the API change; it joins the add-on pack work after phase I. Change log: none.
+
 ## 2026-10-29: Hand something in takes almost any attachment, before the installers
 
 **Decided:** Hand something in reads documents to text itself, pictures and scans through a model that lists image input,

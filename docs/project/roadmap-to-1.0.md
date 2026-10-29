@@ -749,6 +749,7 @@ management (not just read only) lets do it"):
   narrowed; the plugin API is on hold, so turning acting off stops the core using the wider access and the person signs in
   again with the reading scopes to give it back, as the guide says).
   - State (2026-10-29): built: channels declare acts and accounts, `watch.acting`, `acting_scopes`, `act.undo`, and the Settings switch (`tests/test_act_actions.py`, `web/src/components/ActingAccounts.test.tsx`); left: asking the service to drop the wider access when acting is turned off (a plugin API change, on hold).
+   - Moved after the installers (owner, 2026-10-29: "something we can add to post installer as part of the add on pack work"): asking the service to drop the wider access when acting is turned off, with the plugin API change it needs. Until then acting off stops every act at once, and the person can remove the access in the service's own account settings.
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*
