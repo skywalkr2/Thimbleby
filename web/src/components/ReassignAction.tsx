@@ -1,6 +1,7 @@
 // Reassigning an action from its row (design 6.9, 7.5): "Reassign…" asks who (a list of people, the cursor in it) and
 // acts at once with Undo. On a to-do that has several owners it first asks whose part is changing, so the others stay.
 // The change is the person's own edit of the owners, so it is a correction the assistant learns from.
+import { useOneEditor } from "../lib/one-editor";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -74,7 +75,7 @@ export function ReassignForm(props: { action: Target; from?: string; onDone?: ()
  * back. */
 export function useReassign(action: Target, onClosed?: () => void, from?: string): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useOneEditor(`${action.id}:reassign`);
   const close = () => {
     setOpen(false);
     onClosed?.();

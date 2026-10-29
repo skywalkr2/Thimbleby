@@ -5,7 +5,6 @@ import type { S } from "../lib/api";
 import { person } from "../lib/learned-fixtures";
 import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
 import { FollowUps } from "./FollowUps";
-import { OpenItems } from "./OpenItems";
 import { RecordPage } from "./RecordPage";
 
 // The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
@@ -43,44 +42,30 @@ function followups(questions: S["FollowupQuestion"][]): S["FollowupSection"][] {
   ];
 }
 
-// The person's own to-do is acted on in To-dos and questions (design 7.7), so its row's menu is there.
-const openAction = (): S["OpenActionView"] => ({
-  id: "ACT-9",
-  version: 3,
-  text: "Approve the proof",
-  state: "open",
-  owners: [{ person: "PER-1", name: "Pat Example" }],
-  due: "2026-11-03",
-  project: "PRJ-1",
-  project_name: "Book",
-  parent_name: null,
-  notes: null,
-  since: "2026-10-01",
-  on_hold: null,
-  blocker: null,
-  duplicate: null,
-  origin: null,
-  untouched_days: null,
-  owner_question: null,
-  to_send: false,
-});
-
-const openItems = () => ({ actions: [openAction()], questions: [], stale_days: 21 });
-
 const menuOf = async (user: ReturnType<typeof userEvent.setup>, name: RegExp | string) => {
   await user.click(await screen.findByRole("button", { name: typeof name === "string" ? `More actions for ${name}` : name }));
   return screen.getAllByRole("menuitem").map((m) => m.querySelector('[slot="label"]')?.textContent ?? m.textContent);
 };
 
+// A to-do's row has one Edit and no Change this; the page of the to-do keeps Change this in its menu, beside the box for asking.
+const todoPage = (extra: Routes = {}): Routes => ({
+  "GET record?kind=action&id=ACT-9": () => ({ kind: "action", id: "ACT-9", version: 3, fields: { id: "ACT-9", text: "Approve the proof", status: "open" }, long_text: [] }),
+  "GET kinds/action": () => ({ kind: "action", fields: [] }),
+  "GET record-pages/ACT-9?kind=action": () => ({ kind: "action", id: "ACT-9", version: 3, name: "Approve the proof", details: [], open_actions: [], open_questions: [], completed_actions: [], facts: [], fact_source: null, activity: [] }),
+  "GET people": () => [],
+  "GET projects": () => [],
+  "GET settings": () => ({ fingerprint: "fp", items: [] }),
+  "GET lists": () => [],
+  "GET organizations": () => [],
+  "GET plugin-actions?kind=action&id=ACT-9": () => [],
+  "GET task-kinds?kind=action&id=ACT-9": () => [],
+  ...extra,
+});
+
 test("Change this on an action takes a note, posts it, and says the assistant will look at it", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({
-    "GET open-items": openItems,
-    "GET people": () => [],
-    "GET projects": () => [],
-    "POST items/action/ACT-9/change": () => ({ ok: "ACT-9", request: "REQ-5", signal: "SIG-1" }),
-  });
-  renderApp(<OpenItems />);
+  const calls = fakeApi(todoPage({ "POST items/action/ACT-9/change": () => ({ ok: "ACT-9", request: "REQ-5", signal: "SIG-1" }) }));
+  renderApp(<RecordPage kind="action" id="ACT-9" onBack={() => {}} />);
   expect(await menuOf(user, "Approve the proof")).toContain("Change this");
   await user.click(screen.getByRole("menuitem", { name: "Change this" }));
   const box = await screen.findByRole("textbox", { name: "Your note" });
@@ -96,8 +81,8 @@ test("Change this on an action takes a note, posts it, and says the assistant wi
 
 test("a note that couldn't be sent stays in its box", async () => {
   const user = userEvent.setup();
-  fakeApi({ "GET open-items": openItems, "GET people": () => [], "GET projects": () => [] });
-  renderApp(<OpenItems />);
+  fakeApi(todoPage());
+  renderApp(<RecordPage kind="action" id="ACT-9" onBack={() => {}} />);
   await menuOf(user, "Approve the proof");
   await user.click(screen.getByRole("menuitem", { name: "Change this" }));
   await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Move it");

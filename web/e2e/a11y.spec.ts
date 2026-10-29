@@ -3,6 +3,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+/** Opens Ask the way a person does: the header's search field (on a phone, the bar's Search first), then its Ask row. */
+async function openAsk(page: Page) {
+  const field = page.getByRole("banner").getByRole("searchbox");
+  const phone = page.getByRole("button", { name: "Search", exact: true }).first();
+  await expect(field.or(phone)).toBeVisible();
+  if (!(await field.isVisible())) await phone.click();
+  await page.getByRole("searchbox").first().click();
+  await page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / }).click();
+}
+
 const WIDTHS = [390, 1024, 1440, 1920];
 const HEIGHT = 900;
 
@@ -38,6 +48,7 @@ const SCREENS = [
   { name: "Projects", hash: "records/projects" },
   { name: "People", hash: "records/people" },
   { name: "Files", hash: "records/files" },
+  { name: "Notes", hash: "records/notes" },
   { name: "Knowledge", hash: "records/knowledge" },
   { name: "Connections", hash: "settings/connections" },
   { name: "Add-ons", hash: "settings/addons" },
@@ -128,7 +139,7 @@ for (const scheme of ["light", "dark"] as const) {
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: HEIGHT });
         await open(page, "today");
-        await page.getByRole("button", { name: "Ask", exact: true }).first().click();
+        await openAsk(page);
         // A pane from 1440px, a dialog below it.
         const asking = width >= 1440 ? page.getByRole("complementary", { name: /^Ask / }) : page.getByRole("dialog", { name: /^Ask / });
         await expect(asking).toBeVisible();

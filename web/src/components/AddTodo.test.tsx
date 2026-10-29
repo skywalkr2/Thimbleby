@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { TODO_TEXT_MAX } from "../lib/todo-limits";
 import { OpenItems } from "./OpenItems";
 import { Today } from "./Today";
 
@@ -221,4 +222,22 @@ test("with no side besides Personal the form has no project to choose, and with 
   renderApp(<OpenItems />);
   await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
   expect(await screen.findByRole("combobox", { name: /Where does it belong/ })).toBeInTheDocument();
+});
+
+test("a to-do that is too long is said so beside the field, with a count, and Add waits until it is short enough", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  const words = await screen.findByRole("textbox", { name: "What to do" });
+  await user.click(words);
+  await user.paste("w".repeat(TODO_TEXT_MAX + 12));
+  expect(await screen.findByText(`That's 12 characters too long: a to-do can be ${TODO_TEXT_MAX} at most. Shorten it, or keep the detail in a note.`)).toBeInTheDocument();
+  expect(words).toBeInvalid();
+  expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  await user.clear(words);
+  await user.paste("w".repeat(TODO_TEXT_MAX - 20));
+  expect(screen.getByText(`${TODO_TEXT_MAX - 20} of ${TODO_TEXT_MAX} characters`)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+  expect(calls.some((c) => c.route === "POST todos")).toBe(false);
 });

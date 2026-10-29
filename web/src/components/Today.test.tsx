@@ -409,11 +409,11 @@ test("Not right on an item opens the note to send it back with, the correction t
   const { calls } = show([review], { "POST changesets/CS-1/send-back": () => ({ request: "REQ-9" }) });
   await user.click(await screen.findByRole("button", { name: "Look over" }));
   await user.click(await screen.findByRole("button", { name: "Not right: Book the proof run" }));
-  const note = await screen.findByRole("textbox", { name: "What should Helper do differently?" });
+  const note = await screen.findByRole("textbox", { name: "What should Helper do differently about: Book the proof run?" });
   expect(note).toHaveFocus();
   await user.type(note, "This is not a to-do.");
   await user.click(screen.getByRole("button", { name: "Send back" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/send-back")?.body).toEqual({ note: "This is not a to-do." }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/send-back")?.body).toEqual({ note: "This is not a to-do.", ops: [1] }));
 });
 
 test("batches left unopened are one line, and each opens with its own All looks good, oldest first", async () => {
@@ -556,6 +556,33 @@ test("the cursor starts on the first line, and the arrows and Enter walk and ope
   expect(row("decision")).toHaveFocus();
   await user.keyboard("{Enter}");
   expect(await within(row("decision")).findByRole("textbox", { name: "Your answer" })).toBeInTheDocument();
+});
+
+test("the line that has the keyboard focus is the cursor row, and the cursor leaves with the focus", async () => {
+  const user = userEvent.setup();
+  show([decision, review, send]);
+  await screen.findByText("Matte or soft-touch?", { selector: "li *" });
+  await waitFor(() => expect(row("decision")).toHaveFocus());
+  expect(row("decision")).toHaveAttribute("data-selected");
+  expect(row("decision")).toHaveAttribute("aria-current", "true");
+  await user.keyboard("{ArrowDown}");
+  expect(row("review")).toHaveAttribute("data-selected");
+  expect(row("decision")).not.toHaveAttribute("data-selected");
+});
+
+test("a line opened in place is an inset card under its row, closed by its own Close", async () => {
+  const user = userEvent.setup();
+  show([decision, review, send]);
+  await screen.findByText("Matte or soft-touch?", { selector: "li *" });
+  expect(document.querySelector("[data-inset]")).toBeNull();
+  await waitFor(() => expect(row("decision")).toHaveFocus());
+  await user.keyboard("{Enter}");
+  const inset = await waitFor(() => {
+    const el = row("decision").querySelector<HTMLElement>("[data-inset]");
+    expect(el).not.toBeNull();
+    return el as HTMLElement;
+  });
+  expect(within(inset).getByRole("button", { name: "Close" })).toBeInTheDocument();
 });
 
 test("the pane keys take the cursor from the queue into the details and the rail and back, so neither is reached only by the mouse", async () => {
@@ -1044,16 +1071,17 @@ const briefing: S["BriefView"] = {
   day: "2026-10-20",
   forms: ["morning"],
   quiet: false,
+  afternoon_from_hour: 12,
   on_today: 0,
-  sections: [{ key: "changed", more: 0, lines: [{ key: "since:1", kind: "moved", text: "Send the draft", change: "said", day: "2026-10-22", ready: false, you: false }] }],
+  sections: [{ key: "changed", more: 0, lines: [{ key: "since:1", kind: "moved", text: "Send the draft", change: "said", day: "2026-10-22", ready: false, you: false, on_today_line: false }] }],
 };
 const meeting = (): S["AgendaItemView"] => ({ snapshot: "EVT-1", source: "", title: "Print sync", start: todayIso(), all_day: true, cancelled: false, own: true, open_items: 0, days: [todayIso()] });
-const mail = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", received: new Date().toISOString(), unread: true }], left_out: 0, set_aside: 0 });
+const mail = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", received: new Date().toISOString(), unread: true, version: 1 }], left_out: 0, set_aside: 0 });
 
 test("the rail is at most three cards, Briefing, Schedule and Came in, and has no Top priorities or Your to-dos", async () => {
   show([decision], { "GET brief": () => briefing, "GET today/agenda": () => [meeting()], "GET today/arrived": () => mail(), "GET today/week": () => busyWeek });
   const rail = await screen.findByRole("group", { name: RAIL });
-  await within(rail).findByRole("region", { name: "Morning brief" });
+  await within(rail).findByRole("region", { name: /^(Morning|Afternoon) brief$/ });
   await within(rail).findByRole("region", { name: "Schedule" });
   await within(rail).findByRole("region", { name: "Came in" });
   expect(within(rail).getAllByRole("region")).toHaveLength(3);
@@ -1066,7 +1094,7 @@ test("the rail is at most three cards, Briefing, Schedule and Came in, and has n
 
 test("a message in the rail shows the sender's name only, with the address in the tooltip, and a meeting's title has the row under its time", async () => {
   const address = "robin.sample@example.com";
-  const sent = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", sender_address: address, received: new Date().toISOString(), unread: true }], left_out: 0, set_aside: 0 });
+  const sent = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", sender_address: address, received: new Date().toISOString(), unread: true, version: 1 }], left_out: 0, set_aside: 0 });
   show([decision], { "GET today/arrived": () => sent(), "GET today/agenda": () => [meeting()], "GET today/week": () => busyWeek });
   const rail = await screen.findByRole("group", { name: RAIL });
   await within(rail).findByText("Proof is ready");
@@ -1092,7 +1120,7 @@ test("a quiet day's brief is not drawn as a card of its own", async () => {
   show([decision], { "GET brief": () => ({ ...briefing, quiet: true, sections: [] }), "GET today/arrived": () => mail() });
   const rail = await screen.findByRole("group", { name: RAIL });
   await within(rail).findByRole("region", { name: "Came in" });
-  expect(within(rail).queryByRole("region", { name: "Morning brief" })).toBeNull();
+  expect(within(rail).queryByRole("region", { name: /^(Morning|Afternoon) brief$/ })).toBeNull();
 });
 
 test("with nothing in any card and an empty queue, Today says one line: nothing else needs you", async () => {

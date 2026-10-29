@@ -26,6 +26,11 @@ export function YourName() {
       setProblem(name === "" && saved !== "" ? t("settings.row.your_name.empty") : "");
       return;
     }
+    // A full name is a first and a last name: one word is asked again, as the setup guide asks.
+    if (name.split(" ").length < 2) {
+      setProblem(t("welcome.workspace.why_one_word"));
+      return;
+    }
     setProblem("");
     try {
       const done = await api.saveMe(name);

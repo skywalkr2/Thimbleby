@@ -65,8 +65,9 @@ def _validate(hours: WorkingHours | None, quiet: QuietHours | None = None) -> No
     if hours is not None:
         _clock(hours.start)
         _clock(hours.end)
-        if hours.start >= hours.end or not hours.days or any(day not in range(7) for day in hours.days):
-            raise ValueError("Working hours need a nonempty set of weekdays and a same-day interval")
+        # An end before the start is a night shift that runs past midnight; equal times are ambiguous.
+        if hours.start == hours.end or not hours.days or any(day not in range(7) for day in hours.days):
+            raise ValueError("Working hours need a nonempty set of weekdays and two different times")
         if hours.later_today_delay is not None and hours.later_today_delay <= timedelta(0):
             raise ValueError("The later-today delay must be positive")
         if hours.evening is not None:
@@ -87,9 +88,24 @@ def _local(day: date, clock: time, zone: tzinfo) -> datetime:
     return first
 
 
+def _worked(value: datetime, hours: WorkingHours) -> bool:
+    """Whether a moment is inside working hours. A night shift belongs to the day it starts on, so its hours after
+    midnight count against the day before."""
+    clock = value.time()
+    if hours.start < hours.end:
+        return value.weekday() in hours.days and hours.start <= clock < hours.end
+    started = (value.weekday() - 1) % 7
+    return (clock >= hours.start and value.weekday() in hours.days) or (clock < hours.end and started in hours.days)
+
+
+def crosses_midnight(hours: WorkingHours) -> bool:
+    """Whether the working day runs past midnight."""
+    return hours.end < hours.start
+
+
 def _allowed(value: datetime, hours: WorkingHours | None, quiet: QuietHours | None) -> bool:
     clock = value.time()
-    if hours is not None and (value.weekday() not in hours.days or not hours.start <= clock < hours.end):
+    if hours is not None and not _worked(value, hours):
         return False
     if quiet is None:
         return True

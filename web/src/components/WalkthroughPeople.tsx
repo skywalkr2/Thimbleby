@@ -47,35 +47,52 @@ const NONE = "";
 /** Whose people a section lists: the person's own life, or one side of their work. */
 type Whose = { kind: "personal"; id: string | null } | { kind: "job" | "business"; id: string };
 
-/** How a listed person on the personal side relates to the person, set from a list when it was left empty. */
-function RelationSet(props: { person: S["PersonView"] }) {
+/** How a listed person relates to the person (on the personal side) or what their part is (at a job or business), set from a
+ * list when it was left empty. "Someone else" and "Something else" ask for the person's own words before they are saved. */
+function HowSet(props: { person: S["PersonView"]; options: readonly string[]; group: "relation" | "role" }) {
   const { t } = useWords();
   const client = useQueryClient();
   const [problem, setProblem] = useState("");
-  const choose = async (word: string) => {
-    if (!word) return;
+  const [picked, setPicked] = useState(NONE);
+  const [words, setWords] = useState("");
+  const save = async (text: string) => {
     setProblem("");
     try {
-      await api.editPerson(props.person.id, { relation: t(`walkthrough.people.relation.${word}`) });
+      await api.editPerson(props.person.id, { [props.group]: text });
       await client.invalidateQueries({ queryKey: ["people"] });
     } catch (err) {
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
     }
   };
+  const choose = (word: string) => {
+    setPicked(word);
+    if (word && word !== OTHER) void save(t(`walkthrough.people.${props.group}.${word}`));
+  };
   const id = `walkthrough-people-set-${props.person.id}`;
   return (
     <>
       <label className="sr" htmlFor={id}>
-        {t("walkthrough.people.relation.set", { name: props.person.name })}
+        {t(props.group === "relation" ? "walkthrough.people.relation.set" : "walkthrough.people.role.set", { name: props.person.name })}
       </label>
-      <Select id={id} value={NONE} onChange={(e) => void choose(e.target.value)}>
+      <Select id={id} value={picked} onChange={(e) => choose(e.target.value)}>
         <option value={NONE}>{t("walkthrough.people.relation.choose")}</option>
-        {RELATIONS.filter((o) => o !== OTHER).map((o) => (
+        {props.options.map((o) => (
           <option key={o} value={o}>
-            {t(`walkthrough.people.relation.${o}`)}
+            {t(`walkthrough.people.${props.group}.${o}`)}
           </option>
         ))}
       </Select>
+      {picked === OTHER && (
+        <span className="inline-field">
+          <label className="sr" htmlFor={`${id}-words`}>
+            {t(`walkthrough.people.${props.group}.other_label`)}
+          </label>
+          <input id={`${id}-words`} type="text" value={words} autoComplete="off" onChange={(e) => setWords(e.target.value)} />
+          <Button size="sm" disabled={!words.trim()} onClick={() => void save(words.trim())}>
+            {t("walkthrough.people.other_save")}
+          </Button>
+        </span>
+      )}
       {problem && (
         <span className="problem-note" role="alert">
           {problem}
@@ -107,6 +124,8 @@ function Suggestions(props: { places: Place[]; sided: boolean }) {
   const [ticked, setTicked] = useState<Record<string, string[]>>({});
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  // Everyone found was added in this visit, so an empty list says they were all added instead of there being no one.
+  const [allAdded, setAllAdded] = useState(false);
   if (!found.data) return null;
   const list = found.data.people;
   const chosen = list.filter((p) => (ticked[p.address] ?? []).length > 0);
@@ -129,16 +148,19 @@ function Suggestions(props: { places: Place[]; sided: boolean }) {
     }
     setTicked({});
     setProblem(failed.join(" "));
+    if (failed.length === 0 && chosen.length > 0) setAllAdded(true);
     await client.invalidateQueries({ queryKey: ["people"] });
     await client.invalidateQueries({ queryKey: ["people-suggestions"] });
     await client.invalidateQueries({ queryKey: ["setup"] });
     setBusy(false);
   };
+  // With no mail to learn from there is nothing to say: a heading over nothing is left out.
+  if (list.length === 0 && !allAdded) return null;
   return (
     <section aria-labelledby="walkthrough-people-suggest-title" data-people-suggestions="">
       <h3 id="walkthrough-people-suggest-title">{t("walkthrough.people.suggest.title")}</h3>
       {list.length === 0 ? (
-        <p className="hint">{t("walkthrough.people.suggest.none")}</p>
+        <p className="hint">{t("walkthrough.people.suggest.all_added")}</p>
       ) : (
         <>
           <p className="hint">{t(list[0].from_sent ? "walkthrough.people.suggest.hint_sent" : "walkthrough.people.suggest.hint_received")}</p>
@@ -151,7 +173,7 @@ function Suggestions(props: { places: Place[]; sided: boolean }) {
                     {p.address} · {tn("walkthrough.people.suggest.mails", p.count)}
                   </span>
                 </span>
-                <CheckboxGroup legend={t("walkthrough.people.suggest.add_to_legend", { name: p.name })} legendHidden className={styles.places}>
+                <CheckboxGroup legend={t("walkthrough.people.suggest.add_to_legend", { name: p.name })} className={styles.places}>
                   {props.places.map((place) => (
                     <label key={place.key}>
                       <input type="checkbox" checked={(ticked[p.address] ?? []).includes(place.key)} disabled={busy} onChange={() => toggle(p.address, place.key)} />
@@ -310,7 +332,9 @@ function Listed(props: { whose: Whose; title: string; people: S["PersonView"][] 
           <li key={p.id}>
             {p.name}
             {(personal ? p.relation : p.role) && <span className="hint"> · {personal ? p.relation : p.role}</span>}
-            {personal && !p.relation && <RelationSet person={p} />}{" "}
+            {!(personal ? p.relation : p.role) && (
+              <HowSet person={p} group={personal ? "relation" : "role"} options={personal ? RELATIONS : ROLES[props.whose.kind as "job" | "business"]} />
+            )}{" "}
             <Button size="sm" aria-label={t("walkthrough.people.remove_named", { name: p.name })} onClick={() => remove(p)}>
               {t("setup.remove")}
             </Button>
@@ -330,18 +354,18 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
   const options: readonly string[] = personal ? RELATIONS : ROLES[props.place.whose.kind as "job" | "business"];
   const group = personal ? "relation" : "role";
   const [name, setName] = useDraftState("people", "name", "");
-  // How people relate to the person starts empty, so nobody is filed under a relation nobody chose; a part at work starts on the first.
-  const [pick, setPick] = useState<string>(personal ? NONE : options[0]);
+  // How people relate to the person, or their part at work, starts empty, so nobody is filed under one nobody chose.
+  const [pick, setPick] = useState<string>(NONE);
   const [other, setOther] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const how = pick === NONE ? "" : pick === OTHER ? other.trim() : t(`walkthrough.people.${group}.${pick}`);
-  const ready = !!name.trim() && (personal ? pick !== OTHER || !!how : !!how);
+  const ready = !!name.trim() && (pick !== OTHER || !!how);
   const choosePlace = (key: string) => {
     const next = props.places.find((p) => p.key === key);
     if (!next) return;
     props.onPlace(key);
-    setPick(next.whose.kind === "personal" ? NONE : ROLES[next.whose.kind][0]);
+    setPick(NONE);
     setOther("");
   };
 
@@ -357,7 +381,7 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
       });
       setName("");
       setOther("");
-      setPick(personal ? NONE : options[0]);
+      setPick(NONE);
       await client.invalidateQueries({ queryKey: ["people"] });
       await client.invalidateQueries({ queryKey: ["people-suggestions"] });
       await client.invalidateQueries({ queryKey: ["setup"] });
@@ -383,7 +407,7 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
         </FormField>
         <FormField id={`${id}-how`} label={t("walkthrough.people.who")}>
           <Select id={`${id}-how`} value={pick} onChange={(e) => setPick(e.target.value)}>
-            {personal && <option value={NONE}>{t("walkthrough.people.relation.choose")}</option>}
+            <option value={NONE}>{t("walkthrough.people.relation.choose")}</option>
             {options.map((o) => (
               <option key={o} value={o}>
                 {t(`walkthrough.people.${group}.${o}`)}

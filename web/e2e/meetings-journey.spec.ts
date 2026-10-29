@@ -86,8 +86,9 @@ test.describe("meetings and people", () => {
     await line.getByRole("button", { name: "Open", exact: true }).click();
 
     await expect(page.getByRole("heading", { level: 1, name: found.guest.name })).toBeVisible();
-    const memory = page.getByRole("region", { name: "What to remember" });
-    await expect(memory).toContainText(found.promise.text);
+    // What is open with them is one list on their page, each item once, with how it relates to them.
+    const open = page.getByRole("region", { name: `Open with ${found.guest.name}` });
+    await expect(open).toContainText(found.promise.text);
     await checkAccessibility(page);
     expect(problems).toEqual([]);
   });

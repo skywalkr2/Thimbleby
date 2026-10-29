@@ -584,6 +584,25 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         a `side`, it is filed under that side."""
         return handled_choice(snapshot_id, body.read_version, personal=False, side=body.side)
 
+    @r.post("/handled/{snapshot_id}/treat-as")
+    def handled_treat_as(snapshot_id: str, body: TreatAsIn) -> HandledDone:
+        """Treat as, on mail the assistant already handled with a result: what it did with the mail is undone, the
+        mail is filed as chosen (under the `side`, or where its people and words place it), and a correction is
+        recorded. The plain Treat as work refuses such mail."""
+        snap = mail_snapshot(snapshot_id)
+        if snap.version != body.read_version:
+            raise HTTPException(status_code=409, detail="That message changed. Look at the list again.")
+        if not handled.acted_on(store, snapshot_id):
+            return handled_choice(snapshot_id, body.read_version, personal=False, side=body.side)
+        home = home_of(False, body.side)
+        try:
+            made = handled.treat_handled(ws, store, cfg, snapshot_id, project=home)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        worker.poke()
+        return handled_done(snapshot_id, made)
+
     @r.post("/handled/{snapshot_id}/personal")
     def handled_personal(snapshot_id: str, body: ReadVersion) -> HandledDone:
         """Treat as personal: as Treat as work, filed under the Personal project."""

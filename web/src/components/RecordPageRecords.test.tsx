@@ -222,7 +222,7 @@ test("a person is edited in the same drawer as on the People screen", async () =
     "GET kinds/person": () => ({ kind: "person", fields: [{ name: "full_name", description: "", type: "text", required: true, editable: true }] }),
   });
   renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
-  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  await user.click(await screen.findByRole("button", { name: "Edit" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit person" });
   expect(within(dialog).getByRole("textbox", { name: "Full name" })).toHaveValue("Robin Sample");
 });
@@ -494,7 +494,7 @@ test("a page with no facts about it has no Facts section", async () => {
   expect(screen.queryByRole("region", { name: "Facts" })).toBeNull();
 });
 
-test("a page opens with what is open, then the conversation, then what finished, the facts and the history", async () => {
+test("a page opens with what is open, then what finished, the facts and the history, and the box to talk about it last", async () => {
   api(
     "project",
     "PRJ-1",
@@ -512,9 +512,9 @@ test("a page opens with what is open, then the conversation, then what finished,
   const done = await screen.findByRole("region", { name: "Completed" });
   const activity = await screen.findByRole("region", { name: "Activity" });
   const before = (a: Element, b: Element) => expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  before(open, talk);
-  before(talk, done);
+  before(open, done);
   before(done, activity);
+  before(activity, talk);
 });
 
 test("a fact that is one person's word keeps who said it, and a plain statement of the world is left as it is", async () => {
@@ -606,9 +606,9 @@ test("the person's own page says You with their name, and lists what waits for t
   ownPage();
   renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
   expect(await screen.findByRole("heading", { level: 1, name: "You · Robin Sample" })).toBeInTheDocument();
-  expect(await screen.findByRole("heading", { level: 3, name: "What's waiting for you" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 3, name: "Questions for you" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 3, name: "Your details" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 2, name: "What's waiting for you" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Questions for you" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Your details" })).toBeInTheDocument();
   // The question is a question for them, not something they asked themselves.
   expect(screen.getByRole("link", { name: "What does proof mean here?" })).toBeInTheDocument();
   expect(screen.queryByText(/asked of/)).toBeNull();
@@ -629,14 +629,18 @@ test("the person's own page has nothing that describes someone else to them", as
 test("someone else's page keeps its own words, their details and who they are to you", async () => {
   api("person", "PER-2", OWN_FIELDS, page({ kind: "person", id: "PER-2", name: "Sam Other", open_questions: [{ id: "Q-2", title: "Is it final?", to: "PER-2", to_name: "Sam Other", status: "open", kind: "question", origin: null }] }), {
     "GET me": () => ({ full_name: "Robin Sample", person: "PER-1" }),
+    "GET people": () => [person("PER-1", "Robin Sample"), person("PER-2", "Sam Other", { relation: "my sister", role: "Editor" })],
     "GET person-memory/PER-2": () => ({ person: "PER-2", name: "Sam Other", last_in_touch: null, you_asked: [], they_owe: [], you_owe: [], they_asked: [], reach: { kept: {}, replies_on: null }, dates: [], matters: [] }),
   });
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
   expect(await screen.findByRole("heading", { level: 1, name: "Sam Other" })).toBeInTheDocument();
-  expect(await screen.findByRole("heading", { level: 3, name: "Open with Sam Other" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 3, name: "Details" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 2, name: "Open with Sam Other" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Details" })).toBeInTheDocument();
   // A flag that is off (the name not confirmed, not only followed) says nothing, and the name is the heading's.
   expect(screen.queryByText("Name verified")).toBeNull();
-  expect(screen.getByText("Editor")).toBeInTheDocument();
-  expect(screen.getByText("Who they are to you")).toBeInTheDocument();
+  expect(screen.getByText("Who they are")).toBeInTheDocument();
+  // It is under the heading, and in the details beside the facts.
+  expect(screen.getAllByText("my sister")).toHaveLength(2);
+  // How the person works with them is a question about people at work, and a sister isn't one.
+  expect(screen.queryByText("How you work with them")).toBeNull();
 });

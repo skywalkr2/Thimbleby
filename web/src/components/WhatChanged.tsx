@@ -31,6 +31,7 @@ import { AnswerOnToday } from "./AnswerOnToday";
 import { useChangeThis, type ChangeKind } from "./ChangeThis";
 import { PromiseWhy } from "./PromiseWhy";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { DialogFooter, ModalPanel } from "./ModalPanel";
 import { SideFilter } from "./SideFilter";
 import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
 import { Highlighted } from "./SafeText";
@@ -305,12 +306,34 @@ function useChangeActions(item: S["ChangeItem"], hooks: { onOpenGuide?: (step: s
       () => api.looksGood(cs.id),
       () => ({ message: t("toast.looks_good"), many: (n) => tn("toast.looks_good_many", n), undo: () => api.reopen(cs.id) }),
     );
+  // Undo everything reverses many records at once, so it is the one undo that asks first.
+  const [confirmingUndoAll, setConfirmingUndoAll] = useState(false);
   const undoAll = () =>
     cs &&
     act(
       () => api.undo(cs.id),
       (report) => ({ message: undoMessage(report, t, tn) }),
     );
+  const undoAllDialog = confirmingUndoAll ? (
+    <ModalPanel titleId={`undo-all-${item.id}`} onClose={() => setConfirmingUndoAll(false)}>
+      <h2 id={`undo-all-${item.id}`}>{t("changes.undo_all_title")}</h2>
+      <p>{t("changes.undo_all_text")}</p>
+      <DialogFooter>
+        <Button variant="quiet" onClick={() => setConfirmingUndoAll(false)}>
+          {t("action.cancel")}
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => {
+            setConfirmingUndoAll(false);
+            void undoAll();
+          }}
+        >
+          {t("changes.undo_all_go")}
+        </Button>
+      </DialogFooter>
+    </ModalPanel>
+  ) : null;
   const retry = () => void act(() => api.retry(item.id), () => ({ message: t("toast.retrying") }));
 
   // A stop with a cause the screen can clear offers that one action in place of Try again, which could not work.
@@ -355,12 +378,12 @@ function useChangeActions(item: S["ChangeItem"], hooks: { onOpenGuide?: (step: s
       run: () => void act(() => api.reopen(cs.id), () => ({ message: t("toast.reopened"), undo: () => api.looksGood(cs.id) })),
     });
   }
-  if (cs && live.length) menu.push({ id: "undoall", label: t("changes.undo_all"), run: () => void undoAll() });
+  if (cs && live.length) menu.push({ id: "undoall", label: t("changes.undo_all"), run: () => setConfirmingUndoAll(true) });
   if (item.mail_item) {
     const mail = { id: item.mail_item, title };
     menu.push({ id: "aside-sales", label: t("setaside.menu_sales"), run: () => void moveToFolder(mail, "sales") });
   }
-  return { gated, cs, title, primary, menu, canSendBack: !!cs && item.state === "review" };
+  return { gated, cs, title, primary, menu, undoAllDialog, canSendBack: !!cs && item.state === "review" };
 }
 
 /** What What changed offers on a row: it is the history, so nothing on the row is a button. The choice that would have been
@@ -382,6 +405,9 @@ function useChangeSub(item: S["ChangeItem"]): string {
 function stateWord(item: S["ChangeItem"], gated: boolean): string {
   if (item.dismissed) return "changes.state.dismissed";
   if (gated) return "changes.state.cost_go";
+  // Work the person took back is not done, whatever its request says.
+  if (item.changeset?.status === "undone") return "changes.state.undone";
+  if (item.changeset?.status === "partly_undone") return "changes.state.partly_undone";
   // What needed no look was filed quietly; what did was checked once the person said it looks good.
   if (item.review === "filed") return "changes.history.filed";
   if (item.review === "checked") return "changes.history.checked";
@@ -394,7 +420,7 @@ function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; revea
   const { t } = useWords();
   const { item, choice } = props;
   const ref = useRef<HTMLLIElement>(null);
-  const { gated, cs, title, primary, menu, canSendBack } = useChangeActions(item, {
+  const { gated, cs, title, primary, menu, undoAllDialog, canSendBack } = useChangeActions(item, {
     onOpenGuide: props.onOpenGuide,
     startSendBack: () => props.onWant("sendback"),
     startChoosing: () => props.onWant("choose"),
@@ -418,7 +444,12 @@ function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; revea
       titleId={`t-${item.id}`}
       meta={sub}
       expand={{ expanded: choice.chosen === item.id, inert: choice.chosen === item.id, onToggle: () => choice.choose(item.id) }}
-      menu={<RowMenu label={title} actions={historyMenu(primary, menu)} />}
+      menu={
+        <>
+          <RowMenu label={title} actions={historyMenu(primary, menu)} />
+          {undoAllDialog}
+        </>
+      }
     >
       <OnTheRow item={item} />
     </ExpandableRow>
@@ -465,7 +496,7 @@ export function ChangeRow(props: {
   const [sendingBack, setSendingBack] = useState(!!props.sendBack || props.want?.what === "sendback");
   const [choosing, setChoosing] = useState(props.want?.what === "choose");
   const ref = useRef<HTMLLIElement>(null);
-  const { title, primary, menu, canSendBack } = useChangeActions(item, {
+  const { title, primary, menu, undoAllDialog, canSendBack } = useChangeActions(item, {
     onOpenGuide: props.onOpenGuide,
     startSendBack: () => {
       setOpen(true);
@@ -509,11 +540,12 @@ export function ChangeRow(props: {
         </Button>
       )}
       <RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />
+      {undoAllDialog}
     </Actions>
   );
   const pill = (
     <Pill tone={TONE[item.state]}>
-      {t(props.history ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
+      {t(props.history || item.changeset?.status === "undone" || item.changeset?.status === "partly_undone" ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
     </Pill>
   );
   const secondOpinion = cs?.second_opinion ? <span className="second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span> : null;
@@ -521,7 +553,7 @@ export function ChangeRow(props: {
     <>
           {item.note && (
             <div className="your-note">
-              <span className="what">{t("changes.your_note")}</span>
+              <span className="what">{item.title?.kind === "answer" ? t("queue.title.answer") : t("changes.your_note")}</span>
               <p>{item.note}</p>
             </div>
           )}
@@ -586,7 +618,12 @@ export function ChangeRow(props: {
           </Button>
         ) : undefined
       }
-      menu={<RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />}
+      menu={
+        <>
+          <RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />
+          {undoAllDialog}
+        </>
+      }
     >
       <OnTheRow item={item} />
       {open && <RowBody id={`b-${item.id}`}>{opened}</RowBody>}
@@ -764,6 +801,11 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         </div>
         <div className="title">{op.op === "fact" ? factLine(op.title, op.meta.said_by) : plainTitle(op.title, op.meta.due)}</div>
         {meta && <div className="meta">{meta}</div>}
+        {op.op === "note" && op.status === "applied" && (
+          <div className="meta">
+            <a href={viewHref("records/notes")}>{t("notes.see")}</a>
+          </div>
+        )}
         {op.reason && op.status !== "applied" && <div className="reason">{op.reason}</div>}
       </div>
       <Actions>
@@ -949,7 +991,8 @@ export function SourcePanel(props: { id: string; quote: string }) {
   );
 }
 
-export function SendBackForm(props: { cs: string; onDone: () => void }) {
+/** `op` and `item` make it a note about one item of the change: only that item is undone, and the box names it. */
+export function SendBackForm(props: { cs: string; onDone: (sent?: boolean) => void; op?: number; item?: string; estimate?: string | null }) {
   const { t } = useWords();
   const act = useAct();
   const [note, setNote] = useState("");
@@ -963,21 +1006,32 @@ export function SendBackForm(props: { cs: string; onDone: () => void }) {
       onSubmit={(e) => {
         e.preventDefault();
         void act(
-          () => api.sendBack(props.cs, note, undoFirst),
+          () => api.sendBack(props.cs, note, undoFirst, props.op === undefined ? undefined : [props.op]),
           () => ({ message: t("toast.sent_back") }),
-        ).then(props.onDone);
+        ).then((done) => {
+          if (done) props.onDone(true);
+          else props.onDone();
+        });
       }}
     >
-      <label className="hint" htmlFor={`sb-${props.cs}`}>
-        {t("changes.send_back_label")}
+      <label className="hint" htmlFor={`sb-${props.cs}-${props.op ?? "all"}`}>
+        {props.item ? t("changes.send_back_label_item", { item: props.item }) : t("changes.send_back_label")}
       </label>
-      <textarea id={`sb-${props.cs}`} ref={area} value={note} onChange={(e) => setNote(e.target.value)} required />
-      <label className="check-line">
-        <input type="checkbox" checked={undoFirst} onChange={(e) => setUndoFirst(e.target.checked)} />
-        {t("changes.send_back_undo")}
-      </label>
+      <textarea id={`sb-${props.cs}-${props.op ?? "all"}`} ref={area} value={note} onChange={(e) => setNote(e.target.value)} required />
+      {props.op !== undefined && (
+        <p className="hint">
+          <span>{t("changes.send_back_item_redo")}</span>
+          {props.estimate && <span> · {props.estimate}</span>}
+        </p>
+      )}
+      {props.op === undefined && (
+        <label className="check-line">
+          <input type="checkbox" checked={undoFirst} onChange={(e) => setUndoFirst(e.target.checked)} />
+          {t("changes.send_back_undo")}
+        </label>
+      )}
       <Actions align="end">
-        <Button variant="quiet" onClick={props.onDone}>
+        <Button variant="quiet" onClick={() => props.onDone()}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!note.trim()} reason={t("changes.send_back_needs_note")}>

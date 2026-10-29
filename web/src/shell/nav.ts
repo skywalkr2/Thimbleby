@@ -78,6 +78,7 @@ export function useNav(): NavModel {
       ...projects,
       { view: "records/people", label: t("nav.people"), icon: "users" },
       { view: "records/files", label: t("nav.files"), icon: "folder" },
+      { view: "records/notes", label: t("nav.notes"), icon: "book", sub: true },
       { view: "records/knowledge", label: t("nav.knowledge"), icon: "book", sub: true },
       ...plugin("people", "records"),
     ],

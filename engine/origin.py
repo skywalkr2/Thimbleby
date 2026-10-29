@@ -3,7 +3,8 @@
 In order of what exists: the original page, when the input the item came from has an address a browser can open; else
 the saved text of that input; else the change that created the item, with the request behind it. An item is made from
 an input by its `source`; a piece of knowledge names it in its evidence. An item none of those
-reach (made by the engine itself, or imported without its history) has no origin, and the screen shows no link.
+reach (made by the engine itself, or imported without its history) has no origin, and the screen shows no link. A to-do
+the person typed themselves has none either: there is nothing to go back to but their own typing.
 """
 
 from __future__ import annotations
@@ -15,6 +16,8 @@ from urllib.parse import urlparse
 from engine.knowledge import KINDS as KNOWLEDGE_KINDS
 
 LINK, SOURCE, CHANGE = "link", "source", "change"
+#: The op a request made by the person's own act on screen is written with (`apply_as_person`).
+SCREEN_REQUEST_OP = "screen.request"
 
 
 def _openable(url: object) -> bool:
@@ -49,6 +52,7 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
     if not wanted:
         return {}
     created: dict[str, tuple[str | None, str | None]] | None = None
+    typed: dict[str, tuple[str, str]] = view.creators(kind) if kind == "action" else {}
     out: dict[str, dict[str, Any] | None] = {}
     for record_id in wanted:
         record = view.get(kind, record_id, include_deleted=True)
@@ -58,14 +62,26 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
         if found is not None:
             out[record_id] = found
             continue
+        if typed.get(record_id, ("", ""))[0] == "pm":
+            out[record_id] = None
+            continue
         if created is None:
             created = view.creations(kind)
         changeset, request = created.get(record_id, (None, None))
-        if changeset and view.get("changeset", changeset) is not None:
+        if request and _made_on_screen(view, request):
+            out[record_id] = None  # the person typed it: there is no input or request behind it to open
+        elif changeset and view.get("changeset", changeset) is not None:
             out[record_id] = {"kind": CHANGE, "changeset": changeset, "request": request}
         else:
             out[record_id] = None
     return out
+
+
+def _made_on_screen(view: Any, request_id: str) -> bool:
+    """Whether a request was made by the person's own act on screen (a to-do typed, a form saved), which has no input
+    and no work behind it: the ledger names the screen as the one that wrote it."""
+    first = view.ledger(kind="request", record_id=request_id)
+    return bool(first) and first[0].get("op") == SCREEN_REQUEST_OP
 
 
 def from_outside(view: Any, record: Any, kind: str | None = None) -> bool:

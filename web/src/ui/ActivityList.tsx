@@ -37,7 +37,7 @@ export function ActivityList(props: { entries: ActivityEntry[]; shown?: number; 
       <div className={styles.days} role="group" aria-label={props.label}>
         {days.map((group) => (
           <div key={group.day} className={styles.day}>
-            <h4 className={styles.dayName}>{group.name}</h4>
+            <h3 className={styles.dayName}>{group.name}</h3>
             <ol className={styles.entries}>
               {group.entries.map((entry) => (
                 <li key={entry.key} className={styles.entry} data-activity-entry="">

@@ -3796,7 +3796,8 @@ people and details, and never acts in their name without their yes on the exact 
     **last in touch** is the latest of mail from them and mail the person sent them (read from the watched mailboxes' items,
     the sender and the others on it matched to people by the rules every screen uses), a message the person copied to send
     them, or an entry they were on that has ended, with its day and what it was (a mail's subject is outside text, marked);
-    **open with them** as in the prep, both ways; **how they like to be reached** is the ways kept on their record and the
+    **open with them** as in the prep, both ways (a promise is listed as theirs only when it was read as one: a to-do the
+    person handed them, by reassigning it, is theirs to do and is open with them, never "they promised you"); **how they like to be reached** is the ways kept on their record and the
     one they last wrote from (the channel whose address the latest mail from them came from); **their dates** are facts
     about them with a date word (`steward.people.date_words`, a birthday) and the next day it falls on, and facts about them
     with a full date still ahead; **what matters to them** is the facts the person kept about them (never one the assistant
@@ -4227,7 +4228,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   - The first read notes everything the source holds. It then hands in the mail of the last `first_run_days` (14) and every
     item of any other kind of source, through the same triage and sorting as any hand-in; each request is marked with the
     source (`intake`). Older mail isn't read, and the source records the day before which it wasn't looked at
-    (`looked_back_to` on its first `watch_run`); the coverage line says "Not looked at before Oct 5".
+    (`looked_back_to` on its first `watch_run`); the coverage line says "Mail from before Oct 5 has not been read yet".
   - The whole intake is priced as one total (the requests' estimates and the sorting run for its mail). When the total is
     known and not above `ai.budgets.confirm_above_usd` it starts by itself; otherwise the requests are held and Today has one
     line for the source ("Take in Inbox: 12 items from the last 14 days", or "<n> items" for a source with no mail) with the
@@ -4395,8 +4396,10 @@ of `engine/learn.py`, so it is never a correction of the assistant (`tests/test_
 lists and live (no restart): the working day's start and end and its first and last day (09:00 to 17:30, Monday to
 Friday), quiet hours (21:00 to 07:00, which may cross midnight), how reminders missed while the computer slept arrive
 (`each` or `summary`), how far Later today and This evening reach, and how long after its time an unshown reminder counts
-as late; working hours that end before they start, and quiet hours with equal ends, are refused in plain words
-(`tests/test_reminder_lines.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
+as late; working hours that start and end at the same time, and quiet hours with equal ends, are refused in plain words
+(`tests/test_reminder_lines.py`). Working hours that end before they start are a night shift: they run past midnight and
+belong to the day they start on (`tests/test_reminders.py`); the free-time counts for a day's capacity and for proposed
+meeting times work within one day's hours, so a night shift has none to count (`tests/test_day_capacity.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
 `engine/reminder_lines.py`: an open action that is not on hold, whose `remind_at` has come, is one Today line,
 `{task} · due now`; one that came due and was not shown for the late-after time is `{task} · overdue · due {time}`, shown
 at once and never dropped, and adds ", while the app wasn't running" only when the app knows it was not
@@ -4783,7 +4786,10 @@ assistant may draft or ask them. It is the person's own rule, kept per person, b
   four stances, evidence), a system op the learning task may propose: it is held for the person's Keep like every
   system op from the assistant, and never applies on its own. For someone's role there is no op yet.
 - **Choosing a stance.** The person's page has a list of the four meanings (and "Use my default"), saved at once as
-  the person's own edit with Undo. Settings shows `steward.default_stance` as a list and `steward.tracks` as ticks.
+  the person's own edit with Undo. It is asked only of someone from a side of work (a person with an organization, or on a
+  side beside Personal): a sister, a friend or a customer on Personal is never asked whether the person manages or reports to
+  them, and its label is "How you work with them" so it is not mistaken for who they are to you (their `relation`, on
+  Personal). Settings shows `steward.default_stance` as a list and `steward.tracks` as ticks.
 - **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
   is the whole of it.
 

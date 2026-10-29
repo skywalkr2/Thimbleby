@@ -19,7 +19,7 @@ export function AgendaSection(props: { items: Line[]; id: string }) {
   return (
     <section aria-labelledby={props.id} className="record-section">
       <div className="heading">
-        <h3 id={props.id}>{t("agenda.heading")}</h3>
+        <h2 id={props.id}>{t("agenda.heading")}</h2>
       </div>
       <RowList>
         {props.items.map((item) => (

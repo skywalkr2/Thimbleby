@@ -14,6 +14,7 @@ import { useSetAside } from "../lib/set-aside";
 import { useSideFilter, useSides } from "../lib/sides";
 import { useLookedAt } from "../lib/waiting";
 import { recordView, toHash } from "../lib/views";
+import { useHandedToast, useWaitsForStart } from "../lib/handed-toast";
 import { useWords } from "../lib/wording";
 import { SearchField } from "../ui/SearchField";
 import { Icon } from "../ui/Icon";
@@ -186,6 +187,8 @@ export function Handled() {
 
 function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => void } }) {
   const { t } = useWords();
+  const waitsForStart = useWaitsForStart();
+  const toast = useHandedToast();
   const act = useAct();
   const { isWork, isPersonal, isSide, alwaysLikeThis } = useSetAside();
   const { justMe, personal, sides } = useSides();
@@ -207,9 +210,14 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
   // Take a closer look on a change a rule closed: handed in after all, one click, Undo closes it again.
   const lookCloser = async () => {
     setBusy(true);
+    let waits = false;
     await act(
-      () => api.closerLook(item.id, item.version),
-      () => ({ message: t("handled.look_toast", { title: item.title }), undo: () => api.closerLookUndo(item.id) }),
+      async () => {
+        const made = await api.closerLook(item.id, item.version);
+        waits = await waitsForStart();
+        return made;
+      },
+      () => ({ ...toast(waits, t("handled.look_toast", { title: item.title }), t("toast.handed_in_waiting")), undo: () => api.closerLookUndo(item.id) }),
     );
     setBusy(false);
   };

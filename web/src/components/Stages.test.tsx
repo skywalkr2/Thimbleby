@@ -163,6 +163,8 @@ test("with nothing in stages, it says so", async () => {
   fakeApi({ "GET stages/records": () => [], "GET stages/requests": () => [] });
   renderApp(<Stages />);
   expect(await screen.findByText(/^No items have stages yet\./)).toBeInTheDocument();
+  // An empty page says what a stage is, so it isn't a puzzle.
+  expect(screen.getByText(/A stage is where a piece of work stands/)).toBeInTheDocument();
 });
 
 test("Today lists tasks waiting for a go and items ready to move on, never internal names", async () => {

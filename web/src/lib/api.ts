@@ -109,8 +109,8 @@ export const api = {
   /** Takes a side back out while setup is open and nothing is filed under it. */
   removeSide: (project: string) => call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/remove`),
   /** Removes a side whenever the person asks: what is filed under it moves to Personal or ends with it, as one change with Undo. */
-  removeSideWithWork: (project: string, where: S["SideRemoveIn"]["where"]) =>
-    call<S["ProjectEndingDone"]>("POST", `sides/${id(project)}/remove`, { where } satisfies S["SideRemoveIn"]),
+  removeSideWithWork: (project: string, where: S["SideRemoveIn"]["where"], organization: S["SideRemoveIn"]["organization"] = "keep") =>
+    call<S["ProjectEndingDone"]>("POST", `sides/${id(project)}/remove`, { where, organization } satisfies S["SideRemoveIn"]),
   /** Undo of removeSide: the side comes back with its projects, as `kind` at `position` among the sides. */
   restoreSide: (project: string, body: S["SideRestoreIn"]) =>
     call<S["BusinessState"]>("POST", `setup/sides/${id(project)}/restore`, body),
@@ -183,6 +183,9 @@ export const api = {
   /** Treat as one of the sides: handed in and filed under that side's project. */
   handledAs: (item: string, readVersion: number, side: string) =>
     call<S["HandledDone"]>("POST", `handled/${id(item)}/work`, { read_version: readVersion, side } satisfies S["TreatAsIn"]),
+  /** Treat as, from the list of mail that came in: mail the assistant already handled with a result has that undone first. */
+  handledTreatAs: (item: string, readVersion: number, side: string) =>
+    call<S["HandledDone"]>("POST", `handled/${id(item)}/treat-as`, { read_version: readVersion, side } satisfies S["TreatAsIn"]),
   handledPersonal: (item: string, readVersion: number) =>
     call<S["HandledDone"]>("POST", `handled/${id(item)}/personal`, { read_version: readVersion }),
   handledUndo: (item: string, readVersion: number) =>
@@ -196,6 +199,8 @@ export const api = {
   sortingRule: (body: S["SortingRuleIn"]) => call<S["SettingsSaved"]>("POST", "watch/sorting", body),
 
   ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
+  /** Local search: people, projects and open to-dos matching the words; free, no AI call. */
+  search: (q: string) => call<S["SearchResults"]>("GET", `search?q=${encodeURIComponent(q)}`),
   asks: () => call<S["AskView"][]>("GET", "asks"),
   /** The conversation kept on a record, and saying something in it. */
   conversation: (kind: string, record: string) => call<S["ConversationView"]>("GET", `records/${id(kind)}/${id(record)}/conversation`),
@@ -264,8 +269,9 @@ export const api = {
   /** Cancel the person's own calendar entry; Undo brings it back. */
   cancelEvent: (event: string, body: S["EventCancelIn"]) => call<S["EventChanged"]>("POST", `events/${id(event)}/cancel`, body),
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),
-  sendBack: (cs: string, note: string, undoFirst = true) =>
-    call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, undoFirst ? { note } : { note, undo_first: false }),
+  /** `ops` names the items the note is about: only they are undone and sent back. */
+  sendBack: (cs: string, note: string, undoFirst = true, ops?: number[]) =>
+    call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, { note, ...(undoFirst ? {} : { undo_first: false }), ...(ops ? { ops } : {}) }),
   /** Keep a group of an answer the task kind grouped (its held ops are applied), drop it (its applied ops are undone and its
    * held ones kept as they were), or release every held op of the answer together. */
   keepGroup: (cs: string, group: number) => call<S["AnswerGroupDone"]>("POST", `changesets/${id(cs)}/groups/${group}/keep`),

@@ -1,0 +1,2 @@
+/* A detail not filled in yet: a small text button that starts where the values do, so the panel's labels and values stay in line. */
+button.add { justify-self: start; padding-inline: 0; min-height: 0; }

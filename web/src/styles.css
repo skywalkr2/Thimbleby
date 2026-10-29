@@ -218,7 +218,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .settings-side { display: grid; gap: var(--space-3); min-width: 0; }
 .settings-side [data-field] { margin-bottom: 0; }
 .settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; }
+.settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; min-height: var(--target-min); box-sizing: border-box; }
 .settings-nav a:hover { background: var(--surface-sunk); }
 .settings-nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
 .settings-content { display: grid; gap: var(--space-4); min-width: 0; container: settingsform / inline-size; }
@@ -384,6 +384,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .meeting-line [data-field]:first-child { flex-basis: 12rem; }
 .meeting-line [data-variant] { flex: none; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
+/* The unread mark: a dot before the title, and no slot at all once the message is read. */
+.tb-unread-dot { display: inline-block; width: 8px; height: 8px; margin-inline-end: var(--space-2); border-radius: var(--radius-full); background: var(--accent); flex: none; }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }
 .tb-row [data-variant] { flex: none; }
 .reminder-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
@@ -432,6 +434,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
 .record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
+.muted { color: var(--text-muted); }
+@media (min-width: 1024px) { .record-sticky { position: sticky; top: var(--space-4); } }
 /* A side panel is narrow: each label sits above its value, so no pair wraps beside the other. */
 .unfiled { display: grid; gap: var(--space-3); min-width: 0; }
 .unfiled .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }

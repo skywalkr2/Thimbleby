@@ -345,5 +345,5 @@ test("the popover holds what was checked: how many connections were read and whe
   });
   const dialog = await open(user);
   await waitFor(() => expect(within(dialog).getByText(/Checked 1 connection/)).toBeInTheDocument());
-  expect(within(dialog).getByText(/Not looked at before/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Mail from before .* has not been read yet/)).toBeInTheDocument();
 });

@@ -287,6 +287,8 @@ def test_a_job_and_a_business_beside_personal_get_one_question_with_a_choice_and
     # Today: one line for the question, counting each item once, naming neither side.
     shown = [x for x in today_queue.queue(ws, store, cfg, NOW) if x.kind == "unfiled" and x.state == "which_side"]
     assert len(shown) == 1 and shown[0].subject is None and shown[0].count == len(both)
+    # The items wait under Personal, so the line is Personal's: no other side's tab shows it.
+    assert shown[0].side == sides.personal_project(view, cfg)
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" not in sheet["queue.sides.many.other"] and "{business}" not in sheet["queue.sides.meta.many"]
     # Moving one item to the business answers the business for today; the job is still unanswered, so the rest are asked

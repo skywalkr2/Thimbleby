@@ -6,6 +6,7 @@ and the settings; times move with the store's own clock."""
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -14,6 +15,7 @@ from engine import brief
 from engine.brief_cases import LEFT, load_cases, score
 from engine.brief_cases import run as run_case
 from engine.followups import put_on_hold
+from engine.learn import record
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_A, DEMO_B
@@ -324,6 +326,26 @@ def test_meetings_that_overlap_today_are_one_clash_counted_with_a_link_to_its_li
     assert clash.count == 1 and clash.queue.startswith("clash:")
     assert not [x for x in lines_of(found, "risk") if x.kind == "clash"], "the clash is on Today, so it is not listed"
     assert first and second and other_day
+
+
+def test_a_clash_the_person_said_is_fine_is_in_no_section_of_the_brief(env):
+    ws, cfg, store, _ = env
+    for title, start, end in (("Call with the printer", "10:00", "11:00"), ("Dentist", "10:30", "11:30")):
+        make(
+            store,
+            "event",
+            trust="trusted",
+            title=title,
+            start=f"{day(0)}T{start}:00+00:00",
+            end=f"{day(0)}T{end}:00+00:00",
+        )
+    (clash,) = [x for x in lines_of(built(env, "morning"), "today") if x.change == "clash"]
+    note = json.dumps({"kind": "clash", "subject": clash.queue, "change": "fine"})
+    with store.transaction() as tx:
+        record(tx, cfg, {"kind": "suggestion_dismissed", "note": note, "at": NOW.isoformat()}, _TEST, NOW)
+    found = built(env, "morning")
+    shown = [x for s in found.sections for x in s.lines if x.kind == "clash" or x.change == "clash"]
+    assert not shown, "a settled clash stays settled in the brief"
 
 
 def test_what_waits_for_the_persons_yes_is_one_count_that_opens_the_first_of_its_lines_on_today(env):
@@ -777,8 +799,9 @@ def test_the_week_lists_what_is_due_through_the_last_working_day_by_who_owns_it(
         store, "action", text="Send the measurements", owners=[{"person": tracked}], promised_to=[me(cfg)], due=day(1)
     )
     found = built(env, "monday")
-    assert [x.link[1] for x in lines_of(found, "yours")] == [yours, friday]
-    assert [(x.kind, x.state, x.day) for x in lines_of(found, "yours")] == [
+    mine = [x for x in lines_of(found, "yours") if x.link[1] in {yours, friday}]
+    assert [x.link[1] for x in mine] == [yours, friday]
+    assert [(x.kind, x.state, x.day) for x in mine] == [
         ("week_promise", "due", day(2)),
         ("week_promise", "due", day(4)),
     ]
@@ -786,6 +809,25 @@ def test_the_week_lists_what_is_due_through_the_last_working_day_by_who_owns_it(
     assert next_week not in {x.link[1] for s in found.sections for x in s.lines}
     keys = [s.key for s in found.sections]
     assert keys == sorted(keys, key=["yours", "owed", "send", "chase", "decide"].index)
+
+
+def test_the_week_lists_late_and_due_today_to_dos_marked_on_today_and_weekend_ones(env):
+    from engine.today_queue import queue
+
+    ws, cfg, store, clock = env
+    late = own(store, cfg, "Reply to the printer", due=day(-3))
+    today = own(store, cfg, "Send the invoice", due=day(0))
+    saturday = own(store, cfg, "Pack the samples", due=day(5))
+    after = own(store, cfg, "Plan next month", due=day(8))
+    found = built(env, "monday")
+    listed = {x.link[1]: x for x in lines_of(found, "yours")}
+    assert {late, today, saturday} <= set(listed) and after not in listed
+    held = {i for q in queue(ws, store, cfg, NOW) for i in (*q.actions, *q.questions) if i}
+    assert held & {late, today}, "Today holds a line for the late or due-today to-do"
+    for action in (late, today, saturday):
+        assert listed[action].on_today_line == (action in held)
+    assert any(listed[a].on_today_line for a in (late, today))
+    assert [x.state for x in (listed[late], listed[today])] == ["overdue", "due"]
 
 
 def test_what_today_already_holds_a_line_for_is_not_repeated_but_counted(env):
@@ -799,8 +841,8 @@ def test_what_today_already_holds_a_line_for_is_not_repeated_but_counted(env):
     on_today = {i for q in queue(ws, store, cfg, NOW) for i in (*q.actions, *q.questions, q.question) if i}
     assert promise in on_today  # what someone owes the person is a line to send or follow up on
     found = built(env, "monday")
-    assert promise not in {x.link[1] for s in found.sections for x in s.lines}
-    assert found.on_today >= 1  # it links to Today instead
+    (listed,) = [x for s in found.sections for x in s.lines if x.link and x.link[1] == promise]
+    assert listed.on_today_line  # it is listed, marked as already on Today
 
 
 def test_questions_to_send_answers_to_chase_and_decisions_waiting_are_their_own_sections(env):

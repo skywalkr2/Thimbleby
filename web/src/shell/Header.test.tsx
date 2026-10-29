@@ -30,6 +30,7 @@ function show(over: { changes?: unknown[]; demo?: boolean; logo?: boolean; narro
         narrow={over.narrow ?? false}
         shortcuts={rc.shortcuts}
         onHandIn={h.onHandIn ?? noop}
+        onOpenRecord={noop}
         onAsk={h.onAsk ?? noop}
         onHelp={h.onHelp ?? noop}
         onFeedback={h.onFeedback ?? noop}
@@ -96,15 +97,11 @@ test("no Demo chip when the workspace is not a demo", () => {
   expect(screen.queryByText("Demo")).toBeNull();
 });
 
-test("Ask is a search-style field naming the assistant and its key, and it opens the Ask box", async () => {
-  const user = userEvent.setup();
-  const onAsk = vi.fn();
-  show({ handlers: { onAsk } });
-  const field = screen.getAllByRole("button", { name: "Ask" })[0];
-  expect(field).toHaveTextContent("Ask Helper or search…");
-  expect(field).toHaveTextContent("/");
-  await user.click(field);
-  expect(onAsk).toHaveBeenCalledTimes(1);
+test("the header carries a search field named for the assistant, which is not a button that opens a box", () => {
+  show();
+  const field = screen.getAllByRole("searchbox")[0];
+  expect(field).toHaveAttribute("placeholder", "Search or ask Helper");
+  expect(screen.queryByRole("button", { name: "Search or ask" })).toBeNull();
 });
 
 test("Hand something in is the one primary button, and it opens the hand-in", async () => {
@@ -166,7 +163,7 @@ test("on a phone only the brand, the status chip and the user menu remain", asyn
   expect(within(header).getByRole("link", { name: /Go to Today/ })).toBeInTheDocument();
   expect(within(header).getByRole("button", { name: /^App status: / })).toBeInTheDocument();
   expect(within(header).getByRole("button", { name: /^Change appearance, / })).toBeInTheDocument();
-  expect(within(header).queryByRole("button", { name: "Ask" })).toBeNull();
+  expect(within(header).queryByRole("button", { name: "Search or ask" })).toBeNull();
   expect(within(header).queryByRole("button", { name: "Hand something in" })).toBeNull();
   expect(within(header).queryByRole("button", { name: "Help" })).toBeNull();
   expect(within(header).getByText("Demo")).toBeInTheDocument();
@@ -191,7 +188,7 @@ test("on a phone the assistant's state is in the status chip's popover", async (
   const dialog = await screen.findByRole("dialog", { name: "Status" });
   const alive = within(dialog).getByText("Helper", { selector: "p" }).closest("li")!;
   expect(alive).toHaveAttribute("data-state", "alive");
-  expect(alive).toHaveTextContent("no tasks yet");
+  expect(alive).toHaveTextContent("No tasks yet");
 });
 
 test("from a wider screen the assistant's line is beside the chip and the popover doesn't repeat it", async () => {
@@ -212,7 +209,7 @@ test("below 1440px the assistant's state moves into the status chip's popover, a
   const dialog = await screen.findByRole("dialog", { name: "Status" });
   const alive = dialog.querySelector('[data-state="alive"]') as HTMLElement;
   expect(alive).not.toBeNull();
-  expect(alive).toHaveTextContent("no tasks yet");
+  expect(alive).toHaveTextContent("No tasks yet");
 });
 
 test("the header has no Quick links button: the links are the first group of the person's menu, each opening in a new tab", async () => {

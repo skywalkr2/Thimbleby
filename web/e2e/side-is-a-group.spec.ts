@@ -149,13 +149,11 @@ test.describe("a business is also an organization", () => {
     await rows.getByRole("button", { name: /^More actions for/ }).click();
     await expect(page.getByRole("menuitem", { name: "Remove" })).toBeDisabled();
     await page.keyboard.press("Escape");
-    // The organization's page says it is the business, linking to the business's page, which names the organization.
+    // The business and its organization are one page: the organization's name opens the business's own page.
     await rows.getByRole("link", { name: SIDE }).click();
-    const line = page.getByTestId("organization-side");
-    await expect(line).toContainText("This is your business.", LOADED);
-    await line.getByRole("link", { name: "Open its page" }).click();
     await expect(page.getByRole("heading", { level: 1, name: SIDE, exact: true })).toBeVisible(LOADED);
-    await expect(page.getByRole("region", { name: "Details", exact: true }).getByText("Organization", { exact: true })).toBeVisible(LOADED);
+    await expect(page).toHaveURL(/#records\/project\//);
+    await expect(page.getByRole("region", { name: "Details", exact: true }).getByText("Organization", { exact: true })).toHaveCount(0);
     expect(await wider(page)).toBeLessThanOrEqual(0);
   });
 });

@@ -31,6 +31,7 @@ const VIEW_LABEL: Record<CoreView, string> = {
   "records/projects": "nav.projects",
   "records/people": "nav.people",
   "records/files": "nav.files",
+  "records/notes": "nav.notes",
   "records/knowledge": "nav.knowledge",
   "records/rules-review": "rules_review.title",
   settings: "nav.settings",

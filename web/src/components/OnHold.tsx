@@ -1,5 +1,6 @@
 // An action on hold waits for something outside the person's control and is never due, overdue or chased. "Pause"
 // asks what it waits for (the first field has the cursor) and acts at once with Undo; "Take off hold" does too.
+import { useOneEditor } from "../lib/one-editor";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -31,12 +32,14 @@ function useBlockers(except: string, enabled: boolean) {
 
 /** The row menu's entry for an action, and the small form it opens to ask what the action waits for: words, or a person, a
  * to-do or a question picked from a list. */
-export function useHold(action: { id: string; on_hold?: string | null; blocker?: Blocker | null }): { entry: MenuAction; form: ReactNode } {
+export function useHold(action: { id: string; on_hold?: string | null; blocker?: Blocker | null; repeat?: unknown }): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
   const act = useAct();
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useOneEditor(`${action.id}:hold`);
   const [what, setWhat] = useState("");
   const [on, setOn] = useState("");
+  // A chore that repeats isn't waiting on anyone: it is paused until a day or a time of year, said in words.
+  const repeats = !!action.repeat;
   const options = useBlockers(action.id, asking);
   const label = (id: string) =>
     options.people.find((p) => p.id === id)?.name ?? options.actions.find(([a]) => a === id)?.[1] ?? options.questions.find(([q]) => q === id)?.[1] ?? "";
@@ -76,7 +79,7 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
       }}
     >
       <label className="hint" htmlFor={`hold-${action.id}`}>
-        {t("hold.label")}
+        {t(repeats ? "hold.label_repeat" : "hold.label")}
       </label>
       <input
         id={`hold-${action.id}`}
@@ -88,6 +91,8 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
           if (e.key === "Escape") setAsking(false);
         }}
       />
+      {!repeats && (
+        <>
       <label className="hint" htmlFor={`hold-on-${action.id}`}>
         {t("hold.on_label")}
       </label>
@@ -121,6 +126,8 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
           </optgroup>
         )}
       </Select>
+        </>
+      )}
       <Actions align="end">
         <Button variant="quiet" onClick={() => setAsking(false)}>
           {t("action.cancel")}

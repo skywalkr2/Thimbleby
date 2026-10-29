@@ -12,7 +12,8 @@ import { startCursor } from "../lib/cursor";
 import { PlaceOptions } from "./PlaceOptions";
 import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
-import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
+import { addonLabel, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
+import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
@@ -453,6 +454,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const afterSave = useAfterSave();
   const fresh = useFreshFingerprint();
   const client = useQueryClient();
+  // What a setting changed to is said as the setting says it everywhere, not as the file holds it.
+  const settingWords = useSettingWordsFromCache();
   const base = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const { mode } = props;
@@ -635,7 +638,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           const before = valueAt(storedWas.current ?? {}, item.key);
           const after = valueAt(storedNow, item.key);
           if (item.key in edits || JSON.stringify(before ?? null) === JSON.stringify(after ?? null)) continue;
-          lines.push({ label: labelOf(item, t, has), value: formatValue(after, t) });
+          lines.push({ label: labelOf(item, t, has), value: settingWords.value(item, after) });
         }
         storedWas.current = storedNow;
       }

@@ -1027,6 +1027,90 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 267. Sweep batch 8: the P2 polish (setup, People, Settings, empty states, restart wording) (2026-10-29; sweep batch 8, Y01 to Y06 without the layout items)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup, Welcome and What it's for (7.8) | "Reginald" with no "your assistant" and no full stop; the own-life sentence three times | "{assistant}, your assistant, reads ... owed."; said once |
+| Setup, You (7.8, 7.9) | A one-word "full name" was kept | Asked again in words (also in Settings, You); the People step asks only for a name |
+| Setup, AI step (7.8) | "RecommendedService" run together; spend boxes showed "0.1"; "cheaper work starts on its own" | A space between tag, title and words; amounts as "$0.10"; the hint says what waits for the first go and what starts after |
+| Setup, Mail step (7.8) | "Sign in to start reading" and "What it reads waits ..." said twice; two lists headed Now reading | Each said once; the second list reads "Also reading" |
+| Setup, Promises and Done (7.8) | Two primary buttons; Hand something in left setup; "Done" down the recap | One primary (Continue is plain beside a button of the screen's own); the box opens over setup; a check and no word |
+| Setup, People (7.8) | Suggestion boxes labelled only "Personal"; "Side"; "manager" preselected; no "Someone else" or part box for added people; a heading over nothing; "No one to suggest yet" after all were added | The legend is visible; "Where they belong"; nothing preselected; the lists include "Someone else" and a part box for jobs and businesses; no heading with no mail; "You've added everyone we found" |
+| Settings, limits (7.9, 4.0) | A 120-character assistant name scrolled the page; night shifts, "1,50" and a day limit above the month's were not handled | `max_length` 40 sent to the screen and refused in plain words; hours that end before they start run overnight; "1,50" refused, "$1,000,000" read whole; day above month refused |
+| Settings, Lists and Advanced (7.9) | A duplicate add did nothing; "retire one" against "Stop offering"; "Used for" repeating the heading; "Under way"; bare Good and Caution chips; "applies after the rules above"; "set under Details" | The duplicate is said by name; "Stop offering" throughout; the line left out; "Underway"; "Shown as: Caution"; plainer descriptions |
+| Stages, Knowledge, header (7.7, 7.18) | A bare "No items have stages yet."; "What it follows" over nothing; "Not looked at before Wed, Oct 14" | Says what a stage is; the part is left out with nothing in use; "Mail from before ... has not been read yet" |
+| People page (7.14) | The person's own page listed only the one organization their record names | Lists every job and business they keep |
+| Restart and status wording (7.1) | The restart pill alarming; no word when a restart finished; " no AI account yet" | A warning until a restart fails (then a danger, "Restart failed"); a message "Restarted with the new settings."; capital letters, no stray space |
+
+Not done here: the layout items the owner postponed (footer alignment, the phone gap, buttons floating from their field, the
+mail step's plain-looking buttons, radios off their labels, the remove-business alignment, the empty Connections layout,
+the phone card's "..."). A night shift has no free-time count for the capacity check or proposed meeting times, which work
+within one day's hours. The initials badge after renaming the workspace is the initials of the name given and was not
+changed. "Journey mail" in a Settings menu is the add-on of the browser journey tests (`tests/fixtures/plugins/journey_mail`),
+named from its manifest; nothing in the product ships it.
+
+Built: `tests/test_sweep8_settings.py`, `tests/test_money.py`, `tests/test_reminders.py`, `tests/test_reminder_lines.py`,
+`tests/test_day_capacity.py`, `tests/test_list_meanings.py`, `web/src/lib/restart.test.tsx`, `web/src/lib/money.test.tsx`,
+`web/src/shell/status.test.ts`, `web/src/shell/AssistantLine.test.tsx`, `web/src/ui/RadioCard.test.tsx`,
+`web/src/components/Walkthrough.test.tsx`, `FirstPromises.test.tsx`, `Welcome.test.tsx`, `Settings.test.tsx`,
+`ValueLists.test.tsx`, `Stages.test.tsx`, `Knowledge.test.tsx`, `PersonPage.test.tsx`, `LookBack.test.tsx` and
+`web/src/wording/wording.test.ts`.
+
+## 266. People and record pages: contact details and sides on the person form, one page for a business, one editor for a to-do, a list of notes (2026-10-29; sweep batch 6, X33, X34, X35, X39, X40, X41, X42, with the record-page parts of VC10 and the person mockup)
+
+| Where | Before | Now |
+|---|---|---|
+| A person's form (7.14) | No email, phone, side or relation after setup, so a new person was on every side; a duplicate name was an error in a toast behind the drawer | Email, Phone and any other offered kind of contact detail; Where they belong ticked from the list of sides; Who they are to you on Personal, role and organization on a side of work; a duplicate name said while it is typed; a refusal said in the form; an address someone else holds refused with their name |
+| A person's page (7.14, 6.34) | A stack of sections: What to remember, "promised you" and "Open with" listing the same to-do, "How to reach" twice, Name verified, Side and Sides, and "I manage them / I report to them" asked of a sister | The mockup: crumb, who they are under the name, Edit and a menu; tabs Overview, Open with and Activity; a sticky panel that says each fact once; the work question only for someone from a side of work; Mark as left only for them |
+| Handing a to-do to someone (6.32) | It showed as "<Name> promised you" | Open with them, "<Name> has this to do"; a promise is listed as theirs only when it was read as one; the form says they will be listed under Follow-ups for the person to tell them |
+| A to-do (7.5, 7.14) | The page was headed Action with Wording repeated, an empty Draft and no Mark done; a title didn't open it; Edit, Reassign, Change this and Add a note each opened their own form, together, with no Escape; Pause on a chore asked what it waits for; a typed to-do had "Where it came from"; a 477-character to-do failed with "Try again" | To-do page with Mark done; the title opens it; one Edit with who does it and the project; one editor open at a time and Escape closes it; "Paused until when?"; no origin for a typed to-do; a counter and the reason beside the field |
+| Record pages (7.14) | Evidence, Trust, how it was said and developer help among the facts; the box to ask first, with a "nothing said" line; section headings skipping a level | Bookkeeping under More details; the box last and one line; second-level section headings |
+| A business (7.8, 7.14) | Its project page and its organization page each had a conversation and activity and disagreed; Settings could only Rename and Remove | One page: the organization opens it and its notes and people are rows of it; Settings has Add a business and Add a job (also for a person with only their own life); Remove asks whether the organization goes too, and one Undo brings both back |
+| Notes (7.14) | No list of them | Notes under Files, newest first, linked from What changed |
+| Values in words (7.9) | The setup guide's suggested settings and a connection's refreshed lines showed values as the file holds them | The same words as the Settings rows say them |
+
+Not done here (a design choice is needed first): the Follow-ups line for a to-do handed to someone is kept (design 6.10 lists
+it under To send for the person to copy and send), so the person does not choose whether it is listed; and a person's two
+emails (the record keeps one value for each kind of contact detail).
+
+Built: `tests/test_people_pages.py`, `tests/test_origin.py`, `tests/test_remove_side.py`, `web/src/components/PersonForm.test.tsx`,
+`PersonPage.test.tsx`, `TodoPage.test.tsx`, `OpenItems.test.tsx`, `AddTodo.test.tsx`, `OnHold.test.tsx`, `Notes.test.tsx`,
+`BusinessSides.test.tsx`, `RecordPageNames.test.tsx`, `RecordPageRecords.test.tsx`, `Welcome.test.tsx` and
+`web/e2e/people-records.spec.ts`.
+
+## 265. Sweep batch 4, second part: The Afternoon hour is a setting; Answer stays the submit label
+
+- The hour from which the morning form of the brief is called the afternoon brief is `ui.afternoon_from_hour` (0 to 23,
+  default 12), read on the person's clock like every other moment. The brief carries it to the screen (design 6.32, 7).
+- "Answer" stays the label on the form's submit; the line's own button opens the form (design 7.7).
+- Today counts what needs the person; nothing the person does adds a line. A line made by the person's own act replaces the
+  line it came from: a reassign's to-do line becomes "Tell <name>", "Write the weekly message" becomes "Send the weekly message" (7.7).
+- The side menu's To-dos number counts what waits on the person; the To-dos screen says the same number in words ("N need you") (7.1).
+- What changed folds only identical edits of the same record on the same day, otherwise one row per edit. Moving something the
+  assistant filed stays a correction (6.22; 7.7).
+- Undo: only "Undo everything" (many records at once) confirms; every other Undo acts at once (7.1).
+- Redo of one sent-back item: the whole-task redo stays for now and says before it runs "Runs the whole note again with your
+  note", with its cost estimate. A redo of one item is deferred to a later batch (7.3).
+- "Treat as" on mail the assistant already handled is a correction: undo what was done with that mail, file it as chosen,
+  record the signal; refused first with 409 (7.20).
+- "Your promises this week" lists overdue and due-today items too, marked "on Today", and includes weekend items (no design
+  paragraph to correct; recorded here and in the decision entry only).
+- The search field: `/` opens the header field; it searches people, projects, to-dos, files and kept knowledge with no AI call;
+  its last row is "Ask about …"; the placeholder is "Search or ask <assistant name>"; the phone bar has the same field. The Ask
+  pane stays a pane that does not block the page (7.1).
+- A source that serves some sides is kept as it is and shown under every tab.
+- The Afternoon brief's start hour is `ui.afternoon_from_hour` (above).
+
+## 264. Sweep batch 4: Today and To-dos (review sweep-04ffc21e, section 4 P1 Today and reviews)
+
+Not part of the design text yet: the change is in the app, and the design's Today and review sections need a pass to say it
+(a review is per item; a question has one line; a side filter applies to the brief, the clash line and the which-side line).
+Built: the Today state guard (cause 5), "Not right" per item, owner and draft in reviews, the one question line, "Undone" in What
+changed, "You answered", the header search (people, projects, open to-dos; no AI call), the which-side line on Personal, the
+brief's count from Today's count, a settled clash out of the brief, Close for today with Undo, "Afternoon brief", the clash
+line's detail, Came in rows opening the message. Left, needing decisions listed in docs/decisions.md under the same citation.
+
 ## 263. Sweep batch 7: own calendar entries move and cancel; saves in order.
 
 - **The Schedule and the record page (7, 6.12):** the person's own calendar entries move (a new start or end) and cancel

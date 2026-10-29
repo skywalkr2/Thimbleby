@@ -1,7 +1,7 @@
 // Any record's page: its ordinary fields as a list of labelled values, each long text with its versions and working
 // copies, and what the plugins offer on it (design 5.3, 7.2). Nothing here knows what kind of record it is.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ApiError, api, type S } from "../lib/api";
 import { deliveryLines, type Delivery } from "../lib/deliveries";
 import { resolveOffers, usePluginActions, useTaskKinds, type Offer } from "../lib/plugin-actions";
@@ -10,7 +10,8 @@ import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
 import { inReadingOrder, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
 import { reconcile, type Refreshed } from "../lib/refreshed";
-import { time } from "../lib/dates";
+import { day, time } from "../lib/dates";
+import { useAct } from "../lib/act";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AnswerOnToday } from "./AnswerOnToday";
@@ -19,12 +20,12 @@ import { FactSource } from "./FactSource";
 import { FiledLine } from "./Filed";
 import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
-import { PersonDrawer } from "./PersonForm";
+import { PersonDrawer, kindLabel, useContactKinds } from "./PersonForm";
+import { onWorkSide, usePersonMenu } from "./PersonMenu";
 import { PersonPicker } from "./PersonPicker";
 import { AgendaSection } from "./AgendaList";
 import { Attendees } from "./Attendees";
 import { MeetingPrep } from "./MeetingPrep";
-import { PersonMemory } from "./PersonMemory";
 import { useInvitationActs } from "./InvitationActs";
 import { useEventActs } from "./EventActs";
 import { useMessageActs } from "./MessageActs";
@@ -34,6 +35,7 @@ import { SideInside } from "./SideInside";
 import { useSideOf, useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { PromiseWhy } from "./PromiseWhy";
+import { useNoted } from "./NoteBox";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
 import { CONVERSATION_KINDS, RecordConversation } from "./RecordConversation";
@@ -58,6 +60,9 @@ import { FormField } from "../ui/FormField";
 import { FormBlock } from "../ui/FormBlock";
 import { Actions } from "../ui/Actions";
 import { DefinitionList, Definition } from "../ui/DefinitionList";
+import { TabStrip } from "../ui/TabStrip";
+import styles from "./RecordPage.module.css";
+import { whoTheyAre } from "../lib/people-who";
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t, has } = useWords();
   const { kind, id } = props;
@@ -65,6 +70,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const fields = useQuery({ queryKey: ["kind", kind], queryFn: () => api.kindView(kind) });
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const organizations = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   // What is open with the record, what was finished and what happened to it; a record the page can't be read for shows none.
   const page = useQuery({ queryKey: ["record-page", kind, id], queryFn: () => api.recordPage(kind, id) });
   const lines = useValueLines();
@@ -78,6 +84,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const sideName = onSide ? (onSide === personal ? t("sides.filter.personal") : sides.find((s) => s.project === onSide)?.name) : undefined;
   const ownSide = kind === "organization" ? sides.find((s) => s.organization === id) : undefined;
   const { open, dialog } = useTextReview();
+  // A job or business is one thing with one page: the organization it made opens that page, in place of its own, so the two can
+  // never say different things about it.
+  const sidePage = ownSide ? viewHref(recordView("project", ownSide.project)) : null;
+  useEffect(() => {
+    if (sidePage) window.location.replace(sidePage);
+  }, [sidePage]);
   // "Change this" sits in a menu beside the record's own actions, for the kinds of record it can be asked for.
   const change = useChangeThis({ kind: kind as ChangeKind, id });
   // A question also has its own menu: reword it, ask someone else, drop it, or say it was already sent.
@@ -87,6 +99,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // The page of the person themselves reads as theirs: "You", their own details and what waits for them, and none of what
   // describes someone else to them (who they are to you, when you were last in touch, what you asked them).
   const isSelf = kind === "person" && !!me.data?.person && me.data.person === id;
+  // A person's page also knows how you were last in touch, their dates and what matters to them, and says how each open item
+  // relates to them; the details panel and the open list carry these, so none is said twice.
+  const memory = useQuery({ queryKey: ["person-memory", id], queryFn: () => api.personMemory(id), enabled: kind === "person" && !isSelf });
+  const kinds = useContactKinds();
+  const [tab, setTab] = useState<"overview" | "open" | "activity">("overview");
   const waitingOnYou = kind === "question" && questionFields?.status === "open" && !!me.data?.person && questionFields?.to === me.data.person;
   const questionMenu = useQuestionMenu(
     { id, title: String(questionFields?.title ?? ""), text: String(questionFields?.text ?? "") },
@@ -101,6 +118,14 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const invite = useInvitationActs(id, kind === "event" && record.data?.fields.invitation === true);
   // An event that is the person's own on a connected calendar can be moved or cancelled, each through the same yes.
   const eventActs = useEventActs(id, { start: record.data?.fields.start as string | undefined, end: record.data?.fields.end as string | null | undefined }, kind === "event");
+  // A to-do that is open can be marked done from its page, with Undo.
+  const act = useAct();
+  const noted = useNoted();
+  const markDone = () =>
+    void act(
+      () => api.actionStatus(id, "done"),
+      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(id, "open") }),
+    );
   const [editing, setEditing] = useState(false);
   // A person and a project are edited in the same drawer as on their own screens.
   const drawer = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : kind === "project" ? (projects.data ?? []).find((p) => p.id === id) : undefined;
@@ -131,23 +156,26 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // The record's name, never its id: the page says it (a person is named by their full name).
   // While what resolves the names is still on its way the page has no name yet, and no detail: an id is never shown.
   const settled = !page.isPending && !people.isPending && !projects.isPending;
-  const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "") : "";
+  const due = kind === "action" && typeof data?.fields.due === "string" ? data.fields.due : null;
+  const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "", due) : "";
   const ownOrganization = kind === "project" ? sides.find((s) => s.project === id) : undefined;
-  const rows = data && settled
+  type Row = { name: string; label?: string; lines: Array<string | { label: string; url: string }>; link?: { text: string; href: string }; muted?: boolean; onAdd?: () => void };
+  const person = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : undefined;
+  const generic: Row[] = data && settled && kind !== "person"
     ? inReadingOrder(
         Object.entries(data.fields)
           // The id of the input an item came from is shown as its "Where it came from" link instead.
           .filter(([name]) => !isSide || SIDE_FIELDS.has(name))
-          .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
-          // The app's own bookkeeping about a person, and how someone relates to you, are not the person's details about themselves.
-          .filter(([name]) => !(isSelf && SELF_HIDDEN.has(name)))
+          // A to-do's page says its owner and day once, in words, and keeps what only the app uses out of sight.
+          .filter(([name]) => !(kind === "action" && TODO_HIDDEN.has(name)))
+          .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
-          .map(([name, value]) => {
-            // A side's own organization is one line, "Your business", linking to the organization's page: its name is the heading's.
+          .map(([name, value]): Row => {
+            // A side is its organization too, and has one page: the organization's details are rows of this one (below), and
+            // its name is the heading's.
             if (ownOrganization?.organization && name === "organization" && value === ownOrganization.organization) {
-              const text = t(ownOrganization.kind === "job" ? "orgs.own.job" : "orgs.own.business");
-              return { name, lines: [text], link: { text, href: viewHref(recordView("organization", ownOrganization.organization)) } };
+              return { name, lines: [] };
             }
             return {
               name,
@@ -159,15 +187,166 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   : kind === "event" && name === "delivery"
                     ? deliveryLines(value as Delivery | null, t)
                     : detailLines(name, value, info.get(name), names),
-              link: undefined as { text: string; href: string } | undefined,
             };
           })
-          // What the heading already says is not said again under it: the name field, when it is the name.
+          // What the heading already says is not said again under it: the name field, or a to-do's wording, when it is the name.
           .filter((row) => !(NAME_FIELDS.has(row.name) && row.lines.length === 1 && row.lines[0] === name))
           .filter((row) => row.lines.length > 0),
       )
     : [];
+  // A to-do's owner and day are said once, in words, at the head of its details.
+  if (data && settled && kind === "action") {
+    const owners = (Array.isArray(data.fields.owners) ? data.fields.owners : []) as Array<{ person?: string }>;
+    const named = owners.map((o) => (o.person ? names.get(o.person) : undefined)).filter((n): n is string => !!n);
+    const dueText = typeof data.fields.due === "string" && data.fields.due ? day(data.fields.due) : t("promise.no_date");
+    // Someone with only their own life is not told who does their own to-do.
+    const mine = justMe && owners.length > 0 && owners.every((o) => o.person === me.data?.person);
+    generic.unshift(...(mine ? [] : [{ name: "todo_owner", lines: [named.length > 0 ? named.join(", ") : t("open.nobody")] }]), { name: "todo_due", lines: [dueText] });
+  }
+  // The organization a side is, as part of the side's own page: what is known about it and who works for it.
+  if (ownOrganization?.organization) {
+    const org = (organizations.data ?? []).find((o) => o.id === ownOrganization.organization);
+    const staff = (people.data ?? []).filter((p) => p.org === ownOrganization.organization).map((p) => p.name);
+    if (org?.notes) generic.push({ name: "org-notes", label: t("orgs.row.notes"), lines: [org.notes] });
+    if (staff.length > 0) generic.push({ name: "org-people", label: t("orgs.row.people"), lines: staff });
+  }
+  // A person's details are read from the person as the lists read them, so a fact is said once: how to reach them, who they are
+  // to you and on which sides, when you were last in touch, their dates and what matters to them.
+  const personRows: Row[] = [];
+  if (data && settled && kind === "person") {
+    const held = (data.fields.how_to_reach ?? {}) as Record<string, string>;
+    kinds.forEach((ck, i) => {
+      const found = Object.entries(held).find(([k]) => k.trim().toLocaleLowerCase() === ck.trim().toLocaleLowerCase());
+      if (found) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [found[1]] });
+      else if (i < 2) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [t("person.add_kind", { kind: ck.toLocaleLowerCase() })], muted: true, onAdd: () => setEditing(true) });
+    });
+    const role = String(data.fields.role ?? "").trim();
+    const who = person && !isSelf ? whoTheyAre(person, personal, sides, t) : role;
+    // Who they are says how they relate and their part on each side; a role it doesn't say is a row of its own.
+    if (who && who !== role) personRows.push({ name: "who", label: t("person.row.who"), lines: who.split(", ") });
+    if (role && !who.includes(role)) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
+    else if (who === role && role) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
+    const org = names.get(String(data.fields.org ?? "")) ?? person?.org_name ?? "";
+    if (isSelf && !justMe && sides.length > 0) {
+      // The person's own page lists every job and business they keep, not only the one their record names.
+      personRows.push({ name: "org", label: t("person.row.own_orgs"), lines: sides.map((x) => x.name) });
+    } else if (org && !sides.some((x) => x.name === org)) personRows.push({ name: "org", label: labelOf("org"), lines: [org] });
+    const team = names.get(String(data.fields.team ?? ""));
+    if (team) personRows.push({ name: "team", label: labelOf("team"), lines: [team] });
+    if (person && !justMe && sides.length > 0) {
+      const named = (person.sides ?? []).map((sid) => (sid === personal ? t("sides.filter.personal") : sides.find((x) => x.project === sid)?.name)).filter((n): n is string => !!n);
+      if (named.length > 0) personRows.push({ name: "sides", label: labelOf("sides"), lines: named });
+    }
+    if (!isSelf && memory.data) {
+      const touch = memory.data.last_in_touch;
+      personRows.push({
+        name: "last",
+        label: t("people.col.last"),
+        lines: [touch ? `${t(`person.touch.${touch.kind}`, { date: day(touch.on) })}${touch.subject ? ` · ${touch.subject}` : ""}` : t("person.no_contact")],
+        muted: !touch,
+      });
+    }
+    const aliases = (data.fields.aliases ?? []) as string[];
+    if (aliases.length > 0) personRows.push({ name: "aliases", label: labelOf("aliases"), lines: [aliases.join(", ")] });
+    if (data.fields.first_name) personRows.push({ name: "first_name", label: labelOf("first_name"), lines: [String(data.fields.first_name)] });
+    if (memory.data && memory.data.dates.length > 0) {
+      personRows.push({ name: "dates", label: t("memory.dates"), lines: memory.data.dates.map((d) => (d.on ? `${d.text} · ${t(d.yearly ? "memory.dates.next_yearly" : "memory.dates.on", { date: day(d.on) })}` : d.text)) });
+    }
+    if (memory.data && memory.data.matters.length > 0) personRows.push({ name: "matters", label: t("memory.matters"), lines: memory.data.matters.map((m) => m.text) });
+    const why = shown("why_they_matter", data.fields.why_they_matter);
+    if (why.length > 0) personRows.push({ name: "why_they_matter", label: labelOf("why_they_matter"), lines: why });
+    if (data.fields.status === "left") personRows.push({ name: "status", label: labelOf("status"), lines: [t("setup.left")] });
+  }
+  // Bookkeeping about where a value came from, and the app's own flags, are one fold below the facts, never among them.
+  const rows = kind === "person" ? personRows : generic.filter((row) => !FOLDED.has(row.name));
+  const folded = kind === "person" ? [] : generic.filter((row) => FOLDED.has(row.name));
+  // How each open item relates to the person whose page this is, in a few words.
+  const how = new Map<string, string>();
+  if (kind === "person" && memory.data && !isSelf) {
+    const first = person?.first_name || (page.data?.name ?? "").split(" ")[0] || "";
+    for (const k of ["promised_to", "promised_by", "asked_by", "asked_of"] as const) {
+      for (const item of memory.data[k]) how.set(item.id, t(`person.rel.${k}`, { name: first }));
+    }
+    for (const a of page.data?.open_actions ?? []) {
+      if (!how.has(a.id) && (a.owners ?? []).some((o) => o.includes(page.data?.name ?? "\u0000"))) how.set(a.id, t("person.rel.theirs", { name: first }));
+    }
+  }
   const heading = isSelf && name ? t("record.you_named", { name }) : name;
+  const openCount = (page.data?.open_actions.length ?? 0) + (isSelf ? 0 : (page.data?.open_questions.length ?? 0));
+  const menuOf = usePersonMenu(() => setEditing(true));
+
+  if (sidePage) return <Skeleton />;
+  const isPerson = kind === "person";
+  // A person's page has tabs: the overview, everything open with them, and the whole history.
+  const tabbed = isPerson && !isSelf;
+  const activity = page.data && (
+    <RecordActivity page={page.data} show={tabbed ? (tab === "open" ? ["completed", "facts", "repeat"] : ["activity"]) : ["repeat", "completed", "facts", "activity"]} shown={tabbed ? (tab === "overview" ? 3 : 20) : undefined} />
+  );
+  const detailsPanel = data && (
+    <div className="record-side record-sticky">
+      <OriginLink origin={data.origin} />
+      <section aria-labelledby="record-details">
+        <h2 id="record-details" className="sr">
+          {t(isSelf ? "record.details_you" : "record.details")}
+        </h2>
+        {editing && drawer && kind === "person" && <PersonDrawer person={drawer as S["PersonView"]} onClose={stopEditing} />}
+        {editing && drawer && kind === "project" && <ProjectDrawer project={drawer as S["ProjectView"]} onClose={stopEditing} />}
+        {editing && !drawer ? (
+          <DetailsForm kind={kind} record={data} fields={offered} people={people.data ?? []} projects={projects.data ?? []} onDone={stopEditing} />
+        ) : !settled ? (
+          <Skeleton />
+        ) : rows.length === 0 ? (
+          <p className="hint">{t("record.no_details")}</p>
+        ) : (
+          <DefinitionList>
+            {rows.map((row) => (
+              <Definition key={row.name}>
+                <dt>{row.label ?? labelOf(row.name)}</dt>
+                <dd>
+                  {row.link ? (
+                    <div>
+                      <a href={row.link.href}>{row.link.text}</a>
+                    </div>
+                  ) : row.onAdd ? (
+                    <Button variant="quiet" size="sm" className={styles.add} onClick={row.onAdd}>
+                      {row.lines[0] as string}
+                    </Button>
+                  ) : (
+                    row.lines.map((line, i) => (
+                      <div key={i} className={row.muted ? "muted" : undefined}>
+                        {typeof line === "string" ? line : <SafeLink label={line.label || domainOf(line.url) || line.url} url={line.url} />}
+                      </div>
+                    ))
+                  )}
+                </dd>
+              </Definition>
+            ))}
+          </DefinitionList>
+        )}
+        {settled && folded.length > 0 && !editing && (
+          <details className="more-options" data-record-fold="">
+            <summary>{t("record.more_details")}</summary>
+            <DefinitionList>
+              {folded.map((row) => (
+                <Definition key={row.name}>
+                  <dt>{row.label ?? labelOf(row.name)}</dt>
+                  <dd>
+                    {row.lines.map((line, i) => (
+                      <div key={i}>{typeof line === "string" ? line : <SafeLink label={line.label || domainOf(line.url) || line.url} url={line.url} />}</div>
+                    ))}
+                  </dd>
+                </Definition>
+              ))}
+            </DefinitionList>
+          </details>
+        )}
+      </section>
+      {/* How the person works with someone is a question about people at work: it is asked only of someone from a side of work. */}
+      {isPerson && person && !isSelf && !justMe && onWorkSide(person, personal, sides) && (
+        <StancePicker person={id} version={data.version} stance={data.fields.stance} trackOnly={data.fields.track_only === true} />
+      )}
+    </div>
+  );
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
@@ -175,15 +354,32 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         id="record-title"
         title={heading}
         kind={!isSide && !isSelf ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
+        subtitle={isPerson && person && !isSelf ? whoTheyAre(person, personal, sides, t) || undefined : undefined}
         crumb={
-          <Button variant="quiet" size="sm" onClick={props.onBack}>
-            {t("record.back")}
-          </Button>
+          isPerson ? (
+            <>
+              <a href={viewHref("records/people")}>{t("setup.people")}</a>
+              <span aria-hidden="true">›</span>
+              <span>{heading}</span>
+            </>
+          ) : (
+            <Button variant="quiet" size="sm" onClick={props.onBack}>
+              {t("record.back")}
+            </Button>
+          )
         }
         primary={
           data && message.options ? (
             <Button variant="primary" onClick={() => message.ask("reply")}>
               {t("acts.reply")}
+            </Button>
+          ) : kind === "action" && data && data.fields.status === "open" ? (
+            <Button variant="primary" onClick={markDone}>
+              {t("followups.mark_done")}
+            </Button>
+          ) : isPerson && data && (drawer || offered.length > 0) && !editing ? (
+            <Button ref={editButton} onClick={() => setEditing(true)}>
+              {t("setup.edit")}
             </Button>
           ) : undefined
         }
@@ -197,6 +393,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               {eventActs.menu.length > 0 && <RowMenu label={t("acts.event.menu")} actions={eventActs.menu} />}
               {waitingOnYou && <AnswerOnToday question={id} />}
               {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
+              {!isPerson && data && (drawer || offered.length > 0) && !editing && (
+                <Button ref={editButton} onClick={() => setEditing(true)}>
+                  {t("record.edit")}
+                </Button>
+              )}
+              {isPerson && person && !isSelf && <RowMenu label={heading} actions={menuOf(person).filter((entry) => entry.id !== "edit")} />}
             </>
           ) : undefined
         }
@@ -209,11 +411,6 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && eventActs.note}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
-      {data && ownSide && (
-        <p className="hint" data-testid="organization-side">
-          {t(ownSide.kind === "job" ? "orgs.page.job" : "orgs.page.business")} <a href={viewHref(recordView("project", ownSide.project))}>{t("orgs.page.projects")}</a>
-        </p>
-      )}
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
@@ -223,81 +420,53 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && (
         <div className="record-grid">
           <div className="record-main">
-          {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
-          {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
-          {kind === "event" && <Attendees fields={data.fields} names={names} />}
-          {kind === "event" && <MeetingPrep entry={id} title={heading} />}
-          {kind === "person" && !isSelf && <PersonMemory person={id} />}
-          {/* What is open comes first, then the conversation, then what finished and the history. */}
-          {page.data && <RecordActivity page={page.data} part="open" self={isSelf} />}
-          {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
-          {page.data && <RecordActivity page={page.data} part="rest" />}
-          {kind === "project" && justMe && id === personal && <Unfiled />}
-          {kind === "project" && <SideInside id={id} />}
-          {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
-          {data.long_text.map((field) => (
-            <TextSection
-              key={field}
-              kind={kind}
-              id={id}
-              field={field}
-              help={has(`field.${field}.help`) ? t(`field.${field}.help`) : info.get(field)?.description || undefined}
-              onReview={open}
-            />
-          ))}
-          </div>
-          <aside className="record-side">
-          <OriginLink origin={data.origin} />
-          <section aria-labelledby="record-details">
-            <div className="heading">
-              <h3 id="record-details">{t(isSelf ? "record.details_you" : "record.details")}</h3>
-              {(drawer || offered.length > 0) && !editing && (
-                <Button ref={editButton} onClick={() => setEditing(true)}>
-                  {t("record.edit")}
-                </Button>
-              )}
-            </div>
-            {editing && drawer && kind === "person" && <PersonDrawer person={drawer as S["PersonView"]} onClose={stopEditing} />}
-            {editing && drawer && kind === "project" && <ProjectDrawer project={drawer as S["ProjectView"]} onClose={stopEditing} />}
-            {editing && !drawer ? (
-              <DetailsForm
-                kind={kind}
-                record={data}
-                fields={offered}
-                people={people.data ?? []}
-                projects={projects.data ?? []}
-                onDone={stopEditing}
+            {tabbed && (
+              <TabStrip
+                label={t("person.tabs")}
+                value={tab}
+                onChange={setTab}
+                options={[
+                  { value: "overview", label: t("person.tab.overview") },
+                  { value: "open", label: t("person.tab.open", { name: person?.first_name || name.split(" ")[0] || name }), count: openCount },
+                  { value: "activity", label: t("person.tab.activity") },
+                ]}
               />
-            ) : !settled ? (
-              <Skeleton />
-            ) : rows.length === 0 ? (
-              <p className="hint">{t("record.no_details")}</p>
-            ) : (
-              <DefinitionList>
-                {rows.map((row) => (
-                  <Definition key={row.name}>
-                    <dt>{labelOf(row.name)}</dt>
-                    <dd>
-                      {row.link ? (
-                        <div>
-                          <a href={row.link.href}>{row.link.text}</a>
-                        </div>
-                      ) : (
-                        row.lines.map((line, i) => (
-                          <div key={i}>{typeof line === "string" ? line : <SafeLink label={line.label || domainOf(line.url) || line.url} url={line.url} />}</div>
-                        ))
-                      )}
-                    </dd>
-                  </Definition>
-                ))}
-              </DefinitionList>
             )}
-          </section>
-          {/* Who someone is to the person is a question about people at work; a person with only their own life isn't asked. */}
-          {kind === "person" && !isSelf && !justMe && (
-            <StancePicker person={id} version={data.version} stance={data.fields.stance} trackOnly={data.fields.track_only === true} />
-          )}
-          </aside>
+            {kind === "action" && <PromiseWhy action={id} quiet omitOrigin skip={["owner", "due"]} />}
+            {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
+            {kind === "event" && <Attendees fields={data.fields} names={names} />}
+            {kind === "event" && <MeetingPrep entry={id} title={heading} />}
+            {/* What is open comes first, then what finished and the history, and the box to talk about it last. */}
+            {page.data && (!tabbed || tab !== "activity") && (
+              <RecordActivity
+                page={page.data}
+                show={["open"]}
+                self={isSelf}
+                how={how}
+                limit={tabbed && tab === "overview" ? 3 : undefined}
+                onSeeAll={() => setTab("open")}
+              />
+            )}
+            {activity}
+            {kind === "project" && justMe && id === personal && <Unfiled />}
+            {kind === "project" && <SideInside id={id} />}
+            {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
+            {(!tabbed || tab === "overview") &&
+              data.long_text
+                .filter((field) => !(kind === "action" && TODO_HIDDEN.has(field)))
+                .map((field) => (
+                <TextSection
+                  key={field}
+                  kind={kind}
+                  id={id}
+                  field={field}
+                  help={has(`field.${field}.help`) ? t(`field.${field}.help`) : kind.includes("/") ? info.get(field)?.description || undefined : undefined}
+                  onReview={open}
+                />
+              ))}
+            {CONVERSATION_KINDS.has(kind) && (!tabbed || tab === "overview") && <RecordConversation kind={kind} id={id} />}
+          </div>
+          {detailsPanel}
         </div>
       )}
       {dialog}
@@ -305,8 +474,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   );
 }
 
-/** The fields that name a record: the page's heading says the name, so a detail that repeats it is left out. */
-const NAME_FIELDS = new Set<string>(["name", "full_name", "title"]);
+/** The fields that name a record: the page's heading says the name, so a detail that repeats it is left out. A to-do's own
+ * words (`text`) are its heading too. */
+const NAME_FIELDS = new Set<string>(["name", "full_name", "title", "text"]);
+
+/** Bookkeeping about where a value came from, and the app's own flags: shown under "More details", never beside the facts. */
+const FOLDED = new Set<string>(["evidence", "trust", "basis", "name_verified", "track_only", "due_by_person", "due_words", "due_check", "also_said", "reply_reviewed"]);
 
 /** A yes or no in words: nothing for a no, the wording sheet's phrase for a yes (`flag.<field>`), else "Yes". */
 function flagLines(value: unknown, field: string, t: (key: string) => string, has: (key: string) => boolean): string[] {
@@ -317,11 +490,12 @@ function flagLines(value: unknown, field: string, t: (key: string) => string, ha
 /** What a side keeps (a side is a group, not a project): the rest of a project's fields are not listed on its page. */
 const SIDE_FIELDS = new Set<string>(["name", "aliases", "summary", "links", "tags", "content_levels", "data_level", "organization"]);
 
-/** What a person's page leaves out when the person is the one the app is for. */
-const SELF_HIDDEN = new Set<string>(["name_verified", "track_only", "status", "relation"]);
-
 /** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
 const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda", "captured_at"]);
+
+/** What a to-do's page does not list as a detail: its words are the heading, owner and day are said once above, and the
+ * rest is the app's own bookkeeping. */
+const TODO_HIDDEN = new Set<string>(["text", "owners", "due", "due_words", "due_check", "due_event", "due_by_person", "evidence", "told", "status"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);
@@ -450,6 +624,7 @@ function DetailsForm(props: {
           people={props.people}
           projects={props.projects}
           autoFocus={i === 0}
+          own={props.kind.includes("/")}
         />
       ))}
       {error && (
@@ -479,17 +654,20 @@ function DetailInput(props: {
   people: S["PersonView"][];
   projects: S["ProjectView"][];
   autoFocus: boolean;
+  /** A plugin's own kind: its field descriptions were written for the person. The core's are for developers, and say nothing here. */
+  own: boolean;
 }) {
-  const { t } = useWords();
+  const { t, has } = useWords();
   const labelOf = useFieldLabel();
   const { field: f, id, value } = props;
+  const description = has(`field.${f.name}.help`) ? t(`field.${f.name}.help`) : props.own ? f.description : "";
   const label = labelOf(f.name);
   const text = String(value);
   const required = f.required === true;
-  const help = f.description ? `${id}-help` : undefined;
-  const note = f.description ? (
+  const help = description ? `${id}-help` : undefined;
+  const note = description ? (
     <span id={help} className="hint">
-      {f.description}
+      {description}
     </span>
   ) : null;
 
@@ -517,7 +695,7 @@ function DetailInput(props: {
         label={label}
         value={text}
         onChange={props.onChange}
-        note={f.description || undefined}
+        note={description || undefined}
         required={required}
         autoFocus={props.autoFocus}
       />

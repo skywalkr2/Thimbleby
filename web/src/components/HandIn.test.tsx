@@ -217,3 +217,24 @@ test("a dropped file that is neither text nor sound is left out and the box says
   fireEvent.drop(box, { dataTransfer: { files: [new File(["x"], "plan.zip", { type: "application/zip" })] } });
   expect(await screen.findByText("Only text files and voice notes were added. Other files were left out.")).toBeInTheDocument();
 });
+
+test("handing in while Today waits for Start says it waits for Start, with a way to Today, and does not say the assistant is on it", async () => {
+  const user = userEvent.setup();
+  const firstGo = { key: "first_go", group: "decide", kind: "first_go", count: 2, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} };
+  fakeApi({ "POST handin": handed, "GET projects": () => PROJECTS, "GET today/queue": () => [firstGo] });
+  renderApp(<HandIn onClose={vi.fn()} />);
+  await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
+  await user.click(screen.getByRole("button", { name: "Hand in" }));
+  expect(await screen.findByText(/waits until you choose Start/)).toBeInTheDocument();
+  expect(screen.queryByText(/is on it/)).toBeNull();
+  expect(screen.getByRole("button", { name: "Go to Today" })).toBeInTheDocument();
+});
+
+test("handing in when nothing waits for Start still says the assistant is on it", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "POST handin": handed, "GET projects": () => PROJECTS, "GET today/queue": () => [] });
+  renderApp(<HandIn onClose={vi.fn()} />);
+  await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
+  await user.click(screen.getByRole("button", { name: "Hand in" }));
+  expect(await screen.findByText(/is on it/)).toBeInTheDocument();
+});

@@ -20,7 +20,7 @@ export function Attendees(props: { fields: Record<string, unknown>; names: Map<s
     who.person ? <a href={viewHref(recordView("person", who.person))}>{nameOf(who)}</a> : <span>{nameOf(who)}</span>;
   return (
     <section aria-labelledby="record-attendees" className="attendees">
-      <h3 id="record-attendees">{t("record.attendees")}</h3>
+      <h2 id="record-attendees">{t("record.attendees")}</h2>
       {organizer && (
         <p className="hint">
           {t(invited ? "record.invited_by" : "record.organized_by")} {shown(organizer)}

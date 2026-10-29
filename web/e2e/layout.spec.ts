@@ -50,6 +50,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "Projects", hash: "records/projects", ready: (page) => text(page, strings["token-02"]) },
   { name: "People", hash: "records/people", ready: (page) => text(page, strings["email-03"]) },
   { name: "Files", hash: "records/files", ready: (page) => heading(page, "Files") },
+  { name: "Notes", hash: "records/notes", ready: (page) => heading(page, "Notes") },
   { name: "Knowledge", hash: "records/knowledge", ready: (page) => heading(page, "Knowledge") },
   {
     name: "Connections",

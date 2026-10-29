@@ -1,7 +1,7 @@
 // Which screen is showing (design 7.1). Every view has a real link in the address's #fragment, so one build works at any
 // base path with no server routes, and a view can be bookmarked and opened in a new tab:
 //   #today  #schedule  #work/changed  #work/since  #work/handled  #work/followups  #work/open  #work/stages  #work/panel/<name>
-//   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
+//   #records/projects  #records/people  #records/files  #records/notes  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
 //   #settings  #settings/<section> (you, ai, connections, addons, backups, today, appearance, lists, files, advanced, addon/<name>)
 // Three fragments earlier versions used are redirected: #work/outgoing (Follow-ups, where what waits to go out is the To send
@@ -20,6 +20,7 @@ export type CoreView =
   | "records/projects"
   | "records/people"
   | "records/files"
+  | "records/notes"
   | "records/knowledge"
   | "records/rules-review"
   | "settings"
@@ -48,6 +49,7 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "records/projects",
   "records/people",
   "records/files",
+  "records/notes",
   "records/knowledge",
   "records/rules-review",
   "settings",

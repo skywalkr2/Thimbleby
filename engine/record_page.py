@@ -344,7 +344,14 @@ def _open_with(view: Any, kind: str, record_id: str, pm: str | None = None) -> t
         if d.get("status") not in ("open", "held"):
             continue
         owners = {o.get("person") for o in d.get("owners") or []}
-        if (people & owners) or (kind == "project" and d.get("project") == record_id):
+        # Open with a person is what they own and what the person owes them (a promise made to them, a reply they asked
+        # for): one list, so nothing has to be said again beside it.
+        owed = (
+            bool(pm)
+            and pm in owners
+            and (kind == "person" and (record_id in (d.get("promised_to") or []) or d.get("asker") == record_id))
+        )
+        if (people & owners) or owed or (kind == "project" and d.get("project") == record_id):
             actions.append(a)
     for q in view.list("question"):
         d = q.data

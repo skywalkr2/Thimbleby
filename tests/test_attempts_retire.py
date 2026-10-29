@@ -21,6 +21,13 @@ LOOKED_AT = {"ops": [{"op": "question.add", "to": "me", "title": "Which paper?"}
 APPLYING_OTHER = {"ops": [{"op": "question.add", "to": "me", "title": "Which finish?"}]}
 
 
+def question_lines(world):
+    """The Today lines for the question LOOKED_AT asks (its own line, not a review line that counts it again)."""
+    ws, cfg, store = world
+    title = LOOKED_AT["ops"][0]["title"]
+    return [line for line in queue(ws, store, cfg, NOW) if line.question and line.text == title]
+
+
 def lines_of(world, request_ids):
     """The Today lines that stand for any of these requests or their changesets."""
     ws, cfg, store = world
@@ -75,7 +82,9 @@ def test_a_try_again_on_the_same_request_that_applies_leaves_no_line_or_cause_fo
     assert process_again(env, handed.request) is not None
     request = store.read().get("request", handed.request).data
     assert request["cause"] is None and request["waiting"] is None
-    assert [line.kind for line in lines_of(env, {handed.request})] == ["review"]
+    # The question the assistant asked is the one line for that item: a review line would count it a second time.
+    assert [line.kind for line in question_lines(env)] == ["question"]
+    assert [line.kind for line in lines_of(env, {handed.request}) if line.kind == "review"] == []
 
 
 # ---- the attempts before one that applies --------------------------------------------------------------------------
@@ -102,7 +111,8 @@ def test_a_sent_back_attempt_with_a_held_item_is_retired_when_the_next_one_appli
     assert store.read().get("changeset", first_cs).data["status"] == "rejected"
     assert store.read().get("question", held["question"]).data["status"] == "dropped"
     assert lines_of(env, {first.request}) == []
-    assert [line.request for line in lines_of(env, {second})] == [second]
+    assert [line.kind for line in question_lines(env)] == ["question"]
+    assert [line.kind for line in lines_of(env, {second}) if line.kind == "review"] == []
     assert store.read().get("request", second).data.get("superseded_by") is None
 
 

@@ -27,7 +27,8 @@ test("every literal key exists", () => {
   }
   const plural = new Set<string>();
   for (const m of code.matchAll(/\btn\(\s*"([a-z_]+(?:\.[a-z_]+)+)"/g)) plural.add(m[1]);
-  const missing = [...used].filter((k) => !(k in words) && !plural.has(k));
+  // A key chosen by a condition and said with `tn` is a plural pair, whichever it is.
+  const missing = [...used].filter((k) => !(k in words) && !plural.has(k) && !(`${k}.one` in words && `${k}.other` in words));
   const missingPlural = [...plural].flatMap((k) => [`${k}.one`, `${k}.other`]).filter((k) => !(k in words));
   expect(missing).toEqual([]);
   expect(missingPlural).toEqual([]);
@@ -352,9 +353,25 @@ test("no status or action reads Stale or On hold: a to-do not touched in a while
   expect(words["value.status.held"]).toBe("Paused");
 });
 
-test("the setup step about work names no option that doesn't exist: leaving both empty keeps it to the person's own life", () => {
-  expect(words["walkthrough.why.work"]).toContain("Leave both empty to keep it to your own life");
+test("the setup step about work says the own life once, and names no option that doesn't exist", () => {
+  expect(words["walkthrough.work.always"]).toBe("Your own life is always included.");
+  expect(words["walkthrough.work.also_note"]).not.toMatch(/own life/i);
+  expect(words["walkthrough.why.work"]).not.toMatch(/own life/i);
   expect(Object.values(words).filter((v) => /just my own life/i.test(v))).toEqual([]);
+});
+
+test("the welcome line names the assistant as the person's assistant and ends its sentence", () => {
+  expect(words["walkthrough.welcome.line"]).toMatch(/^\{assistant\}, your assistant, reads .*owed\.$/);
+});
+
+test("lists say Underway one way, Stop offering for retiring, and what a tone chip is for", () => {
+  expect(words["lists.meaning.open"]).toBe("Underway");
+  expect(words["lists.looks"]).toBe("Shown as: {tone}");
+  expect(Object.values(words).filter((v) => /\bUnder way\b/.test(v))).toEqual([]);
+});
+
+test("the setup guide's side is called where they belong, and no setup people wording says Side", () => {
+  expect(words["walkthrough.people.side_label"]).toBe("Where they belong");
 });
 
 test("one word says that something waits on the person: a state or a pill says Needs you, and Waiting for you is left to sentences", () => {

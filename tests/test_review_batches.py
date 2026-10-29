@@ -248,3 +248,66 @@ def test_the_routes_confirm_and_undo_a_batch_and_what_changed_reads_filed_checke
         assert app.state.store.read().get("signal", done["signals"][0]).data["note"] == review_batches.TAKEN_BACK
         assert client.post(f"{base}/changesets/confirm", json={"changesets": ["CS-999"]}).status_code == 404
     set_responder(None)
+
+
+def test_not_right_on_one_item_sends_back_that_item_alone_and_it_leaves_the_review_at_once(env):
+    from engine.dispatcher import send_back
+
+    ws, cfg, store = env
+    with store.transaction() as tx:
+        plain = tx.create(
+            "request",
+            {"task": "notes", "origin": "pm", "state": "queued", "created_at": NOW.isoformat()},
+            review_batches._PM,
+        ).id
+    cs_id = with_changeset(store, plain, [("action.add", "applied"), ("action.add", "applied")])
+    (line,) = lines_of(env, "review")
+    assert [i.op for i in line.items] == [0, 1]
+    redo = send_back(store, cs_id, "Not a to-do", NOW, ops=[0])
+    # The rejected item is undone and gone from the review; its sibling still waits for a look, in the same change.
+    outcomes = {o["index"]: o["status"] for o in store.read().get("changeset", cs_id).data["ops"]}
+    assert outcomes == {0: "undone", 1: "applied"}
+    (after,) = lines_of(env, "review")
+    assert [i.op for i in after.items] == [1] and after.count == 1
+    # The redo is told which item the note is about.
+    note = store.read().get("request", redo).data["note"]
+    assert "action.add 0" in note and "Not a to-do" in note
+
+
+def test_a_to_do_in_a_review_carries_its_owner_and_project_beside_its_source(env):
+    from engine.names import People
+
+    ws, cfg, store = env
+    view = store.read()
+    me = People(store, cfg).pm
+    project = view.list("project")[0].id
+    first, *rest = batch(env)
+    with store.transaction() as tx:
+        todo = tx.create(
+            "action",
+            {"text": "Send the spine options", "owners": [{"person": me}], "project": project},
+            review_batches._PM,
+        ).id
+    cs_id = with_changeset(store, first.id, [("action.add", "applied")])
+    found = store.read().get("changeset", cs_id)
+    ops = [{**found.data["ops"][0], "records": [{"kind": "action", "id": todo}]}]
+    with store.transaction() as tx:
+        tx.update("changeset", cs_id, {"ops": ops}, review_batches._PM, read_version=found.version)
+    finish(store, rest)
+    (line,) = lines_of(env, "intake_review")
+    (row,) = line.items
+    assert (row.person, row.project) == (me, project)
+    assert row.title is not None, "the source the to-do came from"
+
+
+def test_a_draft_in_a_review_carries_the_drafted_text(env):
+    ws, cfg, store = env
+    first, *rest = batch(env)
+    cs_id = with_changeset(store, first.id, [("text.draft", "applied")])
+    found = store.read().get("changeset", cs_id)
+    ops = [{**found.data["ops"][0], "op": {"op": "text.draft", "text": "Week one: the spine."}}]
+    with store.transaction() as tx:
+        tx.update("changeset", cs_id, {"ops": ops}, review_batches._PM, read_version=found.version)
+    finish(store, rest)
+    (line,) = lines_of(env, "intake_review")
+    assert [i.draft for i in line.items] == ["Week one: the spine."]

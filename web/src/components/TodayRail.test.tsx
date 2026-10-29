@@ -31,7 +31,7 @@ function event(extra: Partial<S["AgendaItemView"]> & Pick<S["AgendaItemView"], "
 }
 
 function message(extra: Partial<S["ArrivedView"]> & Pick<S["ArrivedView"], "title">): S["ArrivedView"] {
-  return { snapshot: `snap-${extra.title}`, source: "mail-1", received: at(TODAY, 9, 14), ...extra };
+  return { snapshot: `snap-${extra.title}`, source: "mail-1", received: at(TODAY, 9, 14), version: 1, ...extra };
 }
 
 const agenda: S["AgendaItemView"][] = [
@@ -727,4 +727,11 @@ test("the week's list writes a date in a to-do's words as elsewhere, and drops t
   expect(await screen.findByText("Send the venue list.")).toBeInTheDocument();
   expect(screen.getByText(`Plan the move, done on ${day(LATER)}`)).toBeInTheDocument();
   expect(container.textContent).not.toMatch(/2026-10-1[24]/);
+});
+
+test("came in: an unread message carries a dot, and a read one has none", async () => {
+  open();
+  const rows = within(await column("Came in")).getAllByRole("listitem");
+  expect(rows[0].querySelector("[data-unread-dot]")).not.toBeNull();
+  expect(rows[1].querySelector("[data-unread-dot]")).toBeNull();
 });

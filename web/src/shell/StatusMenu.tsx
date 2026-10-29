@@ -48,6 +48,7 @@ const CHIP_WORD: Record<StatusKind, string> = {
   network: "status.chip_network",
   restart: "status.chip_restart",
   restarting: "status.chip_restarting",
+  restart_failed: "status.chip_restart_failed",
   connection_failed: "status.chip_connection_failed",
   connection_retrying: "status.chip_connection_retrying",
   backup: "status.chip_backup",
@@ -118,7 +119,10 @@ export function StatusMenu(props: {
               <li className={[styles.state, alive.tone === "ok" ? "" : styles.warn].join(" ")} data-state="alive" data-tone={alive.tone}>
                 <p className={styles.name}>{t("alive.name")}</p>
                 <p className={`${styles.text} ${styles.full}`}>
-                  <Icon name={alive.icon} size={16} label={t(`alive.icon.${alive.tone}`)} /> {alive.say}
+                  <span className={styles.sayIcon}>
+                    <Icon name={alive.icon} size={16} label={t(`alive.icon.${alive.tone}`)} />
+                  </span>
+                  <span>{alive.say}</span>
                 </p>
               </li>
             )}

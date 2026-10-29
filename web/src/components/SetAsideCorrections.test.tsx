@@ -6,6 +6,7 @@ import type { S } from "../lib/api";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { TodayRail } from "./TodayRail";
 import { WhatChanged } from "./WhatChanged";
+import { MAIL_LINK } from "../fixtures/mail";
 
 const AT = "@";
 const SENDER = `news${AT}lists.example.com`;
@@ -16,12 +17,12 @@ const SAVED: S["SettingsSaved"] = {
   needs_restart: false,
 };
 
-function today(extra: Routes = {}, setAside = 6) {
+function today(extra: Routes = {}, setAside = 6, more: Partial<S["ArrivedView"]> = {}) {
   const received = new Date().toISOString();
   const calls = fakeApi({
     "GET today/agenda": () => [],
     "GET today/arrived": () => ({
-      items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Spring sale", sender: "Shop", received, unread: true }],
+      items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Spring sale", sender: "Shop", received, unread: true, version: 3, ...more }],
       left_out: 0,
       set_aside: setAside,
     }),
@@ -119,4 +120,47 @@ test("a What changed row for a mail message has the same correction; other rows 
   const other = screen.getByRole("button", { name: "More actions for A note" });
   await user.click(other);
   expect(screen.queryByRole("menuitem", { name: "Set aside: sales" })).toBeNull();
+});
+
+const project = (id: string, name: string) => ({ id, name, parent: null }) as S["ProjectView"];
+
+test("a Came in row opens the message's page, and its menu has Treat as and Set aside, for any message", async () => {
+  const user = userEvent.setup();
+  const { calls } = today(
+    {
+      "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+      "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-other", "Other")],
+      "POST handled/SNAP-1/personal": () => ({ id: "SNAP-1", version: 4, section: "sales", request: "REQ-1", address: SENDER, domain: null }),
+    },
+    6,
+    { saved: "SRC-9", link: MAIL_LINK },
+  );
+  const col = await column("Came in");
+  const title = await within(col).findByRole("link", { name: "Spring sale" });
+  expect(title).toHaveAttribute("href", expect.stringContaining("records/source/SRC-9"));
+  await user.click(within(col).getByRole("button", { name: "More actions for Spring sale" }));
+  expect(screen.getByRole("menuitem", { name: "Set aside: sales" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Open the message" })).toBeInTheDocument();
+  await user.click(screen.getByRole("menuitem", { name: "Treat as personal" }));
+  await waitFor(() => expect(body(calls, "POST handled/SNAP-1/personal")).toEqual({ read_version: 3 }));
+});
+
+test("Treat as on mail the assistant already handled says what was taken back, and offers no Undo that would only half undo it", async () => {
+  const user = userEvent.setup();
+  const { calls } = today(
+    {
+      "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-2", kind: "business", name: "Orchard Press", removable: false }], chosen: "work" }),
+      "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-2", "Orchard Press")],
+      "POST handled/SNAP-1/treat-as": () => ({ id: "SNAP-1", version: 4, section: "sales", request: "REQ-1", address: SENDER, domain: null }),
+    },
+    6,
+    { saved: "SRC-9", link: MAIL_LINK },
+  );
+  const col = await column("Came in");
+  await user.click(within(col).getByRole("button", { name: "More actions for Spring sale" }));
+  await user.click(screen.getByRole("menuitem", { name: /Orchard Press/ }));
+  await waitFor(() => expect(body(calls, "POST handled/SNAP-1/treat-as")).toEqual({ read_version: 3, side: "PRJ-2" }));
+  const toasts = screen.getByRole("region", { name: "Notifications" });
+  await waitFor(() => expect(toasts).toHaveTextContent(/Took back what was done with “Spring sale”/));
+  expect(within(toasts).queryByRole("button", { name: "Undo" })).toBeNull();
 });

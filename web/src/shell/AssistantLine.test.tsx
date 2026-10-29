@@ -59,7 +59,7 @@ test("amber: work waiting for an internet connection has its own icon, and the p
   expect(lineNow()).toHaveAccessibleName("Helper: Needs a look");
   expect(lineNow().querySelector("[data-icon='alert']")).not.toBeNull();
   const dialog = await open(user);
-  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText(/waiting for an internet connection/)).toBeInTheDocument();
+  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText(/Waiting for an internet connection/)).toBeInTheDocument();
 });
 
 test("amber: a paused account names itself and when its limit resets, in the popover", async () => {
@@ -76,7 +76,7 @@ test("amber: a restart waiting to be done shows as waiting for a restart, in the
   show(statusFixture({ restart_needed: "A change needs the app to restart." }, { assistant: ran }));
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "restart"));
   const dialog = await open(user);
-  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText(/waiting for a restart/)).toBeInTheDocument();
+  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText("Waiting for a restart")).toBeInTheDocument();
 });
 
 test("red: a failed last run has a different icon, and the popover says so with its time", async () => {
@@ -87,7 +87,7 @@ test("red: a failed last run has a different icon, and the popover says so with 
   expect(lineNow()).toHaveAccessibleName("Helper: Not working");
   expect(lineNow().querySelector("[data-icon='close']")).not.toBeNull();
   const dialog = await open(user);
-  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText(/last task failed 9:42/)).toBeInTheDocument();
+  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText(/Last task failed 9:42/)).toBeInTheDocument();
 });
 
 test("red: an account that can't be used beats the amber states, and the popover offers the AI step", async () => {
@@ -99,7 +99,7 @@ test("red: an account that can't be used beats the amber states, and the popover
   );
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "failing"));
   const dialog = await open(user);
-  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText("can't use its AI account")).toBeInTheDocument();
+  expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText("Can't use its AI account")).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Open AI account setup" }));
   await waitFor(() => expect(onOpenGuide).toHaveBeenCalledWith("ai"));
 });
@@ -197,7 +197,7 @@ test("amber: background work that stopped and was started again says so and when
   show(statusFixture({}, { assistant: { ...ran, loop_restarted_at: `${TODAY}T10:05:00+09:00` } }));
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "loop_restarted"));
   expect(lineNow()).toHaveAttribute("data-tone", "warn");
-  expect(await open(user)).toHaveTextContent(/background work stopped and was started again 10:05/);
+  expect(await open(user)).toHaveTextContent(/Background work stopped and was started again 10:05/);
 });
 
 test("red: stuck background work says since when and the card offers Restart now", async () => {
@@ -206,6 +206,15 @@ test("red: stuck background work says since when and the card offers Restart now
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "stuck"));
   expect(lineNow()).toHaveAttribute("data-tone", "bad");
   const card = await open(user);
-  expect(card).toHaveTextContent(/background work stuck since 10:05/);
+  expect(card).toHaveTextContent(/Background work stuck since 10:05/);
   expect(within(card).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+});
+
+test("the words after the icon start with a capital and no stray space, so no AI account reads as a sentence", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({ ai: { state: "not_set_up", detail: null } }, { assistant: ran }));
+  await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "not_set_up"));
+  const dialog = await open(user);
+  const text = within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText("No AI account yet");
+  expect(text.textContent).toBe("No AI account yet");
 });

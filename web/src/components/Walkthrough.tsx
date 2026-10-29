@@ -74,7 +74,7 @@ export function Walkthrough(
   const register: ContinueSlot = useCallback((spec) => {
     const before = slot.current;
     slot.current = spec;
-    if (!before !== !spec || before?.disabled !== spec?.disabled || before?.why !== spec?.why || before?.label !== spec?.label || before?.inline !== spec?.inline) redraw();
+    if (!before !== !spec || before?.disabled !== spec?.disabled || before?.why !== spec?.why || before?.label !== spec?.label || before?.inline !== spec?.inline || before?.quiet !== spec?.quiet) redraw();
   }, []);
   const data = setup.data;
   // The screen the server named when this opened stays until the person moves: finishing a step must not move them on.
@@ -335,7 +335,7 @@ export function Walkthrough(
                   </Button>
                 ) : next && !(current === "mail" && here === "todo") && !slot.current?.inline ? (
                   <Button
-                    variant="primary"
+                    variant={slot.current?.quiet ? "secondary" : "primary"}
                     loading={busy}
                     disabled={!!slot.current?.disabled}
                     reason={slot.current?.disabled ? slot.current.why : undefined}
@@ -405,7 +405,8 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
                 <Icon name={state === "done" ? "check" : state === "skipped" ? "minus" : "circle"} size={14} />{" "}
                 {label}
               </span>
-              <span className={styles.state}>{t(said)}</span>
+              {/* A done step is marked by its check, and said to a screen reader; the word "Done" is not written down the list. */}
+              <span className={styles.state}>{state === "done" ? <span className="sr">{t(said)}</span> : t(said)}</span>
               <span className={styles.act}>
                 {state !== "done" && (
                   <Button

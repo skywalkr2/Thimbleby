@@ -405,3 +405,12 @@ def test_an_address_nobody_has_leaves_the_name_beside_it_to_decide():
     p = person("Editor")
     assert people().resolve(f"{p['full_name']} (someone@example.com)").person == p["id"]
     assert people().resolve("someone@example.com").status == "unknown"
+
+
+def test_the_address_of_a_connected_mailbox_is_the_person_themselves():
+    mine = "box.owner@example.com"
+    known = People.from_records(PEOPLE, PM, own_addresses=[mine])
+    for written in (mine, f"{surname(PEOPLE[PM])} <{mine}>", f"Somebody Else <{mine.upper()}>"):
+        assert known.resolve(written).status == "ok" and known.resolve(written).person == PM
+    # With no mailbox connected under that address, the same entry is still a stranger.
+    assert people().resolve(f"Somebody Else <{mine}>").status != "ok"

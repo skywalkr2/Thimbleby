@@ -31,7 +31,8 @@ function decimalMark(locale: string | undefined): "." | "," {
 
 /** The amount someone typed, or null when it isn't one. The sign, letters and spaces are left out; a plain number with a
  * point ("1.5") is read as it is, whatever the language; otherwise the number format's own decimal mark is the decimal and
- * the other mark is a group mark. A lone other mark before one or two digits is the decimal too ("1,5"). */
+ * the other mark is a group mark, which must group thousands in threes: "1,50" is not an amount in a format whose decimal
+ * mark is a point, and is refused. */
 export function parseAmount(text: string, locale?: string): number | null {
   const kept = text.replace(/[^0-9.,-]/g, "");
   if (!/\d/.test(kept)) return null;
@@ -44,10 +45,12 @@ export function parseAmount(text: string, locale?: string): number | null {
     const at = kept.lastIndexOf(mark);
     normal = `${kept.slice(0, at).split(other).join("")}.${kept.slice(at + 1)}`;
   } else if (kept.includes(other)) {
-    const at = kept.lastIndexOf(other);
-    const tail = kept.slice(at + 1);
-    const lone = kept.split(other).length === 2 && tail.length >= 1 && tail.length <= 2;
-    normal = lone ? `${kept.slice(0, at)}.${tail}` : kept.split(other).join("");
+    // The other mark only groups thousands, in threes ("1,250"); anywhere else it is not part of an amount in this number
+    // format, so "1,50" is refused instead of being read as 150 or as a dollar fifty.
+    const groups = kept.replace(/^-/, "").split(other);
+    const grouped = groups[0].length >= 1 && groups[0].length <= 3 && groups.slice(1).every((g) => g.length === 3);
+    if (!grouped) return null;
+    normal = kept.split(other).join("");
   } else {
     normal = kept;
   }

@@ -14,6 +14,7 @@ from typing import Any
 
 from engine.free_slots import Busy, free_slots
 from engine.reminder_lines import rules
+from engine.reminders import crosses_midnight
 from engine.today import zone
 
 #: Length given to a timed entry that names no end, in minutes, when working out what it blocks.
@@ -87,6 +88,9 @@ def slots(view: Any, cfg: Any, now: datetime, about: str) -> list[Slot]:
         return []
     tz = zone(cfg)
     working = rules(cfg).working
+    if crosses_midnight(working):
+        # Free time is found within one day's hours; a night shift has none to offer.
+        return []
     length = length_of(entry, tz)
     minutes = max(1, int(length.total_seconds() // 60))
     until = now.astimezone(UTC) + timedelta(days=cfg.watch.propose_days)

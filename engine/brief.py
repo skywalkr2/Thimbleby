@@ -15,9 +15,10 @@ saved for the brief). An empty section is left out and a quiet day is one line.
 due today and still open) and *waiting* (what others owe the person, and the questions sent that nobody has answered).
 It is quiet when nothing moved and nobody is waited on.
 
-**The Monday briefing** is the weekly form: the person's promises through the last working day, what others promised
-them, the questions held to send, the answers to chase and the decisions waiting, overdue first, with nothing that is
-already a line on Today repeated (it is counted in `on_today`). It carries the goals for the week, proposed from what is
+**The Monday briefing** is the weekly form: the person's promises through the end of the week (weekend days
+included), what others promised them, the questions held to send, the answers to chase and the decisions waiting,
+overdue first. A promise Today already has a line for stays in the list, marked `on_today_line`; questions Today holds
+are counted in `on_today`. It carries the goals for the week, proposed from what is
 due and open until the person confirms them, and the message to whoever the person reports to.
 """
 
@@ -102,6 +103,7 @@ class Line:
     link: tuple[str, str] | None = None
     ready: bool = False
     you: bool = False
+    on_today_line: bool = False
 
 
 @dataclass
@@ -392,7 +394,10 @@ def _meeting_time(c: _Day, event_id: str | None, day: date) -> str | None:
 def _clashes(c: _Day) -> list[Line]:
     """Meetings that overlap or leave too little travel time, from today through the configured days ahead."""
     lines = []
+    fine = suggestions.fine_clashes(c.view)
     for clash in day_clashes.upcoming(c.store, c.cfg, c.now):
+        if clash.key in fine:
+            continue  # the person said it is fine, as on Today
         link = clash.link
         lines.append(
             Line(
@@ -894,15 +899,14 @@ def _monday(c: _Day) -> Brief:
     rule = c.cfg.steward.brief
     held = _on_today(c)
     left_out = 0
+    # The week runs through the day before the next week's first working day, so weekend items are in it.
+    through = c.first + timedelta(days=6)
     yours: list[tuple[date, str, Line]] = []
     owed: list[tuple[date, str, Line]] = []
     for a in c.open_actions():
         d = a.data
         day = firm_due(d)
-        if day is None or day > c.last:
-            continue
-        if a.id in held:
-            left_out += 1
+        if day is None or day > through:
             continue
         mine = c.mine(d)
         to = next((p for p in d.get("promised_to") or [] if p != c.pm), None)
@@ -921,6 +925,7 @@ def _monday(c: _Day) -> Brief:
             days=max(0, (c.today - day).days),
             you=mine,
             link=("action", a.id),
+            on_today_line=a.id in held,
         )
         (yours if mine else owed).append((day, d["text"].lower(), line))
     send: list[Line] = []

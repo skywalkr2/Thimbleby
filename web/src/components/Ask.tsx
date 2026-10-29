@@ -28,6 +28,7 @@ import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
 import { Pill, type PillTone } from "../ui/Pill";
 import { RowBody } from "../ui/RowBody";
+import { useHandedToast, useWaitsForStart } from "../lib/handed-toast";
 type AskItem = S["AskView"];
 const SHOWN = 10;
 
@@ -38,6 +39,8 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
   const field = useRef<HTMLTextAreaElement>(null);
   const [question, setQuestion] = useState(props.initial ?? "");
   const [busy, setBusy] = useState(false);
+  const waitsForStart = useWaitsForStart();
+  const toast = useHandedToast();
   const asks = useQuery({ queryKey: ["asks"], queryFn: api.asks });
   const client = useQueryClient();
   // Opened at an answer from Today: reading it is what clears its line.
@@ -51,9 +54,14 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
     const text = question.trim();
     if (!text || busy) return;
     setBusy(true);
+    let waits = false;
     const asked = await act(
-      () => api.ask(text),
-      () => ({ message: t("ask.toast.asked") }),
+      async () => {
+        const made = await api.ask(text);
+        waits = await waitsForStart();
+        return made;
+      },
+      () => toast(waits, t("ask.toast.asked"), t("ask.toast.asked_waiting")),
     );
     setBusy(false);
     if (asked) {

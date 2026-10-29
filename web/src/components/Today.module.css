@@ -61,6 +61,8 @@
 /* A line's items, opened in place (under 1680px) or in the inspector (from it) */
 .detail { display: grid; gap: var(--space-3); min-width: 0; }
 .detail :global([data-row-list]) { border: 0; border-radius: 0; }
+/* A line opened in place is an inset card under its row: a hairline border, rounded, on the surface, inside the row's padding. */
+.detail[data-inset] { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .detailEnd { display: flex; justify-content: flex-end; }
 .inspector { position: sticky; top: calc(var(--header-h) + var(--gutter)); max-height: calc(100dvh - var(--header-h) - 2 * var(--gutter)); overflow-y: auto; min-width: 0; }
 .inspectorBody { padding: var(--space-3) var(--space-4); }

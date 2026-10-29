@@ -5,7 +5,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
-import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { whoTheyAre } from "../lib/people-who";
 import { onSides, useSideFilter, useSides } from "../lib/sides";
@@ -23,7 +22,8 @@ import styles from "./People.module.css";
 import { PersonDrawer } from "./PersonForm";
 import { RecordConversation } from "./RecordConversation";
 import { SideFilter } from "./SideFilter";
-import { RowMenu, type MenuAction } from "./RowMenu";
+import { RowMenu } from "./RowMenu";
+import { usePersonMenu } from "./PersonMenu";
 
 import { PageHeader } from "../ui/PageHeader";
 import { Select } from "../ui/Select";
@@ -38,7 +38,6 @@ const PEOPLE_FIT = 600;
 
 export function People() {
   const { t, tn } = useWords();
-  const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   // With no side beside Personal a person is said by who they are to you: no role, organization or list of organizations.
@@ -56,34 +55,7 @@ export function People() {
   const selected = all.find((p) => p.id === chosen) ?? null;
   const who = (p: S["PersonView"]) => whoTheyAre(p, personal, sides, t);
 
-  const menu = (p: S["PersonView"]): MenuAction[] => {
-    const left = p.status === "left";
-    const entries: MenuAction[] = [{ id: "edit", label: t("setup.edit"), run: () => setEditing(p) }];
-    if (!p.is_pm) {
-      entries.push({
-        id: "left",
-        label: t(left ? "setup.mark_active" : "setup.mark_left"),
-        run: () =>
-          void act(
-            () => api.editPerson(p.id, { status: left ? "active" : "left" }),
-            () => ({
-              message: t(left ? "toast.marked_active" : "toast.marked_left", { name: p.name }),
-              undo: () => api.editPerson(p.id, { status: p.status }),
-            }),
-          ),
-      });
-      entries.push({
-        id: "remove", danger: true,
-        label: t("setup.remove"),
-        run: () =>
-          void act(
-            () => api.removePerson(p.id),
-            () => ({ message: t("toast.removed", { name: p.name }), undo: () => api.restorePerson(p.id) }),
-          ),
-      });
-    }
-    return entries;
-  };
+  const menu = usePersonMenu(setEditing);
 
   const tags = (p: S["PersonView"]) => (
     <>
@@ -144,7 +116,7 @@ export function People() {
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
         fit={PEOPLE_FIT}
-        detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} menu={menu(selected)} /> : null}
+        detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} /> : null}
       >
         {people.isPending ? (
           <Skeleton />
@@ -191,7 +163,7 @@ export function People() {
   );
 }
 
-function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: React.ReactNode; reach: string[]; onEdit: () => void; menu: MenuAction[] }) {
+function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: React.ReactNode; reach: string[]; onEdit: () => void }) {
   const { t, tn } = useWords();
   const p = props.person;
   const fact = (label: string, value: React.ReactNode) =>

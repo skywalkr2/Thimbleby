@@ -77,6 +77,7 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
   { name: "Schedule", hash: () => "schedule", ready: (page) => heading(page, "Schedule") },
   { name: "Knowledge", hash: () => "records/knowledge", ready: (page) => heading(page, "Knowledge") },
   { name: "Files", hash: () => "records/files", ready: (page) => heading(page, "Files") },
+  { name: "Notes", hash: () => "records/notes", ready: (page) => heading(page, "Notes") },
   { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections", 2) },
   { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons", 2) },
   { name: "Settings: You", hash: () => "settings/you", ready: (page) => section(page, "You") },
@@ -141,6 +142,7 @@ test.describe('"Just me" sees no work words', () => {
       "Personal",
       "People",
       "Files",
+      "Notes",
       "Knowledge",
       "Settings",
     ]);
@@ -236,8 +238,8 @@ test.describe('"Just me" sees no work words', () => {
     await expect(page.getByRole("menuitem").first()).toBeVisible(LOADED);
     await read("A to-do's menu");
     await close();
-    // The forms the menu opens (the ones that change nothing until they are saved): edit, reassign and add a note.
-    for (const entry of [/^Edit/, /^Reassign/, /^Add a note/]) {
+    // The forms the menu opens (the ones that change nothing until they are saved): edit (which has who does it too) and add a note.
+    for (const entry of [/^Edit/, /^Add a note/]) {
       await page.getByRole("button", { name: new RegExp(`^More actions for ${seeded.todo.text}`) }).first().click();
       const item = page.getByRole("menuitem", { name: entry });
       // Editing is always offered; the others are read when the menu has them.
@@ -288,7 +290,11 @@ test.describe('"Just me" sees no work words', () => {
     await read("Hand something in");
     await close();
     await expect(page.getByRole("dialog", { name: "Hand something in" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Ask", exact: true }).first().click();
+    // The search field says what it finds in a personal life's words, and its last row opens Ask.
+    const search = page.getByRole("searchbox");
+    await expect(search).toHaveAttribute("placeholder", "A person or a to-do");
+    await search.click();
+    await page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / }).click();
     await expect(page.getByRole("dialog", { name: /^Ask / }).or(page.getByRole("complementary", { name: /^Ask / }))).toBeVisible(LOADED);
     await read("Ask");
     // Keeping track of something of one's own: the templates offered are the ones for a personal life.
@@ -336,7 +342,7 @@ test.describe('"Just me" sees no work words', () => {
       await heading(page, "To-dos and questions");
       // At a phone width the menu is the sheet behind the work button.
       if (size.width < 1024) await page.getByRole("button", { name: "Your day", exact: true }).click();
-      const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ waiting on you$/ });
+      const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ needs? you$/ });
       await expect(entry).toBeVisible(LOADED);
       // The figure is drawn and the words are the link's name; nothing waits on What changed here, so it has no count.
       await expect(entry.locator('[class*="count"]')).toHaveText(/^\d+$/);
@@ -374,7 +380,7 @@ test.describe('"Just me" sees no work words', () => {
     const me = (await (await page.request.get("api/me")).json()) as { person: string; full_name: string };
     await go(page, `records/person/${encodeURIComponent(me.person)}`);
     await expect(page.getByRole("heading", { level: 1, name: `You · ${me.full_name}` })).toBeVisible(LOADED);
-    await expect(page.getByRole("heading", { level: 3, name: "Your details" })).toBeVisible(LOADED);
+    await expect(page.getByRole("heading", { level: 2, name: "Your details" })).toBeVisible(LOADED);
     const text = await settledText(page);
     for (const words of [/You asked/, /Open with/, /No contact on file/, /Who they are to you/, /Name verified/, /Track only/]) {
       expect(text).not.toMatch(words);

@@ -109,6 +109,13 @@ class People:
             context,
             language_words(cfg.language, "self_words"),
         )
+        # The addresses of the accounts the person connected are the person's own.
+        self.own_addresses = frozenset(
+            str(v).strip().lower()
+            for source in cfg.watch.sources
+            for v in (source.account, source.settings.get("user"))
+            if v and "@" in str(v)
+        )
         self.owner_format = cfg.workspace.owner_format
         self.team_names = {t.id: t.data["name"] for t in store.read().list("team")}
         # The people whose only side is the person's own life: a message to one of them doesn't open like a colleague's.
@@ -132,10 +139,12 @@ class People:
         self_words: Iterable[str] | None = None,
         owner_format: str = "{full_name}",
         team_names: Mapping[str, str] | None = None,
+        own_addresses: Iterable[str] = (),
     ) -> People:
         """The people from their records alone, for work that has no store."""
         self = object.__new__(cls)
         self._build(dict(records), pm, context, shipped("self_words") if self_words is None else self_words)
+        self.own_addresses = frozenset(a.strip().lower() for a in own_addresses)
         self.owner_format = owner_format
         self.team_names = dict(team_names or {})
         self.own_life = frozenset()
@@ -187,6 +196,8 @@ class People:
             return Resolved("ok", text)
         if address := _ADDRESS.search(text):
             # An address says who on its own; one nobody has leaves the name written beside it to decide.
+            if self.pm and address.group(0).strip().lower() in self.own_addresses:
+                return Resolved("ok", self.pm)
             found = self.match_entries([address.group(0)])
             if len(found) == 1:
                 return Resolved("ok", next(iter(found)))

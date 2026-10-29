@@ -312,3 +312,16 @@ test("What changed shows a project the assistant found as information with a lin
   expect(within(pane).queryByRole("button", { name: "Add" })).toBeNull();
   expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
 });
+
+test("a name question offers This is me first, and it answers with the person themselves", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET people": () => [{ id: "PER-1", name: "Robin Sample", is_pm: true, aliases: [], status: "active", track_only: false, open_items: 0, how_to_reach: {} }],
+    "POST questions/Q-1/answer": () => ({ ok: "Q-1", request: null }),
+  });
+  renderApp(<AskChooser ask={whoIs} />);
+  const me = await screen.findByRole("button", { name: "This is me" });
+  expect(me.compareDocumentPosition(screen.getByRole("button", { name: "Use this person" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await user.click(me);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/answer")?.body).toEqual({ person: "PER-1" }));
+});

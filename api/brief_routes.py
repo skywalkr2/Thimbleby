@@ -63,6 +63,7 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 BriefSectionView(key=s.key, lines=[line_view(x) for x in s.lines], more=s.more) for s in found.sections
             ],
             quiet=found.quiet,
+            afternoon_from_hour=cfg.ui.afternoon_from_hour,
             on_today=found.on_today,
             goals=BriefGoalsView(**vars(goals)) if goals is not None else None,
             message=BriefMessageView(

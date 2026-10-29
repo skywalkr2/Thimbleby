@@ -317,11 +317,6 @@ def test_quiet_hours_may_cross_midnight():
     assert RemindersSettings(quiet_start="22:00", quiet_end="06:30").quiet_start == "22:00"
 
 
-def test_working_hours_that_end_before_they_start_are_refused_in_plain_words():
-    with pytest.raises(ValidationError, match="working hours must end after they start"):
-        RemindersSettings(working_start="17:00", working_end="09:00")
-
-
 def test_quiet_hours_that_start_and_end_together_or_a_time_that_is_not_one_are_refused():
     with pytest.raises(ValidationError, match="can't start and end at the same time"):
         RemindersSettings(quiet_start="21:00", quiet_end="21:00")
@@ -436,3 +431,13 @@ def test_a_time_written_without_quotes_in_a_settings_file_is_still_a_time():
     assert isinstance(loaded["working_end"], int)  # a settings file reads it as minutes
     s = RemindersSettings.model_validate(loaded)
     assert (s.working_end, s.evening) == ("17:30", "18:00")
+
+
+def test_working_hours_that_end_before_they_start_mean_a_night_shift_and_are_accepted():
+    s = RemindersSettings(working_start="22:00", working_end="06:00")
+    assert (s.working_start, s.working_end) == ("22:00", "06:00")
+
+
+def test_working_hours_that_start_and_end_together_are_refused_in_plain_words():
+    with pytest.raises(ValidationError, match="working hours can't start and end at the same time"):
+        RemindersSettings(working_start="09:00", working_end="09:00")

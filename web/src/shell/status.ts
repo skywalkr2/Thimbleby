@@ -12,6 +12,7 @@ export type StatusKind =
   | "network"
   | "restart"
   | "restarting"
+  | "restart_failed"
   | "connection_failed"
   | "connection_retrying"
   | "backup"
@@ -39,7 +40,9 @@ export function worstState(input: {
   if (input.live === "offline") return "offline";
   if (input.status?.network_wait) return "network";
   if (input.restartPhase === "waiting") return "restarting";
-  if (["asking", "stuck", "refused"].includes(input.restartPhase) || input.status?.restart_needed) return "restart";
+  // A restart waiting for the person's go is a warning; one that failed is the only restart state that is a danger.
+  if (["stuck", "refused"].includes(input.restartPhase)) return "restart_failed";
+  if (input.restartPhase === "asking" || input.status?.restart_needed) return "restart";
   if (input.connections === "failed") return "connection_failed";
   if (input.connections === "retrying") return "connection_retrying";
   if (input.status?.backup.needs_attention) return "backup";
@@ -50,7 +53,7 @@ export function worstState(input: {
 
 /** What the assistant's own line says, worst first: a failing account or run (bad), then the states the chip knows that
  * hold work up (warn), otherwise fine. */
-export type AliveKind = "fine" | "failing" | "run_failed" | "network" | "restarting" | "restart" | "paused" | "not_set_up" | "stuck" | "loop_restarted";
+export type AliveKind = "fine" | "failing" | "run_failed" | "network" | "restarting" | "restart" | "restart_failed" | "paused" | "not_set_up" | "stuck" | "loop_restarted";
 export type AliveTone = "ok" | "warn" | "bad";
 
 export function aliveState(input: { status: S["Status"]; restartPhase: string }): { kind: AliveKind; tone: AliveTone } {
@@ -58,9 +61,10 @@ export function aliveState(input: { status: S["Status"]; restartPhase: string })
   if (status.ai.state === "failing") return { kind: "failing", tone: "bad" };
   if (status.assistant.last_run_failed) return { kind: "run_failed", tone: "bad" };
   if (status.assistant.loop_stuck_since) return { kind: "stuck", tone: "bad" };
+  if (["stuck", "refused"].includes(input.restartPhase)) return { kind: "restart_failed", tone: "bad" };
   if (status.network_wait) return { kind: "network", tone: "warn" };
   if (input.restartPhase === "waiting") return { kind: "restarting", tone: "warn" };
-  if (["asking", "stuck", "refused"].includes(input.restartPhase) || status.restart_needed) return { kind: "restart", tone: "warn" };
+  if (input.restartPhase === "asking" || status.restart_needed) return { kind: "restart", tone: "warn" };
   if (status.assistant.loop_restarted_at) return { kind: "loop_restarted", tone: "warn" };
   if (status.assistant.paused.length) return { kind: "paused", tone: "warn" };
   if (status.ai.state === "not_set_up") return { kind: "not_set_up", tone: "warn" };
@@ -70,9 +74,9 @@ export function aliveState(input: { status: S["Status"]; restartPhase: string })
 /** Everything but "live"and "connecting" is something the person may want to act on. */
 export const isWarn = (kind: StatusKind): boolean => kind !== "live" && kind !== "connecting";
 
-/** The dot's state: a danger when nothing is being read or done (offline, a connection that failed), a warning for the rest. */
+/** The dot's state: a danger when nothing is being read or done (offline, a connection that failed, a restart that failed), a warning for the rest. */
 export function toneOf(kind: StatusKind): StatusTone {
-  if (kind === "offline" || kind === "connection_failed") return "danger";
+  if (kind === "offline" || kind === "connection_failed" || kind === "restart_failed") return "danger";
   return isWarn(kind) ? "warn" : "ok";
 }
 

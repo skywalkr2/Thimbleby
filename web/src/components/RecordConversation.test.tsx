@@ -40,7 +40,9 @@ function show(turns: Turn[], routes: Routes = {}) {
 
 test("a record with nothing said says so and has the box for the first message", async () => {
   show([]);
-  expect(await screen.findByText("Nothing has been said about this yet.")).toBeInTheDocument();
+  // With nothing said yet the box is one line, with no sentence saying so.
+  expect(await screen.findByRole("textbox")).toBeInTheDocument();
+  expect(screen.queryByText("Nothing has been said about this yet.")).toBeNull();
   expect(screen.getByRole("heading", { name: "Talk to Helper" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
 });

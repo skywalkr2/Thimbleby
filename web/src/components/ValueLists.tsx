@@ -66,6 +66,8 @@ function useUsedBy(list: ValueList): string {
     const dot = use.lastIndexOf(".");
     return t("lists.used.other", { kind: readableTail(use.slice(0, dot)), field: readable(use.slice(dot + 1)).toLowerCase() });
   });
+  // A line that only says the list's own name again, such as "Used for: project group" under "Project group", says nothing.
+  if (fields.length === 1 && fields[0].trim().toLowerCase() === list.label.trim().toLowerCase()) return "";
   return fields.length ? t("lists.used_by", { fields: fields.join(", ") }) : "";
 }
 
@@ -177,8 +179,8 @@ function ListBlock(props: { list: ValueList }) {
             if (!value) return;
             const existing = offers(list.values, value);
             if (existing) {
-              setProblem("");
-              setNewValue("");
+              // Saying nothing looked like a failed Add: the list already has it, and the box says so.
+              setProblem(t("lists.duplicate", { value: existing, list: list.label }));
               return;
             }
             // A value on a status list is asked for its meaning with its tone; elsewhere a tone is sent only when chosen.
@@ -200,7 +202,10 @@ function ListBlock(props: { list: ValueList }) {
             value={newValue}
             autoComplete="off"
             placeholder={t("lists.add_placeholder")}
-            onChange={(e) => setNewValue(e.target.value)}
+            onChange={(e) => {
+              setNewValue(e.target.value);
+              setProblem("");
+            }}
           />
           {typed && list.status && (
             <>
@@ -306,5 +311,6 @@ function Meant(props: { list: ValueList; value: string }) {
   const tone = props.list.tones?.[props.value] ?? "neutral";
   const meaning = props.list.meanings?.[props.value];
   if (!meaning && tone === "neutral") return null;
-  return <Pill tone={tone}>{meaning ? t("lists.means", { meaning: t(`lists.meaning.${meaning}`) }) : t(`lists.tone.${tone}`)}</Pill>;
+  // The label says what the tone is for, so "Caution" beside a value reads as how it is shown, not as a warning about it.
+  return <Pill tone={tone}>{meaning ? t("lists.means", { meaning: t(`lists.meaning.${meaning}`) }) : t("lists.looks", { tone: t(`lists.tone.${tone}`) })}</Pill>;
 }

@@ -9,10 +9,13 @@ import { api } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
 import { plainTitle } from "../lib/title-dates";
 import type { QueueLine } from "../lib/today";
+import { titleWords } from "../lib/queue-words";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { HeldDetail } from "./HeldDetail";
+import { ProjectTag } from "./ProjectTag";
 import { useLineTitle } from "./TodayQueue";
+import { useEstimate } from "../lib/money";
 import { SendBackForm } from "./WhatChanged";
 import styles from "./BatchDetail.module.css";
 
@@ -36,14 +39,17 @@ export function BatchDetail(props: { line: QueueLine; sendBack?: boolean }) {
 
 function Batch(props: { part: QueueLine; named: boolean }) {
   const { part } = props;
-  const { t, tn } = useWords();
+  const { t, tn, has } = useWords();
   const act = useAct();
   const title = useLineTitle();
+  const estimate = useEstimate();
   // The row whose "Not right" is open: one at a time, with the cursor in its note.
   const [open, setOpen] = useState<string | null>(null);
+  // Items sent back leave the list at once, before the next read of Today says so.
+  const [sentBack, setSentBack] = useState<ReadonlySet<string>>(new Set());
   const heading = props.named ? title(part) : null;
   const refused = (part.outcome ?? {}).refused ?? 0;
-  const items = part.items ?? [];
+  const items = (part.items ?? []).filter((item) => !sentBack.has(item.key));
   const changesets = part.changesets ?? [];
   const confirm = () =>
     void act(
@@ -65,12 +71,32 @@ function Batch(props: { part: QueueLine; named: boolean }) {
               <li key={item.key} className={styles.item} data-batch-item={item.what ?? ""}>
                 <span className={styles.what}>{whatWord(item.what, t)}</span>
                 <span className={styles.text}>{plainTitle(item.text ?? "")}</span>
-                <Button size="sm" aria-expanded={open === item.key} aria-label={t("queue.batch.not_right_named", { item: plainTitle(item.text ?? "") })} onClick={() => setOpen(open === item.key ? null : item.key)}>
+                <Button variant="quiet" size="sm" className={styles.notRight} aria-expanded={open === item.key} aria-label={t("queue.batch.not_right_named", { item: plainTitle(item.text ?? "") })} onClick={() => setOpen(open === item.key ? null : item.key)}>
                   {t("queue.batch.not_right")}
                 </Button>
+                <span className={styles.meta}>
+                  {titleWords(item.title, t, has)}
+                  {(item.project_name || item.side_name) && <ProjectTag name={item.project_name} parent={item.parent_name} side={item.side_name} className={styles.tag} />}
+                  {item.person_name && <span>{t("queue.batch.owner", { name: item.person_name })}</span>}
+                </span>
+                {item.draft && (
+                  <figure className={styles.draft}>
+                    <figcaption>{t("queue.batch.draft")}</figcaption>
+                    <p>{item.draft}</p>
+                  </figure>
+                )}
                 {open === item.key && item.changeset && (
                   <div className={styles.form}>
-                    <SendBackForm cs={item.changeset} onDone={() => setOpen(null)} />
+                    <SendBackForm
+                      cs={item.changeset}
+                      op={item.op ?? undefined}
+                      item={plainTitle(item.text ?? "")}
+                      estimate={estimate(item.estimate_usd ?? part.estimate_usd)}
+                      onDone={(sent) => {
+                        setOpen(null);
+                        if (sent) setSentBack((was) => new Set(was).add(item.key));
+                      }}
+                    />
                   </div>
                 )}
               </li>

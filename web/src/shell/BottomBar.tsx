@@ -1,10 +1,11 @@
-// The phone's bottom bar (design 7.1): Today, Work, a raised + (Hand something in), Ask and More. Work and More open a
+// The phone's bottom bar (design 7.1): Today, Work, a raised + (Hand something in), Search and More. Work and More open a
 // sheet listing their entries; More also holds the Help items and this device's theme and density.
 import { useState } from "react";
 import { Dialog, Heading, Link } from "react-aria-components";
 import { setDensity, setTheme, useAppearance, type Density, type Theme } from "../lib/theme";
 import { viewHref, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { SearchBox } from "../components/SearchBox";
 import { MISSED_BUTTON, useAnythingToMiss, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
 import { Icon } from "../ui/Icon";
@@ -50,7 +51,9 @@ export function BottomBar(props: {
   current: View;
   version: string;
   onHandIn: () => void;
-  onAsk: () => void;
+  onOpenRecord: (kind: string, id: string) => void;
+  /** Opens Ask, with the words typed in the search field when there are any. */
+  onAsk: (question: string) => void;
   onHelp: () => void;
   onFeedback: () => void;
   onOpenGuide: () => void;
@@ -60,6 +63,7 @@ export function BottomBar(props: {
   const missed = useMissedOne();
   const anythingMissed = useAnythingToMiss();
   const { theme, density } = useAppearance();
+  const [searching, setSearching] = useState(false);
   const [sheet, setSheet] = useState<"work" | "more" | null>(null);
   const close = () => setSheet(null);
   const later = (run: () => void) => () => {
@@ -71,6 +75,22 @@ export function BottomBar(props: {
   const workCurrent = props.current.startsWith("work/");
   return (
     <>
+      {searching && (
+        <div className={styles.search}>
+          <SearchBox
+            opens="up"
+            autoFocus
+            onOpenRecord={(kind, id) => {
+              setSearching(false);
+              props.onOpenRecord(kind, id);
+            }}
+            onAsk={(question) => {
+              setSearching(false);
+              props.onAsk(question);
+            }}
+          />
+        </div>
+      )}
       <nav className={styles.bar} aria-label={t("nav.label")}>
         <a className={styles.item} href={viewHref("today")} aria-current={todayCurrent ? "page" : undefined}>
           <Icon name="home" />
@@ -85,9 +105,9 @@ export function BottomBar(props: {
             <Icon name="plus" size={22} />
           </button>
         </span>
-        <button type="button" className={styles.item} data-ask-button="" onClick={props.onAsk}>
-          <Icon name="chat" />
-          {t("ask.open")}
+        <button type="button" className={styles.item} data-ask-button="" aria-expanded={searching} onClick={() => setSearching((on) => !on)}>
+          <Icon name="search" />
+          {t("search.open")}
         </button>
         <button type="button" className={styles.item} data-feedback-button="" aria-haspopup="dialog" onClick={() => setSheet("more")}>
           <Icon name="more" />

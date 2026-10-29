@@ -19,12 +19,19 @@ export function RadioCard(props: RadioCardProps) {
     <label className={[styles.card, className ?? ""].filter(Boolean).join(" ")} data-radio-card="" data-chosen={rest.checked ? "" : undefined} data-disabled={rest.disabled ? "" : undefined}>
       <input {...rest} type="radio" className={styles.input} />
       <span className={styles.body}>
-        {tag && <span className={styles.tag}>{tag}</span>}
+        {tag && (
+          <>
+            <span className={styles.tag}>{tag}</span>{" "}
+          </>
+        )}
         <strong className={styles.title}>{title}</strong>
         {description && (
-          <span className={styles.description} data-radio-description="">
-            {description}
-          </span>
+          <>
+            {" "}
+            <span className={styles.description} data-radio-description="">
+              {description}
+            </span>
+          </>
         )}
       </span>
     </label>

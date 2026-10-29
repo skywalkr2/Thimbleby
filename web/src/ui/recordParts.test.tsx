@@ -50,7 +50,7 @@ test("an activity list groups its entries by day, shows the latest five, and ask
   // The only list items are the entries: a day's heading is not one.
   expect(within(list).getAllByRole("listitem")).toHaveLength(5);
   // Two entries of the same day sit under one heading, with their times.
-  expect(within(list).getAllByRole("heading", { level: 4 })).toHaveLength(4);
+  expect(within(list).getAllByRole("heading", { level: 3 })).toHaveLength(4);
   expect(within(list).getByText("1:22 PM")).toBeInTheDocument();
   expect(within(list).queryByText("Made the record")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Show all activity" }));

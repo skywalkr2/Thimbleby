@@ -2,6 +2,7 @@
 // Done first and Snooze in its menu (each choice shows the time it moves to), the one line for reminders that waited for
 // quiet hours to end, and the browser notification for a line that appears while the app is open. A snooze or a time the
 // person picks is their own edit of the reminder, with Undo.
+import { useOneEditor } from "../lib/one-editor";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -204,7 +205,7 @@ export function useReminderNotices(lines: Line[] | undefined) {
 export function useRemindMe(action: string, remindAt: string | null | undefined, onClosed?: () => void): { entries: MenuAction[]; form: ReactNode } {
   const { t } = useWords();
   const act = useAct();
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useOneEditor(`${action}:remind`);
   const close = () => {
     setPicking(false);
     onClosed?.();

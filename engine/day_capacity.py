@@ -18,6 +18,7 @@ from engine.day_calendar import timed
 from engine.free_slots import Busy, free_slots
 from engine.lists import value_rank
 from engine.reminder_lines import rules
+from engine.reminders import crosses_midnight
 from engine.today import todo as todays_todos
 from engine.today import zone
 
@@ -68,7 +69,7 @@ def free_minutes(store: Any, cfg: Any, now: datetime) -> int | None:
     local = now.astimezone(here)
     today = local.date()
     working = rules(cfg).working
-    if today.weekday() not in working.days:
+    if today.weekday() not in working.days or crosses_midnight(working):
         return None
     end = datetime.combine(today, working.end, here)
     if local >= end:

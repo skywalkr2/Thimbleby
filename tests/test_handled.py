@@ -420,3 +420,61 @@ def test_the_count_for_today_is_the_handled_mail_that_came_in_on_the_persons_day
     assert later["today"] == 0 and later["set_aside"] == day_of_it["set_aside"] and later["read"] == day_of_it["read"]
     shown = client.get(f"{base}/handled/counts").json()
     assert set(shown) == {"set_aside", "read", "today"}
+
+
+def start_acted(tmp_path):
+    """A workspace where the assistant recorded a fact from one mail, so the mail was handled with a result."""
+    ws, cfg, store = make(
+        tmp_path, [mail("lunch", COLLEAGUE, subject="Lunch is moved", body="Lunch moves to one o'clock.", hours=5)]
+    )
+    result = refresh(ws, store, cfg, "m", NOW)
+    answers(
+        {
+            "summary": "One fact.",
+            "ops": [{"op": "fact", "text": "Lunch moves to one", "evidence": {"quote": "Lunch moves to one o'clock."}}],
+        }
+    )
+    for request in result.new:
+        process(ws, store, cfg, Router(cfg, store, env={}), request, now=NOW)
+    if sides.personal_project(store.read(), cfg) is None:
+        sides.make_personal(store, cfg)
+    store.close()
+    created = create_app(ws, cfg, "t", start_worker=False)
+    client = TestClient(created)
+    client.headers["Authorization"] = "Bearer t"
+    return ws, cfg, created.state.store, client, cfg.server.base_path.rstrip("/") + "/api"
+
+
+def handled_snapshot(store):
+    (snap,) = [s for s in store.read().list("snapshot") if s.data.get("message")]
+    return snap
+
+
+def test_treat_as_work_is_refused_for_mail_the_assistant_already_handled(tmp_path):
+    ws, cfg, store, client, base = start_acted(tmp_path)
+    try:
+        snap = handled_snapshot(store)
+        refused = client.post(f"{base}/handled/{snap.id}/work", json={"read_version": snap.version})
+        assert refused.status_code == 409
+        assert not [r for r in requests_in(store, "queued")]
+    finally:
+        store.close()
+
+
+def test_the_treat_as_correction_undoes_what_was_done_files_it_as_chosen_and_records_a_signal(tmp_path):
+    ws, cfg, store, client, base = start_acted(tmp_path)
+    try:
+        snap = handled_snapshot(store)
+        personal = sides.personal_project(store.read(), cfg)
+        before = {f.id for f in store.read().list("fact") if not f.data.get("retired")}
+        assert before, "the assistant recorded a fact"
+        done = client.post(f"{base}/handled/{snap.id}/treat-as", json={"read_version": snap.version, "side": personal})
+        assert done.status_code == 200, done.text
+        queued = {r.id: r for r in requests_in(store, "queued")}
+        assert queued[done.json()["request"]].data["project"] == personal
+        undone = [c for c in store.read().list("changeset") if c.data["status"] in ("undone", "partly_undone")]
+        assert undone, "what was done with the mail is undone"
+        kinds = {s.data["kind"] for s in store.read().list("signal")}
+        assert "pulled_back" in kinds
+    finally:
+        store.close()

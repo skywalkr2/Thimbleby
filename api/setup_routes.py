@@ -514,9 +514,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         from engine import sides
 
         try:
-            changeset = sides.remove_with_work(store, current(), project, body.where, ws=ws)
+            removal = sides.remove_with_work(
+                store, current(), project, body.where, ws=ws, organization=body.organization
+            )
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+        changeset = removal.changeset
         drafted = note_the_drops(store, current(), changeset, dropped_actions(store, changeset))
         events.changed()
         names = People(store, current())
@@ -525,6 +528,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             drafts=drafted.changesets,
             acts=drafted.acts,
             names=[names.name(person) for person in drafted.people],
+            companions=list(removal.companions),
         )
 
     @r.post("/setup/sides/{project}/restore")

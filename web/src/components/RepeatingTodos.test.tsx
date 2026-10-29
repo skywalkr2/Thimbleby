@@ -70,7 +70,7 @@ function api(shown: S["OpenActionView"][], extra: Routes = {}) {
 async function openEdit(user: ReturnType<typeof userEvent.setup>) {
   const list = await screen.findByRole("list", { name: "Open to-dos" });
   await user.click(within(list).getByRole("button", { name: /More actions for Send the weekly update/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Edit…" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
   return screen.findByRole("textbox", { name: "Repeats" });
 }
 
@@ -79,7 +79,7 @@ test("the Repeats field says back what was understood, under the field, before a
   const calls = api([action()]);
   renderApp(<OpenItems />);
   const field = await openEdit(user);
-  expect(await screen.findByRole("textbox", { name: "What to do" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Title" })).toHaveFocus();
   await user.type(field, "Mondays and Thursdays");
   expect(await screen.findByText("Every Monday and Thursday, starting November 2")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST actions/A-1/repeat")).toBe(false);

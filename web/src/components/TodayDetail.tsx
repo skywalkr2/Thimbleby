@@ -9,6 +9,7 @@ import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { CapacityDetail } from "./CapacityDetail";
+import { ClashDetail } from "./ClashDetail";
 import { RerouteForm } from "./ChangeThis";
 import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
@@ -24,7 +25,7 @@ import { RowList } from "../ui/RowList";
 import { ItemList } from "../ui/ItemList";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "intake_review", "batches", "send", "nudge", "escalate", "promise"]);
+const OPENS = new Set<QueueLine["kind"]>(["capacity", "clash", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "intake_review", "batches", "send", "nudge", "escalate", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
   // The line that asks which side items belong to opens the list of sides to pick from.
@@ -75,6 +76,8 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
       return <EscalateDetail line={line} />;
     case "capacity":
       return <CapacityDetail />;
+    case "clash":
+      return <ClashDetail line={line} />;
     case "unfiled":
       return <SideChoose />;
     case "date_reminder":
@@ -133,7 +136,7 @@ function QuestionDetail(props: { line: QueueLine; onOpenGuide?: (step: string) =
   if (!question) return props.line.request ? <ChangeDetail line={props.line} onOpenGuide={props.onOpenGuide} /> : <AskedItem question={props.line.question ?? ""} />;
   return (
     <ItemList>
-      <DecisionRow question={question} reveal={0} check={props.line.after_move?.check} move={props.line.after_move} />
+      <DecisionRow question={question} reveal={0} check={props.line.after_move?.check} move={props.line.after_move} inLine />
     </ItemList>
   );
 }

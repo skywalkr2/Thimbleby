@@ -473,6 +473,8 @@ export function SavedSide(props: {
   const [name, setName] = useState(side.name);
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
+  // The organization made for the side goes with it only when the person says so.
+  const [withOrganization, setWithOrganization] = useState(false);
   const base = `work-side-${side.project}`;
   // Something filed under the side is never lost without the person saying where it goes.
   const ask = props.removal === "ask" || !side.removable;
@@ -521,7 +523,7 @@ export function SavedSide(props: {
     setBusy(true);
     props.onClear();
     try {
-      const done = await api.removeSideWithWork(side.project, where);
+      const done = await api.removeSideWithWork(side.project, where, withOrganization ? "remove" : "keep");
       setAsking(false);
       await props.onChanged();
       push({
@@ -530,7 +532,9 @@ export function SavedSide(props: {
             ? t("settings.business.removed_end_note", { name: side.name, names: done.names.join(", ") })
             : t(where === "personal" ? "settings.business.removed_move" : "settings.business.removed_end", { name: side.name, personal: t("sides.filter.personal") }),
         undo: async () => {
-          // The one Undo also takes back the notes the ending drafted, while none has gone out.
+          // The one Undo also takes back the notes the ending drafted, while none has gone out, and the organization that
+          // went with it (first, as it was removed last).
+          for (const companion of done.companions ?? []) await api.undo(companion);
           await api.undo(done.changeset);
           await props.onChanged();
         },
@@ -626,6 +630,12 @@ export function SavedSide(props: {
       {ask && asking && (
         <FormBlock role="group" aria-labelledby={`${base}-ask`} data-remove-ask="">
           <p id={`${base}-ask`}>{t("settings.business.remove_ask", { name: side.name })}</p>
+          {side.organization && (
+            <label className="check-line">
+              <input type="checkbox" checked={withOrganization} onChange={(e) => setWithOrganization(e.target.checked)} />
+              <span>{t("settings.business.remove_org", { name: side.name })}</span>
+            </label>
+          )}
           <Actions align="end">
             <Button variant="quiet" disabled={busy} onClick={() => setAsking(false)}>
               {t("settings.business.remove_cancel")}

@@ -1676,15 +1676,27 @@ def _written_by_assistant(store: Store, changeset_id: str, index: int) -> bool:
 
 
 def send_back(
-    store: Store, changeset_id: str, note: str, now: datetime | None = None, *, undo_first: bool = True
+    store: Store,
+    changeset_id: str,
+    note: str,
+    now: datetime | None = None,
+    *,
+    undo_first: bool = True,
+    ops: list[int] | None = None,
 ) -> str:
     """Queue the work again with the PM's note, first undoing what the assistant did unless the PM keeps it (then
-    the old work counts as looked over, and the new run builds on it). Returns the new request id."""
+    the old work counts as looked over, and the new run builds on it). With `ops`, the note is about those items alone:
+    only they are undone, the change's other items still wait for a look, and the note says which items it is about.
+    Returns the new request id."""
     if not note.strip():
         raise ValueError("Say what the assistant should change.")
     now = now or datetime.now(UTC)
     cs = store.read().get("changeset", changeset_id)
-    if undo_first:
+    if ops:
+        undo(store, changeset_id, ops)
+        about = [str(o.get("label") or "").strip() for o in cs.data["ops"] if o["index"] in ops]
+        note = f"{note.strip()}\n(About: {'; '.join(a for a in about if a)})" if any(about) else note
+    elif undo_first:
         undo(store, changeset_id)
     else:
         with store.transaction() as tx:
@@ -1692,9 +1704,15 @@ def send_back(
             tx.update("changeset", changeset_id, {"reviewed": True}, _PM, read_version=current.version)
     signal(store, "sent_back", [changeset_id], note=note, now=now, changeset=changeset_id)
     old = store.read().get("request", cs.data["request"])
+    # Items of the change that were not sent back still wait for a look, so the change stays in the review.
+    left = bool(ops) and any(
+        o["status"] in ("applied", "held") and o["index"] not in ops
+        for o in store.read().get("changeset", changeset_id).data["ops"]
+    )
     with store.transaction() as tx:
         r = tx.get("request", old.id)
-        tx.update("request", old.id, {"state": "done", "waiting": None}, _PM, read_version=r.version)
+        if not left:
+            tx.update("request", old.id, {"state": "done", "waiting": None}, _PM, read_version=r.version)
         combined = "\n\n".join(x for x in (old.data.get("note"), f"Sent back by the user: {note.strip()}") if x)
         return tx.create(
             "request",

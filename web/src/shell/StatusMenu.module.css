@@ -6,3 +6,4 @@
 .warn .text { color: var(--warn); font-weight: var(--weight-semibold); }
 .full { grid-column: 1 / -1; }
 .note { margin: 0; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }
+.sayIcon { margin-inline-end: var(--space-1); vertical-align: middle; }

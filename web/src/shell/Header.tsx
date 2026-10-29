@@ -1,9 +1,8 @@
-// The header (design 7.1): one row, 56px, at every width. Left to right: the brand (a link to Today), a Demo chip, Ask as a
-// search-style field, the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
+// The header (design 7.1): one row, 56px, at every width. Left to right: the brand (a link to Today), a Demo chip, the search
+// field (its last row asks the assistant), the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
 // Hand something in, Help and the person's initials, which open the user menu: the person's own pages, how the assistant is
 // doing, then theme and density.
-// Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the Ask field becomes
-// an icon; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
+// Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the search field shrinks; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
 // before the Ask field gives any up.
 import { useQuery } from "@tanstack/react-query";
 import { Button as AriaButton } from "react-aria-components";
@@ -13,10 +12,10 @@ import { setDensity, setTheme, useAppearance, type Density, type Theme } from ".
 import { viewHref } from "../lib/views";
 import { useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
+import { SearchBox } from "../components/SearchBox";
 import { useAnythingToMiss, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
 import { Button } from "../ui/Button";
-import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { MenuButton, type MenuGroup } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
@@ -91,7 +90,9 @@ export function Header(props: {
   narrow: boolean;
   shortcuts: Record<string, string>;
   onHandIn: () => void;
-  onAsk: () => void;
+  onOpenRecord: (kind: string, id: string) => void;
+  /** Opens Ask, with the words typed in the search field when there are any. */
+  onAsk: (question: string) => void;
   onHelp: () => void;
   onFeedback: () => void;
   onOpenGuide: (step?: string) => void;
@@ -103,7 +104,6 @@ export function Header(props: {
   const person = usePersonName(rc.workspace_name);
   const userMenu = useUserMenuGroups(props.onOpenQuality);
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
-  const askKey = props.shortcuts.ask ?? "/";
   // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
   const tight = useMediaQuery("(max-width: 1439px)");
   const inChip = props.narrow || tight;
@@ -124,16 +124,7 @@ export function Header(props: {
           <Pill tone="warn">{t("demo.label")}</Pill>
         </span>
       )}
-      {!props.narrow && (
-        <>
-          <button type="button" className={styles.ask} data-ask-button aria-label={t("ask.open")} aria-keyshortcuts={askKey} onClick={props.onAsk}>
-            <Icon name="search" />
-            <span className={styles.askText}>{t("header.ask_field")}</span>
-            <kbd>{askKey}</kbd>
-          </button>
-          <IconButton icon="search" label={t("ask.open")} className={styles.askIcon} data-ask-button="" onPress={props.onAsk} />
-        </>
-      )}
+      {!props.narrow && <SearchBox className={styles.ask} onOpenRecord={props.onOpenRecord} onAsk={props.onAsk} />}
       <span className={styles.spacer} />
       <div className={styles.status}>
         <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} narrow={inChip} />

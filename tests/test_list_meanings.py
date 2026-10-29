@@ -243,3 +243,15 @@ def test_the_api_suggests_a_tone_and_a_meaning_for_a_typed_value(api):
     assert got.status_code == 200 and got.json() == {"tone": suggest("Paused")["tone"], "meaning": "blocked"}
     plain = client.get(f"{base}/list-suggestion", params={"list": "project-priority", "value": "Paused"}).json()
     assert plain["meaning"] is None  # a list with no meanings suggests only a tone
+
+
+def test_renaming_onto_a_name_already_offered_is_refused_in_the_menus_own_words(env):
+    _, cfg, store = env
+    _add(store, cfg, value="Paused")
+    with pytest.raises(StoreError, match="Stop offering one of them first"):
+        apply_as_person(
+            store,
+            cfg,
+            [{"op": "list.rename", "list": "project-status", "value": "Paused", "to": "On track"}],
+            "Renamed",
+        )

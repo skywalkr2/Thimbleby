@@ -31,6 +31,10 @@ class HandIn(BaseModel):
 class SendBack(BaseModel):
     note: str
     undo_first: bool = Field(True, description="Undo what the assistant did before it tries again (the default).")
+    ops: list[int] | None = Field(
+        None,
+        description="Indices of the items the note is about; only they are undone. All of the change when left out.",
+    )
 
 
 class UndoChoice(BaseModel):
@@ -96,6 +100,11 @@ class ProjectEndingDone(BaseModel):
     drafts: list[str]
     acts: list[str]
     names: list[str]
+    companions: list[str] = Field(
+        default_factory=list,
+        description="Further changes the removal made (the side's organization going with it): Undo takes these back "
+        "first, then `changeset`.",
+    )
 
 
 class ProjectEndingChoice(BaseModel):
@@ -804,9 +813,9 @@ class ChangesetView(BaseModel):
 class ItemTitle(BaseModel):
     """An item's title in parts (design 7.14); the screen puts them into words: "{kind} from {person} · {topic}"."""
 
-    kind: Literal["email", "calendar", "change", "note", "pasted", "task"] = Field(
-        description="email, calendar or change (another watched item); note: the person's own words; pasted: "
-        "someone else's words handed in; task: work the app started."
+    kind: Literal["email", "calendar", "change", "note", "answer", "pasted", "task"] = Field(
+        description="email, calendar or change (another watched item); note: the person's own words; answer: the "
+        "words typed to answer a question; pasted: someone else's words handed in; task: work the app started."
     )
     person: str | None = Field(None, description="The id of who it came from, when known.")
     person_name: str | None = Field(None, description="That person's full name.")
@@ -1230,6 +1239,11 @@ class PersonIn(BaseModel):
     org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
     relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
+    how_to_reach: dict[str, str] | None = Field(
+        None,
+        description="How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the "
+        "address or number. A blank value is left out.",
+    )
     side: Literal["personal", "business", "both"] | None = Field(
         None,
         description="Which side of life they belong to. Refused for business or both when there is more than one "
@@ -1305,6 +1319,11 @@ class PersonPatch(BaseModel):
     aliases: list[str] | None = None
     status: Literal["active", "left"] | None = None
     relation: str | None = Field(None, description="How they relate to the person; null clears it.")
+    how_to_reach: dict[str, str] | None = Field(
+        None,
+        description="How to reach them, replacing what is kept: a kind of contact detail the workspace offers (email, "
+        "phone) mapped to the address or number. A blank value is left out; an empty map clears them all.",
+    )
     side: Literal["personal", "business", "both"] | None = Field(
         None,
         description="Which side they belong to. Refused for business or both when there is more than one side "
@@ -1534,6 +1553,11 @@ class SideRemoveIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     where: Literal["personal", "end"] = Field(
         description="personal: its projects and to-dos move to Personal. end: they end with it."
+    )
+    organization: Literal["keep", "remove"] = Field(
+        "keep",
+        description="What happens to the organization the side made: keep it (the default), or remove it with the "
+        "side, which is refused while other people work for it.",
     )
 
 
@@ -2754,6 +2778,11 @@ class ArrivedView(BaseModel):
     received: str = Field(description="ISO 8601 date-time with its offset.")
     unread: bool | None = None
     link: str | None = None
+    version: int = Field(0, description="The version of the saved message read, for a correction made from the list.")
+    saved: str | None = Field(
+        None,
+        description="The id of the saved copy of the message, when it was handed in; its page is where a row opens.",
+    )
 
 
 class TodoView(BaseModel):
@@ -3270,6 +3299,9 @@ class QueueLineView(BaseModel):
         None,
         description="For a review line that covers one applied op: what it did, as the op's name and the item's own "
         "words, which the screen says in the past tense; null when the line groups several.",
+    )
+    draft: str | None = Field(
+        None, description="For a `batch_item` that is a draft: the drafted text, shown so it can be approved."
     )
     deciding: list[str] = Field(
         default_factory=list,
@@ -4007,6 +4039,9 @@ class SettingItem(BaseModel):
         None,
         description="True when the value is an amount of US dollars: the screen shows it as currency with two "
         'decimals in the person\'s number format and reads "1.5" and "$1.50" alike.',
+    )
+    max_length: int | None = Field(
+        None, description="For a text setting: the most characters it takes, so the box stops there."
     )
     by_setup: bool | None = Field(
         None,
@@ -7607,6 +7642,9 @@ class BriefLineView(BaseModel):
     link: RecordRef | None = None
     ready: bool = False
     you: bool = False
+    on_today_line: bool = Field(
+        False, description="Today already has a line for this one (a late or due-today to-do, say); it is marked."
+    )
     side: str | None = Field(
         None,
         description="The id of the side's top project the record it opens is on; none for neither. The screen's side "
@@ -7668,6 +7706,10 @@ class BriefView(BaseModel):
     forms: list[Literal["morning", "evening", "monday"]]
     sections: list[BriefSectionView]
     quiet: bool
+    afternoon_from_hour: int = Field(
+        description="`ui.afternoon_from_hour`: the hour of the person's day from which the morning form is called the "
+        "afternoon brief."
+    )
     on_today: int = 0
     goals: BriefGoalsView | None = None
     message: BriefMessageView | None = None
@@ -7984,3 +8026,14 @@ class NotNowDone(BaseModel):
     """A suggestion put off until something about it changes. `signal` is what Undo takes back."""
 
     signal: str
+
+
+class SearchHit(BaseModel):
+    kind: Literal["person", "project", "action", "file", "lesson", "glossary_entry", "routing_entry", "style_note"]
+    id: str
+    title: str = Field(description="The name or words that matched.")
+    detail: str | None = Field(None, description="A few more words to tell it from another, when there are any.")
+
+
+class SearchResults(BaseModel):
+    results: list[SearchHit]

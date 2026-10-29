@@ -29,7 +29,7 @@ function open(fields: Record<string, unknown>, extra: Routes = {}, defaultStance
     "GET record?kind=person&id=PER-2": () => ({ kind: "person", id: "PER-2", version: 3, fields: { id: "PER-2", full_name: "Robin Sample", ...fields }, long_text: [] }),
     "GET kinds/person": () => ({ kind: "person", fields: [] }),
     "GET record-pages/PER-2?kind=person": () => page,
-    "GET people": () => [person("PER-2", "Robin Sample")],
+    "GET people": () => [person("PER-2", "Robin Sample", { org: "ORG-1", org_name: "Hale Upholstery" })],
     "GET projects": () => [project("PRJ-1", "Harbor")],
     "GET settings": () => ({ fingerprint: "fp", items: [setting(defaultStance)] }),
     "GET lists": () => [],
@@ -43,7 +43,7 @@ function open(fields: Record<string, unknown>, extra: Routes = {}, defaultStance
 test("the person's page has a list of who they are to you, with the default said in words, and no raw value", async () => {
   open({ stance: "report_to" });
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
-  const list = await screen.findByRole("combobox", { name: "Who they are to you" });
+  const list = await screen.findByRole("combobox", { name: "How you work with them" });
   expect(list).toHaveValue("report_to");
   const options = within(list).getAllByRole("option").map((o) => o.textContent);
   expect(options).toEqual(["Use my default (I work alongside them)", "I manage them", "I work alongside them", "I report to them", "I only watch them"]);
@@ -53,13 +53,13 @@ test("the person's page has a list of who they are to you, with the default said
 test("someone with no stance shows the default, and one marked as only tracked shows watching as the default", async () => {
   open({}, {}, "manage");
   const first = renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
-  const list = await screen.findByRole("combobox", { name: "Who they are to you" });
+  const list = await screen.findByRole("combobox", { name: "How you work with them" });
   expect(list).toHaveValue("");
   await waitFor(() => expect(within(list).getAllByRole("option")[0]).toHaveTextContent("Use my default (I manage them)"));
   first.unmount();
   open({ track_only: true }, {}, "manage");
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
-  const marked = await screen.findByRole("combobox", { name: "Who they are to you" });
+  const marked = await screen.findByRole("combobox", { name: "How you work with them" });
   expect(within(marked).getAllByRole("option")[0]).toHaveTextContent("Use my default (I only watch them)");
 });
 
@@ -67,7 +67,7 @@ test("picking one saves at once as the person's own edit with Undo, and Use my d
   const user = userEvent.setup();
   const calls = open({ stance: "watch" }, { "POST records/edit": () => ({ changeset: "CS-9" }), "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }) });
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
-  const list = await screen.findByRole("combobox", { name: "Who they are to you" });
+  const list = await screen.findByRole("combobox", { name: "How you work with them" });
   await user.selectOptions(list, "I manage them");
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "person", id: "PER-2", fields: { stance: "manage" }, read_version: 3 }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
@@ -81,7 +81,7 @@ test("a choice that couldn't be saved says so and offers Try again, which saves 
   let fail = true;
   const calls = open({ stance: "watch" }, { "POST records/edit": () => (fail ? new Refuse(500, "") : { changeset: "CS-9" }) });
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
-  await user.selectOptions(await screen.findByRole("combobox", { name: "Who they are to you" }), "I manage them");
+  await user.selectOptions(await screen.findByRole("combobox", { name: "How you work with them" }), "I manage them");
   const problem = await screen.findByRole("alert");
   fail = false;
   await user.click(within(problem).getByRole("button", { name: "Try again" }));
@@ -104,5 +104,5 @@ test("a page for anything but a person has no such list", async () => {
   });
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
   await screen.findByRole("heading", { level: 1, name: "Harbor" });
-  expect(screen.queryByRole("combobox", { name: "Who they are to you" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "How you work with them" })).toBeNull();
 });

@@ -172,7 +172,8 @@ test("Escape cancels the new organization field without closing the form", async
 
 test("marking someone as left and removing them act at once, each with Undo", async () => {
   const user = userEvent.setup();
-  const calls = api([person("P-1", "Ana Person")], {
+  // Someone from a side of work can have left; a friend or a relative can't (the next test).
+  const calls = api([person("P-1", "Ana Person", { org: firstOrg.id, org_name: firstOrg.name })], {
     "POST people/P-1": () => ({ ok: "P-1" }),
     "POST people/P-1/remove": () => ({ ok: "P-1" }),
     "POST people/P-1/restore": () => ({ ok: "P-1" }),
@@ -189,6 +190,16 @@ test("marking someone as left and removing them act at once, each with Undo", as
   await waitFor(() => expect(calls.some((c) => c.route === "POST people/P-1/remove")).toBe(true));
   await undoToast(user);
   await waitFor(() => expect(calls.some((c) => c.route === "POST people/P-1/restore")).toBe(true));
+});
+
+test("someone from the person's own life is never offered Mark as left, but can be removed", async () => {
+  const user = userEvent.setup();
+  api([person("P-1", "Fay Person", { relation: "my sister", side: "personal" })]);
+  renderApp(<People />);
+  const tr = await row("Fay Person");
+  await user.click(within(tr).getByRole("button", { name: /More actions for/ }));
+  expect(await screen.findByRole("menuitem", { name: "Remove" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Mark as left" })).toBeNull();
 });
 
 test("the person themselves can be edited but not marked as left or removed", async () => {

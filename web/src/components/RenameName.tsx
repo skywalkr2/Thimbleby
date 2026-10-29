@@ -90,6 +90,7 @@ export function RenameName(props: {
         type="text"
         value={draft ?? ""}
         autoComplete="off"
+        maxLength={item.max_length ?? undefined}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {

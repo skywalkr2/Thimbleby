@@ -63,6 +63,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Projects",
     "People",
     "Files",
+    "Notes",
     "Knowledge",
     "Contacts",
     "Settings",
@@ -111,7 +112,7 @@ test("every entry with something waiting for the person shows its count, and say
   expect(await screen.findByRole("link", { name: "What changed, 2 changes not yet checked" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Handled for you, 1 new since you last looked" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Follow-ups, 3 follow-ups to send" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "To-dos and questions, 4 waiting on you" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "To-dos and questions, 4 need you" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^Today, 4 things need you/ })).toBeInTheDocument();
   // The figure itself is drawn but not read a second time.
   const followups = screen.getByRole("link", { name: /^Follow-ups/ });
@@ -185,6 +186,7 @@ test("with no side besides Personal the first group has no Work heading, and Sta
     "Personal",
     "People",
     "Files",
+    "Notes",
     "Knowledge",
     "Settings",
   ]);
@@ -210,6 +212,7 @@ test("with sides the menu has Personal and each side by its own name, each a lin
     SECOND.name,
     "People",
     "Files",
+    "Notes",
     "Knowledge",
     "Settings",
   ]);

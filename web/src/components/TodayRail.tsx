@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useSetupOpen } from "../lib/setup-open";
 import { useWords } from "../lib/wording";
 import { settingsView, viewHref, type View } from "../lib/views";
-import { BriefCard, hasBrief, useBrief } from "./BriefCard";
+import { BriefCard, briefClosed, hasBrief, useBrief, useBriefClosings } from "./BriefCard";
 import { useCameInCard } from "./CameInCard";
 import { PluginPanels } from "./PluginPanels";
 import { RailFolds } from "./RailPanel";
@@ -30,6 +30,7 @@ export function TodayRail(props: {
   const open = props.onOpenRecord ?? (() => {});
   // The Briefing card closing for the day changes what is drawn, so the rail draws again.
   const [, closed] = useState(0);
+  useBriefClosings();
   const brief = useBrief(null);
   const briefing = props.workspace ? { settled: !brief.isPending, drawn: hasBrief(brief.data, props.workspace) } : { settled: true, drawn: false };
   // The Schedule card is always drawn and, with no calendar connected, links to Connections while setup is open too.
@@ -40,7 +41,7 @@ export function TodayRail(props: {
   return (
     <div className={styles.rail} role="group" aria-label={t("today.rail.label")} data-region="">
       <RailFolds>
-        {briefing.drawn && props.workspace && <BriefCard workspace={props.workspace} onOpenRecord={open} onOpenView={props.onView} onClosed={() => closed((n) => n + 1)} />}
+        {(briefing.drawn || (props.workspace && briefClosed(brief.data, props.workspace))) && props.workspace && <BriefCard workspace={props.workspace} onOpenRecord={open} onOpenView={props.onView} onClosed={() => closed((n) => n + 1)} />}
         {schedule.card}
         {cameIn.drawn && cameIn.card}
       </RailFolds>

@@ -212,7 +212,7 @@ def test_gap_reason_is_specific():
     assert "gap" in result.reason
 
 
-@pytest.mark.parametrize("configured", [WorkingHours(time(17), time(9)), WorkingHours(time(9), time(17), ())])
+@pytest.mark.parametrize("configured", [WorkingHours(time(9), time(9)), WorkingHours(time(9), time(17), ())])
 def test_invalid_working_hours(configured):
     result = next_fire(Reminder((stamp(),)), stamp(), UTC, None, configured)
     assert result.status == "unknown" and result.reason
@@ -238,3 +238,33 @@ def test_a_zone_whose_clocks_skip_midnight_still_plans():
     )
     assert result.status == "known", result.reason
     assert result.fires[0].at == datetime(2026, 9, 6, 9, tzinfo=zone)
+
+
+# ---- a night shift: hours that end before they start run past midnight -----------------------------------
+
+
+def night():
+    return WorkingHours(time(22), time(6))
+
+
+def test_a_night_shift_waits_for_its_start_and_holds_until_the_next_morning():
+    from engine.reminders import release_at
+
+    # Tuesday noon waits for that evening's start; Wednesday 02:00 is inside the shift that began Tuesday night.
+    assert release_at(stamp(day=5, hour=12), UTC, None, night()) == stamp(day=5, hour=22)
+    inside = stamp(day=6, hour=2)
+    assert release_at(inside, UTC, None, night()) == inside
+
+
+def test_a_night_shift_belongs_to_the_day_it_starts_on():
+    from engine.reminders import release_at
+
+    # Saturday 02:00 ends Friday's shift, so it is inside; Sunday 02:00 would end a Saturday shift, which isn't worked.
+    inside = stamp(day=9, hour=2)
+    assert release_at(inside, UTC, None, night()) == inside
+    assert release_at(stamp(day=10, hour=2), UTC, None, night()) == stamp(day=11, hour=22)
+
+
+def test_hours_that_start_and_end_together_are_still_refused():
+    result = next_fire(Reminder((stamp(),)), stamp(hour=11), UTC, None, WorkingHours(time(9), time(9)))
+    assert result.status == "unknown"

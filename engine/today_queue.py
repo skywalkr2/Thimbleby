@@ -187,6 +187,8 @@ class Line:
     questions: list[str] = field(default_factory=list)
     outcome: dict[str, int] = field(default_factory=dict)
     did: dict[str, str] | None = None
+    #: For a `batch_item` that is a draft: the drafted text, so the review shows what it asks to be approved.
+    draft: str | None = None
     deciding: list[str] = field(default_factory=list)
     #: For a batch to look over (`review`, `intake_review`): what needs a look, one `batch_item` line for each (its
     #: `what` is action, question or draft; a `held` line for what waits for the person's yes), and the changesets
@@ -428,6 +430,12 @@ def _everything(
             if outcome.get("status") == "held":
                 found.append(held_line(req, cs_id, cs, outcome))
                 continue
+            made = next((r["id"] for r in outcome.get("records") or [] if r.get("kind") == "action"), None)
+            todo = reader.get("action", made) if made else None
+            owners = (todo.data.get("owners") or []) if todo is not None else []
+            draft = (
+                (outcome.get("op") or {}).get("text") if (outcome.get("op") or {}).get("op") == "text.draft" else None
+            )
             found.append(
                 Line(
                     key=f"item:{cs_id}:{outcome['index']}",
@@ -436,6 +444,9 @@ def _everything(
                     what=review_batches.item_kind(outcome),
                     text=outcome.get("label") or _op_text(outcome.get("op") or {}),
                     title=named,
+                    person=(owners[0].get("person") if owners else None),
+                    project=(todo.data.get("project") if todo is not None else None),
+                    draft=str(draft) if draft else None,
                     request=req.id,
                     changeset=cs_id,
                     op=outcome["index"],
@@ -501,6 +512,17 @@ def _everything(
             line.kind = "decision" if d.get("kind") == "decision" else "question"
         lines.append(line)
     lines = move_groups.group(reader, people, zone(cfg), lines, Line)
+    # A name asked about in several inputs is one question: answering it releases every item waiting on that name.
+    seen_names: set[str] = set()
+    once: list[Line] = []
+    for each in lines:
+        name = " ".join((each.text or "").split()).casefold()
+        if each.kind == "who_is" and name:
+            if name in seen_names:
+                continue
+            seen_names.add(name)
+        once.append(each)
+    lines = once
 
     # Decide: held items with no question (they wait for the person's yes), and runs waiting for a go. A held item has
     # its line whatever became of the request that made it, a dismissed one included: Today's line is the only place
@@ -1224,6 +1246,17 @@ def _everything(
     for line in lines:
         if line.kind in ("held", "who_is") and line.changeset and line.op is not None:
             asked.setdefault(line.changeset, {})[line.op] = line.key
+    # A question put to the person is answered on its own line too, so the change that asked it doesn't count it again.
+    on_a_line = {
+        line.question: line.key for line in lines if line.question and line.kind in ("question", "decision", "owner")
+    }
+    for cs_id, cs in changesets.items():
+        for outcome in cs.get("ops", []):
+            if outcome.get("status") != "applied" or (outcome.get("op") or {}).get("op") != "question.add":
+                continue
+            key = next((on_a_line[r["id"]] for r in outcome.get("records") or [] if r.get("id") in on_a_line), None)
+            if key is not None:
+                asked.setdefault(cs_id, {})[outcome["index"]] = key
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") != "review" or not d.get("changeset") or req.id in hidden:
@@ -1405,6 +1438,7 @@ def _everything(
                 kind="unfiled",
                 state="which_side",
                 subject=asked.subject,
+                side=sides.personal_project(reader, cfg),
                 count=asked.count,
                 since=asked.since,
             )

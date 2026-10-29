@@ -11,6 +11,7 @@ import { fromDraft } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { FormField } from "../ui/FormField";
+import { MoneyField } from "./MoneyField";
 
 const CONFIRM = "ai.budgets.confirm_above_usd";
 const DAY = "ai.budgets.per_day_usd";
@@ -83,23 +84,14 @@ export function useSpendLine(enabled = true): SpendLine {
     const off = item.locked || !item.editable;
     return (
       <FormField id={id} label={label}>
-        <span className="money-field">
-          <span aria-hidden="true">{t("money.symbol")}</span>
-          <input
-            id={id}
-            type="text"
-            inputMode="decimal"
-            value={shown(item)}
-            disabled={off}
-            autoComplete="off"
-            aria-describedby={`${id}-hint`}
-            aria-invalid={bad && edits[item.key] !== undefined && !fromDraft(item, edits[item.key], locale).ok ? true : undefined}
-            onChange={(e) => {
-              const value = e.target.value;
-              setEdits((before) => ({ ...before, [item.key]: value }));
-            }}
-          />
-        </span>
+        <MoneyField
+          id={id}
+          value={shown(item)}
+          disabled={off}
+          invalid={bad && edits[item.key] !== undefined && !fromDraft(item, edits[item.key], locale).ok}
+          describedBy={`${id}-hint`}
+          onChange={(value) => setEdits((before) => ({ ...before, [item.key]: value }))}
+        />
         <p className="hint" id={`${id}-hint`}>
           {hint}
         </p>
