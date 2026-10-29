@@ -2442,3 +2442,567 @@ Kept for the record; details are in `docs/decisions.md` and the git history.
 
 **Packs:** the define-your-own kit with templates.
 
+## Moved from the plan (2026-10-29)
+
+### Phase B: finish the UI/UX redesign
+
+- [x] [B-6b] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
+  Sources shows on a source's row when its mail couldn't be sorted and why (from L0). Waiting to go out is a designed screen with its empty
+  state.
+  *Built (B-6b):* the "To send" marker on an open action's row in What changed and in To-dos and questions
+  (`tests/test_to_send_marker.py`, `web/src/components/OpenItems.test.tsx`, `web/src/components/WhatChanged.test.tsx`); a
+  source's row saying why some of its mail wasn't sorted (`tests/test_mail_sorting.py`,
+  `web/src/components/Sources.test.tsx`); Waiting to go out as a designed empty state
+  (`web/src/components/WaitingToGoOut.test.tsx`). *Built (list | detail):* What changed and Follow-ups
+  as one line per change or person with the chosen one's detail beside the list (a drawer below 1024px), the first (or the one
+  asking a question) chosen as the list opens beside it, Up and Down moving the choice, Enter into the detail and Escape back
+  to the line, every button and menu item of an open row in the detail
+  (`web/src/components/WhatChangedListDetail.test.tsx`, `web/src/components/FollowUpsListDetail.test.tsx`,
+  `web/src/components/WhatChanged.test.tsx`, `web/src/components/WhatChangedFold.test.tsx`,
+  `web/src/components/FollowUps.test.tsx`). The browser tests on the new layout pass at `a79141c` (`acceptance.spec.ts`, `late-evening.spec.ts`,
+  `journeys.spec.ts`, `panes.spec.ts` with both phone review modes setting up their own item instead of skipping,
+  `shell.spec.ts`, `layout.spec.ts`, `a11y.spec.ts`). A To send line shows the count without an age, because the server
+  holds none for a message not yet sent (the design asks for none).
+- [x] [B-6a] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
+  language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
+  *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
+  *Built (B-6a):* the contrast warning in Appearance and the date-format list (`web/src/lib/theme.test.ts`,
+  `web/src/components/Settings.test.tsx`). *Not built, by decision:* a money list: the functional designer answered that amounts are US dollars, labeled plainly, for 1.0 (design 7.9,
+  change log 174), because every cost is an AI service's price in dollars and the app has no exchange rates; a currency
+  setting waits for that (checklist C29, kept open in A4).
+- [x] [B-6b] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
+  account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
+  tooltip; amber or red when something is wrong. The held-work and paused lines cover the bad case; this covers "is it
+  alive?". The header is two rows when it needs them (title, views and primary buttons on top; status and the person's
+  links small below), tested at about 1,000 px wide. (The line and the two-row header below 1280px are built under "Ready
+  for real use"; what is left here is the final layout and a browser check of the header at about 1,000 px wide.)
+  *Changed (B-7, `docs/decisions.md`, 2026-10-20):* the header is one row at every width; below 1440px the assistant's
+  state is a section of the status chip's popover.
+  *Built (B-6b, B-7):* the final layout, one row with the alive line beside the status chip from 1440px and in the chip's
+  popover below it (`web/src/shell/Header.test.tsx`: "the assistant's alive line is in the header beside the status
+  chip", "below 1440px the assistant's state moves into the status chip's popover, as on the phone, and the line beside
+  the chip is gone"), and in a browser at 800, 1000, 1100, 1200 and 1300px (`web/e2e/shell.spec.ts`: "at 1000px the
+  header is one row, with every control inside the window and the assistant's state in the status chip", passing at
+  `9c0f76e`), with a long assistant line beside the chip at 1440px ("the header never wraps, with plugin panels
+  present").
+- [x] [B-6b] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
+  *Built (B-6b):* the stages board (`web/src/components/StagesBoard.test.tsx`, `tests/test_stage_cards.py`), the hand-in as a
+  drawer and Ask as a pane from 1440px (`web/src/components/AskPane.test.tsx`), and the phone's review mode on What
+  changed (`web/src/components/WhatChanged.test.tsx`: "review mode on a phone"). The same mode for Follow-ups' messages to send, one person at a time
+  with the message's own Copy and Mark sent and Next in the bar (`web/src/components/FollowUpsListDetail.test.tsx`: "review mode
+  on a phone"). The review-mode browser tests no longer skip: each hands in its own item (`web/e2e/panes.spec.ts`, which
+  has run in the full run since; What changed has no phone review mode now, it is the history, change log 229).
+  *Not a separate screen any more:* Waiting to go out is the To send tab of Follow-ups, with its review mode (change log 229).
+- [x] [B-6b] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
+  version opens a generated page with a copy button; decided on review, design 7.5): the preview on screen is what is
+  pasted, mail and documents get the formatting, chat gets clean plain text, and the menu has Copy as plain text. Every
+  Copy in the app uses it (questions, follow-ups, the briefing, reports). A browser test pastes both versions and checks
+  the formatted one escapes every piece of text.
+  *Built (B-6b):* one helper, `web/src/lib/copy.ts`, used by every place the app copies (the preview is what is pasted,
+  formatted and plain together, "Copy as plain text" in the menu, every piece of text escaped, a refused copy selects the
+  text) (`web/src/lib/copy.test.ts`, `web/src/components/FollowUps.test.tsx`). The browser test that pastes both
+  versions passes at `0ce2108` (`web/e2e/acceptance.spec.ts`, "3d. Copy puts the formatted message and its plain text on
+  the clipboard together…"), so nothing is left.
+- [x] [B-6b] **The walkthrough's look** (owner, 2026-10-12: "this looks rough"):
+  - fields sized to what they hold, not the full page width;
+  - one clear primary button per screen ("Save and continue"), with Skip as a quiet link;
+  - the step list without "Not done yet" on every row;
+  - the current step marked as "you are here", not styled like a focused button (owner: it read as focus). The
+    cursor already starts in the screen's first field (`Walkthrough.test.tsx`);
+  - the page using its width.
+
+  It goes through the redesign's components and screenshots like every other screen.
+  *Built (B-6b, B-7):* the step list without "Not done yet" (only done and skipped are marked), "You are here" on the
+  current step with a bar and no fill, one primary on every screen (Continue; "Save and continue" on You) with "I'll do
+  this later" or Skip beside it, and the cursor in the first field (`web/src/components/Walkthrough.test.tsx`, "the
+  look"). The fields sized to what they hold and the page using its width pass in a browser after B-7's buttons
+  (`web/e2e/panes.spec.ts`, "the walkthrough's look", at `0ce2108`), so nothing is left.
+- [x] [B-8] **Build the UI/UX designer's review of batch B-7** (received 2026-10-20 at `46cc3ea`,
+  `reviews/ui-ux-2026-10/rereview-46cc3ea/README.md`; the owner's standing answer, 2026-10-20: "give them what they
+  want"). B-7's six deliberate differences were accepted; F25's yes is accepted on two conditions, which are built here.
+  Each sub-item is done when its test passes:
+  - R1: no record id in any title the person reads (Today, its inspector, What changed, Follow-ups): a line is titled by
+    its item ("Drop 'Settle the endpaper color'?"); an id in a title is refused as an invariant, and the sweep reaches
+    those screens (check C54). **Built (wave 1):** `tests/test_titles_without_ids.py` (labels by title, the kind in words
+    when there is none, a held and a review line, the invariant, the sweep of an old label and of a stored title with Undo),
+    `web/src/components/TodayRecords.test.tsx` ("no line of Today shows an id"), `web/e2e/shell.spec.ts` ("no Today line,
+    inspector heading or What changed title holds an internal id": passing at `9c0f76e`), and the web sweep draws
+    What changed and Follow-ups from data (`web/src/components/ViewSweep.test.tsx`), so nothing is left;
+  - R2: a held line is asked as a question ("Close 'Send two spine options'?") with the same two result buttons in the
+    line and the inspector ("Close it", "Keep it open"); its meta keeps the quote and who said it, the rest moves to the
+    inspector (check C55). **Built (wave 1):** `web/src/components/TodayRecords.test.tsx` (every ask on the line, no
+    "Keep:" or second question), `web/src/components/TodayPromises.test.tsx` (the endings read from an input, Close it and
+    Keep it open with Undo), `web/src/components/WhatChanged.test.tsx` ("a held drop on the change's card has the line's two
+    buttons, and who was told leads it"), `tests/test_held_ask.py`;
+  - R3: every Today line's meta is one line, cut with an ellipsis, and "Outside" folds into the pill column, so six lines
+    fit at 1280×720 (checks C47, C56). **Built (wave 1):** `web/src/ui/Row.test.tsx`,
+    `web/src/components/TodayRecords.test.tsx` ("Outside in the pill column, meta one line"), `web/e2e/shell.spec.ts` (six
+    lines in full at 1280×720 with the demo's longest held and moved lines, each meta one line), and in a browser
+    (`web/e2e/today-capacity.spec.ts`: "Today at 1280x720 shows six lines in full when the held and moved lines are as
+    long as the demo's, each with its meta on one line", passing at `9c0f76e`). *Carried, not blocking the box:* the stopped-work lines
+    (`HeldLines`) still wrap their second line, because it says why and until when and has no inspector to hold the rest;
+  - R4: on a new workspace the header has no "Missed one" until there is something it could have missed, and the
+    workspace's new name shows without a reload. **Built (wave 1):** `web/src/shell/Header.test.tsx` ("a new workspace
+    offers no Missed one until something has been read or handed in"), `web/src/App.test.tsx` ("a new name for the
+    workspace shows in the header at once");
+  - R5: the mail step on a fresh install says one sentence, with one button and one way out. **Built (wave 1):**
+    `web/src/components/Walkthrough.test.tsx` ("with no service listed and nothing read the step is one sentence and one
+    button");
+  - F25's conditions: the yes is asked in the AI step right after the key check passes, and Continue can't skip it
+    silently; when it was skipped, Today says "Let <account> read your work mail and notes" with Allow; the browser
+    tests' fixture has a stand-in account so the yes can be captured. **Built (wave 2):** `tests/test_work_access.py` (the
+    line for an account the person said Not now about, none for one never asked or one that may read internal material,
+    Allow with its read-back and Undo, a higher level kept, the guide records Not now), `web/src/components/WelcomeAi.test.tsx`
+    ("Allow lets the account read open and internal material; Not now leaves it at open material only", with `work_data`),
+    `web/src/shell/HeldLines.test.tsx` (the line and "Allow gives the yes … and Undo puts the answer back"). The step
+    already asked the yes after the check and kept Continue disabled until it was answered
+    (`web/src/components/WelcomeAi.test.tsx`: "the question names the account and its sign-in…"). *Left:* the browser check
+    `web/e2e/work-access.spec.ts` ("Today offers Allow for an account the person said Not now about, and Allow and Undo
+    work", on the server's `--standin-account`) passes at `9c0f76e`, so nothing is left;
+  - R6–R11: the Done step's empty cards; the series page's side panel (labels above values, an item not listed in both
+    Agenda and Next); the rules line's weight and pill; 24px hit areas for checkboxes; no "From: <person>" titles in What
+    changed; shorter Top priorities wording. **Built (wave 2):** R6 `web/src/components/Walkthrough.test.tsx` ("each step
+    is one compact row…"); R7 `web/src/components/SeriesPage.test.tsx` ("an item listed under Agenda is not listed again
+    under Next…", "a person whose only items are on the agenda…") and `web/src/theme/targets.test.ts` ("a side panel puts
+    each label above its value…"); R8 `web/src/shell/HeldLines.test.tsx` (the pill "Rules"; the weight is a stylesheet rule,
+    not measured); R9 `web/src/theme/targets.test.ts` ("a checkbox or radio is a 24px control itself…"); R10
+    `web/src/components/WhatChanged.test.tsx` ("a change from an email is titled by Today's rule…"); R11
+    the Top priorities panel tests (removed with the panel, change log 229) ("a person's row reads name · 1 overdue · 1 waiting 10 days…"). *Left:* the
+    browser checks for R6 (`web/e2e/acceptance.spec.ts`, "the setup walkthrough and Settings are screens of their own…":
+    every recap row at most 64px high), R9 (`web/e2e/a11y.spec.ts`, "… has no visible interactive element under 24×24
+    at 1024, 1440 and 390px", measuring the control itself) and R10 (`web/e2e/shell.spec.ts`, "What changed titles follow
+    Today's title rule, never From: and a person") pass at `9c0f76e`; R7's side panel is still not measured in a
+    browser, carried and not blocking the box (its CSS follows the review's numbers and the stylesheet tests);
+  - CI's python-later job (the tests with the clock 40 days ahead) finishes: on `46cc3ea` it ran past 30 minutes with
+    every other job green and was cancelled, as the same run hung locally at 94% with three workers and passed with two.
+    The job now has a time limit and prints the stack of any test past five minutes; the hanging test is found and fixed,
+    and the job passes on the batch's commit. *Found and fixed (2026-10-20):* the hang was faketime's, not a test's
+    (`tests/test_events.py::test_wait_returns_when_the_counter_moves` waited for a deadline faketime had moved 40 days
+    out), and keeping its timing clock real broke short sleeps instead (33 failures at `0f37be4`), so the job moves the
+    date inside each test process with the time-machine test library (`TEST_CLOCK_DAYS_AHEAD`, `tests/conftest.py`):
+    the whole suite passes 40 days on locally with three workers, and the job passed on CI at `9e9c3f0` (4.5 minutes,
+    run 39527996195).
+- [x] [B-9] **Build the UI/UX designer's review of batch B-8** (received 2026-10-20 at `0f37be4`,
+  `reviews/ui-ux-2026-10/rereview-0f37be4/README.md`; R1 to R11 confirmed fixed on screen, and both of the session's
+  judgment calls accepted; the owner's standing answer: "give them what they want"). Each sub-item is done when its
+  test passes:
+  - S1: one decision is one Today line: a held op leaves its change's review line; the review line says how many wait
+    under Decide; a change holding only held ops shows no review line; approving a review never settles a held op
+    (true in the code today: `looks_good` only marks the change reviewed; a test pins it) (check C57: no item on two
+    Today lines). **Built (B-9):** `tests/test_one_decision_one_line.py` (the held op leaves the review line, the line's
+    `deciding` keys, a change with only held ops has no review line, `looks_good` never settles a held op, no op on two
+    lines), `tests/test_source_intake.py`, `web/src/components/TodayOneDecision.test.tsx` ("the decision stays a question
+    under Decide, and the review line beside it says it waits there", "Go to what waits opens the held line's details");
+    the browser check "one decision is one line: no item is on two Today lines, read from the demo through the API" in
+    `web/e2e/today-capacity.spec.ts` passes at `9c0f76e`;
+  - S2: a held line's details show only the held decision (the question, the quote and who said it, the source, why it
+    waits, the two answers); a held op's label is conditional ("Would close a to-do"). **Built (B-9):**
+    `web/src/components/TodayOneDecision.test.tsx` ("a held line opens on only its decision…", "a held op the engine
+    doesn't shape as a question opens as its own row…", "a held op's label on its change's card says what it would do…"),
+    `web/src/wording/wording.test.ts` ("every op that says what was done has a conditional twin…");
+  - S3: the pill column has one fixed width on every row, so every title starts in line. **Built (B-9):**
+    `web/src/components/TodayOneDecision.test.tsx` ("the lines that stop or ask for something use the queue's columns…");
+    measured at 1440px on the demo's build: every line's title starts at x = 413, where the Access line started at 344 and
+    the Rules line at 333 (`web/e2e/today-capacity.spec.ts`: "every line's title starts at the same place at 1440px,
+    whichever kind of line it is", and `web/e2e/work-access.spec.ts`: "the Access line's title starts where every other
+    line's title starts, at 1440px", both passing at `9c0f76e`);
+  - S4: What changed and Today topics come from a short topic, never a cut-off first sentence; "Work <assistant>
+    started" says what the work was. **Built (B-9):** `tests/test_item_titles.py` ("a short topic beats a first line that
+    would be cut off", "with no topic and a first line too long to show whole the topic is empty", "work the app
+    started…"), `web/src/lib/queue-words.test.ts`;
+  - S5: under Review a change the assistant made reads in the past tense ("<assistant> dropped …"); under Decide, a
+    question. **Built (B-9):** `tests/test_one_decision_one_line.py` ("a review line for one thing says what was done and
+    to what"), `web/src/components/TodayOneDecision.test.tsx` ("a review line says what the assistant did in the past
+    tense…"), `web/src/wording/wording.test.ts` ("a review title for one thing the assistant did is in the past tense…");
+  - S6: with nothing connected, the mail step shows only "I'll do this later"; Continue appears once something is
+    connected. **Built (B-9):** `web/src/components/Walkthrough.test.tsx` ("the mail step with nothing connected has one way
+    on…", "the mail step has Continue once something is connected…");
+  - `docs/project/ui-review-status-2026-10-20.md` carries the reviewer's marks at `0f37be4` and then B-9's. **Built (B-9):**
+    the file (a documentation item, so no test). The three browser checks passed in the full runs and on CI at
+    `e4d9fd7` (run 39545093376, every job green), and the reviewer marked S1 to S6 Done on screen at `9e9c3f0`
+    (`reviews/ui-ux-2026-10/rereview-9e9c3f0/README.md`) and R-0 to R-c at `149890e` (its `followup-149890e/`).
+
+### Phase S: the daily steward (after phase B, before phase I)
+
+**From the outside design review (2026-10-21, `docs/project/reviews/steward-design-review-2026-10.md`; checked against
+the code by the main session),** for S1 before the gate week:
+
+- [x] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
+  were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
+  looks complete. (`tests/test_first_promises.py::test_before_the_start_it_names_the_account_the_folders_and_the_day_the_read_goes_back_to`,
+  `::test_after_a_read_with_one_folder_failed_that_folder_is_named_as_not_read_and_the_result_is_not_complete`,
+  `::test_a_mail_source_with_no_sent_folder_says_so_and_is_never_complete`,
+  `web/src/components/FirstPromises.test.tsx` "what it reads". Left: a sent folder offered by a sign-in itself, 6.33.)
+- [x] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
+  person confirms it. **Built:** `tests/test_due_check.py` (one reading, `engine/firm_due.py`, wherever a due date
+  becomes urgency).
+- [x] [S1-3] The deadline words people use every day are read by the rules, so fewer dates wait for "check this"
+  (the outside helper's 80 phrases, `tests/fixtures/phrases/due-phrases-01.yaml`, 42 read as a person means them at
+  `1ec95d2` and none read wrongly; `tests/test_phrase_cases.py` holds the rules to them): numeric dates in the
+  language's order ("11/6"), "day after tomorrow", "later today", "tonight", "noon" and "midnight", "first thing
+  <day>", "end of the month" and "end of next month", "this weekend", "within <n> hours or days", a time with a zone
+  abbreviation ("5pm ET", zone abbreviations as language data), and holidays as dated data per locale ("by
+  Thanksgiving"), never in code. Each one read is a case in that file passing; a doubtful reading stays inexact.
+  **Built:** `tests/test_phrase_cases.py::test_the_rules_read_more_of_the_deadline_words_people_use_every_day`
+  (33 of the 80 read exactly, 21 before, none wrongly; the roadmap's "42" counted differently and could not be
+  reproduced). *Left:* "by 9 in the morning", and Easter-dated days.
+- [x] [S1-3] A late reminder says "overdue · due <time>" unless the app knows it was closed or asleep (today's
+  `queue.reminder.late` says "while this computer was asleep" without knowing).
+  **Built:** `tests/test_reminder_lines.py::test_a_late_reminder_says_the_app_was_away_only_when_a_gap_in_its_running_covers_the_due_time`
+  (the app's own running record, `engine/running.py`; the words say "while the app wasn't running", since a gap can't
+  tell sleep from closed).
+- [x] [S1-3] The brief's all-clear names any source not read since the last brief, so a stale mailbox never reads as a
+  quiet day.
+  **Built:** `tests/test_watch.py::test_a_source_not_read_successfully_within_the_stale_hours_is_named_by_when_it_was_last_read`
+  (there is no brief yet, so Today's all-clear carries it; `watch.stale_after_hours`).
+- [x] [S1-3] `docs/project/steward-proposal.md`'s stale statements (phase order, the Monday briefing's phase, reminders on
+  any dated thing, approved writes as an open question) are corrected to the roadmap. Checked by reading.
+- [x] [S1b-1] **The publisher, brought forward from phase C4:** every outward act is shown as its exact content and target
+  (recipients, the calendar and the time), approved by the person, then carried out with a visible status (sent, failed
+  with why, undone where the service allows) and written to the ledger. Recipient checks: a new or outside recipient,
+  or one taken from untrusted text, is called out before the yes. It calls `outward.check_outgoing` on every draft before
+  the yes, so nothing that still names the assistant goes out (design 6.12; the function is built and tested in B-7,
+  `tests/test_outward_never_names_assistant.py`).
+  **Built so far (S1b-1a, change log 180):** the `act` record and its states, the outbound-tier ops, the fingerprint, the
+  callouts, the publisher with its attempt key and its start-up `resume`, the core's `copy` channel, `registrar.channel`
+  (plugin API 0.3.87) and the API; `tests/test_publisher.py` holds the designer's eight named tests and the guards
+  (design 6.12, "Built so far"). **Built (S1b-1b, change log 182):** Waiting to go out (the list, each act's exact content and target on
+  screen, the callouts acknowledged by name, Approve and send with its confirm, Copy and Mark sent for a `copy` act,
+  Look again for a stale one, Take it back with Undo) and the Today lines (failed, uncertain, stale):
+  `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`; the browser test
+  `web/e2e/outgoing.spec.ts`. **Built (S1b-2d, change log 190):** the undo toast after a send and Take back in what went
+  out, the count of a list and every kind of act in words, the invitation's name on an answer
+  (`web/src/components/OutgoingActs.test.tsx`). **Built (S1b-1, change log 251):** the before-and-after text of a stale act:
+  the yes keeps the exact content and target it was given on (`approved.shown`) and, once the act goes stale, the act
+  keeps that yes as `was_approved`; the act's view then lists each thing that is different now (a content part, the
+  recipients' addresses, a target field, what the act is about, the account, the channel, the template version) with the
+  words then and now, cleared by an edit, a new yes or taking it back; a yes given before the words were kept says only
+  the kind of change (`tests/test_stale_text.py`: `test_a_yes_keeps_the_exact_content_and_target_it_was_given_on`,
+  `test_a_stale_act_keeps_the_yes_it_lost_and_says_what_changed`, `test_a_template_updated_since_the_yes_shows_its_version_then_and_now`,
+  `test_a_new_yes_or_an_edit_or_taking_it_back_clears_what_was_kept`, `test_the_api_lists_what_changed_with_both_texts_for_a_stale_act_only`,
+  `test_a_yes_given_before_the_content_was_kept_still_goes_stale_and_says_so`; `web/src/components/WaitingToGoOut.test.tsx`
+  "a stale act shows what changed"). And Waiting to go out, what went out and Today's act lines ask the server for the
+  states they show (`status`, and `limit` for the latest ten that went out) instead of reading every act
+  (`web/src/components/WaitingToGoOut.test.tsx` "the lists ask the server for the states they show").
+- [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
+  the publisher for it): (owner: "whatever we can do to make it full featured ... but not
+  phone pushes unless it was an installed ios or apk"): one choice in Settings: in the app's own calendar (local, with an
+  alarm; no act), in the person's calendar on a signed-in calendar account (an event with an alarm), or as a reminder
+  mail to their own address, the last two approved once per reminder or by a standing yes for reminders. No third-party
+  push service. **Built (S1b-2c):** `tests/test_standing_yes.py`, `tests/test_reminder_acts.py`,
+  `web/src/components/ReminderWhere.test.tsx`. **Left:** the owner's check of the calendar form on a real account (the mail
+  add-on, 0.1.1, now declares `calendar: create`, which the reminder event goes through on the account's own calendar);
+  a companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
+  the apps can reach).
+- [x] [S1b-2] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
+  new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
+  Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`), and sending it
+  goes through the publisher after the yes.
+  **Built so far (S1b-2a):** the calendar acts' actions, an answer addressed to the organizer, and undo of a created event
+  (`tests/test_act_actions.py`). **Built (S1b-2b):** the answer's iTIP reply by mail through the core `mailbox` channel
+  (`tests/test_mailbox_channel.py::test_an_answer_goes_as_mail_to_the_organizer_with_the_itip_reply_attached`).
+  **Built (S1b-2d, change log 190):** Accept, Maybe, Decline and Propose a time from the invitation's calendar entry, the
+  free times of the working week to pick from (`tests/test_act_draft_api.py`,
+  `web/src/components/ActsOnRecords.test.tsx`). **Built (cleanup batch):** a Today line in Decide for an invitation waiting for an answer, opening the entry's page where
+  Accept, Maybe, Decline and Propose are (`tests/test_invitation_lines.py`, `web/src/components/MeetingPrep.test.tsx`).
+  **Built (S1b-2, change log 251):** the screens for creating, moving and cancelling an event on a connected calendar,
+  through the channel's declared `calendar: create`, `move` and `cancel` (the mail add-on, 0.1.1, declares all three, so
+  nothing waits for an add-on): **Put on a calendar** on the Schedule screen (offered only when acting is on for a
+  calendar account whose channel creates events; what, the calendar account to pick, day, start, end and an optional
+  alarm; the event goes on the account's own calendar), and **Move to another time** and **Cancel this event** in the
+  entry page's menu (offered only for an event that is the person's own on a connected calendar: read from one, not an
+  invitation from someone else, not already called off, with acting on). Each drafts an act that opens in Waiting to go
+  out as exact content (the event, its new time, the calendar it goes on) and waits for the yes; one that changed after
+  the yes goes stale and says what changed (`tests/test_act_calendar.py`, `web/src/components/CalendarActs.test.tsx`; the
+  fake channel stands in for the add-on). **Left:** the owner's live check on a real calendar account.
+- [x] [S2] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
+  A repeat is typed as a phrase and shown back from data (`engine/repeat_phrases.py`, `tests/test_repeat_phrases.py`):
+  "the 31st" falls on a short month's last day rather than skipping it.
+  The repeats people say that the grammar declines today (the outside helper's 60 phrases,
+  `tests/fixtures/phrases/repeat-phrases-01.yaml`, 31 agreeing at `1ec95d2`, every other one declined, none read
+  wrongly): wording variants of supported repeats ("weekly on Wednesday", "every two weeks on Thursday", "every other
+  week on Monday", "the first Saturday each month", "on the 1st", "annually"); several days of the week ("Mondays and
+  Thursdays", "weekdays except Friday"); several days of the month ("the 1st and 15th", "the second and fourth
+  Tuesday"); the last day, weekday or a given day of the month; a yearly weekday ("the last Friday in November"); and
+  February 29 falling on the 28th. Each needs a shape and its wording to say it back; unclear ones ("biweekly",
+  "quarterly") stay declined and asked.
+  **Built so far (S2):** the grammar reads all of those phrases, each with a shape
+  (`tests/test_repeat_phrases.py`, `tests/test_phrase_cases.py::test_the_rules_read_every_repeat_the_helper_wrote_except_those_with_the_task_in_them`;
+  the four phrases that carry the to-do's own words stay declined, "biweekly" and "quarterly" stay unclear); a repeat on
+  a to-do (`action.repeat`, `repeat` and `occurrence_of` on the action) set by the person at once with Undo, from an
+  input waiting for the yes; the next occurrence made in the same change when one is done, dropped or done by someone
+  else, a missed one staying open and Undo taking both back (`tests/test_repeating_todos.py`); the check route, the set
+  and stop routes and the views' `repeat` and earlier occurrences (`tests/test_repeating_todos.py::test_checking_a_phrase_says_what_was_understood_or_that_it_is_not_clear`);
+  and the screens: the Repeats field in the edit form with its said-back words, the row's repeat mark, Stop repeating
+  and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`, `web/src/lib/repeat.test.ts`).
+  The Repeats field is also on the form that adds a to-do by hand, and Today's to-do rows carry the repeat mark in
+  words (`tests/test_add_todo.py`, `web/src/components/AddTodo.test.tsx`).
+  **Built (S2c):** the assistant proposes a repeat from a sentence like "I send the report every Friday": `action.repeat`
+  carries only the input's words (the engine reads them from the to-do's day, else the day the input was received),
+  names a to-do added earlier in the same answer as `@<n>`, refuses alone on unclear words, and waits for the person's
+  yes from an input (`tests/test_repeating_todos.py`; the extraction prompt line; the golden-set cases
+  `repeat-named-from-the-same-answer` and `repeat-someone-elses-habit`,
+  `tests/test_evaluate_harness.py::test_the_repeat_cases_pass_on_their_stub_answers_and_the_repeat_stays_held`).
+- [x] [S2] **Adding a to-do yourself** (design 6.32; found while building repeating to-dos): Add a to-do on Today and
+  To-dos, no AI, at once with Undo. Built: `POST /api/todos/day` and `POST /api/todos`, with a day in words, none, for
+  someone else, with a repeat, Undo and what isn't clear said back (`tests/test_add_todo.py`); the drawer with the
+  cursor in the words, the said-back day and repeat, the lists and the Undo toast, on Today and To-dos
+  (`web/src/components/AddTodo.test.tsx`). The to-do and its repeat are two changes in order, undone last first.
+- [x] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
+  `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
+  added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed
+  overnight" lines and the invitation's page.
+  **Built so far (S2):** it feeds the brief's "changed overnight" lines: a new invitation, one called off or back on,
+  moved, a new place, title or organizer, read from the calendar entries' history, and not who replied
+  (`tests/test_brief.py::test_what_changed_in_an_invitation_overnight_is_a_line_for_each_change_that_matters`,
+  `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
+  **Built (cleanup batch):** an unanswered invitation is a Today line that opens the entry's page, where it is answered
+  (`tests/test_invitation_lines.py`). **Built (S2, the entry's page):** the page lists what changed since `steward.meetings.changes_days`, one row for each change, who was added, left out or answered included, from the entry's history that the brief reads too (`engine/invitation_history.py`; `tests/test_invitation_page.py::test_the_page_names_each_change_since_the_entry_was_kept_including_who_answered_and_who_was_added`, `tests/test_invitation_page.py::test_an_entry_that_is_not_an_invitation_or_was_changed_by_the_person_shows_no_changes`, `web/src/components/MeetingPrep.test.tsx` "what changed in the invitation is a list on the entry's page, one row for each change, and nothing when nothing changed").
+- [x] [S2] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
+  the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
+  scheduling.
+  What to move is proposed by rules (`engine/capacity.py`, `tests/test_capacity.py`): never a fixed to-do, those due
+  today or overdue last, then lowest priority, not promised and latest due first, with no move a larger one made
+  unnecessary.
+  Free time is computed by rules (`engine/free_slots.py`, `tests/test_free_slots.py`): every calendar merged,
+  working hours and days in the person's zone across clock changes, a buffer around meetings, tentative entries
+  blocking unless counted as free; it also finds the slots for "propose a new time".
+  Clashes are found by rules (`engine/clashes.py`, `tests/test_clashes.py`): overlaps across every calendar,
+  tentative ones apart, and too little travel time between two places, an online meeting needing none.
+  **Built (S2):** `effort_minutes` on the to-do, set in the edit form and Add a to-do and suggested by the assistant as a
+  held `record.set` (`tests/test_day_capacity.py`, `tests/test_add_todo.py`,
+  `web/src/components/RepeatingTodos.test.tsx`, `web/src/components/AddTodo.test.tsx`, the case
+  `effort-stated-for-an-open-todo` in both workspaces); the check and the Today line "Move N to-dos: today holds about
+  H hours" with its proposed moves, each acting at once with Undo, and the same line in the brief
+  (`tests/test_day_capacity.py`, `web/src/components/TodayCapacity.test.tsx`); clashes from today onward as Today and
+  brief lines (`tests/test_day_capacity.py`). **Built (S2, a new to-do's effort):** the effort suggestion names a to-do added
+  earlier in the same answer as `$new:<n>` (the mechanism every op shares), held for the yes (`tests/test_day_capacity.py::test_an_effort_suggested_for_a_to_do_added_in_the_same_answer_is_held_and_kept_with_the_new_to_do`,
+  `tests/test_day_capacity.py::test_the_effort_cases_of_both_workspaces_pass_on_their_stub_answers_including_one_for_a_new_to_do`,
+  the case `effort-stated-for-a-new-todo` in both workspaces).
+- [x] [S2] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
+  threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
+  changes). All settings with defaults.
+  Which suggestions interrupt is decided by rules (`engine/attention.py`, `tests/test_attention.py`): held back when
+  dismissed and unchanged or below the threshold, saved for the digest in quiet hours or past the day's cap, the
+  most important shown first.
+  **Built (S2):** the rules are applied to the suggestion lines on Today (a follow-up gone unanswered, to-dos nobody has
+  touched, items filed under no project, what was learned), what waits is in the next morning brief, and "Not now" puts a
+  suggestion off until its items change, with Undo and the signal `suggestion_dismissed`
+  (`engine/suggestions.py`, `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
+  `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`). **Built (S2, dismissals that teach):** a kind put off `quiet_after_dismissals` times
+  within `learn_days` goes to the brief instead of Today, and at `stop_after_dismissals` (off by default) is not offered, by
+  rules from the signals; Undo, a snooze and old dismissals count for nothing (`engine/attention_learning.py`;
+  `tests/test_attention_learning.py::test_a_kind_put_off_the_configured_number_of_times_goes_to_the_brief_instead_of_today`,
+  `tests/test_attention_learning.py::test_taking_dismissals_back_teaches_nothing_and_the_kind_comes_back`).
+- [x] [S3] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
+  **Built so far (S3, change log 193):** for any calendar entry with other people on it, by rules: who is coming (by id,
+  without anyone who declined), what is open with each of them both ways with the exact words it was made from, the last
+  time in touch and what the last entry with them left open, as the entry's page and a Today line
+  `steward.meetings.prep_hours_before` before it starts; an optional prep note as the core draft kind `meeting-prep`
+  (estimated, held for the go, unreviewed until accepted); and after it ends a Today line that opens a note box tied to the
+  entry, whose words are handed in like any note (`engine/meeting_prep.py`, `tests/test_meetings_people.py`,
+  `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** the browser journey, which has run in the full runs
+  (`web/e2e/meetings-journey.spec.ts`; its seed is `tests/e2e_meetings.py`, `tests/test_e2e_meetings_seed.py`).
+  **Built (S3, the rest):** a capture for an entry nobody else is on (its page offers the box once it has ended; the Today line
+  too when `steward.meetings.capture_alone` is on), an undo for "nothing to note", and the journey passing in a browser run on
+  its own (`tests/test_meetings_people.py::test_an_entry_nobody_else_is_on_is_asked_about_only_when_the_setting_says_so_and_never_when_called_off_or_declined`,
+  `tests/test_meetings_people.py::test_nothing_to_note_can_be_undone_so_the_entry_is_asked_about_again_and_only_that_marking_is_undone`,
+  `web/src/components/MeetingPrep.test.tsx` "Nothing to note ends the question with no words, and Escape closes the box without sending",
+  `web/e2e/meetings-journey.spec.ts`).
+- [x] [S4] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
+  them, and **the separation visible:** each area says which account reads it and whether anything leaves the
+  computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
+  **Personal, decided** (owner, 2026-10-20; design 6.32 "Personal life"): setup makes one Personal project; areas (no end
+  date) and personal projects (with an end) under it, proposed by the assistant once several items share a theme and
+  confirmed by the person; a move teaches the next filing; privacy per area through content levels; Personal left out
+  of work reports. First five minutes: one Personal project and no questions until a pattern shows.
+  **Built so far (S4, change log 194):** a project is an area (`area`, no end day, so never behind) or a project with an
+  end, under Personal or an area; a draft or an input about a project in an area leaves out the facts, lessons, open
+  items and projects of every other area (the packet's reach stops at the area); a project's page says which accounts
+  may read it (its content levels and those above it), where each runs, and whether anything is sent away from the
+  computer, or that no account may read it; when `steward.areas.propose_after` items filed under Personal itself share a
+  word, one Today suggestion offers an area for them and Start files them as the person's own edits (each a correction)
+  with Undo (`engine/areas.py`, `tests/test_areas.py`, `web/src/components/TodayArrives.test.tsx`,
+  `web/src/components/ProjectKnows.test.tsx`). **Built (S4, change log 251):** *the picker:* an area's page has a box for
+  each account that could read it, ticked when it may, saying in words whether reading sends the area's material away from
+  this computer; a tick is saved as it is made with Undo, through the one way content levels already say who reads what (the
+  area gets a level of its own the first time an account is left out; the ticked accounts take it; a level the project above
+  carries is never changed, and an account it keeps out is shown, locked, with why) (`engine/area_readers.py`,
+  `tests/test_area_readers.py`, `web/src/components/ProjectKnows.test.tsx` "the accounts that may read an area"). *The same
+  reach for the drafts:* the prep note for an entry in an area reads that area's reach (what is open with the people
+  coming, what the last meeting left open, the projects and the knowledge), and `people_memory.memory`, `open_with` and
+  `facts_about` take the same test for any draft built from them; the entry's page and a person's page are the person's own
+  and show everything (`tests/test_area_prep_reach.py`; people memory has no AI draft of its own: it is rules over the
+  records, and the follow-up it drafts quotes only the one promise). *One Today across the areas:* each Today line carries
+  its area (`QueueLineView.area`, `area_name`: its project's area, else the one area every record it names is in), a line is
+  tagged with the area's name while Today's lines are in more than one place, and a choice beside the heading narrows Today
+  to one area, remembered on this browser (`tests/test_today_areas.py`, `web/src/components/TodayAreas.test.tsx`).
+- [x] [S5] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the
+  governor's stale sweep for the person's own items is brought forward from phase E.
+  **Built so far (S5, change log 195):** a to-do moved `steward.patterns.moved_times` times, a promise re-dated
+  `redated_times` times and a person owed `owed_replies` replies are each one suggestion line with choices, and the
+  stale line carries Keep, Drop and Snooze for one to-do (Keep them and Snooze them for several); each choice acts at
+  once, records a `suggestion_chosen` signal and has Undo, inside the attention budget (`tests/test_patterns.py`,
+  `web/src/components/SuggestionChoices.test.tsx`). **Built (S5, one line each):** the stale sweep is one line for each stale to-do, with Keep, Drop and Snooze, inside the
+  attention budget's cap, the rest named one each in the brief (`tests/test_open_items.py::test_todays_queue_has_one_line_for_each_stale_to_do`,
+  `tests/test_patterns.py::test_the_attention_budgets_cap_decides_how_many_stale_lines_show_and_the_rest_wait_for_the_brief`,
+  `web/src/components/SuggestionChoices.test.tsx` "each of several stale to-dos is its own line, and a choice names the line it was made on").
+- [x] [S5] **Talking to Reginald:** the conversation on a record (plugin question 190) as the way to ask for anything, every
+  proposed change kept or dropped inline.
+  **Built so far (S5, change log 195):** a box on a to-do, question, person, project or calendar entry: each message an
+  ask about the record with the earlier exchanges, estimated and held for the go, answered with prose and the changes
+  listed under it, each kept or dropped there; kept on the record (`tests/test_conversation.py`,
+  `web/src/components/RecordConversation.test.tsx`). **Built (S5, change log 251):** *the box on every screen of a record:* every
+  kind of record that has a page (to-do, question, person, organization, team, project, meeting, series, saved input, fact,
+  note, rule, lesson, glossary entry) has the conversation, on its page, on the series page, and in the pane or drawer that
+  shows a person or a project beside its list (`web/src/components/ConversationEverywhere.test.tsx`,
+  `tests/test_conversation_history.py::test_every_kind_of_record_with_a_page_can_be_talked_about`); a conversation on a
+  saved input also sends its words, marked as outside text when it came from outside. *The core's search (plugin question
+  207):* each message is searched against the facts, past inputs, records and knowledge the workspace holds, the best
+  `steward.conversation.history_results` (5, zero is off) that share the person's words are sent as evidence, at the data
+  level the answering accounts may see, never the record itself, only what a draft about it may draw on (its area's reach),
+  outside text marked, a packet carrying any of it untrusted, and the search logged on the run (what was searched for and
+  what was sent) (`engine/conversation.py::history`, `tests/test_conversation_history.py`).
+- [x] [S5] **The core reads as a daily assistant:** screens, prompts and help audited for project-manager wording; what is
+  PM-only is listed for the PM pack (phase P). **Built (S5, change log 195):** the wording sheet, the prompts, the
+  playbook guidance, the guide and the settings descriptions say "you", "the user" or "the person"; the PM-only concepts
+  are in `docs/project/pm-pack-items.md`
+  (`tests/test_wording.py::test_no_screen_wording_talks_to_a_project_manager`,
+  `tests/test_wording.py::test_the_settings_prompts_and_guide_a_person_or_the_assistant_reads_say_the_user_not_a_project_manager`).
+
+### Phase U: the UI/UX review's findings (review of 45f7102, 2026-10-26)
+
+The reviewer walked the whole app as two beginners ("Just me" and "Me and my work" for a small business); the review is
+in `reviews/ui-ux-2026-10/review-45f7102/` (README: verdict, findings F1 to F27, one place to act, the proposals;
+`settings.md`: every on-screen field with a verdict; `day-mode.md` and its tokens). Its setup checks and C57, copied here
+as asked (the reviewer's P1 to P12 are numbered U1 to U12 here, so they don't clash with the open promises):
+
+- [x] [U1] The first screen says what the app does for the person, what they'll need and the time, with no PM words.
+  **Built:** `tests/test_walkthrough.py::test_the_walkthrough_opens_by_itself_on_a_new_workspace_on_welcome`, `web/src/components/Walkthrough.test.tsx` ("a fresh walkthrough opens on Welcome").
+- [x] [U2] Progress reads "n of 7" in the wizard, on Done and on Today. All three agree.
+  **Built:** `tests/test_walkthrough.py::test_todays_setup_count_equals_the_walkthroughs`, `web/src/components/Walkthrough.test.tsx` ("progress reads 1 of 7 through 7 of 7, in the one order").
+- [x] [U3] A step is ticked only when its thing happened. Otherwise it reads "Skipped".
+  **Built:** `tests/test_walkthrough.py::test_skipping_mail_makes_your_promises_skipped_with_the_needs_mail_reason`.
+- [x] [U4] "Just me": no screen shows Work, Project, Stage, Organization, Owner or Template.
+  **Built:** `web/e2e/just-me.spec.ts` (the main screens, setup and Done, the add forms, row menus, Knowledge, Quality, Ask and
+  the record pages, lowercase "project" and "workspace" too), `tests/test_settings_cut.py::test_a_hint_never_says_work_project_stage_organization_owner_or_template`.
+- [x] [U5] No sorting rule sets aside mail for being personal.
+  **Built:** `tests/test_handled.py::test_a_personal_message_from_a_friend_is_not_on_the_set_aside_tab_and_is_filed_under_personal`.
+- [x] [U6] "My own business" asks the business's name, what it works on (paste allowed) and, per mailbox, which side it
+  belongs to.
+  **Built:** `tests/test_walkthrough.py::test_a_job_and_two_businesses_make_three_sides_in_order_with_their_kinds`, `::test_what_a_business_works_on_becomes_projects_under_it_through_the_project_route`, `::test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_nothing_else_places`.
+- [x] [U7] People on the personal side: a relation box that starts empty, suggestions from mail, and paste a list.
+  **Built:** `tests/test_people_suggestions.py`, `web/src/components/People.test.tsx`.
+- [x] [U8] The first result reads sent mail by default. An empty result says what was read and offers "Hand something in".
+  **Built:** `tests/test_sent_folder.py`, `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`.
+- [x] [U9] The assistant is introduced by name before anything refers to it. The workspace never shows as "Workspace".
+  **Built:** `tests/test_walkthrough.py::test_saving_the_persons_name_names_a_default_named_workspace_after_them_and_leaves_a_renamed_one_alone`, `web/src/components/Walkthrough.test.tsx` ("You says what the assistant is called, and Rename...").
+- [x] [U10] Today shows each item once (C57), with at most three rail cards.
+  **Built:** `tests/test_today_queue.py::test_no_line_key_repeats_on_today_after_each_kind_of_input`, `web/src/components/TodayRail.test.tsx` ("the rail has at most three cards...").
+- [x] [U11] At 390px, setup's first field is above the fold, and the step list is one line.
+  **Built:** `web/e2e/shell.spec.ts` ("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold").
+- [x] [U12] Settings: at most 26 basic fields, at most 30 advanced, and no ids or key names (see `settings.md`).
+  **Built:** `tests/test_settings_cut.py::test_the_settings_walk_counts_at_most_26_basic_and_30_advanced`, `::test_a_hint_names_no_code_like_id_and_no_word_of_the_files`, `web/e2e/settings-walk.spec.ts`.
+- [x] [C57] An item appears once on Today.
+  **Built:** `tests/test_today_queue.py::test_an_item_that_would_fall_in_two_groups_stays_in_the_higher_one_only`, `::test_no_line_key_repeats_with_overdue_to_dos_setup_open_and_mail_not_connected`.
+
+### Phase U, second pass (review of f973493, 2026-10-28)
+
+The reviewer's second pass (`reviews/ui-ux-2026-10/review-f973493/`) and the designer's answers F39 to F46
+(`docs/project/designer-answers-2026-10-28.md`) are all built here (owner, 2026-10-28; decision 2026-10-28, change log
+234 and 237), in batches with the full suites once per batch. The reviewer then walked a fresh install again with both
+personas (`reviews/ui-ux-2026-10/validate-82d24cc/`): G1 to G4 fixed, phase U closed (roadmap A2b).
+
+- [x] [G1-G4] The P0s: no raw data in messages and none over a control (G1); a review on Today (G2, F39); unsure filing
+  under Personal with one question (G3, F40, F41); setup reads an add-on's sent mail (G4, F10). **Built:**
+  G1 `web/src/lib/raw-data.test.ts`, `web/src/lib/settings-save.test.tsx`,
+  `tests/test_screen_text.py::test_no_message_toast_title_or_label_shows_json_a_record_id_or_a_raw_mail_header`;
+  G2 `tests/test_review_batches.py`, `tests/test_today_adds_no_lines.py`, `web/e2e/today-review.spec.ts`;
+  G3 `tests/test_filing_unsure.py`, `tests/test_filing_api.py`, `web/src/components/TodaySides.test.tsx`,
+  `web/src/components/Unfiled.test.tsx`;
+  G4 `tests/test_sent_folder_addon.py`, `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`.
+- [x] [G5-G14] The P1s: the AI step's words (G5, F46), the service's name (G6), the setup group saved with its jobs (G7),
+  ticks from records (G8), the brief summarises (G9, F42), plain titles and facts (G10, F44), phone lines (G11), tonal
+  in night mode (G12), "Who they are" (G13, F45), the outside marker (G14, F43). **Built:**
+  G5 `web/src/components/WelcomeAi.test.tsx`,
+  `tests/test_work_access.py::test_a_new_or_fallback_account_reads_nothing_private_until_the_person_says_yes_for_that_account`;
+  G6 and G7 `web/src/components/Walkthrough.test.tsx`;
+  G8 `tests/test_walkthrough.py::test_every_counted_tick_is_computed_from_its_own_record_and_no_screen_state_ticks_one`,
+  `::test_a_first_note_is_ticked_only_when_something_was_handed_in_not_for_any_change_made_on_a_screen`,
+  `::test_your_promises_is_not_ticked_before_its_screen_was_reached_even_when_the_look_back_ran`;
+  G9 `tests/test_brief.py`, `web/src/components/BriefCard.test.tsx`;
+  G10 `tests/test_plain_titles.py`, `web/src/components/RecordPageRecords.test.tsx`;
+  G11 and G12 `web/e2e/today-review.spec.ts`, `web/src/theme/dayMode.test.ts`;
+  G13 `web/src/components/People.test.tsx`;
+  G14 `web/src/components/Today.test.tsx`, `web/src/components/MeetingPrep.test.tsx` (the meeting prep's tag went with A2).
+- [x] [G15-G23] The P2s, as the review lists them. **Built:** G15 `web/src/lib/wording.test.tsx`; G16 and G19
+  `web/src/components/Walkthrough.test.tsx`,
+  `tests/test_walkthrough.py::test_the_work_templates_are_offered_only_when_no_jobs_were_given_in_setup`; G17, G22
+  `web/src/components/TodayRail.test.tsx`; G18 `web/src/components/Settings.test.tsx`,
+  `web/src/components/Notifications.test.tsx`, `tests/test_settings_cut.py`; G20 `web/src/components/FollowUps.test.tsx`;
+  G21 `web/src/components/OpenItems.test.tsx`, `web/src/wording/wording.test.ts` ("Stale" and "On hold" everywhere, A2);
+  G23 `web/src/components/RecordPageRecords.test.tsx`.
+- [x] [U13] No JSON, ids or raw headers in any message, title or label. **Built:** `web/src/lib/raw-data.test.ts`,
+  `tests/test_screen_text.py::test_no_message_toast_title_or_label_shows_json_a_record_id_or_a_raw_mail_header`,
+  `tests/test_note_title_migration.py` (notes stored before the title rule were re-titled once, A2).
+- [x] [U14] A review happens on Today: the address stays and the count never rises; no Today action adds lines.
+  **Built:** `tests/test_today_adds_no_lines.py`, `web/e2e/today-review.spec.ts`.
+- [x] [U15] A business's first read leaves at most one filing question. **Built:** `tests/test_filing_unsure.py` (one
+  mailbox serving both sides ends with one question and nothing unfiled; also with a job and a business beside Personal:
+  one question per side a day, one Today line that names neither).
+- [x] [U16] Setup's ticks come from records. **Built:**
+  `tests/test_walkthrough.py::test_every_counted_tick_is_computed_from_its_own_record_and_no_screen_state_ticks_one`.
+- [x] [U17] At 390px, queue titles show at least 25 characters. **Built:** `web/e2e/today-review.spec.ts`.
+- [x] [U18] Row actions are tonal in both themes, only the selected line's filled. **Built:** `web/src/theme/dayMode.test.ts`,
+  `web/e2e/today-review.spec.ts`.
+- [x] [U19] A hand-made file link survives the older copy moving into Archive and the current copy being renamed.
+  **Built:**
+  `tests/test_version_choices.py::test_a_link_survives_the_older_copy_moving_into_archive_and_the_current_copy_being_renamed`.
+- [x] [U20] A rail panel opened on a phone stays open when Today's data refreshes. **Built:** `web/src/components/TodayRailFold.test.tsx`
+  (the cause: a card out of the page while what it asks is on its way lost its own fold; the rail keeps it now),
+  `web/e2e/layout.spec.ts` (the walk opens Came in plainly, no retry).
+- [x] [G-notices] Notices name the apps they go to, from a shipped list, each with its message shape and where to find its
+  address (the reviewer's answer 10; owner, 2026-10-28). **Built:** `tests/test_notice_apps.py`,
+  `web/src/components/Notifications.test.tsx`.
+
+### Before AI hardening: the audit of 2026-10-28 (path to 1.0, the reviewer's and the designer's notes)
+
+- [x] [A1] Bookkeeping: tick the boxes built and never ticked (phase U's second pass, B-6a, B-6b, B-8, B-11c part 2),
+  CHANGES 234 complete and marked built, "Where things stand" brought up to date, built work no longer marked "designed"
+  in the design, stale open-promise rows refreshed and cells capped, and two decisions written down that were taken in
+  building: the handled-for-you count on Today supersedes the designer's F34 and P58 ("nothing about handled mail on
+  Today"), and removing the Top priorities card keeps F15, F16 and F24's chase rules without their display.
+  *Checked by reading* (2026-10-28, docs only): every box named is ticked with its test or left open with what is left, the
+  design's marks and change log 234 are brought up to date, and the two decisions are in `docs/decisions.md` (2026-10-28).
+- [x] [A2] The second pass's leftovers: notes stored before today re-titled once (no raw headers anywhere); U20; the
+  "From an email" note at a link to open and a payment; "Stale" and "On hold" replaced everywhere (G21); no "Outside" tag
+  on meeting-prep lines (G14); U15 with a job and a business (two sides). **Built:** `tests/test_note_title_migration.py`,
+  `web/src/components/TodayRailFold.test.tsx`, `tests/test_outside_steps.py`, `web/src/components/TodayArrives.test.tsx`,
+  `web/src/wording/wording.test.ts`, `web/src/components/MeetingPrep.test.tsx`, `tests/test_filing_unsure.py` (change log 235).
+- [x] [A2b] The reviewer's check of the fixes (`reviews/ui-ux-2026-10/validate-82d24cc/`, 2026-10-28): G1 to G4 fixed,
+  both personas finish setup alone, no Today action raised the count; phase U can close. Backlog H1 to H8: the "since
+  yesterday" line folded into the review lines (H1); "Not looked at before" said once (H2); "Leave both empty to keep it to
+  your own life" (H3); no raw dates in the review's items and facts that say who said them (H4); no stray "·" on the
+  Personal page (H5); "might be" Hale Upholstery's (H6); a quick second tick queued, not dropped, and a failed tick named
+  with Try again (H7); the last message matching the final state of the ticks (H8). **Built:** `tests/test_since_yesterday.py`
+  (H1), `web/src/components/LookBack.test.tsx` (H2), `web/src/wording/wording.test.ts` (H3, H6), `web/src/components/Today.test.tsx`,
+  `FactSays.test.tsx`, `tests/test_fact_says.py` (H4), `RecordPageRecords.test.tsx` (H5), `Walkthrough.test.tsx` (H7, H8). The fact the
+  reviewer saw, "The notes list that the offsite is on a Friday.", is the stand-in answer's shape for a "Decided:" line in
+  a document (`engine/ai/adapters/stand_in.py`): the line says no one chose, and the stand-in sets no speaker; a fact with
+  a known speaker now reads "Pat says …" with its day.
+- [x] [A3] The gate's instruments matched to the pass bar (P65): review time on Today's review pane, counters for
+  lost promises and for a source unread over a day without a line, a procedure for the 50-message sample, design 6.32's
+  thresholds paragraph matched to the bar, which the owner agreed on 2026-10-28.
+  *Built so far (2026-10-28):* the review pane on Today is timed and the median is given; lost promises, sources unread over a day
+  and the 50-message sample (setting, draw, the person's counts, `docs/project/gate-sample-procedure.md`) are counted with their
+  denominators (`tests/test_gate_instruments.py`, `web/src/components/BatchDetail.test.tsx`, `Quality.test.tsx`). The thresholds
+  paragraph of design 6.32 states the agreed bar (change log 238).
+- [x] [A5] The designer's open points: the day-30 scenario tuned to the typical-week shares (P5); the `language.*` word
+  lists moved into shipped data (full-read point 5); the Monday message asking once who it is for; "Drop it and draft the
+  note"; P40 point 8 reproduced; B-11b's tiers with a cost per day. (S4's setup tick boxes for common areas: dropped, owner 2026-10-28; areas
+  come only from the assistant's proposals, as design 7.8 says.)
+  *Built so far (2026-10-28):* the day-30 scenario in the typical-week shares (P5, `tests/test_pairs.py`); the Monday message asking once who it
+  is for; "Drop it and draft the note"; P40 point 8 reproduced with a test that passes (see `open-promises.md`); B-11b's cost per day
+  for each tier (`tests/test_tier_costs.py`); the 52 `language.*` word lists in shipped data, `engine/defaults/language/en-US.yaml`, each setting an
+  optional override that replaces the whole shipped list and applies at once (full-read point 5, change log 236, `tests/test_language_words.py`).
+  Nothing is left in this item.
