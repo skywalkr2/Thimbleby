@@ -1,0 +1,5 @@
+/* The search box: the shared control with a magnifier at its left and no label above it. */
+.search { position: relative; display: block; min-width: 0; margin: 0; }
+.icon { position: absolute; inset-block: 0; inset-inline-start: var(--space-3); display: grid; place-items: center; color: var(--text-subtle); pointer-events: none; }
+.input { padding-inline-start: var(--space-8); }
+.input::-webkit-search-cancel-button { cursor: pointer; }

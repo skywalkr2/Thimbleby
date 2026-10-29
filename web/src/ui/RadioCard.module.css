@@ -1,0 +1,14 @@
+/* A choice card: a hairline when unchosen; a 2px accent ring and a soft tint when chosen. The radio inside is hidden, still in the
+   tab order, and its focus shows as the card's ring. */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-3); min-width: 0; }
+.card { position: relative; display: block; min-width: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+.card:hover { background: var(--surface-hover); }
+.card[data-chosen] { box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
+.card:has(> .input:focus-visible) { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
+.card[data-chosen]:has(> .input:focus-visible) { box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px var(--focus-gap), 0 0 0 6px var(--focus-ring); }
+.card[data-disabled] { cursor: not-allowed; background: var(--surface-sunk); color: var(--text-subtle); }
+.card > .input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; opacity: 0; cursor: pointer; }
+.body { display: grid; gap: var(--space-1); min-width: 0; pointer-events: none; }
+.tag { justify-self: start; }
+.title { font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.description { font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); overflow-wrap: anywhere; }

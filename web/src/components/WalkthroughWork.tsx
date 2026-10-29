@@ -22,6 +22,11 @@ import { insideLines, sideSummary, workLines } from "../lib/work-lines";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
 type Group = { name: string; picked: string[] };
@@ -169,9 +174,8 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
 
   /** What a saved business can still be given: its description and more projects, with the optional group. */
   const savedFields = (side: Side) => (
-    <div className="field" data-more-for={side.project}>
-      <div className="field">
-        <label htmlFor={`work-about-${side.project}`}>{t("walkthrough.work.about", { name: side.name })}</label>
+    <FormBlock data-more-for={side.project}>
+      <FormField id={`work-about-${side.project}`} label={t("walkthrough.work.about", { name: side.name })}>
         <textarea
           id={`work-about-${side.project}`}
           rows={2}
@@ -182,7 +186,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         <p className="hint" id="work-about-hint">
           {t("walkthrough.work.about_hint")}
         </p>
-      </div>
+      </FormField>
       <label htmlFor={`work-more-${side.project}`}>{t("walkthrough.work.more_works_on", { name: side.name })}</label>
       <textarea
         id={`work-more-${side.project}`}
@@ -201,7 +205,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         group={moreGroup[side.project] ?? noGroup()}
         onChange={(group) => setMoreGroup((all) => ({ ...all, [side.project]: group }))}
       />
-    </div>
+    </FormBlock>
   );
 
 
@@ -217,7 +221,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
           {t("draft.restored")}
         </p>
       )}
-      <div className="field work-question" role="group" aria-labelledby="work-question" aria-describedby="work-always">
+      <FormBlock className="work-question" role="group" aria-labelledby="work-question" aria-describedby="work-always">
         <p className="what" id="work-question">
           {t("walkthrough.work.question")}
         </p>
@@ -246,14 +250,14 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
           </p>
         </div>
         {saved.length > 0 && <p className="hint">{t("walkthrough.work.stays")}</p>}
-      </div>
+      </FormBlock>
 
       {saved.length > 0 && (
         <section aria-labelledby="work-added" data-added="">
           <h3 id="work-added">{t("walkthrough.work.added")}</h3>
           {saved.map((side, position) => (
             <div key={side.project} className="saved-side" data-saved-side={side.project}>
-              <ul className="queue">
+              <RowList>
                 <SavedSide
                   side={side}
                   position={position}
@@ -265,7 +269,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                     setRetry(null);
                   }}
                 />
-              </ul>
+              </RowList>
               {businessTicked && side.kind === "business" && savedFields(side)}
             </div>
           ))}
@@ -273,8 +277,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
       )}
 
       {needJobName && (
-        <div className="field" data-job="">
-          <label htmlFor="work-job-name">{t("walkthrough.work.job_name")}</label>
+        <FormField id="work-job-name" label={t("walkthrough.work.job_name")} data-job="">
           <input
             id="work-job-name"
             type="text"
@@ -286,7 +289,7 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
           <p className="hint" id="work-job-name-hint">
             {t("walkthrough.work.job_name_hint")}
           </p>
-        </div>
+        </FormField>
       )}
       {jobTicked && (
         <p className="notice" role="note" data-notice="work-mail">
@@ -299,10 +302,9 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
           const id = `work-business-${draft.key}`;
           const label = draft.name.trim();
           return (
-            <section key={draft.key} className="field" data-business-draft="" aria-labelledby={`${id}-title`}>
+            <FormBlock as="section" key={draft.key}  data-business-draft="" aria-labelledby={`${id}-title`}>
               <h3 id={`${id}-title`}>{label || t("walkthrough.work.new_business")}</h3>
-              <div className="field">
-                <label htmlFor={`${id}-name`}>{t("walkthrough.work.business_name")}</label>
+              <FormField id={`${id}-name`} label={t("walkthrough.work.business_name")}>
                 <input
                   id={`${id}-name`}
                   type="text"
@@ -314,9 +316,8 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                 <p className="hint" id={`${id}-name-hint`}>
                   {t("walkthrough.work.business_name_hint")}
                 </p>
-              </div>
-              <div className="field">
-                <label htmlFor={`${id}-about`}>{label ? t("walkthrough.work.about", { name: label }) : t("walkthrough.work.about_unnamed")}</label>
+              </FormField>
+              <FormField id={`${id}-about`} label={label ? t("walkthrough.work.about", { name: label }) : t("walkthrough.work.about_unnamed")}>
                 <textarea
                   id={`${id}-about`}
                   rows={2}
@@ -327,11 +328,8 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                 <p className="hint" id={`${id}-about-hint`}>
                   {t("walkthrough.work.about_hint")}
                 </p>
-              </div>
-              <div className="field">
-                <label htmlFor={`${id}-works-on`}>
-                  {label ? t("walkthrough.work.works_on", { name: label }) : t("walkthrough.work.works_on_unnamed")}
-                </label>
+              </FormField>
+              <FormField id={`${id}-works-on`} label={label ? t("walkthrough.work.works_on", { name: label }) : t("walkthrough.work.works_on_unnamed")}>
                 <textarea
                   id={`${id}-works-on`}
                   rows={4}
@@ -351,26 +349,26 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
                   group={draft.group}
                   onChange={(group) => draftGroup(draft.key, group)}
                 />
-              </div>
+              </FormField>
               {rows > 1 && (
-                <div className="row-end">
+                <Actions align="end">
                   <Button variant="quiet" size="sm"
                     aria-label={label ? t("walkthrough.work.discard_named", { name: label }) : t("walkthrough.work.discard_unnamed")}
                     onClick={() => setDrafts((all) => all.filter((d) => d.key !== draft.key))}
                   >
                     {t("walkthrough.work.discard")}
                   </Button>
-                </div>
+                </Actions>
               )}
-            </section>
+            </FormBlock>
           );
         })}
       {businessTicked && (
-        <div className="row-end">
+        <Actions align="end">
           <Button onClick={() => setDrafts((all) => [...all, blank()])}>
             {t("walkthrough.work.add_business")}
           </Button>
-        </div>
+        </Actions>
       )}
 
       {problem && (
@@ -384,11 +382,11 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         </div>
       )}
       {!hasSlot && (
-        <div className="row-end">
+        <Actions align="end">
           <Button type="submit" variant={props.done ? "secondary" : "primary"} disabled={busy || !changed || !!missing}>
             {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
           </Button>
-        </div>
+        </Actions>
       )}
     </form>
   );
@@ -414,8 +412,7 @@ function GroupThem(props: { id: string; business: string; lines: string[]; group
   return (
     <details className="more-options group-them" data-group="">
       <summary>{t("walkthrough.work.group.open")}</summary>
-      <div className="field">
-        <label htmlFor={`${props.id}-group-name`}>{t("walkthrough.work.group.name")}</label>
+      <FormField id={`${props.id}-group-name`} label={t("walkthrough.work.group.name")}>
         <input
           id={`${props.id}-group-name`}
           type="text"
@@ -427,7 +424,7 @@ function GroupThem(props: { id: string; business: string; lines: string[]; group
         <p className="hint" id={`${props.id}-group-name-hint`}>
           {props.business ? t("walkthrough.work.group.name_hint_named", { name: props.business }) : t("walkthrough.work.group.name_hint")}
         </p>
-      </div>
+      </FormField>
       {name !== "" &&
         (props.lines.length === 0 ? (
           <p className="hint">{t("walkthrough.work.group.none_listed")}</p>
@@ -546,12 +543,14 @@ export function SavedSide(props: {
   };
 
   return (
-    <li className="line" data-side={side.project} data-kind={side.kind} aria-labelledby={`${base}-name`}>
-      <div className="row pair">
-        <div className="text">
-          {renaming ? (
-            <div className="field">
-              <label htmlFor={`${base}-rename`}>{t("walkthrough.work.rename_label", { name: side.name })}</label>
+    <Row
+      data-side={side.project}
+      data-kind={side.kind}
+      aria-labelledby={`${base}-name`}
+      loop={false}
+      title={
+        renaming ? (
+            <FormField id={`${base}-rename`} label={t("walkthrough.work.rename_label", { name: side.name })}>
               <input
                 id={`${base}-rename`}
                 type="text"
@@ -569,21 +568,23 @@ export function SavedSide(props: {
                   }
                 }}
               />
-            </div>
-          ) : (
-            <strong id={`${base}-name`}>{side.name}</strong>
-          )}
-          <span className="sub">{t(`walkthrough.work.kind.${side.kind}`)}</span>
-          <span className="sub">
-            {props.inside.length > 0
-              ? t("walkthrough.work.projects", { names: props.inside.join(", ") })
-              : (side.filed ?? 0) === 0
-                ? t("walkthrough.work.no_projects")
-                : null}
-          </span>
-          {(side.filed ?? 0) > 0 && <span className="sub">{tn("walkthrough.work.filed", side.filed ?? 0)}</span>}
-        </div>
-        <div className="acts">
+            </FormField>
+        ) : (
+          side.name
+        )
+      }
+      titleId={renaming ? undefined : `${base}-name`}
+      metaLines={[
+        t(`walkthrough.work.kind.${side.kind}`),
+        props.inside.length > 0
+          ? t("walkthrough.work.projects", { names: props.inside.join(", ") })
+          : (side.filed ?? 0) === 0
+            ? t("walkthrough.work.no_projects")
+            : null,
+        (side.filed ?? 0) > 0 ? tn("walkthrough.work.filed", side.filed ?? 0) : null,
+      ]}
+      actions={
+        <>
           {renaming ? (
             <>
               <Button variant="primary" size="sm" disabled={busy || !name.trim()} onClick={() => void rename()}>
@@ -619,12 +620,13 @@ export function SavedSide(props: {
               </Button>
             </>
           )}
-        </div>
-      </div>
+        </>
+      }
+    >
       {ask && asking && (
-        <div className="field" role="group" aria-labelledby={`${base}-ask`} data-remove-ask="">
+        <FormBlock role="group" aria-labelledby={`${base}-ask`} data-remove-ask="">
           <p id={`${base}-ask`}>{t("settings.business.remove_ask", { name: side.name })}</p>
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="quiet" disabled={busy} onClick={() => setAsking(false)}>
               {t("settings.business.remove_cancel")}
             </Button>
@@ -634,9 +636,9 @@ export function SavedSide(props: {
             <Button variant="primary" disabled={busy} onClick={() => void removeWith("personal")}>
               {t("settings.business.remove_move", { personal: t("sides.filter.personal") })}
             </Button>
-          </div>
-        </div>
+          </Actions>
+        </FormBlock>
       )}
-    </li>
+    </Row>
   );
 }

@@ -1,0 +1,7 @@
+/* One line with the send button inside its right edge; it grows only when more than one line is typed. */
+.composer { display: grid; gap: var(--space-2); min-width: 0; }
+.box { display: flex; align-items: flex-end; gap: var(--space-2); min-width: 0; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface); }
+.box:focus-within { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
+.input { flex: 1 1 auto; min-width: 0; width: auto; min-height: 0; max-height: 160px; resize: none; border: 0; background: none; padding: var(--space-2) 0; font-size: var(--text-sm); line-height: var(--lh-sm); field-sizing: content; }
+.input:focus-visible { outline: none; box-shadow: none; }
+.hint { margin: 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); max-width: var(--measure); }

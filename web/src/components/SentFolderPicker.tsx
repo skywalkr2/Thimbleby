@@ -11,6 +11,9 @@ import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
+import { Select } from "../ui/Select";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
 
 /** The folders to choose from, the likeliest first: the one the server marks, then any whose name says "sent", then the
  * rest in the order given; folders already read are left out. */
@@ -49,8 +52,8 @@ export function SentFolderPicker(props: { source: string; label: string; onClose
   };
 
   return (
-    <form
-      className="field sent-picker"
+    <FormBlock as="form"
+      className="sent-picker"
       data-sent-picker=""
       aria-labelledby={`${id}-title`}
       onSubmit={(e) => {
@@ -71,13 +74,13 @@ export function SentFolderPicker(props: { source: string; label: string; onClose
         <>
           <label htmlFor={`${id}-folder`}>{t("walkthrough.sent.label")}</label>
           {listed ? (
-            <select id={`${id}-folder`} value={folder} autoFocus onChange={(e) => setPicked(e.target.value)}>
+            <Select id={`${id}-folder`} value={folder} autoFocus onChange={(e) => setPicked(e.target.value)}>
               {options.map((f) => (
                 <option key={f} value={f}>
                   {f}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <>
               <input id={`${id}-folder`} type="text" list={`${id}-usual`} value={folder} autoFocus autoComplete="off" aria-describedby={`${id}-hint`} onChange={(e) => setPicked(e.target.value)} />
@@ -98,12 +101,12 @@ export function SentFolderPicker(props: { source: string; label: string; onClose
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button onClick={props.onClose}>{t("walkthrough.sent.cancel")}</Button>
         <Button variant="primary" type="submit" loading={busy} disabled={!data || !folder.trim()}>
           {t("walkthrough.sent.add")}
         </Button>
-      </div>
-    </form>
+      </Actions>
+    </FormBlock>
   );
 }

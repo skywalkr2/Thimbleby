@@ -10,6 +10,7 @@ import { PersonPicker } from "./PersonPicker";
 import { RowMenu } from "./RowMenu";
 import { Drawer } from "../ui/Drawer";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 /** Where an unowned action came from, so it can be added to another action instead of being given an owner. */
 export interface FoldAt {
   changeset: string;
@@ -59,7 +60,7 @@ export function AskChooser(props: {
         onAdd={ask.about === "held-op" ? () => setAdding(true) : undefined}
       />
       {foldInto && <span className="hint">{t("ask.fold_hint")}</span>}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
           {word}
         </Button>
@@ -74,7 +75,7 @@ export function AskChooser(props: {
             { id: "note", label: t("note.add"), run: () => setNoting(true), disabled: !person, reason: t("ask.note_needs_person") },
           ]}
         />
-      </div>
+      </Actions>
       {adding && (
         <Drawer open title={t("newperson.title")} onClose={() => setAdding(false)}>
           <NewPersonForm question={ask.id} onClose={() => setAdding(false)} />

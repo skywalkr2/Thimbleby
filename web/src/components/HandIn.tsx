@@ -13,6 +13,9 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { SegmentedControl } from "../ui/SegmentedControl";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
 
 const OwnContext = createContext<{ ids: Set<string>; add: (id: string) => void }>({
   ids: new Set(),
@@ -132,8 +135,7 @@ export function HandIn(props: { onClose: () => void }) {
           void submit();
         }}
       >
-        <div className="field">
-          <label htmlFor="handin-box">{t("handin.box")}</label>
+        <FormField id="handin-box" label={t("handin.box")}>
           <textarea
             id="handin-box"
             className="drop big"
@@ -153,8 +155,8 @@ export function HandIn(props: { onClose: () => void }) {
               {dropProblem}
             </p>
           )}
-        </div>
-        <div className="field choice">
+        </FormField>
+        <FormBlock className="choice">
           <span aria-hidden="true">{t("handin.whose")}</span>
           <SegmentedControl
             label={t("handin.whose")}
@@ -166,10 +168,9 @@ export function HandIn(props: { onClose: () => void }) {
             onChange={setWhose}
           />
           <p className="hint">{t(whose === "mine" ? "handin.whose_hint.mine" : "handin.whose_hint.others")}</p>
-        </div>
+        </FormBlock>
         {whose === "others" && (
-          <div className="field">
-            <label htmlFor="handin-todo">{t("handin.todo")}</label>
+          <FormField id="handin-todo" label={t("handin.todo")}>
             <input
               id="handin-todo"
               type="text"
@@ -177,11 +178,10 @@ export function HandIn(props: { onClose: () => void }) {
               onChange={(e) => setTodo(e.target.value)}
               placeholder={t("handin.todo_placeholder")}
             />
-          </div>
+          </FormField>
         )}
-        <div className="field">
-          <label htmlFor="handin-sensitivity">{t("handin.sensitivity")}</label>
-          <select
+        <FormField id="handin-sensitivity" label={t("handin.sensitivity")}>
+          <Select
             id="handin-sensitivity"
             value={sensitivity}
             aria-describedby="handin-sensitivity-hint"
@@ -190,15 +190,14 @@ export function HandIn(props: { onClose: () => void }) {
             <option value="">{t("handin.sensitivity.usual")}</option>
             <option value="internal">{t("handin.sensitivity.internal")}</option>
             <option value="restricted">{t("handin.sensitivity.restricted")}</option>
-          </select>
+          </Select>
           <span id="handin-sensitivity-hint" className="hint">
             {t("handin.sensitivity_hint")}
           </span>
-        </div>
+        </FormField>
         {!justMe && (
-        <div className="field">
-          <label htmlFor="handin-project">{t("handin.project")}</label>
-          <select
+        <FormField id="handin-project" label={t("handin.project")}>
+          <Select
             id="handin-project"
             value={project}
             aria-describedby="handin-project-hint"
@@ -206,11 +205,11 @@ export function HandIn(props: { onClose: () => void }) {
           >
             <option value="">{t("handin.project.none")}</option>
             <PlaceOptions projects={projects.data ?? []} />
-          </select>
+          </Select>
           <span id="handin-project-hint" className="hint">
             {t("handin.project_hint")}
           </span>
-        </div>
+        </FormField>
         )}
       </form>
     </Drawer>

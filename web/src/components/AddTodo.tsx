@@ -16,6 +16,7 @@ import { Drawer } from "../ui/Drawer";
 import { EffortField } from "./EffortField";
 import { PersonPicker } from "./PersonPicker";
 import { ProjectPicker } from "./ProjectPicker";
+import { FormField } from "../ui/FormField";
 
 function AddTodoForm(props: { onClose: () => void }) {
   const { t } = useWords();
@@ -79,12 +80,10 @@ function AddTodoForm(props: { onClose: () => void }) {
           void save();
         }}
       >
-        <div className="field">
-          <label htmlFor={`${id}-text`}>{t("addtodo.text")}</label>
+        <FormField id={`${id}-text`} label={t("addtodo.text")}>
           <input id={`${id}-text`} type="text" autoFocus value={text} onChange={(e) => setText(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-when`}>{t("addtodo.when")}</label>
+        </FormField>
+        <FormField id={`${id}-when`} label={t("addtodo.when")}>
           <input
             id={`${id}-when`}
             type="text"
@@ -97,12 +96,11 @@ function AddTodoForm(props: { onClose: () => void }) {
             {dayIso && t("addtodo.day_said", { date: day(dayIso) })}
             {read?.status === "unclear" && t("addtodo.day_unclear")}
           </p>
-        </div>
+        </FormField>
         <EffortField id={id} value={effort} onChange={setEffort} />
         <PersonPicker label={t("addtodo.owner")} value={who} suggested={[]} people={active} onChange={setOwner} />
         {!justMe && <ProjectPicker label={t("addtodo.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />}
-        <div className="field">
-          <label htmlFor={`${id}-repeat`}>{t("repeat.label")}</label>
+        <FormField id={`${id}-repeat`} label={t("repeat.label")}>
           <input
             id={`${id}-repeat`}
             type="text"
@@ -116,7 +114,7 @@ function AddTodoForm(props: { onClose: () => void }) {
             {readRepeat?.status === "unclear" && t("repeat.unclear")}
             {readRepeat?.status === "off_start" && readRepeat.start && t("repeat.off_start", { date: day(dayIso), first: day(readRepeat.start) })}
           </p>
-        </div>
+        </FormField>
       </form>
     </Drawer>
   );

@@ -99,3 +99,11 @@ test("with no entries there is no menu at all", () => {
   menu([{ id: "a", entries: [] }]);
   expect(screen.queryByRole("button")).toBeNull();
 });
+
+test("an entry that takes something away is marked as a danger, and its words are still the entry's name", async () => {
+  const user = userEvent.setup();
+  menu([{ id: "a", entries: [{ id: "one", label: "Edit" }] }, { id: "b", entries: [{ id: "two", label: "Drop it", danger: true }] }]);
+  await user.click(screen.getByRole("button", { name: "Open the menu" }));
+  expect(screen.getByRole("menuitem", { name: "Drop it" })).toHaveAttribute("data-danger");
+  expect(screen.getByRole("menuitem", { name: "Edit" })).not.toHaveAttribute("data-danger");
+});

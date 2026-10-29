@@ -10,6 +10,7 @@ import { problemText } from "../lib/problem";
 import { fromDraft } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { FormField } from "../ui/FormField";
 
 const CONFIRM = "ai.budgets.confirm_above_usd";
 const DAY = "ai.budgets.per_day_usd";
@@ -81,8 +82,7 @@ export function useSpendLine(enabled = true): SpendLine {
     const id = `${base}-${item.key.replace(/\./g, "-")}`;
     const off = item.locked || !item.editable;
     return (
-      <div className="field">
-        <label htmlFor={id}>{label}</label>
+      <FormField id={id} label={label}>
         <span className="money-field">
           <span aria-hidden="true">{t("money.symbol")}</span>
           <input
@@ -104,7 +104,7 @@ export function useSpendLine(enabled = true): SpendLine {
           {hint}
         </p>
         {item.locked && <p className="hint">{t(item.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
-      </div>
+      </FormField>
     );
   };
 

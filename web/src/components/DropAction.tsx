@@ -8,6 +8,7 @@ import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 /** The row menu's "Drop" entry for an action, and the small form it opens. `onClosed` runs when the form goes, so the row
  * can take focus back. */
 export function useDropAction(action: { id: string; told_names?: string[] }, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
@@ -22,7 +23,7 @@ export function useDropAction(action: { id: string; told_names?: string[] }, onC
     setReason("");
     onClosed?.();
   };
-  const entry: MenuAction = { id: "drop-action", label: t("action.drop"), note: t("action.drop_note"), run: () => setAsking(true) };
+  const entry: MenuAction = { id: "drop-action", danger: true, label: t("action.drop"), note: t("action.drop_note"), run: () => setAsking(true) };
   const form = asking ? (
     <form
       className="answer-form"
@@ -46,14 +47,14 @@ export function useDropAction(action: { id: string; told_names?: string[] }, onC
         {t("action.drop_label")}
       </label>
       <input id={id} type="text" autoFocus value={reason} onChange={(e) => setReason(e.target.value)} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={close}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!reason.trim()}>
           {t(told.length > 0 ? "action.drop_go_tell" : "action.drop_go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   ) : null;
   return { entry, form };

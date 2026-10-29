@@ -19,6 +19,8 @@ import { useFactLine } from "../lib/fact-line";
 import { OriginLink } from "./Origin";
 
 import { EmptyState } from "../ui/EmptyState";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { RowList } from "../ui/RowList";
 /** The ways an input arrives that the sheet has a word for; any other is "another input". */
 const KINDS = ["pasted", "email", "calendar", "change", "note", "task"];
 const FIELDS = ["status", "phase", "target", "owner", "summary"] as const;
@@ -31,7 +33,7 @@ function Part(props: { id: string; title: string; count: number; children: React
         <h3 id={props.id}>{props.title}</h3>
         <span className="hint">{props.count}</span>
       </div>
-      <ul className="queue">{props.children}</ul>
+      <RowList>{props.children}</RowList>
     </section>
   );
 }
@@ -68,8 +70,7 @@ function Readers(props: { project: string; name: string; choices: S["ReaderChoic
     );
   };
   return (
-    <fieldset data-area-readers="">
-      <legend>{t("knows.readers.title")}</legend>
+    <CheckboxGroup legend={t("knows.readers.title")} data-area-readers="">
       <p className="hint">{t("knows.readers.hint")}</p>
       {props.choices.map((c) => (
         <div key={c.account}>
@@ -80,7 +81,7 @@ function Readers(props: { project: string; name: string; choices: S["ReaderChoic
           {c.locked && <p className="hint">{t("knows.readers.locked")}</p>}
         </div>
       ))}
-    </fieldset>
+    </CheckboxGroup>
   );
 }
 

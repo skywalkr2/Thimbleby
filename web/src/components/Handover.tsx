@@ -15,6 +15,7 @@ import styles from "./Handover.module.css";
 
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { Actions } from "../ui/Actions";
 type Side = S["HandoverSideView"];
 type Which = S["HandoverChoice"]["which"];
 
@@ -64,7 +65,7 @@ export function Handover() {
             <div className={styles.chosen} role="status">
               <p>{t(view.chosen === "folder" ? "handover.chosen_folder" : "handover.chosen_here")}</p>
               <p className="hint">{t(status.data && !status.data.can_restart ? "handover.chosen_manual" : "handover.chosen_note")}</p>
-              <div className="row-end">
+              <Actions align="end">
                 {status.data?.can_restart && (
                   <Button variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
                     {t("restart.now")}
@@ -73,7 +74,7 @@ export function Handover() {
                 <Button disabled={busy} onClick={() => changeMind.mutate()}>
                   {t("handover.change_mind")}
                 </Button>
-              </div>
+              </Actions>
             </div>
           ) : (
             <ul className={styles.choices}>
@@ -110,9 +111,9 @@ function SideRow(props: { title: string; side?: Side | null }) {
   return (
     <li className={styles.side}>
       <strong>{props.title}</strong>
-      {side?.computer && <span className="sub">{t("handover.made_on", { computer: side.computer })}</span>}
+      {side?.computer && <span className="hint">{t("handover.made_on", { computer: side.computer })}</span>}
       {side && side.changes > 0 && <span>{tn("handover.changes", side.changes)}</span>}
-      {side?.latest && <span className="sub">{t("handover.latest", { when: when(side.latest) })}</span>}
+      {side?.latest && <span className="hint">{t("handover.latest", { when: when(side.latest) })}</span>}
     </li>
   );
 }
@@ -134,7 +135,7 @@ function Elsewhere(props: { view: S["HandoverView"] }) {
   return (
     <div className={styles.elsewhere}>
       <p>{view.computer ? t("handover.elsewhere", { computer: view.computer }) : t("handover.elsewhere_unknown")}</p>
-      {view.last_seen && <p className="sub">{t("handover.elsewhere_seen", { when: when(view.last_seen) })}</p>}
+      {view.last_seen && <p className="hint">{t("handover.elsewhere_seen", { when: when(view.last_seen) })}</p>}
       {view.minutes_left > 0 && <p>{tn("handover.elsewhere_wait", view.minutes_left)}</p>}
       <p className="hint">{t("handover.elsewhere_next")}</p>
     </div>

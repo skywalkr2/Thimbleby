@@ -1,6 +1,6 @@
 /* To-dos and questions (design 7.5): the filters wrap and stack, so nothing is wider than the window at any width. */
 .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); margin: var(--space-3) 0; }
-.bar .field { margin-bottom: 0; min-width: 0; flex: 1 1 16ch; max-width: 100%; }
+.bar [data-field] { margin-bottom: 0; min-width: 0; flex: 1 1 16ch; max-width: 100%; }
 .bar select { max-width: 100%; }
 .part { overflow-wrap: anywhere; }
 .toSend { font-weight: var(--weight-semibold); color: var(--text); }

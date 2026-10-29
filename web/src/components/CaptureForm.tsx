@@ -8,6 +8,7 @@ import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { useNoted } from "./NoteBox";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 export function CaptureForm(props: { event: string; title: string; onClose: () => void }) {
   const { t } = useWords();
   const act = useAct();
@@ -66,7 +67,7 @@ export function CaptureForm(props: { event: string; title: string; onClose: () =
       <span id={`${id}-hint`} className="hint">
         {t("meeting.capture.hint")}
       </span>
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -76,7 +77,7 @@ export function CaptureForm(props: { event: string; title: string; onClose: () =
         <Button variant="primary" type="submit" disabled={!words || busy}>
           {t("meeting.capture.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

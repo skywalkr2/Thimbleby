@@ -12,6 +12,10 @@ import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
 import { plainTitle } from "../lib/title-dates";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { ItemList, Item } from "../ui/ItemList";
+import { ExpandableRow } from "../ui/Row";
 type Section = S["FollowupSection"];
 
 interface Item {
@@ -140,11 +144,11 @@ export function FollowUpsByProject(props: { sections: Section[]; compact: boolea
       {bySide.map((s) => (
         <section key={s.side ?? "none"} className="by-side" aria-labelledby={bySide.length > 1 && s.name ? `by-side-${s.side}` : undefined}>
           {bySide.length > 1 && s.name && <h2 id={`by-side-${s.side}`}>{s.name}</h2>}
-          <ol className="queue" aria-label={bySide.length > 1 && s.name ? undefined : t("followups.by_project.list")} aria-labelledby={bySide.length > 1 && s.name ? `by-side-${s.side}` : undefined}>
+          <RowList as="ol" aria-label={bySide.length > 1 && s.name ? undefined : t("followups.by_project.list")} aria-labelledby={bySide.length > 1 && s.name ? `by-side-${s.side}` : undefined}>
             {s.groups.map((g) => (
               <ProjectLine key={g.key} group={g} choice={choice} />
             ))}
-          </ol>
+          </RowList>
         </section>
       ))}
     </ListDetail>
@@ -157,14 +161,15 @@ function ProjectLine(props: { group: Group; choice: ListChoice }) {
   const ref = useRef<HTMLLIElement>(null);
   useRowKeys(ref, { toggle: () => choice.enter(group.key) });
   return (
-    <li className="line" ref={ref} aria-label={group.title} data-project-group={group.key} {...choice.rowProps(group.key)}>
-      <div className="row single">
-        <button type="button" className="expander text" aria-expanded={choice.chosen === group.key} data-inert={choice.chosen === group.key ? "" : undefined} onClick={() => choice.choose(group.key)}>
-          <strong>{group.title}</strong>
-          <span className="sub">{tn("followups.by_project.count", group.items.length)}</span>
-        </button>
-      </div>
-    </li>
+    <ExpandableRow
+      ref={ref}
+      aria-label={group.title}
+      data-project-group={group.key}
+      {...choice.rowProps(group.key)}
+      title={group.title}
+      meta={tn("followups.by_project.count", group.items.length)}
+      expand={{ expanded: choice.chosen === group.key, inert: choice.chosen === group.key, onToggle: () => choice.choose(group.key) }}
+    />
   );
 }
 
@@ -172,22 +177,22 @@ function ProjectLine(props: { group: Group; choice: ListChoice }) {
 function ProjectItems(props: { group: Group; onOpenPerson: (person: string) => void }) {
   const { t } = useWords();
   return (
-    <ul className="children">
+    <ItemList>
       {props.group.items.map((item) => (
-        <li key={item.id} className="child" data-row tabIndex={-1}>
+        <Item row key={item.id}>
           <div>
             <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
             <div className="title">{plainTitle(item.title)}</div>
             <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].filter(Boolean).join(" · ")}</div>
             <OriginLink origin={item.origin} />
           </div>
-          <div className="acts">
+          <Actions>
             <Button aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
               {t("followups.by_project.open")}
             </Button>
-          </div>
-        </li>
+          </Actions>
+        </Item>
       ))}
-    </ul>
+    </ItemList>
   );
 }

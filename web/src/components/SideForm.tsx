@@ -8,6 +8,7 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { Field, list } from "./PersonForm";
+import { FormField } from "../ui/FormField";
 
 export function SideDrawer(props: { side: S["ProjectView"]; onClose: () => void; onSaved?: (id: string, name: string) => void }) {
   const { t } = useWords();
@@ -56,10 +57,9 @@ export function SideDrawer(props: { side: S["ProjectView"]; onClose: () => void;
       >
         <Field id={`sn-${s.id}`} label={t("setup.project_name")} value={name} onChange={setName} required />
         <Field id={`sa-${s.id}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("side.aliases_hint")} />
-        <div className="field">
-          <label htmlFor={`sm-${s.id}`}>{t("side.description")}</label>
+        <FormField id={`sm-${s.id}`} label={t("side.description")}>
           <textarea id={`sm-${s.id}`} className="short" value={summary} onChange={(e) => setSummary(e.target.value)} />
-        </div>
+        </FormField>
       </form>
     </Drawer>
   );

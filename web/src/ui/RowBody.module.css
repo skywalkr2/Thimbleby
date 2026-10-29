@@ -1,0 +1,6 @@
+/* The body runs the row's full width: the row's own side padding is taken back, so the hairline reaches both edges. */
+.body {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-width: 0; overflow-wrap: anywhere;
+  margin-inline: calc(-1 * var(--row-px)); padding: var(--space-3) var(--row-px) var(--space-4); border-top: 1px solid var(--border);
+}
+.pane { margin-inline: 0; padding: var(--space-3) 0 0; border-top: 0; }

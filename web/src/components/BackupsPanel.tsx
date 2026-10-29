@@ -14,6 +14,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { WelcomeBackup } from "./WelcomeBackup";
 
 import { EmptyState } from "../ui/EmptyState";
+import { Actions } from "../ui/Actions";
 export function BackupsPanel(props: { local: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
@@ -66,11 +67,11 @@ export function BackupsPanel(props: { local: boolean }) {
         {backupText(view.state, t)}
         {view.state.last_success ? ` · ${dayAndTime(view.state.last_success)}` : ""}
       </p>
-      <div className="row-end">
+      <Actions align="end">
         <Button loading={busy} disabled={!there} reason={t("backups.now.needs_folder")} onClick={() => void backUp()}>
           {t("backups.now")}
         </Button>
-      </div>
+      </Actions>
       <div role="status">
         {result && <p className={result.ok ? "hint" : "problem-note"}>{result.text}</p>}
       </div>

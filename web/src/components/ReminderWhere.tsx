@@ -13,6 +13,8 @@ import { useWords } from "../lib/wording";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../ui/Button";
 import styles from "./ReminderWhere.module.css";
+import { Select } from "../ui/Select";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
 
 const WHERE_KEY = "steward.reminders.where";
 const ACCOUNT_KEY = "steward.reminders.where_account";
@@ -134,8 +136,7 @@ export function ReminderWhere() {
     <section className={styles.where} aria-labelledby={`${group}-title`}>
       <h3 id={`${group}-title`}>{t("reminders.where.title")}</h3>
       <p className="hint">{t("reminders.where.intro")}</p>
-      <fieldset className={styles.choices} disabled={busy}>
-        <legend className="sr">{t("reminders.where.choose")}</legend>
+      <CheckboxGroup legend={t("reminders.where.choose")} legendHidden className={styles.choices} disabled={busy}>
         {choices.map((c) => (
           <div key={c.id} className={styles.choice}>
             <label>
@@ -150,21 +151,21 @@ export function ReminderWhere() {
                 ) : (
                   <>
                     <label htmlFor={accountId}>{t("reminders.where.account")}</label>
-                    <select id={accountId} value={chosenAccount ?? ""} onChange={(e) => setAccount(e.target.value || null)}>
+                    <Select id={accountId} value={chosenAccount ?? ""} onChange={(e) => setAccount(e.target.value || null)}>
                       <option value="">{t("reminders.where.account.pick")}</option>
                       {options.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </>
                 )}
               </div>
             )}
           </div>
         ))}
-      </fieldset>
+      </CheckboxGroup>
       {outward && chosenAccount && (
         <div className={styles.preview} aria-label={t("reminders.where.preview")}>
           <p>{t("reminders.where.preview")}</p>

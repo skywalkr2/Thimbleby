@@ -12,6 +12,7 @@ import { ActPill } from "./ActPill";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
 
 /** The key an act has in the list's choice, apart from every person's. */
 export const actKey = (id: string): string => `act:${id}`;
@@ -22,11 +23,11 @@ export function ActsList(props: { acts: Act[]; choice: ListChoice; onLook: (id: 
     <section aria-labelledby="outgoing-title" data-waiting-acts="">
       <h2 id="outgoing-title">{t("outgoing.title")}</h2>
       <p className="hint">{t("outgoing.intro")}</p>
-      <ol className="queue" aria-label={t("outgoing.list")}>
+      <RowList as="ol" aria-label={t("outgoing.list")}>
         {props.acts.map((a) => (
           <OutgoingRow key={a.id} act={a} choice={props.choice} onLook={() => props.onLook(a.id)} />
         ))}
-      </ol>
+      </RowList>
     </section>
   );
 }

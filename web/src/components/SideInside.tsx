@@ -9,6 +9,7 @@ import { useWords } from "../lib/wording";
 import { Row } from "../ui/Row";
 import { ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { RowList } from "../ui/RowList";
 export function SideInside(props: { id: string }) {
   const { t, tn } = useWords();
   const { personal, sides } = useSides();
@@ -26,7 +27,7 @@ export function SideInside(props: { id: string }) {
       {inside.length === 0 ? (
         <EmptyState text={t(`side.${part}.empty`)} />
       ) : (
-        <ul className="queue">
+        <RowList>
           {inside.map((p) => (
             <Row
               key={p.id}
@@ -38,7 +39,7 @@ export function SideInside(props: { id: string }) {
               }
             />
           ))}
-        </ul>
+        </RowList>
       )}
       {!isPersonal && (
         <p>

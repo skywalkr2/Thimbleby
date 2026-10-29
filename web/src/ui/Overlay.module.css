@@ -1,0 +1,46 @@
+/* The frame of a drawer, a dialog and the sheet they become on a phone. A drawer is 480px wide (640px when wide) from the right
+   edge, as tall as its content up to the window; a dialog is 560px at most in the middle (780px when wide); below the phone width both are a sheet
+   from the bottom edge with a handle, as tall as their content up to the window. The surface is raised: a shadow by day, a
+   lighter fill and an edge by night. */
+.overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: flex; }
+.overlay.drawer { justify-content: flex-end; align-items: flex-start; }
+.overlay.dialog { justify-content: center; align-items: center; padding: var(--space-4); }
+.overlay[data-entering] { animation: fade var(--dur-base) var(--ease-out); }
+.overlay[data-exiting] { animation: fade var(--dur-base) var(--ease-out) reverse; }
+.modal {
+  display: flex; flex-direction: column; max-width: 100%; min-height: 0;
+  background: var(--surface-raised); color: var(--text); border: 1px solid var(--border);
+}
+.modal.drawer {
+  width: var(--drawer-w); max-height: 100%; border-width: 0 0 1px 1px; border-bottom-left-radius: var(--radius-lg);
+  box-shadow: var(--elev-3), var(--overlay-edge);
+}
+.modal.drawer.wide { width: min(640px, 100%); }
+.modal.drawer[data-entering] { animation: slide var(--dur-slow) var(--ease-out); }
+.modal.drawer[data-exiting] { animation: slide var(--dur-slow) var(--ease-out) reverse; }
+/* A dialog is one scrolling surface; its footer sticks to the bottom edge of what shows (see DialogFooter). */
+.modal.dialog {
+  --overlay-pad-x: var(--space-5); --overlay-pad-y: var(--space-4);
+  display: block; width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  border-radius: var(--radius-lg); box-shadow: var(--elev-3), var(--overlay-edge); padding: var(--overlay-pad-y) var(--overlay-pad-x);
+}
+.modal.dialog.wide { width: min(780px, 100%); }
+.handle { display: none; }
+
+/* The sheet: from the bottom edge, rounded at the top, with a handle. A drawer and a dialog become one on a phone; a sheet is one
+   at every width. */
+.overlay.sheet, :global([data-narrow]) .overlay.drawer, :global([data-narrow]) .overlay.dialog { align-items: flex-end; justify-content: stretch; padding: 0; }
+.modal.sheet, :global([data-narrow]) .modal.drawer, :global([data-narrow]) .modal.dialog, :global([data-narrow]) .modal.drawer.wide {
+  --overlay-pad-x: var(--space-4); --overlay-pad-y: var(--space-4);
+  width: 100%; max-height: min(92dvh, 100%); border-width: 1px 0 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.modal.sheet { display: block; overflow-y: auto; max-height: 85dvh; box-shadow: var(--elev-3), var(--overlay-edge); padding: 0 var(--overlay-pad-x) calc(var(--overlay-pad-y) + env(safe-area-inset-bottom, 0px)); }
+:global([data-narrow]) .modal.dialog { max-height: 92dvh; }
+.modal.sheet[data-entering], :global([data-narrow]) .modal.drawer[data-entering], :global([data-narrow]) .modal.dialog[data-entering] { animation: rise var(--dur-slow) var(--ease-out); }
+.modal.sheet[data-exiting], :global([data-narrow]) .modal.drawer[data-exiting], :global([data-narrow]) .modal.dialog[data-exiting] { animation: rise var(--dur-slow) var(--ease-out) reverse; }
+.modal.sheet .handle, :global([data-narrow]) .handle { display: block; flex: none; width: 40px; height: 4px; border-radius: var(--radius-full); background: var(--border-strong); margin: var(--space-2) auto 0; }
+:global([data-narrow]) .modal.dialog .handle { margin: calc(var(--space-2) - var(--overlay-pad-y)) auto var(--space-3); }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes slide { from { transform: translateX(100%); } }
+@keyframes rise { from { transform: translateY(100%); } }

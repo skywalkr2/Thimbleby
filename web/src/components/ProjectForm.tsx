@@ -17,6 +17,8 @@ import { PersonPicker } from "./PersonPicker";
 import { PlaceOptions } from "./PlaceOptions";
 import { SideDrawer } from "./SideForm";
 import { ValueSelect } from "./ValueSelect";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 
 /** The value lists a project's fields take their choices from. */
 const PROJECT_LISTS = {
@@ -224,43 +226,33 @@ function ProjectFormDrawer(props: {
         people={(people.data ?? []).filter((x) => x.status === "active")}
       />
       {p && (
-        <div className="field">
-          <label htmlFor={`jo-${key}`}>
-            {t("setup.my_role")} <span className="hint">{t("setup.my_role_hint")}</span>
-          </label>
-          <select id={`jo-${key}`} value={role} onChange={(e) => setRole(e.target.value as Role)}>
+        <FormField id={`jo-${key}`} label={<>{t("setup.my_role")} <span className="hint">{t("setup.my_role_hint")}</span></>}>
+          <Select id={`jo-${key}`} value={role} onChange={(e) => setRole(e.target.value as Role)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
                 {t(`role.${r}`)}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormField>
       )}
-      <div className="field">
-        <label htmlFor={`jw-${key}`}>{t("setup.inside")}</label>
-        <select id={`jw-${key}`} value={inside} required={mustChoose} onChange={(e) => setParent(e.target.value)}>
+      <FormField id={`jw-${key}`} label={t("setup.inside")}>
+        <Select id={`jw-${key}`} value={inside} required={mustChoose} onChange={(e) => setParent(e.target.value)}>
           {mustChoose ? <option value="" disabled>{t("setup.inside_choose")}</option> : (sides.length === 0 || !placed) && <option value="">{t("setup.inside_none")}</option>}
           <PlaceOptions projects={others} asParent />
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor={`jl-${key}`}>
-          {t("setup.language")} <span className="hint">{p && !p.language_own ? t("setup.language_inherited") : t("setup.language_hint")}</span>
-        </label>
-        <select id={`jl-${key}`} value={language} onChange={(e) => setLanguage(e.target.value)}>
+        </Select>
+      </FormField>
+      <FormField id={`jl-${key}`} label={<>{t("setup.language")} <span className="hint">{p && !p.language_own ? t("setup.language_inherited") : t("setup.language_hint")}</span></>}>
+        <Select id={`jl-${key}`} value={language} onChange={(e) => setLanguage(e.target.value)}>
           <option value="">{inherited ? t("setup.language_same_as", { language: languageLabel(inherited) }) : t("setup.language_same_workspace")}</option>
           {languageChoices([...(settings.data?.items.find((i) => i.key === "workspace.language")?.options ?? []), ...(language ? [language] : [])]).map((c) => (
             <option key={c.tag} value={c.tag}>
               {c.label}
             </option>
           ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor={`jb-${key}`}>
-          {t("setup.budget")} <span className="hint">{t("setup.budget_hint")}</span>
-        </label>
+        </Select>
+      </FormField>
+      <FormField id={`jb-${key}`} label={<>{t("setup.budget")} <span className="hint">{t("setup.budget_hint")}</span></>}>
         <input
           id={`jb-${key}`}
           type="number"
@@ -269,11 +261,10 @@ function ProjectFormDrawer(props: {
           value={budget}
           onChange={(e) => setBudget(e.target.value)}
         />
-      </div>
-      <div className="field">
-        <label htmlFor={`jm-${key}`}>{t("setup.summary")}</label>
+      </FormField>
+      <FormField id={`jm-${key}`} label={t("setup.summary")}>
         <textarea id={`jm-${key}`} className="short" value={summary} onChange={(e) => setSummary(e.target.value)} />
-      </div>
+      </FormField>
     </form>
     </Drawer>
   );

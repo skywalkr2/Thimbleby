@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 261. The shared components, second set: form parts, overlays, toast, record parts, choice cards, the wizard and the header's status (2026-10-28; sweep batch V2, VC05, VC06, VC07, VC09, VC10, VC11, VC12, VC13)
+
+| Where | Before | Now |
+|---|---|---|
+| Form parts (7.12, 7.14) | A global `.field` and a native select, date and file control on most forms; a fieldset with its legend on a border | `FormField`, `Select`, `DateField`, `FileDrop`, `CheckboxGroup` (a real fieldset, no frame) and `SearchField`; every form moved onto them; "Optional" is a tag; guarded by a browser test over the main screens |
+| Overlays (7.12, 7.13) | A drawer as wide as the inspector and always full height, a dialog with its buttons at the end of its content, a bottom sheet drawn by the phone's bar alone, three popovers each with its own surface, a menu with no way to mark a removal, and Ask as a column that moved the page | One frame (`ui/Overlay`): the Drawer (480px, as tall as its content), the Dialog with a `DialogFooter` that stays in view, and the BottomSheet (a drawer or a dialog on a phone, with a handle, and the phone's menus); one `Popover` (two columns when its list has room); a menu entry can be a `danger`, opened beside its button; Ask is a pane over the right edge that never moves the page |
+| Toast (7.6, 7.12) | Up to three, at the bottom left of the content area from 1280px | One at a time, with an icon (a warning sign for a warning), at the bottom center of the window, at the top while a dialog or drawer is open |
+| Dark mode (7.12) | Overlays and row buttons drew as by day; the calendar's today column used the full soft accent | `--surface-raised` and `--overlay-edge` lift an overlay off the page by night, a row's buttons are tonal by night (`--row-btn-*`), today's column is a low-chroma tint (`--today-tint`) |
+| Record parts (7.14) | Each record page drew its own details, history and ask box | `DefinitionList`, `ActivityList` (by day, five, then "Show all activity") and `AskAboutThis` |
+| Choice cards (7.12) | Each choice in the AI step was a bordered `kind-card` label from a global class | `RadioCard`: words in full, one level, a 2px ring and a soft tint for the chosen one |
+| Setup steps (7.1) | The walkthrough laid out each step's title, explanation, rail and buttons with styles of its own | `WizardShell` (one column of 640 to 720px), `WizardRail` and a fixed `StepFooter`: Back, "I'll do this later", the one primary |
+| Header status (7.1, 7.12) | A chip that said "All good" while a connection was retrying or failing; "Missed something?" in the header | A dot and a word with a warning and a danger state, read from the connections' real state; the detail is in the popover; "Missed something?" is in the Help menu |
+| Lines that open (7.14) | 29 expandable lines on the older global classes (`line`, `row`, `queue`, `kind`, `acts`, `text`) | `ExpandableRow`, a `Row` with `expand` (a button on the title with `aria-expanded`) and a `RowBody`; the old classes are removed |
+
+Built: `web/src/ui/forms.test.tsx`, `web/src/ui/overlays.test.tsx`, `web/src/ui/recordParts.test.tsx`, `web/src/ui/expandable.test.tsx`,
+`web/src/ui/controls.test.ts`, `web/src/shell/status.test.ts`, `web/src/shell/StatusMenu.test.tsx`, `web/src/lib/toasts.test.tsx`,
+`web/src/components/StyleGuide.test.tsx`, and the native-control guard in `web/e2e/guards.spec.ts`.
+
 ## 260. One formatter for everything a person reads: titles, days, setting values, refusals (2026-10-28; sweep batch 3, X16, X32, X37, X38, X49)
 
 | Where | Before | Now |

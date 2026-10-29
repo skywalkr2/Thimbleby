@@ -9,6 +9,7 @@ import { addonLabel } from "../lib/settings";
 import { useWords } from "../lib/wording";
 import { RestartNowButton, usePackChange } from "./Addons";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 /** The add-on a connector belongs to: the part of its id before the slash; none for one the app itself provides. */
 export const addonOfConnector = (connector: string): string | null => {
   const at = connector.indexOf("/");
@@ -35,7 +36,7 @@ export function MissingAddon(props: { plugin: string; onOpenAddons?: () => void 
     <div className="problem-note" data-missing-addon="">
       <p>{text}</p>
       {change.problem && <p role="alert">{change.problem}</p>}
-      <p className="acts">
+      <Actions as="p">
         {restart ? (
           <RestartNowButton />
         ) : installable ? (
@@ -53,7 +54,7 @@ export function MissingAddon(props: { plugin: string; onOpenAddons?: () => void 
             </Button>
           )
         )}
-      </p>
+      </Actions>
     </div>
   );
 }

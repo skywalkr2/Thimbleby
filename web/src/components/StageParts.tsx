@@ -10,6 +10,8 @@ import { upperFirst, useGo, useTaskWords, type StageRequest, type StageView } fr
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
+import { ItemList, Item } from "../ui/ItemList";
 export function WaitingLine(props: { request: StageRequest }) {
   const { t } = useWords();
   const task = useTaskWords();
@@ -19,22 +21,22 @@ export function WaitingLine(props: { request: StageRequest }) {
   const run = () => void go(props.request);
   useRowKeys(ref, { primary: run });
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         <div className="title">{upperFirst(t("stages.go_here", { task: task(props.request.task) }))}</div>
         {estimate && <div className="meta">{estimate}</div>}
       </div>
-      <div className="acts">
+      <Actions>
         <Button variant="primary" disabled={busy} onClick={run}>
           {t("stages.go")}
         </Button>
-      </div>
+      </Actions>
       {error && (
         <p className="problem-note full" role="alert">
           {error}
         </p>
       )}
-    </li>
+    </Item>
   );
 }
 
@@ -52,17 +54,17 @@ export function History(props: { view: StageView }) {
   if (entries.isError) return <p className="hint">{t("stages.load_failed")}</p>;
   if (entries.data.length === 0) return <p className="hint">{t("stages.history_empty")}</p>;
   return (
-    <ul className="children" aria-label={t("stages.history_label")}>
+    <ItemList aria-label={t("stages.history_label")}>
       {[...entries.data].reverse().map((e) => (
-        <li key={e.sequence} className="child single">
+        <Item single key={e.sequence}>
           {t("stages.history_entry", {
             from: label(e.from_stage),
             to: label(e.to_stage),
             when: dayAndTime(e.at),
             who: who(e.op, e.actor),
           })}
-        </li>
+        </Item>
       ))}
-    </ul>
+    </ItemList>
   );
 }

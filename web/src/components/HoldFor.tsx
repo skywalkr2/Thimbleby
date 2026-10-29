@@ -9,6 +9,9 @@ import { day, localDate, nextMonday } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { DateField } from "../ui/DateField";
+import { Actions } from "../ui/Actions";
 const DAY = "day";
 const MONDAY = "monday";
 
@@ -104,19 +107,19 @@ export function useHoldFor(
           <label className="hint" htmlFor={`hold-which-${questions[0].id}`}>
             {t("followups.hold_which")}
           </label>
-          <select id={`hold-which-${questions[0].id}`} autoFocus value={question.id} onChange={(e) => setChosen(e.target.value)}>
+          <Select id={`hold-which-${questions[0].id}`} autoFocus value={question.id} onChange={(e) => setChosen(e.target.value)}>
             {questions.map((q) => (
               <option key={q.id} value={q.id}>
                 {q.title}
               </option>
             ))}
-          </select>
+          </Select>
         </>
       )}
       <label className="hint" htmlFor={`hold-for-${question.id}`}>
         {t("followups.hold_for_label")}
       </label>
-      <select id={`hold-for-${question.id}`} autoFocus={questions.length < 2 || whole} value={target} onChange={(e) => setTarget(e.target.value)}>
+      <Select id={`hold-for-${question.id}`} autoFocus={questions.length < 2 || whole} value={target} onChange={(e) => setTarget(e.target.value)}>
         <option value={DAY}>{t("followups.hold_for_day")}</option>
         <option value={MONDAY}>{t("followups.hold_for_monday", { date: day(monday) })}</option>
         {unique.map((m) => (
@@ -124,23 +127,23 @@ export function useHoldFor(
             {m.label}
           </option>
         ))}
-      </select>
+      </Select>
       {target === DAY && (
         <>
           <label className="hint" htmlFor={`hold-date-${question.id}`}>
             {t("followups.hold_for_date")}
           </label>
-          <input id={`hold-date-${question.id}`} type="date" min={tomorrow} value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateField id={`hold-date-${question.id}`} min={tomorrow} value={date} onChange={(e) => setDate(e.target.value)} />
         </>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={() => setAsking(false)}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!ready}>
           {t("followups.hold_for_save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   ) : null;
   return { entry, messageEntry, form };

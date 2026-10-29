@@ -57,6 +57,7 @@ import { FilterChip } from "../ui/FilterChip";
 import { PageHeader } from "../ui/PageHeader";
 import { RoundCheck } from "../ui/RoundCheck";
 import { TabStrip } from "../ui/TabStrip";
+import { RowList } from "../ui/RowList";
 type Tab = "actions" | "questions";
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -150,17 +151,17 @@ export function OpenItems() {
           {shown === 0 ? (
             <EmptyState text={t("open.none_match")} />
           ) : tab === "actions" ? (
-            <ul className="queue" aria-label={t("open.list.actions")}>
+            <RowList aria-label={t("open.list.actions")}>
               {shownActions.map((a) => (
                 <ActionRow key={a.id} action={a} />
               ))}
-            </ul>
+            </RowList>
           ) : (
-            <ul className="queue" aria-label={t("open.list.questions")}>
+            <RowList aria-label={t("open.list.questions")}>
               {shownQuestions.map((q) => (
                 <QuestionRow key={q.id} question={q} />
               ))}
-            </ul>
+            </RowList>
           )}
           <p className="hint">{tn("open.count", shown)}</p>
         </>

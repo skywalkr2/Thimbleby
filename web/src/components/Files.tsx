@@ -24,6 +24,10 @@ import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
 import { Button, ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row, ExpandableRow } from "../ui/Row";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 /** The width the list needs beside the pane before the pane would overlay it. */
 const FILES_FIT = 420;
 /** The media types shown as text in the preview, and how much of the start of one is shown. */
@@ -90,11 +94,11 @@ export function Files() {
         ) : shown.length === 0 ? (
           <EmptyState text={t("sides.empty.files", { side: side.named })} />
         ) : (
-          <ul className="queue">
+          <RowList>
             {shown.map((file) => (
               <FileRow key={file.id} file={file} project={file.project ? names.get(file.project) : undefined} side={!!file.project && sides.has(file.project)} choice={choice} />
             ))}
-          </ul>
+          </RowList>
         )}
       </ListDetail>
       {adding && (
@@ -129,31 +133,31 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
     t("files.added_on", { when: day(file.added_at) }),
   ];
   return (
-    <li className="line" ref={ref} aria-labelledby={titleId} {...choice.rowProps(file.id)}>
-      <div className="row">
-        <span className="kind k-review">{file.kind_label}</span>
-        <div className="text">
-          <button type="button" id={titleId} className="expander text name" aria-expanded={choice.chosen === file.id} onClick={() => choice.choose(file.id)}>
-            {file.name}
-          </button>
-          <span className="sub">{facts.join(" · ")}</span>
-          {file.origin === "tool" && <Pill tone="warn" className="pill-flush">{t("files.untrusted")}</Pill>}
-        </div>
-        <div className="acts">
-          <ButtonLink variant="primary"
-            data-key="primary"
-            href={api.fileContent(file.id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t("files.open_named", { name: file.name })}
-          >
-            {t("files.open")}
-          </ButtonLink>
-          <RowMenu label={file.name} actions={menu} />
-        </div>
-      </div>
+    <ExpandableRow
+      ref={ref}
+      aria-labelledby={titleId}
+      {...choice.rowProps(file.id)}
+      pill={<Pill>{file.kind_label}</Pill>}
+      title={file.name}
+      titleId={titleId}
+      metaLines={[facts.join(" · "), file.origin === "tool" ? <Pill tone="warn">{t("files.untrusted")}</Pill> : null]}
+      expand={{ expanded: choice.chosen === file.id, onToggle: () => choice.choose(file.id) }}
+      primary={
+        <ButtonLink
+          variant="primary"
+          data-key="primary"
+          href={api.fileContent(file.id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t("files.open_named", { name: file.name })}
+        >
+          {t("files.open")}
+        </ButtonLink>
+      }
+      menu={<RowMenu label={file.name} actions={menu} />}
+    >
       {review}
-    </li>
+    </ExpandableRow>
   );
 }
 
@@ -180,14 +184,14 @@ function FileDetail(props: { file: S["FileView"]; project?: string; side?: boole
         <p>{t(file.origin === "tool" ? "files.detail.from_tool" : "files.detail.from_you", { when: day(file.added_at) })}</p>
         {file.origin === "tool" && <p className="hint">{t("files.detail.from_tool_hint")}</p>}
         {props.earlier && <p>{t("files.detail.replaces", { name: props.earlier })}</p>}
-        <dl className="details-list">
+        <DefinitionList>
           {facts.map(([label, value]) => (
-            <div className="detail" key={label}>
+            <Definition key={label}>
               <dt>{label}</dt>
               <dd>{value}</dd>
-            </div>
+            </Definition>
           ))}
-        </dl>
+        </DefinitionList>
       </section>
       <section aria-labelledby={`file-${file.id}-refers`}>
         <h3 id={`file-${file.id}-refers`}>{t("files.detail.refers")}</h3>
@@ -198,20 +202,21 @@ function FileDetail(props: { file: S["FileView"]; project?: string; side?: boole
         ) : used.data.items.length === 0 ? (
           <p className="hint">{t("files.detail.refers_none")}</p>
         ) : (
-          <ul className="queue">
+          <RowList>
             {used.data.items.map((use) => (
-              <li key={`${use.kind}:${use.id}`} className="line">
-                <a href={viewHref(recordView(use.kind, use.id))}>{t("files.detail.refers_item", { kind: use.kind_label, label: use.label })}</a>
-              </li>
+              <Row
+                key={`${use.kind}:${use.id}`}
+                title={<a href={viewHref(recordView(use.kind, use.id))}>{t("files.detail.refers_item", { kind: use.kind_label, label: use.label })}</a>}
+              />
             ))}
-          </ul>
+          </RowList>
         )}
       </section>
-      <div className="row-end">
+      <Actions align="end">
         <ButtonLink variant="primary" href={api.fileContent(file.id)} target="_blank" rel="noopener noreferrer" aria-label={t("files.open_named", { name: file.name })}>
           {t("files.open")}
         </ButtonLink>
-      </div>
+      </Actions>
     </>
   );
 }

@@ -1,7 +1,8 @@
 // The style guide (design 7.11): every shared component in every state, the type scale and the color roles, in light and
 // dark. It is shown only for a demo workspace or in development, and is not in the sidebar (#styleguide).
 import { useEffect, useId, useState } from "react";
-import { Heading } from "react-aria-components";
+import { Button as AriaButton, Dialog, DialogTrigger, Heading } from "react-aria-components";
+import { addDays, todayOn } from "../lib/dates";
 import { applyTheme, useAppearance, type Theme } from "../lib/theme";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -16,15 +17,28 @@ import { Panel } from "../ui/Panel";
 import { Pill } from "../ui/Pill";
 import { FilterChip } from "../ui/FilterChip";
 import { RoundCheck } from "../ui/RoundCheck";
-import { Row } from "../ui/Row";
+import { ExpandableRow, Row } from "../ui/Row";
+import { RowBody } from "../ui/RowBody";
 import { TabStrip } from "../ui/TabStrip";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { StatusChip } from "../ui/StatusChip";
-import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
 import styles from "./StyleGuide.module.css";
 
+import { ActivityList } from "../ui/ActivityList";
+import { AskAboutThis } from "../ui/AskAboutThis";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { DateField } from "../ui/DateField";
+import { Definition, DefinitionList } from "../ui/DefinitionList";
+import { FileDrop } from "../ui/FileDrop";
+import { FormField } from "../ui/FormField";
+import { BottomSheet } from "../ui/Overlay";
 import { PageHeader } from "../ui/PageHeader";
+import { Popover } from "../ui/Popover";
+import { RadioCard, RadioCards } from "../ui/RadioCard";
+import { Select } from "../ui/Select";
+import { StepFooter } from "../ui/Wizard";
 const TYPE_SCALE = [
   { token: "text-2xl", weight: "semibold" },
   { token: "text-xl", weight: "semibold" },
@@ -75,6 +89,19 @@ export function StyleGuide() {
   const [dialog, setDialog] = useState(false);
   const [draft, setDraft] = useState("");
   const [choice, setChoice] = useState("a");
+  const [card, setCard] = useState("a");
+  const [sheet, setSheet] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [ask, setAsk] = useState("");
+  const today = todayOn(new Date());
+  const activity = [
+    { key: "a", at: `${today}T10:42:00`, body: t("styleguide.activity_a") },
+    { key: "b", at: `${today}T09:15:00`, body: t("styleguide.activity_b") },
+    { key: "c", at: `${addDays(today, -1)}T16:20:00`, body: t("styleguide.activity_c") },
+    { key: "d", at: `${addDays(today, -1)}T11:05:00`, body: t("styleguide.activity_d") },
+    { key: "e", at: `${addDays(today, -3)}T08:30:00`, body: t("styleguide.activity_e") },
+    { key: "f", at: `${addDays(today, -4)}T14:00:00`, body: t("styleguide.activity_f") },
+  ];
   const fieldId = useId();
 
   // The page's own theme toggle shows both themes without changing what this device remembers.
@@ -173,10 +200,13 @@ export function StyleGuide() {
           <StatusChip tone="warn" aria-label={t("styleguide.chip_warn")}>
             {t("styleguide.chip_warn")}
           </StatusChip>
+          <StatusChip tone="danger" aria-label={t("styleguide.chip_danger")}>
+            {t("styleguide.chip_danger")}
+          </StatusChip>
         </div>
       </Section>
 
-      <Panel title={t("styleguide.rows")} count={5} flush>
+      <Panel title={t("styleguide.rows")} count={6} flush>
         <ul className={styles.list}>
           <Row
             lead={<RoundCheck label={t("styleguide.row_lead_check")} onClick={() => undefined} />}
@@ -202,6 +232,20 @@ export function StyleGuide() {
           <Row pill={<Pill tone="danger">{t("styleguide.pill_danger")}</Pill>} title={t("styleguide.row_title")}>
             <p className={styles.caption}>{t("styleguide.row_expanded")}</p>
           </Row>
+          <ExpandableRow
+            title={t("styleguide.row_expand")}
+            titleId={`${fieldId}-expand`}
+            aria-labelledby={`${fieldId}-expand`}
+            meta={t("styleguide.row_expand_meta")}
+            expand={{ expanded: open, controls: `${fieldId}-expand-body`, onToggle: () => setOpen(!open) }}
+            primary={<Button variant="primary" size="sm">{t("styleguide.row_primary")}</Button>}
+          >
+            {open && (
+              <RowBody id={`${fieldId}-expand-body`}>
+                <p className={styles.caption}>{t("styleguide.row_expanded")}</p>
+              </RowBody>
+            )}
+          </ExpandableRow>
         </ul>
       </Panel>
 
@@ -299,11 +343,33 @@ export function StyleGuide() {
             placement="bottom start"
             groups={[
               { id: "one", entries: [{ id: "a", label: t("styleguide.menu_item"), icon: "check" }, { id: "b", label: t("styleguide.menu_disabled"), disabled: true, reason: t("styleguide.reason") }] },
+              { id: "drop", entries: [{ id: "c", label: t("styleguide.menu_danger"), danger: true }] },
               { id: "two", title: t("user.theme"), selected: "light", entries: [{ id: "light", label: t("user.theme.light"), icon: "sun" }, { id: "dark", label: t("user.theme.dark"), icon: "moon" }] },
             ]}
             trigger={<Button icon="chevron-down">{t("styleguide.open_menu")}</Button>}
           />
+          <Button id="styleguide-sheet" onClick={() => setSheet(true)}>
+            {t("styleguide.open_sheet")}
+          </Button>
+          <DialogTrigger>
+            <AriaButton className={styles.trigger}>
+              <Icon name="help" size={16} /> {t("styleguide.open_popover")}
+            </AriaButton>
+            <Popover label={t("styleguide.popover_title")} columns={2}>
+              <ul className={styles.popoverList}>
+                <li>
+                  <strong>{t("styleguide.popover_a")}</strong>
+                  <p className={styles.caption}>{t("styleguide.popover_a_text")}</p>
+                </li>
+                <li>
+                  <strong>{t("styleguide.popover_b")}</strong>
+                  <p className={styles.caption}>{t("styleguide.popover_b_text")}</p>
+                </li>
+              </ul>
+            </Popover>
+          </DialogTrigger>
           <Button onClick={() => push({ message: t("styleguide.toast"), undo: () => undefined })}>{t("styleguide.show_toast")}</Button>
+          <Button onClick={() => push({ message: t("styleguide.toast_warn"), tone: "warn" })}>{t("styleguide.show_toast_warn")}</Button>
           <Button
             onClick={() => {
               push({ message: t("styleguide.toast"), undo: () => undefined });
@@ -324,50 +390,104 @@ export function StyleGuide() {
 
       <Section title={t("styleguide.forms")} note={t("styleguide.forms_note")}>
         <div className={styles.form}>
-          <div className="field">
-            <label htmlFor={`${fieldId}-a`}>{t("styleguide.field")}</label>
+          <FormField id={`${fieldId}-a`} label={t("styleguide.field")}>
             <input id={`${fieldId}-a`} placeholder={t("styleguide.placeholder")} />
             <p className="hint">{t("styleguide.hint")}</p>
-          </div>
-          <div className="field">
-            <label htmlFor={`${fieldId}-b`}>{t("styleguide.field_error")}</label>
+          </FormField>
+          <FormField id={`${fieldId}-b`} label={t("styleguide.field_error")}>
             <input id={`${fieldId}-b`} className={styles.invalid} defaultValue={t("styleguide.value")} aria-invalid="true" aria-describedby={`${fieldId}-e`} />
             <p id={`${fieldId}-e`} className={styles.error}>
               {t("styleguide.error")}
             </p>
-          </div>
-          <div className="field">
-            <label htmlFor={`${fieldId}-c`}>{t("styleguide.field_disabled")}</label>
+          </FormField>
+          <FormField id={`${fieldId}-c`} label={t("styleguide.field_disabled")}>
             <input id={`${fieldId}-c`} disabled defaultValue={t("styleguide.value")} />
-          </div>
-          <div className="field">
-            <label htmlFor={`${fieldId}-d`}>{t("styleguide.field_select")}</label>
-            <select id={`${fieldId}-d`}>
+          </FormField>
+          <FormField id={`${fieldId}-d`} label={t("styleguide.field_select")}>
+            <Select id={`${fieldId}-d`}>
               <option>{t("styleguide.seg_a")}</option>
               <option>{t("styleguide.seg_b")}</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor={`${fieldId}-f`}>{t("styleguide.field_text")}</label>
+            </Select>
+          </FormField>
+          <FormField id={`${fieldId}-f`} label={t("styleguide.field_text")}>
             <textarea id={`${fieldId}-f`} className="short" />
-          </div>
-          <div className={styles.choiceRow}>
-            <label className={styles.choice}>
-              <input type="checkbox" defaultChecked /> {t("styleguide.check_on")}
-            </label>
-            <label className={styles.choice}>
-              <input type="checkbox" /> {t("styleguide.check_off")}
-            </label>
-            <label className={styles.choice}>
-              <input type="checkbox" disabled /> {t("styleguide.check_disabled")}
-            </label>
-            <label className={styles.choice}>
-              <input type="radio" name={`${fieldId}-r`} checked={choice === "a"} onChange={() => setChoice("a")} /> {t("styleguide.seg_a")}
-            </label>
-            <label className={styles.choice}>
-              <input type="radio" name={`${fieldId}-r`} checked={choice === "b"} onChange={() => setChoice("b")} /> {t("styleguide.seg_b")}
-            </label>
-          </div>
+          </FormField>
+          <FormField id={`${fieldId}-h`} label={t("styleguide.field_date")} optional hint={t("styleguide.field_date_hint")}>
+            <DateField id={`${fieldId}-h`} aria-describedby={`${fieldId}-h-hint`} />
+          </FormField>
+          <FormField id={`${fieldId}-i`} label={t("styleguide.field_file")}>
+            <FileDrop id={`${fieldId}-i`} />
+          </FormField>
+          <CheckboxGroup legend={t("styleguide.group")} hint={t("styleguide.group_hint")}>
+            <div className={styles.choiceRow}>
+              <label className={styles.choice}>
+                <input type="checkbox" defaultChecked /> {t("styleguide.check_on")}
+              </label>
+              <label className={styles.choice}>
+                <input type="checkbox" /> {t("styleguide.check_off")}
+              </label>
+              <label className={styles.choice}>
+                <input type="checkbox" disabled /> {t("styleguide.check_disabled")}
+              </label>
+            </div>
+          </CheckboxGroup>
+          <CheckboxGroup legend={t("styleguide.group_radio")} role="radiogroup">
+            <div className={styles.choiceRow}>
+              <label className={styles.choice}>
+                <input type="radio" name={`${fieldId}-r`} checked={choice === "a"} onChange={() => setChoice("a")} /> {t("styleguide.seg_a")}
+              </label>
+              <label className={styles.choice}>
+                <input type="radio" name={`${fieldId}-r`} checked={choice === "b"} onChange={() => setChoice("b")} /> {t("styleguide.seg_b")}
+              </label>
+            </div>
+          </CheckboxGroup>
+          <CheckboxGroup legend={t("styleguide.cards")} hint={t("styleguide.cards_hint")} role="radiogroup">
+            <RadioCards>
+              <RadioCard name={`${fieldId}-c`} checked={card === "a"} onChange={() => setCard("a")} tag={t("styleguide.card_tag")} title={t("styleguide.card_a")} description={t("styleguide.card_a_text")} />
+              <RadioCard name={`${fieldId}-c`} checked={card === "b"} onChange={() => setCard("b")} title={t("styleguide.card_b")} description={t("styleguide.card_b_text")} />
+              <RadioCard name={`${fieldId}-c`} disabled title={t("styleguide.card_c")} description={t("styleguide.card_c_text")} />
+            </RadioCards>
+          </CheckboxGroup>
+        </div>
+      </Section>
+
+      <Section title={t("styleguide.record")} note={t("styleguide.record_note")}>
+        <div className={styles.stack}>
+          <DefinitionList>
+            <Definition>
+              <dt>{t("styleguide.def_role")}</dt>
+              <dd>{t("styleguide.def_role_value")}</dd>
+            </Definition>
+            <Definition>
+              <dt>{t("styleguide.def_side")}</dt>
+              <dd>{t("styleguide.def_side_value")}</dd>
+            </Definition>
+            <Definition>
+              <dt>{t("styleguide.def_birthday")}</dt>
+              <dd>{t("styleguide.def_birthday_value")}</dd>
+            </Definition>
+          </DefinitionList>
+          <ActivityList label={t("styleguide.activity")} entries={activity} />
+          <AskAboutThis
+            label={t("styleguide.ask_label")}
+            placeholder={t("styleguide.ask_placeholder")}
+            hint={t("styleguide.ask_hint")}
+            sendLabel={t("conversation.send")}
+            value={ask}
+            onChange={setAsk}
+            onSend={() => setAsk("")}
+          />
+        </div>
+      </Section>
+
+      <Section title={t("styleguide.wizard")} note={t("styleguide.wizard_note")}>
+        <div className={styles.footDemo}>
+          <StepFooter
+            inFlow
+            back={<Button variant="quiet">{t("styleguide.wizard_back")}</Button>}
+            later={<Button variant="quiet">{t("styleguide.wizard_later")}</Button>}
+            primary={<Button variant="primary">{t("styleguide.wizard_next")}</Button>}
+          />
         </div>
       </Section>
 
@@ -399,12 +519,27 @@ export function StyleGuide() {
       </Section>
 
       <Drawer open={drawer} title={t("styleguide.drawer_title")} dirty={draft !== ""} onClose={() => { setDrawer(false); }} footer={<Button variant="primary" onClick={() => setDrawer(false)}>{t("styleguide.drawer_save")}</Button>}>
-        <div className="field">
-          <label htmlFor={`${fieldId}-g`}>{t("styleguide.field_text")}</label>
+        <FormField id={`${fieldId}-g`} label={t("styleguide.field_text")}>
           <textarea id={`${fieldId}-g`} value={draft} onChange={(e) => setDraft(e.target.value)} />
           <p className="hint">{t("styleguide.drawer_hint")}</p>
-        </div>
+        </FormField>
       </Drawer>
+      {sheet && (
+        <BottomSheet
+          onClose={() => {
+            setSheet(false);
+            restoreFocus(() => document.getElementById("styleguide-sheet"));
+          }}
+        >
+          <Dialog aria-label={t("styleguide.sheet_title")}>
+            <Heading slot="title" className={styles.sheetTitle}>
+              {t("styleguide.sheet_title")}
+            </Heading>
+            <p>{t("styleguide.sheet_text")}</p>
+            <Button onClick={() => setSheet(false)}>{t("action.close")}</Button>
+          </Dialog>
+        </BottomSheet>
+      )}
       {dialog && (
         <ModalPanel
           titleId="styleguide-dialog-title"
@@ -417,7 +552,7 @@ export function StyleGuide() {
             {t("styleguide.dialog_title")}
           </Heading>
           <p>{t("styleguide.dialog_text")}</p>
-          <div className="row-end">
+          <DialogFooter>
             <Button
               onClick={() => {
                 setDialog(false);
@@ -435,7 +570,7 @@ export function StyleGuide() {
             >
               {t("styleguide.danger")}
             </Button>
-          </div>
+          </DialogFooter>
         </ModalPanel>
       )}
     </div>

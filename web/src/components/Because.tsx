@@ -12,6 +12,9 @@ import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
 import styles from "./Learned.module.css";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
 type Entry = S["AppliedEntryView"];
 
 /** Where an entry opens. */
@@ -106,21 +109,20 @@ function NotHere(props: { entry: Entry; onClose: () => void }) {
       }}
     >
       {choices.length > 0 ? (
-        <div className="field">
-          <label htmlFor={id}>{t("because.leave_out")}</label>
-          <select id={id} autoFocus value={project} onChange={(e) => setProject(e.target.value)}>
+        <FormField id={id} label={t("because.leave_out")}>
+          <Select id={id} autoFocus value={project} onChange={(e) => setProject(e.target.value)}>
             <option value="">{t("because.choose_project")}</option>
             {choices.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormField>
       ) : (
         <p className="hint">{t("because.only_retire")}</p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -132,7 +134,7 @@ function NotHere(props: { entry: Entry; onClose: () => void }) {
             {t("because.narrow")}
           </Button>
         )}
-      </div>
+      </Actions>
     </form>
   );
 }

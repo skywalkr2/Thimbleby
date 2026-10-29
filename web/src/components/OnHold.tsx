@@ -11,6 +11,8 @@ import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { Pill } from "../ui/Pill";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { Actions } from "../ui/Actions";
 type Blocker = NonNullable<S["TodoView"]["blocker"]>;
 
 /** What an action can be blocked on, for the picker: people, the other open to-dos and the questions still open or waiting
@@ -89,7 +91,7 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
       <label className="hint" htmlFor={`hold-on-${action.id}`}>
         {t("hold.on_label")}
       </label>
-      <select id={`hold-on-${action.id}`} value={on} onChange={(e) => setOn(e.target.value)}>
+      <Select id={`hold-on-${action.id}`} value={on} onChange={(e) => setOn(e.target.value)}>
         <option value="">{t("hold.on_none")}</option>
         {options.people.length > 0 && (
           <optgroup label={t("hold.on_people")}>
@@ -118,15 +120,15 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
             ))}
           </optgroup>
         )}
-      </select>
-      <div className="row-end">
+      </Select>
+      <Actions align="end">
         <Button variant="quiet" onClick={() => setAsking(false)}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!what.trim() && !on}>
           {t("hold.put")}
         </Button>
-      </div>
+      </Actions>
     </form>
   ) : null;
   return { entry, form };

@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useWords } from "../lib/wording";
 import { useAddOwnRequest } from "./HandIn";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 export interface NoteSend {
   label: string;
   /** Does the act with the note; an act that didn't go through returns nothing, so the box stays open. */
@@ -60,7 +61,7 @@ export function NoteBox(props: { sends: NoteSend[]; onClose: () => void }) {
       <span id={`${id}-hint`} className="hint">
         {t("note.hint")}
       </span>
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -75,7 +76,7 @@ export function NoteBox(props: { sends: NoteSend[]; onClose: () => void }) {
             {s.label}
           </Button>
         ))}
-      </div>
+      </Actions>
     </form>
   );
 }

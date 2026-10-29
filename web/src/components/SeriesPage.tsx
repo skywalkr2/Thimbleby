@@ -10,12 +10,14 @@ import { useWords } from "../lib/wording";
 import { AgendaSection } from "./AgendaList";
 import { RecordConversation } from "./RecordConversation";
 import { Pill } from "../ui/Pill";
-import { Row } from "../ui/Row";
+import { Row, RowItem } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { plainTitle } from "../lib/title-dates";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { RowList } from "../ui/RowList";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 type Page = S["SeriesPageView"];
 
 export function SeriesPage(props: { id: string; onBack: () => void }) {
@@ -45,25 +47,25 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
             </div>
             <aside className="record-side" aria-label={t("record.details")}>
               <h3>{t("record.details")}</h3>
-              <dl className="details-list">
+              <DefinitionList>
                 {data.repeats && (
-                  <div className="detail">
+                  <Definition>
                     <dt>{t("series.repeats")}</dt>
                     <dd>
                       {data.repeats} <span className="hint">{t("series.in_your_words")}</span>
                     </dd>
-                  </div>
+                  </Definition>
                 )}
                 {data.project_name && data.project && (
-                  <div className="detail">
+                  <Definition>
                     <dt>{t("series.project")}</dt>
                     <dd>
                       <a href={viewHref(recordView("project", data.project))}>{data.project_name}</a>
                     </dd>
-                  </div>
+                  </Definition>
                 )}
                 {(data.usually_with ?? []).length > 0 && (
-                  <div className="detail">
+                  <Definition>
                     <dt id="series-usually">{t("series.usually_with")}</dt>
                     <dd>
                       <ul className="plain-list" aria-labelledby="series-usually">
@@ -74,13 +76,13 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
                         ))}
                       </ul>
                     </dd>
-                  </div>
+                  </Definition>
                 )}
-                <div className="detail">
+                <Definition>
                   <dt>{t("series.rolling")}</dt>
                   <dd>{t("series.rolling_rule")}</dd>
-                </div>
-              </dl>
+                </Definition>
+              </DefinitionList>
             </aside>
           </div>
         </>
@@ -131,11 +133,11 @@ function NextMeeting(props: { page: Page }) {
       {groups.map((group) => (
         <div key={group.person ?? "unknown"} className="record-section">
           <h4 className="what">{group.is_pm ? t("series.you") : (group.name ?? t("series.someone"))}</h4>
-          <ul className="queue">
+          <RowList>
             {group.items.map((item) => (
               <ItemRow key={item.id} item={item} />
             ))}
-          </ul>
+          </RowList>
         </div>
       ))}
     </section>
@@ -150,7 +152,7 @@ function Past(props: { page: Page }) {
       <div className="heading">
         <h3 id="series-past">{t("series.past")}</h3>
       </div>
-      <ul className="queue">
+      <RowList>
         {props.page.past.map((m) => {
           const summary = [
             day(m.on),
@@ -160,22 +162,22 @@ function Past(props: { page: Page }) {
             .filter(Boolean)
             .join(" · ");
           return (
-            <li key={m.id} className="line">
+            <RowItem key={m.id}>
               <details>
                 <summary>{summary}</summary>
-                <ul className="queue">
+                <RowList>
                   {m.settled.map((item) => (
                     <ItemRow key={item.id} item={{ ...item, rolled_from: null }} note={t("series.settled_here")} />
                   ))}
                   {m.moved.map((item) => (
                     <ItemRow key={item.id} item={{ ...item, rolled_from: null }} note={item.to ? t("series.moved_here", { day: monthDay(item.to.on) }) : undefined} />
                   ))}
-                </ul>
+                </RowList>
               </details>
-            </li>
+            </RowItem>
           );
         })}
-      </ul>
+      </RowList>
     </section>
   );
 }

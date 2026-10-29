@@ -43,6 +43,10 @@ import { restoreFocus } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./AiAccounts.module.css";
+import { DateField } from "../ui/DateField";
+import { FormField } from "../ui/FormField";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
 
 type Mode = "key" | "models" | "expires" | "name" | null;
 
@@ -100,7 +104,7 @@ export function AiAccounts(props: {
           )}
         </Heading>
         {(props.onCompare || props.onAdd) && (
-          <div className="acts wrap">
+          <Actions>
             {props.onCompare && list.length > 0 && (
               <Button onClick={props.onCompare}>{t("ai_accounts.compare")}</Button>
             )}
@@ -109,7 +113,7 @@ export function AiAccounts(props: {
                 {t("ai_accounts.add")}
               </Button>
             )}
-          </div>
+          </Actions>
         )}
       </div>
       {list.length === 0 ? (
@@ -680,7 +684,7 @@ function AccountRow(props: {
     }
   };
   const replaceOffer = refusal && (
-    <div className="row-end" data-refusal="">
+    <Actions align="end" data-refusal="">
       {refusal.next_model ? (
         <Button size="sm" variant="primary" disabled={busy || testing} aria-label={t("ai_accounts.retired_use_next_named", { name, work: refusedWork })} onClick={() => void replaceRefused()}>
           {t("ai_accounts.retired_use_next")}
@@ -688,7 +692,7 @@ function AccountRow(props: {
       ) : (
         <p className="hint">{t("ai_accounts.retired_none")}</p>
       )}
-    </div>
+    </Actions>
   );
   const onlyMain = role === "work" && !heir;
   const extras = mode !== null || !!problem || testing || !!result || !!gate;
@@ -708,7 +712,7 @@ function AccountRow(props: {
     { id: "key", label: t("ai_accounts.replace_key"), run: () => open("key") },
     { id: "expires", label: t("ai_accounts.key_ends_set"), run: () => open("expires") },
     { id: "name", label: t("ai_accounts.rename"), run: () => open("name") },
-    { id: "remove", label: onlyMain ? t("ai_accounts.remove_no_account") : t("ai_accounts.remove"), run: remove, disabled: busy },
+    { id: "remove", danger: true, label: onlyMain ? t("ai_accounts.remove_no_account") : t("ai_accounts.remove"), run: remove, disabled: busy },
   ];
 
   const nextButton =
@@ -790,11 +794,11 @@ function AccountRow(props: {
           {canUseAnyway && (
             <>
               <p className="hint">{t("ai_check.use_anyway_hint")}</p>
-              <div className="row-end">
+              <Actions align="end">
                 <Button size="sm" disabled={busy} onClick={useAnyway}>
                   {t("ai_check.use_anyway")}
                 </Button>
-              </div>
+              </Actions>
             </>
           )}
         </div>
@@ -813,14 +817,14 @@ function AccountRow(props: {
             <p className="hint" id={`${base}-label-hint`}>
               {t("ai_accounts.rename_hint")}
             </p>
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button variant="primary" type="submit" disabled={busy || label.trim() === "" || label.trim() === name}>
                 {t(busy ? "ai_accounts.saving" : "ai_accounts.save")}
               </Button>
-            </div>
+            </Actions>
           </form>
         )}
         {mode === "expires" && (
@@ -831,18 +835,18 @@ function AccountRow(props: {
             }}
           >
             <label htmlFor={`${base}-ends`}>{t("ai_accounts.key_ends_label")}</label>
-            <input id={`${base}-ends`} ref={firstField} type="date" value={ends} onChange={(e) => setEnds(e.target.value)} aria-describedby={`${base}-ends-hint`} />
+            <DateField id={`${base}-ends`} ref={firstField} value={ends} onChange={(e) => setEnds(e.target.value)} aria-describedby={`${base}-ends-hint`} />
             <p className="hint" id={`${base}-ends-hint`}>
               {t("ai_accounts.key_ends_hint")}
             </p>
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button variant="primary" type="submit" disabled={busy || ends === (account.credential_expires ?? "")}>
                 {t(busy ? "ai_accounts.saving" : "ai_accounts.save")}
               </Button>
-            </div>
+            </Actions>
           </form>
         )}
         {mode === "key" && (
@@ -868,15 +872,15 @@ function AccountRow(props: {
               {t(props.local ? "ai_accounts.new_key_hint" : "welcome.ai.key_where_hint")}
             </p>
             <label htmlFor={`${base}-key-ends`}>{t("ai_accounts.key_ends_label")}</label>
-            <input id={`${base}-key-ends`} type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
-            <div className="row-end">
+            <DateField id={`${base}-key-ends`} value={ends} onChange={(e) => setEnds(e.target.value)} />
+            <Actions align="end">
               <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
               <Button variant="primary" type="submit" disabled={busy || key.trim() === ""}>
                 {t(busy ? "ai_accounts.saving" : "ai_accounts.save")}
               </Button>
-            </div>
+            </Actions>
           </form>
         )}
         {mode === "models" && (
@@ -886,11 +890,9 @@ function AccountRow(props: {
               if (modelsChanged && !modelsBlank) void changeModels(offeredModels);
             }}
           >
-            <fieldset className="details">
-              <legend>{t("ai_accounts.models_title", { name })}</legend>
+            <CheckboxGroup legend={t("ai_accounts.models_title", { name })}>
               {Object.keys(models).map((short, i) => (
-                <div className="field" key={short}>
-                  <label htmlFor={`${base}-model-${short}`}>{modelLabel(short)}</label>
+                <FormField id={`${base}-model-${short}`} label={modelLabel(short)} key={short}>
                   <input
                     id={`${base}-model-${short}`}
                     ref={i === 0 ? firstField : undefined}
@@ -900,11 +902,10 @@ function AccountRow(props: {
                     list={kind?.model_examples?.length ? examplesId : undefined}
                     onChange={(e) => setModels({ ...models, [short]: e.target.value })}
                   />
-                </div>
+                </FormField>
               ))}
               {!(HARDER in account.models) && (
-                <div className="field">
-                  <label htmlFor={`${base}-model-new`}>{t("ai_accounts.model_add_harder")}</label>
+                <FormField id={`${base}-model-new`} label={t("ai_accounts.model_add_harder")}>
                   <input
                     id={`${base}-model-new`}
                     type="text"
@@ -913,7 +914,7 @@ function AccountRow(props: {
                     list={kind?.model_examples?.length ? examplesId : undefined}
                     onChange={(e) => setHarder(e.target.value)}
                   />
-                </div>
+                </FormField>
               )}
               {offersHarderBackup && (
                 <label className="check-line">
@@ -928,8 +929,8 @@ function AccountRow(props: {
                   ))}
                 </datalist>
               ) : null}
-            </fieldset>
-            <div className="row-end">
+            </CheckboxGroup>
+            <Actions align="end">
               <Button variant="quiet" disabled={busy} onClick={close}>
                 {t("ai_accounts.cancel")}
               </Button>
@@ -941,13 +942,13 @@ function AccountRow(props: {
               <Button variant="primary" type="submit" disabled={busy || !modelsChanged || modelsBlank}>
                 {busy ? t("ai_accounts.saving") : offeredModels ? checkLabel(modelsOffer.data) : t("ai_accounts.save")}
               </Button>
-            </div>
+            </Actions>
           </form>
         )}
         {gate && (
           <div role="alert">
             <p className="hint">{t("ai_accounts.over", { amount: money(gate.usd), limit: money(confirmAbove) })}</p>
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="quiet" onClick={() => setGate(null)}>
                 {t("ai_accounts.cancel")}
               </Button>
@@ -961,7 +962,7 @@ function AccountRow(props: {
               >
                 {t("ai_accounts.go_ahead")}
               </Button>
-            </div>
+            </Actions>
           </div>
         )}
         {problem && (

@@ -12,6 +12,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { LabelForm, MoveForm } from "./MessageActs";
 import styles from "./MailSelection.module.css";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 type Asking = "move" | "label";
 const ACTIONS: { id: BatchAction; label: string }[] = [
   { id: "archive", label: "acts.archive" },
@@ -134,7 +135,7 @@ function BatchConfirm(props: { plan: { drafted: Drafted; what: BatchAction; fold
           </ul>
         </div>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" disabled={props.busy} onClick={props.onCancel}>
           {n > 0 ? t("batch.confirm.cancel") : t("acts.cancel")}
         </Button>
@@ -143,7 +144,7 @@ function BatchConfirm(props: { plan: { drafted: Drafted; what: BatchAction; fold
             {tn("batch.confirm.go", n)}
           </Button>
         )}
-      </div>
+      </Actions>
     </div>
   );
 }

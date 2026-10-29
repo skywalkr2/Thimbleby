@@ -7,6 +7,7 @@ import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { plainTitle } from "../lib/title-dates";
+import { RowList } from "../ui/RowList";
 
 export type OpenItem = S["OpenItemView"];
 
@@ -17,7 +18,7 @@ export function PrepItems(props: { kind: OpenItem["kind"]; items: OpenItem[]; na
   return (
     <div data-items={props.kind}>
       {props.heading !== false && <h4>{t(`meeting.items.${props.kind}`, { name: props.name })}</h4>}
-      <ul className="queue">
+      <RowList>
         {props.items.map((item) => (
           <Row
             key={`${item.record}:${item.id}`}
@@ -26,7 +27,7 @@ export function PrepItems(props: { kind: OpenItem["kind"]; items: OpenItem[]; na
             meta={[item.due ? t("meeting.items.due", { date: day(item.due) }) : "", item.quote ? t("meeting.items.quote", { quote: item.quote }) : ""].filter(Boolean).join(" · ") || undefined}
           />
         ))}
-      </ul>
+      </RowList>
     </div>
   );
 }

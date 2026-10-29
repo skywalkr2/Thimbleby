@@ -503,11 +503,13 @@ test("Undo sends the old values back; after later saves it uses the newest finge
   await screen.findByText("Saved. The display name: Lanternx");
   await user.click(screen.getByLabelText("What demo.on does"));
   await waitFor(() => expect(posted(calls)).toHaveLength(2));
-  await user.click((await screen.findAllByRole("button", { name: "Undo" }))[0]);
+  // One toast shows, the newest; its Undo sends the old value with the newest fingerprint, so it still works after later saves.
+  expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(posted(calls)).toHaveLength(3));
-  expect(posted(calls)[2]).toEqual({ changes: { "demo.title": "Lantern" }, reset: [], fingerprint: "fp-3" });
+  // The setting was at its default before the second save, so Undo resets it.
+  expect(posted(calls)[2]).toEqual({ changes: {}, reset: ["demo.on"], fingerprint: "fp-3" });
   expect(await screen.findByText("Undone.")).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveValue("Lantern"));
 });
 
 test("a changed setting says Changed with a Reset beside its label; one at its default shows nothing", async () => {

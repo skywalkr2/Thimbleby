@@ -14,6 +14,11 @@ import { Skeleton } from "../ui/Skeleton";
 import { Button, ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { Row } from "../ui/Row";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
 // ---- synced folder -------------------------------------------------------------------------------------------------
 
 const SYNC_FOLDER = "storage.sync.folder";
@@ -67,8 +72,7 @@ function SyncUnset(props: { fingerprint: string }) {
         }}
       >
         <p className="path">{t("setup.sync_shared_for", { folder: chosen })}</p>
-        <fieldset className="change">
-          <legend>{t("setup.sync_shared_title")}</legend>
+        <CheckboxGroup legend={t("setup.sync_shared_title")}>
           <div className="choice-row">
             <label className="check-line">
               <input type="radio" name="sync-shared" ref={firstAnswer} checked={shared === false} onChange={() => setShared(false)} />
@@ -80,13 +84,13 @@ function SyncUnset(props: { fingerprint: string }) {
             </label>
           </div>
           <p className="hint">{t("setup.sync_shared_hint")}</p>
-        </fieldset>
+        </CheckboxGroup>
         {problem && (
           <p className="problem-note" role="alert">
             {problem}
           </p>
         )}
-        <div className="row-end">
+        <Actions align="end">
           <Button
             disabled={busy}
             onClick={() => {
@@ -99,7 +103,7 @@ function SyncUnset(props: { fingerprint: string }) {
           <Button variant="primary" type="submit" disabled={busy || shared === null}>
             {t("setup.sync_shared_save")}
           </Button>
-        </div>
+        </Actions>
       </form>
     );
   }
@@ -108,11 +112,11 @@ function SyncUnset(props: { fingerprint: string }) {
     <div className="sync-body">
       <p>{t("setup.sync_unset")}</p>
       {canList ? (
-        <div className="row-end">
+        <Actions align="end">
           <Button variant="primary" ref={chooser} disabled={busy} onClick={() => setPicking(true)}>
             {t("setup.sync_choose")}
           </Button>
-        </div>
+        </Actions>
       ) : (
         <form
           onSubmit={(e) => {
@@ -120,15 +124,14 @@ function SyncUnset(props: { fingerprint: string }) {
             if (typed.trim()) setChosen(typed.trim());
           }}
         >
-          <div className="field">
-            <label htmlFor="sync-path">{t("setup.sync_path")}</label>
+          <FormField id="sync-path" label={t("setup.sync_path")}>
             <div className="inline-field">
               <input id="sync-path" type="text" value={typed} autoComplete="off" onChange={(e) => setTyped(e.target.value)} />
               <Button variant="primary" type="submit" disabled={!typed.trim()}>
                 {t("setup.sync_save")}
               </Button>
             </div>
-          </div>
+          </FormField>
         </form>
       )}
       {problem && (
@@ -168,7 +171,7 @@ function SharedSwitch(props: { shared: boolean }) {
     }
   };
   return (
-    <div className="field">
+    <FormBlock>
       <label className="check-line">
         <input type="checkbox" checked={props.shared} onChange={(e) => void change(e.target.checked)} />
         <span>{t("setup.sync_shared_switch")}</span>
@@ -179,7 +182,7 @@ function SharedSwitch(props: { shared: boolean }) {
           {problem}
         </p>
       )}
-    </div>
+    </FormBlock>
   );
 }
 
@@ -242,11 +245,11 @@ export function SyncPanel() {
                 {t("setup.sync_edits")}
               </h3>
               {data.shared && <p className="hint">{t("setup.sync_edits_shared")}</p>}
-              <ul className="queue">
+              <RowList>
                 {data.outside_edits.map((edit) => (
                   <OutsideEdit key={edit.path} edit={edit} onReview={open} />
                 ))}
-              </ul>
+              </RowList>
             </section>
           )}
           {data.conflict_copies.length > 0 && (

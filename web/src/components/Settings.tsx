@@ -80,6 +80,7 @@ import { restoreFocus } from "./ModalPanel";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { SearchField } from "../ui/SearchField";
 type Edits = Record<string, Draft>;
 
 const SEARCH_ID = "settings-search";
@@ -168,22 +169,18 @@ export function SettingsFrame(props: {
       <p className="settings-intro">{t("settings.intro")}</p>
       <div className="settings-layout">
         <div className="settings-side">
-          <div className="field">
-            <label htmlFor={SEARCH_ID}>{t("settings.search")}</label>
-            <input
-              id={SEARCH_ID}
-              type="search"
-              value={props.search?.query ?? ""}
-              onChange={(e) => {
-                if (props.search) props.search.onQuery(e.target.value);
-                else if (e.target.value) {
-                  handOffSearch(e.target.value);
-                  props.choose("you");
-                }
-              }}
-              autoComplete="off"
-            />
-          </div>
+          <SearchField
+            id={SEARCH_ID}
+            label={t("settings.search")}
+            value={props.search?.query ?? ""}
+            onChange={(value) => {
+              if (props.search) props.search.onQuery(value);
+              else if (value) {
+                handOffSearch(value);
+                props.choose("you");
+              }
+            }}
+          />
           <SettingsNav listed={listed} current={props.under ?? null} choose={props.choose} />
         </div>
         <div className="settings-content" ref={props.contentRef}>

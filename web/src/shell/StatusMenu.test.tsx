@@ -39,7 +39,7 @@ const open = async (user: ReturnType<typeof userEvent.setup>) => {
 test("all good: the chip says Live in words, and the popover says when the screen last updated", async () => {
   const user = userEvent.setup();
   show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }));
-  expect(await chip()).toHaveTextContent("Connected");
+  expect(await chip()).toHaveTextContent("All good");
   expect(await chip()).toHaveAttribute("data-status", "live");
   const dialog = await open(user);
   expect(within(dialog).getByText(/Updated /)).toBeInTheDocument();
@@ -55,9 +55,9 @@ test("the popover says the backup is encrypted when it is", async () => {
 
 test("once a backup has succeeded the chip itself shows its age, and its name says it too", async () => {
   show(statusFixture({}, { backup: { configured: true, age_hours: 3, needs_attention: false } }));
-  await chipText("Connected");
+  await chipText("All good");
   await chipText("Backed up 3 hours ago");
-  expect(await chip()).toHaveAccessibleName("App status: Connected, Backed up 3 hours ago");
+  expect(await chip()).toHaveAccessibleName("App status: All good, Backed up 3 hours ago");
 });
 
 test("an overdue backup keeps its age on the chip beside the warning", async () => {
@@ -298,4 +298,52 @@ test("a network wait with a count of zero shows no network line", async () => {
   const dialog = await open(user);
   expect(dialog.querySelector('[data-state="network"]')).toBeNull();
   expect(dialog).not.toHaveTextContent(/\b0 requests?\b/);
+});
+
+// The header read its state from the app, the restart, the backup and the spend, and never from the connections: a connection
+// that could not be read left it saying all was well.
+const source = (over: Partial<S["WatchSourceView"]>): S["WatchSourceView"] => ({
+  id: "src-1", label: "Example mail", connector: "k", connector_label: "Mail", enabled: true, every_minutes: 15, items: 0, last: null, read_at: null, failures: 0, problem: null, ...over,
+});
+const tried = (outcome: "ok" | "failed" | "offline") => ({ outcome, started_at: "2026-10-13T10:00:00Z", new: 0, changed: 0, removed: 0 });
+
+test("a connection that failed: the chip is a danger with its word, not all good, and the popover names the connection", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [source({ last: tried("failed"), read_at: "2026-10-13T08:00:00Z", failures: 3 })],
+  });
+  await chipIs("connection_failed");
+  expect(chipNow()).not.toHaveTextContent("All good");
+  expect(chipNow()).toHaveAttribute("data-tone", "danger");
+  await chipText("Connection failed");
+  const dialog = await open(user);
+  expect(within(dialog).getByText(/Example mail/)).toBeInTheDocument();
+});
+
+test("a connection trying again after no network is a warning, and the chip's name says so", async () => {
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [source({ last: tried("offline"), read_at: "2026-10-13T08:00:00Z" })],
+  });
+  await chipIs("connection_retrying");
+  expect(chipNow()).toHaveAttribute("data-tone", "warn");
+  expect(await chip()).toHaveAccessibleName(/^App status: Connection retrying/);
+});
+
+test("when every connection was read the chip says all good", async () => {
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [source({ last: tried("ok"), read_at: "2026-10-13T10:00:00Z" })],
+  });
+  await chipIs("live");
+  expect(chipNow()).toHaveTextContent("All good");
+  expect(chipNow()).toHaveAttribute("data-tone", "ok");
+});
+
+test("the popover holds what was checked: how many connections were read and when, and any that were not looked at before a day", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [source({ last: tried("ok"), read_at: "2026-10-13T10:00:00Z", looked_back_to: "2026-10-06" })],
+  });
+  const dialog = await open(user);
+  await waitFor(() => expect(within(dialog).getByText(/Checked 1 connection/)).toBeInTheDocument());
+  expect(within(dialog).getByText(/Not looked at before/)).toBeInTheDocument();
 });

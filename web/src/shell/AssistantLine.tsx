@@ -4,7 +4,8 @@
 // runs by account, what waits for the assistant and the order the accounts are tried in. It sits beside the status chip,
 // whose own states it reuses and does not repeat.
 import { useQuery } from "@tanstack/react-query";
-import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
+import { Button as AriaButton, DialogTrigger } from "react-aria-components";
+import { Popover } from "../ui/Popover";
 import { useAccountNames } from "../lib/account-names";
 import { api, type S } from "../lib/api";
 import { wallWhen } from "../lib/dates";
@@ -73,9 +74,8 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
           {t("alive.name")}
         </span>
       </AriaButton>
-      <Popover placement="bottom end" className={styles.popover}>
-        <Dialog aria-label={t("alive.title")} className={styles.dialog}>
-          {({ close }) => (
+      <Popover label={t("alive.title")}>
+        {(close) => (
             <ul className={styles.sections}>
               {tone !== "ok" && (
                 <li className={[styles.section, styles.problem].join(" ")} data-section="problem" data-tone={tone}>
@@ -141,8 +141,7 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                 ))}
               </li>
             </ul>
-          )}
-        </Dialog>
+        )}
       </Popover>
     </DialogTrigger>
   );

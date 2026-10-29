@@ -13,6 +13,10 @@ import { WorkingCopies } from "./WorkingCopies";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
 type Review = (version: string, returnTo?: () => HTMLElement | null | undefined) => void;
 
 /** Words by who wrote them. The three kinds are never folded together. */
@@ -87,8 +91,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
       )}
       {data &&
         (editing ? (
-          <div className="field">
-            <label htmlFor={`${base}-edit`}>{t("text.edit_label", { field: labelOf(field) })}</label>
+          <FormField id={`${base}-edit`} label={t("text.edit_label", { field: labelOf(field) })}>
             <textarea
               id={`${base}-edit`}
               ref={area}
@@ -102,15 +105,15 @@ export function TextSection(props: { kind: string; id: string; field: string; he
                 }
               }}
             />
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="quiet" onClick={stopEdit}>
                 {t("action.cancel")}
               </Button>
               <Button variant="primary" disabled={saving} onClick={() => void save()}>
                 {t(saving ? "text.saving" : "text.save")}
               </Button>
-            </div>
-          </div>
+            </Actions>
+          </FormField>
         ) : data.text.trim() ? (
           <div className="text-body">
             <SafeText text={data.text} />
@@ -136,11 +139,11 @@ export function TextSection(props: { kind: string; id: string; field: string; he
             {t("text.versions")}
             {pending.length > 0 ? ` · ${tn("text.waiting", pending.length)}` : ""}
           </h4>
-          <ul className="queue">
+          <RowList>
             {data.versions.map((v) => (
               <VersionRow key={v.id} version={v} current={data.current} onReview={props.onReview} />
             ))}
-          </ul>
+          </RowList>
         </section>
       )}
       <WorkingCopies kind={kind} id={id} field={field} onReview={props.onReview} />
@@ -162,30 +165,22 @@ function VersionRow(props: { version: S["TextVersionView"]; current: number | nu
     ...(version.number === props.current ? [t("text.shown_now")] : []),
   ];
   return (
-    <li className="line" data-row>
-      <div className="row pair">
-        <div className="text">
-          <div className="name">{t("text.version_n", { n: version.number })}</div>
-          <span className="sub">{facts.join(" · ")}</span>
-          {version.note && (
-            <div className="sub">
-              <SafeText text={version.note} />
-            </div>
-          )}
-        </div>
-        {version.status === "pending" && (
-          <div className="acts">
-            <Button variant="primary"
-              ref={button}
-              data-key="primary"
-              aria-label={t("text.review_named", { n: version.number })}
-              onClick={() => props.onReview(version.id, () => button.current)}
-            >
-              {t("text.review")}
-            </Button>
-          </div>
-        )}
-      </div>
-    </li>
+    <Row
+      title={t("text.version_n", { n: version.number })}
+      metaLines={[facts.join(" · "), version.note ? <SafeText text={version.note} /> : null]}
+      primary={
+        version.status === "pending" ? (
+          <Button
+            variant="primary"
+            ref={button}
+            data-key="primary"
+            aria-label={t("text.review_named", { n: version.number })}
+            onClick={() => props.onReview(version.id, () => button.current)}
+          >
+            {t("text.review")}
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }

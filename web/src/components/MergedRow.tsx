@@ -5,6 +5,7 @@ import { Fragment, useId } from "react";
 import { fromDraft, isChanged, labelOf, type Draft, type Item } from "../lib/settings";
 import { useWords } from "../lib/wording";
 import { ClampedHint } from "../ui/ClampedHint";
+import { Select } from "../ui/Select";
 
 /** The part of a key that names the setting inside its group, which a row's pattern refers to as `{name}`. */
 const slotOf = (key: string) => key.slice(key.lastIndexOf(".") + 1);
@@ -35,7 +36,7 @@ export function MergedRow(props: {
     const listed = item.options ?? [];
     const options = listed.includes(value) || value === "" ? listed : [...listed, value];
     return (
-      <select
+      <Select
         key={item.key}
         id={`setting-${item.key}`}
         aria-label={labelOf(item, t, has)}
@@ -52,7 +53,7 @@ export function MergedRow(props: {
             {option(item, o)}
           </option>
         ))}
-      </select>
+      </Select>
     );
   };
   const bySlot = new Map(items.map((item) => [slotOf(item.key), item]));

@@ -4,7 +4,8 @@
 // picker); a correction is the person's own edit, with Undo, and a signal the assistant learns from. Never a score.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
-import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
+import { Button as AriaButton, DialogTrigger } from "react-aria-components";
+import { Popover } from "../ui/Popover";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
@@ -14,6 +15,11 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { OriginLink } from "./Origin";
 import styles from "./PromiseWhy.module.css";
+import { Select } from "../ui/Select";
+import { DateField } from "../ui/DateField";
+import { Actions } from "../ui/Actions";
+import { ItemList } from "../ui/ItemList";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 
 type View = S["PromiseView"];
 type Field = "owner" | "to" | "due" | "basis";
@@ -58,7 +64,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
     );
   }
   const row = (field: Field, label: string, value: ReactNode, editor: ReactNode) => (
-    <div className="detail" data-promise={field}>
+    <Definition data-promise={field}>
       <dt>{label}</dt>
       <dd>
         {editing === field ? (
@@ -72,19 +78,19 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
           </>
         )}
       </dd>
-    </div>
+    </Definition>
   );
   return (
     <section className="promise-why" aria-label={t("promise.why")} data-promise-why={view.action}>
-      <dl className="details-list">
+      <DefinitionList>
         {view.quote && !props.omitQuote && (
-          <div className="detail">
+          <Definition>
             <dt>{t("promise.words")}</dt>
             <dd>
               <q>{plainDates(view.quote)}</q>
               {!props.omitOrigin && <OriginLink origin={view.origin} />}
             </dd>
-          </div>
+          </Definition>
         )}
         {row(
           "owner",
@@ -137,14 +143,14 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
             <PickBasis value={view.basis} onPick={(basis) => void done({ basis })} onCancel={() => setEditing(null)} />,
           )}
         {(!view.quote || props.omitQuote) && !props.omitOrigin && (
-          <div className="detail">
+          <Definition>
             <dt />
             <dd>
               <OriginLink origin={view.origin} />
             </dd>
-          </div>
+          </Definition>
         )}
-      </dl>
+      </DefinitionList>
       <PromiseNews news={view.news} />
     </section>
   );
@@ -161,10 +167,8 @@ function MetaPart(props: { label: string; text: string; flag?: string | null; op
           {props.text}
           {props.flag && <strong className={styles.flag}> {props.flag}</strong>}
         </AriaButton>
-        <Popover placement="bottom start" className={styles.popover}>
-          <Dialog aria-label={props.label} className={styles.dialog}>
-            {props.children}
-          </Dialog>
+        <Popover label={props.label} placement="bottom start" size="sm" className={styles.content}>
+          {props.children}
         </Popover>
       </DialogTrigger>
     </span>
@@ -243,7 +247,7 @@ export function PromiseNews(props: { news: View["news"] }) {
   return (
     <div className="promise-news">
       <h4>{t("promise.news")}</h4>
-      <ul className="children">
+      <ItemList>
         {props.news.map((n, i) => (
           <li key={`${n.on}-${i}`} data-delivered={n.delivered ? "" : undefined}>
             <div>
@@ -254,7 +258,7 @@ export function PromiseNews(props: { news: View["news"] }) {
             {n.quote && <div className="hint">{t("promise.news.quote", { quote: n.quote })}</div>}
           </li>
         ))}
-      </ul>
+      </ItemList>
     </div>
   );
 }
@@ -263,7 +267,7 @@ export function PromiseNews(props: { news: View["news"] }) {
 function PickPerson(props: { label: string; value: string; people: S["PersonView"][]; none?: string; onPick: (person: string) => void; onCancel: () => void }) {
   const id = useId();
   return (
-    <select
+    <Select
       id={id}
       autoFocus
       aria-label={props.label}
@@ -280,14 +284,14 @@ function PickPerson(props: { label: string; value: string; people: S["PersonView
           {p.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 
 function PickBasis(props: { value: "said" | "inferred"; onPick: (basis: "said" | "inferred") => void; onCancel: () => void }) {
   const { t } = useWords();
   return (
-    <select
+    <Select
       autoFocus
       aria-label={t("promise.basis")}
       value={props.value}
@@ -299,7 +303,7 @@ function PickBasis(props: { value: "said" | "inferred"; onPick: (basis: "said" |
     >
       <option value="said">{t("promise.basis.said")}</option>
       <option value="inferred">{t("promise.basis.inferred")}</option>
-    </select>
+    </Select>
   );
 }
 
@@ -322,15 +326,15 @@ export function NewDate(props: { label: string; value: string; onSave: (due: str
       <label className="hint" htmlFor={id}>
         {props.label}
       </label>
-      <input id={id} type="date" autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
-      <div className="row-end">
+      <DateField id={id} autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!value || value === props.value}>
           {t("promise.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

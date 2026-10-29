@@ -406,7 +406,8 @@ test("a refused request offers Send to another account first in its menu, with T
   expect(within(row).queryByRole("button", { name: "Send to another account" })).toBeNull();
   await choose(user, "Send to another account", row);
   const chooser = await screen.findByRole("group", { name: "Choose an account to try it with." });
-  expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Work account", "Second account", "Cancel"]);
+  // The accounts are asked for when the chooser opens, so they are listed a moment after it.
+  await waitFor(() => expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Work account", "Second account", "Cancel"]));
   await waitFor(() => expect(within(chooser).getByRole("button", { name: "Work account" })).toHaveFocus());
   await user.click(within(chooser).getByRole("button", { name: "Second account" }));
   expect(await screen.findByText("Sent to Second account.")).toBeInTheDocument();

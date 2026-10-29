@@ -22,6 +22,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { RowList } from "../ui/RowList";
 type Entry = S["SinceEntryView"];
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -104,11 +105,11 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
           <MissedOneLine className="hint" />
         </EmptyState>
       ) : (
-        <ul className="queue" aria-label={t("since.list_label")}>
+        <RowList aria-label={t("since.list_label")}>
           {entries.map((e) => (
             <EntryRow key={e.ref} entry={e} onOpenRecord={props.onOpenRecord} onGone={() => setGone((g) => new Set([...g, e.ref]))} />
           ))}
-        </ul>
+        </RowList>
       )}
     </section>
   );

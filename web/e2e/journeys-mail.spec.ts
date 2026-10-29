@@ -262,8 +262,8 @@ test.describe.serial("journey: mail", () => {
     await expect(folder.locator("[data-group]").first()).toBeVisible();
     const collapsed = folder.locator("[data-group] > h2 button[aria-expanded=false]");
     for (let closed = await collapsed.count(); closed > 0; closed = await collapsed.count()) await collapsed.first().click();
-    const socialRow = folder.locator("li.line", { hasText: social });
-    const salesRow = folder.locator("li.line", { hasText: sales });
+    const socialRow = folder.locator("[data-row-list] > li", { hasText: social });
+    const salesRow = folder.locator("[data-row-list] > li", { hasText: sales });
     await expect(socialRow).toContainText("Set aside because: your mail service files it under social");
     await expect(salesRow).toContainText("Set aside because: it was sent to many people");
     await visit(page);
@@ -272,7 +272,7 @@ test.describe.serial("journey: mail", () => {
     // is asked.
     await salesRow.getByRole("button", { name: `Bring it in: ${sales}` }).click();
     await expect(page.getByText(`Handed in ${sales}.`)).toBeVisible();
-    await expect(folder.locator("li.line", { hasText: sales })).toHaveCount(0);
+    await expect(folder.locator("[data-row-list] > li", { hasText: sales })).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn + 1);
     const handed = await requests();
     expect(handed.inputs.filter((input) => input.includes(sales))).toHaveLength(1);
@@ -284,7 +284,7 @@ test.describe.serial("journey: mail", () => {
     await expect(
       page.getByText("From now on, mail from updates@network.example.com is set aside as sales mail."),
     ).toBeVisible();
-    await expect(folder.locator("li.line", { hasText: social })).toHaveCount(1);
+    await expect(folder.locator("[data-row-list] > li", { hasText: social })).toHaveCount(1);
     await visit(page);
 
     // The next read brings a new message from that sender, saying nothing about itself: it is set aside by the new
@@ -302,7 +302,7 @@ test.describe.serial("journey: mail", () => {
     await expect(handled.locator("[data-group]").first()).toBeVisible();
     const shut = handled.locator("[data-group] > h2 button[aria-expanded=false]");
     for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();
-    await expect(handled.locator("li.line", { hasText: later.subject })).toContainText(
+    await expect(handled.locator("[data-row-list] > li", { hasText: later.subject })).toContainText(
       `Set aside because: it is from ${later.sender}`,
     );
     // Counted by input: on a busy computer a call that times out goes to the next account with the same input, which is
@@ -332,7 +332,8 @@ test.describe.serial("journey: mail", () => {
     const openMessage = async () => {
       await openView(page, "What changed");
       const title = new RegExp(`^Email from .+ · ${message.subject}$`);
-      await page.getByRole("list").getByRole("button", { name: new RegExp(`^Email from .+ · ${message.subject} `) }).click();
+      // The line's button is its title (the click area is the whole line); the detail's title is a link of the same name.
+      await page.getByRole("list").getByRole("button", { name: title }).click();
       await page.getByRole("link", { name: title }).click();
       await expect(page.getByRole("heading", { level: 1, name: message.subject })).toBeVisible();
     };

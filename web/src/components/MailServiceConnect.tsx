@@ -11,6 +11,10 @@ import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { SafeLink } from "./SafeText";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
 type Service = S["MailServiceView"];
 
 /** What `onPick` is told when the person chooses to type the server by hand. */
@@ -162,9 +166,8 @@ export function MailServiceConnect(props: {
       <p className="what" id={`${base}-title`}>
         {t("mail_service.title")}
       </p>
-      <div className="field">
-        <label htmlFor={props.selectId ?? `${base}-pick`}>{t("mail_service.pick")}</label>
-        <select id={props.selectId ?? `${base}-pick`} value={picked} disabled={busy} onChange={(e) => pick(e.target.value)} aria-describedby={`${base}-pick-hint`}>
+      <FormField id={props.selectId ?? `${base}-pick`} label={t("mail_service.pick")}>
+        <Select id={props.selectId ?? `${base}-pick`} value={picked} disabled={busy} onChange={(e) => pick(e.target.value)} aria-describedby={`${base}-pick-hint`}>
           <option value="">{t("mail_service.choose")}</option>
           {list.map((s) => (
             <option key={s.id} value={s.id}>
@@ -172,11 +175,11 @@ export function MailServiceConnect(props: {
             </option>
           ))}
           <option value={OTHER_MAILBOX}>{t("mail_service.other")}</option>
-        </select>
+        </Select>
         <p className="hint" id={`${base}-pick-hint`}>
           {t("mail_service.pick_hint")}
         </p>
-      </div>
+      </FormField>
       {service && !connected && (
         <>
           <p className="what">{t("mail_service.steps_title", { service: service.name })}</p>
@@ -186,8 +189,7 @@ export function MailServiceConnect(props: {
               <SafeLink label={t("mail_service.open_page", { service: service.name })} url={service.app_password_page} />
             </p>
           )}
-          <div className="field">
-            <label htmlFor={`${base}-address`}>{t("mail_service.address")}</label>
+          <FormField id={`${base}-address`} label={t("mail_service.address")}>
             <input
               id={`${base}-address`}
               ref={addressBox}
@@ -204,9 +206,8 @@ export function MailServiceConnect(props: {
                 {service.user_hint}
               </p>
             )}
-          </div>
-          <div className="field">
-            <label htmlFor={`${base}-password`}>{t(local ? "mail_service.password" : "mail_service.password_where")}</label>
+          </FormField>
+          <FormField id={`${base}-password`} label={t(local ? "mail_service.password" : "mail_service.password_where")}>
             <input
               id={`${base}-password`}
               type={local ? "password" : "text"}
@@ -220,21 +221,21 @@ export function MailServiceConnect(props: {
             <p className="hint" id={`${base}-password-hint`}>
               {t(local ? "mail_service.password_hint" : "secret.hosted_hint")}
             </p>
-          </div>
+          </FormField>
           {problem && (
             <p className="problem-note" role="alert" data-mail-service-problem="">
               {problem}
             </p>
           )}
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="primary" disabled={busy || address.trim() === "" || password.trim() === ""} onClick={() => void connect()}>
               {busy ? t("mail_service.connecting") : t("mail_service.connect", { service: service.name })}
             </Button>
-          </div>
+          </Actions>
         </>
       )}
       {service && connected && (
-        <div className="field" data-calendar-offer="" role="group" aria-labelledby={`${base}-calendar-title`}>
+        <FormBlock data-calendar-offer="" role="group" aria-labelledby={`${base}-calendar-title`}>
           <p className="what" id={`${base}-calendar-title`}>
             {t("mail_service.calendar_title")}
           </p>
@@ -256,15 +257,15 @@ export function MailServiceConnect(props: {
               {problem}
             </p>
           )}
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="quiet" disabled={busy} onClick={finish}>
               {t("mail_service.calendar_skip")}
             </Button>
             <Button variant="primary" disabled={busy || calendar.trim() === ""} onClick={() => void addCalendar()}>
               {busy ? t("mail_service.connecting") : t("mail_service.calendar_add")}
             </Button>
-          </div>
-        </div>
+          </Actions>
+        </FormBlock>
       )}
     </div>
   );

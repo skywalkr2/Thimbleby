@@ -12,6 +12,8 @@ import { Skeleton } from "../ui/Skeleton";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { Actions } from "../ui/Actions";
 type Asking = "reply" | "reply_all" | "forward" | "move" | "label";
 
 /** The subject with the prefix a reply or forward carries, once: "Re: Proofs" stays "Re: Proofs". */
@@ -115,14 +117,14 @@ function TextForm(props: { label: string; go: string; onCancel: () => void; onSu
         {props.label}
       </label>
       <textarea id={id} rows={5} autoFocus value={text} onChange={(e) => setText(e.target.value)} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!text.trim() || busy}>
           {props.go}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -155,14 +157,14 @@ function ForwardForm(props: { onCancel: () => void; onSubmit: (text: string, to:
         {t("acts.forward.label")}
       </label>
       <textarea id={id} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!to || !text.trim() || busy}>
           {t("acts.forward.go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -226,14 +228,14 @@ export function MoveForm(props: { source: string | null; listAccount?: string | 
           <label className="hint" htmlFor={id}>
             {t("acts.move.label")}
           </label>
-          <select id={id} autoFocus value={folder} onChange={(e) => setFolder(e.target.value)}>
+          <Select id={id} autoFocus value={folder} onChange={(e) => setFolder(e.target.value)}>
             <option value="">{t("acts.move.choose")}</option>
             {choices.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.name}
               </option>
             ))}
-          </select>
+          </Select>
         </>
       ) : (
         <>
@@ -246,14 +248,14 @@ export function MoveForm(props: { source: string | null; listAccount?: string | 
           <input id={id} type="text" autoFocus autoComplete="off" value={folder} onChange={(e) => setFolder(e.target.value.trimStart())} />
         </>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!folder.trim() || busy}>
           {t("acts.move.go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -288,14 +290,14 @@ export function LabelForm(props: { listAccount?: string | null; account?: string
           <label className="hint" htmlFor={id}>
             {t("acts.label.label")}
           </label>
-          <select id={id} autoFocus value={label} onChange={(e) => setLabel(e.target.value)}>
+          <Select id={id} autoFocus value={label} onChange={(e) => setLabel(e.target.value)}>
             <option value="">{t("acts.label.choose")}</option>
             {listed.choices.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.name}
               </option>
             ))}
-          </select>
+          </Select>
         </>
       ) : (
         <>
@@ -310,14 +312,14 @@ export function LabelForm(props: { listAccount?: string | null; account?: string
           <input id={id} type="text" autoFocus autoComplete="off" value={label} onChange={(e) => setLabel(e.target.value)} />
         </>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!label.trim() || busy}>
           {t("acts.label.go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

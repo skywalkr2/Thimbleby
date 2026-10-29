@@ -1,5 +1,5 @@
 import type { S } from "../lib/api";
-import { aliveState, initials, isWarn, worstState } from "./status";
+import { aliveState, connectionState, initials, isWarn, toneOf, worstState } from "./status";
 
 const status = (over: Partial<S["Status"]> = {}, backup: Partial<S["BackupStatus"]> = {}, spend: Partial<S["SpendStatus"]> = {}): S["Status"] => ({
   backup: { configured: true, last_success: null, age_hours: 1, needs_attention: false, last_error: null, encrypted: false, ...backup },
@@ -79,4 +79,37 @@ test("the assistant's line is amber for the states that hold its work up", () =>
 test("the assistant's line is red when its account or its last run fails, ahead of the amber states", () => {
   expect(alive({ ai: { state: "failing", detail: null } })).toEqual({ kind: "failing", tone: "bad" });
   expect(alive({ network_wait: { count: 1, since: "2026-10-14T09:00:00" } }, "idle", { last_run_failed: true })).toEqual({ kind: "run_failed", tone: "bad" });
+});
+
+// A connection the assistant can't read is something to act on, so the header never says all is well while one is failing or
+// trying again: it reads the connections' real state, the one the Connections screen and Today's line already show.
+test("a connection that failed is a state of its own, a danger; one trying again is a warning; neither is all good", () => {
+  const ok = { live: "live" as const, status: status(), restartPhase: "idle" };
+  expect(worstState({ ...ok, connections: "failed" })).toBe("connection_failed");
+  expect(worstState({ ...ok, connections: "retrying" })).toBe("connection_retrying");
+  expect(worstState({ ...ok, connections: "ok" })).toBe("live");
+  expect(isWarn("connection_failed") && isWarn("connection_retrying")).toBe(true);
+  expect(toneOf("connection_failed")).toBe("danger");
+  expect(toneOf("connection_retrying")).toBe("warn");
+  expect(toneOf("live")).toBe("ok");
+});
+
+test("the connection states come after what holds the app up and before a backup", () => {
+  const all = status({ restart_needed: "settings" }, { needs_attention: true }, { warn: true });
+  expect(worstState({ live: "live", status: all, restartPhase: "idle", connections: "failed" })).toBe("restart");
+  expect(worstState({ live: "live", status: status({}, { needs_attention: true }, { warn: true }), restartPhase: "idle", connections: "retrying" })).toBe("connection_retrying");
+  expect(worstState({ live: "offline", status: status(), restartPhase: "idle", connections: "failed" })).toBe("offline");
+  expect(toneOf("offline")).toBe("danger");
+});
+
+test("the connections' state: a failed read is failed; no network, or too long since a read, is retrying; read and pending are fine", () => {
+  const src = (over: object) => ({ id: "a", label: "A", connector: "k", connector_label: "K", enabled: true, every_minutes: 15, items: 0, last: null, read_at: null, failures: 0, problem: null, ...over });
+  const at = "2026-10-19T09:00:00Z";
+  const outcome = (kind: string) => ({ outcome: kind, started_at: at, new: 0, changed: 0, removed: 0 });
+  expect(connectionState(null)).toBe("ok");
+  expect(connectionState({ enabled: 1, read: [src({})], last: null, unread: [], pending: [], stale: [], complete: true } as never)).toBe("ok");
+  expect(connectionState({ enabled: 1, read: [], last: null, unread: [{ source: src({ last: outcome("failed") }), kind: "failed" }], pending: [], stale: [], complete: false } as never)).toBe("failed");
+  expect(connectionState({ enabled: 1, read: [], last: null, unread: [{ source: src({ last: outcome("offline") }), kind: "offline" }], pending: [], stale: [], complete: false } as never)).toBe("retrying");
+  expect(connectionState({ enabled: 1, read: [], last: null, unread: [], pending: [], stale: [src({ read_at: at, stale: true })], complete: false } as never)).toBe("retrying");
+  expect(connectionState({ enabled: 1, read: [], last: null, unread: [], pending: [src({})], stale: [], complete: false } as never)).toBe("ok");
 });

@@ -10,6 +10,7 @@ import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import styles from "./Today.module.css";
+import { Select } from "../ui/Select";
 
 type Source = S["WatchSourceView"];
 
@@ -44,14 +45,14 @@ export function LookBack(props: { source: Source; onClose: () => void }) {
   return (
     <div className={styles.lookBack} role="group" aria-label={t("coverage.look_back.label", { label: source.label })} data-look-back="">
       <label htmlFor={`${base}-days`}>{t("coverage.look_back.days")}</label>
-      <select id={`${base}-days`} ref={field} value={days} onChange={(e) => setDays(Number(e.target.value))}>
+      <Select id={`${base}-days`} ref={field} value={days} onChange={(e) => setDays(Number(e.target.value))}>
         <option value={0}>{t("coverage.look_back.choose")}</option>
         {(source.look_back_choices ?? []).map((n) => (
           <option key={n} value={n}>
             {t("coverage.look_back.choice", { n })}
           </option>
         ))}
-      </select>
+      </Select>
       <p className={styles.lookBackFound} role="status">
         {days === 0
           ? ""

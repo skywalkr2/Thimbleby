@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { durationWords, EFFORT_SIZES } from "../lib/duration";
 import { useWords } from "../lib/wording";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 
 const OTHER = "other";
 
@@ -12,9 +14,8 @@ export function EffortField(props: { id: string; value: number | null; onChange:
   const [other, setOther] = useState(props.value !== null && !sized);
   const picked = props.value === null && !other ? "" : other || !sized ? OTHER : String(props.value);
   return (
-    <div className="field">
-      <label htmlFor={`${props.id}-effort`}>{t("effort.label")}</label>
-      <select
+    <FormField id={`${props.id}-effort`} label={t("effort.label")}>
+      <Select
         id={`${props.id}-effort`}
         value={picked}
         onChange={(e) => {
@@ -34,7 +35,7 @@ export function EffortField(props: { id: string; value: number | null; onChange:
           </option>
         ))}
         <option value={OTHER}>{t("effort.other")}</option>
-      </select>
+      </Select>
       {picked === OTHER && (
         <input
           id={`${props.id}-effort-minutes`}
@@ -51,6 +52,6 @@ export function EffortField(props: { id: string; value: number | null; onChange:
           }}
         />
       )}
-    </div>
+    </FormField>
   );
 }

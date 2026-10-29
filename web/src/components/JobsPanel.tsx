@@ -8,6 +8,7 @@ import { useWords } from "../lib/wording";
 
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
 // ---- scheduled work ------------------------------------------------------------------------------------------------
 
 const OUTCOMES: Record<string, string> = { ok: "setup.job_ok", failed: "setup.job_failed" };
@@ -22,7 +23,7 @@ export function JobsPanel() {
       <div className="heading">
         <h3 id="jobs-title">{t("setup.jobs")}</h3>
       </div>
-      <ul className="queue">
+      <RowList>
         {rows.map((job) => {
           const outcome = job.last_outcome ? t(OUTCOMES[job.last_outcome] ?? "setup.job_other", { outcome: readable(job.last_outcome) }) : "";
           const last = job.last_run_at ? t("setup.job_last", { when: dayAndTime(job.last_run_at), outcome }) : t("setup.job_never");
@@ -41,7 +42,7 @@ export function JobsPanel() {
             </Row>
           );
         })}
-      </ul>
+      </RowList>
     </section>
   );
 }

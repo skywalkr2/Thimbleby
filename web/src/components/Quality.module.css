@@ -8,7 +8,7 @@
 .list li { min-width: 0; overflow-wrap: anywhere; padding: var(--space-1) 0; border-bottom: 1px solid var(--border); }
 .window { margin: var(--space-2) 0 0; }
 .form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
-.form .field { margin: 0; min-width: 0; flex: 1 1 12rem; }
+.form [data-field] { margin: 0; min-width: 0; flex: 1 1 12rem; }
 .form input { width: 100%; min-width: 0; }
 .form .act { flex: 0 0 auto; }
 .alert { margin: 0; }

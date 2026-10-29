@@ -6,6 +6,7 @@ import { deliveryLines, deliveryRange } from "../lib/deliveries";
 import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
 import { Pill } from "../ui/Pill";
+import { Definition, DefinitionList } from "../ui/DefinitionList";
 import { SafeLink } from "./SafeText";
 import { entryHref, fullWhen, type Calendars, type Entry } from "./ScheduleEntry";
 import styles from "./Schedule.module.css";
@@ -44,14 +45,14 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
           <Pill tone="warn">{t("today.agenda.called_off")}</Pill>
         </p>
       )}
-      <dl className={styles.facts}>
+      <DefinitionList>
         {rows.map(([name, value]) => (
-          <div key={name} className={styles.fact}>
+          <Definition key={name}>
             <dt>{name}</dt>
             <dd>{value}</dd>
-          </div>
+          </Definition>
         ))}
-      </dl>
+      </DefinitionList>
       <div className={styles.paneActs}>
         <ButtonLink variant="primary" href={entryHref(entry)}>
           {entry.kind === "due" ? t("schedule.pane.open_todo") : t("schedule.pane.open")}

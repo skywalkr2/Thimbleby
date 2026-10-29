@@ -9,13 +9,14 @@ import { problemText } from "../lib/problem";
 import type { Refreshed } from "../lib/refreshed";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
-import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Icon } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
 import { Button } from "../ui/Button";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
 type Choice = "accept" | "reject";
 
 interface Opened {
@@ -128,7 +129,7 @@ export function TextReview(props: { version: string; onClose: () => void }) {
   const unmapped = data?.version.unmapped ?? [];
 
   return (
-    <ModalPanel titleId={titleId} onClose={props.onClose}>
+    <ModalPanel titleId={titleId} onClose={props.onClose} roomy>
       <Heading slot="title" id={titleId}>
         {t("text_review.title")}
       </Heading>
@@ -153,7 +154,7 @@ export function TextReview(props: { version: string; onClose: () => void }) {
       )}
       <RefreshedLines lines={refreshed} time="" />
       {data && (
-        <div className="review-body review-wide">
+        <div className="review-body">
           {data.version.note && (
             <div className="hint">
               <SafeText text={data.version.note} />
@@ -227,7 +228,7 @@ export function TextReview(props: { version: string; onClose: () => void }) {
           )}
         </div>
       )}
-      <div className="row-end">
+      <DialogFooter>
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -240,7 +241,7 @@ export function TextReview(props: { version: string; onClose: () => void }) {
         <Button variant="primary" disabled={!data || busy} onClick={() => void submit("accept")}>
           {t(busy ? "text_review.applying" : "text_review.apply")}
         </Button>
-      </div>
+      </DialogFooter>
     </ModalPanel>
   );
 }
@@ -268,16 +269,13 @@ function Change(props: {
   const name = useId();
   const conflict = region.side === "both";
   return (
-    <fieldset className="change" data-conflict={conflict ? "true" : undefined}>
-      <legend>
-        {t("text_review.change_n", { n: props.number, total: props.total })}
+    <CheckboxGroup legend={<>{t("text_review.change_n", { n: props.number, total: props.total })}
         {conflict && (
           <Pill tone="danger" className="pill-gap">
             <Icon name="alert" size={14} />{" "}
             {t("text_review.conflict")}
           </Pill>
-        )}
-      </legend>
+        )}</>} data-conflict={conflict ? "true" : undefined}>
       {conflict && <p className="hint">{t("text_review.conflict_hint")}</p>}
       {props.threeWay && <Passage label={t("text_review.original")} text={region.base} />}
       <Passage label={t("text_review.current")} text={region.current} />
@@ -296,6 +294,6 @@ function Change(props: {
           </label>
         ))}
       </div>
-    </fieldset>
+    </CheckboxGroup>
   );
 }

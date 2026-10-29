@@ -25,6 +25,16 @@
 .title { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--row-title-weight); overflow-wrap: anywhere; }
 .clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .meta { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }
+/* An expandable row's title is one button that covers the whole text of the row (the meta opens it too): plain text to look at,
+   with the title underlined under the pointer. */
+.expandable { position: relative; }
+.expander { display: inline-block; border: 0; background: none; padding: 0; margin: 0; text-align: left; cursor: pointer; width: auto; height: auto; min-height: var(--target-min); overflow: visible; font: inherit; color: inherit; }
+.expander::after { content: ""; position: absolute; inset: 0; }
+.expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
+.expandable:hover .expander { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+/* A title whose press would change nothing (its row is already chosen) neither looks nor feels clickable. */
+.expander[data-inert] { cursor: default; }
+.expandable:hover .expander[data-inert] { text-decoration: none; }
 .oneLine { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .actions { grid-column: 2; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
 .leads > .actions { grid-column: 3; }
@@ -33,8 +43,8 @@
 
 /* A row's actions are never solid, and all the same size: a primary asked for here draws as the outline. */
 .actions :global([data-variant]) { height: var(--btn-h-sm); padding-inline: var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
-.actions :global([data-variant="primary"]:not(:disabled)) { background: var(--surface); border-color: var(--btn-border); color: var(--text); }
-.actions :global([data-variant="primary"]:not(:disabled):hover) { background: var(--surface-sunk); border-color: var(--btn-border); }
+.actions :global([data-variant="primary"]:not(:disabled)), .actions :global([data-variant="secondary"]:not(:disabled)) { background: var(--row-btn-bg); border-color: var(--row-btn-border); color: var(--row-btn-text); }
+.actions :global([data-variant="primary"]:not(:disabled):hover), .actions :global([data-variant="secondary"]:not(:disabled):hover) { background: var(--row-btn-hover); border-color: var(--row-btn-border); }
 .actions :global([data-variant="quiet"]) { padding-inline: var(--space-2); }
 
 /* Phone (the configured phone layout, and any window under 640px): a lone action stays at the right
@@ -53,8 +63,9 @@
   .row.leads, :global([data-narrow]) .row.leads { grid-template-columns: auto minmax(0, 1fr) auto; }
   .row.leads > .main, :global([data-narrow]) .row.leads > .main { grid-column: 2; }
   .row.leads > .actions, :global([data-narrow]) .row.leads > .actions { grid-column: 3; }
-:global([data-narrow]) .row.leads { grid-template-columns: auto minmax(0, 1fr) auto; }
-:global([data-narrow]) .row.leads > .main { grid-column: 2; }
-:global([data-narrow]) .row.leads > .actions { grid-column: 3; }
   .row > .actions:has(> :global([data-variant]) ~ :global([data-variant])), :global([data-narrow]) .row > .actions:has(> :global([data-variant]) ~ :global([data-variant])), :global([data-narrow]) .row.leads > .actions:has(> :global([data-variant]) ~ :global([data-variant])) { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
 }
+
+/* A line that holds content of its own: the row's padding and hairline, with its content in the flow. */
+.item { padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); background: var(--surface); list-style: none; margin: 0; min-width: 0; }
+.item:last-child { border-bottom: 0; }

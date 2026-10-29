@@ -15,6 +15,7 @@ import { useSideFilter, useSides } from "../lib/sides";
 import { useLookedAt } from "../lib/waiting";
 import { recordView, toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { SearchField } from "../ui/SearchField";
 import { Icon } from "../ui/Icon";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
@@ -30,6 +31,10 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { TabStrip } from "../ui/TabStrip";
+import { Pill } from "../ui/Pill";
+import { Row, RowItem } from "../ui/Row";
+import { RowList } from "../ui/RowList";
+import { Item } from "../ui/ItemList";
 type Tab = S["HandledView"]["tab"];
 type Group = S["HandledView"]["group"];
 type Row = S["HandledRow"];
@@ -111,10 +116,7 @@ export function Handled() {
       <p className="hint">{t(`handled.explain.${tab}`)}</p>
       {list.data && <p className="hint">{tn("handled.kept", list.data.kept_days)}</p>}
       <div className={styles.bar}>
-        <div className={`field ${styles.search}`}>
-          <label htmlFor={`${ids}-search`}>{t("handled.search")}</label>
-          <input id={`${ids}-search`} type="search" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
-        </div>
+        <SearchField id={`${ids}-search`} label={t("handled.search")} className={styles.search} value={typed} onChange={setTyped} />
         <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />
       </div>
       {kinds.length > 1 || item ? (
@@ -149,7 +151,7 @@ export function Handled() {
             return (
               <section key={key} className={styles.group} data-group={g.key}>
                 <h2>
-                  <button type="button" className="expander text" aria-expanded={open} aria-controls={open ? `${ids}-group-${index}` : undefined} onClick={() => toggle(key)}>
+                  <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={open ? `${ids}-group-${index}` : undefined} onClick={() => toggle(key)}>
                     <span className={styles.head}>
                       <span className={styles.chevron} data-open={open ? "" : undefined}>
                         <Icon name="chevron" size={16} />
@@ -159,18 +161,18 @@ export function Handled() {
                   </button>
                 </h2>
                 {open && (
-                  <ul className="queue" id={`${ids}-group-${index}`}>
+                  <RowList id={`${ids}-group-${index}`}>
                     {g.items.slice(0, limit).map((row) => (
                       <HandledRow key={row.id} item={row} picked={row.saved && row.item === "mail" && row.tab !== "closed" ? { on: picked.selected.has(row.saved), toggle: () => picked.toggle(row.saved ?? "") } : undefined} />
                     ))}
                     {g.items.length > limit && (
-                      <li className="line">
+                      <RowItem>
                         <Button variant="quiet" onClick={() => setMore((now) => ({ ...now, [key]: (now[key] ?? 0) + pageRows }))}>
                           {t("handled.show_more", { n: g.items.length - limit })}
                         </Button>
-                      </li>
+                      </RowItem>
                     )}
-                  </ul>
+                  </RowList>
                 )}
               </section>
             );
@@ -277,33 +279,32 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
     bringButton.current?.focus();
   };
   return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className="row">
-        {props.picked && (
-          <input type="checkbox" className={styles.pick} checked={props.picked.on} aria-label={t("batch.select_named", { title: item.title })} onChange={props.picked.toggle} />
-        )}
-        <span className="kind k-done" data-item={item.item}>
-          {t(`handled.item.${item.item}`)}
-        </span>
-        <div className={`text ${styles.text}`}>
-          <strong id={titleId}>{item.title}</strong>
-          <span className="sub">{facts.join(" · ")}</span>
-          <span className="sub">{why}</span>
-        </div>
-        <div className="acts">
-          <Button variant="primary"
-            data-key="primary"
-            ref={bringButton}
-            disabled={busy}
-            aria-expanded={aside && places.length > 1 ? choosing : undefined}
-            aria-label={aside ? t("setaside.bring_in_named", { title: item.title }) : t("handled.look_named", { title: item.title })}
-            onClick={() => void (closed ? lookCloser() : aside ? bring() : choose(isWork))}
-          >
-            {aside ? t("setaside.bring_in") : t("handled.look")}
-          </Button>
-          <RowMenu label={item.title} actions={menu} />
-        </div>
-      </div>
+    <Row
+      aria-labelledby={titleId}
+      lead={
+        props.picked && (
+          <input type="checkbox" checked={props.picked.on} aria-label={t("batch.select_named", { title: item.title })} onChange={props.picked.toggle} />
+        )
+      }
+      pill={<Pill>{t(`handled.item.${item.item}`)}</Pill>}
+      title={item.title}
+      titleId={titleId}
+      metaLines={[facts.join(" · "), why]}
+      primary={
+        <Button
+          variant="primary"
+          data-key="primary"
+          ref={bringButton}
+          disabled={busy}
+          aria-expanded={aside && places.length > 1 ? choosing : undefined}
+          aria-label={aside ? t("setaside.bring_in_named", { title: item.title }) : t("handled.look_named", { title: item.title })}
+          onClick={() => void (closed ? lookCloser() : aside ? bring() : choose(isWork))}
+        >
+          {aside ? t("setaside.bring_in") : t("handled.look")}
+        </Button>
+      }
+      menu={<RowMenu label={item.title} actions={menu} />}
+    >
       {choosing && (
         <div
           className={styles.bring}
@@ -337,6 +338,6 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
         </div>
       )}
       {versions.form}
-    </li>
+    </Row>
   );
 }

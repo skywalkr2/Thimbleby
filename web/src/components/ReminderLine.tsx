@@ -13,6 +13,8 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { plainTitle } from "../lib/title-dates";
 import { Button } from "../ui/Button";
+import { DateField } from "../ui/DateField";
+import { Actions } from "../ui/Actions";
 type Line = S["QueueLineView"];
 type Choice = S["SnoozeChoiceView"];
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -136,15 +138,15 @@ export function PickTime(props: { value?: string; onSave: (at: string) => void; 
       <label className="hint" htmlFor={id}>
         {t("reminder.pick_label")}
       </label>
-      <input id={id} type="datetime-local" autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
-      <div className="row-end">
+      <DateField id={id} kind="datetime-local" autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!value}>
           {t("reminder.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

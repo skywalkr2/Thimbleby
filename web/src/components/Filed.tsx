@@ -6,6 +6,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Filed = S["FiledView"];
 
@@ -73,7 +74,7 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
           <label className="sr" htmlFor={pick}>
             {t("filed.move_choose")}
           </label>
-          <select
+          <Select
             id={pick}
             className="small"
             value=""
@@ -88,7 +89,7 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
                 {o.name}
               </option>
             ))}
-          </select>
+          </Select>
         </>
       )}
     </p>

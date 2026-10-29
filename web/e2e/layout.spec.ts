@@ -182,13 +182,12 @@ test.describe("no screen is wider than the window", () => {
         window.location.hash = "work/changed";
       });
       await heading(page, "What changed");
-      await expect(page.locator("ol.queue:not(.detail-queue) > li.line .expander").first()).toBeVisible(LOADED);
+      await expect(page.locator("ol[data-row-list]:not([data-detail]) > li [data-expander]").first()).toBeVisible(LOADED);
       // Each row is as tall as its title and what is under it: no line is cut by a row that keeps one height.
       const rows = await page.evaluate(() =>
-        Array.from(document.querySelectorAll("ol.queue:not(.detail-queue) > li.line")).map((li) => {
-          const row = li.querySelector(".row") as HTMLElement;
-          const title = li.querySelector(".expander") as HTMLElement;
-          return { line: li.getBoundingClientRect().height, title: title.getBoundingClientRect().height, scroll: row.scrollHeight, shown: row.clientHeight };
+        Array.from(document.querySelectorAll("ol[data-row-list]:not([data-detail]) > li")).map((li) => {
+          const title = li.querySelector("[data-expander]") as HTMLElement;
+          return { line: li.getBoundingClientRect().height, title: title.getBoundingClientRect().height, scroll: li.scrollHeight, shown: li.clientHeight };
         }),
       );
       expect(rows.length).toBeGreaterThan(0);
@@ -204,8 +203,8 @@ test.describe("no screen is wider than the window", () => {
       await expect
         .poll(async () =>
           pane.evaluate((el) => {
-            const state = el.querySelector(".detail-state .kind")?.getBoundingClientRect();
-            const menu = el.querySelector(".detail-top .acts button")?.getBoundingClientRect();
+            const state = el.querySelector("[data-detail-top] [data-pill]")?.getBoundingClientRect();
+            const menu = el.querySelector("[data-detail-top] [data-actions] button")?.getBoundingClientRect();
             return state && menu ? Math.abs(menu.y - state.y) : null;
           }),
         )
@@ -256,8 +255,7 @@ test.describe("no screen is wider than the window", () => {
 
   test("the header with every chip shown keeps all of its controls inside the window, none cut short", async ({ page }) => {
     test.setTimeout(120_000);
-    // The demo chip, the status chip, the assistant's line (from 1440px) and "Missed something?" (shown once a note has
-    // been handed in, as the setup above does) are all on; wider text is tried too, as another computer's fonts may run wider.
+    // The demo chip, the status chip, and the assistant's line (from 1440px) are all on; wider text is tried too, as another computer's fonts may run wider.
     const cut: string[] = [];
     for (const width of [768, 1024, 1180, 1280, 1440, 1512]) {
       await page.setViewportSize({ width, height: 800 });

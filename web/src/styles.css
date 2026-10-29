@@ -15,7 +15,6 @@ button { min-width: var(--target-min); min-height: var(--target-min); }
    row's padding, or outside a row that has no side padding, never over its text. */
 [data-row]:focus { outline: none; }
 [data-row]:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
-.child[data-row]:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip { position: absolute; left: -9999px; top: var(--space-2); z-index: 100; background: var(--surface); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
 .skip:focus { left: var(--space-4); }
@@ -43,83 +42,21 @@ main p { max-width: var(--measure); }
 .newbar { justify-self: center; border: 0; background: var(--accent); color: var(--text-on-accent); font-weight: var(--weight-semibold); font-size: var(--text-sm); border-radius: var(--radius-full); padding: var(--space-2) var(--space-4); cursor: pointer; box-shadow: var(--elev-2); }
 .hint { font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); }
 
-/* Lists: one surface with hairline dividers, never a card per row */
-.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; }
-.line { background: var(--surface); border-bottom: 1px solid var(--border); min-width: 0; }
-.line:last-child { border-bottom: 0; }
-.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); padding: var(--row-py) var(--row-px); }
-.row:has(> .kind) { grid-template-columns: auto minmax(0, 1fr) auto; }
-/* A pill in a row's pill column wraps inside the column rather than running over the title beside it. */
-.row:has(> .kind) > .kind { white-space: normal; max-width: 100%; }
-.row > .kind { justify-self: start; }
-.row.single { grid-template-columns: minmax(0, 1fr); }
-.row.pair { grid-template-columns: minmax(0, 1fr) auto; }
 .plain-list { list-style: disc; margin: 0; padding-left: var(--space-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .own-steps { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); }
 .plain-list .title { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .plain-list .meta { display: block; color: var(--text-muted); font-size: var(--text-sm); }
 .name { margin: 0; font-size: var(--text-md); }
-.kind { font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--pill-px); min-height: var(--pill-h); display: inline-flex; align-items: center; white-space: nowrap; }
 .pill-gap { margin-left: var(--space-2); }
-.pill-flush { margin: var(--space-1) 0 0; }
 [data-pill] a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.k-review { background: var(--surface-sunk); color: var(--text-muted); }
-.k-send { background: var(--accent-soft); color: var(--accent-text); }
-.k-held { background: var(--warn-soft); color: var(--warn); }
-.k-risk { background: var(--danger-soft); color: var(--danger); }
-.k-wait { background: var(--accent-soft); color: var(--accent-text); }
-.k-done { background: var(--surface-sunk); color: var(--text-muted); }
-.text { min-width: 0; }
-.text strong { display: block; font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
-.text .sub { display: block; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
-.acts { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-/* A line's actions are never solid: the one primary draws as the outline, the same as in ui/Row. The line the cursor is on has the
-   soft fill and the bar at its left edge. A line shown in a pane keeps its filled action. */
-.queue:not(.detail-queue) > .line > .row > .acts > [data-variant="primary"]:not(:disabled) { background: var(--surface); border-color: var(--btn-border); color: var(--text); }
-.queue:not(.detail-queue) > .line > .row > .acts > [data-variant="primary"]:not(:disabled):hover { background: var(--surface-sunk); }
-.queue:not(.detail-queue) > .line > .row > .acts > [data-variant] { height: var(--btn-h-sm); padding-inline: var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
-.queue:not(.detail-queue) > .line[aria-current="true"] { background: var(--row-selected-bg); box-shadow: var(--row-selected-bar); }
-/* A row's title is a block that grows with its words: the row takes the height of every line, never one line's. */
-.expander { display: block; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; height: auto; overflow: visible; }
-.expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
-/* A title whose click would change nothing (its row is already chosen) neither looks nor feels clickable. */
-.expander[data-inert] { cursor: default; }
-.expander[data-inert]:hover strong { text-decoration: none; }
-.expander:hover strong { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
-/* A change or a person's message in the detail pane of a list | detail view: no frame of its own inside the pane's. */
-.detail-queue { border: 0; border-radius: 0; background: none; overflow: visible; }
-.detail-queue > .line { background: none; border: 0; }
-.in-pane .body { border-top: 0; padding: var(--space-3) 0 0; }
-.in-pane[data-row]:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
-.in-pane .learned-inset, .in-pane .made { padding-inline: 0; }
-/* The state and the row's menu share one line: the words wrap inside their own part, so the menu is never left alone under them. */
-.detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-3); }
-.detail-top > .acts { flex: none; }
-.detail-state { display: flex; flex: 1 1 0; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
-.detail-state .sub, .detail-notes .sub, .row-notes .sub { color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
-.detail-notes { display: grid; gap: var(--space-1); padding-bottom: var(--space-2); }
-.row-notes { display: grid; gap: var(--space-1); padding: 0 var(--row-px) var(--space-3); }
-/* Text from outside breaks anywhere rather than widen the screen: a line's open body and its children share this. */
-.body { border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); overflow-wrap: anywhere; }
 .your-note { border-left: 3px solid var(--accent); padding-left: var(--space-3); }
 .your-note p { white-space: pre-wrap; }
 .what { font-size: var(--text-sm); line-height: var(--lh-sm); color: var(--text-muted); font-weight: var(--weight-semibold); }
-.learned-inset { padding: 0 var(--space-4); }
-.made { list-style: none; padding: 0 var(--space-4) var(--space-3); margin: 0; font-size: var(--text-sm); }
+.learned-inset { padding: 0; }
+.made { list-style: none; padding: 0 0 var(--space-3); margin: 0; font-size: var(--text-sm); }
 .learned-inset:empty { display: none; }
 .learned-inset:not(:empty) { padding-bottom: var(--space-3); }
 
-/* Items inside a row: divided by dashed hairlines, not boxed */
-.children { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
-.child { border-top: 1px dashed var(--border); padding: var(--space-2) 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); }
-.child:first-child { border-top: 0; }
-.child .title { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
-.child .meta { color: var(--text-muted); font-size: var(--text-sm); }
-.child .reason { color: var(--warn); font-size: var(--text-sm); }
-.child.single { grid-template-columns: minmax(0, 1fr); }
-/* In the detail pane a row uses the pane's full width, with its buttons under its words, as Today's detail does. */
-.in-pane .child { grid-template-columns: minmax(0, 1fr); }
-.in-pane .child .acts { justify-content: flex-end; }
 .origin { font-size: var(--text-sm); }
 .origin.inline { display: inline; }
 .name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
@@ -146,16 +83,14 @@ a, .link-button { color: var(--link); }
 .sendback, .answer-form, .message, .ask-chooser { grid-column: 1 / -1; display: grid; gap: var(--space-2); }
 /* The note to send back is a line of prose, never wider than the measure. */
 .sendback textarea { max-width: var(--measure); }
-.field { display: grid; gap: var(--space-1); margin-bottom: var(--space-3); }
-.field label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
-textarea, select, input { width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); padding: var(--space-2) var(--space-3); min-height: var(--input-h); font-size: var(--text-md); line-height: var(--lh-md); }
+textarea, input { width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); padding: var(--space-2) var(--space-3); min-height: var(--input-h); font-size: var(--text-md); line-height: var(--lh-md); }
 input::placeholder, textarea::placeholder { color: var(--text-subtle); }
 textarea { min-height: 120px; resize: vertical; }
 textarea.short { min-height: 64px; }
 textarea.msg { min-height: 220px; }
 textarea.drop { border-style: dashed; border-width: 1.5px; min-height: 160px; }
 textarea.big { min-height: 220px; max-width: var(--measure); }
-input:disabled, textarea:disabled, select:disabled { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
+input:disabled, textarea:disabled { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
 /* A checkbox or radio is a 24px control, so its hit area is the element itself (not just its label); the box drawn in it stays
    18px, as a pseudo-element, and the check mark or dot sits at its centre. */
 label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: var(--target-min); }
@@ -170,7 +105,6 @@ input[type="radio"]:checked::before { border-color: var(--accent); background: r
 input[type="checkbox"]:disabled, input[type="radio"]:disabled { background: transparent; border-color: transparent; cursor: not-allowed; }
 input[type="checkbox"]:disabled::before, input[type="radio"]:disabled::before { background: var(--surface-sunk); border-color: var(--border); }
 input[type="checkbox"]:disabled:checked::after { border-color: var(--text-subtle); }
-.row-end { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
 .panel { background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); }
 .panel h2 { font-size: var(--text-section); }
 .setup-form { box-shadow: none; }
@@ -180,12 +114,6 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .problem { text-align: center; padding-top: var(--space-12); gap: var(--space-3); justify-items: center; }
 
 /* One column below the configured width (set by the app from the workspace's settings) */
-[data-narrow] .row { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
-[data-narrow] .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
-[data-narrow] .row .kind { justify-self: start; }
-[data-narrow] .acts { justify-content: stretch; }
-[data-narrow] .acts .primary { flex: 1; }
-[data-narrow] .child .acts .primary { flex: 0 1 auto; }
 
 /* Hand-in: one big box and the choice of whose words are in it */
 .choice { gap: var(--space-2); }
@@ -210,15 +138,12 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .loose-notes h3 { margin: 0; font-size: var(--text-md); }
 
 /* Dialogs for adding a file and reviewing an action */
-.acts.wrap { flex-wrap: wrap; justify-content: flex-end; }
 .dialog-panel form { display: grid; gap: 0; }
 .review-body { display: grid; gap: var(--space-4); }
 .review-choices { display: grid; gap: var(--space-1); }
 .dialog-panel .what { margin: 0 0 var(--space-1); }
 .check-line { display: flex; align-items: center; gap: var(--space-3); min-height: var(--btn-h-sm); cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .check-group { display: flex; flex-direction: column; gap: var(--space-1); }
-fieldset.details { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-3) var(--space-1); margin: 0 0 var(--space-3); min-width: 0; }
-fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .previews { display: grid; gap: var(--space-2); }
 .preview { margin: 0; display: grid; gap: var(--space-1); }
 .preview img { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
@@ -241,30 +166,17 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .panel-table thead th { font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-muted); white-space: nowrap; }
 .panel-table tbody tr:last-child th, .panel-table tbody tr:last-child td { border-bottom: 0; }
 .panel-table td:last-child { white-space: nowrap; }
-.facts { margin: var(--space-1) 0 0; display: grid; gap: var(--space-1); font-size: var(--text-sm); color: var(--text-muted); }
-.facts div { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
-.facts dt { font-weight: var(--weight-semibold); }
-.facts dt::after { content: ":"; }
-.facts dd { margin: 0; overflow-wrap: anywhere; }
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gutter); align-items: start; }
 .board-column { display: grid; gap: var(--space-2); min-width: 0; }
-.board .row.pair { grid-template-columns: minmax(0, 1fr); }
-.details-list { margin: var(--space-2) 0 0; display: grid; gap: var(--space-3); }
-.detail { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); gap: var(--space-1) var(--space-4); }
-.detail dt { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
-.detail dd { margin: 0; overflow-wrap: anywhere; display: grid; gap: var(--space-1); }
 .text-section { display: grid; gap: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-4); }
 .text-body { background: var(--surface-sunk); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); max-height: 480px; overflow: auto; overflow-wrap: anywhere; max-width: var(--measure); }
 .copies { display: grid; gap: var(--space-2); }
-.dialog-panel:has(.review-wide) { width: min(780px, 100%); }
 .changes { display: grid; gap: var(--space-3); }
 .change { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3); margin: 0; min-width: 0; display: grid; gap: var(--space-2); }
 .change[data-conflict="true"] { border-color: var(--danger); border-width: 2px; }
-.change legend { padding: 0 var(--space-2); font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .passage { display: grid; gap: var(--space-1); border-left: 3px solid var(--border); padding-left: var(--space-3); overflow-wrap: anywhere; }
 .choice-row { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
 @media (max-width: 600px) {
-  .detail { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Action review groups, a panel's new-item button, synced folder and scheduled work */
@@ -288,9 +200,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .guide-body form { display: grid; gap: 0; }
 .inline-field { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .inline-field input { flex: 1 1 240px; width: auto; min-width: 0; max-width: var(--field-max); }
-.kinds { display: grid; gap: var(--space-2); padding-bottom: var(--space-2); }
-.kind-choice { align-items: flex-start; padding: var(--space-1) 0; }
-.kind-choice input { margin-top: var(--space-1); }
 .hint.block { display: block; }
 .hint.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .hint-more { font-size: var(--text-meta); line-height: var(--lh-meta); }
@@ -307,7 +216,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .settings-screen { container: settings / inline-size; }
 .settings-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--space-5); align-items: start; }
 .settings-side { display: grid; gap: var(--space-3); min-width: 0; }
-.settings-side .field { margin-bottom: 0; }
+.settings-side [data-field] { margin-bottom: 0; }
 .settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; }
 .settings-nav a:hover { background: var(--surface-sunk); }
@@ -365,8 +274,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .asks .what { margin: 0; }
 .ask-answer, .ask-item { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
 .ask-item { border-left: 3px solid var(--border); padding-left: var(--space-3); }
-.ask-item .acts { flex-wrap: wrap; margin-top: var(--space-1); }
-.text .sub .kind { margin-right: var(--space-2); }
 
 /* Add-ons: tabs, pack rows, the install dialog and the catalog lines */
 .addon-tabs { display: grid; gap: var(--space-4); }
@@ -377,7 +284,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tab-panel { display: grid; gap: var(--space-4); }
 .tab-panel:focus-visible { border-radius: var(--radius-sm); }
 .addons-body { display: grid; gap: var(--space-5); }
-.text.pack { display: grid; gap: var(--space-1); }
 .pack-price { color: var(--text); font-weight: var(--weight-semibold); }
 .pack-summary { overflow-wrap: anywhere; }
 .pack-what { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
@@ -402,10 +308,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .feed-notes summary { cursor: pointer; }
 
 /* The AI step: large choices, the key how-to and the found-on-this-computer card */
-.kind-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-2); }
-.kind-card { border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: var(--space-3); background: var(--surface); cursor: pointer; }
-.kind-grid .kind-card { min-height: 64px; }
-.kind-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 /* The work question: one plain control, a line, then the two tick boxes, no frame. A group's jobs are rows, each with its tick. */
 .work-question { display: grid; gap: var(--space-2); min-width: 0; }
 .work-question [data-also] { display: grid; gap: var(--space-1); }
@@ -423,8 +325,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .more-options[open] > summary::before { transform: rotate(45deg); }
 .key-step { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
 .key-step h4 { margin: 0; font-size: var(--text-sm); }
-.kind-group { margin-top: var(--space-3); }
-.kind-group h4 { margin: 0 0 var(--space-2); font-size: var(--text-sm); }
 .check-row .hint { margin: 0; }
 .ai-accounts { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
 .ai-accounts h3, .ai-accounts h4 { margin: 0; font-size: var(--text-md); }
@@ -437,7 +337,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .level-list { flex-direction: column; }
 .level-hint { margin: 0 0 var(--space-2) var(--space-8); }
 /* The AI step for a first-timer: the recommended tag, the numbered steps, the check's line and the spending sentence. */
-.tag-recommended { margin: 0 0 var(--space-1); }
 .else-list { display: grid; gap: var(--space-3); margin-top: var(--space-3); padding-left: var(--space-3); border-left: 2px solid var(--border); }
 /* The three lines under Something else: each a full-width button that opens its own short list. */
 .else-group { display: grid; gap: var(--space-2); min-width: 0; }
@@ -450,11 +349,10 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .step-number { display: inline-flex; align-items: center; justify-content: center; min-width: var(--space-6); min-height: var(--space-6); border-radius: var(--radius-full); background: var(--surface-sunk); font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .step-text { display: grid; gap: var(--space-1); min-width: 0; }
 .step-action { justify-self: end; }
-.numbered-step .step-text .field { margin-top: var(--space-2); }
+.numbered-step .step-text [data-field] { margin-top: var(--space-2); }
 [data-narrow] .numbered-step { grid-template-columns: auto minmax(0, 1fr); }
 .check-ok { margin: 0; color: var(--ok); font-weight: var(--weight-semibold); }
 .verdict:empty { display: none; }
-.allow-question .kind-choice { margin-bottom: var(--space-2); }
 .spend { padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunk); }
 .spend-line { margin: 0; }
 .money-field { display: inline-flex; align-items: center; gap: var(--space-1); }
@@ -482,8 +380,8 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-row .struck { text-decoration: line-through; }
 /* A meeting added in one line, in the agenda's drawer: the fields share the row and wrap rather than widen it. */
 .meeting-line { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-2); }
-.meeting-line .field { flex: 1 1 8rem; min-width: 0; margin-bottom: 0; }
-.meeting-line .field:first-child { flex-basis: 12rem; }
+.meeting-line [data-field] { flex: 1 1 8rem; min-width: 0; margin-bottom: 0; }
+.meeting-line [data-field]:first-child { flex-basis: 12rem; }
 .meeting-line [data-variant] { flex: none; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }
@@ -505,9 +403,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .now-line::before { flex: 0 0 var(--space-3); }
 .compact { gap: var(--space-2); }
 .compact .heading h2, .compact .heading h3 { font-size: var(--text-md); line-height: var(--lh-md); margin: 0; }
-.compact .row { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); padding: var(--space-3); }
-.compact .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
-.compact .row .kind { justify-self: start; }
 
 .list-values { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .list-values > li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; border-left: 3px solid var(--border); padding-left: var(--space-3); min-height: var(--btn-h); }
@@ -519,17 +414,16 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 
 /* Forms built from setting items: a source's (added or changed from the Sources screen) and an add-on's data file. */
 .source-form, .data-file-form { box-shadow: none; }
-.line > .source-form, .line > .data-file-form { margin: 0 var(--space-4) var(--space-4); background: var(--surface-sunk); }
+[data-row-extra] > .source-form, [data-row-extra] > .data-file-form { margin: 0 0 var(--space-2); background: var(--surface-sunk); }
 .source-form h3, .data-file-form h5 { font-size: var(--text-section); line-height: var(--lh-section); margin: 0; }
 .data-file-form h5 { font-size: var(--text-md); line-height: var(--lh-md); }
 .source-form h3:focus, .data-file-form h5:focus { outline: none; }
-.source-form fieldset.details .setting:first-of-type { border-top: 0; padding-top: 0; }
+.source-form [data-ui="group"] .setting:first-of-type { border-top: 0; padding-top: 0; }
 .data-forms-kind { display: grid; gap: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-3); }
 .data-forms-kind h4 { font-size: var(--text-md); margin: 0; }
 
 /* Where a restart stands, inside the status popover */
 .restart-line { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: start; }
-.restart-line .acts { grid-column: 2; }
 .restart-mark { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-full); background: var(--warn-soft); color: var(--warn); }
 
 /* A record's page (design 7.14): what is going on beside the record's details; stacked below 1024px. */
@@ -539,9 +433,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
 /* A side panel is narrow: each label sits above its value, so no pair wraps beside the other. */
-.record-side .detail { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
-.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; font-size: var(--text-sm); line-height: var(--lh-sm); }
-.timeline .when { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .unfiled { display: grid; gap: var(--space-3); min-width: 0; }
 .unfiled .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
 
@@ -586,15 +477,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 }
 .time-zone-list [role="option"][aria-selected="true"]::before {
   content: "✓ ";
-}
-
-/* A service row in setup: the text and its button side by side while there is room; below that the button goes under the
-   text, full width, and its label wraps instead of running past the window. */
-.mail-step .row.pair > .acts { min-width: 0; max-width: 100%; }
-.mail-step .row.pair > .acts [data-variant] { white-space: normal; text-align: center; max-width: 100%; padding-block: var(--space-2); }
-@media (max-width: 640px) {
-  .mail-step .row.pair { grid-template-columns: minmax(0, 1fr); }
-  .mail-step .row.pair > .acts { display: grid; }
 }
 
 /* A file's preview in its details pane (design 7.15): a picture at most as wide as the pane, text kept to the pane's width. */

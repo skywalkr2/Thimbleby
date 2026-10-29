@@ -1,10 +1,8 @@
-/* A dialog: only for confirms that can't be undone and short questions. 560px at most, over the overlay. */
-.overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: grid; place-items: center; padding: var(--space-4); }
-.overlay[data-entering] { animation: fade var(--dur-base) var(--ease-out); }
-.modal {
-  width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
-  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  box-shadow: var(--elev-3); padding: var(--space-4) var(--space-5);
-}
+/* Inside a dialog: the content, and the footer that stays in view. The frame (the surface, the sheet form) is Overlay's. */
 .dialog { outline: none; display: grid; gap: var(--space-3); }
-@keyframes fade { from { opacity: 0; } }
+/* The footer reaches over the dialog's padding to its edges, so what scrolls under it is hidden, and sticks to the bottom. */
+.footer {
+  position: sticky; bottom: calc(var(--overlay-pad-y, var(--space-4)) * -1); z-index: 1;
+  margin: var(--space-1) calc(var(--overlay-pad-x, var(--space-5)) * -1) calc(var(--overlay-pad-y, var(--space-4)) * -1);
+  padding: var(--space-3) var(--overlay-pad-x, var(--space-5)); border-top: 1px solid var(--border); background: var(--surface-raised);
+}

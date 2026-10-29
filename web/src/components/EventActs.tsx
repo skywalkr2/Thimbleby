@@ -8,6 +8,9 @@ import { useActOptions, useDraftAct } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { DateField } from "../ui/DateField";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
 export interface EventActs {
   /** The entries for the entry page's menu; none when nothing is offered. */
   menu: MenuAction[];
@@ -91,27 +94,25 @@ function MoveForm(props: { start: string; end: string; onCancel: () => void; onS
       }}
     >
       <h3 id={`${base}-title`}>{t("acts.event.move.title")}</h3>
-      <div className="field">
-        <label htmlFor={`${base}-start`}>{t("acts.propose.start")}</label>
-        <input id={`${base}-start`} type="datetime-local" autoFocus value={start} onChange={(e) => setStart(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${base}-end`}>{t("acts.propose.end")}</label>
-        <input id={`${base}-end`} type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
-      </div>
+      <FormField id={`${base}-start`} label={t("acts.propose.start")}>
+        <DateField id={`${base}-start`} kind="datetime-local" autoFocus value={start} onChange={(e) => setStart(e.target.value)} />
+      </FormField>
+      <FormField id={`${base}-end`} label={t("acts.propose.end")}>
+        <DateField id={`${base}-end`} kind="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
+      </FormField>
       {bad && (
         <p className="problem-note" role="alert">
           {t("acts.event.move.bad")}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={busy || !start}>
           {t("acts.event.move.go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

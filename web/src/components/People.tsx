@@ -13,6 +13,7 @@ import { viewHref, recordView } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { FormField } from "../ui/FormField";
 import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
 import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
@@ -25,6 +26,9 @@ import { SideFilter } from "./SideFilter";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 import { PageHeader } from "../ui/PageHeader";
+import { Select } from "../ui/Select";
+import { Actions } from "../ui/Actions";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 /** The organization filter's choices besides one on file: everyone, and people with none. */
 const ALL = "";
 const NONE = "\u0001none";
@@ -69,7 +73,7 @@ export function People() {
           ),
       });
       entries.push({
-        id: "remove",
+        id: "remove", danger: true,
         label: t("setup.remove"),
         run: () =>
           void act(
@@ -111,9 +115,8 @@ export function People() {
     { id: "last", header: t("people.col.last"), rank: 2, cell: (p) => (p.last_contact ? day(p.last_contact) : "") },
   ];
   const filter = (
-    <div className={["field", styles.orgFilter].join(" ")} data-size="content">
-      <label htmlFor="people-org">{t("people.filter_org")}</label>
-      <select id="people-org" value={org} onChange={(e) => setOrg(e.target.value)}>
+    <FormField id="people-org" label={t("people.filter_org")} className={styles.orgFilter} data-size="content">
+      <Select id="people-org" value={org} onChange={(e) => setOrg(e.target.value)}>
         <option value={ALL}>{t("people.all_orgs")}</option>
         {(orgs.data ?? []).map((o) => (
           <option key={o.id} value={o.id}>
@@ -121,8 +124,8 @@ export function People() {
           </option>
         ))}
         <option value={NONE}>{t("people.no_org")}</option>
-      </select>
-    </div>
+      </Select>
+    </FormField>
   );
 
   return (
@@ -193,15 +196,15 @@ function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: R
   const p = props.person;
   const fact = (label: string, value: React.ReactNode) =>
     value ? (
-      <div className="detail">
+      <Definition>
         <dt>{label}</dt>
         <dd>{value}</dd>
-      </div>
+      </Definition>
     ) : null;
   return (
     <>
-      <div className="row-end">{props.tags}</div>
-      <dl className="details-list">
+      <Actions align="end">{props.tags}</Actions>
+      <DefinitionList>
         {fact(t("people.col.relation"), p.relation)}
         {!props.justMe && fact(t("people.col.role"), p.role)}
         {!props.justMe && fact(t("people.col.org"), p.org_name)}
@@ -210,15 +213,15 @@ function PersonDetail(props: { person: S["PersonView"]; justMe: boolean; tags: R
         {fact(t("people.col.reach"), props.reach.length ? props.reach.map((line) => <div key={line}>{line}</div>) : null)}
         {fact(t("people.col.open"), p.open_items > 0 ? tn("people.open_with", p.open_items) : null)}
         {fact(t("people.col.last"), p.last_contact ? day(p.last_contact) : null)}
-      </dl>
-      <div className="row-end">
+      </DefinitionList>
+      <Actions align="end">
         <ButtonLink href={viewHref(recordView("person", p.id))}>
           {t("records.open_page", { name: p.name })}
         </ButtonLink>
         <Button variant="primary" onClick={props.onEdit}>
           {t("setup.edit")}
         </Button>
-      </div>
+      </Actions>
       <RecordConversation key={p.id} kind="person" id={p.id} />
     </>
   );

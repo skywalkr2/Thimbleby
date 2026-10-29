@@ -7,6 +7,9 @@ import { useCalendarOptions, useDraftAct } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
+import { Select } from "../ui/Select";
+import { DateField } from "../ui/DateField";
+import { FormField } from "../ui/FormField";
 
 /** The button that opens the form, drawn only when some connected calendar can add an event. */
 export function NewEvent(props: { today: string }) {
@@ -84,37 +87,31 @@ function NewEventDrawer(props: { today: string; accounts: { id: string; label: s
         }}
       >
         <p className="hint">{t("calendar.new.hint")}</p>
-        <div className="field">
-          <label htmlFor={`${base}-what`}>{t("calendar.new.what")}</label>
+        <FormField id={`${base}-what`} label={t("calendar.new.what")}>
           <input id={`${base}-what`} type="text" autoFocus value={what} onChange={(e) => setWhat(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-account`}>{t("calendar.new.account")}</label>
-          <select id={`${base}-account`} value={account} onChange={(e) => setAccount(e.target.value)}>
+        </FormField>
+        <FormField id={`${base}-account`} label={t("calendar.new.account")}>
+          <Select id={`${base}-account`} value={account} onChange={(e) => setAccount(e.target.value)}>
             {props.accounts.length > 1 && <option value="">{t("calendar.new.choose")}</option>}
             {props.accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.label}
               </option>
             ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-day`}>{t("calendar.new.day")}</label>
-          <input id={`${base}-day`} type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-start`}>{t("calendar.new.start")}</label>
-          <input id={`${base}-start`} type="time" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-end`}>{t("calendar.new.end")}</label>
-          <input id={`${base}-end`} type="time" value={to} onChange={(e) => setTo(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-alarm`}>{t("calendar.new.alarm")}</label>
+          </Select>
+        </FormField>
+        <FormField id={`${base}-day`} label={t("calendar.new.day")}>
+          <DateField id={`${base}-day`} value={day} onChange={(e) => setDay(e.target.value)} />
+        </FormField>
+        <FormField id={`${base}-start`} label={t("calendar.new.start")}>
+          <DateField id={`${base}-start`} kind="time" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </FormField>
+        <FormField id={`${base}-end`} label={t("calendar.new.end")}>
+          <DateField id={`${base}-end`} kind="time" value={to} onChange={(e) => setTo(e.target.value)} />
+        </FormField>
+        <FormField id={`${base}-alarm`} label={t("calendar.new.alarm")}>
           <input id={`${base}-alarm`} type="number" min={0} max={40320} inputMode="numeric" value={alarm} onChange={(e) => setAlarm(e.target.value)} />
-        </div>
+        </FormField>
         {bad && (
           <p className="problem-note" role="alert">
             {t("calendar.new.bad")}

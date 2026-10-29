@@ -23,6 +23,7 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { useLineTitle } from "./TodayQueue";
 import styles from "./BriefCard.module.css";
+import { Select } from "../ui/Select";
 
 type Brief = S["BriefView"];
 type Line = S["BriefLineView"];
@@ -465,14 +466,14 @@ function WhoFor(props: { message: NonNullable<Brief["message"]> }) {
             <label htmlFor={`${id}-who`} className="sr">
               {t("brief.message.who_label")}
             </label>
-            <select id={`${id}-who`} value={picked} onChange={(e) => setPicked(e.target.value)}>
+            <Select id={`${id}-who`} value={picked} onChange={(e) => setPicked(e.target.value)}>
               <option value="">{t("brief.message.who_pick")}</option>
               {choices.map((c) => (
                 <option key={c.person} value={c.person}>
                   {c.name}
                 </option>
               ))}
-            </select>
+            </Select>
             <Button variant="primary" disabled={!picked} reason={picked ? undefined : t("brief.message.who_why_disabled")} onClick={mark}>
               {t("brief.message.who_save")}
             </Button>

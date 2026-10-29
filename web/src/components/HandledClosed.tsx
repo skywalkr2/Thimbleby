@@ -10,6 +10,9 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { Pill } from "../ui/Pill";
 type SilentClose = S["SilentCloseView"];
 
 export function AssistantCloses() {
@@ -41,11 +44,11 @@ export function AssistantCloses() {
           {mine.length === 0 ? (
             <EmptyState text={t("sources.silent.empty")} />
           ) : (
-            <ul className="queue">
+            <RowList>
               {mine.map((item) => (
                 <AssistantCloseRow key={item.ref} item={item} />
               ))}
-            </ul>
+            </RowList>
           )}
         </>
       )}
@@ -69,27 +72,23 @@ function AssistantCloseRow(props: { item: SilentClose }) {
   };
   const facts = [t("sources.silent.by_assistant"), when(item.when)].filter(Boolean);
   return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className="row">
-        <span className="kind k-done" data-item={item.item}>
-          {t(`handled.item.${item.item}`)}
-        </span>
-        <div className="text">
-          <strong id={titleId}>{item.title}</strong>
-          <span className="sub">{[t(`sources.silent.how.${item.how}`), ...facts].join(" · ")}</span>
-          {item.why ? <span className="sub">{t("sources.silent.why", { reason: item.why })}</span> : null}
-        </div>
-        <div className="acts">
-          <Button variant="primary"
-            data-key="primary"
-            disabled={busy}
-            aria-label={t("sources.silent.seen_named", { title: item.title })}
-            onClick={() => void seen()}
-          >
-            {t("sources.silent.seen")}
-          </Button>
-        </div>
-      </div>
-    </li>
+    <Row
+      aria-labelledby={titleId}
+      pill={<Pill>{t(`handled.item.${item.item}`)}</Pill>}
+      title={item.title}
+      titleId={titleId}
+      metaLines={[[t(`sources.silent.how.${item.how}`), ...facts].join(" · "), item.why ? t("sources.silent.why", { reason: item.why }) : null]}
+      primary={
+        <Button
+          variant="primary"
+          data-key="primary"
+          disabled={busy}
+          aria-label={t("sources.silent.seen_named", { title: item.title })}
+          onClick={() => void seen()}
+        >
+          {t("sources.silent.seen")}
+        </Button>
+      }
+    />
   );
 }

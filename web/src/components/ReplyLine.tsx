@@ -11,6 +11,7 @@ import { useWords } from "../lib/wording";
 import { useMessageActs } from "./MessageActs";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 type Line = S["QueueLineView"];
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -155,14 +156,14 @@ function AnsweredForm(props: { onSave: (note: string) => void; onCancel: () => v
         {t("queue.reply.answered_label")}
       </label>
       <input id={id} type="text" autoFocus value={note} onChange={(e) => setNote(e.target.value)} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit">
           {t("queue.reply.answered_go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -187,14 +188,14 @@ function EditForm(props: { value: string; onSave: (text: string) => void; onCanc
         {t("queue.reply.edit_label")}
       </label>
       <textarea id={id} rows={5} autoFocus value={text} onChange={(e) => setText(e.target.value)} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!text.trim()}>
           {t("queue.reply.edit_save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

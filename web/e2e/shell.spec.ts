@@ -155,7 +155,7 @@ test.describe("the visual system", () => {
   test("the style guide has every shared component in every state", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: HEIGHT });
     await signIn(page, "styleguide");
-    for (const section of ["Type scale", "Color roles", "Buttons", "Pills and the status chip", "Rows", "Segmented control", "Empty, loading and failed", "Drawer, dialog, menu and toast", "Form controls", "Evidence", "Icons"]) {
+    for (const section of ["Type scale", "Color roles", "Buttons", "Pills and the status chip", "Rows", "Segmented control", "Empty, loading and failed", "Drawer, dialog, menu and toast", "Form controls", "A record's page", "A setup step's footer", "Evidence", "Icons"]) {
       await expect(page.getByRole("heading", { level: 2, name: section })).toBeVisible();
     }
     // A disabled button says why, and is not shown by opacity alone.
@@ -180,20 +180,19 @@ test.describe("the visual system", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(dialogOpener).toBeFocused();
-    // From 1280px a toast sits at the bottom left of the content area, just right of the navigation and never over it, in one line.
+    // A toast sits at the bottom center of the window whatever the navigation does, in one line, with an icon.
     await page.getByRole("button", { name: "Show a toast" }).click();
     const notices = page.getByRole("region", { name: "Notifications" });
     const toast = notices.getByText("Marked as sent to Sample Person");
     await expect(toast).toBeVisible();
-    const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
     const box = (await toast.boundingBox())!;
     const region = (await notices.boundingBox())!;
-    expect(region.x).toBeGreaterThanOrEqual(nav.x + nav.width);
+    expect(Math.abs(region.x + region.width / 2 - 1440 / 2)).toBeLessThan(2);
     expect(region.width).toBeGreaterThanOrEqual(360);
     expect(region.width).toBeLessThanOrEqual(420);
     expect(box.height).toBeLessThan(30);
     expect(box.y).toBeGreaterThan(HEIGHT - 150);
-    // Narrower, it is at the bottom center, above the bottom bar.
+    // On a phone it is above the bottom bar.
     await page.setViewportSize({ width: 390, height: HEIGHT });
     await expect(toast).toBeVisible();
     // The window was just resized: wait for the navigation to have moved to the bottom bar, then read both boxes in one frame.
@@ -209,14 +208,16 @@ test.describe("the visual system", () => {
       .toEqual({ centered: true, above: true });
   });
 
-  // WCAG 2.4.11 (axe does not check it): with three toasts showing, no control the cursor reaches is hidden under them.
+  // WCAG 2.4.11 (axe does not check it): with a toast showing (one at a time, the newest replacing the one before), no control the
+  // cursor reaches is hidden under it.
   for (const width of [390, 1440]) {
-    test(`with three toasts showing, Tab never leaves a control under them at ${width}px`, async ({ page }) => {
+    test(`with a toast showing, Tab never leaves a control under it at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: HEIGHT });
       await signIn(page, "styleguide");
       await page.getByRole("button", { name: "Show three toasts" }).click();
       const notices = page.getByRole("region", { name: "Notifications" });
-      await expect(notices.getByRole("button", { name: "Dismiss" })).toHaveCount(3);
+      // Three were pushed and one shows: the newest replaced the others.
+      await expect(notices.getByRole("button", { name: "Dismiss" })).toHaveCount(1);
       // Even with several buttons the words keep a width that reads: the buttons wrap under them.
       expect((await notices.getByText("Added Sample Project").boundingBox())!.width).toBeGreaterThan(150);
       await page.getByRole("heading", { level: 1 }).first().focus();
@@ -552,7 +553,7 @@ test.describe("screen use and the shell", () => {
 
   // Below 1440px the header is one row (design 7.1): the title, Ask, the status chip and the buttons, with the assistant's state in
   // the chip's popover and "Quick links" in the person's menu; at about 1,000px Ask is an icon. Nothing is clipped by the
-  // window, the workspace's name keeps its room before Ask gives any up, and Missed something? has its words.
+  // window, the workspace's name keeps its room before Ask gives any up, and Missed something? is in the Help menu.
   for (const width of [800, 1000, 1100, 1200, 1300]) {
     test(`at ${width}px the header is one row, with every control inside the window and the assistant's state in the status chip`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
@@ -564,7 +565,6 @@ test.describe("screen use and the shell", () => {
         header.getByRole("link", { name: /^Go to Today/ }),
         header.getByRole("button", { name: "Ask" }).first(),
         header.getByRole("button", { name: /^App status: / }),
-        header.getByRole("button", { name: "Missed something?" }),
         header.getByRole("button", { name: "Hand something in" }),
         header.getByRole("button", { name: "Help" }),
         header.getByRole("button", { name: /^Change appearance, / }),
@@ -585,10 +585,10 @@ test.describe("screen use and the shell", () => {
           const apart = a.x + a.width <= b.x + 0.5 || b.x + b.width <= a.x + 0.5 || a.y + a.height <= b.y + 0.5 || b.y + b.height <= a.y + 0.5;
           expect(apart, `header controls ${i} and ${j} overlap`).toBe(true);
         }
-      // No assistant line, no "Quick links" and no bare icon for Missed something?.
+      // No assistant line, no "Quick links", and Missed something? is in the Help menu, not the header.
       await expect(header.getByRole("button", { name: new RegExp(`^${await assistantName(page)}`) })).toHaveCount(0);
       await expect(header.getByRole("button", { name: "Quick links" })).toHaveCount(0);
-      await expect(header.getByRole("button", { name: "Missed something?" })).toHaveText("Missed something?");
+      await expect(header.getByRole("button", { name: "Missed something?" })).toHaveCount(0);
       // Where Ask is a field the workspace's name is whole: it gives way only after Ask has.
       if (width >= 1024) {
         const clipped = await header.getByRole("link", { name: /^Go to Today/ }).evaluate((el) => Array.from(el.querySelectorAll("span")).filter((s) => s.scrollWidth > s.clientWidth + 1).length);
@@ -1118,8 +1118,8 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page, "#work/changed");
     await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
-    await expect(page.locator('[data-row] strong[id^="t-"]').first()).toBeVisible();
-    const titles = await page.locator('[data-row] strong[id^="t-"]').allTextContents();
+    await expect(page.locator('[data-row] [id^="t-"]').first()).toBeVisible();
+    const titles = await page.locator('[data-row] [id^="t-"]').allTextContents();
     expect(titles.length).toBeGreaterThan(0);
     for (const text of titles) expect(text).not.toMatch(/^From:/);
     // The demo's mail-borne changes read as Today's lines do.

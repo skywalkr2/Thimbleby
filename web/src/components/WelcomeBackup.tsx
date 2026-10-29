@@ -14,6 +14,10 @@ import { restoreFocus } from "./ModalPanel";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
+import { FormField } from "../ui/FormField";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
+import { RadioCard, RadioCards } from "../ui/RadioCard";
 
 /** The choice that is not one of the drives found: a folder of the person's own. */
 const OTHER = "\u0001other";
@@ -128,33 +132,20 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
         }}
       >
         {found.length > 0 || existing.length > 0 ? (
-          <fieldset className="details">
-            <legend>{t("welcome.backup.where")}</legend>
+          <CheckboxGroup legend={t("welcome.backup.where")}>
+            <RadioCards>
             {found.map((drive) => (
-              <label key={drive.name} className="radio kind-choice kind-card">
-                <input type="radio" name="backup-where" checked={picked === drive.name} onChange={() => setChoice(drive.name)} />
-                <span>
-                  <strong>{drive.name}</strong>
-                  <span className="hint block">{drives.data?.shown}</span>
-                  {drive.recommended && <Pill tone="ok" className="tag-recommended">{t("welcome.ai.recommended")}</Pill>}
-                </span>
-              </label>
+              <RadioCard key={drive.name} name="backup-where" checked={picked === drive.name} onChange={() => setChoice(drive.name)} title={drive.name} description={drives.data?.shown} tag={drive.recommended && <Pill tone="ok" >{t("welcome.ai.recommended")}</Pill>} />
             ))}
-            <label className="radio kind-choice kind-card">
-              <input type="radio" name="backup-where" checked={ownFolder} onChange={() => setChoice(OTHER)} />
-              <span>
-                <strong>{t("welcome.backup.other")}</strong>
-                <span className="hint block">{t("welcome.backup.other_note")}</span>
-              </span>
-            </label>
-          </fieldset>
+            <RadioCard name="backup-where" checked={ownFolder} onChange={() => setChoice(OTHER)} title={t("welcome.backup.other")} description={t("welcome.backup.other_note")} />
+            </RadioCards>
+          </CheckboxGroup>
         ) : (
           props.local && !looking && <p className="hint">{t("welcome.backup.none_found")}</p>
         )}
         {ownFolder && (
           <>
-            <div className="field">
-              <label htmlFor="backup-path">{t("welcome.backup.path")}</label>
+            <FormField id="backup-path" label={t("welcome.backup.path")}>
               <div className="inline-field">
                 <input
                   id="backup-path"
@@ -183,7 +174,7 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
                     ? t("welcome.backup.path_pick", { drives: (drives.data?.names ?? []).join(", ") })
                     : t("welcome.backup.path_pick_plain")}
               </p>
-            </div>
+            </FormField>
             <div role="status">
               {checked && (
                 <p className={checked.ok ? "hint" : "problem-note"}>
@@ -203,11 +194,11 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
           </p>
         )}
         {!hasSlot && (
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="primary" loading={busy} disabled={!!missing || picked === null} reason={missing || undefined} onClick={() => void save()}>
               {props.saveLabel ?? t("welcome.backup.go_here")}
             </Button>
-          </div>
+          </Actions>
         )}
       </form>
       {picking && (

@@ -357,7 +357,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       <a href="#main" className="skip" onClick={skip}>
         {t("app.skip")}
       </a>
-      <div className={[shell.app, sidebar.expanded ? "" : shell.rail, askPane ? shell.withPane : ""].filter(Boolean).join(" ")} data-nav={sidebar.expanded ? "full" : "rail"}>
+      <div className={[shell.app, sidebar.expanded ? "" : shell.rail].filter(Boolean).join(" ")} data-nav={sidebar.expanded ? "full" : "rail"}>
         <Header
           rc={rc}
           live={live}

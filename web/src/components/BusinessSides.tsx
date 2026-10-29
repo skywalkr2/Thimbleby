@@ -8,6 +8,7 @@ import { problemText } from "../lib/problem";
 import { insideLines } from "../lib/work-lines";
 import { useWords } from "../lib/wording";
 import { SavedSide } from "./WalkthroughWork";
+import { RowList } from "../ui/RowList";
 
 export function BusinessSides() {
   const { t } = useWords();
@@ -22,7 +23,7 @@ export function BusinessSides() {
   return (
     <section aria-labelledby="business-sides">
       <h3 id="business-sides">{t("settings.business.sides")}</h3>
-      <ul className="queue">
+      <RowList>
         {sides.map((side, position) => (
           <SavedSide
             key={side.project}
@@ -35,7 +36,7 @@ export function BusinessSides() {
             removal="ask"
           />
         ))}
-      </ul>
+      </RowList>
       {problem && (
         <p className="problem-note" role="alert">
           {problem}

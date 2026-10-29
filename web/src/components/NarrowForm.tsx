@@ -5,6 +5,7 @@ import type { S } from "../lib/api";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import styles from "./Knowledge.module.css";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
 
 type Mode = "projects" | "workspace";
 
@@ -33,16 +34,12 @@ export function NarrowForm(props: {
     props.onSave({ ...scope, scope: mode, projects: mode === "projects" ? chosen : [], except: mode === "workspace" ? chosen : [] });
   const none = chosen.length === 0;
   return (
-    <fieldset
-      className={styles.narrow}
-      onKeyDown={(event) => {
+    <CheckboxGroup legend={t("knowledge.narrow.title")} className={styles.narrow} onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.stopPropagation();
           props.onCancel();
         }
-      }}
-    >
-      <legend>{t("knowledge.narrow.title")}</legend>
+      }}>
       <label className={styles.choice}>
         <input ref={first} type="radio" name={group} checked={mode === "projects"} onChange={() => switchTo("projects")} />
         {t("knowledge.narrow.only")}
@@ -71,6 +68,6 @@ export function NarrowForm(props: {
           {t("action.cancel")}
         </Button>
       </div>
-    </fieldset>
+    </CheckboxGroup>
   );
 }

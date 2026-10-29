@@ -15,6 +15,7 @@ import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { ProjectPicker } from "./ProjectPicker";
 import { SafeText } from "./SafeText";
+import { RowList } from "../ui/RowList";
 
 type Item = S["UnfiledItem"];
 const key = (item: Item) => `${item.kind}:${item.id}`;
@@ -78,7 +79,7 @@ export function Unfiled() {
           />
         </div>
       )}
-      <ul className="queue" id="unfiled-list" hidden={!open}>
+      <RowList id="unfiled-list" hidden={!open}>
         {open && items.map((item) => (
           <Row
             key={key(item)}
@@ -108,7 +109,7 @@ export function Unfiled() {
             )}
           </Row>
         ))}
-      </ul>
+      </RowList>
     </section>
   );
 }

@@ -1,0 +1,4 @@
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
+.end { justify-content: flex-end; }
+:global([data-narrow]) .actions { justify-content: stretch; }
+:global([data-narrow]) .actions > :global([data-variant="primary"]) { flex: 1 0 auto; }

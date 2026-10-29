@@ -10,6 +10,9 @@ import { durationWords } from "../lib/duration";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
+import { DateField } from "../ui/DateField";
+import { Actions } from "../ui/Actions";
+import { ItemList } from "../ui/ItemList";
 
 type Move = S["CapacityMoveView"];
 
@@ -36,7 +39,7 @@ function MoveRow(props: { move: Move; nextDay: string }) {
     <li data-capacity-move={move.action}>
       <div className="title">{move.text}</div>
       <p className="hint">{[durationWords(move.minutes, tn), move.promised ? t("capacity.promised") : "", state].filter(Boolean).join(" · ")}</p>
-      <div className="row-end">
+      <Actions align="end">
         <Button size="sm" variant="primary" onClick={() => void to(props.nextDay)}>
           {t("capacity.move_to", { date: day(props.nextDay) })}
         </Button>
@@ -45,7 +48,7 @@ function MoveRow(props: { move: Move; nextDay: string }) {
             {t("capacity.pick")}
           </Button>
         )}
-      </div>
+      </Actions>
       {picking && (
         <form
           className="answer-form"
@@ -57,15 +60,15 @@ function MoveRow(props: { move: Move; nextDay: string }) {
           <label className="hint" htmlFor={`${id}-day`}>
             {t("capacity.pick_label")}
           </label>
-          <input id={`${id}-day`} type="date" autoFocus value={picked} onChange={(e) => setPicked(e.target.value)} />
-          <div className="row-end">
+          <DateField id={`${id}-day`} autoFocus value={picked} onChange={(e) => setPicked(e.target.value)} />
+          <Actions align="end">
             <Button size="sm" onClick={() => setPicking(false)}>
               {t("action.cancel")}
             </Button>
             <Button size="sm" variant="primary" type="submit" disabled={!picked}>
               {t("capacity.pick_move")}
             </Button>
-          </div>
+          </Actions>
         </form>
       )}
     </li>
@@ -82,11 +85,11 @@ export function CapacityDetail() {
     <>
       <p className="hint">{t("capacity.summary", { needed: durationWords(view.needed_minutes, tn), free: durationWords(view.free_minutes, tn) })}</p>
       {(view.moves ?? []).length > 0 && (
-        <ul className="children">
+        <ItemList>
           {(view.moves ?? []).map((move) => (
             <MoveRow key={move.action} move={move} nextDay={view.next_day ?? ""} />
           ))}
-        </ul>
+        </ItemList>
       )}
       {view.still_over > 0 && <p className="hint">{t("capacity.still_over", { time: durationWords(view.still_over, tn) })}</p>}
     </>

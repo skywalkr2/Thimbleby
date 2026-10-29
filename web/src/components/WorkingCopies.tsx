@@ -12,6 +12,8 @@ import { Icon } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
 export function WorkingCopies(props: {
   kind: string;
   id: string;
@@ -46,13 +48,13 @@ export function WorkingCopies(props: {
         {t("copies.title")}
       </h4>
       {(formats.data ?? []).length > 0 && (
-        <div className="acts wrap" role="group" aria-label={t("copies.hand_out_group")}>
+        <Actions role="group" aria-label={t("copies.hand_out_group")}>
           {(formats.data ?? []).map((format) => (
             <Button key={format.name} disabled={busy !== null} onClick={() => void handOut(format)}>
               {t("copies.hand_out", { label: format.label })}
             </Button>
           ))}
-        </div>
+        </Actions>
       )}
       {handed && (
         <p role="status" className="hint">
@@ -63,11 +65,11 @@ export function WorkingCopies(props: {
         </p>
       )}
       {shown.length > 0 && (
-        <ul className="queue">
+        <RowList>
           {shown.map((copy) => (
             <CopyRow key={copy.id} copy={copy} onReview={props.onReview} />
           ))}
-        </ul>
+        </RowList>
       )}
     </section>
   );

@@ -8,6 +8,7 @@ import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { plainTitle } from "../lib/title-dates";
+import { RowList } from "../ui/RowList";
 
 type Line = S["AgendaLine"];
 
@@ -20,7 +21,7 @@ export function AgendaSection(props: { items: Line[]; id: string }) {
       <div className="heading">
         <h3 id={props.id}>{t("agenda.heading")}</h3>
       </div>
-      <ul className="queue">
+      <RowList>
         {props.items.map((item) => (
           <Row
             key={`${item.kind}:${item.id}`}
@@ -29,7 +30,7 @@ export function AgendaSection(props: { items: Line[]; id: string }) {
             meta={item.added_by_name ? t("agenda.put_by", { name: item.added_by_name, day: day(item.added_at) }) : t("agenda.put_by_assistant", { day: day(item.added_at) })}
           />
         ))}
-      </ul>
+      </RowList>
     </section>
   );
 }

@@ -13,6 +13,8 @@ import { useWords } from "../lib/wording";
 import { heldOf, KeptSecretRow } from "./KeptSecrets";
 import styles from "./Notifications.module.css";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 /** One target's test: runs it, and says how it went in a toast, or in the card when it didn't work. */
 function useTest(target: "browser" | "webhook") {
   const { t } = useWords();
@@ -93,9 +95,8 @@ function WebhookTarget(props: { local: boolean }) {
       <h4 id={`${base}-name`}>{t("notices.webhook.title")}</h4>
       <p>{t("notices.webhook.hint")}</p>
       {apps.length > 0 && (
-        <div className="field">
-          <label htmlFor={`${base}-app`}>{t("notices.app.label")}</label>
-          <select
+        <FormField id={`${base}-app`} label={t("notices.app.label")}>
+          <Select
             id={`${base}-app`}
             value={chosen?.id ?? ""}
             aria-describedby={chosen ? `${base}-app-where` : undefined}
@@ -111,13 +112,13 @@ function WebhookTarget(props: { local: boolean }) {
                 {a.name}
               </option>
             ))}
-          </select>
+          </Select>
           {chosen && (
             <p className="hint" id={`${base}-app-where`}>
               {t("notices.app.where", { where: chosen.where })}
             </p>
           )}
-        </div>
+        </FormField>
       )}
       <KeptSecretRow
         id={`${base}-address`}

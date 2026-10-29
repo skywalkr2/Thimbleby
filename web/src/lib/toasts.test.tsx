@@ -40,7 +40,7 @@ test("a toast shows in the notifications region, which announces politely, and c
   expect(within(region()).queryByText("Fixed")).toBeNull();
 });
 
-test("at most three toasts show, the newest last", async () => {
+test("one toast shows at a time: the newest replaces the one before it, and it has an icon", async () => {
   const user = userEvent.setup();
   render(
     <ToastProvider seconds={0}>
@@ -48,7 +48,8 @@ test("at most three toasts show, the newest last", async () => {
     </ToastProvider>,
   );
   for (let i = 0; i < 5; i++) await user.click(screen.getByRole("button", { name: "push" }));
-  expect(within(region()).getAllByRole("button", { name: "Dismiss" })).toHaveLength(3);
+  expect(within(region()).getAllByRole("button", { name: "Dismiss" })).toHaveLength(1);
+  expect(region().querySelector("[data-tone]")).not.toBeNull();
 });
 
 test("Undo runs the undo and says so, and the last undo is reachable by keyboard", async () => {
@@ -117,7 +118,7 @@ test("dismissAll takes every toast off the screen, and the page is told how many
   await user.click(screen.getByRole("button", { name: "push" }));
   await user.click(screen.getByRole("button", { name: "push" }));
   expect(document.documentElement).toHaveAttribute("data-toasts");
-  expect(document.documentElement.style.getPropertyValue("--toasts")).toBe("2");
+  expect(document.documentElement.style.getPropertyValue("--toasts")).toBe("1");
   await user.click(screen.getByRole("button", { name: "clear all" }));
   expect(within(region()).queryAllByRole("button", { name: "Dismiss" })).toHaveLength(0);
   expect(document.documentElement).not.toHaveAttribute("data-toasts");
@@ -146,7 +147,8 @@ test("the same message pushed again is one toast with a count, and its Undo take
   expect(within(region()).getByText("Filed 3 reviews")).toBeInTheDocument();
   await user.click(within(region()).getByRole("button", { name: "Undo last" }));
   expect(undo).toHaveBeenCalledTimes(1);
-  expect(within(region()).getByText("Filed 2 reviews")).toBeInTheDocument();
+  // The note that it was undone replaces the toast; the two reviews still filed can be undone from the keyboard.
+  expect(within(region()).getByText("Undone.")).toBeInTheDocument();
 });
 
 test("a repeated message without its own wording says how many times", async () => {
@@ -170,21 +172,28 @@ test("a toast with Undo or another action stays past its time until it is dismis
     </ToastProvider>,
   );
   act(() => screen.getByRole("button", { name: "fixed" }).click());
-  act(() => screen.getByRole("button", { name: "push" }).click());
-  act(() => screen.getByRole("button", { name: "plain" }).click());
   act(() => {
     vi.advanceTimersByTime(60000);
   });
   expect(within(region()).getByText("Fixed")).toBeInTheDocument();
+  act(() => screen.getByRole("button", { name: "push" }).click());
+  act(() => {
+    vi.advanceTimersByTime(60000);
+  });
   expect(within(region()).getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  act(() => within(region()).getByRole("button", { name: "Dismiss" }).click());
+  expect(within(region()).queryAllByRole("button", { name: "Dismiss" })).toHaveLength(0);
+  act(() => screen.getByRole("button", { name: "plain" }).click());
+  expect(within(region()).getByText("Plain")).toBeInTheDocument();
+  act(() => {
+    vi.advanceTimersByTime(60000);
+  });
   expect(within(region()).queryByText("Plain")).toBeNull();
-  act(() => within(region()).getAllByRole("button", { name: "Dismiss" })[0].click());
-  expect(within(region()).getAllByRole("button", { name: "Dismiss" })).toHaveLength(1);
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
-test("toasts that stay do not pile up: a fourth replaces the oldest of three", async () => {
+test("toasts that stay do not pile up: a newer one replaces the one showing", async () => {
   vi.useFakeTimers();
   render(
     <ToastProvider seconds={2}>
@@ -195,7 +204,7 @@ test("toasts that stay do not pile up: a fourth replaces the oldest of three", a
   act(() => {
     vi.advanceTimersByTime(60000);
   });
-  expect(within(region()).getAllByRole("button", { name: "Undo" })).toHaveLength(3);
+  expect(within(region()).getAllByRole("button", { name: "Undo" })).toHaveLength(1);
   vi.useRealTimers();
 });
 
@@ -284,4 +293,45 @@ test("a newer toast with the same key replaces the one showing, and that one's U
   await userEvent.click(screen.getByRole("button", { name: "last" }));
   expect(second).toHaveBeenCalledTimes(1);
   expect(first).not.toHaveBeenCalled();
+});
+
+test("an Undo that says what it did itself is not followed by the general word, which would replace it", async () => {
+  const user = userEvent.setup();
+  function Says() {
+    const { push } = useToasts();
+    return (
+      <button type="button" onClick={() => push({ message: "Sent", undo: () => push({ message: "Took back the change to your mail." }) })}>
+        say
+      </button>
+    );
+  }
+  render(
+    <ToastProvider seconds={0}>
+      <Says />
+    </ToastProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "say" }));
+  await user.click(within(region()).getByRole("button", { name: "Undo" }));
+  expect(await within(region()).findByText("Took back the change to your mail.")).toBeInTheDocument();
+  expect(within(region()).queryByText("Undone.")).toBeNull();
+});
+
+test("an Undo that fails without saying so shows a warning", async () => {
+  const user = userEvent.setup();
+  function Fails() {
+    const { push } = useToasts();
+    return (
+      <button type="button" onClick={() => push({ message: "Sent", undo: () => Promise.reject(new Error("no")) })}>
+        fail
+      </button>
+    );
+  }
+  render(
+    <ToastProvider seconds={0}>
+      <Fails />
+    </ToastProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "fail" }));
+  await user.click(within(region()).getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(region().querySelector('[data-tone="warn"]')).not.toBeNull());
 });

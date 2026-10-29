@@ -1,7 +1,7 @@
 // The phone's bottom bar (design 7.1): Today, Work, a raised + (Hand something in), Ask and More. Work and More open a
 // sheet listing their entries; More also holds the Help items and this device's theme and density.
 import { useState } from "react";
-import { Dialog, Heading, Link, Modal, ModalOverlay } from "react-aria-components";
+import { Dialog, Heading, Link } from "react-aria-components";
 import { setDensity, setTheme, useAppearance, type Density, type Theme } from "../lib/theme";
 import { viewHref, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -9,6 +9,7 @@ import { MISSED_BUTTON, useAnythingToMiss, useMissedOne } from "../components/Mi
 import { afterClose } from "../ui/afterClose";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
+import { BottomSheet } from "../ui/Overlay";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { useNav, type NavEntry } from "./nav";
 import { NavCount, navName } from "./NavCount";
@@ -17,8 +18,7 @@ import styles from "./BottomBar.module.css";
 function Sheet(props: { title: string; onClose: () => void; children: React.ReactNode }) {
   const { t } = useWords();
   return (
-    <ModalOverlay isOpen onOpenChange={(open) => !open && props.onClose()} isDismissable className={styles.overlay}>
-      <Modal className={styles.sheet} data-modal-open="">
+    <BottomSheet onClose={props.onClose}>
         <Dialog className={styles.dialog} aria-labelledby="sheet-title">
           <div className={styles.head}>
             <Heading slot="title" id="sheet-title" className={styles.title}>
@@ -28,8 +28,7 @@ function Sheet(props: { title: string; onClose: () => void; children: React.Reac
           </div>
           {props.children}
         </Dialog>
-      </Modal>
-    </ModalOverlay>
+    </BottomSheet>
   );
 }
 

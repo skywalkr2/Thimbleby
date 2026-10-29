@@ -12,6 +12,10 @@ import { Pill } from "../ui/Pill";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { Select } from "../ui/Select";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { RowBody } from "../ui/RowBody";
 const slug = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, "-");
 
 type Tone = S["ListSuggestionView"]["tone"];
@@ -43,11 +47,11 @@ export function ValueLists(props: { level?: 2 | 3; place?: ListsPlace }) {
       {shown.length === 0 ? (
         <EmptyState text={t("lists.none_yet")} />
       ) : (
-        <ul className="queue">
+        <RowList>
           {shown.map((list) => (
             <ListBlock key={list.name} list={list} />
           ))}
-        </ul>
+        </RowList>
       )}
     </section>
   );
@@ -105,16 +109,15 @@ function ListBlock(props: { list: ValueList }) {
   };
 
   return (
-    <li className="line">
-      <div className="row">
-        <div className="text">
-          <strong id={`${base}-name`} tabIndex={-1}>
-            {list.label}
-          </strong>
-          {used && <span className="sub">{used}</span>}
-        </div>
-      </div>
-      <div className="body">
+    <Row
+      title={
+        <span id={`${base}-name`} tabIndex={-1}>
+          {list.label}
+        </span>
+      }
+      meta={used || undefined}
+    >
+      <RowBody>
         {list.values.length === 0 ? (
           <p className="hint">{t("lists.no_values")}</p>
         ) : (
@@ -202,25 +205,25 @@ function ListBlock(props: { list: ValueList }) {
           {typed && list.status && (
             <>
               <label htmlFor={`${base}-meaning`}>{t("lists.meaning_label")}</label>
-              <select id={`${base}-meaning`} value={meaning ?? "open"} onChange={(e) => setChosenMeaning(e.target.value as Meaning)}>
+              <Select id={`${base}-meaning`} value={meaning ?? "open"} onChange={(e) => setChosenMeaning(e.target.value as Meaning)}>
                 {MEANINGS.map((m) => (
                   <option key={m} value={m}>
                     {t(`lists.meaning.${m}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </>
           )}
           {typed && (
             <>
               <label htmlFor={`${base}-tone`}>{t("lists.tone_label")}</label>
-              <select id={`${base}-tone`} value={tone} onChange={(e) => setChosenTone(e.target.value as Tone)}>
+              <Select id={`${base}-tone`} value={tone} onChange={(e) => setChosenTone(e.target.value as Tone)}>
                 {TONES.map((x) => (
                   <option key={x} value={x}>
                     {t(`lists.tone.${x}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </>
           )}
           <Button type="submit" disabled={!newValue.trim()}>
@@ -261,8 +264,8 @@ function ListBlock(props: { list: ValueList }) {
             )}
           </div>
         )}
-      </div>
-    </li>
+      </RowBody>
+    </Row>
   );
 }
 

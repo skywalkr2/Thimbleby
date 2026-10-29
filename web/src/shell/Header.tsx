@@ -13,7 +13,7 @@ import { setDensity, setTheme, useAppearance, type Density, type Theme } from ".
 import { viewHref } from "../lib/views";
 import { useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
-import { MISSED_BUTTON, useAnythingToMiss, useMissedOne } from "../components/MissedOne";
+import { useAnythingToMiss, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -54,12 +54,15 @@ export function useAppearanceGroups(): MenuGroup[] {
 /** The groups of the Help menu: the shortcuts, the setup guide, feedback, and the version as a line that does nothing. */
 export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () => void; onFeedback: () => void }, version: string): MenuGroup[] {
   const { t } = useWords();
+  const missed = useMissedOne();
+  const anythingMissed = useAnythingToMiss();
   return [
     {
       id: "help",
       entries: [
         { id: "shortcuts", label: t("help.open"), icon: "help", run: handlers.onHelp },
         { id: "guide", label: t("header.help_guide"), icon: "check", run: () => afterClose(handlers.onOpenGuide) },
+        ...(anythingMissed ? [{ id: "missed", label: t("missed.open"), icon: "chat" as const, run: missed }] : []),
         { id: "feedback", label: t("feedback.open"), icon: "chat", run: handlers.onFeedback },
       ],
     },
@@ -101,8 +104,6 @@ export function Header(props: {
   const userMenu = useUserMenuGroups(props.onOpenQuality);
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   const askKey = props.shortcuts.ask ?? "/";
-  const missed = useMissedOne();
-  const anythingMissed = useAnythingToMiss();
   // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
   const tight = useMediaQuery("(max-width: 1439px)");
   const inChip = props.narrow || tight;
@@ -140,11 +141,6 @@ export function Header(props: {
       </div>
       {!props.narrow && (
         <div className={styles.end}>
-          {anythingMissed && (
-            <Button variant="quiet" icon="chat" {...{ [MISSED_BUTTON]: "" }} onClick={missed}>
-              <span className={styles.missedText}>{t("missed.open")}</span>
-            </Button>
-          )}
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>

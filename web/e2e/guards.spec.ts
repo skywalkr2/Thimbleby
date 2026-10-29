@@ -4,6 +4,8 @@
 //   2. at most one filled primary button in a region (the header, a pane, a dialog, the main content);
 //   3. no list row has an empty leading column (a row without a mark has no column for one);
 //   4. no field has the cursor when a screen opens (a form, dialog or drawer the person opened is another matter).
+//   5. no native, unstyled select, date, time or file control and no fieldset drawn with its legend on a border (VC05, E12): a
+//      list, a date, a file and a group of ticks come from the shared components, which mark themselves `data-ui`.
 // The layout server holds the long names and the many items of the fixtures, so the guards hold with them.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -50,7 +52,7 @@ async function open(page: Page, screen: (typeof SCREENS)[number]) {
 /** Visible text in the main content that is a sentence (twenty characters or more of its own) set smaller than 13px. */
 const smallParagraphs = (page: Page) =>
   page.evaluate(() => {
-    const exempt = "[data-pill], [data-tag], .kind, .tag, kbd, caption, figcaption, thead, th, h1, h2, h3, h4, h5, h6, button, [data-caption], .sr";
+    const exempt = "[data-pill], [data-tag], .tag, kbd, caption, figcaption, thead, th, h1, h2, h3, h4, h5, h6, button, [data-caption], .sr";
     const found: string[] = [];
     for (const el of Array.from(document.querySelectorAll("main *"))) {
       if (el.closest(exempt)) continue;
@@ -91,7 +93,7 @@ const crowdedPrimaries = (page: Page) =>
 const emptyLeads = (page: Page) =>
   page.evaluate(() => {
     const found: string[] = [];
-    for (const row of Array.from(document.querySelectorAll("main [data-row], main li.line > .row"))) {
+    for (const row of Array.from(document.querySelectorAll("main [data-row]"))) {
       const box = row.getBoundingClientRect();
       if (box.width === 0 || box.height === 0) continue;
       let leftmost = Infinity;
@@ -115,6 +117,26 @@ const fieldWithCursor = (page: Page) =>
     if (!el || el === document.body) return null;
     const field = el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
     return field ? `${el.tagName.toLowerCase()}#${el.id}` : null;
+  });
+
+/** Controls on the page that the shared form components did not draw: a select, a date, time or file input, or a fieldset
+ * that is not a CheckboxGroup or has a frame of its own. A file input that is hidden (opened from a button) is not a control. */
+const nativeControls = (page: Page) =>
+  page.evaluate(() => {
+    const found: string[] = [];
+    const selector = "select, input[type=date], input[type=time], input[type=datetime-local], input[type=file], fieldset";
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>(`main ${selector.replace(/, /g, ", main ")}`))) {
+      const style = getComputedStyle(el);
+      if (el.hidden || style.display === "none") continue;
+      const tag = el.tagName.toLowerCase();
+      const type = (el as HTMLInputElement).type;
+      const kind = tag === "select" ? "select" : tag === "fieldset" ? "group" : type === "file" ? "file" : "date";
+      const mine = el.getAttribute("data-ui") === kind || (kind === "file" && !!el.closest('[data-ui="file"]'));
+      const label = `${tag}${type && tag === "input" ? `[${type}]` : ""}#${el.id || el.getAttribute("name") || ""}`;
+      if (!mine) found.push(`${label} is a native control`);
+      else if (kind === "group" && parseFloat(style.borderTopWidth) > 0) found.push(`${label} has a frame with its legend on it`);
+    }
+    return found.slice(0, 8);
   });
 
 test.describe("the shared components hold on every main screen", () => {
@@ -143,6 +165,7 @@ test.describe("the shared components hold on every main screen", () => {
           for (const small of await smallParagraphs(page)) found.push(`${at}: ${small}`);
           for (const crowd of await crowdedPrimaries(page)) found.push(`${at}: more than one filled primary: ${crowd}`);
           for (const lead of await emptyLeads(page)) found.push(`${at}: ${lead}`);
+          for (const native of await nativeControls(page)) found.push(`${at}: ${native}`);
         }
       }
       expect(found).toEqual([]);

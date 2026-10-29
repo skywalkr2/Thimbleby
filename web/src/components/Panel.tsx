@@ -15,6 +15,10 @@ import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { Definition, DefinitionList } from "../ui/DefinitionList";
 /** `embedded`: the panel sits under a heading of its own (a folded line on Today), so it draws no title or count of its own. */
 export function Panel(props: { name: string; project?: string; embedded?: boolean; onOpenRecord: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
@@ -121,7 +125,7 @@ function RowActions(props: { panel: S["PanelView"]; row: S["PanelRow"]; label: s
     run: () => props.run(o, target, () => box.current?.querySelector<HTMLElement>("button.more")),
   }));
   return (
-    <div className="acts" ref={box}>
+    <Actions ref={box}>
       {primary && (
         <Button variant="primary"
           data-key="primary"
@@ -135,7 +139,7 @@ function RowActions(props: { panel: S["PanelView"]; row: S["PanelRow"]; label: s
         </Button>
       )}
       <RowMenu label={props.label} actions={menu} />
-    </div>
+    </Actions>
   );
 }
 
@@ -216,36 +220,31 @@ function Card(props: ViewProps & { row: S["PanelRow"]; titleColumn: string; skip
   const title = cell(row, props.titleColumn);
   const facts = panel.columns.filter((c) => c !== props.titleColumn && !props.skip.includes(c));
   return (
-    <li className="line" data-row>
-      <div className="row pair">
-        <div className="text">
-          <div className="name">
-            <RowTitle text={title} onOpen={() => props.onOpenRecord(panel.kind, row.id)} />
-          </div>
-          {facts.length > 0 && (
-            <dl className="facts">
-              {facts.map((c) => (
-                <div key={c}>
-                  <dt>{heading(c)}</dt>
-                  <dd>{cell(row, c)}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </div>
-        <RowActions panel={panel} row={row} label={title} run={props.run} />
-      </div>
-    </li>
+    <Row
+      title={<RowTitle text={title} onOpen={() => props.onOpenRecord(panel.kind, row.id)} />}
+      menu={<RowActions panel={panel} row={row} label={title} run={props.run} />}
+    >
+      {facts.length > 0 && (
+        <DefinitionList inline>
+          {facts.map((c) => (
+            <Definition key={c}>
+              <dt>{heading(c)}</dt>
+              <dd>{cell(row, c)}</dd>
+            </Definition>
+          ))}
+        </DefinitionList>
+      )}
+    </Row>
   );
 }
 
 function List(props: ViewProps) {
   return (
-    <ul className="queue">
+    <RowList>
       {props.rows.map((row) => (
         <Card key={row.id} {...props} row={row} titleColumn={props.panel.columns[0]} skip={[]} />
       ))}
-    </ul>
+    </RowList>
   );
 }
 
@@ -267,11 +266,11 @@ function Board(props: ViewProps) {
           <h3 id={`board-${i}`} className="what">
             {name}
           </h3>
-          <ul className="queue">
+          <RowList>
             {rows.map((row) => (
               <Card key={row.id} {...props} row={row} titleColumn={titleColumn} skip={[groupBy]} />
             ))}
-          </ul>
+          </RowList>
         </section>
       ))}
     </div>

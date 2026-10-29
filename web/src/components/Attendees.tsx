@@ -32,8 +32,8 @@ export function Attendees(props: { fields: Record<string, unknown>; names: Map<s
           {asked.map((who, i) => (
             <li key={`${who.address ?? who.name ?? ""}:${i}`}>
               {shown(who)}
-              {who.address && nameOf(who) !== who.address && <span className="sub"> · {who.address}</span>}
-              {who.response && <span className="sub"> · {answer(who.response)}</span>}
+              {who.address && nameOf(who) !== who.address && <span className="hint"> · {who.address}</span>}
+              {who.response && <span className="hint"> · {answer(who.response)}</span>}
             </li>
           ))}
         </ul>

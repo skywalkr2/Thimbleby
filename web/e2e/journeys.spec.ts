@@ -52,7 +52,8 @@ test.describe.serial("journeys", () => {
     // The assistant is introduced by name, with Rename; the name isn't a box until I ask to change it.
     await expect(main.getByText("Your assistant is called Reginald.")).toBeVisible();
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
-    await expect(page.getByText("You · 1 of 7")).toBeVisible();
+    // The step says where it is on the path above its title ("Step 1 of 7"); the rail lists the steps beside it.
+    await expect(main.getByText("Step 1 of 7", { exact: true })).toBeVisible();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).
@@ -291,11 +292,11 @@ test.describe.serial("journeys", () => {
       await page.getByRole("link", { name: /^What changed/ }).first().click();
       // What changed is newest first and titles a change as Today does, so the change just handed in is the top line.
       // Choosing the line shows the whole change in the detail pane beside the list, which is what the steps read.
-      const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
-      await expect(line.locator(".kind").first()).toHaveText(/not yet checked|filed/i, { timeout: 30_000 });
-      const expander = line.locator(".expander").first();
+      const line = page.getByRole("main").locator("[data-row-list] > li[data-row]").first();
+      await expect(line.locator("[data-pill]").first()).toHaveText(/not yet checked|filed/i, { timeout: 30_000 });
+      const expander = line.locator("[data-expander]").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
-      const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
+      const detail = page.locator("aside[data-detail-pane] [data-detail-item]");
       await expect(detail).toBeVisible();
       return detail;
     };
@@ -303,7 +304,7 @@ test.describe.serial("journeys", () => {
     // it is answered. This follows the link (from the change's detail, or from the one item of it that has `hasText`) and
     // returns what Today shows, where the item's answers are.
     const onToday = async (scope: Locator, hasText?: string) => {
-      const item = hasText ? scope.locator("li.child", { hasText }) : scope;
+      const item = hasText ? scope.locator("li[data-item]", { hasText }) : scope;
       await expect(item.getByRole("button", { name: /^(Add|Keep it|Drop it|Do it anyway|Use this person)/ })).toHaveCount(0);
       await item.getByRole("link", { name: "Answer on Today" }).first().click();
       await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
@@ -313,12 +314,12 @@ test.describe.serial("journeys", () => {
     // that holds it is the first of the newest changes whose details have the link (an answer made since is newer).
     const backToToday = async (hasText?: string) => {
       await openView(page, "What changed");
-      const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
+      const detail = page.locator("aside[data-detail-pane] [data-detail-item]");
       await expect(detail).toBeVisible();
-      const holder = (hasText ? detail.locator("li.child", { hasText }) : detail).getByRole("link", { name: "Answer on Today" });
-      const rows = page.getByRole("main").locator("li.line:not(.in-pane)");
+      const holder = (hasText ? detail.locator("li[data-item]", { hasText }) : detail).getByRole("link", { name: "Answer on Today" });
+      const rows = page.getByRole("main").locator("[data-row-list] > li[data-row]");
       for (let i = 0; i < Math.min(await rows.count(), 5); i++) {
-        await rows.nth(i).locator(".expander").first().click();
+        await rows.nth(i).locator("[data-expander]").first().click();
         if (await holder.first().isVisible({ timeout: 3000 }).catch(() => false)) break;
         // The link is drawn once the queue has loaded; try again before moving to the next change.
         await page.waitForTimeout(1500);
@@ -340,7 +341,7 @@ test.describe.serial("journeys", () => {
     // 1. Add a new person. A name nobody has on file is one question; the form starts from the name as written, with
     // the cursor in its first field. Adding sends the waiting action to them. Undo takes the person and the action
     // back (the question stays answered), so it is tried on one newcomer and the other is kept.
-    let row = page.locator("li.line");
+    let row = page.locator("[data-row-list] > li");
     const addNewcomer = async (name: string, keep: boolean) => {
       const sentence = `${name} will confirm the catering menu by 2026-11-20.`;
       row = await handIn(sentence);
@@ -400,7 +401,7 @@ test.describe.serial("journeys", () => {
       action: (await actionsOf()).find((a) => a.text.startsWith("Review each plan"))?.project_name || null,
     });
     expect(await filed()).toEqual({ note: null, action: null });
-    const proposal = (name: string) => page.getByRole("main").locator("li.child", { hasText: `Add a project “${name}”?` });
+    const proposal = (name: string) => page.getByRole("main").locator("li[data-item]", { hasText: `Add a project “${name}”?` });
     // Each proposal is its own line on Today, reached from its own link in the change's details on What changed.
     const toProposal = async (name: string) => {
       await backToToday(name);
@@ -429,7 +430,7 @@ test.describe.serial("journeys", () => {
     const partyNote = async () =>
       (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The party plans are due Friday.")?.project_name || null;
     for (const keep of [false, true]) {
-      await row.locator("li.child", { hasText: `Add a project “${party}”?` }).getByRole("button", { name: `More actions for ${party}` }).click();
+      await row.locator("li[data-item]", { hasText: `Add a project “${party}”?` }).getByRole("button", { name: `More actions for ${party}` }).click();
       await page.getByRole("menuitem", { name: "It's part of…" }).click();
       await row.getByLabel(`“${party}” is part of`).selectOption({ label: festival });
       await row.getByRole("button", { name: "File it there" }).click();
@@ -440,7 +441,7 @@ test.describe.serial("journeys", () => {
       await undo();
       await expect.poll(partyNote).toBeNull();
       row = await backToToday(party);
-      await expect(row.locator("li.child", { hasText: `Add a project “${party}”?` })).toBeVisible();
+      await expect(row.locator("li[data-item]", { hasText: `Add a project “${party}”?` })).toBeVisible();
     }
 
     // 5. Not a project: nothing is filed anywhere and no project is made; the words are kept as not one; Undo brings it back.
@@ -451,7 +452,7 @@ test.describe.serial("journeys", () => {
     ]);
     row = await handIn(trip);
     row = await onToday(row, tour);
-    let tourProposal = row.locator("li.child", { hasText: `Add a project “${tour}”?` });
+    let tourProposal = row.locator("li[data-item]", { hasText: `Add a project “${tour}”?` });
     for (const keep of [false, true]) {
       await tourProposal.getByRole("button", { name: `More actions for ${tour}` }).click();
       await page.getByRole("menuitem", { name: "Not a project" }).click();
@@ -511,7 +512,7 @@ test.describe.serial("journeys", () => {
     // Add-ons lists what the catalog offers: what it adds and reaches, and an Install button.
     await openView(page, "Add-ons");
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
-    const row = page.locator("li.line", { hasText: "Example panel" });
+    const row = page.locator("[data-row-list] > li", { hasText: "Example panel" });
     await expect(row).toHaveCount(1);
     await expect(row).toContainText("1 screen");
     await expect(row).toContainText("Free");
@@ -556,7 +557,7 @@ test.describe.serial("journeys", () => {
     // Turn it off, restart, and remove it from the row's menu; after another restart it is gone.
     await openView(page, "Add-ons");
     await page.getByRole("tab", { name: "Installed" }).click();
-    const installed = page.locator("li.line", { hasText: "journey-panel" });
+    const installed = page.locator("[data-row-list] > li", { hasText: "journey-panel" });
     await installed.getByRole("button", { name: "Turn off journey-panel" }).click();
     await expect(installed).toContainText("Off after a restart");
 
@@ -581,14 +582,14 @@ test.describe.serial("journeys", () => {
 
     // Removed: the row is gone from Installed, the files are gone from the place the app installs into, and the
     // catalog offers it again.
-    await expect(page.locator("li.line", { hasText: "journey-panel" })).toHaveCount(0);
+    await expect(page.locator("[data-row-list] > li", { hasText: "journey-panel" })).toHaveCount(0);
     expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(false);
     await page.reload();
     await page.getByRole("tab", { name: "Installed" }).click();
-    await expect(page.locator("li.line", { hasText: "journey-panel" })).toHaveCount(0);
+    await expect(page.locator("[data-row-list] > li", { hasText: "journey-panel" })).toHaveCount(0);
     await page.getByRole("tab", { name: "Available" }).click();
     await expect(
-      page.locator("li.line", { hasText: "Example panel" }).getByRole("button", { name: "Install Example panel" }),
+      page.locator("[data-row-list] > li", { hasText: "Example panel" }).getByRole("button", { name: "Install Example panel" }),
     ).toBeVisible();
     await visit(page);
 

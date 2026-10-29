@@ -20,3 +20,8 @@
 .invalid { border-color: var(--danger); }
 .choiceRow { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
 .choice { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.trigger { display: inline-flex; align-items: center; gap: var(--space-2); height: var(--btn-h); padding-inline: var(--btn-px); border: 1px solid var(--btn-border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer; }
+.popoverList { list-style: none; margin: 0; padding: 0; }
+.popoverList > li { display: grid; gap: var(--space-1); padding: var(--space-3) 0; }
+.footDemo { position: relative; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.sheetTitle { margin: 0 0 var(--space-2); font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }

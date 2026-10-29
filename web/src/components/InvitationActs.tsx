@@ -10,6 +10,10 @@ import { useActOptions, useDraftAct } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { DateField } from "../ui/DateField";
+import { FormField } from "../ui/FormField";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
 type Answer = "accepted" | "tentative" | "declined" | "propose";
 
 export interface InvitationActs {
@@ -122,42 +126,38 @@ function ProposeForm(props: { entry: string; onCancel: () => void; onSubmit: (st
     >
       <h3 id={`${base}-title`}>{t("acts.propose.title")}</h3>
       {list.length > 0 ? (
-        <fieldset disabled={typed}>
-          <legend>{t("acts.propose.slots")}</legend>
+        <CheckboxGroup legend={t("acts.propose.slots")} disabled={typed}>
           {list.map((s) => (
             <label key={s.start} className="radio">
               <input type="radio" name={`${base}-slot`} checked={chosen?.start === s.start} onChange={() => setPicked(s.start)} />
               {t("acts.propose.slot", { start: dayAndTime(s.start), end: dayAndTime(s.end) })}
             </label>
           ))}
-        </fieldset>
+        </CheckboxGroup>
       ) : (
         !slots.isPending && <p className="hint">{t("acts.propose.none")}</p>
       )}
-      <fieldset>
-        <legend>{t("acts.propose.typed")}</legend>
-        <div className="field">
-          <label htmlFor={`${base}-start`}>{t("acts.propose.start")}</label>
-          <input id={`${base}-start`} type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-end`}>{t("acts.propose.end")}</label>
-          <input id={`${base}-end`} type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
-        </div>
-      </fieldset>
+      <CheckboxGroup legend={t("acts.propose.typed")}>
+        <FormField id={`${base}-start`} label={t("acts.propose.start")}>
+          <DateField id={`${base}-start`} kind="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
+        </FormField>
+        <FormField id={`${base}-end`} label={t("acts.propose.end")}>
+          <DateField id={`${base}-end`} kind="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
+        </FormField>
+      </CheckboxGroup>
       {bad && (
         <p className="problem-note" role="alert">
           {t("acts.propose.bad")}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("acts.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={busy || (!chosen && !typed)}>
           {t("acts.propose.go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

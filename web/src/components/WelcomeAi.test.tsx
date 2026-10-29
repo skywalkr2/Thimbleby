@@ -271,7 +271,7 @@ test("a note is shown whole, once, on its card: never cut off with dots and neve
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   await user.click(await screen.findByRole("button", { name: /^An app you're signed in to/ }));
   const card = screen.getByRole("radio", { name: /App B/ }).closest("label") as HTMLElement;
-  expect((card.querySelector(".hint") as HTMLElement).textContent).toBe(long);
+  expect((card.querySelector("[data-radio-description]") as HTMLElement).textContent).toBe(long);
   await user.click(screen.getByRole("radio", { name: /App B/ }));
   expect(document.querySelector("[data-full-note]")).toBeNull();
   expect(screen.getAllByText(long)).toHaveLength(1);

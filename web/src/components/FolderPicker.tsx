@@ -6,10 +6,11 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api, ApiError } from "../lib/api";
 import { useWords } from "../lib/wording";
-import { ModalPanel } from "./ModalPanel";
+import { ModalPanel, DialogFooter } from "./ModalPanel";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { Actions } from "../ui/Actions";
 /** A folder's address inside another, using the separator the address already uses. */
 export function joinPath(base: string, name: string): string {
   const sep = base.includes("\\") && !base.includes("/") ? "\\" : "/";
@@ -66,11 +67,11 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
         </p>
       )}
       {problem && path && (
-        <div className="row-end">
+        <Actions align="end">
           <Button onClick={() => setPath(undefined)}>
             {t("folders.start_over")}
           </Button>
-        </div>
+        </Actions>
       )}
       {folders.isPending && <Skeleton />}
       {folders.data && (
@@ -78,14 +79,14 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
           <p className="path" ref={heading} tabIndex={-1}>
             {folders.data.home ? t("folders.home") : t("folders.here", { path: folders.data.path })}
           </p>
-          <div className="row-end">
+          <Actions align="end">
             <Button
               disabled={!folders.data.parent}
               onClick={() => setPath(folders.data?.parent ?? undefined)}
             >
               {t("folders.up")}
             </Button>
-          </div>
+          </Actions>
           {folders.data.folders.length === 0 && (!picksFile || (folders.data.files ?? []).length === 0) ? (
             <EmptyState text={t(picksFile ? "folders.no_files" : "folders.none")} />
           ) : (
@@ -109,7 +110,7 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
           )}
         </>
       )}
-      <div className="row-end">
+      <DialogFooter>
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -118,7 +119,7 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
             {t("folders.use")}
           </Button>
         )}
-      </div>
+      </DialogFooter>
     </ModalPanel>
   );
 }

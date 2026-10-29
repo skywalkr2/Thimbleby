@@ -30,6 +30,13 @@ import { Skeleton } from "../ui/Skeleton";
 import { Pill } from "../ui/Pill";
 
 import { EmptyState } from "../ui/EmptyState";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { SearchField } from "../ui/SearchField";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
+import { RadioCard, RadioCards } from "../ui/RadioCard";
 type Kind = S["EndpointView"];
 type ModelInfo = S["AiModelView"];
 type Level = "open" | "internal" | "restricted";
@@ -689,14 +696,16 @@ export function WelcomeAi(props: {
   // The kinds under Something else are a group of their own: one group holding both would have two radios checked at once.
   const underElse = (e: Kind) => kindChoice(e, gated ? "ai-kind-else" : "ai-kind");
   const kindChoice = (e: Kind, group = "ai-kind") => (
-    <label key={e.id} className={`radio kind-choice kind-card${e.recommended && guide ? " recommended" : ""}`}>
-      <input type="radio" name={group} value={e.id} checked={kindId === e.id && !usingFound} onChange={() => choose(e.id)} />
-      <span>
-        {e.recommended && guide && <Pill tone="ok" className="tag-recommended">{t("welcome.ai.recommended")}</Pill>}
-        <strong>{e.name}</strong>
-        {e.note && <span className="hint block">{e.note}</span>}
-      </span>
-    </label>
+    <RadioCard
+      key={e.id}
+      name={group}
+      value={e.id}
+      checked={kindId === e.id && !usingFound}
+      onChange={() => choose(e.id)}
+      tag={e.recommended && guide ? <Pill tone="ok">{t("welcome.ai.recommended")}</Pill> : undefined}
+      title={e.name}
+      description={e.note || undefined}
+    />
   );
 
   /** The servers found running on this computer, each with the button that uses it. */
@@ -748,9 +757,8 @@ export function WelcomeAi(props: {
     const options = shown;
     const note = props2.value === HARDER_SAME ? "" : modelNote(props2.value);
     return (
-      <div className="field">
-        <label htmlFor={props2.id}>{props2.label}</label>
-        <select
+      <FormField id={props2.id} label={props2.label}>
+        <Select
           id={props2.id}
           value={props2.value}
           aria-describedby={note ? `${props2.id}-note` : undefined}
@@ -762,13 +770,13 @@ export function WelcomeAi(props: {
               {m.id}
             </option>
           ))}
-        </select>
+        </Select>
         {note && (
           <p className="hint" id={`${props2.id}-note`}>
             {note}
           </p>
         )}
-      </div>
+      </FormField>
     );
   };
 
@@ -776,15 +784,14 @@ export function WelcomeAi(props: {
   const modelFields = (
     <>
       {list.length > SEARCH_ABOVE && (
-        <div className="field">
-          <label htmlFor="ai-model-find">{t("welcome.ai.model_find")}</label>
-          <input id="ai-model-find" type="search" value={filter} autoComplete="off" onChange={(e) => narrow(e.target.value)} />
+        <FormBlock>
+          <SearchField id="ai-model-find" label={t("welcome.ai.model_find")} value={filter} onChange={narrow} />
           {noMatch && (
             <p className="hint" role="status">
               {t("welcome.ai.model_none")}
             </p>
           )}
-        </div>
+        </FormBlock>
       )}
       {!noMatch && modelSelect({ id: "ai-model", label: t("welcome.ai.model_everyday"), value: everyday, onChange: pickModel(setEveryday, "everyday") })}
       {!noMatch &&
@@ -794,8 +801,7 @@ export function WelcomeAi(props: {
 
   /** The three levels of what an account may see: how the drawer asks, and what Advanced holds in the guide. */
   const levelFields = (
-    <fieldset className="details">
-      <legend>{t("welcome.ai.data")}</legend>
+    <CheckboxGroup legend={t("welcome.ai.data")}>
       <div className="choice-row level-list">
         {LEVELS.map((level) => (
           <div key={level} className="level">
@@ -823,7 +829,7 @@ export function WelcomeAi(props: {
       <p className="hint" data-internal-note="">
         {t("welcome.ai.data_internal_note")}
       </p>
-    </fieldset>
+    </CheckboxGroup>
   );
 
   /** How the check of a new account stands, as a line: checking, "Works", or what to do about it. */
@@ -885,8 +891,7 @@ export function WelcomeAi(props: {
 
   /** Where the key is pasted, or (on a hosted app) where it is kept; the check runs when it is pasted. */
   const keyField = !kind ? null : props.local ? (
-    <div className="field">
-      <label htmlFor="ai-key">{t("welcome.ai.key")}</label>
+    <FormField id="ai-key" label={t("welcome.ai.key")}>
       <div className="inline-field">
         <input
           id="ai-key"
@@ -922,10 +927,9 @@ export function WelcomeAi(props: {
       <p className="hint" id="ai-key-hint">
         {t("welcome.ai.key_hint")} {!kind.needs_key && t("welcome.ai.key_optional")}
       </p>
-    </div>
+    </FormField>
   ) : (
-    <div className="field">
-      <label htmlFor="ai-key-where">{t("welcome.ai.key_where")}</label>
+    <FormField id="ai-key-where" label={t("welcome.ai.key_where")}>
       <input
         id="ai-key-where"
         type="text"
@@ -947,7 +951,7 @@ export function WelcomeAi(props: {
       <p className="hint" id="ai-key-where-hint">
         {t("welcome.ai.key_where_hint")}
       </p>
-    </div>
+    </FormField>
   );
 
   return (
@@ -968,20 +972,13 @@ export function WelcomeAi(props: {
             e.preventDefault();
           }}
         >
-          <fieldset className="details">
-            <legend>{t("welcome.ai.kind")}</legend>
+          <CheckboxGroup legend={t("welcome.ai.kind")}>
             {guide && <p className="hint">{t("welcome.ai.intro", { amount: credit ?? "" })}</p>}
             {gated && (
-              <div className="kinds kind-grid" ref={firstKind}>
+              <RadioCards ref={firstKind}>
                 {featured.map((e) => kindChoice(e))}
-                <label className="radio kind-choice kind-card">
-                  <input type="radio" name="ai-kind" value="" checked={elseShown} onChange={() => setElseOpen(true)} />
-                  <span>
-                    <strong>{t("welcome.ai.else")}</strong>
-                    <span className="hint block">{t("welcome.ai.else_note")}</span>
-                  </span>
-                </label>
-              </div>
+                <RadioCard name="ai-kind" value="" checked={elseShown} onChange={() => setElseOpen(true)} title={t("welcome.ai.else")} description={t("welcome.ai.else_note")} />
+              </RadioCards>
             )}
             {elseShown && gated && (
               <div className="else-list">
@@ -1004,7 +1001,7 @@ export function WelcomeAi(props: {
                     {shownGroup === g.id && (
                       <div id={`ai-else-${g.id}`} className="else-body">
                         {g.id === "computer" && foundCards}
-                        {g.kinds.length > 0 && <div className="kinds kind-grid">{g.kinds.map(underElse)}</div>}
+                        {g.kinds.length > 0 && <RadioCards>{g.kinds.map(underElse)}</RadioCards>}
                       </div>
                     )}
                   </div>
@@ -1015,15 +1012,15 @@ export function WelcomeAi(props: {
               <div>
                 {foundCards}
                 {services.length > 0 && (
-                  <div className="kinds kind-grid" ref={firstKind}>
+                  <RadioCards ref={firstKind}>
                     {services.map(underElse)}
-                  </div>
+                  </RadioCards>
                 )}
                 {apps.length > 0 && (
-                  <div role="group" className="kind-group" aria-labelledby="ai-apps-title">
+                  <FormBlock role="group" aria-labelledby="ai-apps-title">
                     <h4 id="ai-apps-title">{t("welcome.ai.apps")}</h4>
-                    <div className="kinds kind-grid">{apps.map(underElse)}</div>
-                  </div>
+                    <RadioCards>{apps.map(underElse)}</RadioCards>
+                  </FormBlock>
                 )}
                 {more.length > 0 && (
                   <details
@@ -1032,17 +1029,16 @@ export function WelcomeAi(props: {
                     onToggle={(e) => setMoreOpen((e.currentTarget as HTMLDetailsElement).open)}
                   >
                     <summary>{t("welcome.ai.more")}</summary>
-                    <div className="kinds">{more.map(underElse)}</div>
+                    <RadioCards>{more.map(underElse)}</RadioCards>
                   </details>
                 )}
               </div>
             )}
-          </fieldset>
+          </CheckboxGroup>
           {kind && (
             <>
               {kind && asksAddress(kind) && (
-                <div className="field">
-                  <label htmlFor="ai-address">{t("welcome.ai.address")}</label>
+                <FormField id="ai-address" label={t("welcome.ai.address")}>
                   <input
                     id="ai-address"
                     type="text"
@@ -1063,7 +1059,7 @@ export function WelcomeAi(props: {
                   <p className="hint" id="ai-address-hint">
                     {t(guide ? "welcome.ai.address_hint_guide" : "welcome.ai.address_hint")}
                   </p>
-                </div>
+                </FormField>
               )}
               {builtin && kind.installed != null && (
                 <div className="check-row">
@@ -1102,8 +1098,7 @@ export function WelcomeAi(props: {
               )}
               {generic && (
                 <>
-                  <div className="field">
-                    <label htmlFor="ai-command">{t("welcome.advanced.command")}</label>
+                  <FormField id="ai-command" label={t("welcome.advanced.command")}>
                     <input
                       id="ai-command"
                       type="text"
@@ -1124,9 +1119,8 @@ export function WelcomeAi(props: {
                     <p className="hint" id="ai-command-hint">
                       {t("welcome.advanced.command_hint")}
                     </p>
-                  </div>
-                  <fieldset className="details">
-                    <legend>{t("welcome.ai.packet_via")}</legend>
+                  </FormField>
+                  <CheckboxGroup legend={t("welcome.ai.packet_via")}>
                     <div className="choice-row">
                       {(["stdin", "file"] as const).map((v) => (
                         <label key={v} className="check-line">
@@ -1143,9 +1137,8 @@ export function WelcomeAi(props: {
                         </label>
                       ))}
                     </div>
-                  </fieldset>
-                  <fieldset className="details">
-                    <legend>{t("welcome.ai.output_via")}</legend>
+                  </CheckboxGroup>
+                  <CheckboxGroup legend={t("welcome.ai.output_via")}>
                     <div className="choice-row">
                       {(["stdout", "outbox"] as const).map((v) => (
                         <label key={v} className="check-line">
@@ -1162,7 +1155,7 @@ export function WelcomeAi(props: {
                         </label>
                       ))}
                     </div>
-                  </fieldset>
+                  </CheckboxGroup>
                 </>
               )}
               {hasKeyField && (
@@ -1246,8 +1239,7 @@ export function WelcomeAi(props: {
               {showModels && (
                 <>
                   {manualModel ? (
-                    <div className="field">
-                      <label htmlFor="ai-model">{t("welcome.ai.model")}</label>
+                    <FormField id="ai-model" label={t("welcome.ai.model")}>
                       <input
                         id="ai-model"
                         type="text"
@@ -1268,15 +1260,14 @@ export function WelcomeAi(props: {
                       <p className="hint" id="ai-model-hint">
                         {t(agent ? "welcome.ai.model_agent_hint" : "welcome.ai.model_hint")}
                       </p>
-                    </div>
+                    </FormField>
                   ) : builtin && optional && examples.length === 0 ? (
                     // The program's command names no model, so a name typed here would never reach it.
                     <p className="hint">{t("welcome.ai.model_program_picks_hint")}</p>
                   ) : builtin ? (
                     <>
-                      <div className="field">
-                        <label htmlFor="ai-model">{t("welcome.ai.model_choice")}</label>
-                        <select
+                      <FormField id="ai-model" label={t("welcome.ai.model_choice")}>
+                        <Select
                           id="ai-model"
                           value={customModel ? OTHER_MODEL : everyday}
                           onChange={(e) => {
@@ -1293,11 +1284,10 @@ export function WelcomeAi(props: {
                             </option>
                           ))}
                           <option value={OTHER_MODEL}>{t("welcome.ai.model_other")}</option>
-                        </select>
-                      </div>
+                        </Select>
+                      </FormField>
                       {customModel && (
-                        <div className="field">
-                          <label htmlFor="ai-model-custom">{t("welcome.ai.model")}</label>
+                        <FormField id="ai-model-custom" label={t("welcome.ai.model")}>
                           <input
                             id="ai-model-custom"
                             type="text"
@@ -1318,7 +1308,7 @@ export function WelcomeAi(props: {
                           <p className="hint" id="ai-model-custom-hint">
                             {t("welcome.ai.model_agent_hint")}
                           </p>
-                        </div>
+                        </FormField>
                       )}
                     </>
                   ) : guide ? (
@@ -1339,9 +1329,7 @@ export function WelcomeAi(props: {
                 </>
               )}
               {guide && verdict.state === "works" && (
-                <fieldset className="details allow-question" data-allow-question="">
-                  {/* Exactly what Allow covers, said plainly: mail, notes and the calendar, private ones too. */}
-                  <legend>{t("welcome.ai.allow.title")}</legend>
+                <CheckboxGroup legend={t("welcome.ai.allow.title")} className="allow-question" data-allow-question="">
                   <p className="hint">{t("welcome.ai.allow.private")}</p>
                   <p className="hint">
                     {verdict.identity
@@ -1349,22 +1337,17 @@ export function WelcomeAi(props: {
                       : t("welcome.ai.allow.account_unknown", { service: kind.name })}
                   </p>
                   {!verdict.identity && verdict.unknown && <p className="hint">{t("welcome.ai.allow.unknown")}</p>}
+                  <RadioCards>
                   {(["allow", "not_now"] as const).map((answer) => (
-                    <label key={answer} className="radio kind-choice">
-                      <input type="radio" name="ai-work-data" value={answer} checked={workData === answer} onChange={() => chooseWorkData(answer)} />
-                      <span>
-                        <strong>{t(`welcome.ai.allow.${answer}`)}</strong>
-                        <span className="hint block">{t(`welcome.ai.allow.${answer}_note`)}</span>
-                      </span>
-                    </label>
+                    <RadioCard key={answer} name="ai-work-data" value={answer} checked={workData === answer} onChange={() => chooseWorkData(answer)} title={<>{t(`welcome.ai.allow.${answer}`)}</>} description={<>{t(`welcome.ai.allow.${answer}_note`)}</>} />
                   ))}
-                </fieldset>
+                  </RadioCards>
+                </CheckboxGroup>
               )}
               {!guide && levelFields}
               {drawer ? (
                 <>
-                  <div className="field">
-                    <label htmlFor="ai-label">{t("ai_add.name")}</label>
+                  <FormField id="ai-label" label={t("ai_add.name")}>
                     <input
                       id="ai-label"
                       type="text"
@@ -1379,18 +1362,13 @@ export function WelcomeAi(props: {
                     <p className="hint" id="ai-label-hint">
                       {t("ai_add.name_hint")}
                     </p>
-                  </div>
-                  <fieldset className="details">
-                    <legend>{t("ai_add.for")}</legend>
+                  </FormField>
+                  <CheckboxGroup legend={t("ai_add.for")}>
+                    <RadioCards>
                     {(["work", "backup", "none"] as const)
                       .filter((choice) => choice !== "backup" || mains.length > 0)
                       .map((choice) => (
-                        <label key={choice} className="radio kind-choice">
-                          <input type="radio" name="ai-for" value={choice} checked={chosenFor === choice} onChange={() => setForWhat(choice)} />
-                          <span>
-                            <strong>{t(`ai_add.for.${choice}`)}</strong>
-                            <span className="hint block">
-                              {choice === "work"
+                        <RadioCard key={choice} name="ai-for" value={choice} checked={chosenFor === choice} onChange={() => setForWhat(choice)} title={<>{t(`ai_add.for.${choice}`)}</>} description={<>{choice === "work"
                                 ? mains.length
                                   ? t("ai_add.for.work_note", { main: mainName })
                                   : t("ai_add.for.work_note_first")
@@ -1398,20 +1376,17 @@ export function WelcomeAi(props: {
                                   ? checkUsd == null
                                     ? t("ai_add.for.backup_note_free", { main: mainName })
                                     : t("ai_add.for.backup_note", { main: mainName, amount: money(checkUsd) })
-                                  : t("ai_add.for.none_note")}
-                            </span>
-                          </span>
-                        </label>
+                                  : t("ai_add.for.none_note")}</>} />
                       ))}
-                  </fieldset>
+                    </RadioCards>
+                  </CheckboxGroup>
                 </>
               ) : null}
               {guide && spend.node}
               <details className="more-options advanced" data-advanced="">
                 <summary>{t("welcome.ai.advanced")}</summary>
                 {!drawer && (
-                  <div className="field">
-                    <label htmlFor="ai-name">{t("welcome.ai.name")}</label>
+                  <FormField id="ai-name" label={t("welcome.ai.name")}>
                     <input
                       id="ai-name"
                       type="text"
@@ -1426,17 +1401,15 @@ export function WelcomeAi(props: {
                     <p className="hint" id="ai-name-hint">
                       {t("welcome.ai.name_hint")}
                     </p>
-                  </div>
+                  </FormField>
                 )}
                 {!guide && takesAddress(kind) && !asksAddress(kind) && (
-                  <div className="field">
-                    <label htmlFor="ai-address-fixed">{t("welcome.ai.address")}</label>
+                  <FormField id="ai-address-fixed" label={t("welcome.ai.address")}>
                     <input id="ai-address-fixed" type="text" value={kind.base_url} readOnly />
-                  </div>
+                  </FormField>
                 )}
                 {!guide && !agent && (props.local || !hasKeyField) && (
-                  <div className="field">
-                    <label htmlFor="ai-key-ref">{t("welcome.ai.key_ref")}</label>
+                  <FormField id="ai-key-ref" label={t("welcome.ai.key_ref")}>
                     <input
                       id="ai-key-ref"
                       type="text"
@@ -1450,7 +1423,7 @@ export function WelcomeAi(props: {
                     <p className="hint" id="ai-key-ref-hint">
                       {t(props.local ? "welcome.ai.key_ref_hint" : "welcome.ai.key_where_hint")}
                     </p>
-                  </div>
+                  </FormField>
                 )}
               </details>
               {overLimit && askedGo && checkUsd != null && (
@@ -1464,7 +1437,7 @@ export function WelcomeAi(props: {
                 </p>
               )}
               {drawer && (
-                <div className="row-end">
+                <Actions align="end">
                   <Button variant="quiet" disabled={busy} onClick={drawer.onCancel}>
                     {t("ai_add.cancel")}
                   </Button>
@@ -1484,17 +1457,17 @@ export function WelcomeAi(props: {
                             ? t("ai_add.go_ahead", { amount: money(checkUsd) })
                             : t("ai_add.add_check_cost", { amount: money(checkUsd) })}
                   </Button>
-                </div>
+                </Actions>
               )}
             </>
           )}
           {guide && !kind && spend.node}
           {guide && !hasSlot && (
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="primary" loading={busy || testing} disabled={!!(missing || spendWhy)} reason={missing || spendWhy || undefined} onClick={() => void carryOn()}>
                 {t("welcome.ai.save")}
               </Button>
-            </div>
+            </Actions>
           )}
         </form>
       )}

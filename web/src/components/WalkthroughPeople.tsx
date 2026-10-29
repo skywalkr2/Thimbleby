@@ -16,6 +16,11 @@ import { Skeleton } from "../ui/Skeleton";
 import styles from "./WalkthroughPeople.module.css";
 
 import { EmptyState } from "../ui/EmptyState";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
 const RELATIONS = [
   "partner",
   "parent",
@@ -63,14 +68,14 @@ function RelationSet(props: { person: S["PersonView"] }) {
       <label className="sr" htmlFor={id}>
         {t("walkthrough.people.relation.set", { name: props.person.name })}
       </label>
-      <select id={id} value={NONE} onChange={(e) => void choose(e.target.value)}>
+      <Select id={id} value={NONE} onChange={(e) => void choose(e.target.value)}>
         <option value={NONE}>{t("walkthrough.people.relation.choose")}</option>
         {RELATIONS.filter((o) => o !== OTHER).map((o) => (
           <option key={o} value={o}>
             {t(`walkthrough.people.relation.${o}`)}
           </option>
         ))}
-      </select>
+      </Select>
       {problem && (
         <span className="problem-note" role="alert">
           {problem}
@@ -146,23 +151,22 @@ function Suggestions(props: { places: Place[]; sided: boolean }) {
                     {p.address} · {tn("walkthrough.people.suggest.mails", p.count)}
                   </span>
                 </span>
-                <fieldset className={styles.places}>
-                  <legend className="sr">{t("walkthrough.people.suggest.add_to_legend", { name: p.name })}</legend>
+                <CheckboxGroup legend={t("walkthrough.people.suggest.add_to_legend", { name: p.name })} legendHidden className={styles.places}>
                   {props.places.map((place) => (
                     <label key={place.key}>
                       <input type="checkbox" checked={(ticked[p.address] ?? []).includes(place.key)} disabled={busy} onChange={() => toggle(p.address, place.key)} />
                       {place.name}
                     </label>
                   ))}
-                </fieldset>
+                </CheckboxGroup>
               </li>
             ))}
           </ul>
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="primary" loading={busy} disabled={chosen.length === 0} reason={t("walkthrough.people.suggest.tick_first")} onClick={() => void addThese()}>
               {t("walkthrough.people.suggest.add_these")}
             </Button>
-          </div>
+          </Actions>
         </>
       )}
       {problem && (
@@ -224,7 +228,7 @@ function PasteList(props: { place: Place; sided: boolean }) {
   const fresh = preview?.people.filter((p) => !p.on_file) ?? [];
   const known = preview?.people.filter((p) => p.on_file) ?? [];
   return (
-    <div className="field" data-paste-list="">
+    <FormBlock data-paste-list="">
       {!open && (
         <div>
           <button type="button" className="link-button" aria-expanded={false} onClick={() => setOpen(true)}>
@@ -238,11 +242,11 @@ function PasteList(props: { place: Place; sided: boolean }) {
             {props.sided ? t("walkthrough.people.paste.label_side", { side: props.place.name }) : t("walkthrough.people.paste.label")}
           </label>
           <textarea id="walkthrough-people-paste" ref={field} className="msg" value={text} onChange={(e) => setText(e.target.value)} />
-          <div className="row-end">
+          <Actions align="end">
             <Button loading={busy} disabled={!text.trim()} onClick={() => void show()}>
               {t("walkthrough.people.paste.show")}
             </Button>
-          </div>
+          </Actions>
         </>
       )}
       {open && preview && (
@@ -264,14 +268,14 @@ function PasteList(props: { place: Place; sided: boolean }) {
           {preview.left_out.length > 0 && (
             <p className="hint">{t("walkthrough.people.paste.left_out", { lines: preview.left_out.join(", ") })}</p>
           )}
-          <div className="row-end">
+          <Actions align="end">
             <Button disabled={busy} onClick={() => setPreview(null)}>
               {t("walkthrough.people.paste.change")}
             </Button>
             <Button variant="primary" loading={busy} disabled={fresh.length === 0} onClick={() => void add()}>
               {tn("walkthrough.people.paste.add_n", fresh.length)}
             </Button>
-          </div>
+          </Actions>
         </section>
       )}
       {result && <p role="status">{result}</p>}
@@ -280,7 +284,7 @@ function PasteList(props: { place: Place; sided: boolean }) {
           {problem}
         </p>
       )}
-    </div>
+    </FormBlock>
   );
 }
 
@@ -374,38 +378,34 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
       }}
     >
       <div className={styles.addRow}>
-        <div className="field">
-          <label htmlFor={`${id}-name`}>{t("walkthrough.people.name")}</label>
+        <FormField id={`${id}-name`} label={t("walkthrough.people.name")}>
           <input id={`${id}-name`} type="text" value={name} autoComplete="off" onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-how`}>{t("walkthrough.people.who")}</label>
-          <select id={`${id}-how`} value={pick} onChange={(e) => setPick(e.target.value)}>
+        </FormField>
+        <FormField id={`${id}-how`} label={t("walkthrough.people.who")}>
+          <Select id={`${id}-how`} value={pick} onChange={(e) => setPick(e.target.value)}>
             {personal && <option value={NONE}>{t("walkthrough.people.relation.choose")}</option>}
             {options.map((o) => (
               <option key={o} value={o}>
                 {t(`walkthrough.people.${group}.${o}`)}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormField>
         {pick === OTHER && (
-          <div className="field">
-            <label htmlFor={`${id}-other`}>{t(`walkthrough.people.${group}.other_label`)}</label>
+          <FormField id={`${id}-other`} label={t(`walkthrough.people.${group}.other_label`)}>
             <input id={`${id}-other`} type="text" value={other} autoComplete="off" onChange={(e) => setOther(e.target.value)} />
-          </div>
+          </FormField>
         )}
         {props.sided && (
-          <div className="field">
-            <label htmlFor={`${id}-side`}>{t("walkthrough.people.side_label")}</label>
-            <select id={`${id}-side`} value={props.place.key} onChange={(e) => choosePlace(e.target.value)}>
+          <FormField id={`${id}-side`} label={t("walkthrough.people.side_label")}>
+            <Select id={`${id}-side`} value={props.place.key} onChange={(e) => choosePlace(e.target.value)}>
               {props.places.map((place) => (
                 <option key={place.key} value={place.key}>
                   {place.name}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormField>
         )}
         <div className={styles.addButton}>
           <Button type="submit" disabled={busy || !ready}>

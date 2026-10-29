@@ -8,6 +8,7 @@ import { Row } from "../ui/Row";
 import { ActPill } from "./ActPill";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
+import { RowList } from "../ui/RowList";
 
 export function SentActs() {
   const { t } = useWords();
@@ -17,11 +18,11 @@ export function SentActs() {
   return (
     <section aria-labelledby="outgoing-sent-title" data-sent-acts="">
       <h2 id="outgoing-sent-title">{t("outgoing.sent.title")}</h2>
-      <ol className="queue" aria-label={t("outgoing.sent.list")}>
+      <RowList as="ol" aria-label={t("outgoing.sent.list")}>
         {rows.map((a) => (
           <SentRow key={a.id} act={a} />
         ))}
-      </ol>
+      </RowList>
     </section>
   );
 }

@@ -12,9 +12,11 @@ import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
+import { Definition, DefinitionList } from "../ui/DefinitionList";
 import styles from "./HeldDetail.module.css";
 import { ProjectProposalRow } from "./NextSteps";
 import { OpRow, SourcePanel } from "./WhatChanged";
+import { ItemList } from "../ui/ItemList";
 
 /** The parts of a line the decision reads: a held line on Today, or a held row inside a batch. */
 export type HeldLine = Pick<QueueLine, "changeset" | "op" | "held" | "request" | "title" | "waiting">;
@@ -35,13 +37,13 @@ export function HeldDetail(props: { line: HeldLine }) {
     if (!item?.changeset || !op) return <p className="hint">{t("queue.detail.gone")}</p>;
     // A project the assistant found is answered here, with its three choices; What changed only links to this line.
     return (
-      <ul className="children">
+      <ItemList>
         {op.op === "project.add" && op.status === "held" ? (
           <ProjectProposalRow op={op} changeset={item.changeset.id} />
         ) : (
           <OpRow op={op} cs={item.changeset} source={item.source} />
         )}
-      </ul>
+      </ItemList>
     );
   }
   const told = heldTold(ask, t);
@@ -54,25 +56,25 @@ export function HeldDetail(props: { line: HeldLine }) {
   ];
   return (
     <section className={styles.held} aria-label={heldTitle(ask, t)}>
-      <dl className={styles.facts}>
+      <DefinitionList>
         {ask.quote && (
-          <div className={styles.fact}>
+          <Definition>
             <dt>{t("queue.held.detail.said")}</dt>
             <dd>
               {t("queue.held.quote", { quote: ask.quote })}
               {ask.reporter ? ` · ${t("queue.held.e.said_by", { name: ask.reporter })}` : ""}
             </dd>
-          </div>
+          </Definition>
         )}
         {told && (
-          <div className={styles.fact}>
+          <Definition>
             <dd>
               <strong>{told}</strong>
             </dd>
-          </div>
+          </Definition>
         )}
         {from && (
-          <div className={styles.fact}>
+          <Definition>
             <dt>{t("queue.held.detail.source")}</dt>
             <dd>
               {from}
@@ -85,15 +87,15 @@ export function HeldDetail(props: { line: HeldLine }) {
                 </>
               )}
             </dd>
-          </div>
+          </Definition>
         )}
         {line.waiting && (
-          <div className={styles.fact}>
+          <Definition>
             <dt>{t("queue.held.detail.reason")}</dt>
             <dd>{line.waiting}</dd>
-          </div>
+          </Definition>
         )}
-      </dl>
+      </DefinitionList>
       {showSource && source && ask.quote && <SourcePanel id={source} quote={ask.quote} />}
       <div className={styles.answers}>
         {buttons.map((b) => (

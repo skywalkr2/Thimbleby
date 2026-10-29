@@ -1,13 +1,14 @@
-// A drawer from the right (design 7.12, 7.13): for forms and hand-in, so the list stays visible. It has a sticky footer for
+// A drawer from the right, 480px wide and as tall as its content (design 7.12, 7.13): for forms and hand-in, so the list stays visible. It has a sticky footer for
 // its actions, closes with Esc, and when it holds unsaved text (`dirty`) Esc or a click outside asks first instead of
 // losing it. Focus returns to what opened it when it closes.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Dialog, Heading } from "react-aria-components";
 import { useCursorRef } from "../lib/cursor";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "../components/ModalPanel";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
+import { Overlay } from "./Overlay";
 import styles from "./Drawer.module.css";
 
 export function Drawer(props: {
@@ -20,7 +21,7 @@ export function Drawer(props: {
   dirty?: boolean;
   /** The actions, pinned to the bottom. */
   footer?: ReactNode;
-  /** About 640px instead of the detail width. */
+  /** About 640px instead of 480px. */
   wide?: boolean;
   children: ReactNode;
 }) {
@@ -62,15 +63,15 @@ export function Drawer(props: {
     else close();
   };
   return (
-    <ModalOverlay
-      isOpen={props.open}
+    <Overlay
+      kind="drawer"
+      open={props.open}
       onOpenChange={(open) => {
         if (!open) attempt();
       }}
-      isDismissable
-      className={styles.overlay}
+      dismissable
+      wide={props.wide}
     >
-      <Modal className={[styles.modal, props.wide ? styles.wide : ""].filter(Boolean).join(" ")} data-modal-open="">
         <Dialog ref={cursor} className={styles.dialog} aria-labelledby={titleId}>
           <div className={styles.head}>
             <Heading slot="title" id={titleId} className={styles.title}>
@@ -99,7 +100,6 @@ export function Drawer(props: {
             </div>
           )}
         </Dialog>
-      </Modal>
-    </ModalOverlay>
+    </Overlay>
   );
 }

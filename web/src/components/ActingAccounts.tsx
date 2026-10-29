@@ -10,6 +10,7 @@ import { rememberReturn } from "../lib/sign-in-return";
 import { freshSettings, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
+import { ItemList, Item } from "../ui/ItemList";
 
 const KEY = "watch.acting";
 type Account = S["ActAccountView"];
@@ -65,16 +66,16 @@ export function ActingAccounts() {
       ) : (accounts.data?.accounts ?? []).length === 0 ? (
         <p className="hint">{t("acting.none")}</p>
       ) : (
-        <ul className="plain-list" aria-label={t("acting.list")}>
+        <ItemList aria-label={t("acting.list")}>
           {(accounts.data?.accounts ?? []).map((a) => {
             const id = `${base}-${a.id}`.replace(/[^A-Za-z0-9_-]/g, "-");
             return (
-              <li key={a.id} className="row pair" data-account={a.id}>
-                <span className="text">
+              <Item key={a.id} data-account={a.id}>
+                <div>
                   <strong id={`${id}-name`}>{a.label}</strong>
-                  {!a.can_act && <span className="sub">{t("acting.cant", { label: a.label })}</span>}
-                  {a.can_act && !a.acting && a.sign_in && <span className="sub">{t("acting.on_hint")}</span>}
-                </span>
+                  {!a.can_act && <p className="hint">{t("acting.cant", { label: a.label })}</p>}
+                  {a.can_act && !a.acting && a.sign_in && <p className="hint">{t("acting.on_hint")}</p>}
+                </div>
                 <label className="check-line" htmlFor={id}>
                   <input
                     id={id}
@@ -86,10 +87,10 @@ export function ActingAccounts() {
                   />
                   <span>{t("acting.switch")}</span>
                 </label>
-              </li>
+              </Item>
             );
           })}
-        </ul>
+        </ItemList>
       )}
       {problem && (
         <p className="problem-note" role="alert">

@@ -20,6 +20,8 @@ import { MadeBy } from "./MadeBy";
 import { OutsideStep } from "./OutsideStep";
 import { ProjectEndingDetail } from "./ProjectEndingDetail";
 import { ChangeRow, OpRow } from "./WhatChanged";
+import { RowList } from "../ui/RowList";
+import { ItemList } from "../ui/ItemList";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
 const OPENS = new Set<QueueLine["kind"]>(["capacity", "decision", "question", "who_is", "owner", "held", "moved", "terms", "project_ending", "go", "refused", "failed", "review", "intake_review", "batches", "send", "nudge", "escalate", "promise"]);
@@ -116,9 +118,9 @@ function ChangeDetail(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?
   const item = changes.data?.find((c) => c.id === props.line.request);
   if (!item) return <Gone />;
   return (
-    <ol className="queue">
+    <RowList as="ol">
       <ChangeRow item={item} reveal={0} open sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} />
-    </ol>
+    </RowList>
   );
 }
 
@@ -130,9 +132,9 @@ function QuestionDetail(props: { line: QueueLine; onOpenGuide?: (step: string) =
   const question = followups.data?.find((s) => s.is_pm)?.questions.find((q) => q.id === props.line.question);
   if (!question) return props.line.request ? <ChangeDetail line={props.line} onOpenGuide={props.onOpenGuide} /> : <AskedItem question={props.line.question ?? ""} />;
   return (
-    <ul className="children">
+    <ItemList>
       <DecisionRow question={question} reveal={0} check={props.line.after_move?.check} move={props.line.after_move} />
-    </ul>
+    </ItemList>
   );
 }
 
@@ -146,9 +148,9 @@ function AskedItem(props: { question: string }) {
     const op = cs?.ops.find((o) => o.ask?.id === props.question);
     if (cs && op) {
       return (
-        <ul className="children">
+        <ItemList>
           <OpRow op={op} cs={cs} source={item.source} />
-        </ul>
+        </ItemList>
       );
     }
   }
@@ -174,11 +176,11 @@ function MovedDetail(props: { line: QueueLine }) {
   return (
     <>
       <Seen move={props.line.after_move?.request} total={(props.line.questions ?? []).length} />
-      <ul className="children">
+      <ItemList>
         {rows.map((question) => (
           <DecisionRow key={question.id} question={question} reveal={0} check={checks.get(question.id)} move={props.line.after_move} />
         ))}
-      </ul>
+      </ItemList>
     </>
   );
 }
@@ -191,11 +193,11 @@ function TermsDetail(props: { line: QueueLine }) {
   const rows = (props.line.questions ?? []).map((id) => mine.find((q) => q.id === id)).filter((q) => q !== undefined);
   if (rows.length === 0) return <Gone />;
   return (
-    <ul className="children">
+    <ItemList>
       {rows.map((question) => (
         <DecisionRow key={question.id} question={question} reveal={0} />
       ))}
-    </ul>
+    </ItemList>
   );
 }
 
@@ -206,9 +208,9 @@ function SendDetail(props: { line: QueueLine }) {
   const section = followups.data?.find((s) => !s.is_pm && s.person === props.line.person);
   if (!section) return <Gone />;
   return (
-    <ol className="queue">
+    <RowList as="ol">
       <PersonSection section={section} open />
-    </ol>
+    </RowList>
   );
 }
 
@@ -219,9 +221,9 @@ function NudgeDetail(props: { line: QueueLine }) {
   const section = followups.data?.find((s) => !s.is_pm && s.person === props.line.person);
   if (!section) return <Gone />;
   return (
-    <ol className="queue">
+    <RowList as="ol">
       <WaitingSection section={section} compact nudgeOpen />
-    </ol>
+    </RowList>
   );
 }
 

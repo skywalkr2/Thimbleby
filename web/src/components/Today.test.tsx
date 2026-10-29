@@ -242,12 +242,12 @@ const watched = (id: string, over: Partial<S["WatchSourceView"]> = {}): S["Watch
   ...over,
 });
 
-test("the heading says what was read, and an empty Today says nothing needs you together with it", async () => {
+test("an empty Today says nothing needs you together with what was read", async () => {
   const read = new Date().toISOString();
   show([], { "GET watch": () => [watched("a", { read_at: read, last: { outcome: "ok", started_at: read, new: 0, changed: 0, removed: 0 } })] });
   const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /Nothing needs you · Checked 1 connection, last at /.test(el.textContent ?? ""));
   expect(empty).toBeInTheDocument();
-  expect(screen.getAllByText(/Checked 1 connection, last at /).length).toBeGreaterThanOrEqual(2); // the heading's line and the empty state's
+  expect(screen.getAllByText(/Checked 1 connection, last at /)).toHaveLength(1); // the empty state's: the header's popover holds the other line
   expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
 });
 
@@ -258,7 +258,7 @@ test("when a source couldn't be read, neither the heading nor the empty Today sa
   expect(empty.textContent).toMatch(/^Nothing found that needs you/);
   expect(screen.getByText(/Nothing found that needs you$/)).toBeInTheDocument();
   expect(screen.queryByText(/Nothing needs you/)).toBeNull();
-  expect(screen.getAllByText(/Work mail couldn't be read since/).length).toBeGreaterThanOrEqual(2);
+  expect(screen.getAllByText(/Work mail couldn't be read since/)).toHaveLength(1);
 });
 
 test("a source not read lately is named where Today would say nothing needs you, with its own label", async () => {
@@ -268,7 +268,7 @@ test("a source not read lately is named where Today would say nothing needs you,
   expect(empty.textContent).toMatch(/^Nothing found that needs you/);
   expect(screen.getByText(/Nothing found that needs you$/)).toBeInTheDocument();
   expect(screen.queryByText(/Nothing needs you/)).toBeNull();
-  expect(screen.getAllByText(/Work mailbox hasn't been read since/).length).toBeGreaterThanOrEqual(2);
+  expect(screen.getAllByText(/Work mailbox hasn't been read since/)).toHaveLength(1);
   expect(screen.queryByText(/Checked 1 connection/)).toBeNull();
 });
 

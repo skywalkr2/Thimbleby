@@ -4,7 +4,7 @@
 // saved as it is made, with Undo. A suggestion from the measurements is only ever offered, never applied.
 import { useQuery } from "@tanstack/react-query";
 import { RefreshedLines } from "./RefreshedLines";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { accountName, type Account, type Kind } from "../lib/ai-accounts";
 import {
@@ -28,9 +28,11 @@ import {
 import { useMoney, useSmallMoney } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { FormField } from "../ui/FormField";
 import { PackTiers } from "./PackTiers";
 import { RowMenu } from "./RowMenu";
 import styles from "./AiRouting.module.css";
+import { Select } from "../ui/Select";
 
 type Routing = S["AiRoutingView"];
 
@@ -204,7 +206,7 @@ function KindRow(props: {
             </span>
           )}
         </div>
-        <select id={id} value={props.value} disabled={locked} onChange={(e) => props.onChoose(e.target.value)}>
+        <Select id={id} value={props.value} disabled={locked} onChange={(e) => props.onChoose(e.target.value)}>
           {props.tiers.map((x) => (
             <option key={x.name} value={x.name}>
               {props.model(x.name)}
@@ -212,7 +214,7 @@ function KindRow(props: {
           ))}
           {/* An add-on's own tier isn't one of these: the kind of work that names it shows it, and it is mapped under the add-on. */}
           {!props.tiers.some((x) => x.name === props.value) && <option value={props.value}>{props.own(props.value)}</option>}
-        </select>
+        </Select>
         {locked && <p className="hint">{t(kind.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
         {props.problem && (
           <p className="problem-note" role="alert">
@@ -327,14 +329,14 @@ function EscalationRow(props: {
         <label className="setting-label" htmlFor={id}>
           {props.work}
         </label>
-        <select id={id} value={props.value} disabled={locked} onChange={(e) => props.onChange(e.target.value)}>
+        <Select id={id} value={props.value} disabled={locked} onChange={(e) => props.onChange(e.target.value)}>
           <option value="">{t("ai_routing.escalate.never")}</option>
           {props.others.map((o) => (
             <option key={o.name} value={o.name}>
               {t("ai_routing.escalate.to", { model: props.model(o.name) })}
             </option>
           ))}
-        </select>
+        </Select>
         {locked && <p className="hint">{t(props.tier.escalate_source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
         {props.problem && (
           <p className="problem-note" role="alert">
@@ -422,19 +424,19 @@ function Rules(props: { view: Routing; model: (tier: string) => string }) {
             <li key={i}>
               <div className={styles.rule} role="group" aria-label={t("ai_routing.rule", { n: i + 1 })} data-rule={i}>
                 <div className={styles.fields}>
-                  <Field label={t("ai_routing.rule.task")} id={`${base}-${i}-task`}>
+                  <FormField label={t("ai_routing.rule.task")} id={`${base}-${i}-task`} className={styles.field}>
                     {(id) => (
-                      <select id={id} value={row.task} disabled={locked} onChange={(e) => edit(i, { task: e.target.value })}>
+                      <Select id={id} value={row.task} disabled={locked} onChange={(e) => edit(i, { task: e.target.value })}>
                         <option value="">{t("ai_routing.rule.any_task")}</option>
                         {kinds.map((k) => (
                           <option key={k.name} value={k.name}>
                             {kindLabel(k.name)}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
-                  </Field>
-                  <Field label={t("ai_routing.rule.chars")}>
+                  </FormField>
+                  <FormField label={t("ai_routing.rule.chars")} className={styles.field}>
                     {(id) => (
                       <input
                         type="text"
@@ -448,8 +450,8 @@ function Rules(props: { view: Routing; model: (tier: string) => string }) {
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), void commit(rows))}
                       />
                     )}
-                  </Field>
-                  <Field label={t("ai_routing.rule.quotes")}>
+                  </FormField>
+                  <FormField label={t("ai_routing.rule.quotes")} className={styles.field}>
                     {(id) => (
                       <input
                         type="text"
@@ -463,30 +465,30 @@ function Rules(props: { view: Routing; model: (tier: string) => string }) {
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), void commit(rows))}
                       />
                     )}
-                  </Field>
-                  <Field label={t("ai_routing.rule.level")}>
+                  </FormField>
+                  <FormField label={t("ai_routing.rule.level")} className={styles.field}>
                     {(id) => (
-                      <select id={id} value={row.level} disabled={locked} onChange={(e) => edit(i, { level: e.target.value })}>
+                      <Select id={id} value={row.level} disabled={locked} onChange={(e) => edit(i, { level: e.target.value })}>
                         <option value="">{t("ai_routing.rule.any_level")}</option>
                         {LEVELS.map((l) => (
                           <option key={l} value={l}>
                             {t(`welcome.ai.data.${l}`)}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
-                  </Field>
-                  <Field label={t("ai_routing.rule.tier")}>
+                  </FormField>
+                  <FormField label={t("ai_routing.rule.tier")} className={styles.field}>
                     {(id) => (
-                      <select id={id} value={row.tier} disabled={locked} onChange={(e) => edit(i, { tier: e.target.value })}>
+                      <Select id={id} value={row.tier} disabled={locked} onChange={(e) => edit(i, { tier: e.target.value })}>
                         {view.tiers.map((x) => (
                           <option key={x.name} value={x.name}>
                             {props.model(x.name)}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
-                  </Field>
+                  </FormField>
                 </div>
                 <RowMenu
                   label={t("ai_routing.rule", { n: i + 1 })}
@@ -497,7 +499,7 @@ function Rules(props: { view: Routing; model: (tier: string) => string }) {
                           { id: "up", label: t("ai_routing.rule.move_up"), disabled: i === 0, run: () => void commit(moved(rows, i, -1)) },
                           { id: "down", label: t("ai_routing.rule.move_down"), disabled: i === rows.length - 1, run: () => void commit(moved(rows, i, 1)) },
                           {
-                            id: "remove",
+                            id: "remove", danger: true,
                             label: t("ai_routing.rule.remove"),
                             run: () => {
                               void commit(rows.filter((_, j) => j !== i));
@@ -552,20 +554,6 @@ function Rules(props: { view: Routing; model: (tier: string) => string }) {
           {t("ai_routing.rule_add")}
         </Button>
       </div>
-    </div>
-  );
-}
-
-/** A control with its label. */
-function Field(props: { label: string; id?: string; children: (id: string) => ReactNode }) {
-  const own = useId();
-  const id = props.id ?? own;
-  return (
-    <div className={styles.field}>
-      <label htmlFor={id} className="setting-label">
-        {props.label}
-      </label>
-      {props.children(id)}
     </div>
   );
 }

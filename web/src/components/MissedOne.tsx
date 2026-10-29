@@ -11,7 +11,8 @@ import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { useAddOwnRequest } from "./HandIn";
-import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
+import { FormField } from "../ui/FormField";
 
 /** Whether there is anything the assistant could have missed yet: something has been handed in or read, so a change exists.
  * On a new workspace, before any input has been read, the header offers no "Missed one". */
@@ -99,8 +100,7 @@ export function MissedOne(props: { onClose: () => void }) {
           void submit();
         }}
       >
-        <div className="field">
-          <label htmlFor={`${base}-text`}>{t("missed.label")}</label>
+        <FormField id={`${base}-text`} label={t("missed.label")}>
           <textarea
             id={`${base}-text`}
             ref={field}
@@ -120,15 +120,15 @@ export function MissedOne(props: { onClose: () => void }) {
           <span id={`${base}-hint`} className="hint">
             {t("missed.hint")}
           </span>
-        </div>
-        <div className="row-end">
+        </FormField>
+        <DialogFooter>
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.cancel")}
           </Button>
           <Button variant="primary" type="submit" disabled={busy || !text.trim()}>
             {t(busy ? "missed.sending" : "missed.go")}
           </Button>
-        </div>
+        </DialogFooter>
       </form>
     </ModalPanel>
   );

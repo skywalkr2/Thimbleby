@@ -12,6 +12,7 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 type T = ReturnType<typeof useWords>["t"];
 
 /** The page's address names the event and the date of it that was opened: the snapshot, an at sign, then the date's start. */
@@ -78,14 +79,14 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
                 <div className="heading">
                   <h3 id="record-details">{t("record.details")}</h3>
                 </div>
-                <dl className="details-list">
+                <DefinitionList>
                   {rows.map((row) => (
-                    <div key={row.name} className="detail" data-detail={row.name}>
+                    <Definition key={row.name} data-detail={row.name}>
                       <dt>{row.label}</dt>
                       <dd>{row.value}</dd>
-                    </div>
+                    </Definition>
                   ))}
-                </dl>
+                </DefinitionList>
                 {event.link && (
                   <p>
                     <SafeLink label={t("schedule.open_calendar")} url={event.link} />

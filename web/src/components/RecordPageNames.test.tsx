@@ -78,7 +78,7 @@ test("a person's details say names, words and a label for a choice, in the order
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Quarry House");
   expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Role", "Organization", "How to reach", "Other names", "Team", "Status"]);
-  const value = (term: string) => within(details).getByText(term).closest(".detail")!.querySelector("dd")!.textContent;
+  const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Organization")).toBe("Quarry House");
   expect(value("Team")).toBe("Quarry Editorial");
   expect(value("How to reach")).toBe("Email: robin@example.org");
@@ -123,7 +123,7 @@ test("an empty value is no row, and a list of maps shows each map's parts joined
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Roles");
   expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Roles"]);
-  const lines = within(details).getByText("Roles").closest(".detail")!.querySelectorAll("dd > div");
+  const lines = within(details).getByText("Roles").closest("[data-definition]")!.querySelectorAll("dd > div");
   expect([...lines].map((l) => l.textContent)).toEqual(["Robin Sample · Run", "Robin Sample"]);
 });
 
@@ -141,7 +141,7 @@ test("a reference to a record that was deleted says it was removed, never its id
   renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Quarry House");
-  const value = (term: string) => within(details).getByText(term).closest(".detail")!.querySelector("dd")!.textContent;
+  const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Team")).toBe("Removed");
   expect(details.textContent).not.toMatch(/\b[A-Z]{2,5}-\d+\b/);
 });
@@ -192,7 +192,7 @@ test("the page of a side says its own organization once, as \"Your business\" li
   renderApp(<RecordPage kind="project" id="PRJ-7" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
   const term = await within(details).findByText("Organization");
-  const value = term.closest(".detail")!.querySelector("dd")!;
+  const value = term.closest("[data-definition]")!.querySelector("dd")!;
   expect(value).toHaveTextContent("Your business");
   expect(within(value as HTMLElement).getByRole("link", { name: "Your business" })).toHaveAttribute("href", expect.stringContaining("ORG-1"));
   // The heading is the only place the name is said.
@@ -213,7 +213,7 @@ test("a project's details leave out an area flag that is off and say one that is
   serve("project", "PRJ-1", { name: "Harbor", area: true }, fields, page("project", "PRJ-1", "Harbor", []));
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
   const on = await screen.findByRole("region", { name: "Details" });
-  const row = (await within(on).findByText("Area")).closest(".detail")!;
+  const row = (await within(on).findByText("Area")).closest("[data-definition]")!;
   expect(row.querySelector("dd")).toHaveTextContent("An area of life: ongoing, with no end date");
   expect(on).not.toHaveTextContent(/Yes/);
 });

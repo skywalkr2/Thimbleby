@@ -135,16 +135,16 @@ async function handIn(page: Page, c: Case) {
   await go(page, "What changed");
   // What changed titles a change as Today does. Choosing the line shows the whole change in the detail pane beside the
   // list, which is what the steps read.
-  const rows = page.getByRole("main").locator("li.line:not(.in-pane)");
+  const rows = page.getByRole("main").locator("[data-row-list] > li[data-row]");
   const line = mine ? rows.and(page.locator(`[data-changeset="${mine}"]`)).first() : rows.first();
-  await expect(line.locator(".kind").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
-  const expander = line.locator(".expander").first();
+  await expect(line.locator("[data-pill]").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
+  const expander = line.locator("[data-expander]").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
-  const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
+  const detail = page.locator("aside[data-detail-pane] [data-detail-item]");
   await expect(detail).toBeVisible();
   // A row inside the pane (a held item among them) uses the pane's full width: its words are never squeezed beside its buttons.
   const paneWidth = (await detail.boundingBox())!.width;
-  for (const child of await detail.locator(".child").all()) {
+  for (const child of await detail.locator("[data-item]").all()) {
     const words = (await child.locator(":scope > div").first().boundingBox())!;
     expect(words.width).toBeGreaterThan(paneWidth * 0.8);
   }
@@ -460,7 +460,7 @@ test.describe.serial("acceptance scenario", () => {
     const existing = new Set((await getJson<Section[]>(page, "api/followups")).flatMap((s) => s.actions.map((a) => a.id)));
     const row = await handIn(page, notes);
     // One action per task, and every name resolved: no "who is this?" decision for these notes.
-    const actions = row.locator("li.child", { hasText: "Added a to-do" });
+    const actions = row.locator("li[data-item]", { hasText: "Added a to-do" });
     await expect(actions).toHaveCount(notes.expect!.length);
     await expect(row.getByRole("combobox", { name: /Who is/ })).toHaveCount(0);
     const followups = await getJson<Section[]>(page, "api/followups");
@@ -522,9 +522,9 @@ test.describe.serial("acceptance scenario", () => {
     // The demo already holds questions of its own: only what the hand-in adds is checked.
     const existing = new Set((await getJson<Section[]>(page, "api/followups")).flatMap((s) => s.questions.map((q) => q.id)));
     const row = await handIn(page, printer);
-    const recorded = row.locator("li.child", { hasText: "Recorded a fact" });
+    const recorded = row.locator("li[data-item]", { hasText: "Recorded a fact" });
     await expect(recorded).toHaveCount(1);
-    await expect(row.locator("li.child", { hasText: "Asked a question" })).toHaveCount(0);
+    await expect(row.locator("li[data-item]", { hasText: "Asked a question" })).toHaveCount(0);
     // The screen shows the fact and the words it rests on, and the source highlights those words.
     // A fact that is one person's word keeps who said it ("<name> says …", and no closing full stop); one stated as settled keeps its words.
     const words = String(fact.text).replace(/[.!?]+$/, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -565,10 +565,10 @@ test.describe.serial("acceptance scenario", () => {
     };
     expect(before.standing).toHaveProperty("settings");
     const row = await handIn(page, hostile);
-    await expect(row.locator("li.child", { hasText: "Filed a note" })).toHaveCount(1);
+    await expect(row.locator("li[data-item]", { hasText: "Filed a note" })).toHaveCount(1);
     // Nothing else came of it: no person, action, question, or anything held for a yes.
-    await expect(row.locator("li.child")).toHaveCount(1);
-    await expect(row.locator("li.child [data-pill]")).toHaveCount(0);
+    await expect(row.locator("li[data-item]")).toHaveCount(1);
+    await expect(row.locator("li[data-item] [data-pill]")).toHaveCount(0);
     expect((await getJson<Person[]>(page, "api/people")).length).toBe(before.people);
     // The rules and settings are as they were: same rule count, same settings files, same settings, none proposed.
     expect(await helperJson(page, "standing")).toEqual(before.standing);
@@ -582,10 +582,10 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     const projects: Array<{ id: string; name: string }> = await (await page.request.get("api/projects")).json();
     const loose = await handIn(page, { id: "loose-note", note: "Keep this one for later" });
-    await expect(loose.locator("li.child", { hasText: "Filed a note (no project)" })).toHaveCount(1);
+    await expect(loose.locator("li[data-item]", { hasText: "Filed a note (no project)" })).toHaveCount(1);
     const row = await handIn(page, { id: "own-note", note: "Keep this under the project, for later" });
     const first = projects[0];
-    await expect(row.locator("li.child", { hasText: `Filed a note under ${first.name}` })).toHaveCount(1);
+    await expect(row.locator("li[data-item]", { hasText: `Filed a note under ${first.name}` })).toHaveCount(1);
     await go(page, "Projects");
     // The note filed under no project is one line below the table ("1 item needs a place · Sort them"), not lost; Sort them
     // opens its rows.
@@ -746,7 +746,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toBeVisible();
-    // From 1280px the toast is at the bottom left of the content area, never over the navigation.
+    // The toast is at the bottom center of the window, never over the navigation.
     const toast = (await page.getByRole("region", { name: "Notifications" }).boundingBox())!;
     const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
     expect(toast.x).toBeGreaterThanOrEqual(nav.x + nav.width);
@@ -763,7 +763,7 @@ test.describe.serial("acceptance scenario", () => {
     await choose(target.name);
     const waiting = page.locator("aside[data-detail-pane]", { has: page.getByRole("heading", { name: target.name }) });
     await expect(waiting).toContainText(/sent (today|.* \(\d+ days?\))/);
-    await expect(waiting.locator("li.child")).toHaveCount(questions.length + actions.length);
+    await expect(waiting.locator("li[data-item]")).toHaveCount(questions.length + actions.length);
     await expect(waiting.getByRole("button", { name: "Mark their work done" }).first()).toBeVisible();
     await checkAccessibility(page);
     // Undo puts it all back to send.
@@ -785,12 +785,12 @@ test.describe.serial("acceptance scenario", () => {
     await getJson(page, `api/record?kind=fact&id=${factId}`);
 
     // Only the chosen change shows its details, in the pane beside the list: choose this one to see what it did.
-    const expander = page.locator(`li.line[data-changeset="${changeset}"]:not(.in-pane)`).locator(".expander").first();
+    const expander = page.locator(`[data-row-list] > li[data-changeset="${changeset}"]`).locator("[data-expander]").first();
     if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
-    const row = page.locator(`li.line.in-pane[data-changeset="${changeset}"]`);
+    const row = page.locator(`[data-detail-item][data-changeset="${changeset}"]`);
     await row.getByRole("button", { name: /More actions for/ }).first().click();
     await page.getByRole("menuitem", { name: "Undo everything it did" }).click();
-    await expect(row.locator("li.child [data-pill]")).toHaveText(/Undone/i);
+    await expect(row.locator("li[data-item] [data-pill]")).toHaveText(/Undone/i);
 
     // The fact is gone: no screen lists facts yet, so the record route a record's page reads from no longer finds it.
     expect((await page.request.get(`api/record?kind=fact&id=${factId}`)).status()).toBe(404);
@@ -848,9 +848,9 @@ test.describe.serial("acceptance scenario", () => {
     // After one succeeds Today's line goes, and the header chip itself shows how long ago it ran.
     await line.getByRole("button", { name: "Back up now" }).click();
     await expect(line).toHaveCount(0);
-    await expect(chip).toContainText("Connected");
+    await expect(chip).toContainText("All good");
     await expect(chip).toContainText("Backed up less than an hour ago");
-    await expect(chip).toHaveAccessibleName(/^App status: Connected, Backed up less than an hour ago$/);
+    await expect(chip).toHaveAccessibleName(/^App status: All good, Backed up less than an hour ago$/);
     const status = await openStatus(page);
     await expect(status).toContainText("Backed up less than an hour ago");
     await checkAccessibility(page);
@@ -877,9 +877,17 @@ test.describe.serial("acceptance scenario", () => {
       await go(page, view);
       const rows = page.getByRole("main").locator("[data-row]");
       await expect(rows.first()).toBeVisible();
-      // A click on the row's own text (not on a button in it) focuses the row; the mouse gets no ring.
-      await page.getByRole("main").locator("[data-row] > .row > .kind, [data-row] .meta, [data-row] [class*='_meta_'], [data-row] .what, [data-row] .title").first().click();
-      await expect(page.locator("[data-row]:focus")).toHaveCount(1);
+      // A click on the row's own text focuses the row; the mouse gets no ring. A row that opens something under it is one button
+      // over its whole text, so there the click lands on that button, inside the row.
+      const plain = "[data-row]:not(:has([data-expander]))";
+      const text = page.getByRole("main").locator(`${plain} [data-pill], ${plain} [class*='_meta_']`);
+      if ((await text.count()) > 0) {
+        await text.first().click();
+        await expect(page.locator("[data-row]:focus")).toHaveCount(1);
+      } else {
+        await page.getByRole("main").locator("[data-row] [data-expander]").first().click();
+        await expect(page.locator("[data-row] [data-expander]:focus")).toHaveCount(1);
+      }
       // The mouse gets no ring. (On Today a click also opens the line, which marks it as selected with a bar of its own.)
       expect(await page.evaluate(() => document.activeElement!.matches(":focus-visible"))).toBe(false);
       if (view !== "Today") expect((await focusRing(page)).shown).toBe(false);
@@ -898,7 +906,7 @@ test.describe.serial("acceptance scenario", () => {
   test("Connections shows how often each connection is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {
     await signIn(page);
     await go(page, "Connections");
-    const sources = page.getByRole("main").locator("ul.queue").first();
+    const sources = page.getByRole("main").locator("ul[data-row-list]").first();
     // One row per source, each saying it reads by itself and when it last did.
     await expect(sources.getByRole("listitem").first()).toContainText(/Read every \d+ minutes · /);
     await page.getByRole("button", { name: "Add mail, calendar or folder" }).click();
@@ -1093,8 +1101,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row).toBeVisible();
     // The row says who they are; the organization is in the person's details, by name, never by its id.
     await expect(row).not.toContainText(/ORG-/);
-    await expect(page.locator("dl.details-list", { hasText: "Organization" })).toContainText(name);
-    await expect(page.locator("dl.details-list", { hasText: "Organization" })).not.toContainText(/ORG-/);
+    await expect(page.locator("[data-definition-list]", { hasText: "Organization" })).toContainText(name);
+    await expect(page.locator("[data-definition-list]", { hasText: "Organization" })).not.toContainText(/ORG-/);
     const orgs = page.getByRole("region", { name: "Organizations" });
     // The organizations are a table: the person count is a number in the People column.
     await expect(orgs.getByRole("row", { name: new RegExp(name) }).getByRole("cell", { name: "1", exact: true })).toBeVisible();
@@ -1140,7 +1148,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Lists" }).click();
     const lists = page.getByRole("region", { name: "Lists" });
     await expect(lists).toBeVisible();
-    const status = lists.locator("li.line", { hasText: "Project status" });
+    const status = lists.locator("[data-row-list] > li", { hasText: "Project status" });
     await expect(status).toContainText("Used for: project status");
     await expect(status.getByText("Parked for now", { exact: true })).toBeVisible();
     await checkAccessibility(page);
@@ -1174,15 +1182,15 @@ test.describe.serial("acceptance scenario", () => {
     // Stages opens as a board; these rows are on its list, one switch away (the choice is remembered).
     await page.getByRole("radio", { name: "List", exact: true }).or(page.getByRole("button", { name: "List", exact: true })).first().click();
     // The list loads while the server may still be filing what earlier tests handed in, so its first row gets longer.
-    await expect(page.locator("li.line", { hasText: item.title }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("[data-row-list] > li", { hasText: item.title }).first()).toBeVisible({ timeout: 20_000 });
     await checkAccessibility(page);
-    const row = page.locator("li.line", { hasText: item.title }).first();
-    await expect(row.locator(".kind")).toHaveText(item.current_label ?? "Not started");
+    const row = page.locator("[data-row-list] > li", { hasText: item.title }).first();
+    await expect(row.locator("[data-pill]")).toHaveText(item.current_label ?? "Not started");
     await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
     await expect(page.getByText(`Moved ${item.title} to ${item.next!.label}.`)).toBeVisible();
-    await expect(row.locator(".kind")).toHaveText(item.next!.label);
+    await expect(row.locator("[data-pill]")).toHaveText(item.next!.label);
     await page.getByRole("button", { name: "Undo" }).last().click();
-    await expect(row.locator(".kind")).toHaveText(item.current_label ?? "Not started");
+    await expect(row.locator("[data-pill]")).toHaveText(item.current_label ?? "Not started");
     await row.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "History" }).click();
     await expect(row.getByRole("list", { name: "Where it has been" })).toContainText("after undoing a change");
@@ -1194,7 +1202,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.locator("[data-row]", { hasText: `${item.title} can move to` })).toHaveCount(0);
     await go(page, "Stages");
     await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
-    await expect(row.locator(".kind")).toHaveText(item.next!.label);
+    await expect(row.locator("[data-pill]")).toHaveText(item.next!.label);
 
     await go(page, "Today");
     const ready = page.locator("[data-row]", { hasText: `${item.title} can move to ${following.label}` });
@@ -1231,7 +1239,7 @@ test.describe.serial("acceptance scenario", () => {
     await go(page, "Stages");
     // Stages opens as a board; these rows are on its list, one switch away (the choice is remembered).
     await page.getByRole("radio", { name: "List", exact: true }).or(page.getByRole("button", { name: "List", exact: true })).first().click();
-    const here = page.locator("li.line", { hasText: item.title }).first();
+    const here = page.locator("[data-row-list] > li", { hasText: item.title }).first();
     await expect(here.getByRole("list", { name: "Waiting for you to start it" })).toContainText("is waiting for you to start it");
     await checkAccessibility(page);
     await here.getByRole("button", { name: "Start", exact: true }).click();
@@ -1246,7 +1254,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);
     await go(page, "Stages");
-    await expect(page.locator("li.line").first()).toBeVisible();
+    await expect(page.locator("[data-row-list] > li").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });
@@ -1270,7 +1278,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByText("Added short-note.txt.")).toBeVisible();
     await expect(dialog).toHaveCount(0);
     await expect(opener).toBeFocused();
-    const row = page.locator("li.line", { hasText: "short-note.txt" });
+    const row = page.locator("[data-row-list] > li", { hasText: "short-note.txt" });
     await expect(row).toContainText("Attachment");
     await expect(row.getByRole("link", { name: /^Open short-note\.txt/ })).toHaveAttribute("target", "_blank");
     await checkAccessibility(page);
@@ -1298,7 +1306,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);
     await go(page, "Files");
-    await expect(page.locator("li.line").first()).toBeVisible();
+    await expect(page.locator("[data-row-list] > li").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });

@@ -10,6 +10,7 @@ import { settleMove } from "../lib/moves";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { useNoted } from "./NoteBox";
+import { Actions } from "../ui/Actions";
 
 export function AfterMoveAnswers(props: { question: { id: string; title: string }; check: S["AfterMoveCheck"]; move: S["AfterMove"] | null | undefined }) {
   const { t } = useWords();
@@ -56,14 +57,14 @@ export function AfterMoveAnswers(props: { question: { id: string; title: string 
 
   if (check.kind === "date") {
     return (
-      <div className="row-end" role="group" aria-label={question.title} data-after-move="date">
+      <Actions align="end" role="group" aria-label={question.title} data-after-move="date">
         <Button size="sm" variant="primary" data-key="primary" onClick={() => void move()}>
           {t("queue.moved.answer.move", { date: to })}
         </Button>
         <Button size="sm" onClick={() => void answer(t("queue.moved.answered.kept", { date: from }), t("queue.moved.toast.kept", { date: from }))}>
           {t("queue.moved.answer.keep", { date: from })}
         </Button>
-      </div>
+      </Actions>
     );
   }
   return (
@@ -74,24 +75,24 @@ export function AfterMoveAnswers(props: { question: { id: string; title: string 
             {t("queue.moved.change_label")}
           </label>
           <textarea id={`${id}-note`} className="short" autoFocus value={note} onChange={(e) => setNote(e.target.value)} />
-          <div className="row-end">
+          <Actions align="end">
             <Button size="sm" variant="quiet" onClick={() => setChanging(false)}>
               {t("action.cancel")}
             </Button>
             <Button size="sm" variant="primary" type="submit" disabled={!note.trim()}>
               {t("queue.moved.change_send")}
             </Button>
-          </div>
+          </Actions>
         </form>
       ) : (
-        <div className="row-end" role="group" aria-label={question.title}>
+        <Actions align="end" role="group" aria-label={question.title}>
           <Button size="sm" variant="primary" data-key="primary" onClick={() => void answer(t("queue.moved.answered.holds"), t("queue.moved.toast.holds"))}>
             {t("queue.moved.answer.holds")}
           </Button>
           <Button size="sm" onClick={() => setChanging(true)}>
             {t("queue.moved.answer.change")}
           </Button>
-        </div>
+        </Actions>
       )}
     </div>
   );

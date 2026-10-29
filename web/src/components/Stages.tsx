@@ -25,6 +25,11 @@ import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { RowList } from "../ui/RowList";
+import { ItemList, Item } from "../ui/ItemList";
+import { Row } from "../ui/Row";
+import { Pill } from "../ui/Pill";
+import { RowBody } from "../ui/RowBody";
 type Shown = "board" | "list";
 const KEPT = "stages.view";
 
@@ -99,7 +104,7 @@ export function Stages() {
             {shown === "board" ? (
               <StagesBoard kind={kindWords(kind)} views={views} waiting={waiting} />
             ) : (
-              <ul className="queue">
+              <RowList>
                 {views.map((view) => (
                   <StageRow
                     key={`${view.record.kind}/${view.record.id}`}
@@ -107,7 +112,7 @@ export function Stages() {
                     waiting={waiting.filter((r) => sameItem(view.record, r.stage_start))}
                   />
                 ))}
-              </ul>
+              </RowList>
             )}
           </section>
         ))
@@ -161,44 +166,42 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
   const titleId = `st-${view.record.kind}-${view.record.id}`;
 
   return (
-    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={titleId}>
-      <div className="row">
-        <span className={`kind ${view.current === null ? "k-done" : "k-review"}`}>{stageName}</span>
-        <div className="text">
-          <div id={titleId} className="name">
-            <SafeText text={view.title} />
-          </div>
-          <span className="sub">{sub}</span>
-        </div>
-        <div className="acts">
-          {primary && (
-            <Button variant="primary" disabled={busy} onClick={primary.run}>
-              {primary.label}
-            </Button>
-          )}
-          <RowMenu label={view.title} actions={menu} />
-        </div>
-      </div>
+    <Row
+      ref={ref}
+      aria-labelledby={titleId}
+      pill={<Pill tone={view.current === null ? "neutral" : "need"}>{stageName}</Pill>}
+      title={<SafeText text={view.title} />}
+      titleId={titleId}
+      meta={sub}
+      primary={
+        primary && (
+          <Button variant="primary" disabled={busy} onClick={primary.run}>
+            {primary.label}
+          </Button>
+        )
+      }
+      menu={<RowMenu label={view.title} actions={menu} />}
+    >
       {hasBody && (
-        <div className="body">
+        <RowBody>
           {!view.ready && next && failed.length > 0 && (
             <div>
               <p className="what">{t("stages.why_not", { stage: next.label })}</p>
-              <ul className="children">
+              <ItemList>
                 {failed.map((c) => (
-                  <li key={c.id} className="child single">
+                  <Item single key={c.id}>
                     <SafeText text={c.reason} />
-                  </li>
+                  </Item>
                 ))}
-              </ul>
+              </ItemList>
             </div>
           )}
           {props.waiting.length > 0 && (
-            <ul className="children" aria-label={t("stages.waiting_label")}>
+            <ItemList aria-label={t("stages.waiting_label")}>
               {props.waiting.map((r) => (
                 <WaitingLine key={r.id} request={r} />
               ))}
-            </ul>
+            </ItemList>
           )}
           {history && <History view={view} />}
           {error && (
@@ -206,9 +209,9 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
               {error}
             </p>
           )}
-        </div>
+        </RowBody>
       )}
       {review}
-    </li>
+    </Row>
   );
 }

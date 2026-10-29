@@ -44,7 +44,14 @@ test("a checkbox or radio is a 24px control itself, with an 18px box drawn insid
   expect(read("theme/tokens.css")).toMatch(/--check-inset:\s*3px/);
 });
 
-test("a side panel puts each label above its value, so no pair wraps beside the other at a panel's width", () => {
-  const css = read("styles.css");
-  expect(rule(css, ".record-side .detail")).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+test("a record's facts keep a 110px label column and stack the label above its value in a narrow place, so no pair wraps beside the other", () => {
+  const css = read("ui/DefinitionList.module.css");
+  expect(rule(css, ".item")).toMatch(/grid-template-columns:\s*110px minmax\(0,\s*1fr\)/);
+  expect(css).toMatch(/\[data-narrow\]\) \.item \{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  expect(css).toMatch(/max-width: 639\.98px\) \{ \.item \{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+});
+
+test("an expandable row's title button is at least the target floor high, though its click area is the whole row", () => {
+  const css = read("ui/Row.module.css");
+  expect(rule(css, ".expander")).toMatch(/min-height:\s*var\(--target-min\)/);
 });

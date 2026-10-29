@@ -123,7 +123,7 @@ test("Handled for you stays inside the window at every width, on both tabs and a
         const keys = await page.locator("[data-group]").evaluateAll((els) => els.map((e) => e.getAttribute("data-group")));
         if (new Set(keys).size !== keys.length) wide.push(`${tab} by ${group}: group keys repeat: ${keys.join(", ")}`);
         for (let closed = await collapsed.count(); closed > 0; closed = await collapsed.count()) await collapsed.first().click();
-        await expect(page.locator("main li.line").first()).toBeVisible(LOADED);
+        await expect(page.locator("main [data-row-list] > li").first()).toBeVisible(LOADED);
         const found = await overflow(page);
         if (tooWide(found)) wide.push(`${tab} by ${group} at ${size.width}: ${JSON.stringify(found)}`);
         if (size.width === SIZES[0].width) {

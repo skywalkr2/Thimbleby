@@ -13,6 +13,7 @@ import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { useTextReview } from "./TextReview";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 /** The actions the assistant has in hand, by action id. A failed read is no actions: the rows simply say nothing. */
 export function useHanded(): Map<string, S["HandedActionView"]> {
   const found = useQuery({ queryKey: ["handed"], queryFn: api.handed });
@@ -105,14 +106,14 @@ export function useHandToAssistant(
           </label>
           <textarea id={id} className="short" autoFocus value={note} onChange={(e) => setNote(e.target.value)} />
           <p className="hint">{t("work.hand.hint")}</p>
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="quiet" onClick={close}>
               {t("action.cancel")}
             </Button>
             <Button variant="primary" type="submit">
               {t("work.hand.go")}
             </Button>
-          </div>
+          </Actions>
         </form>
       )}
       {handed && <HandedLine handed={handed} onReview={(version) => review.open(version)} />}

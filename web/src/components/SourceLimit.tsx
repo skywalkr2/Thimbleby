@@ -7,6 +7,7 @@ import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { PersonPicker } from "./PersonPicker";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 export function SourceLimit(props: { source: string; limit: S["SourceLimit"] }) {
   const { t } = useWords();
   const act = useAct();
@@ -46,7 +47,7 @@ export function SourceLimit(props: { source: string; limit: S["SourceLimit"] }) 
       ) : (
         <div className="source-widen">
           <PersonPicker label={t("source.limit.add_label")} value={person} onChange={setPerson} suggested={[]} people={others} noAdd autoFocus />
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="primary" disabled={!person} onClick={() => void widen({ people: [person], open: false }, t("source.limit.widened"))}>
               {t("source.limit.add")}
             </Button>
@@ -56,7 +57,7 @@ export function SourceLimit(props: { source: string; limit: S["SourceLimit"] }) 
             <Button variant="quiet" onClick={() => setOpen(false)}>
               {t("source.limit.cancel")}
             </Button>
-          </div>
+          </Actions>
         </div>
       )}
     </section>

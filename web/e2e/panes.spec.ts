@@ -88,10 +88,12 @@ test.describe("Hand something in", () => {
 
 test.describe("Ask", () => {
   for (const width of [1440, 1920]) {
-    test(`is a pane beside the screen at ${width}px: the content is not covered, the cursor is in the question, Escape closes it`, async ({ page }) => {
+    test(`is a pane over the screen's right edge at ${width}px: the page is not moved, the cursor is in the question, Escape closes it`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page);
       const opener = page.getByRole("button", { name: "Ask", exact: true }).first();
+      // The pane is an overlay on the right edge (the drawer's width and surface): the page behind it is not moved or narrowed.
+      const before = (await page.getByRole("main").boundingBox())!;
       await opener.click();
       const pane = page.getByRole("complementary", { name: /^Ask / });
       await expect(pane).toBeVisible();
@@ -101,9 +103,10 @@ test.describe("Ask", () => {
       expect(paneBox.x + paneBox.width).toBeGreaterThanOrEqual(width - 1);
       expect(paneBox.width).toBeGreaterThanOrEqual(419);
       expect(paneBox.width).toBeLessThanOrEqual(601);
-      // The work stays in view and reachable: the content ends where the pane begins, and a link outside it still works.
+      // The work stays where it was and reachable: the content keeps its place and width, and a link outside the pane still works.
       const main = (await page.getByRole("main").boundingBox())!;
-      expect(main.x + main.width).toBeLessThanOrEqual(paneBox.x + 1);
+      expect(Math.abs(main.x - before.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(main.width - before.width)).toBeLessThanOrEqual(1);
       expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0);
       await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^People/ }).click();
       await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
@@ -228,7 +231,7 @@ test.describe("the phone's review mode", () => {
 });
 
 test.describe("the walkthrough's look", () => {
-  test("fields are as wide as what they hold, the list marks where you are and says nothing is 'not done yet', and the page uses its width", async ({
+  test("fields are as wide as what they hold, the list marks where you are and says nothing is 'not done yet', and a step is one centered column", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1920, height: 1000 });
@@ -246,12 +249,13 @@ test.describe("the walkthrough's look", () => {
     expect(field.width).toBeLessThanOrEqual(361);
     await expect(page.getByText("Not done yet")).toHaveCount(0);
     await expect(steps.getByText("You are here")).toHaveCount(1);
-    // The page fills the window: the screen's card reaches well past the old 1100px column, with its why in a pane beside it.
-    const card = (await main.boundingBox())!;
-    expect(card.x + card.width).toBeGreaterThan(1300);
+    // A step is one centered column of 640 to 720px, its explanation above its fields.
+    const column = await main.getByRole("heading", { level: 2, name: "You" }).evaluate((h) => h.parentElement!.getBoundingClientRect().width);
+    expect(column).toBeGreaterThanOrEqual(600);
+    expect(column).toBeLessThanOrEqual(721);
     const why = main.locator("p").filter({ hasText: /./ }).first();
     const whyBox = (await why.boundingBox())!;
-    expect(whyBox.x).toBeGreaterThan(field.x + field.width);
+    expect(whyBox.y).toBeLessThan(field.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   });
 });

@@ -1,0 +1,6 @@
+/* One surface with hairline dividers: the rows inside it carry the dividers, the list the frame. */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; min-width: 0; }
+.detail { border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.item { list-style: none; min-width: 0; }
+.item:focus { outline: none; }
+.item:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }

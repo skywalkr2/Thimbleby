@@ -5,6 +5,8 @@ import type { S } from "../lib/api";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { PersonDrawer } from "./PersonForm";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 
 /** The choice that opens the add form; no person id can look like it. */
 const ADD = "\u0001add";
@@ -34,9 +36,8 @@ export function PersonPicker(props: {
     restoreFocus(() => select.current);
   };
   return (
-    <div className="field">
-      <label htmlFor={id}>{props.label}</label>
-      <select
+    <FormField id={id} label={props.label}>
+      <Select
         id={id}
         ref={select}
         autoFocus={props.autoFocus}
@@ -68,8 +69,8 @@ export function PersonPicker(props: {
           ))}
         </optgroup>
         {!props.noAdd && <option value={ADD}>{t("person.add_option")}</option>}
-      </select>
+      </Select>
       {adding && <PersonDrawer onClose={close} onSaved={(personId) => props.onChange(personId)} />}
-    </div>
+    </FormField>
   );
 }

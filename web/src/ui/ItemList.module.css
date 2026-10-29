@@ -1,0 +1,14 @@
+/* Items inside a row: divided by dashed hairlines, not boxed. */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; min-width: 0; }
+.item { border-top: 1px dashed var(--border); padding: var(--space-2) 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); min-width: 0; }
+.item:first-child { border-top: 0; }
+.single { grid-template-columns: minmax(0, 1fr); }
+.item:focus { outline: none; }
+.item:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* In the detail pane an item uses the pane's full width, with its buttons under its words, as Today's detail does. */
+.list[data-pane] .item { grid-template-columns: minmax(0, 1fr); }
+.list[data-pane] .item > :global([data-actions]) { justify-content: flex-end; }
+/* What an item holds on its left: a small label, a title, a meta line and a reason. */
+.item :global(.title) { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.item :global(.meta) { color: var(--text-muted); font-size: var(--text-sm); }
+.item :global(.reason) { color: var(--warn); font-size: var(--text-sm); }

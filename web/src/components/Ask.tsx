@@ -1,7 +1,7 @@
 // Asking the assistant (design 6.25): a box for a question, and under it the recent questions with what came of them.
 // An answer shows the words it rests on. A suggested setting is applied by the person with one click (and Undo, from
-// the read-back toast); a drafted report is theirs to copy and send. On a wide screen it is a pane at the right edge
-// (`pane`), so answers with lists have room and the work stays in view; on a narrower one it is a dialog.
+// the read-back toast); a drafted report is theirs to copy and send. On a wide screen it is a pane over the right edge
+// (`pane`, never moving the page), so answers with lists have room and the work stays in view; on a narrower one it is a dialog.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
@@ -17,11 +17,17 @@ import { freshSettings, useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import styles from "./AskPane.module.css";
-import { ModalPanel } from "./ModalPanel";
+import { ModalPanel, DialogFooter } from "./ModalPanel";
 import { OwnKindsOffer } from "./Templates";
 import { SafeText } from "./SafeText";
 import { Skeleton } from "../ui/Skeleton";
 import { Button, ButtonLink } from "../ui/Button";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { Pill, type PillTone } from "../ui/Pill";
+import { RowBody } from "../ui/RowBody";
 type AskItem = S["AskView"];
 const SHOWN = 10;
 
@@ -74,8 +80,7 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
           void submit();
         }}
       >
-        <div className="field">
-          <label htmlFor={`${base}-question`}>{t("ask.question")}</label>
+        <FormField id={`${base}-question`} label={t("ask.question")}>
           <textarea
             id={`${base}-question`}
             ref={field}
@@ -96,15 +101,15 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
           <span id={`${base}-hint`} className="hint">
             {t("ask.hint")}
           </span>
-        </div>
-        <div className="row-end">
+        </FormField>
+        <DialogFooter>
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.close")}
           </Button>
           <Button variant="primary" type="submit" disabled={busy || !question.trim()}>
             {t(busy ? "ask.sending" : "ask.go")}
           </Button>
-        </div>
+        </DialogFooter>
       </form>
       <OwnKindsOffer />
       <section aria-labelledby={`${base}-recent`} className="asks">
@@ -123,11 +128,11 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
         ) : asks.data.length === 0 ? (
           <p className="hint">{t("ask.empty")}</p>
         ) : (
-          <ul className="queue">
+          <RowList>
             {asks.data.slice(0, SHOWN).map((item) => (
               <AskRow key={item.id} revealed={item.id === props.reveal} item={item} onApplied={props.onClose} mailTo={props.feedbackTo} />
             ))}
-          </ul>
+          </RowList>
         )}
       </section>
     </>
@@ -154,13 +159,13 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
   );
 }
 
-const PILL: Record<string, string> = {
-  queued: "k-wait",
-  running: "k-wait",
-  review: "k-review",
-  done: "k-send",
-  needs_you: "k-held",
-  failed: "k-risk",
+const TONE: Record<string, PillTone> = {
+  queued: "need",
+  running: "need",
+  review: "neutral",
+  done: "need",
+  needs_you: "warn",
+  failed: "danger",
 };
 
 function AskRow(props: { revealed?: boolean; item: AskItem; onApplied: () => void; mailTo?: string | null }) {
@@ -173,19 +178,25 @@ function AskRow(props: { revealed?: boolean; item: AskItem; onApplied: () => voi
   const proposals = item.proposals ?? [];
   const reports = item.reports ?? [];
   return (
-    <li className="line" aria-labelledby={titleId} data-revealed={props.revealed || undefined} ref={(el) => { if (props.revealed) el?.scrollIntoView?.({ block: "nearest" }); }}>
-      <div className="row single">
-        <div className="text">
-          <strong id={titleId}>{item.question}</strong>
-          <span className="sub">
-            <span className={`kind ${PILL[state] ?? "k-review"}`}>{t(`ask.state.${state}`)}</span>
-            {!answered && item.waiting ? ` ${item.waiting}` : ""}
-            {when ? ` · ${when}` : ""}
-          </span>
-        </div>
-      </div>
+    <Row
+      aria-labelledby={titleId}
+      loop={false}
+      data-revealed={props.revealed || undefined}
+      ref={(el) => {
+        if (props.revealed) el?.scrollIntoView?.({ block: "nearest" });
+      }}
+      title={item.question}
+      titleId={titleId}
+      meta={
+        <>
+          <Pill tone={TONE[state] ?? "neutral"}>{t(`ask.state.${state}`)}</Pill>
+          {!answered && item.waiting ? ` ${item.waiting}` : ""}
+          {when ? ` · ${when}` : ""}
+        </>
+      }
+    >
       {(item.answer || proposals.length > 0 || reports.length > 0) && (
-        <div className="body">
+        <RowBody>
           {item.answer && (
             <div className="ask-answer">
               <SafeText text={item.answer.text} />
@@ -211,9 +222,9 @@ function AskRow(props: { revealed?: boolean; item: AskItem; onApplied: () => voi
           {reports.map((r) => (
             <Report key={r.id} report={r} mailTo={props.mailTo} />
           ))}
-        </div>
+        </RowBody>
       )}
-    </li>
+    </Row>
   );
 }
 
@@ -232,14 +243,14 @@ function Verdict(props: { request: string; verdict: "helpful" | "not_helpful" | 
     );
   };
   return (
-    <div className="acts" role="group" aria-label={t("ask.verdict_group")}>
+    <Actions role="group" aria-label={t("ask.verdict_group")}>
       <Button variant="quiet" aria-pressed={props.verdict === "helpful"} onClick={() => say(true)}>
         {t("ask.helpful")}
       </Button>
       <Button variant="quiet" aria-pressed={props.verdict === "not_helpful"} onClick={() => say(false)}>
         {t("ask.not_helpful")}
       </Button>
-    </div>
+    </Actions>
   );
 }
 
@@ -278,14 +289,14 @@ function CorrectIt(props: { request: string }) {
         <span className="what">{t("ask.correct_label")}</span>
         <textarea ref={field} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </label>
-      <div className="acts">
+      <Actions>
         <Button variant="primary" disabled={!note.trim()} onClick={() => void send()}>
           {t("ask.correct_send")}
         </Button>
         <Button variant="quiet" onClick={() => setOpen(false)}>
           {t("ask.correct_cancel")}
         </Button>
-      </div>
+      </Actions>
     </div>
   );
 }
@@ -330,9 +341,9 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
     <div className="ask-item">
       <span className="what">{t("ask.suggestion")}</span>
       <strong>{t("ask.suggestion_line", { label, value: item ? settingWords.value(item, p.value) : formatValue(p.value, t) })}</strong>
-      {p.why && <span className="sub">{p.why}</span>}
+      {p.why && <span className="hint">{p.why}</span>}
       {open ? (
-        <div className="acts">
+        <Actions>
           <Button variant="primary"
             disabled={busy}
             aria-label={t("ask.apply_named", { label })}
@@ -343,9 +354,9 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
           <Button variant="quiet" disabled={busy} aria-label={t("ask.not_now_named", { label })} onClick={notNow}>
             {t("ask.not_now")}
           </Button>
-        </div>
+        </Actions>
       ) : (
-        <span className="sub">{t(`ask.proposal.${p.status}`)}</span>
+        <span className="hint">{t(`ask.proposal.${p.status}`)}</span>
       )}
       {problem && (
         <p className="problem-note" role="alert">
@@ -415,7 +426,7 @@ function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
         <>
           <span className="hint">{t("ask.report_hint")}</span>
           {tooLong && <span className="hint">{t("ask.report_too_long")}</span>}
-          <div className="acts">
+          <Actions>
             {/* Keyed, so the control the person just used keeps its place (and the focus) when the order changes. */}
             {shared
               ? [markSentButton("primary"), mailLink("quiet"), copyButton("quiet", "ask.copy_again")]
@@ -423,10 +434,10 @@ function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
             <Button variant="quiet" aria-label={t("ask.set_aside_named", { title: r.title })} onClick={setAside}>
               {t("ask.set_aside")}
             </Button>
-          </div>
+          </Actions>
         </>
       ) : (
-        <span className="sub">{t(`ask.report_status.${r.status}`)}</span>
+        <span className="hint">{t(`ask.report_status.${r.status}`)}</span>
       )}
     </div>
   );

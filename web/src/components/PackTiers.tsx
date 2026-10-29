@@ -12,6 +12,8 @@ import { problemText } from "../lib/problem";
 import { addonLabel } from "../lib/settings";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
+import { Select } from "../ui/Select";
 
 type PackTier = S["PackTierView"];
 
@@ -107,14 +109,14 @@ function TierRow(props: { tier: PackTier; accounts: Account[] }) {
         <strong>{tier.label}</strong>
         {tier.description && <p className="hint">{tier.description}</p>}
         {tier.used_by.length > 0 && <p className="hint">{t("pack_tiers.used_by", { work: tier.used_by.join(", ") })}</p>}
-        <p className="sub" id={`${base}-state`}>
+        <p className="hint" id={`${base}-state`}>
           {tier.mapped
             ? t("pack_tiers.mapped", { account: mappedAccount ? nameOf(mappedAccount) : (tier.account ?? ""), model: tier.model ?? "" })
             : t("pack_tiers.unmapped", { fallback: tierName(tier.falls_back_to) })}
         </p>
         {withModels.length > 0 && (
-          <div className="row-end wrap">
-            <select
+          <Actions align="end">
+            <Select
               aria-label={t("pack_tiers.account", { label: tier.label })}
               value={account}
               disabled={busy}
@@ -126,15 +128,15 @@ function TierRow(props: { tier: PackTier; accounts: Account[] }) {
                   {nameOf(a)}
                 </option>
               ))}
-            </select>
+            </Select>
             {shorts.length > 1 && (
-              <select aria-label={t("pack_tiers.model", { label: tier.label })} value={model} disabled={busy} onChange={(e) => setModel(e.target.value)}>
+              <Select aria-label={t("pack_tiers.model", { label: tier.label })} value={model} disabled={busy} onChange={(e) => setModel(e.target.value)}>
                 {shorts.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
             <Button
               variant="primary"
@@ -152,7 +154,7 @@ function TierRow(props: { tier: PackTier; accounts: Account[] }) {
                 {t("pack_tiers.stop", { fallback: tierName(tier.falls_back_to) })}
               </Button>
             )}
-          </div>
+          </Actions>
         )}
         {suggested && (suggested.account !== tier.account || suggested.model !== tier.model) && (
           <p className="hint" data-suggestion="">

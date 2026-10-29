@@ -13,6 +13,10 @@ import { RowMenu } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill } from "../ui/Pill";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
+import { Item } from "../ui/ItemList";
 /** The form that answers a "Who is this?" question with a new person. It starts from the name as written and whatever the
  * input says about them, and the cursor is in its first field. */
 export function NewPersonForm(props: { question: string; onClose: () => void }) {
@@ -77,53 +81,43 @@ function NewPersonFields(props: { question: string; start: S["NewPersonPrefillVi
         if (e.key === "Escape") props.onClose();
       }}
     >
-      <div className="field">
-        <label htmlFor={`${ids}-name`}>{t("newperson.full_name")}</label>
+      <FormField id={`${ids}-name`} label={t("newperson.full_name")}>
         <input id={`${ids}-name`} ref={first} type="text" autoComplete="off" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${ids}-first`}>
-          {t("newperson.first_name")} <span className="hint">{t("newperson.first_name_hint")}</span>
-        </label>
+      </FormField>
+      <FormField id={`${ids}-first`} label={<>{t("newperson.first_name")} <span className="hint">{t("newperson.first_name_hint")}</span></>}>
         <input id={`${ids}-first`} type="text" autoComplete="off" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${ids}-org`}>
-          {t("newperson.org")} <span className="hint">{t("newperson.org_hint")}</span>
-        </label>
+      </FormField>
+      <FormField id={`${ids}-org`} label={<>{t("newperson.org")} <span className="hint">{t("newperson.org_hint")}</span></>}>
         <input id={`${ids}-org`} type="text" autoComplete="off" list={`${ids}-orgs`} value={org} onChange={(e) => setOrg(e.target.value)} />
         <datalist id={`${ids}-orgs`}>
           {(orgs.data ?? []).map((o) => (
             <option key={o.id} value={o.name} />
           ))}
         </datalist>
-      </div>
-      <div className="field">
-        <label htmlFor={`${ids}-role`}>{t("newperson.role")}</label>
+      </FormField>
+      <FormField id={`${ids}-role`} label={t("newperson.role")}>
         <input id={`${ids}-role`} type="text" autoComplete="off" value={role} onChange={(e) => setRole(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${ids}-kind`}>{t("newperson.kind")}</label>
-        <select id={`${ids}-kind`} value={kind} onChange={(e) => setKind(e.target.value)}>
+      </FormField>
+      <FormField id={`${ids}-kind`} label={t("newperson.kind")}>
+        <Select id={`${ids}-kind`} value={kind} onChange={(e) => setKind(e.target.value)}>
           {start.contact_kinds.map((k) => (
             <option key={k} value={k}>
               {k}
             </option>
           ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor={`${ids}-value`}>{t("newperson.value")}</label>
+        </Select>
+      </FormField>
+      <FormField id={`${ids}-value`} label={t("newperson.value")}>
         <input id={`${ids}-value`} type="text" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value)} />
-      </div>
-      <div className="row-end">
+      </FormField>
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!fullName.trim() || busy}>
           {t("newperson.add")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -184,7 +178,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
 
   useRowKeys(ref, { primary: () => void add() });
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         <div className="what">
           {t("project_item.what")}
@@ -198,7 +192,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
           </div>
         )}
       </div>
-      <div className="acts">
+      <Actions>
         <Button variant="primary" onClick={() => void add()}>
           {t("project_item.add")}
         </Button>
@@ -210,7 +204,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
             { id: "not-a-project", label: t("project_item.not_a_project"), run: () => void notOne() },
           ]}
         />
-      </div>
+      </Actions>
       {choosing && (
         <form
           className="answer-form"
@@ -225,20 +219,20 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
           <label className="hint" htmlFor={`${ids}-into`}>
             {t("project_item.part_of_label", { name })}
           </label>
-          <select id={`${ids}-into`} autoFocus value={into} onChange={(e) => setInto(e.target.value)}>
+          <Select id={`${ids}-into`} autoFocus value={into} onChange={(e) => setInto(e.target.value)}>
             <option value="">{t("project_item.choose")}</option>
             <PlaceOptions projects={projects.data ?? []} asParent />
-          </select>
-          <div className="row-end">
+          </Select>
+          <Actions align="end">
             <Button variant="quiet" onClick={close}>
               {t("action.cancel")}
             </Button>
             <Button variant="primary" type="submit" disabled={!into}>
               {t("project_item.part_of_go")}
             </Button>
-          </div>
+          </Actions>
         </form>
       )}
-    </li>
+    </Item>
   );
 }

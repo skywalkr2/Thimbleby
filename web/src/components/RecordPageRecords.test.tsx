@@ -80,7 +80,7 @@ test("activity says who changed which field of what, by the field's label and th
   api("project", "PRJ-1", { name: "Harbor" }, shown);
   const first = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
   const activity = await screen.findByRole("region", { name: "Activity" });
-  const rows = within(activity).getAllByRole("listitem");
+  const rows = entriesOf(activity);
   expect(rows[0]).toHaveTextContent("Helper changed due date on Send two spine options");
   expect(within(rows[0]).getByText("Send two spine options").tagName).toBe("STRONG");
   expect(rows[1]).toHaveTextContent("You changed why they matter on Harbor");
@@ -89,14 +89,14 @@ test("activity says who changed which field of what, by the field's label and th
   first.unmount();
   api("project", "PRJ-1", { name: "Harbor" }, shown);
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />, {}, { unnamed: true });
-  expect(within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem")[0]).toHaveTextContent("Your assistant changed due date on Send two spine options");
+  expect(entriesOf(await screen.findByRole("region", { name: "Activity" }))[0]).toHaveTextContent("Your assistant changed due date on Send two spine options");
 });
 
 test("the making of a record is one line that says added, or added in setup, and never a change of one of its fields", async () => {
   const made = (id: string, name: string, op: string, how: "added" | "setup"): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "project", id, name, op, field: null, made: how, actor: "pm", by_assistant: false });
   api("project", "PRJ-1", { name: "Harbor" }, page({ activity: [made("PRJ-2", "First catalog", "project.add#0", "added"), made("PRJ-1", "Harbor", "init", "setup")] }));
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
-  const rows = within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem");
+  const rows = entriesOf(await screen.findByRole("region", { name: "Activity" }));
   expect(rows[0]).toHaveTextContent("You added First catalog");
   expect(rows[1]).toHaveTextContent("Harbor was added in setup");
   expect(rows[1].textContent).not.toMatch(/changed|You /);
@@ -104,6 +104,9 @@ test("the making of a record is one line that says added, or added in setup, and
 
 // Every field a label exists for, and the ones the sheet leaves to the field's own name, in the sentence that names a change:
 // a label of any shape reads as English in it ("changed why they matter on", never "changed the why they matter of").
+/** The entries of a region's activity, one for each thing that happened (not the day headings that group them). */
+const entriesOf = (region: HTMLElement) => Array.from(region.querySelectorAll<HTMLElement>("[data-activity-entry]"));
+
 const FIELD_NAMES = [
   ...Object.keys(en)
     .filter((k) => /^field\.[a-z_]+(\.just_me)?$/.test(k))
@@ -116,7 +119,11 @@ test("the sentence for a changed field reads as English for every field that can
   const entry = (name: string): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "project", id: "PRJ-1", name: "Harbor", op: "record.edit", field: name, actor: "pm", by_assistant: false });
   api("project", "PRJ-1", { name: "Harbor" }, page({ activity: unique.map(entry) }));
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
-  const rows = within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem");
+  const region = await screen.findByRole("region", { name: "Activity" });
+  // The latest few show first; the rest are asked for.
+  expect(entriesOf(region)).toHaveLength(5);
+  await userEvent.click(within(region).getByRole("button", { name: "Show all activity" }));
+  const rows = entriesOf(region);
   expect(rows).toHaveLength(unique.length);
   for (const row of rows) {
     const sentence = row.textContent ?? "";
@@ -130,7 +137,7 @@ test("a second move of the same date says it moved again, neutrally, with how ma
   const moved = (n: number): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "action", id: "ACT-1", name: "Send two spine options", op: "record.edit", field: "due", actor: "pm", by_assistant: false, moved_again: n, moved_since: "2026-10-06" });
   api("project", "PRJ-1", { name: "Harbor" }, page({ activity: [moved(3), moved(2)] }));
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
-  const rows = within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem");
+  const rows = entriesOf(await screen.findByRole("region", { name: "Activity" }));
   expect(rows[0]).toHaveTextContent("moved again (third time since Oct 6)");
   expect(rows[1]).toHaveTextContent("moved again (second time since Oct 6)");
   expect(rows[1].textContent).not.toMatch(/slip/i);

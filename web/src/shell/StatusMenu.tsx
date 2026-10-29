@@ -2,7 +2,7 @@
 // with its action: when the screen last updated and Refresh, the backup and Back up now, a restart waiting for the person's
 // Restart now (the app never restarts on its own), the assistant when it can't do its work yet, and the spend near a limit.
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogTrigger, Popover } from "react-aria-components";
+import { DialogTrigger } from "react-aria-components";
 import { RestartNotice, useRestart } from "../lib/restart";
 import { useRestartWhat } from "../lib/restart-for";
 import { api, type S } from "../lib/api";
@@ -12,12 +12,16 @@ import { time, whenText } from "../lib/dates";
 import type { LiveState } from "../lib/live";
 import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { Popover } from "../ui/Popover";
 import { StatusChip } from "../ui/StatusChip";
+import { CoverageLine } from "../components/Coverage";
+import { useCoverage } from "../lib/coverage";
+import { settingsView, viewHref } from "../lib/views";
 import { afterClose } from "../ui/afterClose";
 import { useAlive } from "./AssistantLine";
-import { isWarn, worstState, type StatusKind } from "./status";
+import { connectionState, toneOf, worstState, type StatusKind } from "./status";
 import styles from "./StatusMenu.module.css";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -44,6 +48,8 @@ const CHIP_WORD: Record<StatusKind, string> = {
   network: "status.chip_network",
   restart: "status.chip_restart",
   restarting: "status.chip_restarting",
+  connection_failed: "status.chip_connection_failed",
+  connection_retrying: "status.chip_connection_retrying",
   backup: "status.chip_backup",
   spend: "status.chip_spend",
   live: "status.chip_live",
@@ -64,7 +70,8 @@ export function StatusMenu(props: {
   const total = useTotal();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const alive = useAlive();
-  const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase });
+  const found = useCoverage();
+  const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase, connections: connectionState(found) });
   const word = t(CHIP_WORD[kind]);
   const b = status.data?.backup;
   // Once a backup has succeeded the chip keeps its age in view beside its word; the popover says the same in full.
@@ -89,16 +96,15 @@ export function StatusMenu(props: {
   return (
     <DialogTrigger>
       <StatusChip
-        tone={isWarn(kind) ? "warn" : "ok"}
+        tone={toneOf(kind)}
         aria-label={t("status.chip_named", { state: age ? t("status.chip_with", { state: word, detail: age }) : word })}
         data-status={kind}
         detail={age ?? undefined}
       >
         {word}
       </StatusChip>
-      <Popover placement="bottom end" className={styles.popover}>
-        <Dialog aria-label={t("status.title")} className={styles.dialog}>
-          {({ close }) => (
+      <Popover label={t("status.title")} columns={2}>
+        {(close) => (
           <>
           <ul className={styles.states}>
             <li className={[styles.state, props.live.state === "offline" ? styles.warn : ""].join(" ")} data-state="updates">
@@ -128,6 +134,19 @@ export function StatusMenu(props: {
                   <Button size="sm" onClick={() => leave(close, () => props.onOpenGuide("backup"))}>
                     {t("status.backup_set_up")}
                   </Button>
+                )}
+              </li>
+            )}
+            {found && (
+              <li className={[styles.state, kind === "connection_failed" || kind === "connection_retrying" ? styles.warn : ""].join(" ")} data-state="connections">
+                <p className={styles.name}>{t("status.connections")}</p>
+                <div className={styles.full}>
+                  <CoverageLine />
+                </div>
+                {!found.complete && (
+                  <ButtonLink size="sm" href={viewHref(settingsView("connections"))} onClick={() => close()}>
+                    {t("status.connections_open")}
+                  </ButtonLink>
                 )}
               </li>
             )}
@@ -189,8 +208,7 @@ export function StatusMenu(props: {
             )}
           </ul>
           </>
-          )}
-        </Dialog>
+        )}
       </Popover>
     </DialogTrigger>
   );

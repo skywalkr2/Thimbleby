@@ -1,4 +1,5 @@
 // A menu (design 7.12): a surface with a floating shadow, 36px items with an optional icon, a separator between groups,
+// an item that takes something away (`danger`) in red, opened beside its button (never over it) and its row,
 // a disabled item that says why, and groups that choose one value (a checked item). Built on the React Aria menu, so it
 // is keyboard and screen-reader complete. The trigger is any React Aria button (an IconButton, a StatusChip).
 import { Fragment, useRef, type ReactNode } from "react";
@@ -16,6 +17,8 @@ export interface MenuEntry {
   /** The entry can't be used now; `reason` says why, under its label. */
   disabled?: boolean;
   reason?: string;
+  /** The entry takes something away (drop, remove, discard): drawn in the danger color. */
+  danger?: boolean;
   /** A line under the label that says what the entry does or costs, shown whether or not the entry can be used. */
   note?: string;
 }
@@ -61,7 +64,7 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
   return (
     <MenuTrigger onOpenChange={closed}>
       {props.trigger}
-      <Popover placement={props.placement ?? "bottom end"} className={styles.popover}>
+      <Popover placement={props.placement ?? "bottom end"} offset={6} className={styles.popover}>
         <Menu
           className={styles.menu}
           onAction={(key) => {
@@ -86,6 +89,7 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
                     id={entry.id}
                     className={styles.item}
                     isDisabled={entry.disabled}
+                    data-danger={entry.danger ? "" : undefined}
                     textValue={entry.label}
                     href={entry.href}
                     target={entry.href ? "_blank" : undefined}

@@ -10,7 +10,7 @@ import { useQueue, useTodayCount } from "../lib/today";
 import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
-import { CoverageLine, useNoneText } from "./Coverage";
+import { useNoneText } from "./Coverage";
 import { AreaFilter } from "./AreaFilter";
 import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
@@ -99,7 +99,6 @@ export function Today(props: {
               {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
                 .filter(Boolean)
                 .join(" · ")}
-              <CoverageLine as="span" />
             </>
           }
           filters={

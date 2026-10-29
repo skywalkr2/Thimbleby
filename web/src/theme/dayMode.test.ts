@@ -112,14 +112,17 @@ test("night mode keeps its values and its bordered, banded look; type, row title
 
 test("a row's actions are never solid: the primary draws as the outline, and the cursor's row has a soft fill and a bar, not a filled button", () => {
   const css = read("ui/Row.module.css");
-  expect(css).toMatch(/\.actions :global\(\[data-variant="primary"\]:not\(:disabled\)\) \{[^}]*background: var\(--surface\)/);
+  // An outline by day and tonal by night, from the row-button tokens: the primary and the secondary draw alike.
+  expect(css).toMatch(/\.actions :global\(\[data-variant="primary"\]:not\(:disabled\)\), \.actions :global\(\[data-variant="secondary"\]:not\(:disabled\)\) \{[^}]*background: var\(--row-btn-bg\)/);
+  expect(primitives["--row-btn-bg"]).toBe("var(--surface)");
+  expect(dark["--row-btn-bg"]).toBe("var(--accent-soft)");
+  expect(dark["--row-btn-border"]).toBe("transparent");
   expect(css).not.toMatch(/row-action/);
   expect(css).toMatch(/\.selected, \.selected:hover \{[^}]*background: var\(--row-selected-bg\); box-shadow: var\(--row-selected-bar\)/);
   expect(css).toMatch(/\.title \{[^}]*font-weight: var\(--row-title-weight\)/s);
-  // The same two rules for the lines drawn with the older classes, so the two look alike until they are one.
+  // One row for every line: the older classes for a line, its row and its actions are gone.
   const styles = read("styles.css");
-  expect(styles).toMatch(/\.queue:not\(\.detail-queue\) > \.line > \.row > \.acts > \[data-variant="primary"\]:not\(:disabled\) \{[^}]*background: var\(--surface\)/);
-  expect(styles).toMatch(/\.line\[aria-current="true"\] \{[^}]*var\(--row-selected-bg\)/);
+  expect(styles).not.toMatch(/(^|\n)\.(queue|line|row|acts|kind|expander|children|child)(?![-\w])/);
   expect(tokens).toMatch(/--row-selected-bg: color-mix\(in srgb, var\(--accent-soft\) 55%, transparent\)/);
   expect(tokens).not.toMatch(/--row-action|--row-pill-w/);
 });
@@ -130,7 +133,8 @@ test("panes take their edge from the tokens, and a group header has no band", ()
     expect(css, file).toMatch(/border: 1px solid var\(--pane-border\); box-shadow: var\(--pane-edge\)/);
   }
   const styles = read("styles.css");
-  for (const selector of [".queue", ".panel", ".table-wrap", ".record-side"]) {
+  expect(read("ui/RowList.module.css")).toMatch(/\.list \{[^}]*border: 1px solid var\(--pane-border\); box-shadow: var\(--pane-edge\)/);
+  for (const selector of [".panel", ".table-wrap", ".record-side"]) {
     const line = styles.split("\n").find((l) => l.startsWith(`${selector} {`)) ?? "";
     expect(line, selector).toContain("var(--pane-border)");
     expect(line, selector).toContain("var(--pane-edge)");
@@ -185,4 +189,35 @@ test("below 640px a lone action stays at the row's edge and several sit under th
   expect(phone).toMatch(/\.row, :global\(\[data-narrow\]\) \.row \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto/);
   // A lone action stays at the right edge; a second button sends the actions under the title, at the right.
   expect(phone).toMatch(/\.row > \.actions:has\(> :global\(\[data-variant\]\) ~ :global\(\[data-variant\]\)\)[^{]*\{[^}]*grid-column: 1 \/ -1;[^}]*justify-content: flex-end/);
+});
+
+// Dark-mode accents and elevation (design 7.12, VC09): a floating thing lifts off the page by a raised fill and an edge at night,
+// a shadow does it by day; today's column is a low-chroma tint; the selected state is the soft accent, never the solid one.
+test("overlays lift off the page: a raised fill and an edge by night, the shadow by day", () => {
+  expect(primitives["--surface-raised"]).toBe("var(--surface)");
+  expect(dark["--surface-raised"]).toMatch(/^#/);
+  expect(dark["--overlay-edge"]).toContain("var(--border-strong)");
+  // The frame (a drawer, a dialog, a sheet) is one file, and the popover and the menu are the two other surfaces that float.
+  for (const file of ["ui/Overlay.module.css", "ui/MenuButton.module.css", "ui/Popover.module.css"]) {
+    const css = read(file);
+    expect(css, file).toMatch(/background: var\(--surface-raised\)/);
+    expect(css, file).toMatch(/var\(--overlay-edge\)/);
+  }
+  // What sits inside the frame (a footer) takes the raised fill too, so it is not a different grey from the frame.
+  for (const file of ["ui/Drawer.module.css", "components/ModalPanel.module.css"]) expect(read(file), file).toMatch(/background: var\(--surface-raised\)/);
+});
+
+test("today's column in the calendar is a low-chroma tint, never the full soft accent", () => {
+  expect(primitives["--today-tint"]).toMatch(/color-mix\(in srgb, var\(--accent-soft\) 55%/);
+  expect(dark["--today-tint"]).toMatch(/color-mix\(in srgb, var\(--accent-soft\) 35%/);
+  const css = read("components/Schedule.module.css");
+  expect(css).not.toMatch(/\[data-today\][^{]*\{[^}]*var\(--accent-soft\)/);
+  expect(css).toMatch(/\.cell\[data-today\] \{ background: var\(--today-tint\)/);
+});
+
+test("the selected state in navigation is the soft accent, and the tonal pairs keep AA contrast by night", () => {
+  expect(read("shell/Sidebar.module.css")).toMatch(/\.entry\[aria-current="page"\] \{ background: var\(--accent-soft\)/);
+  const night = (name: string) => color(name, dark);
+  expect(contrast(night("--row-btn-text"), night("--accent-soft"))).toBeGreaterThanOrEqual(AA);
+  expect(contrast(night("--text"), night("--surface-raised"))).toBeGreaterThanOrEqual(AA);
 });

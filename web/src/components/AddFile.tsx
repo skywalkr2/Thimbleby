@@ -11,10 +11,15 @@ import { problemText } from "../lib/problem";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
-import { ModalPanel } from "./ModalPanel";
+import { ModalPanel, DialogFooter } from "./ModalPanel";
 import { PlaceOptions } from "./PlaceOptions";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { FileDrop } from "../ui/FileDrop";
 const DEFAULT_KIND = "attachment";
 
 export function AddFile(props: { onClose: () => void }) {
@@ -89,9 +94,8 @@ export function AddFile(props: { onClose: () => void }) {
             if (ready) add.mutate();
           }}
         >
-          <div className="field">
-            <label htmlFor={`${base}-kind`}>{t("addfile.kind")}</label>
-            <select
+          <FormField id={`${base}-kind`} label={t("addfile.kind")}>
+            <Select
               id={`${base}-kind`}
               value={kind.name}
               aria-describedby={`${base}-kind-help`}
@@ -106,40 +110,34 @@ export function AddFile(props: { onClose: () => void }) {
                   {k.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <span id={`${base}-kind-help`} className="hint">
               {t("addfile.accepts", { types: typeWords(kind.accept), max: kind.max_mb })}
             </span>
-          </div>
-          <div className="field">
-            <label htmlFor={`${base}-file`}>{t("addfile.file")}</label>
-            <input
+          </FormField>
+          <FormField id={`${base}-file`} label={t("addfile.file")}>
+            <FileDrop
               id={`${base}-file`}
-              type="file"
               accept={kind.accept.join(",")}
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
                 setProblem("");
               }}
             />
-          </div>
+          </FormField>
           {!justMe && (
-          <div className="field">
-            <label htmlFor={`${base}-project`}>
-              {t("addfile.project")} <span className="hint">{t("addfile.optional")}</span>
-            </label>
-            <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
+          <FormField id={`${base}-project`} label={t("addfile.project")} optional>
+            <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
               <option value="">{t("addfile.no_project")}</option>
               <PlaceOptions projects={projects.data ?? []} />
-            </select>
-          </div>
+            </Select>
+          </FormField>
           )}
           {fields === null ? (
             <p className="hint">{t("addfile.unsupported")}</p>
           ) : (
             fields.length > 0 && (
-              <fieldset className="details">
-                <legend>{t("addfile.details")}</legend>
+              <CheckboxGroup legend={t("addfile.details")}>
                 {fields.map((f) => (
                   <DetailInput
                     key={`${kind.name}/${f.key}`}
@@ -152,7 +150,7 @@ export function AddFile(props: { onClose: () => void }) {
                     }}
                   />
                 ))}
-              </fieldset>
+              </CheckboxGroup>
             )
           )}
           {shown && (
@@ -160,14 +158,14 @@ export function AddFile(props: { onClose: () => void }) {
               {shown}
             </p>
           )}
-          <div className="row-end">
+          <DialogFooter>
             <Button variant="quiet" onClick={props.onClose}>
               {t("action.cancel")}
             </Button>
             <Button variant="primary" type="submit" disabled={!ready}>
               {t(add.isPending ? "addfile.adding" : "addfile.go")}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       )}
     </ModalPanel>
@@ -185,39 +183,32 @@ function DetailInput(props: { field: DetailField; id: string; value: string | bo
   );
   if (f.type === "boolean") {
     return (
-      <div className="field">
+      <FormBlock>
         <label className="check-line" htmlFor={id}>
           <input id={id} type="checkbox" checked={value === true} aria-describedby={help} onChange={(e) => props.onChange(e.target.checked)} />
           <span>{f.label}</span>
         </label>
         {hint}
-      </div>
+      </FormBlock>
     );
   }
-  const label = (
-    <label htmlFor={id}>
-      {f.label} {!f.required && <span className="hint">{t("addfile.optional")}</span>}
-    </label>
-  );
   if (f.type === "choice") {
     return (
-      <div className="field">
-        {label}
-        <select id={id} value={String(value)} aria-describedby={help} required={f.required} onChange={(e) => props.onChange(e.target.value)}>
+      <FormField id={id} label={f.label} optional={!f.required}>
+        <Select id={id} value={String(value)} aria-describedby={help} required={f.required} onChange={(e) => props.onChange(e.target.value)}>
           {!f.required && <option value="">{t("addfile.not_chosen")}</option>}
           {f.choices.map((c) => (
             <option key={String(c.value)} value={String(c.value)}>
               {c.label}
             </option>
           ))}
-        </select>
+        </Select>
         {hint}
-      </div>
+      </FormField>
     );
   }
   return (
-    <div className="field">
-      {label}
+    <FormField id={id} label={f.label} optional={!f.required}>
       {f.type === "text" ? (
         <input
           id={id}
@@ -243,6 +234,6 @@ function DetailInput(props: { field: DetailField; id: string; value: string | bo
         />
       )}
       {hint}
-    </div>
+    </FormField>
   );
 }

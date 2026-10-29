@@ -52,6 +52,11 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t, has } = useWords();
   const { kind, id } = props;
@@ -261,9 +266,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             ) : rows.length === 0 ? (
               <p className="hint">{t("record.no_details")}</p>
             ) : (
-              <dl className="details-list">
+              <DefinitionList>
                 {rows.map((row) => (
-                  <div key={row.name} className="detail">
+                  <Definition key={row.name}>
                     <dt>{labelOf(row.name)}</dt>
                     <dd>
                       {row.link ? (
@@ -276,9 +281,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                         ))
                       )}
                     </dd>
-                  </div>
+                  </Definition>
                 ))}
-              </dl>
+              </DefinitionList>
             )}
           </section>
           {kind === "person" && !isSelf && (
@@ -331,7 +336,7 @@ function Offers(props: { kind: string; id: string }) {
     run: () => run(o, target, () => box.current?.querySelector<HTMLElement>("button.more")),
   }));
   return (
-    <div className="acts" ref={box} role="group" aria-label={t("record.actions")}>
+    <Actions ref={box} role="group" aria-label={t("record.actions")}>
       <Button variant="primary"
         data-key="primary"
         onClick={(e) => {
@@ -343,7 +348,7 @@ function Offers(props: { kind: string; id: string }) {
       </Button>
       <RowMenu label={t("record.actions")} actions={menu} />
       {review}
-    </div>
+    </Actions>
   );
 }
 
@@ -446,14 +451,14 @@ function DetailsForm(props: {
         </div>
       )}
       <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onDone}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!dirty || saving}>
           {t("record.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -482,13 +487,13 @@ function DetailInput(props: {
 
   if (f.type === "yes_no") {
     return (
-      <div className="field">
+      <FormBlock>
         <label className="check-line" htmlFor={id}>
           <input id={id} type="checkbox" checked={value === true} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.checked)} />
           <span>{label}</span>
         </label>
         {note}
-      </div>
+      </FormBlock>
     );
   }
   if (f.type === "reference" && f.refers_to === "person") {
@@ -523,7 +528,7 @@ function DetailInput(props: {
   if (f.type === "choice" || (f.type === "number" && (f.options ?? []).length > 0)) {
     const options = (f.options ?? []).map((o) => ({ value: o, label: o }));
     control = (
-      <select id={id} value={text} required={required} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)}>
+      <Select id={id} value={text} required={required} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)}>
         {!required && <option value="">{t("record.none")}</option>}
         {required && text === "" && <option value="" />}
         {options.map((o) => (
@@ -531,7 +536,7 @@ function DetailInput(props: {
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     );
   } else if (f.type === "list") {
     control = <textarea id={id} className="short" value={text} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)} />;
@@ -551,12 +556,9 @@ function DetailInput(props: {
     );
   }
   return (
-    <div className="field">
-      <label htmlFor={id}>
-        {label} {f.type === "list" && <span className="hint">{t("record.list_hint")}</span>}
-      </label>
+    <FormField id={id} label={<>{label} {f.type === "list" && <span className="hint">{t("record.list_hint")}</span>}</>}>
       {control}
       {note}
-    </div>
+    </FormField>
   );
 }

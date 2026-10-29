@@ -65,7 +65,7 @@ test.describe("Late evening", () => {
     await page.getByRole("button", { name: "Waiting on them" }).click();
     await page.getByRole("listitem", { name, exact: true }).getByRole("button", { name: new RegExp(`^${name}`) }).click();
     const waiting = page.locator("aside[data-detail-pane]", { has: page.getByRole("heading", { name }) });
-    const item = waiting.locator("li.child", { hasText: sent[0].text });
+    const item = waiting.locator("li[data-item]", { hasText: sent[0].text });
     await expect(item).toContainText("sent today");
     await expect(item).not.toContainText(/waiting \d+ days?/);
     await expectNoNegativeDays(page);
@@ -74,7 +74,7 @@ test.describe("Late evening", () => {
     await item.getByRole("button", { name: /^More actions for / }).click();
     await page.getByRole("menuitem", { name: "Followed up" }).click();
     await expect(page.getByText(/^Recorded your follow-up with /)).toBeVisible();
-    await expect(waiting.locator("li.child", { hasText: sent[0].text })).toContainText("followed up");
+    await expect(waiting.locator("li[data-item]", { hasText: sent[0].text })).toContainText("followed up");
     await expectNoNegativeDays(page);
 
     // Today shows the same wait without a negative number, however it counts it.

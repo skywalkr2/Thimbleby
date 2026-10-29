@@ -9,11 +9,17 @@ import { MissedOneLine, MissedOneProvider } from "./MissedOne";
 import { NothingNeedsYou } from "./Coverage";
 import { SinceYesterday } from "./SinceYesterday";
 
-// Missed one (design 6.32): a control in the header on every screen opens one small form, the cursor in its one field;
+// Missed one (design 6.32): an item of the Help menu in the header, on every screen, opens one small form, the cursor in its one field;
 // sending says thanks and points at the request it made; the same form opens from the quiet screens and the phone's More
 // sheet.
 
 const noop = () => undefined;
+
+/** Missed one is an item of the Help menu. */
+async function openFromHelp(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "Help" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Missed something?" }));
+}
 const WORDS = "Dana said she would send the notes by Friday";
 
 function header(routes: Parameters<typeof fakeApi>[0] = {}) {
@@ -35,10 +41,10 @@ function header(routes: Parameters<typeof fakeApi>[0] = {}) {
   return calls;
 }
 
-test("the header's Missed one opens the form with the cursor in its one field", async () => {
+test("the Help menu's Missed one opens the form with the cursor in its one field", async () => {
   const user = userEvent.setup();
   header();
-  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  await openFromHelp(user);
   const dialog = await screen.findByRole("dialog", { name: "Report something missed" });
   const field = within(dialog).getByLabelText("What did I miss?");
   await waitFor(() => expect(field).toHaveFocus());
@@ -48,7 +54,7 @@ test("the header's Missed one opens the form with the cursor in its one field", 
 test("sending posts the words, thanks the person in a toast that points at the request, and closes the form", async () => {
   const user = userEvent.setup();
   const calls = header({ "POST missed": () => ({ request: "REQ-9", signal: "SIG-3" }) });
-  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  await openFromHelp(user);
   const field = await screen.findByLabelText("What did I miss?");
   await user.type(field, WORDS);
   await user.click(screen.getByRole("button", { name: "Send" }));
@@ -62,7 +68,7 @@ test("sending posts the words, thanks the person in a toast that points at the r
 test("Enter sends, and a refusal keeps the form and what was typed", async () => {
   const user = userEvent.setup();
   header({ "POST missed": () => new Refuse(400, "Say what the assistant missed.") });
-  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  await openFromHelp(user);
   const field = await screen.findByLabelText("What did I miss?");
   await user.type(field, `${WORDS}{Enter}`);
   expect(await screen.findByText(/Say what the assistant missed\./)).toBeInTheDocument();
@@ -73,7 +79,7 @@ test("Enter sends, and a refusal keeps the form and what was typed", async () =>
 test("Escape closes the form without sending", async () => {
   const user = userEvent.setup();
   const calls = header();
-  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  await openFromHelp(user);
   await screen.findByLabelText("What did I miss?");
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Report something missed" })).toBeNull());

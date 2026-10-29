@@ -7,6 +7,8 @@ import { offers, useListChange, useValueLists } from "../lib/lists";
 import { useWords } from "../lib/wording";
 import { useFocusAfterRender } from "../lib/focus-after-render";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 /** The choice that opens the add field; no list value can look like it. */
 const ADD = "\u0001add";
 
@@ -75,11 +77,8 @@ export function ValueSelect(props: {
   };
 
   return (
-    <div className="field">
-      <label htmlFor={id}>
-        {props.label} {props.hint && <span className="hint">{props.hint}</span>}
-      </label>
-      <select
+    <FormField id={id} label={<>{props.label} {props.hint && <span className="hint">{props.hint}</span>}</>}>
+      <Select
         id={id}
         ref={select}
         value={value}
@@ -100,7 +99,7 @@ export function ValueSelect(props: {
         ))}
         {extra !== null && <option value={extra}>{found ? t("lists.not_offered", { value: extra }) : extra}</option>}
         {found && <option value={ADD}>{t("lists.add_option")}</option>}
-      </select>
+      </Select>
       {props.note && (
         <span id={help} className="hint">
           {props.note}
@@ -145,6 +144,6 @@ export function ValueSelect(props: {
           {problem}
         </p>
       )}
-    </div>
+    </FormField>
   );
 }

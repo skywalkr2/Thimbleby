@@ -210,7 +210,7 @@ test("every page of Settings is built in one frame: the same title, search and s
     frames.push({
       name,
       title: await box("main h1"),
-      search: await box(".settings-side .field"),
+      search: await box(".settings-side [data-field]"),
       side: await box(".settings-nav"),
       content: await box(".settings-content"),
     });

@@ -14,6 +14,7 @@ import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { entryHref } from "./Because";
 import styles from "./Learned.module.css";
+import { Select } from "../ui/Select";
 
 export type Proposal = S["ProposalView"];
 
@@ -98,7 +99,7 @@ export function ReachPicker(props: {
   return (
     <span className={styles.reach}>
       <label htmlFor={id}>{t("learned.keep_for")}</label>
-      <select
+      <Select
         id={id}
         value={props.value}
         aria-describedby={saidId}
@@ -109,7 +110,7 @@ export function ReachPicker(props: {
             {props.words(c)}
           </option>
         ))}
-      </select>
+      </Select>
       <span id={saidId} className={styles.reachSaid} data-reach-said="">
         {props.said}
       </span>

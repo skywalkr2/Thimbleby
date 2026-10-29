@@ -5,6 +5,32 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-28: The second set of shared components: form parts, overlays, one toast, record parts, choice cards, the wizard and the header's status (sweep batch V2)
+
+**Decided:** (1) A form is `FormField`, `Select`, `DateField`, `FileDrop` and `CheckboxGroup`: no native select, date or file
+control, and no fieldset with its legend on a border, on any main screen. (2) Everything that opens over the page is one
+frame: a drawer 480px wide and as tall as its content, a dialog whose buttons stay at its bottom edge, and on a phone both are a
+sheet from the bottom with a handle; one popover; a menu entry that removes something is red. (3) One toast at a time, with an
+icon, at the bottom center, at the top while a dialog or drawer is open. (4) Record pages share a definition list, an activity
+timeline and a one-line ask box. (5) A choice drawn as a card is one level, with its words in full. (6) A setup step is one
+centered column with a fixed footer (Back, I'll do this later, the one primary). (7) The header's status is a dot and a word,
+with a warning and a danger, and it reads the connections' real state: it never says "All good" while a connection is
+retrying or has failed ("Missed something?" moved to the Help menu). (8) A line that opens something under it is one
+`ExpandableRow`, and the older global list classes are removed.
+
+**Decided by:** the UI/UX reviewer's visual review (VC05, VC06, VC07, VC09 to VC13, E10, E12) and the main session's brief; the
+builder's choices, for review: the Ask pane stays a pane that leaves the page behind it usable, but it is a fixed overlay with
+the drawer's width and surface and no longer a column that moves the page (the review says "an overlay like the drawer" and
+"never pushing the page"; it does not block the page behind it, unlike a drawer, because the person asks about what the page
+shows: decided by the main session);
+the review's two-column popover is the status popover with its states in two columns.
+
+**Why:** the screens had their own copies of the field, the select, the popover, the sheet and the list line, so a fix reached few
+screens, and the header's status did not read the connections at all, so it said "All good" while one was retrying.
+
+**Impact:** Design 7.12, 7.6 and CHANGES section 261. No new setting; new wording keys for the style guide only. No change to scope.
+Change log: section 261.
+
 ## 2026-10-28: The shared components: one Button, Row, PageHeader, EmptyState, and the link and type tokens (sweep batch V1)
 
 **Decided:** (1) Button has three weights (primary solid, secondary outline, quiet text), one primary per region, and a row's
@@ -28,7 +54,7 @@ few screens and the review scored the lists as forms, with an empty pill column 
 **Impact:** Design 7.12 and 7.1 and CHANGES section 259. No new setting; new wording keys for the style guide, and the tab
 labels of To-dos and questions no longer carry their count in the wording. Not done: the lines drawn with the older global
 classes (`line`, `row`, `queue`) still carry their own markup in 29 places (the expandable lines of Follow-ups, What changed, Add-ons, sign-ins, sources and others), with the same measures; each moves onto
-`Row` when its screen is rebuilt. No change to scope. Change log: section 259.
+`Row` when its screen is rebuilt (done in batch V2, the entry above). No change to scope. Change log: section 259.
 
 ## 2026-10-28: One formatter for everything a person reads
 

@@ -27,6 +27,8 @@ import { Unfiled } from "./Unfiled";
 import styles from "./Projects.module.css";
 
 import { PageHeader } from "../ui/PageHeader";
+import { Actions } from "../ui/Actions";
+import { DefinitionList, Definition } from "../ui/DefinitionList";
 type Project = S["ProjectView"];
 
 /** The projects in groups: each configured group in turn, those with none, and last the finished ones. A project inside
@@ -103,7 +105,7 @@ export function Projects() {
   const menu = (p: Project): MenuAction[] => [
     { id: "edit", label: t("setup.edit"), run: () => setEditing(p) },
     {
-      id: "remove",
+      id: "remove", danger: true,
       label: t("setup.remove"),
       run: () =>
         void act(
@@ -208,19 +210,19 @@ function ProjectDetail(props: { project: Project; parent?: Project; total: (n: n
   const mine = (notes.data ?? []).filter((n) => n.project === p.id);
   const fact = (label: string, value: React.ReactNode) =>
     value ? (
-      <div className="detail">
+      <Definition>
         <dt>{label}</dt>
         <dd>{value}</dd>
-      </div>
+      </Definition>
     ) : null;
   return (
     <>
-      <div className="row-end">
+      <Actions align="end">
         {p.completed && <Pill tone="ok">{t("projects.group.completed")}</Pill>}
         {p.status && !p.completed && <Pill tone={p.status_tone ?? "neutral"}>{p.status}</Pill>}
-      </div>
+      </Actions>
       {p.summary && <SafeText text={p.summary} />}
-      <dl className="details-list">
+      <DefinitionList>
         {fact(t("setup.group"), p.group)}
         {fact(t("setup.phase"), p.phase)}
         {fact(t("setup.priority"), p.priority)}
@@ -232,7 +234,7 @@ function ProjectDetail(props: { project: Project; parent?: Project; total: (n: n
         {fact(t("projects.col.actions"), p.open_actions > 0 ? tn("projects.open_actions", p.open_actions) : null)}
         {fact(t("projects.col.questions"), p.open_questions > 0 ? tn("projects.open_questions", p.open_questions) : null)}
         {fact(t("projects.col.changed"), p.last_change ? dayAndTime(p.last_change) : null)}
-      </dl>
+      </DefinitionList>
       {mine.length > 0 && (
         <section aria-label={t("projects.notes")}>
           <h3 className="what">{t("projects.notes")}</h3>
@@ -245,14 +247,14 @@ function ProjectDetail(props: { project: Project; parent?: Project; total: (n: n
           </ul>
         </section>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <ButtonLink href={viewHref(recordView("project", p.id))}>
           {t("records.open_page", { name: p.name })}
         </ButtonLink>
         <Button variant="primary" onClick={props.onEdit}>
           {t("setup.edit")}
         </Button>
-      </div>
+      </Actions>
       <RecordConversation key={p.id} kind="project" id={p.id} />
     </>
   );

@@ -1,0 +1,13 @@
+/* A date or time: the shared control box at the width a date needs, tabular figures, a picker button that is a real target. */
+.date {
+  appearance: none; -webkit-appearance: none;
+  width: 100%; max-width: var(--field-date); min-width: 0; min-height: var(--input-h);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  background-color: var(--surface); color: var(--text);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-md); line-height: var(--lh-md); font-variant-numeric: tabular-nums;
+}
+.both { max-width: var(--field-name); }
+.date:disabled { background-color: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
+.date::-webkit-calendar-picker-indicator { cursor: pointer; border-radius: var(--radius-sm); padding: var(--space-1); margin-inline-start: var(--space-1); }
+.date::-webkit-datetime-edit-fields-wrapper { padding: 0; }

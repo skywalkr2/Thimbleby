@@ -20,10 +20,13 @@ import { problemText } from "../lib/problem";
 import { readableTail } from "../lib/records";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
-import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
 import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
 export type ActionTarget = { kind: string; id: string } | null;
 type Choices = Record<string, string | boolean>;
 
@@ -392,7 +395,7 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
           )}
         </div>
       )}
-      <div className="row-end">
+      <DialogFooter>
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -404,7 +407,7 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
         <Button variant="primary" disabled={!proposal || busy || applying || !!error} onClick={() => void apply()}>
           {t(applying ? "review.applying" : "review.apply")}
         </Button>
-      </div>
+      </DialogFooter>
     </ModalPanel>
   );
 }
@@ -451,36 +454,34 @@ function ChoiceField(props: {
   ) : null;
   if (c.options.length > 0) {
     return (
-      <div className="field">
-        <label htmlFor={field}>{c.label}</label>
-        <select id={field} value={String(value)} aria-describedby={help} onChange={(e) => props.onChange(c.id, e.target.value)}>
+      <FormField id={field} label={c.label}>
+        <Select id={field} value={String(value)} aria-describedby={help} onChange={(e) => props.onChange(c.id, e.target.value)}>
           {c.options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
-        </select>
+        </Select>
         {note}
-      </div>
+      </FormField>
     );
   }
   if (c.text) {
     return (
-      <div className="field">
-        <label htmlFor={field}>{c.label}</label>
+      <FormField id={field} label={c.label}>
         <TextChoice id={field} help={help} value={String(value)} maxLength={c.max_length} onCommit={(v) => props.onChange(c.id, v)} />
         {note}
-      </div>
+      </FormField>
     );
   }
   return (
-    <div className="field">
+    <FormBlock>
       <label className="check-line" htmlFor={field}>
         <input id={field} type="checkbox" checked={value === true} aria-describedby={help} onChange={(e) => props.onChange(c.id, e.target.checked)} />
         <span>{c.label}</span>
       </label>
       {note}
-    </div>
+    </FormBlock>
   );
 }
 

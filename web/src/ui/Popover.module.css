@@ -1,0 +1,12 @@
+/* The popover: a raised panel, 320 or 420px wide (640px in two columns), never wider than the window. */
+.popover { width: min(420px, calc(100vw - var(--space-4))); }
+.popover[data-size="sm"] { width: min(320px, calc(100vw - var(--space-4))); }
+.popover[data-columns="2"] { width: min(640px, calc(100vw - var(--space-4))); }
+.popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }
+@keyframes pop { from { opacity: 0; transform: scale(0.98); } }
+.dialog {
+  outline: none; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--elev-2), var(--overlay-edge); padding: var(--space-2) var(--space-4);
+}
+.popover[data-columns="2"] .dialog > :is(ul, ol) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-5); }
+@media (max-width: 600px) { .popover[data-columns="2"] .dialog > :is(ul, ol) { grid-template-columns: minmax(0, 1fr); } }

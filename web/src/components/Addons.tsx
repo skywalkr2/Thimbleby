@@ -30,7 +30,7 @@ import { useRestart } from "../lib/restart";
 import { freshSettings, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
-import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
 import { domainOf } from "./SafeText";
 import { ReadToken } from "./ReadToken";
 import { AddonSecrets } from "./KeptSecrets";
@@ -39,6 +39,10 @@ import { Skeleton } from "../ui/Skeleton";
 import { DeveloperSettings } from "./DeveloperSettings";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
 type Installed = S["InstalledPackView"];
@@ -179,7 +183,7 @@ export function usePackChange(packId: string, name: string, focusRow: () => void
 /** What a row says once an install or removal needs the restart, with the same Restart now the other rows have. */
 function RestartLine(props: { text: string }) {
   return (
-    <p className="sub pack-restart" role="status">
+    <p className="hint pack-restart" role="status">
       {props.text}
       <RestartNowButton />
     </p>
@@ -253,7 +257,7 @@ function Available(props: { view: S["PacksView"] }) {
       {empty ? (
         <EmptyState text={empty} />
       ) : (
-        <ul className="queue">
+        <RowList>
           {groupByFile(view.available).map((slots) =>
             slots.length === 1 ? (
               <PackRow
@@ -273,7 +277,7 @@ function Available(props: { view: S["PacksView"] }) {
               />
             ),
           )}
-        </ul>
+        </RowList>
       )}
       {view.enabled && view.feeds.length === 0 && <AddCatalog first />}
       {view.enabled && view.feeds.length > 0 && <Catalog feeds={view.feeds} />}
@@ -366,7 +370,7 @@ function PackRow(props: {
     actions.push({ id: "update", label: t("addons.get_update"), run: props.onGet });
   }
   if (installed && !pack.enabled && pack.removable) {
-    actions.push({ id: "remove", label: t("addons.remove"), run: () => void change.remove() });
+    actions.push({ id: "remove", danger: true, label: t("addons.remove"), run: () => void change.remove() });
   }
   if (safeHomepage) {
     actions.push({
@@ -376,77 +380,7 @@ function PackRow(props: {
     });
   }
   return (
-    <li className="line" id={`pack-row-${index}`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
-      <div className="row pair">
-        <div className="text pack">
-          <strong id={`${base}-name`}>{pack.name}</strong>
-          {!props.group && <span className="sub">{facts.join(" · ")}</span>}
-          {!props.group && <span className="sub pack-price">{priceText(pack.price, amount, t)}</span>}
-          {pack.summary && <p className="pack-summary">{pack.summary}</p>}
-          <WhatLines what={pack.what} base={base} />
-          {(pack.libraries ?? []).length > 0 && (
-            <div className="pack-part">
-              <p className="what" id={`${base}-libraries`}>
-                {t("addons.libraries")}
-              </p>
-              <ul className="plain-list" aria-labelledby={`${base}-libraries`}>
-                {(pack.libraries ?? []).map((lib) => (
-                  <li key={lib.name}>{t("addons.library_line", { name: lib.name, version: lib.version })}</li>
-                ))}
-              </ul>
-              <p className="hint">{t("addons.libraries_hint")}</p>
-            </div>
-          )}
-          {!installed && pack.library_problem && <p className="problem-note">{pack.library_problem}</p>}
-          {pack.costs.length > 0 && (
-            <div className="pack-part">
-              <p className="what" id={`${base}-costs`}>
-                {t("addons.costs")}
-              </p>
-              <ul className="plain-list" aria-labelledby={`${base}-costs`}>
-                {pack.costs.map((cost, i) => (
-                  <li key={`${cost.label}-${i}`}>{costText(cost, t, small, size)}</li>
-                ))}
-              </ul>
-              <p className="hint">{t("addons.costs_hint")}</p>
-            </div>
-          )}
-          {installed && (
-            <p className="sub" id={`${base}-state`}>
-              {t(props.restartNeeded ? "addons.state.restart_version" : pack.enabled ? "addons.state.on_version" : "addons.state.off_version", {
-                version: pack.installed_version ?? "",
-              })}
-              {props.restartNeeded && !change.note && <RestartNowButton />}
-            </p>
-          )}
-          {installed && pack.enabled && pack.signed_in != null && (
-            <p className="sub">{t(pack.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>
-          )}
-          {installed && update && (
-            <p className="pack-update">
-              {t("addons.update", { from: pack.installed_version ?? "", to: pack.version })}
-            </p>
-          )}
-          {change.note && <RestartLine text={change.note} />}
-          {problem && (
-            <p className="problem-note" role="alert">
-              {problem}
-            </p>
-          )}
-          {change.needsToken && pack.release_host && (
-            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
-          )}
-          {change.tokenSaved && (
-            <p className="sub" role="status">
-              {t("addons.token.saved_note")}
-            </p>
-          )}
-          {safeHomepage && (
-            <span className="sub">{t("addons.homepage_line", { domain: pack.homepage_domain ?? "" })}</span>
-          )}
-        </div>
-        <div className="acts">
-          {!installed && pack.installable && !change.installed && offerInstall && (
+    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} metaLines={[(!props.group ? <>{facts.join(" · ")}</> : null), (!props.group ? <>{priceText(pack.price, amount, t)}</> : null)]} actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
             <Button variant="primary"
               id={`pack-install-${index}`}
               data-key="primary"
@@ -470,10 +404,70 @@ function PackRow(props: {
           {installed && !pack.enabled && (
             <SwitchButton on={false} label={pack.name} busy={power.busy} id={`pack-switch-${index}`} onRun={() => void power.run(true)} />
           )}
-          <RowMenu label={pack.name} actions={actions} />
-        </div>
-      </div>
-    </li>
+          <RowMenu label={pack.name} actions={actions} /></>}>
+{pack.summary && <p className="pack-summary">{pack.summary}</p>}
+<WhatLines what={pack.what} base={base} />
+{(pack.libraries ?? []).length > 0 && (
+            <div className="pack-part">
+              <p className="what" id={`${base}-libraries`}>
+                {t("addons.libraries")}
+              </p>
+              <ul className="plain-list" aria-labelledby={`${base}-libraries`}>
+                {(pack.libraries ?? []).map((lib) => (
+                  <li key={lib.name}>{t("addons.library_line", { name: lib.name, version: lib.version })}</li>
+                ))}
+              </ul>
+              <p className="hint">{t("addons.libraries_hint")}</p>
+            </div>
+          )}
+{!installed && pack.library_problem && <p className="problem-note">{pack.library_problem}</p>}
+{pack.costs.length > 0 && (
+            <div className="pack-part">
+              <p className="what" id={`${base}-costs`}>
+                {t("addons.costs")}
+              </p>
+              <ul className="plain-list" aria-labelledby={`${base}-costs`}>
+                {pack.costs.map((cost, i) => (
+                  <li key={`${cost.label}-${i}`}>{costText(cost, t, small, size)}</li>
+                ))}
+              </ul>
+              <p className="hint">{t("addons.costs_hint")}</p>
+            </div>
+          )}
+{installed && (
+            <p className="hint" id={`${base}-state`}>
+              {t(props.restartNeeded ? "addons.state.restart_version" : pack.enabled ? "addons.state.on_version" : "addons.state.off_version", {
+                version: pack.installed_version ?? "",
+              })}
+              {props.restartNeeded && !change.note && <RestartNowButton />}
+            </p>
+          )}
+{installed && pack.enabled && pack.signed_in != null && (
+            <p className="hint">{t(pack.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>
+          )}
+{installed && update && (
+            <p className="pack-update">
+              {t("addons.update", { from: pack.installed_version ?? "", to: pack.version })}
+            </p>
+          )}
+{change.note && <RestartLine text={change.note} />}
+{problem && (
+            <p className="problem-note" role="alert">
+              {problem}
+            </p>
+          )}
+{change.needsToken && pack.release_host && (
+            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
+          )}
+{change.tokenSaved && (
+            <p className="hint" role="status">
+              {t("addons.token.saved_note")}
+            </p>
+          )}
+{safeHomepage && (
+            <span className="hint">{t("addons.homepage_line", { domain: pack.homepage_domain ?? "" })}</span>
+          )}
+</Row>
   );
 }
 
@@ -504,45 +498,7 @@ function PackGroup(props: {
     pack.updated ? t("addons.updated", { updated: /^\d{4}-\d{2}-\d{2}$/.test(pack.updated) ? day(pack.updated) : pack.updated }) : "",
   ].filter(Boolean);
   return (
-    <li className="line" id={`${base}-row`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
-      <div className="row pair">
-        <div className="text pack">
-          <strong id={`${base}-name`}>{t("addons.group.title", { names: listOf(names, t("addons.group.and")) })}</strong>
-          <span className="sub">{facts.join(" · ")}</span>
-          <span className="sub pack-price">{priceText(pack.price, amount, t)}</span>
-          <p className="hint">{t("addons.group.one_file", { n: slots.length })}</p>
-          <p className="what" id={`${base}-includes`}>
-            {t("addons.group.includes", { names: names.join(", ") })}
-          </p>
-          {change.problem && (
-            <p className="problem-note" role="alert">
-              {change.problem}
-            </p>
-          )}
-          {change.needsToken && pack.release_host && (
-            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
-          )}
-          {change.tokenSaved && (
-            <p className="sub" role="status">
-              {t("addons.token.saved_note")}
-            </p>
-          )}
-          {change.note && <RestartLine text={change.note} />}
-          <ul className="queue" aria-labelledby={`${base}-includes`}>
-            {slots.map((slot) => (
-              <PackRow
-                key={`${slot.pack.id}-${slot.index}`}
-                pack={slot.pack}
-                index={slot.index}
-                restartNeeded={restartNeeded(slot.pack, props.installed)}
-                onGet={() => props.onGet(slot.index)}
-                group={{ anyInstalled, nameOf: props.nameOf }}
-              />
-            ))}
-          </ul>
-        </div>
-        <div className="acts">
-          {!anyInstalled && pack.installable && !change.installed && (
+    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={<>{t("addons.group.title", { names: listOf(names, t("addons.group.and")) })}</>} titleId={`${base}-name`} metaLines={[facts.join(" · "), priceText(pack.price, amount, t)]} actions={<>{!anyInstalled && pack.installable && !change.installed && (
             <Button variant="primary"
               id={`${base}-install`}
               data-key="primary"
@@ -562,10 +518,38 @@ function PackGroup(props: {
             >
               {t("addons.get")}
             </Button>
+          )}</>}>
+<p className="hint">{t("addons.group.one_file", { n: slots.length })}</p>
+<p className="what" id={`${base}-includes`}>
+            {t("addons.group.includes", { names: names.join(", ") })}
+          </p>
+{change.problem && (
+            <p className="problem-note" role="alert">
+              {change.problem}
+            </p>
           )}
-        </div>
-      </div>
-    </li>
+{change.needsToken && pack.release_host && (
+            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
+          )}
+{change.tokenSaved && (
+            <p className="hint" role="status">
+              {t("addons.token.saved_note")}
+            </p>
+          )}
+{change.note && <RestartLine text={change.note} />}
+<RowList aria-labelledby={`${base}-includes`}>
+            {slots.map((slot) => (
+              <PackRow
+                key={`${slot.pack.id}-${slot.index}`}
+                pack={slot.pack}
+                index={slot.index}
+                restartNeeded={restartNeeded(slot.pack, props.installed)}
+                onGet={() => props.onGet(slot.index)}
+                group={{ anyInstalled, nameOf: props.nameOf }}
+              />
+            ))}
+          </RowList>
+</Row>
   );
 }
 
@@ -592,11 +576,11 @@ function GetIt(props: { pack: Pack; onClose: () => void }) {
           </details>
         )}
       </div>
-      <div className="row-end">
+      <DialogFooter>
         <Button variant="primary" onClick={props.onClose}>
           {t("action.close")}
         </Button>
-      </div>
+      </DialogFooter>
     </ModalPanel>
   );
 }
@@ -677,8 +661,7 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
       }}
     >
       <h3 id={`${id}-title`}>{t("addons.catalog_add_title")}</h3>
-      <div className="field">
-        <label htmlFor={`${id}-address`}>{t("addons.catalog_address")}</label>
+      <FormField id={`${id}-address`} label={t("addons.catalog_address")}>
         <input
           id={`${id}-address`}
           type="text"
@@ -693,13 +676,13 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
         <p className="hint" id={`${id}-hint`}>
           {t("addons.catalog_address_hint")}
         </p>
-      </div>
+      </FormField>
       {problem && (
         <p className="problem-note" role="alert">
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         {!props.first && props.onDone && (
           <Button variant="quiet" onClick={props.onDone}>
             {t("action.cancel")}
@@ -708,7 +691,7 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
         <Button variant="primary" type="submit" disabled={!address.trim() || busy}>
           {t(busy ? "addons.catalog_adding" : "addons.catalog_add")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -825,7 +808,7 @@ function InstalledList(props: { items: Installed[] }) {
   const { t } = useWords();
   if (props.items.length === 0) return <EmptyState text={t("addons.installed.empty")} />;
   return (
-    <ul className="queue">
+    <RowList>
       {groupByFile(props.items).map((slots) =>
         slots.length === 1 ? (
           <InstalledRow key={`${slots[0].item.name}-${slots[0].index}`} item={slots[0].item} index={slots[0].index} />
@@ -833,7 +816,7 @@ function InstalledList(props: { items: Installed[] }) {
           <InstalledGroup key={`group-${slots[0].index}`} slots={slots} />
         ),
       )}
-    </ul>
+    </RowList>
   );
 }
 
@@ -843,20 +826,22 @@ function InstalledGroup(props: { slots: { item: Installed; index: number }[] }) 
   const names = props.slots.map((s) => s.item.name);
   const base = `installed-group-${props.slots[0].index}`;
   return (
-    <li className="line" id={`${base}-row`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
-      <div className="text pack">
-        <strong id={`${base}-name`}>{t("addons.group.title", { names: listOf(names, t("addons.group.and")) })}</strong>
-        <p className="hint">{t("addons.group.one_file", { n: names.length })}</p>
-        <p className="what" id={`${base}-includes`}>
-          {t("addons.group.includes", { names: names.join(", ") })}
-        </p>
-        <ul className="queue" aria-labelledby={`${base}-includes`}>
-          {props.slots.map((slot) => (
-            <InstalledRow key={`${slot.item.name}-${slot.index}`} item={slot.item} index={slot.index} />
-          ))}
-        </ul>
-      </div>
-    </li>
+    <Row
+      id={`${base}-row`}
+      aria-labelledby={`${base}-name`}
+      title={t("addons.group.title", { names: listOf(names, t("addons.group.and")) })}
+      titleId={`${base}-name`}
+    >
+      <p className="hint">{t("addons.group.one_file", { n: names.length })}</p>
+      <p className="what" id={`${base}-includes`}>
+        {t("addons.group.includes", { names: names.join(", ") })}
+      </p>
+      <RowList aria-labelledby={`${base}-includes`}>
+        {props.slots.map((slot) => (
+          <InstalledRow key={`${slot.item.name}-${slot.index}`} item={slot.item} index={slot.index} />
+        ))}
+      </RowList>
+    </Row>
   );
 }
 
@@ -871,7 +856,7 @@ function InstalledRow(props: { item: Installed; index: number }) {
   const problem = change.problem || power.problem;
   const actions: MenuAction[] = [];
   if (!item.enabled && item.removable) {
-    actions.push({ id: "remove", label: t("addons.remove"), run: () => void change.remove() });
+    actions.push({ id: "remove", danger: true, label: t("addons.remove"), run: () => void change.remove() });
   }
   const isOn = item.enabled;
   const pending = waitsForRestart(item);
@@ -883,31 +868,22 @@ function InstalledRow(props: { item: Installed; index: number }) {
         ? t("addons.state.because", { reason: item.reason })
         : t("addons.state.off");
   return (
-    <li className="line" id={`${base}-row`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
-      <div className="row pair">
-        <div className="text pack">
-          <strong id={`${base}-name`}>{item.name}</strong>
-          {item.version && <span className="sub">{t("addons.version", { version: item.version })}</span>}
-          {item.description && <p className="pack-summary">{item.description}</p>}
-          <p className="sub">
+    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={item.name} titleId={`${base}-name`} meta={(item.version ? <>{t("addons.version", { version: item.version })}</> : null)} actions={<><SwitchButton on={isOn} label={item.name} busy={power.busy} onRun={() => void power.run(!isOn)} />
+          <RowMenu label={item.name} actions={actions} /></>}>
+{item.description && <p className="pack-summary">{item.description}</p>}
+<p className="hint">
             {statusText}
             {pending && <RestartNowButton />}
           </p>
-          {isOn && item.signed_in != null && <p className="sub">{t(item.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>}
-          {change.note && <RestartLine text={change.note} />}
-          {problem && (
+{isOn && item.signed_in != null && <p className="hint">{t(item.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>}
+{change.note && <RestartLine text={change.note} />}
+{problem && (
             <p className="problem-note" role="alert">
               {problem}
             </p>
           )}
-          <WhatLines what={item.what} base={base} />
-          {item.state === "enabled" && <AddonSecrets plugin={item.name} />}
-        </div>
-        <div className="acts">
-          <SwitchButton on={isOn} label={item.name} busy={power.busy} onRun={() => void power.run(!isOn)} />
-          <RowMenu label={item.name} actions={actions} />
-        </div>
-      </div>
-    </li>
+<WhatLines what={item.what} base={base} />
+{item.state === "enabled" && <AddonSecrets plugin={item.name} />}
+</Row>
   );
 }

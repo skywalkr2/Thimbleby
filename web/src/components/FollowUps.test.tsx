@@ -360,7 +360,7 @@ test("a card lists only what is still to send, with no buttons or pills on the i
   expect(within(list).queryByRole("button")).toBeNull();
   expect(screen.queryByText("Did the cover ship?")).toBeNull();
   expect(screen.queryByText("Return the proof")).toBeNull();
-  expect(screen.getByRole("button", { name: /^Robin Sample/ })).toHaveTextContent("2 to send");
+  expect(screen.getByRole("button", { name: /^Robin Sample/ }).closest("li")!).toHaveTextContent("2 to send");
 });
 
 test("the workspace can rename the section", async () => {
@@ -396,7 +396,7 @@ test("the default view hides what was already sent; Waiting on them shows it, on
   expect(screen.queryByRole("complementary")).toBeNull();
   const rows = within(await findInPlace())
     .getAllByRole("listitem")
-    .filter((li) => li.classList.contains("child"));
+    .filter((li) => li.hasAttribute("data-item"));
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent(/Is the index final\?/);
   expect(rows[0]).toHaveTextContent(/sent .* \(2 days\)/);
@@ -973,7 +973,7 @@ test("Later lists the questions held for a meeting or a day, per person, and To 
   held[1].later = [...later, { ...later[0], id: "Q-5", title: "Is the cover final?", held_until: "2026-10-22", held_for_name: "Print sync" }];
   fakeApi({ "GET followups": () => held, "GET people": () => [] });
   renderApp(<FollowUps />);
-  expect(await screen.findByRole("button", { name: /^Robin Sample/ })).toHaveTextContent("1 to send");
+  expect((await screen.findByRole("button", { name: /^Robin Sample/ })).closest("li")!).toHaveTextContent("1 to send");
   expect(screen.queryByText("Is the index final?")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Later" }));
   // One person holds all that is for later, so their items stand in place.
@@ -1448,7 +1448,7 @@ test("a question's link that came from an email says so beside the link, and one
   renderApp(<FollowUps />);
   await userEvent.click(await screen.findByRole("button", { name: /^You/ }));
   await screen.findByText("Pay the printer?");
-  const rows = screen.getAllByRole("listitem").filter((r) => r.classList.contains("child"));
+  const rows = screen.getAllByRole("listitem").filter((r) => r.hasAttribute("data-item"));
   const asked = rows.filter((r) => r.textContent?.includes("Pay the printer?"));
   const own = rows.filter((r) => r.textContent?.includes("Book the room?"));
   expect(asked.some((r) => within(r).queryByText("From an email; check the address before you open it."))).toBe(true);

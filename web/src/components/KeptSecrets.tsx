@@ -15,6 +15,8 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { SecretField } from "./SecretField";
 import { Button } from "../ui/Button";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
 type How = "type" | "where" | "held";
 type Held = Pick<S["SourceSecretView"], "where" | "name">;
 
@@ -60,8 +62,8 @@ export function KeptSecretRow(props: {
     }
   };
   return (
-    <form
-      className="field kept-secret"
+    <FormBlock as="form"
+      className="kept-secret"
       onSubmit={(e) => {
         e.preventDefault();
         if (ready && !busy) void save();
@@ -95,13 +97,13 @@ export function KeptSecretRow(props: {
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         {props.more}
         <Button variant="primary" size="sm" type="submit" disabled={!ready || busy} aria-label={props.saveLabel}>
           {t(busy ? "secrets.saving" : "secrets.save")}
         </Button>
-      </div>
-    </form>
+      </Actions>
+    </FormBlock>
   );
 }
 
@@ -215,14 +217,14 @@ export function BackupKey() {
           </p>
           <input type="text" readOnly value={made} aria-labelledby={`${base}-made-title`} onFocus={(e) => e.currentTarget.select()} />
           <p className="hint">{t("backup_key.made_hint")}</p>
-          <div className="row-end">
+          <Actions align="end">
             <Button size="sm" onClick={() => void copy()}>
               {t("backup_key.copy")}
             </Button>
             <Button variant="primary" size="sm" onClick={() => setMade(null)}>
               {t("backup_key.done")}
             </Button>
-          </div>
+          </Actions>
         </div>
       )}
     </section>

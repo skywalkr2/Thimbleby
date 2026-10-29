@@ -11,6 +11,7 @@ import { NoteBox } from "./NoteBox";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 /** The kinds of item a change can be asked for: an action, a question, a decision, a calendar entry or a fact. */
 export type ChangeKind = "action" | "question" | "decision" | "event" | "fact";
 
@@ -62,7 +63,7 @@ export function useQuestionMenu(
   const entries: MenuAction[] = [
     { id: "reword", label: t("question.reword"), run: () => setMode("reword") },
     { id: "reroute", label: t("question.reroute"), run: () => setMode("reroute") },
-    { id: "drop", label: t("question.drop"), note: t("question.drop_note"), run: () => setMode("drop") },
+    { id: "drop", danger: true, label: t("question.drop"), note: t("question.drop_note"), run: () => setMode("drop") },
   ];
   if (options.canMarkSent) {
     entries.push({
@@ -86,17 +87,17 @@ export function useQuestionMenu(
   return { entries, form };
 }
 
-function Actions(props: { onClose: () => void; label: string; disabled: boolean }) {
+function FormActions(props: { onClose: () => void; label: string; disabled: boolean }) {
   const { t } = useWords();
   return (
-    <div className="row-end">
+    <Actions align="end">
       <Button variant="quiet" onClick={props.onClose}>
         {t("action.cancel")}
       </Button>
       <Button variant="primary" type="submit" disabled={props.disabled}>
         {props.label}
       </Button>
-    </div>
+    </Actions>
   );
 }
 
@@ -134,7 +135,7 @@ function RewordForm(props: { q: { id: string; title: string; text: string }; onC
         {t("question.reword_text")}
       </label>
       <textarea id={`${id}-text`} className="short" value={text} onChange={(e) => setText(e.target.value)} />
-      <Actions onClose={props.onClose} label={t("question.reword_go")} disabled={!dirty} />
+      <FormActions onClose={props.onClose} label={t("question.reword_go")} disabled={!dirty} />
     </form>
   );
 }
@@ -162,7 +163,7 @@ export function RerouteForm(props: { q: { id: string }; onClose: () => void }) {
       }}
     >
       <PersonPicker label={t("question.reroute_label")} value={person} onChange={setPerson} suggested={[]} people={everyone} autoFocus />
-      <Actions onClose={props.onClose} label={t("question.reroute_go")} disabled={!person} />
+      <FormActions onClose={props.onClose} label={t("question.reroute_go")} disabled={!person} />
     </form>
   );
 }
@@ -191,7 +192,7 @@ function DropForm(props: { q: { id: string }; onClose: () => void }) {
         {t("question.drop_label")}
       </label>
       <input id={id} type="text" autoFocus value={reason} onChange={(e) => setReason(e.target.value)} />
-      <Actions onClose={props.onClose} label={t("question.drop_go")} disabled={!reason.trim()} />
+      <FormActions onClose={props.onClose} label={t("question.drop_go")} disabled={!reason.trim()} />
     </form>
   );
 }

@@ -26,6 +26,7 @@ import { AddConnection } from "./Sources";
 import { WalkthroughMail } from "./WalkthroughMail";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
+import { StepFooter, WizardRail, WizardShell, WizardStep, type RailStep } from "../ui/Wizard";
 import styles from "./Walkthrough.module.css";
 import { Icon } from "../ui/Icon";
 
@@ -264,66 +265,89 @@ export function Walkthrough(
     onChooseSource: (plugin: string | null, kind?: string) => setAdding({ plugin, kind }),
   };
 
+  const railSteps: RailStep[] = SCREENS.filter((screen) => screen !== "welcome").map((screen) => {
+    const state = standing(steps, screen);
+    const reason = stepOf(steps, screen)?.reason;
+    return {
+      id: screen,
+      label: screenName(screen),
+      state,
+      stateWords: state === "skipped" ? t(reason ? `walkthrough.state.skipped_${reason}` : "walkthrough.state.skipped") : undefined,
+      doneWords: t("walkthrough.state.done"),
+      current: screen === current,
+      hereWords: t("walkthrough.here"),
+    };
+  });
   return (
     <ContinueSlotProvider value={register}>
-    <div className={styles.root} data-walkthrough="">
-      <header className={styles.head}>
-        <div className={styles.title}>
-          <h1 id="walkthrough-title">{t("walkthrough.title")}</h1>
-          <p className={styles.intro}>{t("walkthrough.intro")}</p>
-        </div>
-        <Button onClick={() => void finishLater()}>{t("walkthrough.later")}</Button>
-      </header>
-      <div className={styles.layout} data-welcome={current === "welcome" ? "" : undefined}>
-        {current !== "welcome" && (
-          <nav aria-label={t("walkthrough.screens")} className={styles.nav}>
-            <div className={styles.place}>
-              <p data-place="">
-                {placed
-                  ? t("walkthrough.place", { label: screenName(current), n: placed.place ?? 0, total: data.total })
-                  : screenName(current)}
-              </p>
-              <Button size="sm" aria-expanded={listOpen} aria-controls="walkthrough-steps" onClick={() => setListOpen((open) => !open)}>
-                {t("walkthrough.steps")}
-              </Button>
-            </div>
-            <ol className={styles.screens} id="walkthrough-steps" data-open={listOpen}>
-              {SCREENS.filter((screen) => screen !== "welcome").map((screen) => {
-                const state = standing(steps, screen);
-                const reason = stepOf(steps, screen)?.reason;
-                return (
-                  <li key={screen}>
-                    <button
-                      type="button"
-                      className={styles.screen}
-                      data-screen={screen}
-                      data-state={state ?? undefined}
-                      aria-current={screen === current ? "step" : undefined}
-                      onClick={() => go(screen)}
-                    >
-                      <span className={styles.label}>
-                        <span>{screenName(screen)}</span>
-                        {screen === current && <span className={styles.here}>{t("walkthrough.here")}</span>}
-                      </span>
-                      {(state === "done" || state === "skipped") && (
-                        <span className={styles.mark}>
-                          <Icon name={state === "done" ? "check" : "minus"} size={14} />{" "}
-                          {t(state === "skipped" && reason ? `walkthrough.state.skipped_${reason}` : `walkthrough.state.${state}`)}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        )}
-        <main id="main" className={styles.step} tabIndex={-1} aria-labelledby="walkthrough-screen-title" data-screen={current}>
-          <h2 id="walkthrough-screen-title" ref={heading} tabIndex={-1}>
-            {screenName(current)}
-          </h2>
-          <p className={styles.why}>{why}</p>
-          <div className={styles.body}>
+      <WizardShell
+        data-walkthrough=""
+        titleId="walkthrough-title"
+        title={t("walkthrough.title")}
+        intro={t("walkthrough.intro")}
+        headAction={
+          <Button variant="quiet" onClick={() => void finishLater()}>
+            {t("walkthrough.later")}
+          </Button>
+        }
+        rail={
+          current !== "welcome" ? (
+            <WizardRail
+              label={t("walkthrough.screens")}
+              place={placed ? t("walkthrough.place", { label: screenName(current), n: placed.place ?? 0, total: data.total }) : screenName(current)}
+              stepsLabel={t("walkthrough.steps")}
+              open={listOpen}
+              onToggle={() => setListOpen((open) => !open)}
+              listId="walkthrough-steps"
+              steps={railSteps}
+              onGo={(id) => go(id as Screen)}
+              toggle={
+                <Button size="sm" aria-expanded={listOpen} aria-controls="walkthrough-steps" onClick={() => setListOpen((open) => !open)}>
+                  {t("walkthrough.steps")}
+                </Button>
+              }
+            />
+          ) : undefined
+        }
+      >
+        <WizardStep
+          eyebrow={placed ? t("walkthrough.step_of", { n: placed.place ?? 0, total: data.total }) : undefined}
+          title={screenName(current)}
+          titleId="walkthrough-screen-title"
+          titleRef={heading}
+          explanation={why}
+          screen={current}
+          footer={
+            <StepFooter
+              footRef={foot}
+              back={previous ? <Button onClick={() => go(previous)}>{t("walkthrough.back")}</Button> : undefined}
+              later={
+                current !== "done" && here === "todo" && STEP_OF[current] ? (
+                  <Button variant="quiet" disabled={busy} onClick={() => void skip()}>
+                    {t("walkthrough.skip")}
+                  </Button>
+                ) : undefined
+              }
+              primary={
+                current === "done" ? (
+                  <Button variant="primary" onClick={() => void finish()}>
+                    {t("walkthrough.finish")}
+                  </Button>
+                ) : next && !(current === "mail" && here === "todo") && !slot.current?.inline ? (
+                  <Button
+                    variant="primary"
+                    loading={busy}
+                    disabled={!!slot.current?.disabled}
+                    reason={slot.current?.disabled ? slot.current.why : undefined}
+                    onClick={() => void carryOn()}
+                  >
+                    {slot.current?.label ?? t(current === "welcome" ? "walkthrough.welcome.start" : "walkthrough.next")}
+                  </Button>
+                ) : undefined
+              }
+            />
+          }
+        >
           {adding && <AddConnection plugin={adding.plugin} kind={adding.kind} onClose={() => setAdding(null)} />}
           {!adding && (
           <>
@@ -353,38 +377,8 @@ export function Walkthrough(
               {problem}
             </p>
           )}
-          </div>
-          <div className={styles.foot} ref={foot}>
-            {previous && <Button onClick={() => go(previous)}>{t("walkthrough.back")}</Button>}
-            <span className={styles.grow} />
-            {current === "done" ? (
-              <Button variant="primary" onClick={() => void finish()}>
-                {t("walkthrough.finish")}
-              </Button>
-            ) : (
-              <>
-                {here === "todo" && STEP_OF[current] && (
-                  <Button disabled={busy} onClick={() => void skip()}>
-                    {t("walkthrough.skip")}
-                  </Button>
-                )}
-                {next && !(current === "mail" && here === "todo") && !slot.current?.inline && (
-                  <Button
-                    variant="primary"
-                    loading={busy}
-                    disabled={!!slot.current?.disabled}
-                    reason={slot.current?.disabled ? slot.current.why : undefined}
-                    onClick={() => void carryOn()}
-                  >
-                    {slot.current?.label ?? t(current === "welcome" ? "walkthrough.welcome.start" : "walkthrough.next")}
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </main>
-      </div>
-    </div>
+        </WizardStep>
+      </WizardShell>
     </ContinueSlotProvider>
   );
 }

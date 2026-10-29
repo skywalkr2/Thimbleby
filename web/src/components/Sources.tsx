@@ -30,6 +30,14 @@ import { SignIns } from "./SignIns";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { RadioCard, RadioCards } from "../ui/RadioCard";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { FormBlock } from "../ui/FormBlock";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -204,7 +212,7 @@ export function Sources(props: {
         <h2 id="sources-title" tabIndex={-1} data-section-heading="">
           {t("sources.title")}
         </h2>
-        <div className="acts">
+        <Actions>
           <Button variant="primary"
             id={addButton}
             aria-expanded={form?.type === "add"}
@@ -212,7 +220,7 @@ export function Sources(props: {
           >
             {t("sources.add")}
           </Button>
-        </div>
+        </Actions>
       </div>
       <p className="hint">{t("sources.intro")}</p>
       <p className="hint">
@@ -249,7 +257,7 @@ export function Sources(props: {
       ) : sources.data.length === 0 ? (
         <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
       ) : (
-        <ul className="queue">
+        <RowList>
           {sources.data.map((source) => (
             <SourceRow
               key={source.id}
@@ -263,7 +271,7 @@ export function Sources(props: {
               onChanged={() => setForm(null)}
             />
           ))}
-        </ul>
+        </RowList>
       )}
     </section>
   );
@@ -328,7 +336,7 @@ function SourceRow(props: {
       ? [{ id: "look_back", label: t("coverage.look_back.open"), run: () => setLooking(true) }]
       : []),
     { id: "power", label: t(source.enabled ? "sources.turn_off" : "sources.turn_on"), run: () => turn(!source.enabled) },
-    { id: "remove", label: t("sources.remove"), run: remove },
+    { id: "remove", danger: true, label: t("sources.remove"), run: remove },
   ];
 
   // Until a read has worked there is no count to give: "0 items" would say it was read and found nothing.
@@ -345,32 +353,27 @@ function SourceRow(props: {
   ];
   const found = [source.last ? lastWords : "", source.failures > 1 ? t("sources.failures", { n: source.failures }) : ""].filter(Boolean);
   return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className="row pair">
-        <div className="text">
-          <strong id={titleId}>{source.label}</strong>
-          <span className="sub">{facts.join(" · ")}</span>
-          <span className="sub">{schedule.join(" · ")}</span>
-          {found.length > 0 && <span className="sub">{found.join(" · ")}</span>}
-          {source.last?.unsorted && (
-            <p className="hint" data-unsorted="">
-              <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
-            </p>
-          )}
-          {!source.connector_label && addonOfConnector(source.connector) && (
-            <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
-          )}
-          {problem && (
-            <p className="problem-note" role={props.alert ? "alert" : undefined}>
-              {problem}
-            </p>
-          )}
-          {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
-        </div>
-        <div className="acts">
-          <RowMenu label={source.label} actions={actions} buttonId={menuId} />
-        </div>
-      </div>
+    <Row
+      aria-labelledby={titleId}
+      title={source.label}
+      titleId={titleId}
+      metaLines={[facts.join(" · "), schedule.join(" · "), found.join(" · ")]}
+      menu={<RowMenu label={source.label} actions={actions} buttonId={menuId} />}
+    >
+      {source.last?.unsorted && (
+        <p className="hint" data-unsorted="">
+          <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
+        </p>
+      )}
+      {!source.connector_label && addonOfConnector(source.connector) && (
+        <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
+      )}
+      {problem && (
+        <p className="problem-note" role={props.alert ? "alert" : undefined}>
+          {problem}
+        </p>
+      )}
+      {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
       {looking && <LookBack source={source} onClose={() => { setLooking(false); restoreFocus(() => document.getElementById(menuId)); }} />}
       {props.changing && (
         <SourceForm
@@ -383,7 +386,7 @@ function SourceRow(props: {
           }}
         />
       )}
-    </li>
+    </Row>
   );
 }
 
@@ -410,17 +413,17 @@ function SentFolderOffer(props: { source: Source; save: ReturnType<typeof useSou
   };
   return (
     <div className="sent-offer" data-sent-offer="">
-      <label className="sub" htmlFor={id}>
+      <label className="hint" htmlFor={id}>
         {t("sources.sent.offer")}
       </label>
-      <select id={id} aria-label={t("sources.sent.folder")} value={folder} onChange={(e) => setPicked(e.target.value)}>
+      <Select id={id} aria-label={t("sources.sent.folder")} value={folder} onChange={(e) => setPicked(e.target.value)}>
         {!marked && <option value="">{t("sources.sent.choose")}</option>}
         {options.map((f) => (
           <option key={f} value={f}>
             {f}
           </option>
         ))}
-      </select>
+      </Select>
       <Button size="sm" disabled={!folder || busy} onClick={() => void add()}>
         {t("sources.sent.add")}
       </Button>
@@ -717,8 +720,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         {source ? t("sources.change_title", { label: source.label }) : t("sources.add_title")}
       </h3>
       {adding && !given && (
-        <fieldset className="details">
-          <legend>{t("sources.kind_title")}</legend>
+        <CheckboxGroup legend={t("sources.kind_title")}>
           {props.kindsFailed ? (
             <p className="problem-note">{t("sources.kinds_failed")}</p>
           ) : props.kinds === undefined ? (
@@ -729,46 +731,41 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
             groups.map((group) => {
               const groupId = `${base}-group-${group.id || "core"}`;
               return (
-                <div key={group.id} role="group" className="kind-group" aria-labelledby={groups.length > 1 ? groupId : undefined}>
+                <FormBlock key={group.id} role="group" aria-labelledby={groups.length > 1 ? groupId : undefined}>
                   {groups.length > 1 && (
                     <p className="what" id={groupId}>
                       {group.label}
                     </p>
                   )}
-                  <div className="kinds kind-grid">
+                  <RadioCards>
                     {group.kinds.map((k) => (
-                      <label key={k.name} className="radio kind-choice kind-card">
-                        <input
-                          type="radio"
-                          name={`${base}-kind`}
-                          value={k.name}
-                          checked={chosen === k.name}
-                          onChange={() => {
-                            setPicked(k.name);
-                            setEdits({});
-                            setPasted({});
-                            setProblem("");
-                            setFieldProblems({});
-                          }}
-                        />
-                        <span>
-                          <strong>{kindTitle(k)}</strong>
-                          {has(`sources.kind_desc.${k.name}`) && <span className="hint">{t(`sources.kind_desc.${k.name}`)}</span>}
-                        </span>
-                      </label>
+                      <RadioCard
+                        key={k.name}
+                        name={`${base}-kind`}
+                        value={k.name}
+                        checked={chosen === k.name}
+                        onChange={() => {
+                          setPicked(k.name);
+                          setEdits({});
+                          setPasted({});
+                          setProblem("");
+                          setFieldProblems({});
+                        }}
+                        title={kindTitle(k)}
+                        description={has(`sources.kind_desc.${k.name}`) ? t(`sources.kind_desc.${k.name}`) : undefined}
+                      />
                     ))}
-                  </div>
-                </div>
+                  </RadioCards>
+                </FormBlock>
               );
             })
           )}
-        </fieldset>
+        </CheckboxGroup>
       )}
       {adding && chosen === "mailbox" && !given && <MailServiceConnect onPick={setGuide} onConnected={props.onClose} />}
       {kind && !guided && !listFirst && (
         <>
-          <div className="field">
-            <label htmlFor={`${base}-label`}>{t("sources.field.label")}</label>
+          <FormField id={`${base}-label`} label={t("sources.field.label")}>
             <input
               id={`${base}-label`}
               type="text"
@@ -780,16 +777,15 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
             <p className="hint" id={`${base}-label-hint`}>
               {t("sources.field.label_hint")}
             </p>
-          </div>
+          </FormField>
           {adding && (kind.first_run === "baseline" || kind.first_run === "intake") && (
             <p className="hint" data-first-read="">
               {t(kind.first_run === "baseline" ? "sources.first_read_noted" : (kind.reads ?? []).includes("mail") ? "sources.first_read_intake" : "sources.first_read_other")}
             </p>
           )}
           {accountList !== null && (
-            <div className="field">
-              <label htmlFor={`${base}-account`}>{t("sources.field.account")}</label>
-              <select
+            <FormField id={`${base}-account`} label={t("sources.field.account")}>
+              <Select
                 id={`${base}-account`}
                 value={accountChosen}
                 aria-describedby={`${base}-account-hint`}
@@ -801,15 +797,14 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                     {a}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="hint" id={`${base}-account-hint`}>
                 {t("sources.field.account_hint")}
               </p>
-            </div>
+            </FormField>
           )}
           {items.length > 0 && (
-            <fieldset className="details">
-              <legend>{has(`sources.details.${kind.name}`) ? t(`sources.details.${kind.name}`) : t("sources.details")}</legend>
+            <CheckboxGroup legend={has(`sources.details.${kind.name}`) ? t(`sources.details.${kind.name}`) : t("sources.details")}>
               <ItemFields items={items} edits={edits} onEdit={(key, draft) => {
                   setEdits((all) => ({ ...all, [key]: draft }));
                   setFieldProblems((all) => (key in all ? {} : all));
@@ -820,48 +815,44 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                 plain
                 problems={fieldProblems}
               />
-            </fieldset>
+            </CheckboxGroup>
           )}
           <details className="more-options" data-more="">
             <summary>{t("sources.more")}</summary>
-          <div className="field">
-            <label htmlFor={`${base}-every`}>{t("sources.field.every")}</label>
-            <select id={`${base}-every`} value={every} onChange={(e) => setEvery(e.target.value)}>
+          <FormField id={`${base}-every`} label={t("sources.field.every")}>
+            <Select id={`${base}-every`} value={every} onChange={(e) => setEvery(e.target.value)}>
               {everyOptions.map((n) => (
                 <option key={n} value={String(n)}>
                   {everyText(n, tn)}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormField>
           {adding && (projects.data ?? []).length > 0 && (
-            <div className="field">
-              <label htmlFor={`${base}-project`}>{t(justMe ? "sources.field.area" : "sources.field.project")}</label>
-              <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
+            <FormField id={`${base}-project`} label={t(justMe ? "sources.field.area" : "sources.field.project")}>
+              <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
                 <option value="">{t(justMe ? "sources.field.no_area" : "sources.field.no_project")}</option>
                 <PlaceOptions projects={projects.data ?? []} />
-              </select>
-            </div>
+              </Select>
+            </FormField>
           )}
           {calendarSource && (
-            <div className="field">
-              <label htmlFor={`${base}-color`}>{t("sources.field.color")}</label>
-              <select id={`${base}-color`} value={color} aria-describedby={`${base}-color-hint`} onChange={(e) => setColor(e.target.value)}>
+            <FormField id={`${base}-color`} label={t("sources.field.color")}>
+              <Select id={`${base}-color`} value={color} aria-describedby={`${base}-color-hint`} onChange={(e) => setColor(e.target.value)}>
                 <option value="">{t("sources.field.no_color")}</option>
                 {CALENDAR_COLORS.map((name) => (
                   <option key={name} value={name}>
                     {t(`sources.color.${name}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="hint" id={`${base}-color-hint`}>
                 {t("sources.field.color_hint")}
               </p>
-            </div>
+            </FormField>
           )}
           {mailSource && (
-            <fieldset className="details" data-capture="">
-              <legend>{t("sources.capture.title")}</legend>
+            <CheckboxGroup legend={t("sources.capture.title")} data-capture="">
               <label className="check-line">
                 <input type="checkbox" checked={capture} aria-describedby={`${base}-capture-hint`} onChange={(e) => setCapture(e.target.checked)} />
                 <span>{t("sources.capture.everything")}</span>
@@ -869,8 +860,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               <p className="hint" id={`${base}-capture-hint`}>
                 {t("sources.capture.everything_hint")}
               </p>
-              <div className="field">
-                <label htmlFor={`${base}-capture-address`}>{t("sources.capture.address")}</label>
+              <FormField id={`${base}-capture-address`} label={t("sources.capture.address")}>
                 <input
                   id={`${base}-capture-address`}
                   type="email"
@@ -882,13 +872,12 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                 <p className="hint" id={`${base}-capture-address-hint`}>
                   {t("sources.capture.address_hint")}
                 </p>
-              </div>
-            </fieldset>
+              </FormField>
+            </CheckboxGroup>
           )}
           {source && (
-            <div className="field">
-              <label htmlFor={`${base}-level`}>{t("sources.field.level")}</label>
-              <select id={`${base}-level`} value={level} aria-describedby={`${base}-level-hint`} onChange={(e) => setLevel(e.target.value)}>
+            <FormField id={`${base}-level`} label={t("sources.field.level")}>
+              <Select id={`${base}-level`} value={level} aria-describedby={`${base}-level-hint`} onChange={(e) => setLevel(e.target.value)}>
                 <option value="">
                   {source.data_level_side_level
                     ? t("sources.field.level_side", { level: t(`sources.level.${source.data_level_side_level}`) })
@@ -899,7 +888,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                     {t(`sources.level.${name}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="hint" id={`${base}-level-hint`}>
                 {t("sources.field.level_hint")}
               </p>
@@ -908,12 +897,11 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                   {t("sources.level_warn", { level: t(`sources.level.${level}`).toLowerCase() })}
                 </p>
               )}
-            </div>
+            </FormField>
           )}
           {(authors.data?.length ?? 0) > 0 && (
-            <div className="field">
-              <label htmlFor={`${base}-author`}>{t("sources.field.author")}</label>
-              <select
+            <FormField id={`${base}-author`} label={t("sources.field.author")}>
+              <Select
                 id={`${base}-author`}
                 value={author}
                 aria-describedby={`${base}-author-hint`}
@@ -925,11 +913,11 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                     {a.kind === "you" ? t("sources.field.author_you", { name: a.name }) : a.name}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="hint" id={`${base}-author-hint`}>
                 {t("sources.field.author_hint")}
               </p>
-            </div>
+            </FormField>
           )}
           </details>
           {waitingForSettings && <Skeleton rows={1} />}
@@ -941,7 +929,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         </p>
       )}
       <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -950,7 +938,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
             {t(busy ? "sources.saving" : adding ? "sources.save_add" : "sources.save_change")}
           </Button>
         )}
-      </div>
+      </Actions>
     </form>
   );
 }

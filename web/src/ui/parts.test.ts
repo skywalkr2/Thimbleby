@@ -38,9 +38,19 @@ test("a row's title is never clamped to a number of lines unless the list opts i
   expect(queue).toMatch(/clamp=\{title\}/);
 });
 
-test("the title button grows with its words and the detail's menu shares the state's line", () => {
-  const css = readFileSync(join(root, "styles.css"), "utf-8");
-  expect(css.match(/\n\.expander \{[^}]*\}/)?.[0]).toMatch(/display: block/);
-  expect(css.match(/\n\.expander \{[^}]*\}/)?.[0]).not.toMatch(/(?<!min-)height: \d/);
-  expect(css.match(/\n\.detail-top \{[^}]*\}/)?.[0]).not.toMatch(/flex-wrap: wrap/);
+test("an expandable row's title is a button that covers the row's text and grows with its words; the detail's menu shares the state's line", () => {
+  const css = readFileSync(join(root, "ui", "Row.module.css"), "utf-8");
+  const expander = css.match(/\n\.expander \{[^}]*\}/)?.[0] ?? "";
+  expect(expander).toMatch(/display: inline/);
+  expect(expander).not.toMatch(/(?<!min-)height: \d/);
+  expect(css).toMatch(/\.expander::after \{[^}]*position: absolute; inset: 0/);
+  const top = readFileSync(join(root, "ui", "DetailTop.module.css"), "utf-8");
+  expect(top.match(/(^|\n)\.top \{[^}]*\}/)?.[0]).not.toMatch(/flex-wrap: wrap/);
+});
+
+test("the older line, row, queue, kind, text, acts and expander classes are gone from every screen", () => {
+  const found = sources(root).filter((path) =>
+    /className=(?:"[^"]*|\{`[^`]*)(?<![-\w.])(line|row|queue|kind|k-(?:review|send|held|risk|wait|done)|text|acts|expander|children|child|in-pane|row-end|sub)(?![-\w])/.test(readFileSync(path, "utf-8")),
+  );
+  expect(found.map((path) => path.slice(root.length + 1))).toEqual([]);
 });

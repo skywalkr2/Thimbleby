@@ -7,6 +7,8 @@ import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { PlaceOptions } from "./PlaceOptions";
 import { ProjectDrawer } from "./ProjectForm";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 
 /** The choice that opens the add form; no project id can look like it. */
 const ADD = "\u0001add";
@@ -34,9 +36,8 @@ export function ProjectPicker(props: {
     restoreFocus(() => select.current);
   };
   return (
-    <div className="field">
-      <label htmlFor={id}>{props.label}</label>
-      <select
+    <FormField id={id} label={props.label}>
+      <Select
         id={id}
         ref={select}
         value={props.value}
@@ -48,8 +49,8 @@ export function ProjectPicker(props: {
         <option value="">{props.empty ?? t("project.choose")}</option>
         <PlaceOptions projects={rows} />
         <option value={ADD}>{t("project.add_option")}</option>
-      </select>
+      </Select>
       {adding && <ProjectDrawer onClose={close} onSaved={(projectId) => props.onChange(projectId)} />}
-    </div>
+    </FormField>
   );
 }

@@ -5,7 +5,7 @@ import { Heading } from "react-aria-components";
 import { actTitle, recipientNames, type Act } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
-import { ModalPanel } from "./ModalPanel";
+import { ModalPanel, DialogFooter } from "./ModalPanel";
 
 export function ConfirmSend(props: { act: Act; again?: boolean; onGo: () => void; onCancel: () => void }) {
   const { t } = useWords();
@@ -26,12 +26,12 @@ export function ConfirmSend(props: { act: Act; again?: boolean; onGo: () => void
         {title}
       </Heading>
       <p>{t(act.kind === "mailbox" ? "outgoing.confirm.text.change" : "outgoing.confirm.text")}</p>
-      <div className="row-end">
+      <DialogFooter>
         <Button onClick={props.onCancel}>{t("action.cancel")}</Button>
         <Button variant="primary" onClick={props.onGo}>
           {t("outgoing.confirm.go")}
         </Button>
-      </div>
+      </DialogFooter>
     </ModalPanel>
   );
 }

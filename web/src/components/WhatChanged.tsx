@@ -37,11 +37,17 @@ import { Highlighted } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
 import { Skeleton } from "../ui/Skeleton";
-import { Pill } from "../ui/Pill";
+import { Pill, type PillTone } from "../ui/Pill";
 
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { TabStrip } from "../ui/TabStrip";
+import { Actions } from "../ui/Actions";
+import { RowList, DetailItem } from "../ui/RowList";
+import { ItemList, Item } from "../ui/ItemList";
+import { ExpandableRow } from "../ui/Row";
+import { RowBody } from "../ui/RowBody";
+import { DetailTop } from "../ui/DetailTop";
 /** The width the list needs beside the pane: a state, a title with one line under it, the primary and the menu. */
 const CHANGES_FIT = 480;
 
@@ -221,7 +227,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           fit={CHANGES_FIT}
           detail={
             selected ? (
-              <ol className="queue detail-queue">
+              <RowList as="ol" detail>
                 <ChangeRow
                   key={selected.id}
                   item={selected}
@@ -231,11 +237,11 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
                   want={want?.id === selected.id ? want : null}
                   onOpenGuide={props.onOpenGuide}
                 />
-              </ol>
+              </RowList>
             ) : null
           }
         >
-          <ol className="queue">
+          <RowList as="ol">
             {rows.map((item) => (
               <ChangeListRow
                 key={item.id}
@@ -246,20 +252,20 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
                 onOpenGuide={props.onOpenGuide}
               />
             ))}
-          </ol>
+          </RowList>
         </ListDetail>
       )}
     </section>
   );
 }
 
-const PILL: Record<S["ChangeItem"]["state"], string> = {
-  queued: "k-wait",
-  running: "k-wait",
-  review: "k-review",
-  needs_you: "k-held",
-  done: "k-done",
-  failed: "k-risk",
+const TONE: Record<S["ChangeItem"]["state"], PillTone> = {
+  queued: "need",
+  running: "need",
+  review: "neutral",
+  needs_you: "warn",
+  done: "neutral",
+  failed: "danger",
 };
 
 /** A run held back because its estimate is above the amount to confirm (stage tasks have their own go row). */
@@ -402,19 +408,20 @@ function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; revea
     send_back: canSendBack ? () => props.onWant("sendback") : undefined,
   });
   return (
-    <li className="line" ref={ref} aria-labelledby={`t-${item.id}`} data-changeset={cs?.id} {...choice.rowProps(item.id)}>
-      <div className="row">
-        <span className={`kind ${PILL[item.state]}`}>{t(stateWord(item, gated))}</span>
-        <button type="button" className="expander text" aria-expanded={choice.chosen === item.id} data-inert={choice.chosen === item.id ? "" : undefined} onClick={() => choice.choose(item.id)}>
-          <strong id={`t-${item.id}`}>{title}</strong>
-          <span className="sub">{sub}</span>
-        </button>
-        <div className="acts">
-          <RowMenu label={title} actions={historyMenu(primary, menu)} />
-        </div>
-      </div>
+    <ExpandableRow
+      ref={ref}
+      aria-labelledby={`t-${item.id}`}
+      data-changeset={cs?.id}
+      {...choice.rowProps(item.id)}
+      pill={<Pill tone={TONE[item.state]}>{t(stateWord(item, gated))}</Pill>}
+      title={title}
+      titleId={`t-${item.id}`}
+      meta={sub}
+      expand={{ expanded: choice.chosen === item.id, inert: choice.chosen === item.id, onToggle: () => choice.choose(item.id) }}
+      menu={<RowMenu label={title} actions={historyMenu(primary, menu)} />}
+    >
       <OnTheRow item={item} />
-    </li>
+    </ExpandableRow>
   );
 }
 
@@ -495,44 +502,23 @@ export function ChangeRow(props: {
   });
 
   const actions = (
-    <div className="acts">
+    <Actions>
       {primary && !props.history && (
         <Button variant="primary" onClick={primary.run}>
           {primary.label}
         </Button>
       )}
       <RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />
-    </div>
+    </Actions>
   );
-  const pill = <span className={`kind ${PILL[item.state]}`}>{t(props.history ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}</span>;
-  return (
-    <li className={props.pane ? "line in-pane" : "line"} data-row tabIndex={-1} ref={ref} aria-labelledby={props.pane ? undefined : `t-${item.id}`} data-changeset={cs?.id}>
-      {props.pane ? (
-        <div className="detail-top">
-          <div className="detail-state">
-            {pill}
-            <span className="sub">{sub}</span>
-          </div>
-          {actions}
-        </div>
-      ) : (
-        <div className="row">
-          {pill}
-          <button type="button" className="expander text" aria-expanded={open} aria-controls={`b-${item.id}`} onClick={() => setOpen(!open)}>
-            <strong id={`t-${item.id}`}>{title}</strong>
-            <span className="sub">{sub}</span>
-          </button>
-          {actions}
-        </div>
-      )}
-      {cs?.second_opinion && (
-        <div className={props.pane ? "detail-notes" : "text row-notes"}>
-          {cs?.second_opinion && <span className="sub second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span>}
-        </div>
-      )}
-      {!props.pane && <OnTheRow item={item} />}
-      {open && (
-        <div className="body" id={`b-${item.id}`}>
+  const pill = (
+    <Pill tone={TONE[item.state]}>
+      {t(props.history ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
+    </Pill>
+  );
+  const secondOpinion = cs?.second_opinion ? <span className="second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span> : null;
+  const opened = (
+    <>
           {item.note && (
             <div className="your-note">
               <span className="what">{t("changes.your_note")}</span>
@@ -547,7 +533,7 @@ export function ChangeRow(props: {
           {cs && cs.ops.length === 0 && <p className="hint">{t("changes.nothing_done")}</p>}
           {cs && !props.history && cs.ops.filter((o) => o.status === "held").length > 1 && <ReleaseAll cs={cs} />}
           {cs && cs.ops.length > 0 && (
-            <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>
+            <ItemList pane={props.pane} aria-label={tn("changes.did", cs.ops.length)}>
               {(cs.groups ?? []).map((group) => (
                 <GroupRow key={`g-${group.id}`} group={group} cs={cs} history={props.history} />
               ))}
@@ -560,13 +546,51 @@ export function ChangeRow(props: {
                     <OpRow key={op.index} op={op} cs={cs} source={item.source} history={props.history} />
                   ),
                 )}
-            </ul>
+            </ItemList>
           )}
           {sendingBack && cs && <SendBackForm cs={cs.id} onDone={() => setSendingBack(false)} />}
           {choosing && <AccountChooser request={item.id} onDone={() => setChoosing(false)} />}
-        </div>
-      )}
-    </li>
+    </>
+  );
+  if (props.pane) {
+    return (
+      <DetailItem data-row="" tabIndex={-1} ref={ref} data-changeset={cs?.id}>
+        <DetailTop
+          state={
+            <>
+              {pill}
+              <span>{sub}</span>
+            </>
+          }
+          actions={actions}
+        />
+        {secondOpinion && <p className="hint">{secondOpinion}</p>}
+        {open && <RowBody pane id={`b-${item.id}`}>{opened}</RowBody>}
+      </DetailItem>
+    );
+  }
+  return (
+    <ExpandableRow
+      ref={ref}
+      aria-labelledby={`t-${item.id}`}
+      data-changeset={cs?.id}
+      pill={pill}
+      title={title}
+      titleId={`t-${item.id}`}
+      metaLines={[sub, secondOpinion]}
+      expand={{ expanded: open, controls: `b-${item.id}`, onToggle: () => setOpen(!open) }}
+      primary={
+        primary && !props.history ? (
+          <Button variant="primary" onClick={primary.run}>
+            {primary.label}
+          </Button>
+        ) : undefined
+      }
+      menu={<RowMenu label={title} actions={props.history ? historyMenu(primary, menu) : menu} />}
+    >
+      <OnTheRow item={item} />
+      {open && <RowBody id={`b-${item.id}`}>{opened}</RowBody>}
+    </ExpandableRow>
   );
 }
 
@@ -723,7 +747,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
   const { justMe } = useSides();
   const meta = metaLine(op, t, labelOf, !justMe);
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         {heldWords && told && (
           <div className="reason">
@@ -742,7 +766,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         {meta && <div className="meta">{meta}</div>}
         {op.reason && op.status !== "applied" && <div className="reason">{op.reason}</div>}
       </div>
-      <div className="acts">
+      <Actions>
         {history ? null : heldWords ? (
           <>
             {heldWords.other && (
@@ -763,7 +787,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
           )
         )}
         <RowMenu label={plainTitle(op.title, op.meta.due)} actions={menu} />
-      </div>
+      </Actions>
       {op.evidence && (
         <div className="because">
           {t("op.because")} <q>{op.evidence.quote}</q>{" "}
@@ -787,7 +811,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
           <AskChooser ask={ask} fold={{ changeset: cs.id, index: op.index }} />
         </div>
       )}
-    </li>
+    </Item>
   );
 }
 
@@ -826,25 +850,25 @@ function GroupRow(props: { group: S["AnswerGroupView"]; cs: S["ChangesetView"]; 
       (done) => ({ message: leftMessage(done, "toast.group_dropped", t, tn) }),
     );
   const menu: MenuAction[] = [];
-  if (group.applied || group.held) menu.push({ id: "drop", label: t("changes.group.drop"), run: () => void drop() });
+  if (group.applied || group.held) menu.push({ id: "drop", danger: true, label: t("changes.group.drop"), run: () => void drop() });
   useRowKeys(ref, { primary: group.held && !props.history ? () => void keep() : undefined });
   const firstHeld = props.history && group.held ? cs.ops.find((o) => o.answer_group === group.label && o.status === "held") : undefined;
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         <div className="title">{group.label}</div>
         <div className="meta">{counts.join(" · ")}</div>
       </div>
-      <div className="acts">
+      <Actions>
         {group.held > 0 && !props.history && (
           <Button variant="primary" onClick={() => void keep()}>
             {t("changes.group.keep")}
           </Button>
         )}
         <RowMenu label={group.label} actions={menu} />
-      </div>
+      </Actions>
       {firstHeld && <HeldOnToday changeset={cs.id} op={firstHeld.index} />}
-    </li>
+    </Item>
   );
 }
 
@@ -854,7 +878,7 @@ function ReleaseAll(props: { cs: S["ChangesetView"] }) {
   const act = useAct();
   const { cs } = props;
   return (
-    <div className="row-end">
+    <Actions align="end">
       <Button
         onClick={() =>
           void act(
@@ -868,7 +892,7 @@ function ReleaseAll(props: { cs: S["ChangesetView"] }) {
       >
         {t("changes.release_all")}
       </Button>
-    </div>
+    </Actions>
   );
 }
 
@@ -951,14 +975,14 @@ export function SendBackForm(props: { cs: string; onDone: () => void }) {
         <input type="checkbox" checked={undoFirst} onChange={(e) => setUndoFirst(e.target.checked)} />
         {t("changes.send_back_undo")}
       </label>
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onDone}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!note.trim()} reason={t("changes.send_back_needs_note")}>
           {t("changes.send_back_go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -1003,11 +1027,11 @@ function AccountChooser(props: { request: string; onDone: () => void }) {
           ))}
         </ul>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onDone}>
           {t("action.cancel")}
         </Button>
-      </div>
+      </Actions>
     </div>
   );
 }

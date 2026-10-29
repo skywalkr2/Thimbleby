@@ -1,0 +1,18 @@
+/* The record's facts: a 110px muted label, then the value, in 36px rows. */
+.list { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); font-size: var(--text-sm); line-height: var(--lh-sm); min-width: 0; }
+.item { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: var(--space-1) var(--space-4); align-items: baseline; min-height: 36px; padding: var(--space-2) 0; min-width: 0; }
+.item dt { margin: 0; color: var(--text-muted); font-weight: var(--weight-regular); overflow-wrap: anywhere; }
+.item dd { margin: 0; color: var(--text); overflow-wrap: anywhere; display: grid; gap: var(--space-1); min-width: 0; }
+.item dd:empty { display: none; }
+/* In a narrow place (the side panel, a phone) the label sits above its value. */
+@media (max-width: 639.98px) { .item { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+:global([data-narrow]) .item { grid-template-columns: minmax(0, 1fr); gap: 0; }
+
+/* Compact: a card's facts as "label: value", wrapping. */
+.inline { gap: var(--space-1); color: var(--text-muted); }
+.inline .item { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); min-height: 0; padding: 0; }
+.inline .item dt { font-weight: var(--weight-semibold); }
+.inline .item dt::after { content: ":"; }
+.inline .item dd { display: block; }
+/* A value with no label (a sentence the list carries) runs the full width. */
+.item dd:only-child { grid-column: 1 / -1; }

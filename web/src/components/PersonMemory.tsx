@@ -32,8 +32,8 @@ export function PersonMemory(props: { person: string }) {
             {kept.map(([channel, address]) => (
               <li key={channel}>
                 <span>{address}</span>
-                <span className="sub"> · {channel}</span>
-                {memory.reach.replies_on === channel && <span className="sub"> · {t("memory.reach.replies")}</span>}
+                <span className="hint"> · {channel}</span>
+                {memory.reach.replies_on === channel && <span className="hint"> · {t("memory.reach.replies")}</span>}
               </li>
             ))}
           </ul>
@@ -46,8 +46,8 @@ export function PersonMemory(props: { person: string }) {
             {memory.dates.map((d) => (
               <li key={d.fact}>
                 <span>{d.text}</span>
-                {d.on && <span className="sub"> · {t(d.yearly ? "memory.dates.next_yearly" : "memory.dates.on", { date: day(d.on) })}</span>}
-                {d.quote && d.quote !== d.text && <span className="sub"> · {t("meeting.items.quote", { quote: d.quote })}</span>}
+                {d.on && <span className="hint"> · {t(d.yearly ? "memory.dates.next_yearly" : "memory.dates.on", { date: day(d.on) })}</span>}
+                {d.quote && d.quote !== d.text && <span className="hint"> · {t("meeting.items.quote", { quote: d.quote })}</span>}
               </li>
             ))}
           </ul>
@@ -60,8 +60,8 @@ export function PersonMemory(props: { person: string }) {
             {memory.matters.map((k) => (
               <li key={k.fact}>
                 <span>{k.text}</span>
-                {k.as_of && <span className="sub"> · {t("memory.matters.as_of", { date: day(k.as_of) })}</span>}
-                {k.quote && k.quote !== k.text && <span className="sub"> · {t("meeting.items.quote", { quote: k.quote })}</span>}
+                {k.as_of && <span className="hint"> · {t("memory.matters.as_of", { date: day(k.as_of) })}</span>}
+                {k.quote && k.quote !== k.text && <span className="hint"> · {t("meeting.items.quote", { quote: k.quote })}</span>}
               </li>
             ))}
           </ul>

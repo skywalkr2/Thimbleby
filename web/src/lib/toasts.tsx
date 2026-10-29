@@ -1,7 +1,9 @@
-// Undo toasts: reversible actions happen at once and offer Undo here instead of asking first. The last undo is also
-// reachable from the keyboard, and F6 moves the cursor to the toasts, where Escape puts one away. A toast stays until
+// Undo toasts: reversible actions happen at once and offer Undo here instead of asking first. One toast shows at a time:
+// the newest replaces the one before it (the older one's Undo stays reachable from the keyboard, which undoes the last
+// action), with an icon, at the bottom centre of the window whatever the navigation does. The last undo is also
+// reachable from the keyboard, and F6 moves the cursor to the toast, where Escape puts it away. A toast stays until
 // dismissed when the configured time is 0, and waits while the pointer or the cursor is on it. The same message pushed
-// again is one toast with a count, so a run of identical actions never grows the stack.
+// again is one toast with a count.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Icon } from "../ui/Icon";
 import { useWords } from "./wording";
@@ -17,6 +19,8 @@ export interface ToastInput {
   many?: (n: number) => string;
   /** One thing's toasts share a key: a newer one replaces the one showing, and that one's Undo goes with it. */
   key?: string;
+  /** What the message is: done (the default, a check) or a warning (a sign that something did not work). */
+  tone?: "done" | "warn";
 }
 
 interface Toast extends ToastInput {
@@ -47,7 +51,7 @@ export function useToastCount(): number {
   return useContext(CountContext);
 }
 
-const MAX_SHOWN = 3;
+const MAX_SHOWN = 1;
 
 export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const { t } = useWords();
@@ -55,6 +59,8 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const next = useRef(1);
   const undos = useRef<Array<{ token: number; run: () => Promise<unknown> | void }>>([]);
   const nextToken = useRef(1);
+  // How many toasts have been pushed: an Undo that said what happened itself is not followed by a general word that replaces it.
+  const pushed = useRef(0);
   const stack = useRef<HTMLDivElement>(null);
 
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((x) => x.id !== id)), []);
@@ -76,6 +82,7 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   }, [toasts.length]);
 
   const push = useCallback((toast: ToastInput) => {
+    pushed.current += 1;
     const token = toast.undo ? nextToken.current++ : 0;
     if (toast.undo) undos.current.push({ token, run: toast.undo });
     setToasts((shown) => {
@@ -107,11 +114,13 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const runUndo = useCallback(
     async (token: number, run: () => Promise<unknown> | void) => {
       spend(token);
+      const before = pushed.current;
+      const said = () => pushed.current !== before;
       try {
         await run();
-        push({ message: t("toast.undone") });
+        if (!said()) push({ message: t("toast.undone") });
       } catch {
-        push({ message: t("toast.undo_failed") });
+        if (!said()) push({ message: t("toast.undo_failed"), tone: "warn" });
       }
     },
     [spend, push, t],
@@ -237,6 +246,9 @@ function ToastView(props: { toast: Toast; seconds: number; onDismiss: () => void
         }
       }}
     >
+      <span className={styles.icon} data-tone={props.toast.tone ?? "done"} aria-hidden="true">
+        <Icon name={props.toast.tone === "warn" ? "alert" : "check"} size={16} />
+      </span>
       <span className={styles.message}>{message}</span>
       {actions.map((action) => (
         <button

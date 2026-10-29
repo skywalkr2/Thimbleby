@@ -10,6 +10,8 @@ import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { SecretField } from "./SecretField";
 import { Button } from "../ui/Button";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
 /** The row's way to give the read token for the place an add-on's files are kept: typed here on a local app, where the
  * app keeps it on this computer, or as where it is kept. It goes only to that host. Saved, Install can be pressed again. */
 export function ReadToken(props: {
@@ -73,7 +75,7 @@ export function ReadToken(props: {
           {t("addons.token.intro", { host })}
         </p>
       )}
-      <div className="field">
+      <FormBlock>
         <span className="setting-label" id={`${base}-token-label`}>
           {t(props.plain ? "addons.token.plain_label" : "addons.token.label")}
         </span>
@@ -92,13 +94,13 @@ export function ReadToken(props: {
           autoFocus
           onMode={setHow}
         />
-      </div>
+      </FormBlock>
       {problem && (
         <p className="problem-note" role="alert">
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         {!props.plain && (
           <Button variant="quiet" disabled={busy} onClick={() => setOpen(false)}>
             {t("action.cancel")}
@@ -107,7 +109,7 @@ export function ReadToken(props: {
         <Button variant="primary" type="submit" disabled={!ready || busy}>
           {t(busy ? "addons.token.saving" : "addons.token.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

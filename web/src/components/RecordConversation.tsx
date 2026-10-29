@@ -12,6 +12,12 @@ import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { SafeText } from "./SafeText";
 import { Button } from "../ui/Button";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { Pill } from "../ui/Pill";
+import { RowBody } from "../ui/RowBody";
+import { AskAboutThis } from "../ui/AskAboutThis";
 type Turn = S["AskView"];
 type Op = S["OpView"];
 
@@ -70,46 +76,23 @@ export function RecordConversation(props: { kind: string; id: string }) {
       </h2>
       {turns.length === 0 && !talk.isPending ? <p className="hint">{t("conversation.empty")}</p> : null}
       {turns.length > 0 && (
-        <ul className="queue">
+        <RowList>
           {turns.map((turn) => (
             <TurnRow key={turn.id} turn={turn} />
           ))}
-        </ul>
+        </RowList>
       )}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send();
-        }}
-      >
-        <div className="field">
-          <label htmlFor={`${base}-message`}>{t("conversation.label")}</label>
-          <textarea
-            id={`${base}-message`}
-            ref={field}
-            className="short"
-            value={message}
-            aria-describedby={`${base}-hint`}
-            placeholder={t("conversation.placeholder")}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              // Enter sends; Shift+Enter starts a new line.
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                void send();
-              }
-            }}
-          />
-          <span id={`${base}-hint`} className="hint">
-            {t("conversation.hint")}
-          </span>
-        </div>
-        <div className="row-end">
-          <Button variant="primary" type="submit" disabled={busy || !message.trim()}>
-            {t(busy ? "conversation.sending" : "conversation.send")}
-          </Button>
-        </div>
-      </form>
+      <AskAboutThis
+        label={t("conversation.label")}
+        placeholder={t("conversation.placeholder")}
+        hint={t("conversation.hint")}
+        value={message}
+        onChange={setMessage}
+        onSend={() => void send()}
+        busy={busy}
+        sendLabel={t("conversation.send")}
+        inputRef={field}
+      />
     </section>
   );
 }
@@ -149,26 +132,28 @@ function TurnRow(props: { turn: Turn }) {
   };
 
   return (
-    <li className="line" aria-labelledby={titleId}>
-      <div className="row single">
-        <div className="text">
-          <strong id={titleId}>{turn.question}</strong>
-          <span className="sub">
-            <span className="kind k-review">{t(`ask.state.${state}`)}</span>
-            {!answered && turn.waiting ? ` ${turn.waiting}` : ""}
-            {when ? ` · ${when}` : ""}
-          </span>
-        </div>
-      </div>
-      <div className="body">
+    <Row
+      aria-labelledby={titleId}
+      loop={false}
+      title={turn.question}
+      titleId={titleId}
+      meta={
+        <>
+          <Pill>{t(`ask.state.${state}`)}</Pill>
+          {!answered && turn.waiting ? ` ${turn.waiting}` : ""}
+          {when ? ` · ${when}` : ""}
+        </>
+      }
+    >
+      <RowBody>
         {turn.waiting_for_go && (
           <div className="ask-item">
-            <span className="sub">{turn.estimate_usd != null ? t("conversation.waiting_go_cost", { cost: total(turn.estimate_usd) }) : t("conversation.waiting_go")}</span>
-            <div className="acts">
+            <span className="hint">{turn.estimate_usd != null ? t("conversation.waiting_go_cost", { cost: total(turn.estimate_usd) }) : t("conversation.waiting_go")}</span>
+            <Actions>
               <Button variant="primary" onClick={() => void act(() => api.stageGo(turn.id, turn.version), () => ({ message: t("toast.go") }))}>
                 {t("conversation.go")}
               </Button>
-            </div>
+            </Actions>
           </div>
         )}
         {turn.answer && (
@@ -194,7 +179,7 @@ function TurnRow(props: { turn: Turn }) {
             <ul className="plain-list">
               {ops.map((op) => (
                 <li key={op.index}>
-                  <span>{op.title}</span> <span className="sub">{t(`conversation.op.${op.status}`)}</span>
+                  <span>{op.title}</span> <span className="hint">{t(`conversation.op.${op.status}`)}</span>
                   {op.status === "held" && (
                     <Button aria-label={t("conversation.keep_named", { what: op.title })} onClick={() => keep(op)}>
                       {t("conversation.keep")}
@@ -209,15 +194,15 @@ function TurnRow(props: { turn: Turn }) {
               ))}
             </ul>
             {!turn.reviewed && ops.some((o) => o.status === "applied") && (
-              <div className="acts">
+              <Actions>
                 <Button onClick={keepAll}>
                   {t("conversation.keep_all")}
                 </Button>
-              </div>
+              </Actions>
             )}
           </div>
         )}
-      </div>
-    </li>
+      </RowBody>
+    </Row>
   );
 }

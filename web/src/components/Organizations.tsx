@@ -26,7 +26,7 @@ export function Organizations() {
   const menu = (o: S["OrganizationView"]): MenuAction[] => [
     { id: "rename", label: t("setup.rename"), run: () => setRenaming(o) },
     {
-      id: "remove",
+      id: "remove", danger: true,
       label: t("setup.remove"),
       disabled: o.people > 0 || !!o.side,
       reason: t(o.side ? "orgs.remove_own" : "setup.org_remove_blocked"),

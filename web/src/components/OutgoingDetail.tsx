@@ -26,6 +26,7 @@ import { ConfirmSend } from "./ConfirmSend";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import styles from "./Outgoing.module.css";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
 
 export function OutgoingDetail(props: {
   act: Act;
@@ -195,8 +196,7 @@ export function OutgoingDetail(props: {
       </section>
 
       {offered && !mustLook && called.length > 0 && (
-        <fieldset className={styles.callouts}>
-          <legend>{t("outgoing.callouts.title")}</legend>
+        <CheckboxGroup legend={t("outgoing.callouts.title")} className={styles.callouts}>
           <p className="hint">{t("outgoing.callouts.hint")}</p>
           {called.map((r) => {
             const id = `${base}-${r.key}`.replace(/[^A-Za-z0-9_-]/g, "-");
@@ -220,7 +220,7 @@ export function OutgoingDetail(props: {
               </div>
             );
           })}
-        </fieldset>
+        </CheckboxGroup>
       )}
 
       <div className={styles.actions}>

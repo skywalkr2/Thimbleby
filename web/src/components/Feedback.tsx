@@ -15,8 +15,10 @@ import { useToasts } from "../lib/toasts";
 import { problemLines } from "../lib/problem-lines";
 import { parseView, type CoreView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { ModalPanel } from "./ModalPanel";
+import { ModalPanel, DialogFooter } from "./ModalPanel";
 import { Button, ButtonLink } from "../ui/Button";
+import { FormField } from "../ui/FormField";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
 const VIEW_LABEL: Record<CoreView, string> = {
   today: "nav.home",
   schedule: "schedule.title",
@@ -107,8 +109,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
         {t("feedback.title")}
       </Heading>
       <form onSubmit={(e) => e.preventDefault()}>
-        <div className="field">
-          <label htmlFor={fieldId}>{t("feedback.message")}</label>
+        <FormField id={fieldId} label={t("feedback.message")}>
           <textarea
             id={fieldId}
             className="short"
@@ -129,7 +130,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
               {t("feedback.required")}
             </span>
           )}
-        </div>
+        </FormField>
         <label className="check-line">
           <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} />
           <span>{t("feedback.include")}</span>
@@ -156,17 +157,14 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
             </span>
           </>
         )}
-        <fieldset className="details">
-          <legend>{t("feedback.preview")}</legend>
-          <div className="field">
-            <label htmlFor={`${base}-subject`}>{t("feedback.preview_subject")}</label>
+        <CheckboxGroup legend={t("feedback.preview")}>
+          <FormField id={`${base}-subject`} label={t("feedback.preview_subject")}>
             <input id={`${base}-subject`} readOnly value={subject} />
-          </div>
-          <div className="field">
-            <label htmlFor={`${base}-body`}>{t("feedback.preview_body")}</label>
+          </FormField>
+          <FormField id={`${base}-body`} label={t("feedback.preview_body")}>
             <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(addProblems ? 14 : 10, body.split("\n").length + 1)} value={body} />
-          </div>
-        </fieldset>
+          </FormField>
+        </CheckboxGroup>
         {note && (
           <p id={noteId} className="hint" role="status">
             {note}
@@ -177,7 +175,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
             {t("feedback.copy_blocked")}
           </p>
         )}
-        <div className="row-end">
+        <DialogFooter>
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.close")}
           </Button>
@@ -194,7 +192,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
                 {t("feedback.mail")}
               </Button>
             ))}
-        </div>
+        </DialogFooter>
       </form>
     </ModalPanel>
   );

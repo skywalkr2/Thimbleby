@@ -59,6 +59,13 @@ import { Pill } from "../ui/Pill";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { TabStrip } from "../ui/TabStrip";
+import { Actions } from "../ui/Actions";
+import { RowList, DetailItem } from "../ui/RowList";
+import { SectionRow } from "../ui/SectionRow";
+import { DetailTop } from "../ui/DetailTop";
+import { RowBody } from "../ui/RowBody";
+import { ItemList, Item } from "../ui/ItemList";
+import { ExpandableRow } from "../ui/Row";
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
 const FILTERS: Filter[] = ["send", "later", "waiting"];
@@ -266,7 +273,7 @@ export function FollowUps(props: { compact?: boolean }) {
         // One group has nothing to choose between: its items are shown in place, not as a list beside a pane that holds them.
         <div className="in-place" data-in-place="">
           <h2 id="followups-group-title" tabIndex={-1}>{shown[0].is_pm ? t("followups.you") : shown[0].name}</h2>
-          <ol className="queue detail-queue">{detailOf(shown[0])}</ol>
+          <RowList as="ol" detail>{detailOf(shown[0])}</RowList>
         </div>
       ) : (
         <ListDetail
@@ -282,14 +289,14 @@ export function FollowUps(props: { compact?: boolean }) {
                 onLook={() => setLooked((now) => ({ ...now, [selectedAct.id]: true }))}
               />
             ) : selected ? (
-              <ol className="queue detail-queue">{detailOf(selected)}</ol>
+              <RowList as="ol" detail>{detailOf(selected)}</RowList>
             ) : null
           }
         >
           {actRows.length > 0 && <ActsList acts={actRows} choice={choice} onLook={(id) => setLooked((now) => ({ ...now, [id]: true }))} />}
           {shown.length > 0 && actRows.length > 0 && <h2 id="followups-messages-title">{t("followups.messages_title")}</h2>}
           {shown.length > 0 && (
-            <ol className="queue" aria-labelledby={actRows.length > 0 ? "followups-messages-title" : undefined}>
+            <RowList as="ol" aria-labelledby={actRows.length > 0 ? "followups-messages-title" : undefined}>
               {phone && reviewable.length > 0 && (
                 <li className="review-start">
                   <Button variant="primary" onClick={() => setReviewing(true)}>
@@ -309,7 +316,7 @@ export function FollowUps(props: { compact?: boolean }) {
                   onCopied={() => sharedMessage(s.person).set({ copied: true })}
                 />
               ))}
-            </ol>
+            </RowList>
           )}
         </ListDetail>
       )}
@@ -413,24 +420,26 @@ function FollowListRow(props: {
     edit: kind === "send" ? () => toDetail("edit") : undefined,
   });
   return (
-    <li className="line" ref={ref} aria-label={name} {...choice.rowProps(s.person)}>
-      <div className="row pair">
-        <button type="button" className="expander text" aria-expanded={choice.chosen === s.person} data-inert={choice.chosen === s.person ? "" : undefined} onClick={() => choice.choose(s.person)}>
-          <strong>{name}</strong>
-          <span className="sub">
-            {sub}
-            {kind === "waiting" && <WaitingPill days={oldest} chase={chase} />}
-          </span>
-        </button>
-        {kind === "send" && (
-          <div className="acts">
-            <Button variant="primary" onClick={() => toDetail("primary")}>
-              {props.copied ? t("followups.mark_sent") : t("followups.copy_message")}
-            </Button>
-          </div>
-        )}
-      </div>
-    </li>
+    <ExpandableRow
+      ref={ref}
+      aria-label={name}
+      {...choice.rowProps(s.person)}
+      title={name}
+      meta={
+        <>
+          {sub}
+          {kind === "waiting" && <WaitingPill days={oldest} chase={chase} />}
+        </>
+      }
+      expand={{ expanded: choice.chosen === s.person, inert: choice.chosen === s.person, onToggle: () => choice.choose(s.person) }}
+      primary={
+        kind === "send" ? (
+          <Button variant="primary" onClick={() => toDetail("primary")}>
+            {props.copied ? t("followups.mark_sent") : t("followups.copy_message")}
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -440,32 +449,22 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; p
   const actions = props.compact ? [] : s.actions;
   const Heading = props.compact ? "h4" : "h3";
   return (
-    <li className={props.pane ? "line in-pane" : "line"}>
-      {!props.pane && (
-        <div className="row single">
-          <div className="text">
-            <Heading className="name">{t("followups.you")}</Heading>
-            <span className="sub">{yourCounts(s, props.compact, tn)}</span>
-          </div>
-        </div>
+<SectionRow pane={props.pane} title={<Heading>{t("followups.you")}</Heading>} meta={yourCounts(s, props.compact, tn)}>
+      {s.questions.length > 0 && (
+        <ItemList pane={props.pane}>
+          {s.questions.map((q) => (
+            <YourQuestionRow key={q.id} question={q} />
+          ))}
+        </ItemList>
       )}
-      <div className="body">
-        {s.questions.length > 0 && (
-          <ul className="children">
-            {s.questions.map((q) => (
-              <YourQuestionRow key={q.id} question={q} />
-            ))}
-          </ul>
-        )}
-        {actions.length > 0 && (
-          // Follow-ups is about other people: the person's own to-dos are one line that opens them where they are kept.
-          <p className="hint" data-own-todos="">
-            {tn("followups.your_actions", actions.length)} ·{" "}
-            <a href={viewHref("work/open")}>{t("followups.open_your_todos")}</a>
-          </p>
-        )}
-      </div>
-    </li>
+      {actions.length > 0 && (
+        // Follow-ups is about other people: the person's own to-dos are one line that opens them where they are kept.
+        <p className="hint" data-own-todos="">
+          {tn("followups.your_actions", actions.length)} ·{" "}
+          <a href={viewHref("work/open")}>{t("followups.open_your_todos")}</a>
+        </p>
+      )}
+    </SectionRow>
   );
 }
 
@@ -481,7 +480,7 @@ function YourQuestionRow(props: { question: S["FollowupQuestion"] }) {
   const change = useChangeThis({ kind: q.kind === "decision" ? "decision" : "question", id: q.id }, back);
   const titleId = `your-q-${q.id}`;
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
         <div className="title" id={titleId}>
@@ -496,14 +495,14 @@ function YourQuestionRow(props: { question: S["FollowupQuestion"] }) {
         {q.from_outside && q.links.length > 0 && <OutsideStep word="outside.step.open" />}
         <OriginLink origin={q.origin} />
       </div>
-      <div className="acts">
+      <Actions>
         <AnswerOnToday question={q.id} describedBy={titleId} />
         <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
-      </div>
+      </Actions>
       {menu.form}
       {change.form}
       <LearnedLines records={[q.id]} />
-    </li>
+    </Item>
   );
 }
 
@@ -524,7 +523,7 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
     if (props.reveal) showRow(ref.current, true);
   }, [props.reveal]);
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
         <div className="title">{q.title}</div>
@@ -537,9 +536,9 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
         {q.from_outside && q.links.length > 0 && <OutsideStep word="outside.step.open" />}
         <OriginLink origin={q.origin} />
       </div>
-      <div className="acts">
+      <Actions>
         <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
-      </div>
+      </Actions>
       {menu.form}
       {change.form}
       <LearnedLines records={[q.id]} />
@@ -565,15 +564,15 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
               {t("followups.answer_label")}
             </label>
             <textarea id={`ans-${q.id}`} className="short" value={answer} onChange={(e) => setAnswer(e.target.value)} />
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="primary" type="submit" data-key="primary" disabled={!answer.trim()}>
                 {t("followups.answer")}
               </Button>
-            </div>
+            </Actions>
           </form>
         )}
       </div>
-    </li>
+    </Item>
   );
 }
 
@@ -751,34 +750,15 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   });
 
   const buttons = (
-    <div className="acts">
+    <Actions>
       <Button variant="primary" onClick={primary}>
         {copied ? t("followups.mark_sent") : t("followups.copy_message")}
       </Button>
       <RowMenu label={s.name} actions={menu} />
-    </div>
+    </Actions>
   );
-  return (
-    <li className={props.pane ? "line in-pane" : "line"} data-row tabIndex={-1} ref={ref} aria-labelledby={props.pane ? undefined : `p-${s.person}`}>
-      {props.pane ? (
-        <div className="detail-top">
-          <div className="detail-state">
-            <span className="sub">{tn("followups.to_send", s.to_send)}</span>
-          </div>
-          {buttons}
-        </div>
-      ) : (
-        <div className="row pair">
-          <button type="button" className="expander text" aria-expanded={open} onClick={() => setOpen(!open)}>
-            <strong id={`p-${s.person}`}>{s.name}</strong>
-            <span className="sub">{tn("followups.to_send", s.to_send)}</span>
-          </button>
-          {buttons}
-        </div>
-      )}
-      {hold.form}
-      {open && (
-        <div className="body">
+  const opened = (
+    <>
           <SegmentedControl
             label={t("followups.view")}
             value={view}
@@ -845,7 +825,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                   {t("followups.message_label", { name: s.name })}
                 </label>
                 <textarea id={`msg-${s.person}`} className="msg" ref={area} value={message} onChange={(e) => setDraft(e.target.value)} />
-                <div className="row-end">
+                <Actions align="end">
                   <span className="hint">{t("followups.clean_copy")}</span>
                   {draft !== null && (
                     <Button variant="quiet" onClick={() => setDraft(null)}>
@@ -855,13 +835,39 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                   <Button variant="primary" onClick={primary} disabled={!!s.withheld}>
                     {copied ? t("followups.mark_sent") : t("followups.copy_message")}
                   </Button>
-                </div>
+                </Actions>
               </div>
             </>
           )}
-        </div>
-      )}
-    </li>
+    </>
+  );
+  if (props.pane) {
+    return (
+      <DetailItem data-row="" tabIndex={-1} ref={ref}>
+        <DetailTop state={<span>{tn("followups.to_send", s.to_send)}</span>} actions={buttons} />
+        {hold.form}
+        {open && <RowBody pane>{opened}</RowBody>}
+      </DetailItem>
+    );
+  }
+  return (
+    <ExpandableRow
+      ref={ref}
+      aria-labelledby={`p-${s.person}`}
+      title={s.name}
+      titleId={`p-${s.person}`}
+      meta={tn("followups.to_send", s.to_send)}
+      expand={{ expanded: open, onToggle: () => setOpen(!open) }}
+      primary={
+        <Button variant="primary" onClick={primary}>
+          {copied ? t("followups.mark_sent") : t("followups.copy_message")}
+        </Button>
+      }
+      menu={<RowMenu label={s.name} actions={menu} />}
+    >
+      {hold.form}
+      {open && <RowBody>{opened}</RowBody>}
+    </ExpandableRow>
   );
 }
 
@@ -871,23 +877,13 @@ function LaterSection(props: { section: S["FollowupSection"]; pane?: boolean }) 
   const s = props.section;
   const later = s.later ?? [];
   return (
-    <li className={props.pane ? "line in-pane" : "line"} aria-labelledby={props.pane ? undefined : `l-${s.person}`}>
-      {!props.pane && (
-        <div className="row pair">
-          <div className="text">
-            <strong id={`l-${s.person}`}>{s.name}</strong>
-            <span className="sub">{tn("followups.later_count", later.length)}</span>
-          </div>
-        </div>
-      )}
-      <div className="body">
-        <ul className="plain-list" aria-label={s.name}>
-          {later.map((q) => (
-            <LaterQuestion key={q.id} question={q} />
-          ))}
-        </ul>
-      </div>
-    </li>
+    <SectionRow pane={props.pane} title={s.name} titleId={`l-${s.person}`} meta={tn("followups.later_count", later.length)}>
+      <ul className="plain-list" aria-label={s.name}>
+        {later.map((q) => (
+          <LaterQuestion key={q.id} question={q} />
+        ))}
+      </ul>
+    </SectionRow>
   );
 }
 
@@ -915,29 +911,23 @@ export function WaitingSection(props: { section: S["FollowupSection"]; compact: 
   const questions = waitingQuestions(s);
   const actions = waitingActions(s);
   return (
-    <li className={props.pane ? "line in-pane" : "line"} tabIndex={-1} aria-labelledby={props.pane ? undefined : `w-${s.person}`}>
-      {!props.pane && (
-        <div className="row single">
-          <div className="text">
-            <Heading className="name" id={`w-${s.person}`}>
-              {s.name}
-            </Heading>
-            <span className="sub">{tn("followups.waiting_count", questions.length + actions.length)}</span>
-          </div>
-        </div>
-      )}
-      <div className="body">
-        {s.nudge && <NudgeCard section={s} nudge={s.nudge} start={!!props.nudgeOpen} />}
-        <ul className="children">
-          {questions.map((q) => (
-            <WaitingQuestion key={q.id} question={q} person={s.name} />
-          ))}
-          {actions.map((a) => (
-            <WaitingAction key={a.id} action={a} person={s.person} name={s.name} />
-          ))}
-        </ul>
-      </div>
-    </li>
+    <SectionRow
+      pane={props.pane}
+      tabIndex={-1}
+      title={<Heading id={`w-${s.person}`}>{s.name}</Heading>}
+      labelledBy={`w-${s.person}`}
+      meta={tn("followups.waiting_count", questions.length + actions.length)}
+    >
+      {s.nudge && <NudgeCard section={s} nudge={s.nudge} start={!!props.nudgeOpen} />}
+      <ItemList pane={props.pane}>
+        {questions.map((q) => (
+          <WaitingQuestion key={q.id} question={q} person={s.name} />
+        ))}
+        {actions.map((a) => (
+          <WaitingAction key={a.id} action={a} person={s.person} name={s.name} />
+        ))}
+      </ItemList>
+    </SectionRow>
   );
 }
 
@@ -1061,7 +1051,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
           value={text}
           onChange={(e) => setDraft(e.target.value)}
         />
-        <div className="row-end">
+        <Actions align="end">
           <span className="hint">{round}</span>
           {draft !== null && (
             <Button variant="quiet" onClick={() => setDraft(null)}>
@@ -1077,7 +1067,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
             {copied ? t("followups.mark_sent") : t("followups.nudge.copy")}
           </Button>
           <RowMenu label={s.name} actions={[{ id: "copy-plain", label: t("followups.copy_plain"), run: () => void copyPlainText() }]} />
-        </div>
+        </Actions>
       </div>
     </div>
   );
@@ -1124,7 +1114,7 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
   };
   const meta = sentLine(q.sent, q.waiting_days, "", tn, t);
   return (
-    <li className="child" ref={row} tabIndex={-1}>
+    <Item ref={row} tabIndex={-1}>
       <div>
         <div className="title">
           {q.title}
@@ -1133,14 +1123,14 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
         {meta && <div className="meta">{meta}</div>}
         <OriginLink origin={q.origin} />
       </div>
-      <div className="acts">
+      <Actions>
         {!replying && (
           <Button onClick={() => setReplying(true)}>
             {t("followups.record_reply")}
           </Button>
         )}
         <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
-      </div>
+      </Actions>
       {menu.form}
       {change.form}
       <LearnedLines records={[q.id]} />
@@ -1165,17 +1155,17 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
               if (e.key === "Escape") setReplying(false);
             }}
           />
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="quiet" onClick={() => setReplying(false)}>
               {t("action.cancel")}
             </Button>
             <Button variant="primary" type="submit" disabled={!text.trim()}>
               {t("followups.reply_go")}
             </Button>
-          </div>
+          </Actions>
         </form>
       )}
-    </li>
+    </Item>
   );
 }
 
@@ -1220,7 +1210,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
     { label: t("followups.followed_up"), run: followedUp },
   ];
   return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
+    <Item row ref={ref}>
       <div>
         <div className="title">
           <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
@@ -1233,12 +1223,12 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
         )}
         <OriginLink origin={a.origin} />
       </div>
-      <div className="acts">
+      <Actions>
         <Button variant="primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </Button>
         <RowMenu label={a.text} actions={[chase ? finish : chased, note, ...(a.version != null && a.owners ? [reassign.entry] : []), hold.entry, change.entry, drop.entry]} />
-      </div>
+      </Actions>
       {noting && (
         <NoteBox
           sends={chase ? [sends[1], sends[0]] : sends}
@@ -1253,6 +1243,6 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
       {change.form}
       {drop.form}
       <LearnedLines records={[a.id]} />
-    </li>
+    </Item>
   );
 }

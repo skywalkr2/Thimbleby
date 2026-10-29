@@ -10,11 +10,13 @@ import { usePlaceText } from "../lib/place";
 import { useSaid } from "../lib/repeat";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { ActivityList } from "../ui/ActivityList";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { OriginLink, hasOrigin } from "./Origin";
 import { plainTitle } from "../lib/title-dates";
 import { useFactLine } from "../lib/fact-line";
+import { RowList } from "../ui/RowList";
 
 type Page = S["RecordPageView"];
 
@@ -77,7 +79,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
     <div className="record-activity">
       {showOpen && open > 0 && (!props.self || page.open_actions.length > 0) && (
         <Section id="record-open" title={props.self ? t("record.open_you") : t("record.open_with", { name: page.name })} count={props.self ? page.open_actions.length : open}>
-          <ul className="queue">
+          <RowList>
             {page.open_actions.map((a) => (
               <Row
                 key={a.id}
@@ -104,12 +106,12 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
                 ])}
               />
             ))}
-          </ul>
+          </RowList>
         </Section>
       )}
       {showOpen && props.self && page.open_questions.length > 0 && (
         <Section id="record-questions" title={t("record.questions_you")} count={page.open_questions.length}>
-          <ul className="queue">
+          <RowList>
             {page.open_questions.map((q) => (
               <Row
                 key={q.id}
@@ -120,7 +122,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
                 ])}
               />
             ))}
-          </ul>
+          </RowList>
         </Section>
       )}
       {showRest && (page.repeat || earlier.length > 0) && (
@@ -129,7 +131,7 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
           {earlier.length > 0 && (
             <>
               <h4 className="hint">{t("repeat.earlier")}</h4>
-              <ul className="queue">
+              <RowList>
                 {earlier.map((e) => (
                   <Row
                     key={e.id}
@@ -137,14 +139,14 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
                     title={<a href={viewHref(recordView("action", e.id))}>{e.due ? day(e.due) : page.name}</a>}
                   />
                 ))}
-              </ul>
+              </RowList>
             </>
           )}
         </Section>
       )}
       {showRest && completed.length > 0 && (
         <Section id="record-completed" title={t("record.completed")} count={completed.length}>
-          <ul className="queue">
+          <RowList>
             {completed.map((c) => (
               <Row
                 key={c.id}
@@ -158,12 +160,12 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
                 ])}
               />
             ))}
-          </ul>
+          </RowList>
         </Section>
       )}
       {showRest && (page.facts ?? []).length > 0 && (
         <Section id="record-facts" title={t("record.facts")} count={(page.facts ?? []).length}>
-          <ul className="queue">
+          <RowList>
             {(page.facts ?? []).map((f) => (
               <Row
                 key={f.id}
@@ -171,29 +173,32 @@ export function RecordActivity(props: { page: Page; part?: "open" | "rest"; self
                 meta={f.as_of ? t("record.facts_as_of", { date: day(f.as_of) }) : undefined}
               />
             ))}
-          </ul>
+          </RowList>
         </Section>
       )}
       {showRest && page.activity.length > 0 && (
         <Section id="record-activity" title={t("record.activity")}>
-          <ol className="timeline">
-            {page.activity.map((e, i) => (
-              <li key={`${e.at}-${e.id}-${e.op}-${i}`}>
-                <span className="when">{monthDay(e.at)}</span>{" "}
-                {e.made === "setup" ? (
-                  <>
-                    <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong> <span>{t("record.activity.setup")}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
-                    <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong>
-                  </>
-                )}
-                {movedAgain(e) && <span> · {movedAgain(e)}</span>}
-              </li>
-            ))}
-          </ol>
+          <ActivityList
+            entries={page.activity.map((e, i) => ({
+              key: `${e.at}-${e.id}-${e.op}-${i}`,
+              at: e.at,
+              body: (
+                <>
+                  {e.made === "setup" ? (
+                    <>
+                      <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong> <span>{t("record.activity.setup")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
+                      <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong>
+                    </>
+                  )}
+                  {movedAgain(e) && <span> · {movedAgain(e)}</span>}
+                </>
+              ),
+            }))}
+          />
         </Section>
       )}
       {showRest && open === 0 && completed.length === 0 && !page.repeat && earlier.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}

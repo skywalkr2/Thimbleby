@@ -22,6 +22,11 @@ import { Skeleton } from "../ui/Skeleton";
 import { Icon } from "../ui/Icon";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
 type Form = S["DataFormView"];
 type DataFile = S["DataFile"];
 
@@ -51,16 +56,15 @@ export function DataForms(props: { level?: 2 | 3 }) {
       </div>
       <p className="hint">{t("dataform.intro")}</p>
       {(projects.data ?? []).length > 0 && (
-        <div className="field">
-          <label htmlFor={`${base}-project`}>{t("dataform.project")}</label>
-          <select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)} aria-describedby={`${base}-project-hint`}>
+        <FormField id={`${base}-project`} label={t("dataform.project")}>
+          <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)} aria-describedby={`${base}-project-hint`}>
             <option value="">{t("dataform.no_project")}</option>
             <PlaceOptions projects={projects.data ?? []} />
-          </select>
+          </Select>
           <p className="hint" id={`${base}-project-hint`}>
             {t("dataform.project_hint")}
           </p>
-        </div>
+        </FormField>
       )}
       {forms.data.map((form) => (
         <FormFiles key={`${form.name}:${project}`} form={form} project={project} />
@@ -95,7 +99,7 @@ function FormFiles(props: { form: Form; project: string }) {
       ) : files.data.length === 0 ? (
         <EmptyState text={t("dataform.none")} />
       ) : (
-        <ul className="queue">
+        <RowList>
           {files.data.map((file) => (
             <FileRow
               key={file.file}
@@ -107,7 +111,7 @@ function FormFiles(props: { form: Form; project: string }) {
               onClose={() => setEditor(null)}
             />
           ))}
-        </ul>
+        </RowList>
       )}
       {editor?.isNew && (
         <FileEditor
@@ -134,7 +138,7 @@ function FormFiles(props: { form: Form; project: string }) {
           }}
         />
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button
           id={newButton}
           aria-expanded={naming}
@@ -143,7 +147,7 @@ function FormFiles(props: { form: Form; project: string }) {
         >
           {t("dataform.new")}
         </Button>
-      </div>
+      </Actions>
     </section>
   );
 }
@@ -172,38 +176,38 @@ function FileRow(props: { form: Form; file: DataFile; project: string; editing: 
 
   const actions: MenuAction[] = [];
   if (project && file.layers.includes("project")) {
-    actions.push({ id: "remove-project", label: t("dataform.remove_project"), run: () => remove("project") });
+    actions.push({ id: "remove-project", danger: true, label: t("dataform.remove_project"), run: () => remove("project") });
   }
   if (file.layers.includes("workspace")) {
-    actions.push({ id: "remove", label: t("dataform.remove"), run: () => remove("workspace") });
+    actions.push({ id: "remove", danger: true, label: t("dataform.remove"), run: () => remove("workspace") });
   }
 
   return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className="row pair">
-        <div className="text">
-          <strong id={titleId}>{file.file}</strong>
-          {file.layer && <span className="sub">{t(`dataform.layer.${file.layer}`)}</span>}
-          {file.problem && (
-            <p className="problem-note">
-              <Icon name="alert" size={16} />
-              {t("dataform.problem", { problem: file.problem })}
-            </p>
-          )}
-        </div>
-        <div className="acts">
-          <Button variant="primary"
-            id={openId}
-            data-key="primary"
-            aria-expanded={props.editing}
-            aria-label={t("dataform.open_named", { file: file.file })}
-            onClick={props.onOpen}
-          >
-            {t("dataform.open")}
-          </Button>
-          <RowMenu label={file.file} actions={actions} />
-        </div>
-      </div>
+    <Row
+      aria-labelledby={titleId}
+      title={file.file}
+      titleId={titleId}
+      meta={file.layer ? t(`dataform.layer.${file.layer}`) : undefined}
+      primary={
+        <Button
+          variant="primary"
+          id={openId}
+          data-key="primary"
+          aria-expanded={props.editing}
+          aria-label={t("dataform.open_named", { file: file.file })}
+          onClick={props.onOpen}
+        >
+          {t("dataform.open")}
+        </Button>
+      }
+      menu={<RowMenu label={file.file} actions={actions} />}
+    >
+      {file.problem && (
+        <p className="problem-note">
+          <Icon name="alert" size={16} />
+          {t("dataform.problem", { problem: file.problem })}
+        </p>
+      )}
       {props.editing && (
         <FileEditor
           form={form}
@@ -216,7 +220,7 @@ function FileRow(props: { form: Form; file: DataFile; project: string; editing: 
           }}
         />
       )}
-    </li>
+    </Row>
   );
 }
 
@@ -240,8 +244,7 @@ function NewFileName(props: { taken: string[]; onCancel: () => void; onStart: (f
         if (ready) props.onStart(file);
       }}
     >
-      <div className="field">
-        <label htmlFor={`${base}-name`}>{t("dataform.name")}</label>
+      <FormField id={`${base}-name`} label={t("dataform.name")}>
         <input
           id={`${base}-name`}
           ref={input}
@@ -261,15 +264,15 @@ function NewFileName(props: { taken: string[]; onCancel: () => void; onStart: (f
             {problem}
           </p>
         )}
-      </div>
-      <div className="row-end">
+      </FormField>
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!ready}>
           {t("dataform.start")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -373,14 +376,14 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!canSave} aria-label={t("dataform.save_named", { file })}>
           {t(busy ? "sources.saving" : "settings.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

@@ -167,7 +167,7 @@ function KnowledgeRow(props: {
     ? [
         { id: "edit", label: t("knowledge.change"), run: () => setEditing(true) },
         { id: "just", label: t("knowledge.just_this_time"), run: () => void done(acts.justThisTime(item)) },
-        { id: "discard", label: t("knowledge.drop"), run: () => void done(acts.discard(item)) },
+        { id: "discard", danger: true, label: t("knowledge.drop"), run: () => void done(acts.discard(item)) },
       ]
     : inUse
       ? [{ id: "narrow", label: t("knowledge.narrow"), run: () => setNarrowing(true) }]

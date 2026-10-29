@@ -14,6 +14,8 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { useFile } from "./Unfiled";
+import { Actions } from "../ui/Actions";
+import { ItemList } from "../ui/ItemList";
 
 type Question = S["FilingQuestion"];
 
@@ -45,12 +47,12 @@ function SideQuestion(props: { question: Question }) {
         ))}
       </ul>
       <p className="hint">{tn("filing.visible", n, { side: q.name })}</p>
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="primary" onClick={() => void move()}>
           {t("filing.move")}
         </Button>
         <Button onClick={() => void keep()}>{t("filing.keep")}</Button>
-      </div>
+      </Actions>
     </section>
   );
 }
@@ -74,13 +76,13 @@ export function SideChoose() {
       {items.length > 0 && (
         <>
           <p className="hint">{tn("sides.choose.intro", items.length)}</p>
-          <ul className="children" aria-label={t("sides.choose.label")}>
+          <ItemList aria-label={t("sides.choose.label")}>
             {choices.map((c) => (
               <li key={c.id}>
                 <Button onClick={() => void file(items, c.id)}>{c.name}</Button>
               </li>
             ))}
-          </ul>
+          </ItemList>
           <p className="hint">
             <a href={viewHref("records/projects")}>{t("sides.choose.one_by_one")}</a>
           </p>

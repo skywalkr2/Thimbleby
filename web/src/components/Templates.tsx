@@ -11,6 +11,7 @@ import { Icon } from "../ui/Icon";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
 export function TemplateList() {
   const { t } = useWords();
   const act = useAct();
@@ -29,7 +30,7 @@ export function TemplateList() {
     if (done?.needs_restart) restart.offer();
   };
   return (
-    <ul className="queue">
+    <RowList>
       {templates.data.map((tpl) => {
         return (
           <Row
@@ -50,7 +51,7 @@ export function TemplateList() {
           />
         );
       })}
-    </ul>
+    </RowList>
   );
 }
 

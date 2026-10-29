@@ -186,7 +186,10 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     const header = page.getByRole("banner");
     await expect(header).toContainText("Reginald");
-    await expect(page.getByRole("button", { name: "Missed something?" })).toBeVisible();
+    // Missed something? is an entry of the Help menu (it is no longer a button in the header).
+    await header.getByRole("button", { name: "Help" }).click();
+    await expect(page.getByRole("menuitem", { name: "Missed something?" })).toBeVisible();
+    await page.keyboard.press("Escape");
     // Nothing reaches past the right edge of a 1280 wide window.
     const past = await page.evaluate(() =>
       Array.from(document.querySelectorAll("header *, [role=banner] *")).filter((el) => el.getBoundingClientRect().right > window.innerWidth + 0.5).map((el) => el.tagName + ":" + (el.textContent ?? "").slice(0, 30)),

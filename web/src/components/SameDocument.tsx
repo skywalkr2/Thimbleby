@@ -9,6 +9,8 @@ import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { Actions } from "../ui/Actions";
 export interface VersionActs {
   /** The choices as menu entries; none when the record isn't a file in a watched folder. */
   entries: MenuAction[];
@@ -70,22 +72,22 @@ function SameForm(props: { others: S["VersionFile"][]; onCancel: () => void; onS
       <label className="hint" htmlFor={id}>
         {t("versions.same_label")}
       </label>
-      <select id={id} autoFocus value={key} onChange={(e) => setKey(e.target.value)}>
+      <Select id={id} autoFocus value={key} onChange={(e) => setKey(e.target.value)}>
         <option value="">{t("versions.same_choose")}</option>
         {props.others.map((o) => (
           <option key={o.key} value={o.key}>
             {o.key}
           </option>
         ))}
-      </select>
-      <div className="row-end">
+      </Select>
+      <Actions align="end">
         <Button variant="quiet" onClick={props.onCancel}>
           {t("versions.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!chosen || busy}>
           {t("versions.same_go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }
@@ -117,20 +119,20 @@ export function CurrentCopy(props: { question: string; copies: S["Option"][] }) 
       <label className="hint" htmlFor={id}>
         {t("versions.current_label")}
       </label>
-      <select id={id} value={file} onChange={(e) => setFile(e.target.value)}>
+      <Select id={id} value={file} onChange={(e) => setFile(e.target.value)}>
         <option value="">{t("versions.current_choose")}</option>
         {props.copies.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
         ))}
-      </select>
+      </Select>
       <span className="hint">{t("versions.current_note")}</span>
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="primary" type="submit" data-key="primary" disabled={!file || busy}>
           {t("versions.current_go")}
         </Button>
-      </div>
+      </Actions>
     </form>
   );
 }

@@ -28,6 +28,10 @@ import { Icon } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
 type Step = S["SetupStepView"];
 
 /** The id of a step's section, so Today can open the guide at one step. */
@@ -102,32 +106,32 @@ export function StepList(props: {
               ) : step.id === "backup" ? (
                 <WelcomeBackup local={setup.data.local} />
               ) : step.id === "people" ? (
-                <div className="row-end">
+                <Actions align="end">
                   <Button onClick={props.onOpenPeople}>
                     {t("welcome.people.open")}
                   </Button>
-                </div>
+                </Actions>
               ) : step.id === "addons" ? (
                 <AddonsStep onOpen={props.onOpenAddons} />
               ) : step.kind === "tiers" && step.plugin ? (
                 <PackTiers level={4} plugin={step.plugin} />
               ) : step.id === "first_note" ? (
-                <div className="row-end">
+                <Actions align="end">
                   <Button onClick={props.onHandIn}>
                     {t("handin.open")}
                   </Button>
-                </div>
+                </Actions>
               ) : (
                 <>
                   {hasSettings(step) && <SuggestedSettings step={step} />}
                   {step.action && (
-                    <div className="row-end">
+                    <Actions align="end">
                       <Button
                         onClick={() => start({ name: step.action!, label, on: null }, null)}
                       >
                         {label}
                       </Button>
-                    </div>
+                    </Actions>
                   )}
                 </>
               )}
@@ -149,9 +153,9 @@ function SignInStep(props: { name: string; label: string; done: boolean; onChoos
   if (props.done) {
     const row = signIns.data?.find((item) => item.name === props.name);
     return row ? (
-      <ul className="queue">
+      <RowList>
         <SignInRow item={row} onChooseSource={props.onChooseSource} />
-      </ul>
+      </RowList>
     ) : null;
   }
   return (
@@ -161,7 +165,7 @@ function SignInStep(props: { name: string; label: string; done: boolean; onChoos
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button
           disabled={busy}
           aria-label={t("sign_in.sign_in_named", { label: props.label })}
@@ -169,7 +173,7 @@ function SignInStep(props: { name: string; label: string; done: boolean; onChoos
         >
           {busy ? t("sign_in.working") : t("sign_in.sign_in")}
         </Button>
-      </div>
+      </Actions>
     </>
   );
 }
@@ -198,7 +202,7 @@ function AddonsStep(props: { onOpen: () => void }) {
         </p>
       )}
       {off.length > 0 && (
-        <div className="field">
+        <FormBlock>
           <span className="what" id="guide-addons-off">
             {t("welcome.addons.off_title")}
           </span>
@@ -207,9 +211,9 @@ function AddonsStep(props: { onOpen: () => void }) {
               <li key={p.name}>{addonLabel(p.name, t, has)}</li>
             ))}
           </ul>
-        </div>
+        </FormBlock>
       )}
-      <div className="row-end">
+      <Actions align="end">
         {off.length > 0 && (
           <Button disabled={busy} onClick={() => void leaveOff()}>
             {t("welcome.addons.leave_off")}
@@ -218,7 +222,7 @@ function AddonsStep(props: { onOpen: () => void }) {
         <Button onClick={props.onOpen}>
           {t("welcome.addons.open")}
         </Button>
-      </div>
+      </Actions>
     </>
   );
 }
@@ -255,7 +259,7 @@ function SuggestedSettings(props: { step: Step }) {
   };
 
   return (
-    <div className="field">
+    <FormBlock>
       <span className="what" id={`${stepSlug(step.id)}-settings`}>
         {t(Object.keys(step.settings ?? {}).length > 0 ? "welcome.settings.title" : "welcome.settings.adds_title")}
       </span>
@@ -272,12 +276,12 @@ function SuggestedSettings(props: { step: Step }) {
           {problem}
         </p>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button disabled={busy} onClick={() => void apply()}>
           {t("welcome.settings.apply")}
         </Button>
-      </div>
-    </div>
+      </Actions>
+    </FormBlock>
   );
 }
 
@@ -312,14 +316,14 @@ function StepSection(props: { step: Step; label: string; explanation: string; ch
       {props.explanation && <p className="hint">{props.explanation}</p>}
       {props.children}
       {!step.done && (
-        <div className="row-end">
+        <Actions align="end">
           <Button variant="quiet"
             aria-label={t(step.skipped ? "welcome.reopen_named" : "welcome.skip_named", { label, skip: skipWords })}
             onClick={toggle}
           >
             {step.skipped ? t("welcome.reopen") : skipWords}
           </Button>
-        </div>
+        </Actions>
       )}
     </li>
   );
@@ -430,8 +434,7 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
         if (pending && !empty) void save();
       }}
     >
-      <div className="field">
-        <label htmlFor="workspace-full-name">{t("welcome.workspace.full_name")}</label>
+      <FormField id="workspace-full-name" label={t("welcome.workspace.full_name")}>
         <input
           id="workspace-full-name"
           type="text"
@@ -443,9 +446,8 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
         <p className="hint" id="workspace-full-name-hint">
           {t("welcome.workspace.full_name_hint")}
         </p>
-      </div>
-      <div className="field">
-        <label htmlFor={zoneId}>{t("welcome.workspace.timezone")}</label>
+      </FormField>
+      <FormField id={zoneId} label={t("welcome.workspace.timezone")}>
         {item?.type === "choice" && item.options?.length ? (
           // A time zone is picked by its city, with a search.
           <TimeZoneSelect
@@ -471,18 +473,18 @@ function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; setting
           {t("welcome.workspace.timezone_hint")}
         </p>
         {item?.locked && <p className="hint">{t(item.source === "env" ? "settings.locked_env" : "settings.locked_flag")}</p>}
-      </div>
+      </FormField>
       {problem && (
         <p className="problem-note" role="alert">
           {problem}
         </p>
       )}
       {!hasSlot && (
-        <div className="row-end">
+        <Actions align="end">
           <Button type="submit" variant={props.done ? "secondary" : "primary"} disabled={busy || empty || !pending}>
             {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
           </Button>
-        </div>
+        </Actions>
       )}
     </form>
     <RenameName

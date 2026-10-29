@@ -14,6 +14,12 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { useFocusAfterRender } from "../lib/focus-after-render";
 import { Button } from "../ui/Button";
+import { FormField } from "../ui/FormField";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
+import { ItemList, Item } from "../ui/ItemList";
 type SignIn = S["SignInView"];
 type Account = S["SignInAccount"];
 
@@ -38,11 +44,11 @@ export function SignIns(props: {
           <h3 id="sign-ins-title">{t("sign_in.title")}</h3>
         </div>
         <p className="hint">{t("sign_in.none")}</p>
-        <div className="row-end">
+        <Actions align="end">
           <Button onClick={props.onOpenAddons}>
             {t("sign_in.open_addons")}
           </Button>
-        </div>
+        </Actions>
       </section>
     );
   }
@@ -52,11 +58,11 @@ export function SignIns(props: {
         <h3 id="sign-ins-title">{t("sign_in.title")}</h3>
       </div>
       <p className="hint">{t("sign_in.intro")}</p>
-      <ul className="queue">
+      <RowList>
         {signIns.data.map((item) => (
           <SignInRow key={item.name} item={item} onChooseSource={props.onChooseSource} />
         ))}
-      </ul>
+      </RowList>
     </section>
   );
 }
@@ -180,8 +186,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   if (item.set_aside && !pasted) actions.push({ id: "bring-back", label: t("sign_in.own.bring_back"), run: bringBack, disabled: busy });
 
   const callbackField = (
-    <div className="field">
-      <label htmlFor={`${base}-callback`}>{t("sign_in.callback")}</label>
+    <FormField id={`${base}-callback`} label={t("sign_in.callback")}>
       <input
         id={`${base}-callback`}
         type="text"
@@ -193,27 +198,54 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
       <p className="hint" id={`${base}-callback-hint`}>
         {t("sign_in.callback_hint")}
       </p>
-    </div>
+    </FormField>
   );
 
   return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={`${base}-title`}>
-      <div className="row pair">
-        <div className="text">
-          <strong id={`${base}-title`}>{item.label}</strong>
-          {accounts.length > 0 ? (
-            <ul className="plain-list" aria-label={t("sign_in.accounts")}>
+    <Row
+      aria-labelledby={`${base}-title`}
+      title={item.label}
+      titleId={`${base}-title`}
+      meta={
+        accounts.length === 0
+          ? signedIn && item.account
+            ? t("sign_in.status.signed_in_as", { account: item.account })
+            : t(`sign_in.status.${item.status}`)
+          : undefined
+      }
+      primary={
+        <Button
+          variant="primary"
+          data-key="primary"
+          disabled={busy || notReady}
+          aria-label={named}
+          aria-describedby={describedBy || undefined}
+          onClick={() =>
+            notReading.length > 0
+              ? startReading()
+              : signedIn
+                ? props.onChooseSource(addonOfSignIn(item.name))
+                : void start()
+          }
+        >
+          {label}
+        </Button>
+      }
+      menu={<RowMenu label={item.label} actions={actions} buttonId={menuId} />}
+    >
+          {accounts.length > 0 && (
+            <ItemList aria-label={t("sign_in.accounts")}>
               {accounts.map((a) => {
                 const who = a.address ?? t("sign_in.account_unnamed");
                 return (
-                  <li key={a.key} className="row pair">
-                    <span className="sub">
+                  <Item key={a.key}>
+                    <span className="hint">
                       {accounts.length === 1 && a.status !== "expired" && a.address
                         ? t("sign_in.status.signed_in_as", { account: a.address })
                         : who}
                       {a.status === "expired" && <> · {t("sign_in.status.expired")}</>}
                     </span>
-                    <span className="acts">
+                    <Actions as="span">
                       {a.status === "expired" && (
                         <Button variant="quiet"
                           disabled={busy || !item.ready}
@@ -230,20 +262,14 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                       >
                         {t("sign_in.sign_out")}
                       </Button>
-                    </span>
-                  </li>
+                    </Actions>
+                  </Item>
                 );
               })}
-            </ul>
-          ) : (
-            <span className="sub">
-              {signedIn && item.account
-                ? t("sign_in.status.signed_in_as", { account: item.account })
-                : t(`sign_in.status.${item.status}`)}
-            </span>
+            </ItemList>
           )}
           {several && accounts.length > 0 && (
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="quiet"
                 disabled={busy || !item.ready}
                 aria-label={t("sign_in.add_account_named", { label: item.label })}
@@ -251,10 +277,10 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
               >
                 {t("sign_in.add_account")}
               </Button>
-            </div>
+            </Actions>
           )}
           {allows.length > 0 && (
-            <div className="field">
+            <FormBlock>
               <span className="what" id={`${base}-allows`}>
                 {t("sign_in.allows")}
               </span>
@@ -263,7 +289,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                   <li key={i}>{line}</li>
                 ))}
               </ul>
-            </div>
+            </FormBlock>
           )}
           {notReading.length > 0 && (
             <p className="hint" id={`${base}-not-reading`}>
@@ -271,11 +297,11 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
             </p>
           )}
           {missing.length > 0 && (
-            <div className="field">
+            <FormBlock>
               <p className="hint" id={`${base}-missing`}>
                 {t("sign_in.missing", { list: missing.join(", ") })}
               </p>
-              <div className="row-end">
+              <Actions align="end">
                 <Button
                   disabled={busy || !item.ready}
                   aria-label={t("sign_in.sign_in_again_named", { label: item.label })}
@@ -284,8 +310,8 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                 >
                   {t("sign_in.sign_in_again")}
                 </Button>
-              </div>
-            </div>
+              </Actions>
+            </FormBlock>
           )}
           {item.app === "add-on" && item.app_note && <p className="hint">{item.app_note}</p>}
           {item.default_unusable && !pasted && (
@@ -315,27 +341,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
               disabled={busy}
             />
           ) : null}
-        </div>
-        <div className="acts">
-          <Button variant="primary"
-            data-key="primary"
-            disabled={busy || notReady}
-            aria-label={named}
-            aria-describedby={describedBy || undefined}
-            onClick={() =>
-              notReading.length > 0
-                ? startReading()
-                : signedIn
-                  ? props.onChooseSource(addonOfSignIn(item.name))
-                  : void start()
-            }
-          >
-            {label}
-          </Button>
-          <RowMenu label={item.label} actions={actions} buttonId={menuId} />
-        </div>
-      </div>
-    </li>
+    </Row>
   );
 }
 
@@ -385,8 +391,8 @@ function OwnAppForm(props: {
   };
 
   return (
-    <form
-      className="field"
+    <FormBlock as="form"
+      
       aria-label={t("sign_in.own.form", { label: item.label })}
       onSubmit={(e) => {
         e.preventDefault();
@@ -395,18 +401,17 @@ function OwnAppForm(props: {
     >
       <p className="hint">{t("sign_in.own.lead")}</p>
       {steps.length > 0 && (
-        <div className="field">
+        <FormBlock>
           <h4 id={`${base}-steps`}>{t("sign_in.own.steps_title")}</h4>
           <ol className="own-steps" aria-labelledby={`${base}-steps`}>
             {steps.map((step, i) => (
               <li key={i}>{step.link ? <SafeLink label={step.text} url={step.link} /> : step.text}</li>
             ))}
           </ol>
-        </div>
+        </FormBlock>
       )}
       {props.callbackField}
-      <div className="field">
-        <label htmlFor={`${base}-client-id`}>{t("sign_in.own.client_id")}</label>
+      <FormField id={`${base}-client-id`} label={t("sign_in.own.client_id")}>
         <input
           id={`${base}-client-id`}
           type="text"
@@ -419,10 +424,9 @@ function OwnAppForm(props: {
         <p className="hint" id={`${base}-client-id-hint`}>
           {t("sign_in.own.client_id_hint")}
         </p>
-      </div>
+      </FormField>
       {item.needs_secret && (
-        <div className="field">
-          <label htmlFor={`${base}-client-secret`}>{t("sign_in.own.client_secret")}</label>
+        <FormField id={`${base}-client-secret`} label={t("sign_in.own.client_secret")}>
           <input
             id={`${base}-client-secret`}
             type="password"
@@ -431,9 +435,9 @@ function OwnAppForm(props: {
             spellCheck={false}
             onChange={(e) => setSecret(e.target.value)}
           />
-        </div>
+        </FormField>
       )}
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" aria-label={t("sign_in.own.cancel_named", { label: item.label })} onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
@@ -444,8 +448,8 @@ function OwnAppForm(props: {
         >
           {saving ? t("sign_in.own.saving") : t("sign_in.own.save")}
         </Button>
-      </div>
-    </form>
+      </Actions>
+    </FormBlock>
   );
 }
 
@@ -458,12 +462,12 @@ export function NotReadingLines() {
   const waiting = (signIns.data ?? []).filter((s) => s.status === "signed_in" && (s.not_reading ?? []).length > 0);
   if (waiting.length === 0) return null;
   return (
-    <ul className="plain-list" aria-label={t("sign_in.start_reading")}>
+    <ItemList aria-label={t("sign_in.start_reading")}>
       {waiting.map((item) => {
         const list = (item.not_reading ?? []).join(", ");
         const id = `not-reading-${item.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
         return (
-          <li key={item.name} className="row pair">
+          <Item key={item.name}>
             <p className="hint" id={id}>
               {t("sources.signed_in_not_reading", { label: item.label, list })}
             </p>
@@ -479,9 +483,9 @@ export function NotReadingLines() {
             >
               {t("sign_in.start_reading")}
             </Button>
-          </li>
+          </Item>
         );
       })}
-    </ul>
+    </ItemList>
   );
 }

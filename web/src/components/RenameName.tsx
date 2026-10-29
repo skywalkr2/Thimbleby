@@ -8,6 +8,8 @@ import { problemText } from "../lib/problem";
 import { knownFingerprint, useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
 
 export function RenameName(props: {
   /** The text setting that holds the name. */
@@ -76,16 +78,12 @@ export function RenameName(props: {
   }
   const id = `rename-${props.settingKey.replace(/[^a-z0-9]+/gi, "-")}`;
   return (
-    <div
-      className="field"
-      onKeyDown={(e) => {
+    <FormField id={id} label={props.label} onKeyDown={(e) => {
         if (e.key === "Escape") {
           e.stopPropagation();
           setDraft(null);
         }
-      }}
-    >
-      <label htmlFor={id}>{props.label}</label>
+      }}>
       <input
         id={id}
         ref={field}
@@ -100,17 +98,17 @@ export function RenameName(props: {
           }
         }}
       />
-      <div className="row-end">
+      <Actions align="end">
         <Button onClick={() => setDraft(null)}>{props.cancel}</Button>
         <Button variant="primary" loading={busy} disabled={empty} reason={empty ? props.blank : undefined} onClick={() => void save()}>
           {props.save}
         </Button>
-      </div>
+      </Actions>
       {problem && (
         <p className="problem-note" role="alert">
           {problem}
         </p>
       )}
-    </div>
+    </FormField>
   );
 }

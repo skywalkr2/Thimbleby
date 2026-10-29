@@ -1,0 +1,15 @@
+/* A select: the shared control box, no native arrow, a caret drawn in the text colour at the right. */
+.select {
+  appearance: none; -webkit-appearance: none;
+  width: 100%; min-width: 0; min-height: var(--input-h);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  background-color: var(--surface); color: var(--text);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  font-size: var(--text-md); line-height: var(--lh-md); text-overflow: ellipsis; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 19px) 50%, calc(100% - 14px) 50%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+.select:disabled { background-color: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
+.select:disabled { background-image: linear-gradient(45deg, transparent 50%, var(--text-subtle) 50%), linear-gradient(135deg, var(--text-subtle) 50%, transparent 50%); }
+.select option { background: var(--surface); color: var(--text); }

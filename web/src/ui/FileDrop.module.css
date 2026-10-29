@@ -1,0 +1,14 @@
+/* The drop zone: a dashed outline that firms up when a file is over it or the cursor is in it; the real input covers it. */
+.zone {
+  position: relative; display: flex; align-items: center; min-height: var(--input-h);
+  border: 1.5px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--text);
+  max-width: var(--field-max); min-width: 0;
+}
+.zone:hover, .zone[data-over] { background: var(--accent-soft); border-color: var(--accent); }
+.zone[data-chosen] { border-style: solid; }
+.zone:has(.input:focus-visible) { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
+.zone:has(.input:disabled) { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); }
+.input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; opacity: 0; cursor: pointer; border: 0; }
+.face { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); min-width: 0; pointer-events: none; }
+.words { font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); overflow-wrap: anywhere; min-width: 0; }
+.sub { font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); }

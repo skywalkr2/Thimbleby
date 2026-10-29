@@ -7,6 +7,8 @@ import { problemText } from "../lib/problem";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 export const STANCES = ["manage", "alongside", "report_to", "watch"] as const;
 type Stance = (typeof STANCES)[number];
 
@@ -63,16 +65,15 @@ export function StancePicker(props: {
   };
 
   return (
-    <div className="field">
-      <label htmlFor={id}>{t("stance.title")}</label>
-      <select id={id} value={chosen} disabled={saving} aria-describedby={`${id}-hint`} onChange={(e) => void save(e.target.value)}>
+    <FormField id={id} label={t("stance.title")}>
+      <Select id={id} value={chosen} disabled={saving} aria-describedby={`${id}-hint`} onChange={(e) => void save(e.target.value)}>
         <option value="">{t("stance.default", { stance: t(`stance.${fallback}`) })}</option>
         {STANCES.map((s) => (
           <option key={s} value={s}>
             {t(`stance.${s}`)}
           </option>
         ))}
-      </select>
+      </Select>
       <span id={`${id}-hint`} className="hint">
         {t("stance.hint")}
       </span>
@@ -86,6 +87,6 @@ export function StancePicker(props: {
           )}
         </div>
       )}
-    </div>
+    </FormField>
   );
 }

@@ -11,6 +11,8 @@ import { useWords } from "../lib/wording";
 import { EffortField } from "./EffortField";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { DateField } from "../ui/DateField";
+import { Actions } from "../ui/Actions";
 type Target = Pick<S["OpenActionView"], "id" | "version" | "text" | "due" | "repeat" | "effort_minutes">;
 
 export function useEditAction(action: Target, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
@@ -89,7 +91,7 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
       <label className="hint" htmlFor={`${id}-due`}>
         {t("open.edit.due")}
       </label>
-      <input id={`${id}-due`} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+      <DateField id={`${id}-due`} value={due} onChange={(e) => setDue(e.target.value)} />
       <EffortField id={id} value={effort} onChange={setEffort} />
       <label className="hint" htmlFor={`${id}-repeat`}>
         {t("repeat.label")}
@@ -114,14 +116,14 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
           </>
         )}
       </p>
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="quiet" onClick={close}>
           {t("action.cancel")}
         </Button>
         <Button variant="primary" type="submit" disabled={!words || !changed || !repeatOk}>
           {t("open.edit.save")}
         </Button>
-      </div>
+      </Actions>
     </form>
   ) : null;
   return { entry, form };

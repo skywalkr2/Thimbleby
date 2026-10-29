@@ -24,6 +24,11 @@ import { Icon } from "../ui/Icon";
 import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
 import { useSourceSave } from "./Sources";
 import { ReadToken } from "./ReadToken";
+import { FormBlock } from "../ui/FormBlock";
+import { CheckboxGroup } from "../ui/CheckboxGroup";
+import { Actions } from "../ui/Actions";
+import { RowList } from "../ui/RowList";
+import { Row } from "../ui/Row";
 
 type Pack = S["PackView"];
 type Installed = S["InstalledPackView"];
@@ -122,7 +127,7 @@ function SortingSwitch() {
     }
   };
   return (
-    <div className="field" data-sorting="">
+    <FormBlock data-sorting="">
       <label className="check-line">
         <input type="checkbox" checked={on} disabled={settings.isPending} onChange={(e) => void change(e.target.checked)} />
         <span>{t("walkthrough.mail.sorting")}</span>
@@ -136,7 +141,7 @@ function SortingSwitch() {
           </Button>
         </div>
       )}
-    </div>
+    </FormBlock>
   );
 }
 
@@ -236,8 +241,7 @@ function SourceSides(props: { sources: Source[]; group?: boolean; what?: string;
   const serving = options.filter((o) => ticked(o.id)).map((o) => o.name);
   const nameOf = (side: string) => options.find((o) => o.id === side)?.name ?? side;
   return (
-    <fieldset className="field" data-source-sides={props.group ? undefined : mine[0]} data-sign-in-sides={props.group ? "" : undefined} aria-describedby={`${id}-hint`}>
-      <legend>{props.group ? t(`walkthrough.mail.sides.group.legend_${count}`) : t("walkthrough.mail.sides.legend", { label: label })}</legend>
+    <CheckboxGroup legend={props.group ? t(`walkthrough.mail.sides.group.legend_${count}`) : t("walkthrough.mail.sides.legend", { label: label })} data-source-sides={props.group ? undefined : mine[0]} data-sign-in-sides={props.group ? "" : undefined} aria-describedby={`${id}-hint`}>
       {options.map((o) => (
         <label key={o.id} className="check-line">
           <input type="checkbox" checked={ticked(o.id)} disabled={settings.isPending} onChange={(e) => change(o.id, e.target.checked)} />
@@ -248,7 +252,7 @@ function SourceSides(props: { sources: Source[]; group?: boolean; what?: string;
         {t("walkthrough.mail.sides.hint")}
       </p>
       {(serving.length > 0 || touched) && (
-        <p className="sub" role="status" data-sides-state="">
+        <p className="hint" role="status" data-sides-state="">
           {props.group
             ? serving.length > 0
               ? t(`walkthrough.mail.sides.group.state_${count}`, { sides: list(serving) })
@@ -272,7 +276,7 @@ function SourceSides(props: { sources: Source[]; group?: boolean; what?: string;
           </Button>
         </div>
       )}
-    </fieldset>
+    </CheckboxGroup>
   );
 }
 
@@ -316,15 +320,15 @@ function SetAsideLine() {
   const [open, setOpen] = useState(false);
   const on = settings.data?.items.find((i) => i.key === SORTING)?.value !== "rules";
   return (
-    <div className="field" data-set-aside-line="">
-      <p className="sub">
+    <FormBlock data-set-aside-line="">
+      <p className="hint">
         {t(on ? "walkthrough.mail.aside.on" : "walkthrough.mail.aside.off")} <span aria-hidden="true">·</span>{" "}
         <Button variant="quiet" aria-expanded={open} onClick={() => setOpen((x) => !x)}>
           {t("walkthrough.mail.aside.change")}
         </Button>
       </p>
       {open && <SortingSwitch />}
-    </div>
+    </FormBlock>
   );
 }
 
@@ -402,7 +406,7 @@ export function WalkthroughMail(props: {
           {connected.map(({ service, title, reads }) => {
             const what = listOf(reads.map((s) => s.label));
             return (
-              <section key={service.id} className="field" data-reading="" data-connected={service.id}>
+              <FormBlock as="section" key={service.id}  data-reading="" data-connected={service.id}>
                 <p className="what">
                   <strong>{t("walkthrough.mail.result.connected", { service: title })}</strong>
                   {reads.length > 0 && <> {t("walkthrough.mail.result.reading", { what })}</>}
@@ -411,32 +415,32 @@ export function WalkthroughMail(props: {
                 {reads.length > 0 && hasSides && (
                   <SignInSides sources={reads} what={what} personal={business.data?.personal ?? null} sides={business.data?.sides ?? []} />
                 )}
-              </section>
+              </FormBlock>
             );
           })}
           <SetAsideLine />
           {props.onContinue && (
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="primary" loading={props.continuing} onClick={props.onContinue}>
                 {t("walkthrough.next")}
               </Button>
-            </div>
+            </Actions>
           )}
         </div>
       )}
       {folded && (
-        <div className="field">
+        <FormBlock>
           <Button variant="quiet" aria-expanded={false} onClick={() => setRevealed(true)}>
             {t("walkthrough.mail.connect_another")}
           </Button>
-        </div>
+        </FormBlock>
       )}
       {!folded && services.length > 0 && (
         <>
           <p className="what" id="mail-services">
             {t("walkthrough.mail.services")}
           </p>
-          <ul className="queue" aria-labelledby="mail-services">
+          <RowList aria-labelledby="mail-services">
             {services.map((service) => (
               <ServiceRow
                 key={service.id}
@@ -447,33 +451,33 @@ export function WalkthroughMail(props: {
                 canUseMailbox={hasMailGuide}
               />
             ))}
-          </ul>
+          </RowList>
         </>
       )}
       {services.length === 0 && (
-        <div className="field" data-mail-none="">
+        <FormBlock data-mail-none="">
           <p className={packs.isError ? "problem-note" : "hint"} id="mail-none">
             {t(packs.isError ? "walkthrough.mail.load_failed" : "walkthrough.mail.none")}
           </p>
-          <div className="row-end">
+          <Actions align="end">
             <Button aria-describedby="mail-none" onClick={() => props.onChooseSource(null)}>
               {t("walkthrough.mail.connect_one")}
             </Button>
-          </div>
-        </div>
+          </Actions>
+        </FormBlock>
       )}
       {waiting && (
         <div className="restart-step" role="status">
           <p>{t(canRestart ? "walkthrough.mail.restart_why" : "walkthrough.mail.restart_manual")}</p>
           {canRestart && (
-            <div className="row-end">
+            <Actions align="end">
               <Button variant="primary"
                 disabled={restart.busy || restart.waiting}
                 onClick={() => void restart.now()}
               >
                 {restart.waiting ? t("walkthrough.mail.restarting") : t("walkthrough.mail.restart")}
               </Button>
-            </div>
+            </Actions>
           )}
           {restart.phase === "refused" && restart.problem && (
             <p className="problem-note" role="alert">
@@ -490,13 +494,13 @@ export function WalkthroughMail(props: {
       {/* The common mail services by name: the steps for an app password, then only an address and that password. */}
       {!folded && <MailServiceConnect selectId={MAIL_GUIDE_PICK} onPick={(id) => id === OTHER_MAILBOX && props.onChooseSource(null, "mailbox")} />}
       {!folded && services.length > 0 && (
-        <div className="field">
-          <div className="row-end">
+        <FormBlock>
+          <Actions align="end">
             <Button onClick={() => props.onChooseSource(null)}>
               {t("walkthrough.mail.other")}
             </Button>
-          </div>
-        </div>
+          </Actions>
+        </FormBlock>
       )}
       {!nothingYet && !hasResult && (
         <>
@@ -507,7 +511,7 @@ export function WalkthroughMail(props: {
         </>
       )}
       {others.length > 0 && (
-        <div className="field" data-reading="">
+        <FormBlock data-reading="">
           <span className="what" id="mail-read">
             {t("walkthrough.mail.reading")}
           </span>
@@ -524,7 +528,7 @@ export function WalkthroughMail(props: {
             ))}
           </ul>
           {!hasResult && <p className="hint">{t("walkthrough.mail.first_go")}</p>}
-        </div>
+        </FormBlock>
       )}
       {others.length > 0 && hasSides &&
         others.map((source) => (
@@ -601,20 +605,31 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   // Once the person has signed in, the row says so and what is read, and offers no Sign in.
   const signedIn = state === "ready" && props.signIns.length > 0 && props.signIns.every((item) => item.status === "signed_in");
   return (
-    <li
-      className="line"
-      id={base}
-      data-service={service.id}
-      data-state={state}
-      data-signed-in={signedIn ? "" : undefined}
-      aria-labelledby={`${base}-name`}
-    >
-      <div className="row pair">
-        <div className="text pack">
-          <strong id={`${base}-name`}>{service.name}</strong>
-          <span className="sub">{t("walkthrough.mail.reads_line", { reads })}</span>
-          {service.summary && <p className="pack-summary">{service.summary}</p>}
-          <details className="more-options">
+    <Row id={base} data-service={service.id} data-state={state} data-signed-in={signedIn ? "" : undefined} aria-labelledby={`${base}-name`} loop={false} title={service.name} titleId={`${base}-name`} meta={t("walkthrough.mail.reads_line", { reads })} actions={<>{state === "not_installed" && service.installable && (
+            <Button variant="primary"
+              disabled={busy || after}
+              aria-describedby={`${base}-state`}
+              onClick={() => void connect()}
+            >
+              {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
+            </Button>
+          )}
+          {state === "not_installed" && !service.installable && (
+            <Button onClick={props.onOpenAddons}>
+              {t("walkthrough.mail.get_it")}
+            </Button>
+          )}
+          {state === "off" && (
+            <Button variant="primary"
+              disabled={busy || after}
+              aria-describedby={`${base}-state`}
+              onClick={() => void connect()}
+            >
+              {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
+            </Button>
+          )}</>}>
+{service.summary && <p className="pack-summary">{service.summary}</p>}
+<details className="more-options">
             <summary>{t("walkthrough.mail.reaches")}</summary>
             <ul className="plain-list">
               {reaches.map((line) => (
@@ -622,13 +637,13 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               ))}
             </ul>
           </details>
-          {/* Installing or turning on is one line and one button; the other states say where the service stands. */}
-          {oneLine ? (
+{/* Installing or turning on is one line and one button; the other states say where the service stands. */}
+{oneLine ? (
             <p className="hint" id={`${base}-state`} data-needs-addon="">
               {t(oneClick ? "walkthrough.mail.signs_in" : "walkthrough.mail.signs_in_manual", { service: signsInTo })}
             </p>
           ) : (
-            <p className="sub" id={`${base}-state`}>
+            <p className="hint" id={`${base}-state`}>
               {state === "problem" && service.reason
                 ? t("walkthrough.mail.state.problem", { reason: service.reason })
                 : signedIn
@@ -636,12 +651,12 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
                   : t(`walkthrough.mail.state.${state}`)}
             </p>
           )}
-          {problem && (
+{problem && (
             <p className="problem-note" role="alert">
               {problem}
             </p>
           )}
-          {needsKey && service.releaseHost && (
+{needsKey && service.releaseHost && (
             <>
               <ReadToken
                 plain
@@ -665,15 +680,15 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
               )}
             </>
           )}
-          {keySaved && (
+{keySaved && (
             <div role="status">
-              <p className="sub">{t("walkthrough.mail.key_saved")}</p>
+              <p className="hint">{t("walkthrough.mail.key_saved")}</p>
               <Button variant="primary" disabled={busy} onClick={() => void connect()}>
                 {t("action.try_again")}
               </Button>
             </div>
           )}
-          {state === "ready" &&
+{state === "ready" &&
             props.signIns.map((item, i) => (
               <ServiceSignIn
                 key={item.name}
@@ -682,34 +697,7 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
                 onStarted={() => setAfter(false)}
               />
             ))}
-        </div>
-        <div className="acts">
-          {state === "not_installed" && service.installable && (
-            <Button variant="primary"
-              disabled={busy || after}
-              aria-describedby={`${base}-state`}
-              onClick={() => void connect()}
-            >
-              {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
-            </Button>
-          )}
-          {state === "not_installed" && !service.installable && (
-            <Button onClick={props.onOpenAddons}>
-              {t("walkthrough.mail.get_it")}
-            </Button>
-          )}
-          {state === "off" && (
-            <Button variant="primary"
-              disabled={busy || after}
-              aria-describedby={`${base}-state`}
-              onClick={() => void connect()}
-            >
-              {busy || after ? t("walkthrough.mail.connecting") : t("walkthrough.mail.connect", { name: service.name })}
-            </Button>
-          )}
-        </div>
-      </div>
-    </li>
+</Row>
   );
 }
 
@@ -737,27 +725,27 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
   return (
     <div className="service-sign-in" data-sign-in={item.name}>
       {signedIn ? (
-        <p className="sub">
+        <p className="hint">
           <Icon name="check" size={14} />{" "}
           {item.account ? t("walkthrough.mail.signed_in_as", { account: item.account }) : t("walkthrough.mail.signed_in")}
         </p>
       ) : (
         <>
           {(item.allows ?? []).length > 0 && (
-            <p className="sub">{t("walkthrough.mail.allows", { allows: (item.allows ?? []).join("; ") })}</p>
+            <p className="hint">{t("walkthrough.mail.allows", { allows: (item.allows ?? []).join("; ") })}</p>
           )}
           {resumed && phase === "idle" && (
-            <p className="sub" role="status">
+            <p className="hint" role="status">
               {t("walkthrough.mail.resumed", { service: resumed })}
             </p>
           )}
           {phase === "waiting" && (
-            <p className="sub" role="status">
+            <p className="hint" role="status">
               {t("sign_in.window.waiting")}
             </p>
           )}
           {phase === "done" && (
-            <p className="sub" role="status">
+            <p className="hint" role="status">
               {t("sign_in.window.done")}
             </p>
           )}
@@ -766,7 +754,7 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
               {text}
             </p>
           )}
-          <div className="row-end">
+          <Actions align="end">
             <Button variant="primary"
               ref={button}
               disabled={busy}
@@ -784,7 +772,7 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
                     ? t("walkthrough.mail.sign_in_to", { service: resumed })
                     : t(again ? "sign_in.sign_in_again" : "sign_in.sign_in")}
             </Button>
-          </div>
+          </Actions>
         </>
       )}
     </div>

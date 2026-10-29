@@ -16,6 +16,8 @@ import styles from "./Quality.module.css";
 
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+import { DateField } from "../ui/DateField";
+import { FormField } from "../ui/FormField";
 type View = S["QualityView"];
 
 /** A whole number typed in a field, or null when it isn't one. */
@@ -91,16 +93,13 @@ function CountForm(props: { view: View }) {
 
   return (
     <form className={styles.form} onSubmit={(e) => void submit(e)} aria-label={t("quality.counts.form")}>
-      <div className="field">
-        <label htmlFor={`${base}-date`}>{t("quality.counts.date")}</label>
-        <input id={`${base}-date`} type="date" value={day} max={today} onChange={(e) => setDate(e.target.value)} required />
-      </div>
-      <div className="field">
-        <label htmlFor={`${base}-present`}>{t("quality.counts.present")}</label>
+      <FormField id={`${base}-date`} label={t("quality.counts.date")}>
+        <DateField id={`${base}-date`} value={day} max={today} onChange={(e) => setDate(e.target.value)} required />
+      </FormField>
+      <FormField id={`${base}-present`} label={t("quality.counts.present")}>
         <input id={`${base}-present`} type="number" inputMode="numeric" min={0} step={1} value={present} onChange={(e) => setPresent(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${base}-missed`}>{t("quality.counts.missed")}</label>
+      </FormField>
+      <FormField id={`${base}-missed`} label={t("quality.counts.missed")}>
         <input
           id={`${base}-missed`}
           type="number"
@@ -112,7 +111,7 @@ function CountForm(props: { view: View }) {
           aria-describedby={tooMany ? `${base}-problem` : undefined}
           onChange={(e) => setMissed(e.target.value)}
         />
-      </div>
+      </FormField>
       <div className={styles.act}>
         <Button type="submit" variant="primary" disabled={!ready} reason={busy || tooMany ? undefined : t("quality.counts.why_disabled")}>
           {t(busy ? "quality.counts.saving" : "quality.counts.save")}
@@ -162,12 +161,10 @@ function SampleRow(props: { sample: NonNullable<View["sample"]>; item: NonNullab
     <li data-sample-item={item.source}>
       <form className={styles.form} onSubmit={(e) => void submit(e)}>
         <p>{t("quality.sample.received", { subject, day: monthDay(todayOn(new Date(item.received_at))) })}</p>
-        <div className="field">
-          <label htmlFor={`${base}-present`}>{t("quality.sample.present", { subject })}</label>
+        <FormField id={`${base}-present`} label={t("quality.sample.present", { subject })}>
           <input id={`${base}-present`} type="number" inputMode="numeric" min={0} step={1} value={present} onChange={(e) => setPresent(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-missed`}>{t("quality.sample.missed", { subject })}</label>
+        </FormField>
+        <FormField id={`${base}-missed`} label={t("quality.sample.missed", { subject })}>
           <input
             id={`${base}-missed`}
             type="number"
@@ -179,7 +176,7 @@ function SampleRow(props: { sample: NonNullable<View["sample"]>; item: NonNullab
             aria-describedby={tooMany ? `${base}-problem` : undefined}
             onChange={(e) => setMissed(e.target.value)}
           />
-        </div>
+        </FormField>
         <div className={styles.act}>
           <Button type="submit" aria-label={t("quality.sample.save_named", { subject })} disabled={!ready} reason={busy || tooMany ? undefined : t("quality.counts.why_disabled")}>
             {t("quality.sample.save")}

@@ -7,6 +7,8 @@ import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { useFocusAfterRender } from "../lib/focus-after-render";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
 /** The choice that opens the add field; no organization id can look like it. */
 const ADD = "\u0001add";
 
@@ -60,11 +62,8 @@ export function OrgSelect(props: {
   };
 
   return (
-    <div className="field">
-      <label htmlFor={id}>
-        {props.label} {props.hint && <span className="hint">{props.hint}</span>}
-      </label>
-      <select
+    <FormField id={id} label={<>{props.label} {props.hint && <span className="hint">{props.hint}</span>}</>}>
+      <Select
         id={id}
         ref={select}
         value={held}
@@ -80,7 +79,7 @@ export function OrgSelect(props: {
           </option>
         ))}
         <option value={ADD}>{t("org.add_option")}</option>
-      </select>
+      </Select>
       {adding && (
         <div className="inline-field list-add">
           <label className="sr" htmlFor={`${id}-new`}>
@@ -114,6 +113,6 @@ export function OrgSelect(props: {
           </Button>
         </div>
       )}
-    </div>
+    </FormField>
   );
 }

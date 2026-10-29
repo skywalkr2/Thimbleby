@@ -16,6 +16,7 @@ import { TimeZoneSelect } from "./TimeZoneSelect";
 import { restoreFocus } from "./ModalPanel";
 import { SecretField, type SecretInput } from "./SecretField";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
 export function SettingRow(props: {
   item: Item;
   /** The words for the label when the screen knows better than the sheet (a name it holds); else the sheet's. */
@@ -151,7 +152,7 @@ export function SettingRow(props: {
     );
   } else if (item.type === "choice") {
     control = (
-      <select
+      <Select
         id={id}
         value={String(draft)}
         disabled={off}
@@ -169,7 +170,7 @@ export function SettingRow(props: {
             {c.label}
           </option>
         ))}
-      </select>
+      </Select>
     );
   } else if (item.type === "list" && (item.options ?? []).length > 0) {
     // A list drawn from a fixed set of values is ticked, never typed.

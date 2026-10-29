@@ -8,7 +8,7 @@ import { dayAndTime } from "../lib/dates";
 import { revealOrKeep } from "../lib/reveal";
 import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { ModalPanel, restoreFocus, DialogFooter } from "./ModalPanel";
 import { SafeLink } from "./SafeText";
 import { SourceLimit } from "./SourceLimit";
 import { Skeleton } from "../ui/Skeleton";
@@ -98,11 +98,11 @@ function SourceDialog(props: { source: string; onClose: () => void }) {
           {s.text ? <div className="source-text">{s.text}</div> : <p className="hint">{t("source.not_kept")}</p>}
         </div>
       )}
-      <div className="row-end">
+      <DialogFooter>
         <Button variant="primary" autoFocus onClick={props.onClose}>
           {t("origin.close")}
         </Button>
-      </div>
+      </DialogFooter>
     </ModalPanel>
   );
 }

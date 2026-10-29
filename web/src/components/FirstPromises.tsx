@@ -21,6 +21,8 @@ import { useMissedOne } from "./MissedOne";
 import { SentFolderPicker } from "./SentFolderPicker";
 
 import { EmptyState } from "../ui/EmptyState";
+import { FormBlock } from "../ui/FormBlock";
+import { Actions } from "../ui/Actions";
 type Result = S["FirstPromisesView"];
 
 /** Where the Sent folder is being chosen: the account whose folder it is, held by the screen itself so the choice stays open
@@ -63,15 +65,15 @@ function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: ()
       // With no mail read there is nothing to look back over: handing something in is the way to see what the assistant
       // does, and connecting mail is the quieter choice beside it.
       return (
-        <div className="field" data-first-promises="needs">
+        <FormBlock data-first-promises="needs">
           <p>{t("walkthrough.promises.no_mail")}</p>
-          <div className="row-end">
+          <Actions align="end">
             <Button onClick={() => props.go("mail")}>{t("walkthrough.promises.to_mail")}</Button>
             <Button variant="primary" onClick={props.onHandIn}>
               {t("walkthrough.promises.none_hand_in")}
             </Button>
-          </div>
-        </div>
+          </Actions>
+        </FormBlock>
       );
     case "reading":
       return (
@@ -95,12 +97,12 @@ function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: ()
 
 function Needs(props: { text: string; label: string; run: () => void }) {
   return (
-    <div className="field" data-first-promises="needs">
+    <FormBlock data-first-promises="needs">
       <p>{props.text}</p>
-      <div className="row-end">
+      <Actions align="end">
         <Button onClick={props.run}>{props.label}</Button>
-      </div>
-    </div>
+      </Actions>
+    </FormBlock>
   );
 }
 
@@ -118,16 +120,16 @@ function Offer(props: { data: Result; picking: Picking }) {
     setBusy(false);
   };
   return (
-    <div className="field" data-first-promises="offer">
+    <FormBlock data-first-promises="offer">
       <h3 id="first-promises-offer">{title}</h3>
       <p role="status">{tn("walkthrough.promises.offer.found", data.count, { cost: costWords(data, estimate, t) })}</p>
       <ReadList data={data} done={false} plan picking={props.picking} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="primary" loading={busy} onClick={() => void go()}>
           {t("walkthrough.promises.go")}
         </Button>
-      </div>
-    </div>
+      </Actions>
+    </FormBlock>
   );
 }
 
@@ -139,7 +141,7 @@ function Found(props: { data: Result; onHandIn: () => void; picking: Picking }) 
   const list = <ReadList data={data} done picking={props.picking} />;
   if (data.promises.length === 0) {
     return (
-      <div className="field" data-first-promises="none">
+      <FormBlock data-first-promises="none">
         <p>{t(unread(data) ? "walkthrough.promises.none_partial" : "walkthrough.promises.none")}</p>
         {data.coverage.length > 0 && (
           <p>
@@ -151,17 +153,17 @@ function Found(props: { data: Result; onHandIn: () => void; picking: Picking }) 
         )}
         <p className="hint">{t("walkthrough.promises.none_hint")}</p>
         {list}
-        <div className="row-end">
+        <Actions align="end">
           <Button onClick={missed}>{t("missed.open")}</Button>
           <Button variant="primary" onClick={props.onHandIn}>
             {t("walkthrough.promises.none_hand_in")}
           </Button>
-        </div>
-      </div>
+        </Actions>
+      </FormBlock>
     );
   }
   return (
-    <div className="field" data-first-promises="found">
+    <FormBlock data-first-promises="found">
       <h3 id="first-promises-list">{t("walkthrough.promises.found")}</h3>
       <ul className="plain-list" aria-labelledby="first-promises-list">
         {data.promises.map((p) => (
@@ -177,7 +179,7 @@ function Found(props: { data: Result; onHandIn: () => void; picking: Picking }) 
       {data.more > 0 && <p className="hint">{tn("walkthrough.promises.more", data.more)}</p>}
       {data.follow_up && <FollowUpReady followUp={data.follow_up} />}
       {list}
-    </div>
+    </FormBlock>
   );
 }
 
@@ -208,7 +210,7 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; picking:
     return t(f.outcome === "read" && f.from_date ? "walkthrough.coverage.read_from" : `walkthrough.coverage.${f.outcome}`, vars);
   };
   return (
-    <section className="field" data-coverage={props.done ? (data.complete ? "complete" : "partial") : "plan"} aria-labelledby="first-promises-read">
+    <FormBlock as="section"  data-coverage={props.done ? (data.complete ? "complete" : "partial") : "plan"} aria-labelledby="first-promises-read">
       <h3 id="first-promises-read">{t(plan ? "walkthrough.coverage.title_plan" : "walkthrough.coverage.title_read")}</h3>
       <ul className="plain-list" aria-labelledby="first-promises-read">
         {data.coverage.flatMap((p) =>
@@ -226,11 +228,11 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; picking:
       </ul>
       {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : unread(data) ? "walkthrough.coverage.partial" : "walkthrough.coverage.read_no_sent")}</p>}
       {missing.length > 0 && picking.key === null && (
-        <div className="row-end">
+        <Actions align="end">
           <Button onClick={() => picking.choose(placeKey(missing[0]))}>{t("walkthrough.coverage.add_sent")}</Button>
-        </div>
+        </Actions>
       )}
-    </section>
+    </FormBlock>
   );
 }
 
@@ -268,16 +270,16 @@ function FollowUpReady(props: { followUp: NonNullable<Result["follow_up"]> }) {
     }
   };
   return (
-    <section className="field" data-follow-up={person} aria-labelledby="first-promises-follow-up">
+    <FormBlock as="section"  data-follow-up={person} aria-labelledby="first-promises-follow-up">
       <h3 id="first-promises-follow-up">{t("walkthrough.promises.follow_up")}</h3>
       <p className="hint">{t("walkthrough.promises.follow_up_to", { name })}</p>
       <label htmlFor="first-promises-message">{t("walkthrough.promises.follow_up_text", { name })}</label>
       <textarea id="first-promises-message" className="msg" value={text} onChange={(e) => setText(e.target.value)} />
-      <div className="row-end">
+      <Actions align="end">
         <Button variant="primary" disabled={sent} onClick={() => void (copied ? markSent() : copy())}>
           {copied ? t("followups.mark_sent") : t("followups.copy_message")}
         </Button>
-      </div>
-    </section>
+      </Actions>
+    </FormBlock>
   );
 }

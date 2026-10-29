@@ -117,14 +117,14 @@ test("Hand something in is the one primary button, and it opens the hand-in", as
   expect(onHandIn).toHaveBeenCalledTimes(1);
 });
 
-test("Help is a menu: shortcuts, the setup guide, feedback and the version as a line that does nothing", async () => {
+test("Help is a menu: shortcuts, the setup guide, Missed one, feedback and the version as a line that does nothing", async () => {
   const user = userEvent.setup();
   const onHelp = vi.fn();
   const onFeedback = vi.fn();
   const onOpenGuide = vi.fn();
   show({ handlers: { onHelp, onFeedback, onOpenGuide } });
   await user.click(screen.getByRole("button", { name: "Help" }));
-  expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Show keyboard shortcuts", "Setup guide", "Write feedback", "Version 9.8.7"]);
+  expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Show keyboard shortcuts", "Setup guide", "Missed something?", "Write feedback", "Version 9.8.7"]);
   expect(screen.getByRole("menuitem", { name: "Version 9.8.7" })).toHaveAttribute("aria-disabled", "true");
   await user.click(screen.getByRole("menuitem", { name: "Show keyboard shortcuts" }));
   expect(onHelp).toHaveBeenCalledTimes(1);
@@ -247,19 +247,26 @@ test("the person's menu has How the assistant is doing, which opens the figures,
   expect(onOpenQuality).toHaveBeenCalledTimes(1);
 });
 
-test("the missed-something button has its words (kept for screen readers where the row is tight), not only an icon", async () => {
+test("Missed something? is in the Help menu, with its words, and not a button of the header", async () => {
+  const user = userEvent.setup();
   show();
-  const button = await screen.findByRole("button", { name: "Missed something?" });
-  expect(button).toHaveTextContent("Missed something?");
+  await user.click(await screen.findByRole("button", { name: "Help" }));
+  expect(await screen.findByRole("menuitem", { name: "Missed something?" })).toBeInTheDocument();
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("button", { name: "Missed something?" })).toBeNull();
 });
 
 test("a new workspace offers no Missed one until something has been read or handed in", async () => {
   show({ changes: [] });
+  const user = userEvent.setup();
   await screen.findByRole("button", { name: "Hand something in" });
-  await waitFor(() => expect(screen.queryByRole("button", { name: "Missed something?" })).toBeNull());
+  await user.click(screen.getByRole("button", { name: "Help" }));
+  await waitFor(() => expect(screen.queryByRole("menuitem", { name: "Missed something?" })).toBeNull());
 });
 
 test("Missed one shows once the assistant has been given anything it could have missed", async () => {
+  const user = userEvent.setup();
   show({ changes: [{ id: "REQ-1" }] });
-  expect(await screen.findByRole("button", { name: "Missed something?" })).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Help" }));
+  expect(await screen.findByRole("menuitem", { name: "Missed something?" })).toBeInTheDocument();
 });

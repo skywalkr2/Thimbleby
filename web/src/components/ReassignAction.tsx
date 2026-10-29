@@ -10,6 +10,9 @@ import { useWords } from "../lib/wording";
 import { PersonPicker } from "./PersonPicker";
 import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
 type Target = { id: string; version: number; owners: S["OpenActionView"]["owners"] };
 
 /** The picker and its Undo, for a place that shows the form itself (Today's suggested escalation); the menu entry below
@@ -38,17 +41,16 @@ export function ReassignForm(props: { action: Target; from?: string; onDone?: ()
   return (
     <div className="answer-form" ref={box} onKeyDown={(e) => e.key === "Escape" && props.onCancel?.()}>
       {action.owners.length > 1 && !props.from && (
-        <div className="field">
-          <label htmlFor={`${id}-from`}>{t("open.reassign.from")}</label>
-          <select id={`${id}-from`} value={from} onChange={(e) => setFrom(e.target.value)}>
+        <FormField id={`${id}-from`} label={t("open.reassign.from")}>
+          <Select id={`${id}-from`} value={from} onChange={(e) => setFrom(e.target.value)}>
             <option value="">{t("person.choose")}</option>
             {action.owners.map((o) => (
               <option key={o.person} value={o.person}>
                 {o.name}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormField>
       )}
       <PersonPicker
         label={props.label ?? t("open.reassign.to")}
@@ -58,11 +60,11 @@ export function ReassignForm(props: { action: Target; from?: string; onDone?: ()
         onChange={(to) => void choose(to)}
       />
       {props.onCancel && (
-        <div className="row-end">
+        <Actions align="end">
           <Button variant="quiet" onClick={props.onCancel}>
             {t("action.cancel")}
           </Button>
-        </div>
+        </Actions>
       )}
     </div>
   );

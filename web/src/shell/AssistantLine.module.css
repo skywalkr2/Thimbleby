@@ -14,13 +14,6 @@
 .line[data-tone="warn"] .name, .line[data-tone="warn"] svg { color: var(--warn); }
 .line[data-tone="bad"] .name, .line[data-tone="bad"] svg { color: var(--danger); }
 
-.popover { width: min(420px, calc(100vw - var(--space-4))); }
-.popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }
-@keyframes pop { from { opacity: 0; transform: scale(0.98); } }
-.dialog {
-  outline: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  box-shadow: var(--elev-2); padding: var(--space-2) var(--space-4);
-}
 .sections { list-style: none; margin: 0; padding: 0; display: grid; }
 .section { display: grid; gap: var(--space-1); justify-items: start; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
 .section:last-child { border-bottom: 0; }

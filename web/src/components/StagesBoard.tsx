@@ -18,6 +18,7 @@ import { History, WaitingLine } from "./StageParts";
 import styles from "./StagesBoard.module.css";
 
 import { EmptyState } from "../ui/EmptyState";
+import { ItemList } from "../ui/ItemList";
 /** More columns than this scroll inside the board's own frame instead of wrapping. */
 const FIT = 6;
 const NONE = "";
@@ -210,11 +211,11 @@ function Card(props: { view: StageView; waiting: StageRequest[]; onDrag: (starte
         </ul>
       )}
       {props.waiting.length > 0 && (
-        <ul className="children" aria-label={t("stages.waiting_label")}>
+        <ItemList aria-label={t("stages.waiting_label")}>
           {props.waiting.map((r) => (
             <WaitingLine key={r.id} request={r} />
           ))}
-        </ul>
+        </ItemList>
       )}
       {history && <History view={view} />}
       {error && (

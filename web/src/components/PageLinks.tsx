@@ -10,6 +10,8 @@ import { knownFingerprint, useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { pageLinks, type PageLink } from "../shell/HeaderLinks";
 import { Button } from "../ui/Button";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
 
 const WEB = /^https?:\/\/\S+$/i;
 
@@ -85,24 +87,22 @@ export function PageLinks() {
             void add();
           }}
         >
-          <div className="field">
-            <label htmlFor={`${base}-name`}>{t("pages.name")}</label>
+          <FormField id={`${base}-name`} label={t("pages.name")}>
             <input id={`${base}-name`} type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor={`${base}-address`}>{t("pages.address")}</label>
+          </FormField>
+          <FormField id={`${base}-address`} label={t("pages.address")}>
             <input id={`${base}-address`} type="url" inputMode="url" value={address} onChange={(e) => setAddress(e.target.value)} aria-describedby={problem ? `${base}-problem` : undefined} />
-          </div>
+          </FormField>
           {problem && (
             <p className="problem-note" id={`${base}-problem`} role="alert">
               {problem}
             </p>
           )}
-          <div className="row-end">
+          <Actions align="end">
             <Button type="submit" variant="primary" disabled={!name.trim() || !address.trim()}>
               {t("pages.add")}
             </Button>
-          </div>
+          </Actions>
         </form>
       )}
     </section>

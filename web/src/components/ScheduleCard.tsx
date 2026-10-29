@@ -21,6 +21,9 @@ import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSources";
 import { Pill } from "../ui/Pill";
+import { DateField } from "../ui/DateField";
+import { FormField } from "../ui/FormField";
+import { Actions } from "../ui/Actions";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -103,12 +106,12 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
       countText={tn("today.agenda.count", count)}
       summary={agenda.data ? summary || (sourceState.problems.length > 0 ? t("today.rail.not_read") : t("today.agenda.none_today")) : ""}
       footer={
-        <div className="row-end">
+        <Actions align="end">
           <AddMeeting today={today} />
           <ButtonLink size="sm" href={viewHref("schedule")}>
             {t("schedule.open")}
           </ButtonLink>
-        </div>
+        </Actions>
       }
     >
       {agenda.isPending || watch.isPending ? (
@@ -240,18 +243,15 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
           void submit();
         }}
       >
-        <div className="field">
-          <label htmlFor={`${base}-what`}>{t("meeting.what")}</label>
+        <FormField id={`${base}-what`} label={t("meeting.what")}>
           <input id={`${base}-what`} type="text" value={what} onChange={(e) => setWhat(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-day`}>{t("meeting.day")}</label>
-          <input id={`${base}-day`} type="date" value={day_} onChange={(e) => setOn(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={`${base}-time`}>{t("meeting.time")}</label>
-          <input id={`${base}-time`} type="time" value={at} onChange={(e) => setAt(e.target.value)} />
-        </div>
+        </FormField>
+        <FormField id={`${base}-day`} label={t("meeting.day")}>
+          <DateField id={`${base}-day`} value={day_} onChange={(e) => setOn(e.target.value)} />
+        </FormField>
+        <FormField id={`${base}-time`} label={t("meeting.time")}>
+          <DateField id={`${base}-time`} kind="time" value={at} onChange={(e) => setAt(e.target.value)} />
+        </FormField>
         {/* The drawer's Add button is outside the form; this one lets Enter in a field add the meeting. */}
         <button type="submit" hidden tabIndex={-1} aria-hidden="true" />
       </form>

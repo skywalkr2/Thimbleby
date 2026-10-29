@@ -60,7 +60,7 @@ test("the conversation is shown oldest first with each answer and the words it r
     turn("REQ-2", { question: "Who owns it?", state: "running", waiting: "With the assistant, starting now" }),
   ]);
   await screen.findByText("The printer.");
-  const items = Array.from(document.querySelectorAll<HTMLElement>("li.line"));
+  const items = Array.from(document.querySelectorAll<HTMLElement>("[data-conversation] [data-row-list] > li"));
   expect(items[0]).toHaveTextContent("What is this waiting on?");
   expect(within(items[0]!).getByText("The printer.")).toBeInTheDocument();
   expect(within(items[0]!).getByText("“waiting on the printer”")).toBeInTheDocument();

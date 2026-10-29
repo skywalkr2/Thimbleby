@@ -10,6 +10,8 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { OrgSelect } from "./OrgSelect";
+import { FormField } from "../ui/FormField";
+import { DateField } from "../ui/DateField";
 
 export const list = (text: string) =>
   text
@@ -17,7 +19,7 @@ export const list = (text: string) =>
     .map((x) => x.trim())
     .filter(Boolean);
 
-/** A labelled text box; the form fields of the records screens share this. */
+/** A labelled text box (or date); the form fields of the records screens share this. */
 export function Field(props: {
   id: string;
   label: string;
@@ -28,19 +30,20 @@ export function Field(props: {
   required?: boolean;
 }) {
   return (
-    <div className="field">
-      <label htmlFor={props.id}>
-        {props.label} {props.hint && <span className="hint">{props.hint}</span>}
-      </label>
-      <input
-        id={props.id}
-        type={props.type ?? "text"}
-        value={props.value}
-        required={props.required}
-        autoComplete="off"
-        onChange={(e) => props.onChange(e.target.value)}
-      />
-    </div>
+    <FormField id={props.id} label={<>{props.label} {props.hint && <span className="hint">{props.hint}</span>}</>}>
+      {props.type === "date" ? (
+        <DateField id={props.id} value={props.value} required={props.required} onChange={(e) => props.onChange(e.target.value)} />
+      ) : (
+        <input
+          id={props.id}
+          type={props.type ?? "text"}
+          value={props.value}
+          required={props.required}
+          autoComplete="off"
+          onChange={(e) => props.onChange(e.target.value)}
+        />
+      )}
+    </FormField>
   );
 }
 
