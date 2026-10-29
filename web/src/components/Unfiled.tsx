@@ -8,6 +8,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText } from "../lib/dates";
+import { useSides } from "../lib/sides";
 import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -25,6 +26,7 @@ export function useFile() {
   const { tn } = useWords();
   const act = useAct();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const { personal } = useSides();
   return async (items: Item[], project: string) => {
     // A project just added is not in the list the picker saw yet, so it is looked for again.
     const found = projects.data?.find((p) => p.id === project) ?? (await api.projects()).find((p) => p.id === project);
@@ -32,7 +34,8 @@ export function useFile() {
     return act(
       () => api.fileUnfiled({ project, items: items.map((i) => ({ kind: i.kind, id: i.id, read_version: i.version })) }),
       (done) => ({
-        message: found?.side ? tn("unfiled.filed_side", items.length, { project: where }) : tn("unfiled.filed", items.length, { project: where }),
+        // Filing on a side of work says it is now visible with that side's work; on Personal it just says where.
+        message: found?.side ? tn(found.id === personal ? "unfiled.filed_in" : "unfiled.filed_side", items.length, { project: where }) : tn("unfiled.filed", items.length, { project: where }),
         undo: async () => {
           const report = await api.undo(done.changeset);
           if (!report.restored.length) throw new Error("not undone");

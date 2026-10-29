@@ -29,7 +29,7 @@ import { Knowledge } from "./components/Knowledge";
 import { MissedOneProvider } from "./components/MissedOne";
 import { Panel } from "./components/Panel";
 import { People } from "./components/People";
-import { Projects } from "./components/Projects";
+import { ProjectsOrPersonal } from "./components/Projects";
 import { restoreFocus } from "./components/ModalPanel";
 import { ConnectedEventPage } from "./components/ConnectedEventPage";
 import { RecordPage } from "./components/RecordPage";
@@ -241,7 +241,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "work/stages":
         return <Stages />;
       case "records/projects":
-        return <Projects />;
+        return <ProjectsOrPersonal onBack={() => setView(origin.current)} />;
       case "records/people":
         return <People />;
       case "records/files":

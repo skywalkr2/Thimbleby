@@ -126,7 +126,7 @@ test("a side's Edit details is a small drawer with only Name, Other names and De
   expect(within(drawer).getByRole("textbox", { name: "Description" })).toHaveValue("An independent publishing imprint.");
   // The first field has the cursor.
   await waitFor(() => expect(within(drawer).getByRole("textbox", { name: "Name" })).toHaveFocus());
-  for (const projectOnly of [/Target/, /Status/, /Phase/, /Priority/, /Group/, /Owner/, /Your role/, /Inside/, /Language/, /Budget/]) {
+  for (const projectOnly of [/Target/, /Status/, /Phase/, /Stage/, /Priority/, /Group/, /Owner/, /Your role/, /Inside/, /Language/, /Budget/, /spending limit/]) {
     expect(within(drawer).queryByLabelText(projectOnly)).toBeNull();
   }
   expect(screen.queryByRole("dialog", { name: "Edit project" })).toBeNull();
@@ -152,4 +152,24 @@ test("a side's Details list shows no project-only rows, only its name, other nam
   expect(within(details).queryByText("Open")).toBeNull();
   expect(within(details).queryByText("Drafting")).toBeNull();
   expect(within(details).queryByText("PER-1")).toBeNull();
+});
+
+test("a side's page offers adding a project, which starts inside that side and warns of nothing to be moved", async () => {
+  const user = userEvent.setup();
+  show(SIDE.project, SIDE.name, [SIDE]);
+  const projects = await screen.findByRole("region", { name: "Projects" });
+  await user.click(within(projects).getByRole("button", { name: "Add a project" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a project" });
+  expect(within(dialog).getByRole("combobox", { name: "Inside" })).toHaveValue(SIDE.project);
+});
+
+test("a project's page says which side it is on, and Personal's own page offers no add button", async () => {
+  show(BOOK.id, BOOK.name, [SIDE]);
+  expect(await screen.findByText("Project in Orchard Press")).toBeInTheDocument();
+});
+
+test("Personal's page offers no Add a project", async () => {
+  show(PERSONAL.id, PERSONAL.name, [SIDE]);
+  await screen.findByRole("region", { name: "Areas" });
+  expect(screen.queryByRole("button", { name: "Add a project" })).toBeNull();
 });

@@ -124,6 +124,18 @@ export function useSideOf(): (project: string | null | undefined) => Side | null
   };
 }
 
+/** The words that say what moving something into a side's work changes, or none: the name of the side an item now sits in when
+ * that is a side beside Personal and not the one it started in (`from` is where it was, none for a new item, which is
+ * filed where its form says and needs no warning). The same warning stands beside every way of moving something. */
+export function useMovedToSide(from: string | null | undefined, to: string | null | undefined): string | null {
+  const state = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const sideOf = useSideOf();
+  if (!from || !to) return null;
+  const now = sideOf(to);
+  if (!now || now === sideOf(from) || now === state.data?.personal) return null;
+  return (state.data?.sides ?? []).find((s) => s.project === now)?.name ?? null;
+}
+
 /** The sides as the screens read them: whether there is nothing beside Personal, Personal's own project, and the sides. */
 export function useSides(): SidesState {
   const state = useQuery({ queryKey: ["business"], queryFn: api.business });

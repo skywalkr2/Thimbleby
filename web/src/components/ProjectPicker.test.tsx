@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -50,4 +51,39 @@ test("choosing a side's own choice hands back the side's id; choosing a project 
   await user.selectOptions(select, "In Orchard Press, not in a project");
   await user.selectOptions(select, "The spring catalog");
   expect(picked).toEqual(["PRJ-firm", "PRJ-book"]);
+});
+
+// Moving something into a side's work says what that changes, the same warning as every other way of moving (design 6.32).
+function showMoving(started: string) {
+  const sides = [{ project: "PRJ-firm", kind: "business", name: "Orchard Press", removable: false, filed: 0 }];
+  fakeApi({
+    "GET projects": () => [PERSONAL, HOME, FIRM, BOOK, PART, LOOSE],
+    "GET setup/business": () => ({ business: true, name: "Orchard Press", personal: PERSONAL.id, sides, chosen: "work" }),
+  });
+  function Moving() {
+    const [value, setValue] = useState(started);
+    return <ProjectPicker label="Where does it belong?" value={value} onChange={setValue} />;
+  }
+  renderApp(<Moving />);
+}
+
+test("moving an item from Personal into a side says it will be visible with that side's work, and moving back says nothing", async () => {
+  const user = userEvent.setup();
+  showMoving("PRJ-home");
+  const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
+  await within(select).findAllByRole("group");
+  expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
+  await user.selectOptions(select, "The spring catalog");
+  expect(await screen.findByText("This item will be visible with Orchard Press's work.")).toBeInTheDocument();
+  await user.selectOptions(select, "Home");
+  expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
+});
+
+test("a new item, which starts nowhere, is not warned about where it is put", async () => {
+  const user = userEvent.setup();
+  showMoving("");
+  const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
+  await within(select).findAllByRole("group");
+  await user.selectOptions(select, "The spring catalog");
+  expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
 });

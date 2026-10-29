@@ -2,18 +2,22 @@
 // its own page with how much is open in it. Nothing is shown for any other project. A person with no side beside Personal
 // reads "Areas" and never a word about projects.
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../lib/api";
 import { useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Row } from "../ui/Row";
-import { ButtonLink } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
+import { Actions } from "../ui/Actions";
 import { EmptyState } from "../ui/EmptyState";
 import { RowList } from "../ui/RowList";
+import { ProjectDrawer } from "./ProjectForm";
 export function SideInside(props: { id: string }) {
   const { t, tn } = useWords();
   const { personal, sides } = useSides();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const [adding, setAdding] = useState(false);
   const isPersonal = personal === props.id;
   if (!isPersonal && !sides.some((s) => s.project === props.id)) return null;
   const inside = (projects.data ?? []).filter((p) => p.parent === props.id && !p.completed).sort((a, b) => a.name.localeCompare(b.name));
@@ -42,12 +46,12 @@ export function SideInside(props: { id: string }) {
         </RowList>
       )}
       {!isPersonal && (
-        <p>
-          <ButtonLink href={viewHref("records/projects")}>
-            {t("side.projects.all")}
-          </ButtonLink>
-        </p>
+        <Actions>
+          <Button onClick={() => setAdding(true)}>{t("project.add_title")}</Button>
+          <ButtonLink href={viewHref("records/projects")}>{t("side.projects.all")}</ButtonLink>
+        </Actions>
       )}
+      {adding && <ProjectDrawer inside={props.id} onClose={() => setAdding(false)} />}
     </section>
   );
 }

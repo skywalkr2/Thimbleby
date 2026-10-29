@@ -614,7 +614,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             set_up = None
         return [
             TemplateView(
-                id=t["id"], name=t["name"], description=t["description"], adds=t["adds"], set_up=t["id"] == set_up
+                id=t["id"],
+                name=t["name"],
+                description=t["description"],
+                adds=t["adds"],
+                set_up=t["id"] == set_up,
+                audience=t["audience"],
             )
             for t in templates.shipped()
         ]

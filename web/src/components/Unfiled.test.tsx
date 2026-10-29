@@ -86,7 +86,7 @@ test("File under… groups the places by side: the side's own choice is not in a
   await waitFor(() => expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a project", "In Orchard Press, not in a project", "The spring catalog", "Add a project…"]));
   await user.selectOptions(picker, "PRJ-firm");
   await waitFor(() => expect(calls.find((c) => c.route === "POST unfiled/file")?.body).toMatchObject({ project: "PRJ-firm" }));
-  expect(await screen.findByText("Filed 1 item in Orchard Press, not in a project.")).toBeInTheDocument();
+  expect(await screen.findByText("Filed 1 item in Orchard Press. It is now visible with Orchard Press's work.")).toBeInTheDocument();
 });
 
 test("File under… offers the projects and ends with Add a project…; choosing one files the item at once, with Undo", async () => {

@@ -1444,16 +1444,27 @@ class FilingItem(BaseModel):
     text: str = Field(description="The item in one line.")
 
 
-class FilingQuestion(BaseModel):
-    """The question for one side (design 6.32): the items that wait under Personal and could be this side's."""
+class FilingSide(BaseModel):
+    """A side an item could move to."""
 
     side: str = Field(description="The id of the side's top project.")
     name: str = Field(description="The side's name.")
+
+
+class FilingQuestion(BaseModel):
+    """The question for a set of sides (design 6.32): the items that wait under Personal and could be on any of them.
+    Each item is in one question only; with several `sides` the person picks where they go, and the pick starts on
+    `side`."""
+
+    side: str = Field(description="The id of the side's top project the choice starts on: the first of `sides`.")
+    name: str = Field(description="The name of the side the choice starts on.")
+    sides: list[FilingSide] = Field(description="The sides the items could move to, in the person's order.")
     items: list[FilingItem]
 
 
 class FilingQuestions(BaseModel):
-    """The grouped questions of which side unsure items belong to, one for each side, at most once a day."""
+    """The grouped questions of which side unsure items belong to: each unsure item in one question, with a choice of
+    the sides it could be on, at most once a day for a set of sides."""
 
     questions: list[FilingQuestion]
 
@@ -2629,6 +2640,12 @@ class AgendaItemView(BaseModel):
         description="For an own entry that is a parcel or order on its way: its order, tracking number, carrier and "
         "status. One whose `dated` is false has no days (`days` is empty) and is shown under 'On its way'.",
     )
+    side: str | None = Field(
+        None,
+        description="The id of the side's top project the entry is on: that of the entry the app keeps for it, else "
+        "the one side the calendar it comes from serves; none for neither. The screen's side filter shows an entry "
+        "with none under every choice.",
+    )
 
 
 class ScheduleEntryView(AgendaItemView):
@@ -2652,11 +2669,6 @@ class ScheduleEntryView(AgendaItemView):
         "event",
         description="What the entry is: an event of a connected calendar, an entry of the app's own calendar, a parcel "
         "or order (an own entry with `delivery`), or the due date of one of the person's own open to-dos.",
-    )
-    side: str | None = Field(
-        None,
-        description="The id of the side's top project the entry is on; none for neither. The screen's side filter "
-        "shows an entry with none under every choice.",
     )
     action: str | None = Field(
         None,
@@ -4153,6 +4165,11 @@ class TemplateView(BaseModel):
     description: str
     adds: list[TemplateAdds] = Field(default_factory=list, description="What applying it sets up.")
     set_up: bool = Field(False, description="This workspace already has everything it adds.")
+    audience: Literal["personal", "work", "any"] = Field(
+        "work",
+        description="Who it is for: a person's own life, running work for others, or either. A person with nothing "
+        "beside their own life is offered the first and the last.",
+    )
 
 
 class TemplateApply(BaseModel):
@@ -6802,6 +6819,11 @@ class OpenActionView(BaseModel):
         description="The side it is filed on directly, when it is in a side and in no project of it; its project "
         "name is then empty.",
     )
+    side: str | None = Field(
+        None,
+        description="The id of the side's top project it is on, whether it is filed on the side itself or in a project "
+        "of it; none for neither. The screen's side filter shows an item with none under every choice.",
+    )
     parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
     notes: str | None = Field(None, description="Its notes, which the screen shows on hover.")
     since: str = Field("", description="The day it was made, as an ISO date.")
@@ -6892,6 +6914,11 @@ class OpenQuestionView(BaseModel):
     side_name: str | None = Field(
         None,
         description="The sides it is filed on directly, by name and joined with commas, apart from its projects.",
+    )
+    side: str | None = Field(
+        None,
+        description="The id of the side's top project it is on; none for neither. The screen's side filter shows an "
+        "item with none under every choice.",
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
     since: str = Field("", description="The day it was sent, else the day it was made, as an ISO date.")
@@ -6998,6 +7025,9 @@ class WeekDueView(BaseModel):
     owners: list[OwnerNameView] = Field(default_factory=list)
     mine: bool = False
     kind: Literal["due", "lead", "setup", "hold"] = "due"
+    side: str | None = Field(
+        None, description="The id of the side's top project it is on; none for neither (shown under every choice)."
+    )
 
 
 class WeekWaitingView(BaseModel):
@@ -7007,6 +7037,11 @@ class WeekWaitingView(BaseModel):
     person_name: str
     count: int
     due: date | None = None
+    side: str | None = Field(
+        None,
+        description="The side those to-dos are on. A person waiting on the person from several sides has a row for "
+        "each side; the screen's side filter shows a row with none under every choice.",
+    )
 
 
 class ThisWeekView(BaseModel):
@@ -7532,6 +7567,11 @@ class BriefLineView(BaseModel):
     link: RecordRef | None = None
     ready: bool = False
     you: bool = False
+    side: str | None = Field(
+        None,
+        description="The id of the side's top project the record it opens is on; none for neither. The screen's side "
+        "filter shows a line with none under every choice.",
+    )
 
 
 class BriefSectionView(BaseModel):
@@ -7555,6 +7595,12 @@ class BriefGoalsView(BaseModel):
     most: int
 
 
+class BriefChoiceView(OwnerNameView):
+    """Someone the person can pick as the one they report to: a person on the job, with the part they have there."""
+
+    role: str | None = Field(None, description="Their part at the job, in the person's words, when they gave one.")
+
+
 class BriefMessageView(BaseModel):
     """Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the
     assistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:
@@ -7563,8 +7609,9 @@ class BriefMessageView(BaseModel):
 
     state: Literal["none", "working", "needs_go", "draft", "kept", "ask"]
     to: list[OwnerNameView]
-    choices: list[OwnerNameView] = Field(
-        default_factory=list, description="For `ask`: the people the person can pick as the one they report to."
+    choices: list[BriefChoiceView] = Field(
+        default_factory=list,
+        description="For `ask`: the people on the job the person can pick as the one they report to.",
     )
     text: str | None = None
     estimate_usd: float | None = None

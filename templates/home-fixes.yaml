@@ -1,0 +1,35 @@
+name: Home fixes
+description: Repairs and improvements around the home, from noticing them to done, with who does each and what it costs.
+audience: personal
+plugins:
+  kit:
+    types:
+      - id: fix
+        name: fix
+        plural: Fixes
+        prefix: FX
+        title_field: title
+        fields:
+          - {name: title, label: What needs fixing, kind: text}
+          - {name: room, label: Where in the home, kind: choice, options: [kitchen, bathroom, bedroom, living room, outside, other], assistant: true}
+          - {name: by, label: Who does it, kind: person}
+          - {name: cost, label: Cost, kind: number, assistant: true}
+          - {name: due, label: Wanted by, kind: date, assistant: true}
+          - {name: notes, label: Notes, kind: long_text}
+        stages:
+          - {id: noticed, label: Noticed, description: Something to put right; nobody asked yet.}
+          - id: quoted
+            label: Quoted
+            description: Someone has said what it costs.
+            checks: [{kind: filled, field: cost}]
+          - id: booked
+            label: Booked
+            description: A day is agreed with whoever does it.
+            checks: [{kind: filled, field: due}]
+          - id: done
+            label: Done
+            description: Finished and paid.
+            checklist: [Work checked, Paid]
+        board_by: room
+        columns: [title, room, due]
+        today: {due_field: due, due_within_days: 7}

@@ -37,7 +37,7 @@ const choose = async (name: string) => userEvent.setup().click(await screen.find
 
 // ---- To-dos ------------------------------------------------------------------------------------------------------------
 
-const action = (id: string, text: string, projectId: string | null, name: string | null): S["OpenActionView"] => ({
+const action = (id: string, text: string, projectId: string | null, name: string | null, side: string | null = null): S["OpenActionView"] => ({
   id,
   version: 1,
   text,
@@ -47,6 +47,8 @@ const action = (id: string, text: string, projectId: string | null, name: string
   project: projectId,
   project_name: name ?? "",
   parent_name: null,
+  // The server says which side each is on (the side of its project), or none.
+  side,
   notes: null,
   since: "2026-10-01",
   on_hold: null,
@@ -59,7 +61,7 @@ const action = (id: string, text: string, projectId: string | null, name: string
 });
 const todos: Routes = {
   "GET open-items": () => ({
-    actions: [action("A-1", "Water the beans", "PRJ-garden", "Garden"), action("A-2", "Quote the sofa", "PRJ-quotes", "Quotes"), action("A-3", "Renew the licence", null, null)],
+    actions: [action("A-1", "Water the beans", "PRJ-garden", "Garden", PERSONAL), action("A-2", "Quote the sofa", "PRJ-quotes", "Quotes", SHOP), action("A-3", "Renew the licence", null, null)],
     questions: [],
     stale_days: 21,
   }),

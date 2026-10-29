@@ -4041,6 +4041,26 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
     step when there is one and a list to pick from when there are several, from a side and from Personal alike
     (`tests/test_many_sides.py::test_a_filing_names_every_other_side_to_move_to_and_one_step_only_when_there_is_one`,
     `::test_the_page_lists_every_other_side_to_move_to_and_an_edit_to_one_of_them_moves_the_item`).
+- **One side model for every record and source (built, change log 262; `tests/test_one_side_model.py`, `tests/test_brief_week.py`,
+  `tests/test_greetings.py`, `web/e2e/side-filter.spec.ts`):** which side a thing is on is worked out in one place,
+  `engine/sides.py`, and every list reads it: a record is on the side of the first project it names that has one
+  (`side_of_item`, `side_of_record`); a line of Today's queue is on its project's side, else the side it names itself (a clash
+  is on the side its two meetings share: `side_of_entries`), else the one side the watched calendar or mailbox it is about
+  serves, else the one side every record it names is on, else on none; an entry of the agenda is on the side of the entry the
+  app keeps for it, else the side its calendar serves (`side_of_agenda_item`). What is on no side shows under every choice
+  of the side filter, and a side's choice shows only what is on it, on Today, To-dos and questions, Follow-ups, the Schedule
+  and the week. The rows of the week carry a side too, and one person waited on from several sides is one row under All and
+  one count per side under a side. A to-do the person types belongs to Personal while Personal is their only side
+  (`only_side`); with several sides its form asks where, starting on the side the screen is narrowed to.
+- **Personal only means no work concepts (built, change log 262):** a person whose only side is Personal never sees the stance
+  question about a person (manage, work alongside, report to, watch: the default stands), a Project column in a message's
+  table, the Projects list (its address opens Personal's page, which holds the areas and anything still to be filed), templates
+  made for running work for others (a template says its `audience`: `personal`, `work` or `any`; one that says none is for
+  work), or the words action, project, stage, template, owner or "report to" anywhere. The weekly message to whoever the
+  person reports to is offered only to a person with a side of kind job, asks only among the people on a job side, and is
+  written from the job's side alone (its packet holds that side's people and projects, never Personal's or another side's).
+  A message to someone who is only on the person's own life opens by how they relate to the person, from the wording sheet
+  (`greeting.relation_words.<kind>` and `greeting.relation.<kind>`, `greeting.personal` for any other), never as a colleague's does.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; **built**, S1-4: `tests/test_sides.py`, `tests/test_many_sides.py`): every item belongs to Personal or to the
   second side, the person's work (an employer or a business: setup asks only "Just me" or "Me and my work", change log 218;
   a top-level project, its projects under it; a setting, `workspace.project.business`, names it). Every list that can hold both sides (Today, What changed, Handled for you, Follow-ups, To-dos, People and
@@ -4468,8 +4488,10 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
   project with no reason kept (`filed_by` empty: no core record gained a field, since the plugin API is on hold); it stays
   unfiled only when there is no personal project. It counts as waiting on a guess while it sits directly under Personal,
   the assistant made it after the side existed, it has no `filed_by` and the person hasn't kept it. `GET
-  /api/filing/questions` gives one question for each side with items that could be its own (the sides its source serves,
-  else every other side); a side the person answered today (a `suggestion_chosen` or `suggestion_dismissed` signal whose note
+  /api/filing/questions` gives each waiting item in exactly one question: items that could be the same sides' are one question
+  with the list of those sides (the choice starts on the first, which is the one side the items' source serves when it serves
+  one; the Move names what it changes, and every other way of moving something to a side's work, an item's page, a project's
+  Inside list and a to-do's place, says the same); a side the person answered today (a `suggestion_chosen` or `suggestion_dismissed` signal whose note
   names the side) is not asked again that day. `POST /api/filing/move` is `record.edit` of each item's project through
   `apply_as_person` (one changeset, so one Undo; each edit is an `edited` correction) and moves the notes kept from the same
   inputs along with the items; `POST /api/filing/keep` leaves the items, and they are never asked about again. Moving the

@@ -648,9 +648,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def today_agenda() -> list[AgendaItemView]:
         """Events from watched calendars, then the app's own calendar entries, on today and the next configured days,
         in the person's time zone. Last come the deliveries with no date yet, which are on no day (`days` is empty)."""
-        from engine import today
+        from engine import sides, today
 
-        return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, worker.now(), undated=True)]
+        view = store.read()
+        return [
+            AgendaItemView(**vars(a), side=sides.side_of_agenda_item(view, cfg, a))
+            for a in today.agenda(store, cfg, worker.now(), undated=True)
+        ]
 
     @r.get("/today/agenda-span")
     def today_agenda_span() -> AgendaSpanView:
@@ -760,7 +764,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         here = zone(cfg)
 
         def shown(line: Any) -> QueueLineView:
-            data = {k: v for k, v in vars(line).items() if k not in ("title", "since", "items", "parts")}
+            data = {k: v for k, v in vars(line).items() if k not in ("title", "since", "items", "parts", "side")}
             if line.until:
                 # A time of the person's own clock, so the screen shows it as they would say it.
                 data["until"] = datetime.fromisoformat(line.until).astimezone(here)

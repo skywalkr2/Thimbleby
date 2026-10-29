@@ -39,6 +39,7 @@ from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 from tests.e2e_just_me import seed_first_go, seed_just_me, the_person
 from tests.e2e_meetings import seed_meetings
+from tests.e2e_sides import calendar_sources, seed_sides
 from tests.roundtrip import round_trip
 
 TOKEN = "e2e-token"
@@ -273,6 +274,15 @@ def main() -> None:
         "work words; /__e2e/just-me says what was seeded",
     )
     parser.add_argument(
+        "--sides",
+        action="store_true",
+        help="make the workspace as --just-me does, add a job and a business as setup adds them, and seed a to-do and "
+        "a promise on each side, one to-do on none, a calendar for each side and two meetings of the business "
+        "calendar that clash, for the check that the side filter changes what Today, To-dos, Follow-ups and the "
+        "Schedule show; "
+        "/__e2e/sides says what was seeded",
+    )
+    parser.add_argument(
         "--first-day",
         action="store_true",
         help="make the workspace as --just-me does but seed nothing except one run waiting for the person's first go, "
@@ -306,7 +316,7 @@ def main() -> None:
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
     atexit.register(shutil.rmtree, tmp, ignore_errors=True)
-    if args.just_me or args.first_day:
+    if args.just_me or args.first_day or args.sides:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
         ws = init_workspace(tmp / "ws", git=False, you=the_person(), name=f"{the_person().split()[0]}'s")
@@ -355,6 +365,12 @@ def main() -> None:
             {"id": ACTS_SOURCE, "connector": "mailbox", "label": "E2E mail", "enabled": False, "every_minutes": 43200}
         ]
         watch["acting"] = [ACTS_ACCOUNT]
+        path.write_text(yaml.safe_dump(watch, sort_keys=False), encoding="utf-8")
+    if args.sides:
+        # The calendars name the sides they serve; the sides are made after the app starts and get these ids.
+        path = ws.config_dir / "watch.yaml"
+        watch = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        watch["sources"] = calendar_sources()
         path.write_text(yaml.safe_dump(watch, sort_keys=False), encoding="utf-8")
     if args.standin_account:
         # In the settings file, not a flag, so Allow's save is what the app reads afterwards.
@@ -406,6 +422,14 @@ def main() -> None:
     acts = seed_acts(ws, store, cfg) if args.acts else None
     meetings = seed_meetings(store, cfg) if args.meetings else None
     just_me = seed_just_me(store, cfg) if args.just_me else None
+    if args.sides:
+        from starlette.testclient import TestClient
+
+        # The sides are made through the setup route, as setup makes them, so the running app takes them in at once.
+        client = TestClient(app, base_url=f"http://127.0.0.1:{args.port}", headers={"Authorization": f"Bearer {TOKEN}"})
+        sided = seed_sides(client, store, cfg)
+    else:
+        sided = None
     if args.first_day:
         seed_first_go(store)
 
@@ -500,9 +524,14 @@ def main() -> None:
         """What the "Just me" journey's records are."""
         return JSONResponse({"enabled": just_me is not None, **(just_me or {})})
 
+    async def with_sides(_request):
+        """What the side filter's records are."""
+        return JSONResponse({"enabled": sided is not None, **(sided or {})})
+
     outer = Starlette(
         routes=[
             Route("/__e2e/just-me", alone),
+            Route("/__e2e/sides", with_sides),
             Route("/__e2e/delivered", delivered),
             Route("/__e2e/meetings", met),
             Route("/__e2e/acts", acted),

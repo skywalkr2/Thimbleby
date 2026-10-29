@@ -111,6 +111,16 @@ class People:
         )
         self.owner_format = cfg.workspace.owner_format
         self.team_names = {t.id: t.data["name"] for t in store.read().list("team")}
+        # The people whose only side is the person's own life: a message to one of them doesn't open like a colleague's.
+        from engine import sides
+
+        view = store.read()
+        personal = sides.personal_project(view, cfg)
+        self.own_life = (
+            frozenset(p.id for p in view.list("person") if sides.person_sides(view, cfg, p.data) == [personal])
+            if personal
+            else frozenset()
+        )
 
     @classmethod
     def from_records(
@@ -128,6 +138,7 @@ class People:
         self._build(dict(records), pm, context, shipped("self_words") if self_words is None else self_words)
         self.owner_format = owner_format
         self.team_names = dict(team_names or {})
+        self.own_life = frozenset()
         return self
 
     @classmethod

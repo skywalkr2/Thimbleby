@@ -864,20 +864,26 @@ def test_a_morning_without_confirmed_goals_carries_none(env):
 
 
 def test_the_message_section_asks_once_who_it_is_for_until_someone_is_marked_or_the_person_says_nobody(env):
+    from tests.test_many_sides import add_side
+
     ws, cfg, store, clock = env
-    someone(store, "Quinn Fictional")
+    job = add_side((ws, cfg, store), "Weekday job", kind="job")
+    assert built(env, "monday").message is None, "nobody is on the job yet, so there is nobody to pick"
+    someone(store, "Quinn Fictional", sides=[job])
     asking = built(env, "monday").message
     assert asking.state == "ask" and asking.to == () and asking.choices, "the people to pick from, not the person"
     assert me(cfg) not in asking.choices
-    boss = someone(store, "Lena Fictional", stance="report_to")
+    boss = someone(store, "Lena Fictional", stance="report_to", sides=[job])
     found = built(env, "monday")
     assert found.message.state == "none" and found.message.to == (boss,)
 
 
 def test_saying_nobody_ends_the_question_for_every_later_week_and_undo_asks_again(env):
     from engine import week_plan
+    from tests.test_many_sides import add_side
 
     ws, cfg, store, clock = env
+    someone(store, "Quinn Fictional", sides=[add_side((ws, cfg, store), "Weekday job", kind="job")])
     week_plan.set_reports_to_nobody(store, cfg, NOW, True)
     assert built(env, "monday").message is None
     assert built(env, "monday", NOW + timedelta(days=7)).message is None, "once, not once a week"

@@ -1027,6 +1027,27 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 262. One side model on every record and source, and personal only means no work concepts (2026-10-29; sweep batch 5, X18, X20, X23, X36, X43, X44)
+
+| Where | Before | Now |
+|---|---|---|
+| The side of a thing (6.32) | Each screen worked out a side for its own rows, so Today, the Schedule and the week showed the same lines under every choice of the side filter; a clash from a calendar of one side showed under the others | One place, `engine/sides.py`: a record, a line of Today's queue, an agenda entry and a clash each have a side (or none, shown under every choice); the filter changes what Today, To-dos and questions, Follow-ups, the Schedule and the week show |
+| Typed to-dos (6.32) | A to-do typed by hand had no project, so Personal's page missed it | Filed on Personal while it is the only side; with several sides the form asks where, starting on the side the screen is narrowed to |
+| Move them? (6.32, 7.7) | One question for each side, so the same items were listed twice, and only Today warned that moving makes an item visible with that side's work | Each waiting item in one question with a list of the sides it could be on, starting on its source's side; an item's page, a project's Inside list and a to-do's place carry the same warning |
+| The weekly message (6.32) | Asked a person with only their own life whom they report to; drafted from every side | Offered only with a side of kind job, asks among the people on a job side, drafted from the job's side alone |
+| A message to someone on Personal (6.32) | Opened like a colleague's | Opens by how they relate to the person, from the wording sheet |
+| Personal only (7.1) | The stance question, a Project column in a message's table, the Projects table, work templates, "Action", "report to", "Use this template" and a hint about where you work | None of them: stance not asked, no such column, the Projects address opens Personal's page, only personal templates offered, plain words |
+| Projects with sides (7.13, 7.14) | No Add a project on a side's page; a project's page didn't say its side; "Budget" read as the job's own; "Phase" in the form and "Stage" in the table | Add a project on a side's page starts inside it; the page says "Project in <side>"; "AI spending limit"; "Stage" in both |
+
+Not done here (a design choice or a layout measurement is needed first): one grouping idea for a project's Inside and Group,
+removing a group that is still used by offering to move or remove what is in it, the Projects table's column widths, and
+projects opening the same way (page or pane) everywhere.
+
+Built: `tests/test_one_side_model.py`, `tests/test_brief_week.py`, `tests/test_greetings.py`, `tests/test_filing_unsure.py`,
+`tests/test_kit.py`, `web/src/components/ThisWeekSides.test.tsx`, `web/src/components/TodaySides.test.tsx`,
+`web/src/components/ProjectPicker.test.tsx`, `web/src/components/SideInside.test.tsx`, `web/src/lib/followup-table.test.ts`,
+`web/e2e/side-filter.spec.ts` and the work-words walk in `web/e2e/just-me.spec.ts`.
+
 ## 261. The shared components, second set: form parts, overlays, toast, record parts, choice cards, the wizard and the header's status (2026-10-28; sweep batch V2, VC05, VC06, VC07, VC09, VC10, VC11, VC12, VC13)
 
 | Where | Before | Now |

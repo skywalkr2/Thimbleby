@@ -138,3 +138,20 @@ test("a link that isn't a web address is never made one, and text with tabs or l
   const sheet = toTsv(found, words);
   expect(sheet).toContain("A & B\tLine one Line two <b>\t\t—\t");
 });
+
+describe("a person with only their own life", () => {
+  it("has tables with no column for where an item is filed, and the fill-in column still last", () => {
+    const own: TableWords = { ...words, project: null };
+    const tables = tablesOf(section([action("A1", "Call the plumber", "2026-10-30", { side_name: "Personal", project_name: "" })], [question("Q1", "Which week?", "2026-10-20")]), own, "2026-10-29");
+    expect(tables.map((t) => t.columns)).toEqual([
+      ["To-do", "Due", "Link", "Your update"],
+      ["Question", "First asked", "Link", "Your answer"],
+    ]);
+    for (const table of tables) {
+      expect(table.fill).toBe(table.columns.length - 1);
+      for (const row of table.rows) expect(row).toHaveLength(table.columns.length);
+    }
+    const text = toTsv(tables, own) + toHtml(tables, own);
+    expect(text).not.toMatch(/not in a project|Project/);
+  });
+});

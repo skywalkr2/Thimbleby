@@ -1,10 +1,12 @@
-// What the line that asks which side some items belong to opens (design 6.32, 7.7): for each side, the items the assistant
-// couldn't place and left under Personal, with one question ("These 4 items might be Hale Upholstery's. Move them there?")
-// and two choices. Move says what it changes first (the items will be visible with that side's work), is the person's own
-// change and has Undo; Keep leaves them under Personal and they are not asked about again. Items filed under no project at
-// all (a workspace with no Personal) are still sorted by choosing a side, one change with Undo. The person can also sort
-// them one at a time from the list of unfiled items.
+// What the line that asks which side some items belong to opens (design 6.32, 7.7): the items the assistant couldn't place
+// and left under Personal, each in one question ("These 4 items might be Hale Upholstery's. Move them there?"). When they
+// could be on several sides the question says so and has a list of those sides, starting on the first (the side the
+// calendar or mailbox they came from serves, when it serves one). Move says what it changes first (the items will be
+// visible with that side's work), is the person's own change and has Undo; Keep leaves them under Personal and they are not
+// asked about again. Items filed under no project at all (a workspace with no Personal) are still sorted by choosing a side,
+// one change with Undo. The person can also sort them one at a time from the list of unfiled items.
 import { useQuery } from "@tanstack/react-query";
+import { useId, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { plainTitle } from "../lib/title-dates";
@@ -15,22 +17,29 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import { useFile } from "./Unfiled";
 import { Actions } from "../ui/Actions";
+import { FormField } from "../ui/FormField";
+import { Select } from "../ui/Select";
 import { ItemList } from "../ui/ItemList";
 
 type Question = S["FilingQuestion"];
 
-/** One side's question: what it asks, what Move changes, and Move and Keep. */
+/** One question: what it asks, the side to pick when the items could be on several, what Move changes, and Move and Keep. */
 function SideQuestion(props: { question: Question }) {
   const { t, tn } = useWords();
   const act = useAct();
+  const id = useId();
   const q = props.question;
+  const [picked, setPicked] = useState(q.side);
+  const to = q.sides.find((s) => s.side === picked) ?? q.sides[0] ?? { side: q.side, name: q.name };
+  const several = q.sides.length > 1;
   const refs = q.items.map((i) => ({ kind: i.kind, id: i.id, read_version: i.version }));
   const n = q.items.length;
+  const asked = several ? tn("filing.question.pick", n) : tn("filing.question", n, { side: q.name });
   const move = () =>
     act(
-      () => api.filingMove({ side: q.side, items: refs }),
+      () => api.filingMove({ side: to.side, items: refs }),
       (done) => ({
-        message: tn("filing.moved", done.count, { side: q.name }) + (done.rule ? ` ${t("filing.rule_proposed")}` : ""),
+        message: tn("filing.moved", done.count, { side: to.name }) + (done.rule ? ` ${t("filing.rule_proposed")}` : ""),
         undo: async () => {
           const report = await api.undo(done.changeset);
           if (!report.restored.length) throw new Error("not undone");
@@ -39,14 +48,25 @@ function SideQuestion(props: { question: Question }) {
     );
   const keep = () => act(() => api.filingKeep({ side: q.side, items: refs }), () => ({ message: t("filing.kept") }));
   return (
-    <section className="filing-question" data-filing-question={q.side} aria-label={tn("filing.question", n, { side: q.name })}>
-      <p>{tn("filing.question", n, { side: q.name })}</p>
-      <ul className="plain-list" aria-label={t("filing.items_label", { side: q.name })}>
+    <section className="filing-question" data-filing-question={q.side} aria-label={asked}>
+      <p>{asked}</p>
+      <ul className="plain-list" aria-label={several ? t("filing.items_label.pick") : t("filing.items_label", { side: q.name })}>
         {q.items.map((i) => (
           <li key={`${i.kind}:${i.id}`}>{plainTitle(i.text)}</li>
         ))}
       </ul>
-      <p className="hint">{tn("filing.visible", n, { side: q.name })}</p>
+      {several && (
+        <FormField id={`${id}-side`} label={t("filing.pick_label")}>
+          <Select id={`${id}-side`} value={to.side} onChange={(e) => setPicked(e.target.value)}>
+            {q.sides.map((s) => (
+              <option key={s.side} value={s.side}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
+      <p className="hint">{tn("filing.visible", n, { side: to.name })}</p>
       <Actions align="end">
         <Button variant="primary" onClick={() => void move()}>
           {t("filing.move")}

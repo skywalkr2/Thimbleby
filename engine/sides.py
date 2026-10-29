@@ -44,13 +44,17 @@ SETTING_BUSINESS = "workspace.project.business"
 SETTING_SIDES = "workspace.project.sides"
 
 
+def words_sheet() -> dict[str, Any]:
+    """The words the engine writes into the person's own records itself, by wording-sheet key, as shipped."""
+    return load_yaml(WORDS_FILE.read_text(encoding="utf-8")) or {}
+
+
 def word(cfg: Any | None, key: str) -> str:
     """A word the engine writes into a record: the workspace's wording override, else the shipped default."""
     override = (cfg.ui.wording.get(key) or "").strip() if cfg is not None else ""
     if override:
         return override
-    shipped = load_yaml(WORDS_FILE.read_text(encoding="utf-8")) or {}
-    return str(shipped[key])
+    return str(words_sheet()[key])
 
 
 def _live(view: Any, project_id: str | None) -> str | None:
@@ -204,6 +208,12 @@ def alone_with_personal(cfg: Any) -> str | None:
     return project.personal if project.personal and not project.sides else None
 
 
+def only_side(view: Any, cfg: Any) -> str | None:
+    """The side everything of the person's belongs to when they have just one: Personal, while no other side stands.
+    None once there is another side (what is typed then is filed where its form says) or when there is no Personal."""
+    return personal_project(view, cfg) if not side_list(view, cfg) else None
+
+
 def business_project(view: Any, cfg: Any) -> str | None:
     """The top project of the first side besides Personal, when there is one and it is still there."""
     listed = side_list(view, cfg)
@@ -291,11 +301,42 @@ def side_of_item(view: Any, cfg: Any, record: Any) -> Side | None:
     return None
 
 
+def side_of_agenda_item(view: Any, cfg: Any, item: Any) -> Side | None:
+    """The side an entry of the agenda is on: that of the project of the entry the app keeps for it, else, for an event
+    of a connected calendar, the one side its watched source serves. None when it is on no side (shown under every
+    choice)."""
+    kept = item.snapshot if item.own else item.entry
+    record = view.get("event", kept) if kept else None
+    if record is not None and (side := side_of_item(view, cfg, record)):
+        return side
+    return watch_source_side(view, cfg, item.source) if item.source else None
+
+
+def side_of_entries(view: Any, cfg: Any, items: Any) -> Side | None:
+    """The one side the entries of a line are on (a clash is between two): the side the ones that are on a side share.
+    Entries on no side don't decide, and entries on different sides leave the line on none, so it shows under every
+    choice of the side filter."""
+    found = {side for item in items if (side := side_of_agenda_item(view, cfg, item))}
+    return next(iter(found)) if len(found) == 1 else None
+
+
+def side_of_record(view: Any, cfg: Any, kind: str, record_id: str | None) -> Side | None:
+    """Which side a record is on, by its kind and id: that of the first project it names that has one. None for a record
+    that isn't there or names none."""
+    record = view.get(kind, record_id) if record_id else None
+    return side_of_item(view, cfg, record) if record is not None else None
+
+
 def side_of_line(view: Any, cfg: Any, line: Any) -> Side | None:
-    """Which side a line of Today's queue is on: that of its project, else the one side every record it names (the
+    """Which side a line of Today's queue is on: that of its project, else the side the line itself names (a clash's
+    meetings), else the one side the watched source it is about serves, else the one side every record it names (the
     question, the actions and the questions it covers) is on. A line about records on several sides, or about none, is
     on no side, so a side filter shows it under every choice."""
     if side := side_of_project(view, cfg, getattr(line, "project", None)):
+        return side
+    if (own := getattr(line, "side", None)) in side_ids(view, cfg):
+        return own
+    if side := watch_source_side(view, cfg, getattr(line, "source", None)):
         return side
     found: set[Side] = set()
     refs = [("question", getattr(line, "question", None))]

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { useMovedToSide } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { PlaceOptions } from "./PlaceOptions";
@@ -24,8 +25,11 @@ export function ProjectPicker(props: {
   describedBy?: string;
   autoFocus?: boolean;
 }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  // Where it was when the form opened: moving it into a side's work says what that changes, as every way of moving does.
+  const [started] = useState(props.value);
+  const movedTo = useMovedToSide(started, props.value);
   const own = useId();
   const id = props.id ?? own;
   const select = useRef<HTMLSelectElement>(null);
@@ -50,6 +54,7 @@ export function ProjectPicker(props: {
         <PlaceOptions projects={rows} />
         <option value={ADD}>{t("project.add_option")}</option>
       </Select>
+      {movedTo && <span className="hint">{tn("filing.visible", 1, { side: movedTo })}</span>}
       {adding && <ProjectDrawer onClose={close} onSaved={(projectId) => props.onChange(projectId)} />}
     </FormField>
   );

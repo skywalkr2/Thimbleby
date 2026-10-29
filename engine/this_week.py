@@ -16,6 +16,7 @@ from engine.blocked import standing_hold
 from engine.config.schema import WEEKDAYS
 from engine.firm_due import firm_due
 from engine.names import People
+from engine.sides import side_of_item
 from engine.today import AgendaItem, agenda, zone
 
 
@@ -36,16 +37,21 @@ class Due:
     #: "due" (by the week's end), "lead" (a to-do counted ahead by its lead time), "setup" (a meeting counted ahead) or
     #: "hold"
     kind: str = "due"
+    #: The side the to-do is on (the id of its top project); none when it is on none.
+    side: str | None = None
 
 
 @dataclass
 class Waiting:
     """Someone waiting on the person: `count` of the person's open to-dos promised to them or replies owed to them that
-    are due by the week's end or overdue, and the earliest `due` of them (none when none has a day)."""
+    are due by the week's end or overdue, and the earliest `due` of them (none when none has a day). One person who is
+    waited on from several sides has one of these for each side, so a side's list counts only its own."""
 
     person: str
     count: int
     due: date | None = None
+    #: The side those to-dos are on (the id of its top project); none for those on none.
+    side: str | None = None
 
 
 @dataclass
@@ -112,7 +118,7 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
     pm = people.pm
     reader = store.read()
     due: list[Due] = []
-    waiting: dict[str, Waiting] = {}
+    waiting: dict[tuple[str, str | None], Waiting] = {}
     for record in reader.list("action"):
         d = record.data
         if d.get("status") != "open" or standing_hold(reader, d, people):
@@ -128,15 +134,16 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
             counted, kind = day == today, "hold"
         elif day is not None and lead > 0 and day > last and lead_start(cfg, day, lead) <= today:
             counted, kind = True, "setup" if meeting else "lead"
+        side = side_of_item(reader, cfg, record)
         if counted:
-            due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine, kind))
+            due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine, kind, side))
         if not mine or (day is not None and day > last):
             continue
         asked = [d["asker"]] if d.get("reply_owed") and d.get("asker") else []
         for person in {*(d.get("promised_to") or []), *asked}:
             if person == pm:
                 continue
-            found = waiting.setdefault(person, Waiting(person, 0))
+            found = waiting.setdefault((person, side), Waiting(person, 0, side=side))
             found.count += 1
             if day is not None and (found.due is None or day < found.due):
                 found.due = day
@@ -146,6 +153,8 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
         today,
         last,
         due,
-        sorted(waiting.values(), key=lambda w: (w.due is None, w.due or last, people.name(w.person).lower())),
+        sorted(
+            waiting.values(), key=lambda w: (w.due is None, w.due or last, people.name(w.person).lower(), w.side or "")
+        ),
         meetings,
     )

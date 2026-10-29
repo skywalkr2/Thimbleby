@@ -259,6 +259,8 @@ test("Move edits the item's project as the person, says so with Undo, and the ro
   const { calls } = open([ADDED_BY_WORDS], {
     "POST records/edit": () => ({ changeset: "CS-20" }),
     "POST changesets/CS-20/undo": () => ({ restored: ["ACT-9"], skipped: [] }),
+    // Personal is the other side, so moving there says only where it went.
+    "GET setup/business": () => ({ business: true, name: "Business", personal: "PRJ-2", sides: [{ project: "PRJ-1", kind: "business", name: "Business", removable: false, filed: 0 }], chosen: "work" }),
   });
   await screen.findByRole("list", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: /More actions for/ }));
@@ -293,5 +295,5 @@ test("with several other sides the row's menu has Move to… over a list of them
   expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(expect.arrayContaining(["Personal", "Lantern Works"]));
   await user.click(screen.getByRole("menuitem", { name: "Lantern Works" }));
   await waitFor(() => expect(body(calls, "POST records/edit")).toEqual({ kind: "action", id: "ACT-9", fields: { project: "PRJ-3" }, read_version: 3 }));
-  expect(await screen.findByText("Moved to Lantern Works.")).toBeInTheDocument();
+  expect(await screen.findByText("Moved 1 item to Lantern Works. It is now visible with Lantern Works's work.")).toBeInTheDocument();
 });

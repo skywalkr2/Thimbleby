@@ -24,6 +24,7 @@ from engine.tasks import task_kind
 from engine.texts import read_text, versions
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, without_first_go
+from tests.test_many_sides import add_side
 
 # A Monday afternoon on the person's clock (UTC here); the week runs Monday to Friday.
 NOW = datetime(2026, 10, 19, 14, 0, tzinfo=UTC)
@@ -40,6 +41,8 @@ def env(tmp_path):
     without_first_go(ws.config_dir)
     cfg = ws.config(env={"COCKPIT__WORKSPACE__USER__TIMEZONE": "UTC"})
     store = Store(ws.db_path, cfg=cfg)
+    # The person has a job: the message to whoever they report to is offered to no one else.
+    store.job = add_side((ws, cfg, store), "Weekday job", kind="job")
     yield ws, cfg, store
     store.close()
     set_responder(None)
@@ -50,8 +53,9 @@ def me(cfg) -> str:
 
 
 def boss(store, name="Lena Fictional") -> str:
+    """Someone on the job whom the person reports to."""
     with store.transaction() as tx:
-        return tx.create("person", {"full_name": name, "stance": "report_to"}, _PM).id
+        return tx.create("person", {"full_name": name, "stance": "report_to", "sides": [store.job]}, _PM).id
 
 
 def plans(store) -> list:
@@ -168,7 +172,12 @@ def test_the_packet_has_the_weeks_facts_marked_as_data_after_the_stable_parts(en
     with store.transaction() as tx:
         tx.create(
             "action",
-            {"text": mine, "owners": [{"person": me(cfg)}], "due": (TODAY + timedelta(days=2)).isoformat()},
+            {
+                "text": mine,
+                "owners": [{"person": me(cfg)}],
+                "due": (TODAY + timedelta(days=2)).isoformat(),
+                "project": store.job,
+            },
             _PM,
         )
     week_plan.set_goals(store, cfg, GOALS, NOW)
@@ -181,6 +190,67 @@ def test_the_packet_has_the_weeks_facts_marked_as_data_after_the_stable_parts(en
     assert "Keep it to three lines." in text and text.count("<untrusted") >= 1
     assert "<untrusted" not in built.task.stable and built.task.instructions.startswith("You are")
     assert built.knowledge is not None
+
+
+def test_the_message_is_written_from_the_jobs_side_alone(env):
+    """Nothing of the person's own life or of a business of theirs is in what the message is written from: not a to-do,
+    not a decision waiting, not a person on those sides."""
+    ws, cfg, store = env
+    boss(store, "Lena Fictional")
+    personal = cfg.workspace.project.personal
+    business = add_side(env, "Side business", kind="business")
+    due = (TODAY + timedelta(days=2)).isoformat()
+    words = {"job": "Send the weekly figures", "personal": "Book the dentist", "business": "Order the fabric"}
+    with store.transaction() as tx:
+        for side, home in (("job", store.job), ("personal", personal), ("business", business)):
+            tx.create(
+                "action", {"text": words[side], "owners": [{"person": me(cfg)}], "due": due, "project": home}, _PM
+            )
+        tx.create(
+            "question",
+            {"to": me(cfg), "title": "Which week suits the dentist?", "kind": "decision", "projects": [personal]},
+            _PM,
+        )
+        tx.create("person", {"full_name": "Sister Fictional", "sides": [personal], "relation": "my sister"}, _PM)
+    request = week_plan.ask_for_message(store, cfg, NOW)
+    built = packets.build(ws, store, cfg, request, TODAY)
+    everything = built.task.request + built.task.stable
+    assert words["job"] in everything
+    for left_out in (words["personal"], words["business"], "Which week suits the dentist?", "Sister Fictional"):
+        assert left_out not in everything
+
+
+def test_only_a_person_with_a_job_is_asked_who_they_report_to_and_only_among_the_people_on_it(tmp_path):
+    from tests.e2e_just_me import the_person
+
+    ws = init_workspace(tmp_path / "alone", git=False, you=the_person())
+    cfg = ws.config(env={"COCKPIT__WORKSPACE__USER__TIMEZONE": "UTC"})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        personal = cfg.workspace.project.personal
+        with store.transaction() as tx:
+            sister = tx.create(
+                "person", {"full_name": "Sister Fictional", "sides": [personal], "relation": "my sister"}, _PM
+            ).id
+        # Their own life alone: no message and nothing asked, whoever is on file.
+        assert week_plan.message_of(store.read(), cfg, store, NOW) is None
+        with pytest.raises(StoreError, match="job"):
+            week_plan.ask_for_message(store, cfg, NOW)
+        # A business of their own is nobody's job: still nothing asked.
+        business = add_side((ws, cfg, store), "Side business", kind="business")
+        assert week_plan.message_of(store.read(), cfg, store, NOW) is None
+        # A job with nobody on it yet: nothing to pick from, so nothing asked.
+        job = add_side((ws, cfg, store), "Weekday job", kind="job")
+        assert week_plan.message_of(store.read(), cfg, store, NOW) is None
+        # With people on the job, those and only those are offered: not the sister, not someone on the business.
+        with store.transaction() as tx:
+            lena = tx.create("person", {"full_name": "Lena Fictional", "role": "manager", "sides": [job]}, _PM).id
+            pat = tx.create("person", {"full_name": "Pat Fictional", "role": "colleague", "sides": [job]}, _PM).id
+            tx.create("person", {"full_name": "Supplier Fictional", "sides": [business]}, _PM)
+        asked = week_plan.message_of(store.read(), cfg, store, NOW)
+        assert asked.state == "ask" and asked.choices == (lena, pat) and sister not in asked.choices
+    finally:
+        store.close()
 
 
 def test_a_packet_for_a_week_with_nobody_to_report_to_is_refused(env):
@@ -289,6 +359,11 @@ def client(tmp_path):
     cfg = ws.config(env={}, flags={"server.base_path": "/"})
     app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui")
     with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as http:
+        # The person has a job, set up as setup sets it up; the running app takes the side in as its own loop does.
+        made = http.post("/api/setup/business", json={"name": "Weekday job", "kind": "job"})
+        assert made.status_code == 200, made.text
+        app.state.worker.apply_live()
+        app.state.store.job = made.json()["project"]
         yield http, app.state.store, ws
     set_responder(None)
 
@@ -307,16 +382,20 @@ def test_the_goal_route_confirms_answers_with_what_it_replaced_and_explains_a_re
 
 def test_the_brief_route_names_the_form_the_goals_and_the_message_state(client):
     http, store, ws = client
+    with store.transaction() as tx:
+        tx.create("person", {"full_name": "Quinn Fictional", "role": "manager", "sides": [store.job]}, _PM)
     monday = http.get("/api/brief", params={"form": "monday"})
     assert monday.status_code == 200
     body = monday.json()
     assert body["form"] == "monday" and body["goals"]["confirmed"] is False
-    assert body["message"]["state"] == "ask" and body["message"]["to"] == [] and body["message"]["choices"]
+    assert body["message"]["state"] == "ask" and body["message"]["to"] == []
+    # The choices are the people on the job, each with the part they have there.
+    assert [(c["name"], c["role"]) for c in body["message"]["choices"]] == [("Quinn Fictional", "manager")]
     morning = http.get("/api/brief", params={"form": "morning"}).json()
     assert morning["form"] == "morning" and morning["goals"] is None
     assert http.get("/api/brief", params={"form": "noon"}).status_code == 422
     with store.transaction() as tx:
-        tx.create("person", {"full_name": "Lena Fictional", "stance": "report_to"}, _PM)
+        tx.create("person", {"full_name": "Lena Fictional", "stance": "report_to", "sides": [store.job]}, _PM)
     asked = http.post("/api/brief/message", json={"note": "Short."})
     assert asked.status_code == 200 and asked.json()["request"]
     again = http.post("/api/brief/message", json={})
@@ -344,7 +423,7 @@ def test_asking_for_a_message_with_nobody_to_report_to_is_refused_on_the_route(c
 def test_choosing_who_the_person_reports_to_marks_them_as_the_persons_own_change_with_undo(env):
     _, cfg, store = env
     with store.transaction() as tx:
-        lena = tx.create("person", {"full_name": "Lena Fictional"}, _PM).id
+        lena = tx.create("person", {"full_name": "Lena Fictional", "sides": [store.job]}, _PM).id
     changeset = week_plan.set_report_to(store, cfg, lena)
     assert week_plan.report_to(store.read(), cfg) == [lena]
     entry = next(e for e in store.read().changes_of(changeset) if e["field"] == "stance")
@@ -366,7 +445,7 @@ def test_the_person_cannot_be_the_one_they_report_to_and_a_stranger_is_refused(e
 def test_the_who_route_marks_a_person_or_says_nobody_and_both_can_be_taken_back(client):
     http, store, _ = client
     with store.transaction() as tx:
-        lena = tx.create("person", {"full_name": "Lena Fictional"}, _PM).id
+        lena = tx.create("person", {"full_name": "Lena Fictional", "sides": [store.job]}, _PM).id
     asking = http.get("/api/brief", params={"form": "monday"}).json()["message"]
     assert asking["state"] == "ask" and lena in [c["person"] for c in asking["choices"]]
     nobody = http.post("/api/brief/message/for", json={"nobody": True})

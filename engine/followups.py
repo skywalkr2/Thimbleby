@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, tzinfo
 from typing import Any
 
-from engine import audience, learn, outward, promises, sent_version, sides
+from engine import audience, greetings, learn, outward, promises, sent_version, sides
 from engine.blocked import ViewNames, blocker_of, blocker_problem, holds_up
 from engine.cleaning import normalize
 from engine.config import Config
@@ -469,7 +469,7 @@ def compose(s: Section, cfg: Config, people: People) -> str:
     actions = [a for a in s.actions if a["to_send"]]
     if not questions and not actions:
         return ""
-    lines = [words.greeting.format(first_name=people.first_name(s.person)), ""]
+    lines = [greetings.opening(cfg, people, s.person), ""]
     for n, q in enumerate(questions, 1):
         prefix = f"{n}. " if len(questions) > 1 else ""
         lines.append(prefix + plain_dates(q["title"], words.date_format))
@@ -512,7 +512,7 @@ def compose_nudge(s: Section, cfg: Config, people: People, today: date) -> Nudge
             : cfg.ui.followups.second_nudge_items
         ]
     first = min((item[4] for item in due if item[4]), default=None) or today.isoformat()
-    lines = [words.greeting.format(first_name=people.first_name(s.person)), ""]
+    lines = [greetings.opening(cfg, people, s.person), ""]
     if round_ > 1:
         lines.append(words.nudge_second_intro.format(date=shown(first)))
     elif len(due) == 1:

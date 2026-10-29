@@ -183,7 +183,7 @@ test("a row opens its detail with the facts, its notes and a link to its page; E
   expect(within(detail).getByText("Where it stands.")).toBeInTheDocument();
   expect(within(detail).getByText("The series")).toBeInTheDocument();
   expect(within(detail).getByText("Only watch it")).toBeInTheDocument();
-  expect(within(detail).getByText("$40.00 of $250.00 spent")).toBeInTheDocument();
+  expect(within(detail).getByText("$40.00 of $250.00 spent on the assistant")).toBeInTheDocument();
   expect(within(detail).getByText("2 open to-dos")).toBeInTheDocument();
   expect(within(detail).getByText("older note")).toBeInTheDocument();
   expect(within(detail).queryByText("other project")).toBeNull();
@@ -269,7 +269,7 @@ test("a project's status, phase and group are chosen from their lists, and the c
   renderApp(<Projects />);
   const dialog = await edit(user, "Book one");
   const status = within(dialog).getByRole("combobox", { name: "Status" });
-  const phase = within(dialog).getByRole("combobox", { name: "Phase" });
+  const phase = within(dialog).getByRole("combobox", { name: "Stage" });
   const group = within(dialog).getByRole("combobox", { name: /Group/ });
   await waitFor(() => expect(within(group).getAllByRole("option").map((o) => o.textContent)).toContain("Old shelf (no longer offered)"));
   expect(within(status).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "On track", "At risk", "Add to the list…"]);

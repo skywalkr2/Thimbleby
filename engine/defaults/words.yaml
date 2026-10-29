@@ -23,3 +23,31 @@ filing.rule_source: "You moved this sender's items to the same place twice."
 # The title of a note made from a mail: its subject, then who sent it; with no subject, the first words of the body.
 note.title_from: "{subject} · from {sender}"
 note.title_from_unknown: "{subject}"
+
+# How a message opens to someone who is only on the person's own life, by how they relate to the person: for each kind,
+# the words in the person's description of them that mean it (separated by commas) and the opening line, {first_name}
+# being the name a greeting to them uses. Anyone else on the own life gets `greeting.personal`; a colleague's message
+# opens as the greeting setting says.
+greeting.personal: "Hi {first_name}, hope you're doing well."
+greeting.relation_words.partner: partner, wife, husband, spouse
+greeting.relation.partner: "Hi {first_name},"
+greeting.relation_words.parent: parent, mother, father, mom, dad, mum
+greeting.relation.parent: "Hi {first_name},"
+greeting.relation_words.child: child, son, daughter
+greeting.relation.child: "Hi {first_name},"
+greeting.relation_words.sister: sister, sis
+greeting.relation.sister: "Hi {first_name}, hope you're well."
+greeting.relation_words.brother: brother, bro
+greeting.relation.brother: "Hi {first_name}, hope you're well."
+greeting.relation_words.friend: friend
+greeting.relation.friend: "Hey {first_name}, hope you're doing well."
+greeting.relation_words.neighbor: neighbor, neighbour
+greeting.relation.neighbor: "Hi {first_name}, hope you're well."
+greeting.relation_words.landlord: landlord, landlady
+greeting.relation.landlord: "Hello {first_name},"
+greeting.relation_words.school: school, teacher
+greeting.relation.school: "Hello {first_name},"
+greeting.relation_words.tradesperson: tradesperson, plumber, electrician, builder
+greeting.relation.tradesperson: "Hello {first_name},"
+greeting.relation_words.doctor: doctor, dentist, nurse
+greeting.relation.doctor: "Hello {first_name},"

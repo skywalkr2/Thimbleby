@@ -2770,6 +2770,18 @@
             "description": "The series this date or entry is one meeting of, when it is.",
             "title": "Series"
           },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side's top project the entry is on: that of the entry the app keeps for it, else the one side the calendar it comes from serves; none for neither. The screen's side filter shows an entry with none under every choice.",
+            "title": "Side"
+          },
           "snapshot": {
             "description": "The item's id: the snapshot of a watched event, or the id of an own entry.",
             "title": "Snapshot",
@@ -6409,6 +6421,51 @@
         "title": "BlockerView",
         "type": "object"
       },
+      "BriefChoiceView": {
+        "description": "Someone the person can pick as the one they report to: a person on the job, with the part they have there.",
+        "properties": {
+          "name": {
+            "description": "The owner as the workspace writes one: the full name, with the team when it has one.",
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "description": "The owner's person id.",
+            "title": "Person",
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their part at the job, in the person's words, when they gave one.",
+            "title": "Role"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the team they act for here, if any; kept when another owner changes.",
+            "title": "Team"
+          }
+        },
+        "required": [
+          "person",
+          "name"
+        ],
+        "title": "BriefChoiceView",
+        "type": "object"
+      },
       "BriefGoalsIn": {
         "additionalProperties": false,
         "properties": {
@@ -6704,6 +6761,18 @@
             "title": "Ready",
             "type": "boolean"
           },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side's top project the record it opens is on; none for neither. The screen's side filter shows a line with none under every choice.",
+            "title": "Side"
+          },
           "state": {
             "anyOf": [
               {
@@ -6824,9 +6893,9 @@
         "description": "Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the\nassistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:\nits `text`), `kept` (the person copied it) or `ask` (nobody is marked as someone the person reports to, and they\nhaven't said nobody: `choices` are the people to pick from). `to` are the people it is for.",
         "properties": {
           "choices": {
-            "description": "For `ask`: the people the person can pick as the one they report to.",
+            "description": "For `ask`: the people on the job the person can pick as the one they report to.",
             "items": {
-              "$ref": "#/components/schemas/OwnerNameView"
+              "$ref": "#/components/schemas/BriefChoiceView"
             },
             "title": "Choices",
             "type": "array"
@@ -10356,7 +10425,7 @@
         "type": "object"
       },
       "FilingQuestion": {
-        "description": "The question for one side (design 6.32): the items that wait under Personal and could be this side's.",
+        "description": "The question for a set of sides (design 6.32): the items that wait under Personal and could be on any of them.\nEach item is in one question only; with several `sides` the person picks where they go, and the pick starts on\n`side`.",
         "properties": {
           "items": {
             "items": {
@@ -10366,26 +10435,35 @@
             "type": "array"
           },
           "name": {
-            "description": "The side's name.",
+            "description": "The name of the side the choice starts on.",
             "title": "Name",
             "type": "string"
           },
           "side": {
-            "description": "The id of the side's top project.",
+            "description": "The id of the side's top project the choice starts on: the first of `sides`.",
             "title": "Side",
             "type": "string"
+          },
+          "sides": {
+            "description": "The sides the items could move to, in the person's order.",
+            "items": {
+              "$ref": "#/components/schemas/FilingSide"
+            },
+            "title": "Sides",
+            "type": "array"
           }
         },
         "required": [
           "side",
           "name",
+          "sides",
           "items"
         ],
         "title": "FilingQuestion",
         "type": "object"
       },
       "FilingQuestions": {
-        "description": "The grouped questions of which side unsure items belong to, one for each side, at most once a day.",
+        "description": "The grouped questions of which side unsure items belong to: each unsure item in one question, with a choice of\nthe sides it could be on, at most once a day for a set of sides.",
         "properties": {
           "questions": {
             "items": {
@@ -10399,6 +10477,27 @@
           "questions"
         ],
         "title": "FilingQuestions",
+        "type": "object"
+      },
+      "FilingSide": {
+        "description": "A side an item could move to.",
+        "properties": {
+          "name": {
+            "description": "The side's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "side": {
+            "description": "The id of the side's top project.",
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "name"
+        ],
+        "title": "FilingSide",
         "type": "object"
       },
       "FingerprintIn": {
@@ -16767,6 +16866,18 @@
             ],
             "description": "How it repeats, when it does, said back from data."
           },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side's top project it is on, whether it is filed on the side itself or in a project of it; none for neither. The screen's side filter shows an item with none under every choice.",
+            "title": "Side"
+          },
           "side_name": {
             "anyOf": [
               {
@@ -17126,6 +17237,18 @@
             },
             "title": "Projects",
             "type": "array"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side's top project it is on; none for neither. The screen's side filter shows an item with none under every choice.",
+            "title": "Side"
           },
           "side_name": {
             "anyOf": [
@@ -25920,7 +26043,7 @@
                 "type": "null"
               }
             ],
-            "description": "The id of the side's top project the entry is on; none for neither. The screen's side filter shows an entry with none under every choice.",
+            "description": "The id of the side's top project the entry is on: that of the entry the app keeps for it, else the one side the calendar it comes from serves; none for neither. The screen's side filter shows an entry with none under every choice.",
             "title": "Side"
           },
           "slot": {
@@ -29762,6 +29885,17 @@
             "title": "Adds",
             "type": "array"
           },
+          "audience": {
+            "default": "work",
+            "description": "Who it is for: a person's own life, running work for others, or either. A person with nothing beside their own life is offered the first and the last.",
+            "enum": [
+              "personal",
+              "work",
+              "any"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
           "description": {
             "title": "Description",
             "type": "string"
@@ -32152,6 +32286,18 @@
             ],
             "title": "Project Name"
           },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side's top project it is on; none for neither (shown under every choice).",
+            "title": "Side"
+          },
           "side_name": {
             "anyOf": [
               {
@@ -32203,6 +32349,18 @@
           "person_name": {
             "title": "Person Name",
             "type": "string"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The side those to-dos are on. A person waiting on the person from several sides has a row for each side; the screen's side filter shows a row with none under every choice.",
+            "title": "Side"
           }
         },
         "required": [
@@ -37303,7 +37461,7 @@
     },
     "/api/filing/questions": {
       "get": {
-        "description": "The questions of which side unsure items belong to: for each side, the items waiting under Personal that\ncould be its own (none when the person answered that side's question today).",
+        "description": "The questions of which side unsure items belong to: the items waiting under Personal, each in one question\nwith the sides it could be on (none for sides the person answered today).",
         "operationId": "filing_questions_api_filing_questions_get",
         "responses": {
           "200": {

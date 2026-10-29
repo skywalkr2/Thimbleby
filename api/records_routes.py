@@ -18,6 +18,7 @@ from api.schemas import (
     FilingMoved,
     FilingQuestion,
     FilingQuestions,
+    FilingSide,
     ProjectKnowsView,
     ProjectReading,
     SeriesPageView,
@@ -80,14 +81,15 @@ def build_records_router(ws: Workspace, cfg: Config, store: Store, events: Event
 
     @r.get("/filing/questions")
     def filing_questions() -> FilingQuestions:
-        """The questions of which side unsure items belong to: for each side, the items waiting under Personal that
-        could be its own (none when the person answered that side's question today)."""
+        """The questions of which side unsure items belong to: the items waiting under Personal, each in one question
+        with the sides it could be on (none for sides the person answered today)."""
         asked = filing.questions(store.read(), cfg, worker.now())
         return FilingQuestions(
             questions=[
                 FilingQuestion(
                     side=q.side,
                     name=q.name,
+                    sides=[FilingSide(side=c.project, name=c.name) for c in q.sides],
                     items=[
                         FilingItem(kind=i.kind, id=i.id, version=i.version, text=i.text)  # type: ignore[arg-type]
                         for i in q.items

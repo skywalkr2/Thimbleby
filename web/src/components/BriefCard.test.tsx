@@ -357,6 +357,31 @@ test("with nobody marked the briefing asks once who the message is for, and mark
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-7/undo")).toBe(true));
 });
 
+test("the question offers the people on the job but not customers, suppliers or staff, and starts on the one who is the manager", async () => {
+  const user = userEvent.setup();
+  const calls = show(
+    {
+      ...MONDAY,
+      message: {
+        state: "ask",
+        to: [],
+        choices: [
+          { person: "PER-7", name: "Avi Example", role: "customer" },
+          { person: "PER-8", name: "Pat Example", role: "colleague" },
+          { person: "PER-9", name: "Lena Example", role: "manager" },
+          { person: "PER-10", name: "Sam Example", role: "supplier" },
+        ],
+      },
+    },
+    { "POST brief/message/for": () => ({ changeset: "CS-7" }) },
+  ).calls;
+  const who = await screen.findByLabelText("The person you report to");
+  expect(within(who).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick a person", "Pat Example", "Lena Example"]);
+  expect(who).toHaveValue("PER-9");
+  await user.click(screen.getByRole("button", { name: "This is who I report to" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST brief/message/for")?.body).toEqual({ person: "PER-9" }));
+});
+
 test("saying nobody stops the question, and Undo asks again", async () => {
   const user = userEvent.setup();
   const calls = show(ASKING, { "POST brief/message/for": () => ({ changeset: null }) }).calls;

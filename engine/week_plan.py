@@ -7,9 +7,11 @@ Both live on one `week_plan` record for the person and the week, named by the we
   theirs, with Undo. Nothing proposes them into the record: the briefing offers a few from what is due and open, and the
   person confirms, changes or drops them. A week with fewer than the fewest has no confirmed goals.
 - **The message** is a draft the assistant writes to the people the person reports to (stance `report_to`, 6.34), from
-  what was done, what moved and what needs them. It is one request of the `monday-message` kind: estimated, held for the
-  person's go above the configured amount, filed as a pending draft of the record's `message` text. It is never sent
-  from here; the person copies it, which marks it reviewed.
+  what was done, what moved and what needs them. It is offered only to a person with a job (a side of kind job), asks
+  who it is for among the people on a job side, and is written from the job's side alone, never from the person's own
+  life or any other side. It is one request of the `monday-message` kind: estimated, held for the person's go above the
+  configured amount, filed as a pending draft of the record's `message` text. It is never sent from here; the person
+  copies it, which marks it reviewed.
 
 Nothing here reaches a service.
 """
@@ -20,6 +22,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from engine import sides
 from engine.config.schema import WEEKDAYS
 from engine.names import People
 from engine.scope import stance_of
@@ -126,6 +129,12 @@ def set_goals(store: Any, cfg: Any, goals: list[str], now: datetime) -> list[str
     return before
 
 
+def job_sides(view: Any, cfg: Any) -> list[str]:
+    """The sides of kind job that stand, by id: the only place a message to whoever the person reports to is offered
+    and written from. Empty for a person with only their own life, or a business of their own."""
+    return [s.project for s in sides.side_list(view, cfg) if s.kind == "job"]
+
+
 def report_to(view: Any, cfg: Any) -> list[str]:
     """The people the person reports to (their stance is "I report to them"), by name."""
     me = cfg.workspace.user.person
@@ -180,22 +189,31 @@ def said_nobody(view: Any, person: str | None) -> bool:
 
 
 def candidates(view: Any, cfg: Any) -> tuple[str, ...]:
-    """The people the person can pick as the one they report to: everyone but themself, by name."""
+    """The people the person can pick as the one they report to: those on a job side, never themself or anyone only on
+    their own life, by name."""
     me = cfg.workspace.user.person
-    names = {p.id: str(p.data.get("full_name") or p.id) for p in view.list("person") if p.id != me}
+    jobs = set(job_sides(view, cfg))
+    names = {
+        p.id: str(p.data.get("full_name") or p.id)
+        for p in view.list("person")
+        if p.id != me and jobs & set(sides.person_sides(view, cfg, p.data))
+    }
     return tuple(sorted(names, key=lambda i: (names[i].lower(), i)))
 
 
 def message_of(view: Any, cfg: Any, store: Any, now: datetime) -> Message | None:
-    """The message's state for this week. With nobody marked as someone the person reports to, the briefing asks once
-    who it is for (state `ask`), until the person marks someone or says nobody: then there is no message to write
-    (None)."""
+    """The message's state for this week, for a person with a job: with none, there is no message (None). With nobody
+    marked as someone the person reports to, the briefing asks once who it is for among the people on the job (state
+    `ask`), until the person marks someone or says nobody, and says nothing while nobody is on the job yet (None)."""
+    if not job_sides(view, cfg):
+        return None
     to = tuple(report_to(view, cfg))
     person = People(store, cfg).pm
     if not to:
-        if said_nobody(view, person):
+        choices = candidates(view, cfg)
+        if said_nobody(view, person) or not choices:
             return None
-        return Message("ask", (), choices=candidates(view, cfg))
+        return Message("ask", (), choices=choices)
     week, _ = week_bounds(cfg, now.astimezone(zone(cfg)).date())
     plan = plan_of(view, person, week)
     if plan is None:
@@ -259,6 +277,8 @@ def ask_for_message(store: Any, cfg: Any, now: datetime, note: str | None = None
     person = People(store, cfg).pm
     week, _ = week_bounds(cfg, now.astimezone(zone(cfg)).date())
     with store.transaction() as tx:
+        if not job_sides(tx, cfg):
+            raise StoreError("There is no job to write a message for.")
         if not report_to(tx, cfg):
             raise StoreError("There is nobody marked as someone you report to, so there is no message to write.")
         found = plan_of(tx, person, week)
@@ -304,6 +324,19 @@ def copied(store: Any, cfg: Any, now: datetime) -> bool:
 # ---- the packet ---------------------------------------------------------------------------------------------------
 
 
+def _the_jobs_side(view: Any, cfg: Any) -> set[str]:
+    """The side the message is written from: the job side or sides of the people it is for (every job side when none of
+    them is on one)."""
+    jobs = set(job_sides(view, cfg))
+    theirs = {
+        side
+        for person in report_to(view, cfg)
+        if (record := view.get("person", person)) is not None
+        for side in sides.person_sides(view, cfg, record.data)
+    } & jobs
+    return theirs or jobs
+
+
 def _marked(text: str) -> str:
     """Text that can't close the marking it sits in."""
     return text.replace("</untrusted", "</ untrusted")
@@ -323,6 +356,10 @@ def facts(store: Any, cfg: Any, now: datetime) -> str:
     today = now.astimezone(here).date()
     _, last = week_bounds(cfg, today)
     since = now - timedelta(days=7)
+    on_the_job = _the_jobs_side(view, cfg)
+
+    def on_job(record: Any) -> bool:
+        return sides.side_of_item(view, cfg, record) in on_the_job
 
     def stamp(value: Any) -> datetime | None:
         try:
@@ -339,7 +376,11 @@ def facts(store: Any, cfg: Any, now: datetime) -> str:
         if moment is None or not since <= moment <= now:
             continue
         action = view.get("action", row["record_id"])
-        if action is None or not any(o.get("person") == pm for o in action.data.get("owners") or []):
+        if (
+            action is None
+            or not on_job(action)
+            or not any(o.get("person") == pm for o in action.data.get("owners") or [])
+        ):
             continue
         if row["field"] == "status" and row["after"] == "done" and (row["record_id"], "done") not in seen:
             seen.add((row["record_id"], "done"))
@@ -351,7 +392,7 @@ def facts(store: Any, cfg: Any, now: datetime) -> str:
     waiting: list[str] = []
     for action in view.list("action"):
         d = action.data
-        if d.get("status") != "open" or standing_hold(view, d, people):
+        if d.get("status") != "open" or not on_job(action) or standing_hold(view, d, people):
             continue
         day = firm_due(d)
         mine = any(o.get("person") == pm for o in d.get("owners") or [])
@@ -363,7 +404,7 @@ def facts(store: Any, cfg: Any, now: datetime) -> str:
     deciding = [
         q.data["title"]
         for q in view.list("question")
-        if q.data.get("to") == pm and q.data.get("status") == "open" and q.data.get("kind") == "decision"
+        if q.data.get("to") == pm and q.data.get("status") == "open" and q.data.get("kind") == "decision" and on_job(q)
     ]
     goals = goals_of(view, pm, week_bounds(cfg, today)[0])
     names = ", ".join(people.name(p) for p in report_to(view, cfg))
@@ -393,6 +434,8 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     found = store.read().get("week_plan", about.get("id")) if about.get("kind") == "week_plan" else None
     if found is None:
         raise PacketRefused("the week this message was for is gone")
+    if not job_sides(store.read(), cfg):
+        raise PacketRefused("the person has no job to write a message for")
     if not report_to(store.read(), cfg):
         raise PacketRefused("nobody is marked as someone the person reports to")
     note = req.data.get("note") or ""
@@ -401,6 +444,11 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     kept = current(store.read(), "week_plan", found.id, "message")
     kept_text = read_text(store, kept.data["sha256"]) if kept is not None else ""
     people = People(store, cfg)
+    # Only the job's side is in the packet: its people and its projects, never the person's own life or another side.
+    view = store.read()
+    on_the_job = _the_jobs_side(view, cfg)
+    its_people = frozenset(p.id for p in view.list("person") if on_the_job & set(sides.person_sides(view, cfg, p.data)))
+    its_projects = frozenset(p.id for p in view.list("project") if sides.top_of(view, p.id) in on_the_job)
     learned = _learned(
         store,
         cfg,
@@ -417,8 +465,8 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
         for part in (
             "# Practice\n" + _guidance(kind),
             learned.stable,
-            "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store, cfg),
+            "# People\n" + _people(store, cfg, its_people),
+            "# Projects\n" + _projects(store, cfg, reach=its_projects),
         )
         if part.strip()
     )

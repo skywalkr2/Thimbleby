@@ -110,7 +110,7 @@ test("beside the pane only the priority columns stay, and the column picker brin
   const pane = await screen.findByRole("complementary", { name: "Harbor" });
   expect(pane).toBeInTheDocument();
   expect(document.querySelector("[data-split]")).toHaveAttribute("data-pane", "beside");
-  expect(headers().filter(Boolean)).toEqual(["Project", "Status", "Target", "Owner", "Open to-dos", "Actions"]);
+  expect(headers().filter(Boolean)).toEqual(["Project", "Status", "Target", "Owner", "Open to-dos", "Options"]);
   // The picker lists the others, checked or not, and choosing one shows it.
   await user.click(screen.getByRole("button", { name: "Choose columns" }));
   const stage = await screen.findByRole("menuitemcheckbox", { name: "Stage" });
@@ -168,7 +168,7 @@ test("the organizations are a table: name, how many people work there, whether i
   });
   renderApp(<People />);
   const table = await screen.findByRole("table", { name: "Organizations" });
-  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent).filter(Boolean)).toEqual(["Organization", "People", "Yours", "Also called", "Actions"]);
+  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent).filter(Boolean)).toEqual(["Organization", "People", "Yours", "Also called", "Options"]);
   const one = within(table).getByText("Org one").closest("tr")!;
   expect(one).toHaveTextContent("2");
   expect(one).toHaveTextContent("Org 1");

@@ -122,7 +122,7 @@ test("the project form offers Inside (never itself), Language with the inherited
   expect(labels[0]).toBe("Same as English (United Kingdom)");
   expect(labels.slice(1)).toEqual(["English (Australia)", "English (United Kingdom)", "English (United States)", "French (Canada)"]);
   expect(within(dialog).getByText("Choose a writing preference to override the parent project's choice.")).toBeInTheDocument();
-  const budget = within(dialog).getByRole("spinbutton", { name: /Budget \(US dollars\)/ });
+  const budget = within(dialog).getByRole("spinbutton", { name: /AI spending limit \(US dollars\)/ });
   expect(budget).toHaveValue(null);
   await user.selectOptions(language, "en-AU");
   await user.type(budget, "120.5");
@@ -171,7 +171,7 @@ test("a project with no project around it names the workspace as what an empty l
   renderApp(<Projects />);
   await user.click(await screen.findByRole("button", { name: "Add a project" }));
   const language = await screen.findByRole("combobox", { name: /Writing preferences/ });
-  expect(within(language).getAllByRole("option")[0]).toHaveTextContent("Same as the workspace");
+  expect(within(language).getAllByRole("option")[0]).toHaveTextContent("Same as your usual setting");
 });
 
 test("choosing Same as for the language and clearing the budget send nothing, so the project inherits and has no cap", async () => {
@@ -184,7 +184,7 @@ test("choosing Same as for the language and clearing the budget send nothing, so
   const language = within(dialog).getByRole("combobox", { name: /Writing preferences/ });
   expect(language).toHaveValue("en-GB");
   await user.selectOptions(language, "");
-  await user.clear(within(dialog).getByRole("spinbutton", { name: /Budget/ }));
+  await user.clear(within(dialog).getByRole("spinbutton", { name: /AI spending limit/ }));
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1")).toBe(true));
   expect(calls.find((c) => c.route === "POST projects/PRJ-1")?.body).toMatchObject({ parent: null, language: null, budget_usd: null });

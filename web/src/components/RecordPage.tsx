@@ -31,7 +31,7 @@ import { useMessageActs } from "./MessageActs";
 import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
 import { SideInside } from "./SideInside";
-import { useSides } from "../lib/sides";
+import { useSideOf, useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
@@ -42,6 +42,7 @@ import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink, domainOf } from "./SafeText";
 import { StancePicker } from "./StancePicker";
+import { Unfiled } from "./Unfiled";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
@@ -68,9 +69,13 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const page = useQuery({ queryKey: ["record-page", kind, id], queryFn: () => api.recordPage(kind, id) });
   const lines = useValueLines();
   const { justMe, personal, sides } = useSides();
+  const sideOf = useSideOf();
   // Personal's page and each side's page are the top of a side: they say what is inside and never call themselves a project.
   const isSide = kind === "project" && (personal === id || sides.some((s) => s.project === id));
   // An organization that is one of the person's own businesses or jobs says so, and links to that side.
+  // A project says which side it is on, when the person has sides to tell apart.
+  const onSide = kind === "project" && !isSide && !justMe && sides.length > 0 ? sideOf(id) : null;
+  const sideName = onSide ? (onSide === personal ? t("sides.filter.personal") : sides.find((s) => s.project === onSide)?.name) : undefined;
   const ownSide = kind === "organization" ? sides.find((s) => s.organization === id) : undefined;
   const { open, dialog } = useTextReview();
   // "Change this" sits in a menu beside the record's own actions, for the kinds of record it can be asked for.
@@ -169,7 +174,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       <PageHeader
         id="record-title"
         title={heading}
-        kind={!isSide && !isSelf ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : readableTail(kind)}</Pill> : undefined}
+        kind={!isSide && !isSelf ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
         crumb={
           <Button variant="quiet" size="sm" onClick={props.onBack}>
             {t("record.back")}
@@ -226,6 +231,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {page.data && <RecordActivity page={page.data} part="open" self={isSelf} />}
           {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
           {page.data && <RecordActivity page={page.data} part="rest" />}
+          {kind === "project" && justMe && id === personal && <Unfiled />}
           {kind === "project" && <SideInside id={id} />}
           {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
           {data.long_text.map((field) => (
@@ -234,7 +240,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               kind={kind}
               id={id}
               field={field}
-              help={info.get(field)?.description || undefined}
+              help={has(`field.${field}.help`) ? t(`field.${field}.help`) : info.get(field)?.description || undefined}
               onReview={open}
             />
           ))}
@@ -286,7 +292,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               </DefinitionList>
             )}
           </section>
-          {kind === "person" && !isSelf && (
+          {/* Who someone is to the person is a question about people at work; a person with only their own life isn't asked. */}
+          {kind === "person" && !isSelf && !justMe && (
             <StancePicker person={id} version={data.version} stance={data.fields.stance} trackOnly={data.fields.track_only === true} />
           )}
           </aside>

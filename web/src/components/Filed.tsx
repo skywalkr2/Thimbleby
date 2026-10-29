@@ -4,6 +4,7 @@
 import { useId } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Select } from "../ui/Select";
@@ -31,7 +32,8 @@ export function movesToPick(filed: Filed): S["FiledMove"][] {
 /** Moves an item to the top project of another side (the one it can move to, or the one named); the toast says so and has Undo. */
 export function useMoveFiled() {
   const act = useAct();
-  const { t } = useWords();
+  const { t, tn } = useWords();
+  const { personal } = useSides();
   return (kind: string, id: string, filed: Filed, side?: S["FiledMove"]) => {
     const to = side?.project ?? filed.move_to;
     if (!to) return Promise.resolve(undefined);
@@ -39,7 +41,8 @@ export function useMoveFiled() {
     return act(
       () => api.editRecord({ kind, id, fields: { [filed.field]: filed.field === "projects" ? [to] : to }, read_version: filed.version }),
       (done) => ({
-        message: t("filed.moved", { project: name }),
+        // Moving to a side of work says what that changes, as every other way of moving something does.
+        message: to === personal ? t("filed.moved", { project: name }) : tn("filing.moved", 1, { side: name }),
         undo: async () => {
           const report = await api.undo(done.changeset);
           if (!report.restored.length) throw new Error("not undone");
@@ -51,7 +54,8 @@ export function useMoveFiled() {
 
 /** The line on an item's page: why it is where it is, and the button that moves it to the other side. */
 export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
+  const { personal } = useSides();
   const move = useMoveFiled();
   const { filed } = props;
   const options = movesToPick(filed);
@@ -65,6 +69,7 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
           <Button size="sm" onClick={() => void move(props.kind, props.id, filed)}>
             {t("filed.move", { project: filed.move_to_name ?? "" })}
           </Button>
+          {filed.move_to !== personal && <span className="hint"> {tn("filing.visible", 1, { side: filed.move_to_name ?? "" })}</span>}
         </>
       )}
       {options.length > 0 && (
@@ -90,6 +95,7 @@ export function FiledLine(props: { kind: string; id: string; filed: Filed }) {
               </option>
             ))}
           </Select>
+          <span className="hint"> {t("filed.move_hint")}</span>
         </>
       )}
     </p>

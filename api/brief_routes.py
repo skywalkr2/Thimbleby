@@ -12,6 +12,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
+    BriefChoiceView,
     BriefGoalsIn,
     BriefGoalsKept,
     BriefGoalsView,
@@ -27,7 +28,7 @@ from api.schemas import (
     OwnerNameView,
     RecordRef,
 )
-from engine import brief, week_plan
+from engine import brief, sides, week_plan
 from engine.config import Config
 from engine.names import People
 from engine.storage import Store, StoreError
@@ -40,7 +41,11 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     def line_view(line: brief.Line) -> BriefLineView:
         values: dict[str, Any] = {k: v for k, v in vars(line).items() if k != "link"}
-        return BriefLineView(**values, link=RecordRef(kind=line.link[0], id=line.link[1]) if line.link else None)
+        return BriefLineView(
+            **values,
+            link=RecordRef(kind=line.link[0], id=line.link[1]) if line.link else None,
+            side=sides.side_of_record(store.read(), cfg, *line.link) if line.link else None,
+        )
 
     @r.get("/brief")
     def get_brief(form: Literal["morning", "evening", "monday"] | None = None) -> BriefView:
@@ -63,7 +68,14 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             message=BriefMessageView(
                 state=message.state,  # type: ignore[arg-type]
                 to=[OwnerNameView(person=p, name=people.name(p)) for p in message.to],
-                choices=[OwnerNameView(person=p, name=people.name(p)) for p in message.choices],
+                choices=[
+                    BriefChoiceView(
+                        person=p,
+                        name=people.name(p),
+                        role=(store.read().get("person", p).data.get("role") or None),
+                    )
+                    for p in message.choices
+                ],
                 text=message.text,
                 estimate_usd=message.estimate_usd,
             )

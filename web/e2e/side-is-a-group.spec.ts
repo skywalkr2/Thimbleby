@@ -108,7 +108,7 @@ test.describe("a business is a group, not a project", () => {
     await expect(drawer.getByRole("textbox", { name: "Name", exact: true })).toBeFocused();
     await expect(drawer.getByRole("textbox", { name: /Other names/ })).toBeVisible();
     await expect(drawer.getByRole("textbox", { name: "Description" })).toHaveValue(SUMMARY);
-    for (const projectOnly of [/Target/, /Status/, /Phase/, /Priority/, /Group/, /Owner/, /Your role/, /Inside/, /Budget/]) {
+    for (const projectOnly of [/Target/, /Status/, /Phase/, /Priority/, /Group/, /Owner/, /Your role/, /Inside/, /AI spending limit/]) {
       await expect(drawer.getByLabel(projectOnly)).toHaveCount(0);
     }
     await expect(page.getByRole("dialog", { name: "Edit project" })).toHaveCount(0);

@@ -42,6 +42,11 @@ const justMe = { port: 8799 + offset };
 // business and a project before it looks at their pages.
 const sides = { port: 8763 + offset };
 
+// And the side filter: a workspace made like the "Just me" one with a job and a business added as setup adds them, a to-do, a
+// question and a promise on each side, one to-do on none and two calendars each serving a side, so each screen is read under
+// every choice of the filter.
+const sideFilter = { port: 8765 + offset };
+
 // And the first day: a workspace made as a person with no work makes it, with a business set up through the setup route and
 // nothing else in it but one run waiting for the first go, read as it stands (the check on rows of empty parts, and the
 // captures when CAPTURE_DIR is set).
@@ -133,6 +138,7 @@ export default defineConfig({
     { name: "meetings", testMatch: /meetings-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${meetings.port}/` } },
     { name: "just-me", testMatch: /just-me\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${justMe.port}/` } },
     { name: "sides", testMatch: /side-is-a-group\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sides.port}/` } },
+    { name: "side-filter", testMatch: /side-filter\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sideFilter.port}/` } },
     { name: "first-day", testMatch: /first-day.*\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${firstDay.port}/` } },
     { name: "quick-edits", testMatch: /quick-edits\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${quickEdits.port}/` } },
     { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
@@ -213,6 +219,13 @@ export default defineConfig({
       command: `uv run python -m tests.e2e_server --port ${sides.port} --base-path / --just-me --plain-stages`,
       cwd: "..",
       url: `http://127.0.0.1:${sides.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `uv run python -m tests.e2e_server --port ${sideFilter.port} --base-path / --sides --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${sideFilter.port}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
     },

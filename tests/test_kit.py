@@ -166,7 +166,8 @@ def test_a_workspace_saves_its_settings_as_a_template(tmp_path):
     saved = templates.save(ws, tmp_path / "mine.yaml", "Mine", "My own setup.", ["kit"])
     data = yaml.safe_load(saved.read_text())
     assert data["name"] == "Mine" and data["plugins"]["kit"]["types"][0]["id"] == "request"
-    assert [t["id"] for t in templates.shipped()] == ["client-work", "content-calendar"]
+    shipped = [t["id"] for t in templates.shipped()]
+    assert shipped == ["client-work", "content-calendar", "home-fixes", "trips-and-plans"]
 
 
 def test_items_have_a_place_in_the_synced_folder(env, tmp_path):
@@ -214,3 +215,30 @@ def test_the_person_edits_any_shown_record_with_undo(env):
         f"{api}/records/edit", json={**body, "fields": {"size": "enormous"}, "read_version": item.version + 1}
     )
     assert refused.status_code == 409
+
+
+def test_every_shipped_template_says_who_it_is_for_and_applies(tmp_path):
+    """Each starting template names its audience (a person's own life, running work for others, or either) and applies
+    to a new workspace; the ones for a person's own life say nothing about work."""
+    import re
+
+    from engine import templates
+
+    shipped = {t["id"]: t for t in templates.shipped()}
+    assert {i: t["audience"] for i, t in shipped.items()} == {
+        "client-work": "work",
+        "content-calendar": "any",
+        "home-fixes": "personal",
+        "trips-and-plans": "personal",
+    }
+    for template_id in shipped:
+        ws, _cfg, store = workspace(tmp_path / template_id, template=template_id)
+        store.close()
+    work_words = re.compile(r"\b(work|projects?|clients?|customers?|stages?|owners?|organizations?)\b", re.IGNORECASE)
+    for template_id in ("home-fixes", "trips-and-plans"):
+        text = " ".join(
+            [shipped[template_id]["name"], shipped[template_id]["description"]]
+            + [a["name"] for a in shipped[template_id]["adds"]]
+            + [f for a in shipped[template_id]["adds"] for f in a["fields"]]
+        )
+        assert not work_words.search(text), (template_id, work_words.search(text).group(0))

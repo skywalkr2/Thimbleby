@@ -146,14 +146,19 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     owners=owner_ids(people, d.owners),
                     mine=d.mine,
                     kind=d.kind,
+                    side=d.side,
                 )
                 for d in found.due
             ],
             waiting=[
-                WeekWaitingView(person=w.person, person_name=people.name(w.person), count=w.count, due=w.due)
+                WeekWaitingView(
+                    person=w.person, person_name=people.name(w.person), count=w.count, due=w.due, side=w.side
+                )
                 for w in found.waiting
             ],
-            meetings=[AgendaItemView(**vars(m)) for m in found.meetings],
+            meetings=[
+                AgendaItemView(**vars(m), side=sides.side_of_agenda_item(store.read(), cfg, m)) for m in found.meetings
+            ],
         )
 
     @r.get("/schedule")

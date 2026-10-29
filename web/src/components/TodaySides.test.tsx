@@ -66,9 +66,10 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-const waiting = (side: S["SideView"]): S["FilingQuestion"] => ({
+const waiting = (side: S["SideView"], ...also: S["SideView"][]): S["FilingQuestion"] => ({
   side: side.project,
   name: side.name,
+  sides: [side, ...also].map((s) => ({ side: s.project, name: s.name })),
   items: items.map((i) => ({ kind: i.kind, id: i.id, version: i.version, text: i.text })),
 });
 
@@ -157,4 +158,26 @@ test("Keep leaves the items under Personal and changes nothing", async () => {
   await waitFor(() => expect(calls.find((c) => c.route === "POST filing/keep")?.body).toMatchObject({ side: FIRST.project }));
   expect(calls.some((c) => c.route === "POST filing/move")).toBe(false);
   expect(await screen.findByText("Kept under Personal.")).toBeInTheDocument();
+});
+
+test("items that could be on two sides are one question with a list of those sides, starting on the first, and Move goes to the one picked", async () => {
+  const user = userEvent.setup();
+  const calls = show(sortLine(3, null), [FIRST, SECOND], {
+    "GET unfiled": () => unfiledView(),
+    "GET filing/questions": () => ({ questions: [waiting(FIRST, SECOND)] }),
+    "POST filing/move": () => ({ changeset: "CS-2", count: 3, rule: null }),
+  });
+  await user.click(within(await row("These 3 items could belong to one of your sides. Move them?")).getByRole("button", { name: "Look" }));
+  const question = await screen.findByLabelText("These 3 items could belong to one of your sides. Where should they go?", { selector: "section" });
+  // Each item is listed once, not once for each side.
+  expect(within(question).getAllByRole("listitem").map((li) => li.textContent)).toEqual(items.map((i) => i.text));
+  const side = within(question).getByRole("combobox", { name: "Move to" });
+  expect(side).toHaveValue(FIRST.project);
+  // The warning names the side the list is on, and follows it.
+  expect(within(question).getByText(`These 3 items will be visible with ${FIRST.name}'s work.`)).toBeInTheDocument();
+  await user.selectOptions(side, SECOND.project);
+  expect(within(question).getByText(`These 3 items will be visible with ${SECOND.name}'s work.`)).toBeInTheDocument();
+  await user.click(within(question).getByRole("button", { name: "Move" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST filing/move")?.body).toMatchObject({ side: SECOND.project }));
+  expect(await screen.findByText(`Moved 3 items to ${SECOND.name}. They are now visible with ${SECOND.name}'s work.`)).toBeInTheDocument();
 });

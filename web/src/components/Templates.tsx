@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useRestart } from "../lib/restart";
+import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Icon } from "../ui/Icon";
@@ -17,9 +18,12 @@ export function TemplateList() {
   const act = useAct();
   const restart = useRestart();
   const templates = useQuery({ queryKey: ["templates"], queryFn: api.templates });
+  const { justMe } = useSides();
   const [busy, setBusy] = useState(false);
   if (templates.isPending) return <Skeleton />;
-  if (templates.isError || !templates.data.length) return <EmptyState text={t("welcome.template.none")} />;
+  // A person with nothing beside their own life is offered the templates for that, never the ones for running work.
+  const offered = templates.data?.filter((tpl) => !justMe || tpl.audience !== "work") ?? [];
+  if (templates.isError || !offered.length) return <EmptyState text={t("welcome.template.none")} />;
   const apply = async (template: S["TemplateView"]) => {
     setBusy(true);
     const done = await act(
@@ -31,7 +35,7 @@ export function TemplateList() {
   };
   return (
     <RowList>
-      {templates.data.map((tpl) => {
+      {offered.map((tpl) => {
         return (
           <Row
             key={tpl.id}

@@ -1,0 +1,29 @@
+name: Trips and plans
+description: Trips, visits and other plans of your own, from first idea to done, with what to book and bring.
+audience: personal
+plugins:
+  kit:
+    types:
+      - id: plan
+        name: plan
+        plural: Plans
+        prefix: PL
+        title_field: title
+        fields:
+          - {name: title, label: What, kind: text}
+          - {name: when, label: When, kind: date, assistant: true}
+          - {name: place, label: Where, kind: text, assistant: true}
+          - {name: companions, label: Who is coming, kind: person}
+          - {name: notes, label: Notes, kind: long_text}
+        stages:
+          - {id: idea, label: Idea, description: Something to think about; nothing booked yet.}
+          - id: booked
+            label: Booked
+            description: The day and the place are settled.
+            checks: [{kind: filled, field: when}]
+            checklist: [Day settled, Place booked, Everyone told]
+          - id: done
+            label: Done
+            description: It has happened.
+        columns: [title, when, place]
+        today: {due_field: when, due_within_days: 7, missing: [when]}

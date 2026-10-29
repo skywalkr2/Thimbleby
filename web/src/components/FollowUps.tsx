@@ -612,6 +612,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const { t, tn } = useWords();
   const act = useAct();
   const { push } = useToasts();
+  const { justMe } = useSides();
   const s = props.section;
   const ref = useRef<HTMLLIElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -664,7 +665,8 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
 
   // The table is what the message holds, in rows: its words come from the sheet and nothing is added to it.
   const words: TableWords = {
-    project: t("followups.table.project"),
+    // A person with only their own life has everything in one place, so the table has no column for it.
+    project: justMe ? null : t("followups.table.project"),
     action: t("followups.table.action"),
     question: t("followups.table.question"),
     due: t("followups.table.due"),

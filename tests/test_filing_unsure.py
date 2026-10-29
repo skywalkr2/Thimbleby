@@ -261,14 +261,15 @@ def test_a_source_serving_two_sides_offers_only_those_sides(env):
         )
     (waiting,) = filing.waiting(store.read(), cfg)
     assert set(waiting.could_be) == {BUSINESS_ID, second}  # the third side isn't served, so it isn't offered
-    asked = filing.questions(store.read(), cfg, NOW)
-    assert {q.side for q in asked} == {BUSINESS_ID, second}
-    assert filing.summary(store.read(), cfg, NOW).subject is None  # two sides asked: the line names none
+    (asked,) = filing.questions(store.read(), cfg, NOW)  # one question, with a choice of the two sides it could be
+    assert {c.project for c in asked.sides} == {BUSINESS_ID, second}
+    assert filing.summary(store.read(), cfg, NOW).subject is None  # two sides to pick from: the line names none
 
 
-def test_a_job_and_a_business_beside_personal_get_one_question_for_each_side_a_day_and_one_line_naming_neither(env):
-    """Two sides beside Personal (design 6.32, check U15): what no signal places could be either side's, so each side is
-    asked at most once a day, and Today says it in one line that names no single side while there are two."""
+def test_a_job_and_a_business_beside_personal_get_one_question_with_a_choice_and_one_line_naming_neither(env):
+    """Two sides beside Personal (design 6.32, check U15): what no signal places could be either side's, so every item
+    is in one question that lets the person pick the side, asked at most once a day while a side is unanswered, and
+    Today says it in one line that names no single side while there are two."""
     import json
 
     from engine import today_queue
@@ -278,18 +279,40 @@ def test_a_job_and_a_business_beside_personal_get_one_question_for_each_side_a_d
     job = add_side(env, "Weekday job", kind="job")
     run_week(env)
     view = store.read()
-    asked = filing.questions(view, cfg, NOW)
-    assert [q.side for q in asked] == [BUSINESS_ID, job]  # one question for each side, in the person's order
-    both = {(i.kind, i.id) for i in asked[0].items}
-    assert both and both == {(i.kind, i.id) for i in asked[1].items} and unfiled(view) == []
-    # Today: one line for every question, counting each item once, naming neither side.
+    (asked,) = filing.questions(view, cfg, NOW)  # one question, not one for each side
+    assert [c.project for c in asked.sides] == [BUSINESS_ID, job]  # a choice of the sides, in the person's order
+    assert asked.side == BUSINESS_ID  # it starts on the first
+    both = {(i.kind, i.id) for i in asked.items}
+    assert both and len(both) == len(asked.items) and unfiled(view) == []  # each item once
+    # Today: one line for the question, counting each item once, naming neither side.
     shown = [x for x in today_queue.queue(ws, store, cfg, NOW) if x.kind == "unfiled" and x.state == "which_side"]
     assert len(shown) == 1 and shown[0].subject is None and shown[0].count == len(both)
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" not in sheet["queue.sides.many.other"] and "{business}" not in sheet["queue.sides.meta.many"]
-    # Moving one item answers the business's question for today; the job's question stays for the rest, still once.
-    first = asked[0].items[0]
+    # Moving one item to the business answers the business for today; the job is still unanswered, so the rest are asked
+    # again, once, and tomorrow all of them are.
+    first = asked.items[0]
     filing.move(store, cfg, BUSINESS_ID, [(first.kind, first.id, first.version)], NOW)
-    after = filing.questions(store.read(), cfg, NOW)
-    assert [q.side for q in after] == [job] and len(after[0].items) == len(both) - 1
-    assert [q.side for q in filing.questions(store.read(), cfg, NOW + timedelta(days=1))] == [BUSINESS_ID, job]
+    (after,) = filing.questions(store.read(), cfg, NOW)
+    assert len(after.items) == len(both) - 1
+    filing.keep(store, cfg, job, [(i.kind, i.id, i.version) for i in after.items], NOW)
+    assert filing.questions(store.read(), cfg, NOW) == []  # every side answered today, and the rest are kept
+
+
+def test_an_item_of_a_source_serving_one_side_is_asked_about_only_for_that_side(env):
+    """Beside a job, an item that waits under Personal and came from a source serving only the business is offered to
+    the business alone: no choice, and the job is never named."""
+    from engine.storage import WriteContext
+    from tests.test_many_sides import a_watched_source, add_side, serve
+
+    ws, cfg, store = env
+    job = add_side(env, "Weekday job", kind="job")
+    source = a_watched_source(env, serve(env, BUSINESS_ID))
+    with store.transaction() as tx:
+        tx.create(
+            "action",
+            {"text": "Look into it", "owners": [{"person": shared.ME}], "project": PERSONAL_ID, "source": source},
+            WriteContext(actor="assistant", trust="untrusted", op="test.filing"),
+        )
+    (asked,) = [q for q in filing.questions(store.read(), cfg, NOW) if q.items[0].text == "Look into it"]
+    assert [c.project for c in asked.sides] == [BUSINESS_ID] and job not in {c.project for c in asked.sides}

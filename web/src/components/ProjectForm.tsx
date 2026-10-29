@@ -9,6 +9,7 @@ import { useFirstField } from "../lib/focus";
 import { languageChoices, languageLabel } from "../lib/languages";
 import { parseAmount } from "../lib/money";
 import { placeGroups } from "../lib/project-choices";
+import { useMovedToSide } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -35,6 +36,8 @@ type Role = (typeof ROLES)[number];
 /** The form for a project, or the small one for a side, which is a group and has no project fields. */
 export function ProjectDrawer(props: {
   project?: S["ProjectView"];
+  /** For a new project, what it starts inside (the page it is added from). */
+  inside?: string;
   onClose: () => void;
   onSaved?: (id: string, name: string) => void;
 }) {
@@ -43,10 +46,11 @@ export function ProjectDrawer(props: {
 
 function ProjectFormDrawer(props: {
   project?: S["ProjectView"];
+  inside?: string;
   onClose: () => void;
   onSaved?: (id: string, name: string) => void;
 }) {
-  const { t, locale } = useWords();
+  const { t, tn, locale } = useWords();
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
@@ -62,7 +66,7 @@ function ProjectFormDrawer(props: {
   const [target, setTarget] = useState(p?.target ?? "");
   const [owner, setOwner] = useState(p?.owner ?? "");
   const [summary, setSummary] = useState(p?.summary ?? "");
-  const [parent, setParent] = useState(p?.parent ?? "");
+  const [parent, setParent] = useState(p?.parent ?? props.inside ?? "");
   const [language, setLanguage] = useState(p?.language_own ? p.language : "");
   const [budget, setBudget] = useState(p?.budget_usd != null ? String(p.budget_usd) : "");
   const [role, setRole] = useState<Role>(p?.role ?? "run");
@@ -83,7 +87,9 @@ function ProjectFormDrawer(props: {
   const lonely = sides.length === 1 ? sides[0].id : "";
   const placed = !p || sides.some((g) => g.projects.some((c) => c.id === p.id));
   const inside = parent || (!p ? lonely : "");
+  const startsInside = props.inside ?? lonely;
   const mustChoose = sides.length > 0 && placed && inside === "";
+  const movedTo = useMovedToSide(p?.parent, inside);
   // An empty language means it follows the project it is inside, so that one's language is what the box suggests.
   const inherited = others.find((x) => x.id === inside)?.language ?? (p && !p.language_own ? p.language : "");
   // A budget is typed as the person writes an amount: "250", "$250.00" and "250,00" in a language that writes a comma.
@@ -151,7 +157,7 @@ function ProjectFormDrawer(props: {
   };
   const dirty =
     p === undefined
-      ? [name, aliases, status, phase, group, priority, target, owner, summary, language, budget].some((v) => v !== "") || inside !== lonely
+      ? [name, aliases, status, phase, group, priority, target, owner, summary, language, budget].some((v) => v !== "") || inside !== startsInside
       : name !== p!.name ||
         aliases !== (p!.aliases ?? []).join(", ") ||
         status !== (p!.status ?? "") ||
@@ -241,6 +247,7 @@ function ProjectFormDrawer(props: {
           {mustChoose ? <option value="" disabled>{t("setup.inside_choose")}</option> : (sides.length === 0 || !placed) && <option value="">{t("setup.inside_none")}</option>}
           <PlaceOptions projects={others} asParent />
         </Select>
+        {movedTo && <span className="hint">{tn("filing.visible", 1, { side: movedTo })}</span>}
       </FormField>
       <FormField id={`jl-${key}`} label={<>{t("setup.language")} <span className="hint">{p && !p.language_own ? t("setup.language_inherited") : t("setup.language_hint")}</span></>}>
         <Select id={`jl-${key}`} value={language} onChange={(e) => setLanguage(e.target.value)}>

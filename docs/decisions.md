@@ -5,6 +5,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-29: Which side a thing is on is worked out once; a person with only their own life meets no work concepts (sweep batch 5)
+
+**Decided:** (1) The side of a record, a line of Today's queue, an agenda entry, a clash and a row of the week is worked out in
+`engine/sides.py`, and every screen reads it; what is on no side shows under every choice of the side filter. (2) A to-do typed
+by hand is filed on Personal while that is the person's only side; with several sides the form asks. (3) Items the assistant
+couldn't place are one question each, with a list of the sides they could be on. (4) For a person whose only side is Personal:
+the stance question is not asked, a message's table has no Project column, the Projects address opens Personal's page, only
+templates marked for a personal life (or for any) are offered, and no screen holds the words action, project, stage, template,
+owner or "report to". (5) The weekly message is for a person with a job side, written from that side alone. (6) A message to
+someone only on the person's own life opens by relation, from the wording sheet. (7) A project's budget is called the AI
+spending limit.
+
+**Decided by:** the sweep's findings X18, X20, X23, X36, X43 and X44, and the main session's brief (the opening by relation);
+the builder's choices, for review: the stance question is hidden rather than reworded for personal relations (the default
+stance stands), and "Work week" stays as the calendar's name for Monday to Friday.
+
+**Why:** each screen had its own idea of a side, so the filter did nothing; a person with only their own life was asked whom they
+report to and offered client work.
+
+**Impact:** Design 6.32, 7.1 and CHANGES section 262. No new setting; wording keys and a template field (`audience`) added.
+API: a `side` on agenda, week, brief and open-item rows, `sides` on a filing question, `audience` on a template. No change to scope.
+Change log: section 262.
+
 ## 2026-10-28: The second set of shared components: form parts, overlays, one toast, record parts, choice cards, the wizard and the header's status (sweep batch V2)
 
 **Decided:** (1) A form is `FormField`, `Select`, `DateField`, `FileDrop` and `CheckboxGroup`: no native select, date or file

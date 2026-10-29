@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-from engine import repeats
+from engine import repeats, sides
 from engine.applier import apply_as_person
 from engine.due_phrases import load_holidays, resolve
 from engine.language_words import language_words
@@ -87,6 +87,8 @@ def add(
             raise TodoProblem("That person isn't on file.")
     if project and view.get("project", project) is None:
         raise TodoProblem("That project isn't on file.")
+    # A to-do typed by a person who has only their own life belongs to it: it is on Personal's page and under its side.
+    project = project or sides.only_side(view, cfg)
     day = read_day(store, cfg, when)
     if day.status == "unclear":
         raise TodoProblem("That day isn't clear. Try something like 'Friday' or 'next Tuesday', or leave it empty.")

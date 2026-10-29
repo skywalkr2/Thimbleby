@@ -1,13 +1,16 @@
 // "Just me" sees no work words (the UI/UX review's F3 and the reviewer's follow-up; roadmap check U4): on a workspace made with
 // no work, whose only side is Personal, every screen is read as a person reads it and none of the words Work, Project, Stage,
-// Organization, Owner or Template is in what it shows, nor the lowercase "project" or "workspace". The screens are the main
+// Organization, Owner, Template, Action or "report to" is in what it shows, in any case, nor "workspace". The screens are the main
 // ones, each setup screen and Done, the forms (a to-do, a file, handing something in), a row's menu, Knowledge, Quality, Ask
 // and a record's own page. The words are whole words with their plurals; a side's own name could hold one, and this
 // workspace has no side. The server (`--just-me`) holds an area of life, a person with their relation, a to-do and a
 // question on Personal, and says what they are called at /__e2e/just-me, so no name is written out here.
 import { expect, test, type Page } from "@playwright/test";
 
-const WORK_WORDS = /\b(Work|Projects?|Stages?|Organizations?|Owners?|Templates?|projects?|[Ww]orkspaces?)\b/;
+// Work is only its capitalized heading ("Back up your work" is ordinary speech); the rest are work concepts in any case. The
+// words for running work for others: a project, a stage, an organization, an owner, a template, an action (a to-do is the
+// person's word) and whom one reports to.
+const WORK_WORDS = /\b(Work|[Pp]rojects?|[Ss]tages?|[Oo]rgani[sz]ations?|[Oo]wners?|[Tt]emplates?|[Aa]ctions?|[Ww]orkspaces?|[Rr]eport(?:s|ing)? to)\b/;
 
 /** What a screen's data takes to arrive on a busy computer: each screen is read once it shows what it loads. */
 const LOADED = { timeout: 20_000 };
@@ -68,6 +71,11 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
       await expect(page.getByRole("link", { name: seeded.area.name })).toBeVisible(LOADED);
     },
   },
+  // The screen that lists the person's projects is for a person who runs work; for one with only their own life, the address
+  // still lands on a page that reads as theirs.
+  { name: "Where things are filed", hash: () => "records/projects", ready: (page) => expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED) },
+  { name: "Schedule", hash: () => "schedule", ready: (page) => heading(page, "Schedule") },
+  { name: "Knowledge", hash: () => "records/knowledge", ready: (page) => heading(page, "Knowledge") },
   { name: "Files", hash: () => "records/files", ready: (page) => heading(page, "Files") },
   { name: "Connections", hash: () => "settings/connections", ready: (page) => heading(page, "Connections", 2) },
   { name: "Add-ons", hash: () => "settings/addons", ready: (page) => heading(page, "Add-ons", 2) },
@@ -79,9 +87,11 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
   { name: "Settings: Quick links", hash: () => "settings/links", ready: (page) => section(page, "Quick links") },
 ];
 
-/** The words a screen shows that a person with no work must not see, each once. */
+/** The words a screen shows that a person with no work must not see, each once. "Work week" is the calendar's own name for
+ * Monday to Friday, which any calendar has, so it isn't read as the word. */
 const workWordsIn = (text: string) => {
   const found = new Map<string, string>();
+  text = text.replace(/Work week/g, "Weekdays");
   for (const hit of text.matchAll(new RegExp(WORK_WORDS, "g"))) {
     if (found.has(hit[0])) continue;
     const at = hit.index ?? 0;
@@ -281,6 +291,16 @@ test.describe('"Just me" sees no work words', () => {
     await page.getByRole("button", { name: "Ask", exact: true }).first().click();
     await expect(page.getByRole("dialog", { name: /^Ask / }).or(page.getByRole("complementary", { name: /^Ask / }))).toBeVisible(LOADED);
     await read("Ask");
+    // Keeping track of something of one's own: the templates offered are the ones for a personal life.
+    const own = page.getByRole("button", { name: "Keep track of something of your own" });
+    await own.click();
+    await expect(page.getByRole("button", { name: /^Use / }).first()).toBeVisible(LOADED);
+    await read("Ask: keep track of something of your own");
+    // None of the templates made for running work for others is on offer.
+    const templates = (await (await page.request.get("api/templates")).json()) as Array<{ name: string; audience: string }>;
+    for (const template of templates.filter((t) => t.audience === "work")) {
+      await expect(page.getByRole("button", { name: `Use ${template.name}`, exact: true })).toHaveCount(0);
+    }
     await close();
 
     // Knowledge and Quality.
@@ -338,6 +358,16 @@ test.describe('"Just me" sees no work words', () => {
       const box = await place.boundingBox();
       expect(box && box.x + box.width <= size.width).toBe(true);
     }
+  });
+
+  // The weekly briefing is the message to whoever the person reports to: a person with only their own life has no one to report
+  // to, so it never asks, whatever day it is read.
+  test("the weekly briefing doesn't ask who they report to, and offers no message to write", async ({ page }) => {
+    const brief = (await (await page.request.get("api/brief?form=monday")).json()) as { message: unknown };
+    expect(brief.message ?? null).toBeNull();
+    await go(page, "today");
+    await heading(page, "Today");
+    await expect(page.getByText(/report to/i)).toHaveCount(0);
   });
 
   test("the person's own page says You and what waits for them, and never describes them as someone else", async ({ page }) => {

@@ -755,7 +755,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
           </div>
         )}
         <div className="what">
-          {opLabel(op, t, has)}
+          {opLabel(op, t, has, justMe)}
           {pill && (
             <Pill tone={pill} className="pill-gap">
               {t(`op.status.${pillKey}`)}
@@ -897,12 +897,13 @@ function ReleaseAll(props: { cs: S["ChangesetView"] }) {
 }
 
 /** What the assistant did, in words; a filed note also says where it went. */
-function opLabel(op: S["OpView"], t: T, has: (key: string) => boolean): string {
+function opLabel(op: S["OpView"], t: T, has: (key: string) => boolean, alone = false): string {
   // Before it is decided an op is only what would happen ("Would close a to-do"); done is said once it is.
   const word = op.status === "held" && has(`op.would.${op.op}`) ? "op.would" : "op";
   if (op.op === "note") {
     if (op.meta.project) return t(`${word}.note.under`, { project: op.meta.project });
-    return op.meta.side_name ? t(`${word}.note.in_side`, { side: op.meta.side_name }) : t(`${word}.note.none`);
+    // With nothing beside Personal, "not in a project" says nothing: a note is simply filed in Personal.
+    return op.meta.side_name ? t(`${word}.note.${alone ? "in_personal" : "in_side"}`, { side: op.meta.side_name }) : t(`${word}.note.none`);
   }
   return t(`${word}.${op.op}`);
 }

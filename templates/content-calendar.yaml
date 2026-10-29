@@ -1,5 +1,6 @@
 name: Content calendar
 description: Pieces to write and publish, by channel and date, from idea to published.
+audience: any
 plugins:
   kit:
     types:

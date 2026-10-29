@@ -8,6 +8,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, todayOn, time, wallTime } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
+import { onSide, useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { AgendaItems } from "./AgendaList";
 import { useChangeThis } from "./ChangeThis";
@@ -85,7 +86,8 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const now = useNow();
   const today = todayOn(now);
   const tomorrow = addDays(today, 1);
-  const events = agenda.data ?? [];
+  const filter = useSideFilter();
+  const events = (agenda.data ?? []).filter((e) => onSide(e.side, filter.choice));
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   const groups = groupByDay(events, today);
   // Deliveries with no date yet are on no day: they are listed under "On its way" at the card's end.

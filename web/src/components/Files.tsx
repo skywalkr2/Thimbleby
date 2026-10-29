@@ -10,7 +10,7 @@ import { useSize } from "../lib/files";
 import { useListChoice, type ListChoice } from "../lib/list-choice";
 import { useMediaQuery } from "../lib/media";
 import { usePluginActions } from "../lib/plugin-actions";
-import { onSide, useSideFilter, useSideOf } from "../lib/sides";
+import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
@@ -49,6 +49,9 @@ export function Files() {
   const sides = new Set((projects.data ?? []).filter((p) => p.side).map((p) => p.id));
   const side = useSideFilter();
   const sideOf = useSideOf();
+  // With nothing beside Personal, a file filed on Personal itself has no place to say: it is simply the person's.
+  const { justMe } = useSides();
+  const placeOf = (project: string | null | undefined) => (project && !(justMe && sides.has(project)) ? names.get(project) : undefined);
   const everything = files.data ?? [];
   const shown = everything.filter((f) => onSide(sideOf(f.project), side.choice));
   const beside = useMediaQuery("(min-width: 1024px)");
@@ -83,7 +86,7 @@ export function Files() {
         title={selected?.name ?? ""}
         onClose={choice.close}
         fit={FILES_FIT}
-        detail={selected ? <FileDetail file={selected} project={selected.project ? names.get(selected.project) : undefined} side={!!selected.project && sides.has(selected.project)} earlier={everything.find((f) => f.id === selected.replaces)?.name} /> : null}
+        detail={selected ? <FileDetail file={selected} project={placeOf(selected.project)} side={!!selected.project && sides.has(selected.project)} earlier={everything.find((f) => f.id === selected.replaces)?.name} /> : null}
       >
         {files.isPending ? (
           <Skeleton />
@@ -96,7 +99,7 @@ export function Files() {
         ) : (
           <RowList>
             {shown.map((file) => (
-              <FileRow key={file.id} file={file} project={file.project ? names.get(file.project) : undefined} side={!!file.project && sides.has(file.project)} choice={choice} />
+              <FileRow key={file.id} file={file} project={placeOf(file.project)} side={!!file.project && sides.has(file.project)} choice={choice} />
             ))}
           </RowList>
         )}

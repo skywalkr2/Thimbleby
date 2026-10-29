@@ -37,7 +37,8 @@ class TemplateError(Exception):
 
 
 def shipped() -> list[dict[str, Any]]:
-    """The starting templates: {id, name, description, adds, path} each."""
+    """The starting templates: {id, name, description, audience, adds, path} each. `audience` is who a template is for:
+    `personal` (a person's own life), `work` (running work for others) or `any`; a template with none is for work."""
     found = []
     for path in sorted(SHIPPED.glob("*.yaml")):
         data = _read(path)
@@ -46,6 +47,7 @@ def shipped() -> list[dict[str, Any]]:
                 "id": path.stem,
                 "name": data["name"],
                 "description": data.get("description", ""),
+                "audience": data.get("audience") if data.get("audience") in ("personal", "work", "any") else "work",
                 "adds": adds(data),
                 "path": path,
             }

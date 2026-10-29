@@ -1,5 +1,6 @@
 name: Client work
 description: Requests from clients, from first contact to delivered, with a checklist before delivery.
+audience: work
 plugins:
   kit:
     types:

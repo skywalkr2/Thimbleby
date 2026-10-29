@@ -2,9 +2,11 @@
 
 When the filing ranks (`engine.sides.file_by_people`) can't tell whether an item belongs to Personal or to another side,
 the item waits under Personal, the more private level. This module reads those items back and offers the one grouped
-question that moves them: a question for each side, at most once a day, listing the items that could be that side's
-("These 4 items look like a side's. Move them there?") with Move and Keep under Personal. Nothing here decides a
-filing: the ranks do, and the person's click moves.
+question that moves them. Each item is listed once: items that could be the same sides' (the sides the watched source
+they came from serves, else every other side) are one question, with a choice of those sides that starts on the first
+("These 4 items look like a side's. Move them there?") and Move and Keep under Personal. At most one question a day
+for a set of sides, until each of them has been answered. Nothing here decides a filing: the ranks do, and the person's
+click moves.
 
 An item counts as waiting under Personal on a guess when it sits directly under the personal project, the assistant
 made it after the side existed, and no signal stamped a reason on it (`filed_by` is empty). Move is the person's own
@@ -42,13 +44,30 @@ class Waiting:
     could_be: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class Choice:
+    """A side an item could move to: its top project and its name."""
+
+    project: str
+    name: str
+
+
 @dataclass
 class Question:
-    """The question for one side: its top project and name, and the items that could be that side's, newest first."""
+    """The question for a set of sides: the sides the items could be on (`sides`, in the person's order) and the items,
+    newest first, each in exactly one question. `side` and `name` are the side the choice starts on: the first, which is
+    the one side the items' source serves when it serves one."""
 
-    side: str
-    name: str
+    sides: list[Choice]
     items: list[Waiting] = field(default_factory=list)
+
+    @property
+    def side(self) -> str:
+        return self.sides[0].project
+
+    @property
+    def name(self) -> str:
+        return self.sides[0].name
 
 
 @dataclass(frozen=True)
@@ -181,15 +200,22 @@ def _answered_today(view: Any, cfg: Any, side: str, now: datetime) -> bool:
 
 
 def questions(view: Any, cfg: Any, now: datetime) -> list[Question]:
-    """The questions to ask now: one for each side that has items that could be its own, unless the person answered
-    that side's question today. Sides in the person's order."""
+    """The questions to ask now: the waiting items grouped by the sides they could be on, each item once, a group's
+    question held back while every one of its sides was answered today. Groups in the order of their first side in the
+    person's list of sides, then the rest."""
     items = waiting(view, cfg)
+    listed = sides.side_list(view, cfg)
+    order = {s.project: n for n, s in enumerate(listed)}
+    names = {s.project: s.name for s in listed}
+    groups: dict[tuple[str, ...], list[Waiting]] = {}
+    for item in items:
+        groups.setdefault(tuple(sorted(item.could_be, key=lambda p: order.get(p, len(order)))), []).append(item)
     asked: list[Question] = []
-    for side in sides.side_list(view, cfg):
-        mine = [i for i in items if side.project in i.could_be]
-        if mine and not _answered_today(view, cfg, side.project, now):
-            asked.append(Question(side.project, side.name, mine))
-    return asked
+    for could, mine in sorted(groups.items(), key=lambda g: [order.get(p, len(order)) for p in g[0]]):
+        if all(_answered_today(view, cfg, p, now) for p in could):
+            continue
+        asked.append(Question([Choice(p, names[p]) for p in could if p in names], mine))
+    return [q for q in asked if q.sides]
 
 
 def summary(view: Any, cfg: Any, now: datetime) -> Summary | None:
@@ -201,7 +227,7 @@ def summary(view: Any, cfg: Any, now: datetime) -> Summary | None:
     every = {(i.kind, i.id): i for q in asked for i in q.items}
     return Summary(
         count=len(every),
-        subject=asked[0].name if len(asked) == 1 else None,
+        subject=asked[0].name if len(asked) == 1 and len(asked[0].sides) == 1 else None,
         since=min((i.created_at for i in every.values()), default=""),
     )
 

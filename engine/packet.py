@@ -1022,7 +1022,8 @@ def _calendar_section(store: Store, cfg: Config, today: date) -> str:
     return "# Calendar entries and series\n" + "\n".join(lines) if lines else ""
 
 
-def _people(store: Store, cfg: Config) -> str:
+def _people(store: Store, cfg: Config, only: frozenset[str] | None = None) -> str:
+    """The people, each with who they are to the user. With `only` (the ids a draft may draw on), those and the user."""
     from engine.scope import stance_of
 
     teams = {t.id: t.data["name"] for t in store.read().list("team")}
@@ -1031,6 +1032,8 @@ def _people(store: Store, cfg: Config) -> str:
     pm = cfg.workspace.user.person
     for p in store.read().list("person"):
         d = p.data
+        if only is not None and p.id not in only and p.id != pm:
+            continue
         bits = [p.id, d["full_name"]]
         if d.get("aliases"):
             bits.append("aliases: " + ", ".join(d["aliases"]))

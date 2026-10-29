@@ -11,6 +11,7 @@ import { useAct } from "../lib/act";
 import { useAgo } from "../lib/ago";
 import { day, dayAndTime } from "../lib/dates";
 import { useTotal } from "../lib/money";
+import { useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
@@ -21,6 +22,7 @@ import { RecordsTable, type TableColumn, type TableGroup } from "../ui/RecordsTa
 import { Skeleton } from "../ui/Skeleton";
 import { ProjectDrawer } from "./ProjectForm";
 import { RecordConversation } from "./RecordConversation";
+import { RecordPage } from "./RecordPage";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Unfiled } from "./Unfiled";
@@ -85,6 +87,17 @@ export function groupProjects(projects: Project[], labels: { none: string; open:
 
 /** The width the priority columns (name, status, target, owner, open to-dos and the menu) need beside the pane. */
 const PROJECTS_FIT = 640;
+
+/** The screen for the address of the project list: for a person with nothing beside their own life, who has no projects to
+ * list, the page of that life (where its areas and anything still to be filed are); for everyone else, the projects. */
+export function ProjectsOrPersonal(props: { onBack: () => void }) {
+  const { justMe, personal } = useSides();
+  const business = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  if (business.isPending || projects.isPending) return <Skeleton />;
+  if (justMe && personal) return <RecordPage key={`project:${personal}`} kind="project" id={personal} onBack={props.onBack} />;
+  return <Projects />;
+}
 
 export function Projects() {
   const { t, tn } = useWords();

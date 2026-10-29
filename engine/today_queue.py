@@ -33,6 +33,7 @@ from engine import (
     review_batches,
     running,
     sent_version,
+    sides,
     since_yesterday,
     source_intake,
     suggestions,
@@ -262,6 +263,8 @@ class Line:
     other_starts: str | None = None
     other_ends: str | None = None
     other_entry: str | None = None
+    #: The side the line is on when its own fields don't say (a clash: the side its meetings are on; design 6.32).
+    side: str | None = None
     #: For a travel clash line, the travel time asked for between the two places (`travel_minutes`) and where each
     #: meeting is (`place`, `other_place`).
     travel_minutes: int | None = None
@@ -1590,6 +1593,7 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
                 other_starts=clash.second.start.astimezone(here).isoformat(),
                 other_ends=clash.second.end.astimezone(here).isoformat(),
                 since=clash.at.isoformat(),
+                side=sides.side_of_entries(store.read(), cfg, [clash.first.item, clash.second.item]),
             )
         )
     return lines

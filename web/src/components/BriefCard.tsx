@@ -12,6 +12,7 @@ import { copyMessage } from "../lib/copy";
 import { day, wallTime } from "../lib/dates";
 import { durationWords } from "../lib/duration";
 import { chooseFilters } from "../lib/open-items";
+import { onSide, useSideFilter } from "../lib/sides";
 import type { View } from "../lib/views";
 import { useMoney } from "../lib/money";
 import { reveal } from "../lib/reveal";
@@ -441,8 +442,14 @@ function WhoFor(props: { message: NonNullable<Brief["message"]> }) {
   const { t } = useWords();
   const act = useAct();
   const id = useId();
-  const [picked, setPicked] = useState("");
-  const choices = props.message.choices ?? [];
+  // The people on the job, but not the ones the person serves or who work for them: a customer, a supplier or staff is not
+  // who they report to. The one they gave as their manager is picked to begin with.
+  const said = (role: string | null | undefined) => (role ?? "").trim().toLowerCase();
+  const not = ["customer", "supplier", "staff"].map((r) => t(`walkthrough.people.role.${r}`).toLowerCase());
+  const choices = (props.message.choices ?? []).filter((c) => !not.includes(said(c.role)));
+  const managers = choices.filter((c) => said(c.role) === t("walkthrough.people.role.manager").toLowerCase());
+  const [chosenBy, setPicked] = useState<string | null>(null);
+  const picked = chosenBy ?? (managers.length === 1 ? managers[0].person : "");
   const mark = () => {
     const chosen = choices.find((c) => c.person === picked);
     if (!chosen) return;
@@ -501,6 +508,7 @@ export function BriefCard(props: {
   const [unfolded, setUnfolded] = useState(false);
   const found = useBrief(asked);
   const queue = useQueue();
+  const filter = useSideFilter();
   const id = useId();
   const data = found.data;
   if (!data || data.form === null) return null;
@@ -568,11 +576,11 @@ export function BriefCard(props: {
         </div>
       </div>
       {data.message && (data.message.state === "ask" ? <WhoFor message={data.message} /> : <Message message={data.message} />)}
-      {data.sections.map((section) => (
+      {data.sections.map((section) => ({ section, lines: section.lines.filter((line) => onSide(line.side, filter.choice)) })).filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0).map(({ section, lines }) => (
         <div key={section.key} className={styles.section} data-section={section.key}>
           <h3 className={styles.sub}>{heading(section.key, t)}</h3>
           <ul className={styles.lines}>
-            {section.lines.map((line) => (
+            {lines.map((line) => (
               <LineRow key={line.key} line={line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
             ))}
           </ul>

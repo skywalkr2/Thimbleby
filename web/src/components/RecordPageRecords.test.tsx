@@ -382,7 +382,12 @@ test("an item the assistant filed by words says why on its page, and Move to the
     "ACT-5",
     { text: "Send the proof", project: "PRJ-1", filed_by: { by: "alias", word: "RTE", project: "PRJ-1" } },
     page({ kind: "action", id: "ACT-5", name: "Send the proof", filed: FILED }),
-    { "POST records/edit": () => ({ changeset: "CS-30" }), "POST changesets/CS-30/undo": () => ({ restored: ["ACT-5"], skipped: [] }) },
+    {
+      "POST records/edit": () => ({ changeset: "CS-30" }),
+      "POST changesets/CS-30/undo": () => ({ restored: ["ACT-5"], skipped: [] }),
+      // Personal is the other side, so moving there says only where it went.
+      "GET setup/business": () => ({ business: true, name: "Business", personal: "PRJ-2", sides: [{ project: "PRJ-1", kind: "business", name: "Business", removable: false, filed: 0 }], chosen: "work" }),
+    },
   );
   renderApp(<RecordPage kind="action" id="ACT-5" onBack={() => {}} />);
   expect(await screen.findByText("Filed under Business: it names RTE")).toBeInTheDocument();
@@ -448,7 +453,7 @@ test("with several other sides the page offers Move to… as a list of them, and
   expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Move to…", "Personal", "Lantern Works"]);
   await user.selectOptions(list, "Lantern Works");
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "ACT-7", fields: { project: "PRJ-3" }, read_version: 3 }));
-  expect(await screen.findByText("Moved to Lantern Works.")).toBeInTheDocument();
+  expect(await screen.findByText("Moved 1 item to Lantern Works. It is now visible with Lantern Works's work.")).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-32/undo")).toBe(true));
 });

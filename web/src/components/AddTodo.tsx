@@ -8,7 +8,7 @@ import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { saidRepeat, useRepeatCheck } from "../lib/repeat";
-import { useSides } from "../lib/sides";
+import { useSideFilter, useSides } from "../lib/sides";
 import { useDayCheck } from "../lib/todo-day";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -26,8 +26,12 @@ function AddTodoForm(props: { onClose: () => void }) {
   const [text, setText] = useState("");
   const [when, setWhen] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
-  const [project, setProject] = useState("");
   const { justMe } = useSides();
+  // With several sides the form asks where the to-do belongs (starting on the side the screen is narrowed to); with only
+  // the person's own life it belongs to that, and is not asked.
+  const filter = useSideFilter();
+  const asks = filter.offered;
+  const [project, setProject] = useState(asks && filter.choice !== "all" ? filter.choice : "");
   const [repeat, setRepeat] = useState("");
   const [effort, setEffort] = useState<number | null>(null);
   const active = (people.data ?? []).filter((p) => p.status !== "left");
@@ -40,7 +44,7 @@ function AddTodoForm(props: { onClose: () => void }) {
   const dayOk = !when.trim() || read?.status === "ok";
   const repeatOk = !typedRepeat || readRepeat?.status === "ok";
   const words = text.trim();
-  const ready = !!words && !!who && dayOk && repeatOk;
+  const ready = !!words && !!who && dayOk && repeatOk && (!asks || !!project);
   const save = async () => {
     if (!ready) return;
     const body = { text: words, owners: [who], ...(when.trim() ? { when: when.trim() } : {}), ...(project ? { project } : {}), ...(typedRepeat ? { repeat: typedRepeat } : {}), ...(effort ? { effort_minutes: effort } : {}) };
@@ -99,7 +103,15 @@ function AddTodoForm(props: { onClose: () => void }) {
         </FormField>
         <EffortField id={id} value={effort} onChange={setEffort} />
         <PersonPicker label={t("addtodo.owner")} value={who} suggested={[]} people={active} onChange={setOwner} />
-        {!justMe && <ProjectPicker label={t("addtodo.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />}
+        {!justMe && (
+          <ProjectPicker
+            label={t(asks ? "addtodo.place" : "addtodo.project")}
+            value={project}
+            empty={t(asks ? "addtodo.choose_place" : "addtodo.no_project")}
+            required={asks}
+            onChange={setProject}
+          />
+        )}
         <FormField id={`${id}-repeat`} label={t("repeat.label")}>
           <input
             id={`${id}-repeat`}

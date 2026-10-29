@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from engine import people_memory
+from engine import greetings, people_memory
 from engine.names import People
 
 
@@ -32,7 +32,7 @@ def draft(store: Any, cfg: Any, action: str, today: date) -> FollowUp | None:
     words = cfg.language.messages
     people = People(store, cfg)
     lines = [
-        words.greeting.format(first_name=people.first_name(quiet.person)),
+        greetings.opening(cfg, people, quiet.person),
         "",
         words.quiet_intro,
         quiet.text,

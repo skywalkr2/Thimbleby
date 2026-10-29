@@ -28,7 +28,9 @@ export interface Table {
 
 /** The words a table is made of, from the wording sheet, and how a date reads. */
 export interface TableWords {
-  project: string;
+  /** The heading of the column that says where each item is filed; none for a person with only their own life, whose items
+   * are all in one place, so the tables have no such column. */
+  project: string | null;
   action: string;
   question: string;
   due: string;
@@ -57,23 +59,29 @@ const safe = (url: string) => /^https?:\/\//i.test(url);
  * were first asked, oldest first, with those not sent yet last. `today` is yyyy-mm-dd. */
 export function tablesOf(section: S["FollowupSection"], w: TableWords, today: string): Table[] {
   const tables: Table[] = [];
+  // The column that says where an item is filed comes first, when there is one.
+  const where = (cells: TableCell[], at: TableCell) => (w.project === null ? cells : [at, ...cells]);
+  const heads = (columns: string[]) => (w.project === null ? columns : [w.project, ...columns]);
+  const fill = w.project === null ? 3 : 4;
   const actions = section.actions
     .filter((a) => a.to_send)
     .sort((a, b) => (a.due ?? "9999-99-99").localeCompare(b.due ?? "9999-99-99") || a.text.localeCompare(b.text));
   if (actions.length) {
     tables.push({
       kind: "actions",
-      columns: [w.project, w.action, w.due, w.link, w.update],
-      fill: 4,
+      columns: heads([w.action, w.due, w.link, w.update]),
+      fill,
       rows: actions.map((a) => {
         const late = !!a.due && a.due.slice(0, 10) < today;
-        return [
+        return where(
+          [
+            { text: a.text },
+            { text: !a.due ? "" : late ? w.overdue(w.due_day(a.due)) : w.due_day(a.due), overdue: late },
+            { text: "", links: a.links },
+            { text: "" },
+          ],
           { text: a.project_name || (a.side_name ? w.side(a.side_name) : "") },
-          { text: a.text },
-          { text: !a.due ? "" : late ? w.overdue(w.due_day(a.due)) : w.due_day(a.due), overdue: late },
-          { text: "", links: a.links },
-          { text: "" },
-        ];
+        );
       }),
     });
   }
@@ -83,15 +91,19 @@ export function tablesOf(section: S["FollowupSection"], w: TableWords, today: st
   if (questions.length) {
     tables.push({
       kind: "questions",
-      columns: [w.project, w.question, w.asked, w.link, w.answer],
-      fill: 4,
-      rows: questions.map((q) => [
-        { text: q.project_name || (q.side_name ? w.side(q.side_name) : "") },
-        { text: q.title },
-        { text: q.sent ? w.asked_day(q.sent) : w.notSent },
-        { text: "", links: q.links },
-        { text: "" },
-      ]),
+      columns: heads([w.question, w.asked, w.link, w.answer]),
+      fill,
+      rows: questions.map((q) =>
+        where(
+          [
+            { text: q.title },
+            { text: q.sent ? w.asked_day(q.sent) : w.notSent },
+            { text: "", links: q.links },
+            { text: "" },
+          ],
+          { text: q.project_name || (q.side_name ? w.side(q.side_name) : "") },
+        ),
+      ),
     });
   }
   return tables;

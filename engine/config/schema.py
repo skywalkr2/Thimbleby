@@ -2074,7 +2074,7 @@ class LanguageFile(FileModel):
         True,
         description="Never ask what an unmistakable name means: the core's list of country names, time zone names, "
         "mail folder names and well-known service names. Short abbreviations are not on it, since they often mean "
-        "something particular where you work. Off turns the list off; the words you add in `known_terms` still count.",
+        "something particular to you. Off turns the list off; the words you add in `known_terms` still count.",
     )
     known_terms: list[str] = Field(
         default_factory=list,

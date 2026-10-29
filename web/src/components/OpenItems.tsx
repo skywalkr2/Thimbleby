@@ -23,7 +23,7 @@ import {
 import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
 import { openOnToday } from "./AnswerOnToday";
-import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
+import { onSide, useSideFilter, useSides } from "../lib/sides";
 import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
@@ -72,9 +72,8 @@ export function OpenItems() {
   const addTodo = useAddTodo();
   // With a side beside Personal, the list can be narrowed to one side; what is on no side shows under every choice.
   const side = useSideFilter();
-  const sideOf = useSideOf();
-  const actions = (items.data?.actions ?? []).filter((a) => onSide(sideOf(a.project), side.choice));
-  const questions = (items.data?.questions ?? []).filter((q) => onSide(sideOf((q.projects ?? [])[0]), side.choice));
+  const actions = (items.data?.actions ?? []).filter((a) => onSide(a.side, side.choice));
+  const questions = (items.data?.questions ?? []).filter((q) => onSide(q.side, side.choice));
 
   const projectName = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? actions.find((a) => a.project === id)?.project_name ?? id;
   const projectChoices = [...new Set(tab === "actions" ? actions.filter((a) => !a.side_name).map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
