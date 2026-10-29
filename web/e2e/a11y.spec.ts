@@ -3,8 +3,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
-/** Opens Ask the way a person does: the header's search field (on a phone, the bar's Search first), then its Ask row. */
+/** Opens Ask the way a person does: whatever is open (Ask from an earlier width) is closed first, then the header's search
+ * field (on a phone, the bar's Search button first) and its Ask row. */
 async function openAsk(page: Page) {
+  const open = page.getByRole("dialog").or(page.getByRole("complementary", { name: /^Ask / }));
+  for (let i = 0; i < 3 && (await open.count()) > 0; i++) await page.keyboard.press("Escape");
+  await expect(open).toHaveCount(0);
   const field = page.getByRole("banner").getByRole("searchbox");
   const phone = page.getByRole("button", { name: "Search", exact: true }).first();
   await expect(field.or(phone)).toBeVisible();
