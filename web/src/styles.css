@@ -218,7 +218,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .settings-side { display: grid; gap: var(--space-3); min-width: 0; }
 .settings-side [data-field] { margin-bottom: 0; }
 .settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; }
+.settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; min-height: var(--target-min); box-sizing: border-box; }
 .settings-nav a:hover { background: var(--surface-sunk); }
 .settings-nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
 .settings-content { display: grid; gap: var(--space-4); min-width: 0; container: settingsform / inline-size; }
