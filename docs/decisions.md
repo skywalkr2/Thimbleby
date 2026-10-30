@@ -5,6 +5,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: The Quality screen takes the mockup's layout, not new measures (VS15)
+
+**Decided:**
+- **Nothing new is counted.** The screen shows only what `GET /api/quality` returns today, and each label keeps the
+  measure's existing meaning. "Promises closed as done" stays that, and never becomes the mockup's "Kept on time".
+- **The four tiles** are the four outcome measures (design 6.32), each for the configured window. The comparison under
+  a tile is the latest week against the week before, taken from the same weekly figures. With fewer than two weeks there
+  is no comparison. Review time's tile is the median per day; the window's total is in the table.
+- **The weekly table** is the existing weekly figures: a row per week and a column per measure.
+- **"Mistakes to look at"** is the existing "Missed something?" data as it is grouped today (who, which week, how many).
+  Each row links to that person's page when there is one. Item-level mistake rows with their own "Look" wait until the
+  API keeps them, after the installers.
+- **The person's own count** is the existing form, as a small card.
+
+**Decided by:** the main session, after the coding agent rightly stopped on brief 19.
+
+**Why:** the mockup is a layout. Changing what a measure means, or inventing a comparison or an action, would make the
+quality numbers say something they don't count.
+
+**Impact:**
+- The Quality screen's layout only, with no API change.
+- Item-level mistakes join the post-installer list. Change log: none (the layout's own entry comes with the build).
+
 ## 2026-10-30: Settings and Connections follow the review's VS17 and VS18 rows (batch 7b)
 
 **Decided:**
