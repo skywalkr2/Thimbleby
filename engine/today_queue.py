@@ -38,6 +38,7 @@ from engine import (
     source_intake,
     suggestions,
     watch,
+    week_plan,
 )
 from engine.blocked import standing_hold
 from engine.firm_due import firm_due
@@ -1259,7 +1260,13 @@ def _everything(
                 asked.setdefault(cs_id, {})[outcome["index"]] = key
     for req in requests.values():
         d = req.data
-        if d.get("dismissed") or d.get("state") != "review" or not d.get("changeset") or req.id in hidden:
+        if (
+            d.get("dismissed")
+            or d.get("task") == week_plan.TASK
+            or d.get("state") != "review"
+            or not d.get("changeset")
+            or req.id in hidden
+        ):
             continue
         cs = changesets.get(d["changeset"]) or {}
         if cs.get("reviewed"):
