@@ -858,6 +858,39 @@ def test_questions_to_send_answers_to_chase_and_decisions_waiting_are_their_own_
     assert section(found, "decide") is None and found.on_today >= 1
 
 
+def test_a_decision_not_on_today_is_listed_in_the_monday_decide_section(env):
+    ws, cfg, store, _ = env
+    source = next(source for source in cfg.watch.sources if source.enabled)
+    make(
+        store,
+        "watch_run",
+        source=source.id,
+        started_at=(NOW - timedelta(hours=2)).isoformat(),
+        outcome="failed",
+        error_kind="outage",
+        error="The source could not be read.",
+    )
+    with store.transaction() as tx:
+        decision = tx.create(
+            "question",
+            {
+                "to": me(cfg),
+                "title": "Should the source be checked another way?",
+                "kind": "decision",
+                "resolves": {"kind": "watch", "source": source.id},
+            },
+            _TEST,
+        ).id
+    from engine.today_queue import queue
+
+    on_today = {
+        item for line in queue(ws, store, cfg, NOW) for item in (*line.actions, *line.questions, line.question) if item
+    }
+    assert decision not in on_today
+    (listed,) = lines_of(built(env, "monday"), "decide")
+    assert (listed.kind, listed.link) == ("decision", ("question", decision))
+
+
 def test_a_question_held_for_the_weekly_note_is_in_that_mondays_briefing_and_not_the_one_before(env):
     from engine.followups import hold_question
 
