@@ -1027,7 +1027,7 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
-## NEXT. Today's remaining mockup: brief, status pill and Tomorrow (Task 20, VS05, VC13)
+## 272. Today's remaining mockup: the brief folded, one status pill, and Tomorrow (2026-10-30; VS05, VC13)
 
 | Where | Before | Now |
 |---|---|---|

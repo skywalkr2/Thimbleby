@@ -18,7 +18,7 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Why:** the 1440px and 390px mockups clarify the remaining Today hierarchy without changing the meaning or count of its lines.
 
-**Impact:** Today and its header presentation only. Change log: section NEXT.
+**Impact:** Today and its header presentation only. Change log: section 272.
 
 ## 2026-10-30: Quality follows the review's VS15 row (Task 19)
 
