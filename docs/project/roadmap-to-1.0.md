@@ -36,8 +36,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   tests. **Plugin API 0.3.92** (0.3.91, then a channel's folder list); the hold on API changes applies again (P33).
 - **Open in the audit's batch:** A4, the checklist's partials, each re-marked with why (C16, C23, C24, C29, C35, C43).
 - **Next, in order:**
-  1. **AI account hardening** (gate I-0a): B-11c's last item (`thinking: off`, which the service's listing gives no capability
-     for), B-11b's rest (the recommendation by cost per passing answer, "Measure", the model picker's role words, effort in the
+  1. **AI account hardening** (gate I-0a): B-11c's thinking off is done as designed (decided 2026-10-30), B-11b's rest (the recommendation by cost per passing answer, "Measure", the model picker's role words, effort in the
      pre-save check, confirming each service's effort parameter), each fix checked on a low-cost model first, then the owner's
      re-run (B-10; P30 and P31 are the owner's captures and the learning-pair groups).
   2. **The owner's checks and the gate week with its pass bar** (P65: agreed by the owner 2026-10-28, `docs/project/gate-pass-bar-draft-2026-10-28.md`
@@ -633,8 +632,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   pick by the listing's own date, then the version in the id, never the list's order (`tests/test_family.py`, and a newer
   model of the family watched weekly, `tests/test_model_watch.py`); moving a saved account of the recommended service to the
   native adapter, only on a yes with an identity read-back (`tests/test_native_move.py`).
-  *Left in part 2:* the service's listing names no "thinking can be turned off" capability, so `thinking: off` is never sent
-  yet. *Left in the item:* P30 (the owner captures each command-line agent's signed-out message) and the check of each fix
+  *Part 2's thinking off, decided 2026-10-30:* done as designed: `thinking: off` is sent only where a model's listing
+  accepts it (`tests/test_anthropic_messages.py::test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort`);
+  no service's listing says so yet, so it is sent nowhere, and nothing more is built. *Left in the item:* P30 (the owner captures each command-line agent's signed-out message) and the check of each fix
   on a low-cost model.
   (3) **Failures captured in detail for feedback** (owner, 2026-10-21: "We should have something in the program that
   captures failures in detail so the user can send them in the feedback"): every failed AI call, account check,
@@ -646,7 +646,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   no packet text, secret or address. *Built:*
   `tests/test_problems.py::test_a_failed_calls_report_holds_the_parameters_and_the_error_and_no_packet_text_secret_or_address`;
   a request's settings are shown as configured when the report is made.
-  - State (2026-10-29): built: parts 1, 2a, 2b, 2c and 3 (`tests/test_catalog_claims.py`, `tests/test_anthropic_messages.py`, `tests/test_estimate_calibration.py`, `tests/test_family.py`, `tests/test_model_watch.py`, `tests/test_native_move.py`, `tests/test_problems.py`); left: `thinking: off` (the service's listing gives no capability), P30 (the owner's captured signed-out messages) and the check of each fix on a low-cost model.
+  - State (2026-10-29): built: parts 1, 2a, 2b, 2c and 3 (`tests/test_catalog_claims.py`, `tests/test_anthropic_messages.py`, `tests/test_estimate_calibration.py`, `tests/test_family.py`, `tests/test_model_watch.py`, `tests/test_native_move.py`, `tests/test_problems.py`); left: P30 (the owner's captured signed-out messages) and the check of each fix on a low-cost model.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings

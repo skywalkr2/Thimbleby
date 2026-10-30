@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 268. Hand something in reads attachments; pictures through accounts listed as reading images (2026-10-30)
+
+| Where | Before | Now |
+|---|---|---|
+| Handing something in (7.x) | A pasted picture is told it can't be read; reading a picture not built | Documents read to text by the app's readers, with no AI; pictures read by an account listed as reading images, after the estimate; anything else kept in the person's files with "can't be read yet" (being built) |
+| Routing by capability (6.16, "Reading what arrives") | Reading a screenshot needs an account whose model reads images | The same, decided as `ModelInfo.reads_images` from the service's listing or the account's `image_models`, never from a name (being built) |
+
 ## 267. Sweep batch 8: the P2 polish (setup, People, Settings, empty states, restart wording) (2026-10-29; sweep batch 8, Y01 to Y06 without the layout items)
 
 | Where | Before | Now |

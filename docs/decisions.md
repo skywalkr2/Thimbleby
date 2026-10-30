@@ -5,6 +5,39 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: How Hand something in reads attachments, a request to move a call in the brief, thinking off, the catalog address, and languages for dates
+
+**Decided:**
+- **Attachments (the 2026-10-29 decision, made concrete):**
+  - A file handed in is read by the app's own readers (6.2: PDF, word processor, spreadsheet, slides, plain text, a
+    calendar file, a saved mail with its attachments), with no AI. Each reading is outside content.
+  - A picture, screenshot or scan is read only by an account whose model is listed as reading images. That is the
+    service's own listing, or the account's own list `image_models`, the way `transcribe_models` works for speech. It is
+    never assumed from a model's or vendor's name, and when no account can read it, the hand-in says so.
+  - Anything else is kept in the person's files with a plain "can't be read yet".
+- **The brief's request to move a call (sample 3):** the "Changed overnight" line comes from a to-do asked of the person.
+  It is filed overnight from someone else's words, tied to a calendar entry, and names who asked. It is never the
+  person's own outgoing question. Whether the assistant ties such a to-do to its calendar entry is checked in the owner's
+  AI re-run.
+- **Thinking off (B-11c):** done as designed. `thinking: off` is sent only where a model's listing accepts it. No
+  service's listing says so yet, so it is not sent anywhere, and nothing more is built.
+- **The catalog address:** the shipped address moves to the repository's new name, and the old one is kept as a former
+  shipped address. A saved feed at the old address counts as the shipped catalog and is read at the new one.
+- **Languages for dates:** people's dates are read in German, French and Spanish when a project's or the workspace's
+  language says so. The language list keeps offering only languages whose screens are written, so the new date files
+  serve projects whose language a plugin or the configuration sets, until the screens are translated.
+
+**Decided by:** the main session, on the owner's go-ahead to settle the open items before the installers (2026-10-30).
+
+**Why:**
+- Each follows a rule already in place: readers before AI, capabilities from listings never names, one item one line,
+  and no half-translated screen.
+- A former address keeps every saved workspace working.
+
+**Impact:**
+- Copilot briefs 12 to 15 (`docs/project/briefs/step3-copilot.md`).
+- The hand-in text in 7.x and the routing text in 6.16 change. Change log: section 268.
+
 ## 2026-10-29: Dropping a service's wider access when acting is turned off moves after the installers
 
 **Decided:** asking the mail or calendar service to take back the wider access when the person turns acting off, and the

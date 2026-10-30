@@ -156,3 +156,130 @@ runs the full suites; the coding agent runs only what it touched.
   - or the checks that will name it are in;
   - the whole `root-panes` project passes with its dependency;
   - and the P96 row in `docs/project/open-promises.md` says which.
+
+## Task 12: Hand something in reads documents
+- **Decision:** `docs/decisions.md`, 2026-10-30 ("How Hand something in reads attachments…"), and design 7.x "Handing
+  something in" (`docs/design/07-ui.md`, **Attachments**). Read both first. This task is the documents part only;
+  pictures are task 13.
+- **What exists (checked):**
+  - The readers are in `engine/extract/`. `read_file` reads PDF, word processor, spreadsheet, slides, plain text,
+    Markdown, CSV, calendar files and HTML by type, with a size limit, and raises `Unsupported` or `ExtractError` with
+    plain reasons. `engine/extract/attached.py` reads a saved mail's attachments.
+  - The hand-in routes are `POST /handin` (text) and `POST /handin/audio` in `api/routes.py`. The audio route is the
+    pattern for an uploaded file: a size cap from config, plain refusals.
+  - `POST /files` (`add_file_route`) keeps a file in the person's files.
+- **Build:**
+  - `POST /handin/file`, following `/handin/audio`:
+    - read the file with `read_file` (a saved mail `.eml` with its attachments through `attached.py`);
+    - hand the text in as **pasted content** (someone else's words: outside, never instructions), named by the file;
+    - the person's optional note goes with it, as with pasted text;
+    - a file nothing reads is kept through the same function `POST /files` uses, and the answer says "can't be read
+      yet" in plain words;
+    - a file over the size limit is refused plainly;
+    - the route returns a Pydantic model from `api/schemas.py`; then run `uv run python -m api.openapi`.
+  - The size limit:
+    - If no existing config key fits, add `steward.capture.max_file_mb` with its schema, default, description, and
+      demo values in both fictional workspaces.
+    - Say which you used.
+  - **The hand-in drawer** (`web/src/components/HandIn.tsx`):
+    - drop, paste or pick a file;
+    - each file shows a row with its name and what happened (read, kept as can't-be-read-yet, refused and why);
+    - the text box and its "Whose words are these?" choice keep working as now;
+    - pictures keep today's "A picture can't be read yet…" message until task 13.
+- **Tests:**
+  - API tests: a PDF, a word processor file, a spreadsheet, a saved mail with an attachment, an unreadable file kept,
+    and an oversized file refused. Use the fixtures in `engine/extract/fixtures/`, made-up content only;
+  - that the handed-in text is marked outside content;
+  - and a component test of the drawer's file rows.
+- **Not this task:** pictures (task 13), and any AI reading.
+- **Done when:**
+  - the tests pass;
+  - the hand-in item's State line in `docs/project/roadmap-to-1.0.md` (`[B-6b] What the work version's screens show`,
+    "Widened") says documents are built, citing the tests;
+  - and design 7.x **Attachments** says "built" for documents.
+
+## Task 13: Hand something in reads pictures through an account listed as reading images
+- **Decision:** the same entry and design text as task 12, plus design 6.16 ("Reading what arrives": `reads_images`,
+  `image_models`). Do task 12 first.
+- **Follow speech-to-text at every point.** It is the same shape, already built:
+  - `ModelInfo.transcribes` (`engine/ai/task.py`);
+  - the account setting `transcribe_models` and where the router sets `info.transcribes` (`engine/ai/router.py`, near
+    `settings.transcribe_models`);
+  - `_that_transcribe`, `transcribers` and `CannotTranscribe`;
+  - `AiTask.audio` and the `Audio` type;
+  - each adapter's handling of `task.audio`;
+  - the `transcribe` task kind in `engine/tasks.py`, with its prompt and playbook;
+  - `engine/transcribe.py`;
+  - and `POST /handin/audio`.
+- **Build the image equivalents:**
+  - `ModelInfo.reads_images`, filled by an adapter only where its service's listing says so;
+  - the account setting `image_models`, with its schema, default (empty), description, and demo values in both
+    workspaces;
+  - the router's filter that keeps only accounts reading images, and a plain-words error when none can;
+  - `AiTask.image`;
+  - each adapter sending the image the way its service takes one: the native messages adapter as an image block, the
+    OpenAI-compatible adapter as an image in the user message, and the stand-in adapter returning a stand-in reading. The
+    command-line agent adapter says it can't, unless its program is documented to take a file.
+  - A task kind that reads a picture's words and content as text, with its prompt template, playbook entry, knowledge
+    section and knowledge log, exactly as `transcribe` has them (the self-check requires these).
+  - The reading shows its estimate first, like any run.
+  - The words read are handed in as pasted content (outside).
+- **The drawer:** a pasted or dropped picture goes through this when an account can read it, and when none can, the
+  message says so in plain words and keeps the picture.
+- **Rules:**
+  - No vendor or model name outside `engine/ai/adapters/` and config.
+  - Never decide a model reads images from its name.
+  - `classify_error` stays the only place that reads vendor text.
+- **Tests:**
+  - the router: only listed accounts, and none means the plain error;
+  - each adapter's request shape, with recorded fixtures and no network;
+  - the hand-in route with the stand-in adapter;
+  - and the drawer's message when none can.
+- **Done when:** the tests pass, and the State line and design text say pictures are built, citing the tests.
+
+## Task 14: the morning brief's request to move a call (sample 3)
+- **Decision:** `docs/decisions.md`, 2026-10-30: the "Changed overnight" line comes from a to-do asked of the person.
+  - The to-do is filed overnight from someone else's words, tied to a calendar entry (`Action.event`), and names who
+    asked.
+  - It is never the person's own outgoing question.
+- **Read:**
+  - sample 3 in `docs/project/steward-brief-samples.md` ("Tess asked to move your call to Friday at 10");
+  - both workspaces' `brief-03` cases;
+  - `engine/brief.py`, including `_fact_lines`, the pattern for "filed since", read from the ledger.
+- **Build:**
+  1. First add to both brief-03 cases, in `given` and `then`:
+     - an action asked of the person: owners are the person, `promised_to` is the one who asked, `event` is the call,
+       and it is filed overnight from outside content;
+     - and the expected changed line, with its kind and text, naming who asked, linked to the event.
+     Remove `meeting_dependency` from `left`. Run the case test: it fails.
+  2. Then build the line in `engine/brief.py`, rules only. The person's own questions and to-dos never make this line.
+- **The screen:** the line renders in `BriefCard.tsx`, with its wording in `en.json` and a component test.
+- **Done when:**
+  - both workspaces' sample cases pass, and no `left` remains;
+  - the `[S2]` item is ticked and moved word for word to `roadmap-done.md`, with its State line citing the tests;
+  - and the State line notes that whether the assistant ties such a to-do to its calendar entry is checked in the
+    owner's AI re-run.
+
+## Task 15: the shipped catalog's address
+- **Decision:** `docs/decisions.md`, 2026-10-30:
+  - the shipped address moves to the repository's new name;
+  - the old one is kept as a former shipped address;
+  - a saved feed at the old address counts as the shipped catalog and is read at the new one.
+- **Read:**
+  - `catalog/product.yaml` (`pack_catalog`);
+  - `engine/shipped.py` (`product()`);
+  - in `api/pack_routes.py`, where `own=` compares a feed's URL with the shipped one;
+  - and where feeds are fetched.
+  - The new address is the same URL with the repository's new name. Check the git remote and the catalog docs for the
+    name; never guess one.
+- **Build:**
+  - `pack_catalog` becomes the new address, and a list `pack_catalog_former` holds the old one;
+  - one function answers "is this the shipped catalog?" for the current and former addresses, and `own=` uses it;
+  - a saved feed at a former address is fetched at the current one, and the person's saved settings aren't rewritten
+    behind their back.
+- **Tests:**
+  - a feed saved at the old address shows as the shipped catalog and is fetched at the new one;
+  - a different feed is not;
+  - the shipped address is the new one.
+- **Done when:** the tests pass, and the P96 row in `docs/project/open-promises.md` moves the catalog address to
+  "Done since", citing them.
