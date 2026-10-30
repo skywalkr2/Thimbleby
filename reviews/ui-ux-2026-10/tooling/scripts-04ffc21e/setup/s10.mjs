@@ -1,0 +1,18 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open();
+const tail = (t) => (t.split("These need a technical setup")[1] ?? t).split("What it may spend")[0];
+await page.getByRole("radio", { name: /Something else/ }).click(); await page.waitForTimeout(1000);
+await page.getByRole("button", { name: /^An app you're signed in/ }).click(); await page.waitForTimeout(1000);
+await page.getByRole("radio", { name: /^Claude Code/ }).click(); await page.waitForTimeout(20000);
+const sel = page.getByLabel("AI model", { exact: true });
+console.log("OPTIONS:", await sel.locator("option").allInnerTexts().catch(()=>"none"));
+const t = await mainText(page); console.log(t.slice(t.indexOf("Installed")));
+await audit(page, "r1-12-ai-app-claude-after20s");
+await page.getByRole("button", { name: /^Another service/ }).click(); await page.waitForTimeout(1000);
+await page.getByRole("radio", { name: /^Google AI Studio/ }).click(); await page.waitForTimeout(1500);
+const t2 = await mainText(page); console.log("GOOGLE:", t2.slice(t2.indexOf("Another service that speaks")));
+await audit(page, "r1-11-ai-another-google");
+await page.getByRole("radio", { name: /^Another service that speaks/ }).click(); await page.waitForTimeout(1500);
+const t3 = await mainText(page); console.log("GENERIC:", t3.slice(t3.indexOf("Another service that speaks")));
+await audit(page, "r1-11-ai-another-generic");
+await browser.close();

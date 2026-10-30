@@ -1,0 +1,10 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/connections");
+await page.getByRole("button", { name: "Choose what to read" }).click(); await page.waitForTimeout(1500);
+await page.getByRole("radio", { name: "Example mail" }).click(); await page.waitForTimeout(2500);
+const sec = async () => (await mainText(page)).split("Add a connection").slice(-1)[0].split("Your inbox")[0];
+console.log("MAIL:", await sec());
+await audit(page, "cn-choose-mail");
+console.log("ctrls:", await page.locator("main input, main select").evaluateAll(b => b.map(x => `${x.type} id=${x.id} "${(x.closest("label")?.innerText || x.getAttribute("aria-label")||"").trim().slice(0,60)}" val=${x.value} checked=${x.checked} dis=${x.disabled}`)));
+await browser.close();

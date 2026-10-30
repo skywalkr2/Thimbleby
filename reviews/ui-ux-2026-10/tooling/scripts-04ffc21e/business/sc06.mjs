@@ -1,0 +1,15 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#schedule");
+await page.getByRole("button", { name: "Add to schedule" }).click(); await page.waitForTimeout(1000);
+const d = page.locator("[role=dialog]").last();
+await d.getByLabel("What").fill("Fabric delivery from Owen");
+await d.getByLabel("Day").fill("2026-10-29");
+await d.getByLabel(/Time/).fill("10:00");
+await d.getByRole("button", { name: "Add" }).click(); await page.waitForTimeout(2000);
+await audit(page, "sc06-added-entry");
+await page.getByText("Fabric delivery from Owen").first().click(); await page.waitForTimeout(1200);
+await audit(page, "sc07-own-entry-details");
+const t = await mainText(page); const i=t.lastIndexOf("Fabric delivery"); console.log("DETAIL:", t.slice(i, i+800));
+console.log("BUTTONS:", await page.locator("main button, main a").evaluateAll(e=>e.map(x=>(x.getAttribute('aria-label')||x.textContent).trim()).filter(Boolean).slice(-10).join(" | ")));
+await browser.close();

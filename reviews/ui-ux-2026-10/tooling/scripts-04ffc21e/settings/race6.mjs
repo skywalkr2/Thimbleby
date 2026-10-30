@@ -1,0 +1,14 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/ai");
+const log = []; page.on("request", r => { if (r.method() !== "GET") log.push((r.postData()||"").slice(0, 70)); });
+const gap = Number(process.env.GAP);
+const set = async (name, v) => { const f = page.getByRole("textbox", { name }); await f.click(); await page.keyboard.press("Control+A"); await page.keyboard.type(v, { delay: 80 }); await page.waitForTimeout(gap); };
+await set("Ask me before anything over", process.env.A);
+await set("Most to spend in a day", process.env.B);
+await set("Most to spend in a month", process.env.C);
+await page.locator("main h2, main h3").first().click(); await page.waitForTimeout(4000);
+const screen = await page.locator("main input[type=text]").evaluateAll(i => i.slice(0, 3).map(x => x.value));
+await page.reload(); await page.waitForTimeout(2500);
+console.log("gap", gap, "posts:", log.length, log, "\n screen:", screen, "persisted:", await page.locator("main input[type=text]").evaluateAll(i => i.slice(0, 3).map(x => x.value)));
+await browser.close();

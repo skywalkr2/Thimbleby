@@ -1,0 +1,13 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open(); await go(page, "#today");
+const side = page.locator("main").locator("section,div").filter({ has: page.getByRole("heading", { name: /briefing|Morning brief/ }) }).last();
+console.log("BRIEF0:", (await side.innerText()).replace(/\n+/g," | ").slice(0,500));
+await page.waitForTimeout(2000); console.log("BRIEF0b:", (await side.innerText()).replace(/\n+/g," | ").slice(0,500)); await page.getByRole("button", { name: "Show this week's briefing" }).click(); await page.waitForTimeout(2500);
+await page.locator("main select").last().filter({ hasText: "Pick a person" }).selectOption({label:"Dana Whitfield"}).catch(e=>console.log("sel", e.message.slice(0,100)));
+await page.getByRole("button", { name: "This is who I report to" }).click(); await page.waitForTimeout(3000);
+await audit(page, "t14-reportto-set");
+console.log("BRIEF1:", (await side.innerText()).replace(/\n+/g," | ").slice(0,1500));
+await page.getByRole("button", { name: "Set goals" }).click().catch(()=>{}); await page.waitForTimeout(1500);
+await audit(page, "t15-set-goals");
+console.log("GOALS:", (await mainText(page)).match(/briefing[\s\S]{0,1200}/)?.[0]);
+await browser.close();

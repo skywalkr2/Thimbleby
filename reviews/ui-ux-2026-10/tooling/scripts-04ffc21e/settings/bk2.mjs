@@ -1,0 +1,11 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/backups");
+await page.getByRole("button", { name: "Make one for me" }).click(); await page.waitForTimeout(2000);
+console.log("after make:", (await mainText(page)).split("Backup key")[1]?.split("Synced folder")[0], "| toasts:", await toasts(page));
+console.log("dialog:", await page.locator("[role=dialog]").innerText().catch(()=>"none"));
+await audit(page, "bk-key-made");
+const btns = await page.locator("main button").evaluateAll(b => b.map(x => x.textContent.trim()).filter(Boolean));
+console.log("btns:", btns);
+await browser.close();

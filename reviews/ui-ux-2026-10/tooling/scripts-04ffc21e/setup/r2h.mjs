@@ -1,0 +1,16 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+const boxes = page.locator("main fieldset").first().locator("input[type=checkbox]");
+await boxes.nth(1).click(); await page.waitForTimeout(2500);
+await page.reload(); await page.waitForTimeout(2500);
+let t = await mainText(page); console.log(t.slice(t.indexOf("Your inbox is for"), t.indexOf("Your inbox is for")+100));
+await audit(page, "r2-10-mail-sides-set");
+await others("r2-10-mail-sides-set");
+await page.locator("main").getByRole("button", { name: "Continue" }).first().click(); await page.waitForTimeout(2500);
+t = await mainText(page); console.log("== PROMISES BEFORE\n", t);
+await page.locator("main").getByRole("button", { name: "Start", exact: true }).click();
+await page.waitForTimeout(20000);
+t = await mainText(page); console.log("== PROMISES RESULT\n", t);
+await audit(page, "r2-11-promises-result");
+await others("r2-11-promises-result");
+await browser.close();

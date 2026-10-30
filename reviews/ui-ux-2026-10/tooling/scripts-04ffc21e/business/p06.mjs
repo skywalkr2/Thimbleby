@@ -1,0 +1,14 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#records/projects");
+await page.locator("main").getByRole("link", { name: "Calloway Upholstery", exact: true }).first().click(); await page.waitForTimeout(2000);
+const bizUrl = page.url();
+await page.getByRole("link", { name: "Your business" }).or(page.getByRole("button", { name: "Your business" })).first().click(); await page.waitForTimeout(2000);
+console.log("ORG ->", page.url()); await audit(page, "p06-business-org");
+console.log((await mainText(page)).slice(0,2000));
+await page.goto(bizUrl); await page.waitForTimeout(2000);
+await page.getByRole("button", { name: "Edit details" }).click(); await page.waitForTimeout(1200);
+await audit(page, "p07-business-edit-details");
+const t = await mainText(page); const i = t.indexOf("Details"); console.log("EDIT:", t.slice(i, i+1500));
+console.log(await page.locator("main input, main select, main textarea").evaluateAll(s=>s.map(x=>(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+x.value+(x.tagName==='SELECT'?" ["+[...x.options].map(o=>o.text).join("/")+"]":""))));
+await browser.close();

@@ -1,0 +1,18 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const I = await info();
+const { browser, page } = await open();
+await page.getByRole("radio", { name: /Something else/ }).click(); await page.waitForTimeout(500);
+await page.getByRole("button", { name: /^Another service/ }).click(); await page.waitForTimeout(500);
+await page.getByLabel(/^Another service that speaks/).click(); await page.waitForTimeout(500);
+await page.locator("#ai-key").fill("a-made-up-key");
+await page.getByRole("textbox", { name: "Service address" }).fill(I.ai_base_url);
+await page.getByRole("textbox", { name: "Service address" }).blur();
+await page.waitForTimeout(3500);
+await page.getByText("Advanced", { exact: true }).click(); await page.waitForTimeout(500);
+await page.getByLabel("AI model for everyday work").selectOption("fake-small");
+await page.getByRole("radio", { name: /^Allow/ }).click();
+await audit(page, "s07-ai-filled");
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(2000);
+await audit(page, "s08-mail");
+console.log(await mainText(page));
+await browser.close();

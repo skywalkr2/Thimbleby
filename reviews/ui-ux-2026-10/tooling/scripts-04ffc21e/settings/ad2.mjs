@@ -1,0 +1,13 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/addons");
+await page.getByRole("tab", { name: "Installed" }).click(); await page.waitForTimeout(1000);
+await page.getByRole("button", { name: /^Turn off/ }).click(); await page.waitForTimeout(3000);
+console.log("dialog:", await page.locator("[role=dialog],[role=alertdialog]").innerText().catch(()=>"none"));
+console.log("after off:", (await mainText(page)).split("Installed\n")[1]?.slice(0, 600));
+console.log("btns:", await page.locator("main button").evaluateAll(b => b.map(x => x.textContent.trim()).filter(Boolean)));
+await audit(page, "ad-off", { full: false });
+console.log("hdr:", (await page.locator("header").innerText()).replace(/\n/g, " / "));
+await go(page, "#settings/connections"); console.log("conn when off:", (await mainText(page)).split("Accounts")[1]?.replace(/\n+/g, " / ").slice(0, 600));
+await audit(page, "ad-off-connections", { full: false });
+await browser.close();

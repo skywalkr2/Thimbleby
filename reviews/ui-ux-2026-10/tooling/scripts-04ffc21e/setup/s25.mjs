@@ -1,0 +1,12 @@
+import { open, audit, mainText, others, info } from "./lib.mjs";
+const I = await info();
+const { browser, page } = await open({ path: "#setup" });
+await page.getByRole("button", { name: "Missed something?" }).click(); await page.waitForTimeout(800);
+await page.getByLabel("What did I miss?").fill("I promised Maya Okafor I would send the venue deposit by Friday");
+await page.getByRole("button", { name: "Send" }).click(); await page.waitForTimeout(6000);
+let t = await mainText(page); console.log("== AFTER MISSED\n", t.slice(t.indexOf("Your promises\n")+14, t.lastIndexOf("Back\n")));
+await audit(page, "r1-37-promises-after-missed");
+await page.getByRole("button", { name: "Continue" }).last().click(); await page.waitForTimeout(2500);
+console.log(await audit(page, "r1-38-backup-day"));
+await others("r1-38-backup");
+await browser.close();

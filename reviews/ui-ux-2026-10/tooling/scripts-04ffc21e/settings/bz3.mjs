@@ -1,0 +1,12 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/business");
+await page.getByRole("button", { name: /^Remove/ }).nth(1).click(); await page.waitForTimeout(1200);
+const dlg = page.locator("[role=dialog], [role=alertdialog]");
+console.log("dialog count:", await dlg.count());
+console.log("REMOVE UI:", (await dlg.count()) ? await dlg.innerText() : (await mainText(page)).split("What it is called")[1]?.split("Lists")[0]);
+await audit(page, "bz-remove-ask", { full: false });
+const ctrls = await page.locator("[role=dialog] input, [role=dialog] button, main input[type=radio]").evaluateAll(b => b.map(x => `${x.tagName} ${x.type} "${(x.closest("label")?.innerText || x.textContent).trim().slice(0,80)}"`));
+console.log(ctrls);
+await browser.close();

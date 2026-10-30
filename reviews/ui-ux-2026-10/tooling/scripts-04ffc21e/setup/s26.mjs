@@ -1,0 +1,18 @@
+import { open, audit, mainText, others, info } from "./lib.mjs";
+const I = await info();
+const { browser, page } = await open({ path: "#setup" });
+const body = async () => { const t = await mainText(page); return t.slice(t.indexOf("Backups\n")+8, t.lastIndexOf("Back\n")).replace(/\n+/g, " | "); };
+await page.getByRole("button", { name: /^Choose/ }).click(); await page.waitForTimeout(1500);
+console.log("== CHOOSER", await body()); await audit(page, "r1-39-backup-chooser");
+console.log("dialog text:", (await page.locator("[role=dialog]").innerText().catch(()=>"(no dialog)")).replace(/\n+/g," | ").slice(0,800));
+await page.keyboard.press("Escape"); await page.waitForTimeout(600);
+const f = page.getByLabel("Folder", { exact: true });
+await f.fill("not/a/real/path ???"); await page.getByRole("button", { name: "Check" }).click(); await page.waitForTimeout(2000);
+console.log("== BAD", await body()); await audit(page, "r1-40-backup-badpath");
+await f.fill("/etc"); await page.getByRole("button", { name: "Check" }).click(); await page.waitForTimeout(2000);
+console.log("== /etc", await body()); await audit(page, "r1-40-backup-etc");
+await f.fill(I.workspace); await page.getByRole("button", { name: "Check" }).click(); await page.waitForTimeout(2000);
+console.log("== workspace itself", await body()); await audit(page, "r1-40-backup-workspace");
+await f.fill(I.backup_folder); await page.getByRole("button", { name: "Check" }).click(); await page.waitForTimeout(2000);
+console.log("== GOOD", await body()); await audit(page, "r1-41-backup-good");
+await browser.close();

@@ -1,0 +1,16 @@
+import { open, audit, mainText, others, info } from "./lib.mjs";
+const I = await info();
+const { browser, page } = await open({ path: "#setup" });
+const body = async () => { const t = await mainText(page); return t.slice(t.indexOf("Backups\n")+8, t.lastIndexOf("Back\n")).replace(/\n+/g, " | "); };
+await page.getByRole("button", { name: /^Choose/ }).click(); await page.waitForTimeout(1200);
+await page.getByRole("button", { name: "Go up one folder" }).click(); await page.waitForTimeout(1200);
+console.log("dialog up:", (await page.locator("[role=dialog]").innerText()).replace(/\n+/g," | ").slice(0,600));
+await audit(page, "r1-39-backup-chooser-up");
+await page.getByRole("button", { name: "Use this folder" }).click(); await page.waitForTimeout(2000);
+console.log("== USE UP", await body()); await audit(page, "r1-39-backup-chooser-used");
+const f = page.getByLabel("Folder", { exact: true });
+await f.fill(I.backup_folder); await f.blur(); await page.waitForTimeout(1500);
+await page.getByRole("button", { name: /Back up now/ }).click(); await page.waitForTimeout(6000);
+console.log(await audit(page, "r1-42-people-day"));
+await others("r1-42-people");
+await browser.close();

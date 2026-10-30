@@ -1,0 +1,14 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open({ scheme: "light" });
+await go(page, "#settings/addons");
+await page.getByRole("tab", { name: "Installed" }).click(); await page.waitForTimeout(1500);
+console.log("INSTALLED:", (await mainText(page)).split("Installed\n")[1]?.slice(0, 1500));
+await audit(page, "ad-installed");
+console.log("btns:", await page.locator("main button").evaluateAll(b => b.map(x => x.textContent.trim() + "|" + (x.getAttribute("aria-label")||""))));
+await page.locator("summary", { hasText: "More settings" }).click().catch(()=>{}); await page.waitForTimeout(800);
+console.log("MORE:", (await mainText(page)).split("More settings")[1]?.slice(0, 1500));
+await audit(page, "ad-more");
+await go(page, "#settings/addon/journey-mail");
+console.log("ADDON PAGE:", (await mainText(page)).split("Journey mail\n").slice(-1)[0].slice(0, 1500));
+await audit(page, "ad-journey");
+await browser.close();

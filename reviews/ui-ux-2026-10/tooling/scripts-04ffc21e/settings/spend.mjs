@@ -1,0 +1,10 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/ai");
+console.log((await mainText(page)).split("AI accounts")[1]?.split("Choose which")[0].replace(/\n+/g, " / "));
+await page.locator("header").getByText("Connected").click(); await page.waitForTimeout(800);
+console.log("POP:", (await page.locator("[role=dialog]").innerText().catch(()=>"")).replace(/\n+/g, " / "));
+await page.keyboard.press("Escape");
+await go(page, "#settings/ai-compare");
+console.log("CMP:", (await mainText(page)).split("Compare what accounts can do")[1]?.replace(/\n+/g, " / ").slice(0, 600));
+await browser.close();

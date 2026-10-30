@@ -1,0 +1,10 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open(); await go(page, "#settings/business");
+await page.getByRole("button", { name: /Remove/ }).nth(2).click(); await page.waitForTimeout(1000);
+await audit(page, "bz10-remove-question");
+const d = page.locator("[role=dialog], [role=alertdialog]").last();
+const txt = (await d.count()) ? await d.innerText() : (await mainText(page)).match(/Robin's Cushion Stall[\s\S]{0,1200}/)?.[0];
+console.log("Q:", txt);
+console.log(await page.locator("main input, main select, [role=dialog] input, [role=dialog] select").evaluateAll(s=>s.map(x=>x.type+" "+(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+(x.tagName==='SELECT'?x.options[x.selectedIndex]?.text+" ["+[...x.options].map(o=>o.text).join("/")+"]":(x.checked ?? x.value)))));
+console.log("BUTTONS:", await page.locator("main button, [role=dialog] button").evaluateAll(e=>e.map(x=>(x.getAttribute('aria-label')||x.textContent).trim()).filter(Boolean).slice(0,30).join(" | ")));
+await browser.close();

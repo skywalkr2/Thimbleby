@@ -1,0 +1,23 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const [mode] = process.argv.slice(2);
+const cfg = { d: { width: 1440, height: 900, scheme: "light" }, n: { width: 1440, height: 900, scheme: "dark" }, p: { width: 390, height: 844, scheme: "light" } }[mode];
+const { browser, page } = await open(cfg);
+const P = (n) => `o-${mode}-${n}`;
+const dlg = async () => (await page.locator("[role=dialog], [role=menu], dialog[open], [role=tooltip]").allInnerTexts().catch(()=>[])).join("\n----\n");
+const tryStep = async (name, fn, esc=true) => { try { await fn(); await page.waitForTimeout(900); await audit(page, P(name), { full: false }); console.log("  DLG:", (await dlg()).slice(0, 1500)); } catch (e) { console.log("FAIL", name, e.message.split("\n")[0]); } if (esc) { await page.keyboard.press("Escape"); await page.waitForTimeout(400);} };
+await go(page, "#today");
+// sidebar state
+const tog = page.locator("nav button, aside button").last();
+console.log("toggle label:", await tog.getAttribute("aria-label"), await tog.getAttribute("title"));
+const navs = await page.locator("nav a, aside a").evaluateAll(els => els.map(e => [e.getAttribute("aria-label"), e.getAttribute("title"), e.textContent.trim(), e.getAttribute("href")]));
+console.log(JSON.stringify(navs));
+await tryStep("nav-hover", () => page.locator("nav a, aside a").nth(2).hover(), false);
+await tog.click(); await page.waitForTimeout(600);
+await tryStep("user-menu", () => page.getByRole("button", { name: /Change appearance/ }).click());
+await tryStep("help-menu", () => page.getByRole("button", { name: "Help" }).click(), false);
+await tryStep("feedback", () => page.getByRole("menuitem", { name: /feedback/i }).or(page.getByText("Write feedback")).first().click());
+await tryStep("help-menu2", () => page.getByRole("button", { name: "Help" }).click(), false);
+await tryStep("setup-guide", () => page.getByText("Setup guide").first().click());
+await go(page, "#today");
+await tryStep("missed", async () => { await go(page, "#work/since"); await page.getByRole("button", { name: "Missed something?" }).first().click(); });
+await browser.close();

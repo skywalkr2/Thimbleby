@@ -1,0 +1,14 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+import { counts, lines } from "./lib2.mjs";
+const { browser, page } = await open(); await go(page, "#today");
+console.log("BEFORE", await counts(page));
+const line = page.locator("[data-queue-line]").first();
+await line.getByRole("button", { name: "Pick" }).click(); await page.waitForTimeout(1500);
+await page.locator("main select").first().selectOption({label:"Robin Calloway"}); await page.waitForTimeout(500);
+await audit(page, "t07-picked-robin");
+await page.getByRole("button", { name: "Use this person" }).click(); await page.waitForTimeout(2500);
+await audit(page, "t08-after-use-person");
+console.log("AFTER", await counts(page));
+console.log((await lines(page)).join("\n"));
+console.log((await mainText(page)).slice(0,1600));
+await browser.close();

@@ -1,0 +1,14 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, page } = await open({});
+await go(page, "#today");
+const hdr = await page.locator("header").innerText().catch(()=>"");
+console.log("HEADER:", hdr.replace(/\n+/g," | "));
+await page.getByRole("button", { name: /App status/ }).click(); await page.waitForTimeout(800);
+await audit(page, "rs-status", { full: false });
+console.log("STATUS POP:", (await page.locator("[role=dialog]").allInnerTexts()).join("\n"));
+await page.keyboard.press("Escape");
+await page.getByRole("button", { name: /^Reginald/ }).click(); await page.waitForTimeout(800);
+await audit(page, "rs-reginald", { full: false });
+console.log("REGINALD POP:", (await page.locator("[role=dialog]").allInnerTexts()).join("\n"));
+console.log("TODAY:", (await mainText(page)).slice(0, 600));
+await browser.close();

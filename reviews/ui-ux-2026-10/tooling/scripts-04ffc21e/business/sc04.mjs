@@ -1,0 +1,16 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#schedule");
+await page.getByText("Venue walk-through").first().click(); await page.waitForTimeout(1200);
+await page.locator("main").getByText("Open", {exact:true}).last().click(); await page.waitForTimeout(2000);
+console.log("URL", page.url());
+await audit(page, "sc04-event-page");
+console.log((await mainText(page)).slice(0,2500));
+console.log("BUTTONS:", await page.locator("main button, main a").evaluateAll(e=>e.map(x=>(x.getAttribute('aria-label')||x.textContent).trim()).filter(Boolean).join(" | ")));
+await go(page, "#schedule");
+await page.getByRole("button", { name: "Add to schedule" }).click(); await page.waitForTimeout(1200);
+await audit(page, "sc05-add-to-schedule");
+const d = page.locator("[role=dialog]").last();
+console.log("ADD:", (await d.innerText().catch(()=>"(no dialog)")).slice(0,1500));
+console.log(await page.locator("[role=dialog] input, [role=dialog] select, [role=dialog] textarea").evaluateAll(s=>s.map(x=>x.tagName+" "+x.type+" "+(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+(x.tagName==='SELECT'?x.options[x.selectedIndex]?.text+" ["+[...x.options].map(o=>o.text).join("/")+"]":x.value))));
+await browser.close();

@@ -1,0 +1,12 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#records/people");
+await page.getByRole("button", { name: "Add a person" }).click(); await page.waitForTimeout(1000);
+let d = page.locator("[role=dialog]").last();
+await d.locator("#pn-new").fill("Jun Park");
+await d.getByLabel(/^Role/).fill("customer");
+await d.getByRole("button", { name: "Add a person" }).click(); await page.waitForTimeout(1800);
+console.log("URL", page.url());
+await audit(page, "pp07-person-added");
+console.log((await mainText(page)).slice(0,2000));
+await browser.close();

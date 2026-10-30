@@ -1,0 +1,14 @@
+import { open, audit, mainText } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+await page.getByRole("button", { name: "Missed something?" }).click(); await page.waitForTimeout(1200);
+console.log("URL", page.url().split("#")[1]); console.log(await audit(page, "r1-34-promises-missed"));
+await page.keyboard.press("Escape"); await page.waitForTimeout(800);
+await page.goto(page.url().split("#")[0] + "#setup"); await page.waitForTimeout(2000);
+await page.getByRole("button", { name: /^Hand something in to see/ }).click(); await page.waitForTimeout(1500);
+console.log("URL", page.url().split("#")[1]); console.log(await audit(page, "r1-35-promises-handin"));
+await page.keyboard.press("Escape"); await page.waitForTimeout(800);
+console.log("after esc URL", page.url().split("#")[1]);
+await page.goto(page.url().split("#")[0] + "#setup"); await page.waitForTimeout(2000);
+await page.getByRole("button", { name: "Choose the Sent folder" }).click(); await page.waitForTimeout(2000);
+console.log("URL", page.url().split("#")[1]); console.log(await audit(page, "r1-36-promises-sentfolder"));
+await browser.close();

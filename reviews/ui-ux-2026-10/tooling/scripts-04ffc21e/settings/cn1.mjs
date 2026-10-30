@@ -1,0 +1,10 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open({ scheme: "light" });
+await go(page, "#settings/connections");
+await page.getByRole("button", { name: "Choose what to read" }).click(); await page.waitForTimeout(2000);
+const d = page.locator("[role=dialog]");
+console.log("dialog?", await d.count());
+console.log("CHOOSE:", ((await d.count()) ? await d.innerText() : (await mainText(page)).split("Accounts")[1]).slice(0, 3000));
+await audit(page, "cn-choose");
+console.log("ctrls:", await page.locator("[role=dialog] input, [role=dialog] button, [role=dialog] select").evaluateAll(b => b.map(x => `${x.tagName} ${x.type} "${(x.closest("label")?.innerText || x.textContent || x.getAttribute("aria-label")||"").trim().slice(0,60)}" checked=${x.checked} dis=${x.disabled}`)));
+await browser.close();

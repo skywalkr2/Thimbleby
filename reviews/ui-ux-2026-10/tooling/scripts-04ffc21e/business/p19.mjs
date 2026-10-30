@@ -1,0 +1,15 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#records/projects");
+await page.getByRole("button", { name: "More actions for Customer jobs" }).click(); await page.waitForTimeout(400);
+await page.getByRole("menuitem", { name: "Remove" }).click(); await page.waitForTimeout(1200);
+await audit(page, "p19-remove-group-confirm", {full:false});
+const d = page.locator("[role=dialog], [role=alertdialog]").last();
+console.log("CONFIRM:", (await d.innerText().catch(()=>"(no dialog) "+(async()=>"")())));
+console.log(await d.locator("input, select").evaluateAll(s=>s.map(x=>x.type+" "+(x.labels?.[0]?.textContent||x.id)+" = "+(x.tagName==='SELECT'?[...x.options].map(o=>o.text).join("/"):x.checked)) ).catch(()=>[]));
+await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+await page.getByRole("button", { name: "More actions for Workshop move" }).click(); await page.waitForTimeout(400);
+await page.getByRole("menuitem", { name: "Remove" }).click(); await page.waitForTimeout(1200);
+await audit(page, "p20-remove-workshop-confirm", {full:false});
+console.log("CONFIRM2:", await d.innerText().catch(()=>"none"));
+await browser.close();

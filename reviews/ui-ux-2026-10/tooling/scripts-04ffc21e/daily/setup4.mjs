@@ -1,0 +1,12 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const inf = await info();
+const { browser, page } = await open({});
+await go(page, "#setup");
+const step = async (n) => { await page.waitForTimeout(1500); await audit(page, n); console.log("=====",n,"\n"+(await mainText(page)).slice(0, 2500)); };
+await page.getByRole("button", { name: "Continue" }).click(); await step("s08-backups");
+await page.getByLabel("Folder", { exact: true }).fill(inf.backup_folder);
+await page.getByRole("button", { name: /Back up now/ }).click(); await page.waitForTimeout(5000);
+await step("s08b-backups-done");
+await page.getByRole("button", { name: "Continue" }).click(); await step("s09-people");
+await page.getByRole("button", { name: /I'll do this later|Continue/ }).first().click(); await step("s10-done");
+await browser.close();

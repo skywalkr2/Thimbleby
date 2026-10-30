@@ -1,0 +1,11 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, page } = await open({});
+await go(page, "#records/people");
+await page.getByRole("link", { name: "Priya Hart", exact: true }).click(); await page.waitForTimeout(1000);
+await page.getByRole("link", { name: "Open Priya Hart's page" }).click(); await page.waitForTimeout(1500);
+const url = page.url(); console.log(url);
+await page.getByRole("button", { name: "Edit details" }).click(); await page.waitForTimeout(1000);
+await audit(page, "p-d-person-edit");
+console.log(await page.locator("main input, main select, main textarea, [role=dialog] input, [role=dialog] select, [role=dialog] textarea").evaluateAll(els => els.map(e => e.tagName+":"+(e.getAttribute("aria-label")||e.labels?.[0]?.textContent||e.placeholder||e.name).slice(0,60) + (e.tagName==="SELECT" ? " ["+[...e.options].map(o=>o.text).join("|")+"]" : ""))));
+console.log(await page.locator("main button, [role=dialog] button").evaluateAll(els => els.map(e => (e.getAttribute("aria-label")||e.textContent.trim()).slice(0,40))));
+await browser.close();

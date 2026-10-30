@@ -1,0 +1,15 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#setup");
+await page.getByRole("button", { name: /What it's for/ }).first().click(); await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Add another business" }).click(); await page.waitForTimeout(800);
+const ids = await page.locator("main input, main textarea").evaluateAll(i => i.map(x => x.id).filter(Boolean));
+console.log(ids);
+const nameId = "work-business-1-name";
+await page.locator("#" + nameId).fill("Harbour Bikes");
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(2500);
+console.log("after continue:", (await mainText(page)).slice(0, 300));
+await go(page, "#settings/business");
+console.log((await mainText(page)).split("What it is called")[1]?.split("Lists")[0].replace(/\n+/g, " / "));
+await go(page, "#today"); console.log("today:", (await mainText(page)).slice(0, 300).replace(/\n/g, " / "));
+await browser.close();

@@ -1,0 +1,10 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+import fs from "node:fs";
+const { browser, page } = await open();
+await go(page, "#records/files");
+await page.getByRole("button", { name: "Add a file" }).click(); await page.waitForTimeout(1200);
+await audit(page, "fi01-add-file");
+const d = page.locator("[role=dialog]").last();
+console.log("ADD:", (await d.innerText().catch(()=>mainText(page))).slice(0,1500));
+console.log(await page.locator("[role=dialog] input, [role=dialog] select, [role=dialog] textarea, main input[type=file]").evaluateAll(s=>s.map(x=>x.tagName+" "+x.type+" "+(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+(x.tagName==='SELECT'?x.options[x.selectedIndex]?.text+" ["+[...x.options].map(o=>o.text).join("/")+"]":x.value))));
+await browser.close();

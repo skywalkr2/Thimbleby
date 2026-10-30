@@ -1,0 +1,17 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const I = await info();
+const { browser, page } = await open();
+console.log(await mainText(page).then(t=>t.slice(0,200)));
+await page.getByLabel("A job").check(); await page.getByLabel("My own business").check(); await page.waitForTimeout(500);
+await page.locator("#work-job-name").fill("Northwind Clinic");
+await page.locator("#work-business-1-name").fill("Calloway Upholstery");
+await page.locator("#work-business-1-about").fill("I reupholster chairs and sofas from a small workshop.");
+await page.locator("#work-business-1-works-on").fill("Mrs Hale's wingback chair\nCafe booth seating\nWorkshop move");
+await page.getByText("Do some of these belong together").click(); await page.waitForTimeout(500);
+await page.locator("#work-business-1-group-name").fill("Customer jobs");
+await audit(page, "s04-group-open");
+console.log(await mainText(page));
+const boxes = page.getByRole("checkbox", { name: /^in / });
+console.log("in boxes", await boxes.count(), await boxes.allInnerTexts());
+await page.screenshot({path: process.env.OUT+"/s04b.png", fullPage:true});
+await browser.close();

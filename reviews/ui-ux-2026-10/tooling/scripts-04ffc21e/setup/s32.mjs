@@ -1,0 +1,25 @@
+import { open, audit, mainText, go } from "./lib.mjs";
+const { browser, page } = await open({ path: "#settings/you" });
+await audit(page, "r1-54-settings-you");
+await page.getByRole("button", { name: "Open the setup guide" }).click(); await page.waitForTimeout(2000);
+console.log("URL", page.url().split("#")[1], (await mainText(page)).slice(0, 200).replace(/\n/g," | "));
+await audit(page, "r1-55-guide-from-settings");
+// jump to Backups via Steps list
+await page.locator('button[data-screen="backup"]').click(); await page.waitForTimeout(1500);
+let t = await mainText(page); console.log("== BACKUP REVISIT", t.replace(/\n+/g," | ").slice(0,600));
+await audit(page, "r1-56-backup-revisit");
+await page.locator('button[data-screen="work"]').click(); await page.waitForTimeout(1500);
+t = await mainText(page); console.log("== WORK REVISIT", t.replace(/\n+/g," | ").slice(0,800));
+await audit(page, "r1-57-work-revisit");
+await page.locator('button[data-screen="ai"]').click(); await page.waitForTimeout(2000);
+t = await mainText(page); console.log("== AI REVISIT", t.replace(/\n+/g," | ").slice(0,1200));
+await audit(page, "r1-58-ai-revisit");
+await page.locator('button[data-screen="you"]').click(); await page.waitForTimeout(1500);
+t = await mainText(page); console.log("== YOU REVISIT", t.replace(/\n+/g," | ").slice(0,600));
+await audit(page, "r1-59-you-revisit");
+await page.getByRole("button", { name: "Finish later" }).click(); await page.waitForTimeout(2000);
+console.log("after finish later URL", page.url().split("#")[1]);
+await audit(page, "r1-60-after-finish-later");
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload URL", page.url().split("#")[1]);
+await browser.close();

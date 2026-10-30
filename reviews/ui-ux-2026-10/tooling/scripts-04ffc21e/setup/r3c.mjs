@@ -1,0 +1,20 @@
+import { open, audit, mainText, go } from "./lib.mjs";
+const { browser, page } = await open({ path: "#today" });
+console.log("landed:", page.url().split("#")[1], (await mainText(page)).slice(0, 40).replace(/\n/g," | "));
+await page.getByRole("button", { name: "Go to Today" }).click(); await page.waitForTimeout(2500);
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload on today:", page.url().split("#")[1]);
+await page.getByRole("button", { name: /Reginald/ }).first().click(); await page.waitForTimeout(1500);
+console.log("== REGINALD WARNING CLICK\n", (await page.locator("body").innerText()).slice(0, 1500));
+await audit(page, "r3-05-reginald-warning");
+await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+await go(page, "#settings/you"); 
+console.log("== SETTINGS YOU\n", (await mainText(page)).slice(0, 600));
+await audit(page, "r3-06-settings-you-skipped");
+await page.getByRole("button", { name: "Open the setup guide" }).click(); await page.waitForTimeout(2000);
+console.log("guide opens at:", (await mainText(page)).slice(0, 60).replace(/\n/g," | "));
+// Settings AI
+await go(page, "#settings/ai");
+console.log("== SETTINGS AI\n", (await mainText(page)).slice(0, 800));
+await audit(page, "r3-07-settings-ai-skipped");
+await browser.close();

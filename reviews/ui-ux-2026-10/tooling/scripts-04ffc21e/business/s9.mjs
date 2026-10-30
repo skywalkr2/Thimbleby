@@ -1,0 +1,14 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const I = await info();
+const { browser, ctx, page } = await open(); await go(page,"#setup");
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(1500);
+await audit(page, "s15-backups");
+await page.getByLabel("Folder", { exact: true }).fill(I.backup_folder);
+await page.getByRole("button", { name: /Back up now/ }).click(); await page.waitForTimeout(5000);
+await audit(page, "s16-backups-done");
+console.log(await mainText(page));
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(2000);
+await audit(page, "s17-people");
+console.log(await mainText(page));
+console.log(await page.locator("main select").evaluateAll(s=>s.map(x=>[...x.options].map(o=>o.text).join(" / "))));
+await browser.close();

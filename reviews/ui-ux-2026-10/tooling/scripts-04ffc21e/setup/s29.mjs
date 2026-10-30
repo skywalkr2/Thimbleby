@@ -1,0 +1,15 @@
+import { open, audit, mainText, others, info } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+const body = async () => { const t = await mainText(page); return t.slice(t.indexOf("The people in your life"), t.lastIndexOf("Back\n")).replace(/\n+/g, " | "); };
+await page.getByText("Paste a list").click(); await page.waitForTimeout(800);
+console.log("== PASTE OPEN", await body()); await audit(page, "r1-47-people-paste-open");
+const ta = page.locator("main textarea").first();
+await ta.fill("Ines Duarte, my sister\n\n   \nTheo Brandt <theo.brandt@example.com>\nJun Park - our neighbor\n12345\n!!!\nhttp://example.com\nMaya Okafor\nSam Rivera; my accountant\nA really really long name that goes on and on and on and on and on and on forever and ever Smith\n");
+await page.waitForTimeout(800);
+console.log("== PASTE FILLED", await body()); await audit(page, "r1-48-people-paste-filled");
+const btn = page.locator("main").getByRole("button", { name: /^Add|^Read|^Check|^Use/ });
+console.log("buttons:", await page.locator("main button").allInnerTexts());
+await page.locator("main").getByRole("button", { name: /^Add \d|^Add these people|^Add them|^Add all|^Read the list/ }).first().click({ timeout: 4000 }).catch(e=>console.log("no add-from-list button"));
+await page.waitForTimeout(2500);
+console.log("== PASTE AFTER", await body()); await audit(page, "r1-49-people-paste-after");
+await browser.close();

@@ -1,0 +1,13 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open(); await go(page, "#settings/business");
+await page.getByRole("button", { name: "Remove Robin's Cushion Stall" }).click(); await page.waitForTimeout(800);
+await page.getByRole("button", { name: "Move them to Personal" }).click(); await page.waitForTimeout(1500);
+await audit(page, "bz11-removed-moved", {full:false});
+let t = await mainText(page); console.log(t.slice(t.indexOf("What it is called"), t.indexOf("Lists")));
+console.log("nav:", await page.locator("nav, aside").first().innerText().then(x=>x.replace(/\n+/g," ")));
+const u = page.getByRole("button", { name: "Undo" }); console.log("undo", await u.count());
+await go(page, "#records/projects"); console.log("PROJECTS:", (await mainText(page)).slice(0,700));
+await audit(page, "bz12-projects-after-remove");
+await go(page, "#settings/business");
+const u2 = page.getByRole("button", { name: "Undo" }); console.log("undo after nav", await u2.count());
+await browser.close();

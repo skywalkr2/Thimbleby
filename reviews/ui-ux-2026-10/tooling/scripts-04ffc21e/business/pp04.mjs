@@ -1,0 +1,15 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#records/people");
+await page.getByRole("button", { name: "Add a person" }).click(); await page.waitForTimeout(1200);
+let d = page.locator("[role=dialog]").last();
+await audit(page, "pp04-add-person");
+console.log((await d.innerText()).slice(0,2500));
+console.log(await d.locator("input, select, textarea").evaluateAll(s=>s.map(x=>x.tagName+" "+x.type+" "+(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+(x.tagName==='SELECT'?x.options[x.selectedIndex]?.text+" ["+[...x.options].map(o=>o.text).join("/")+"]":(x.type==='checkbox'?x.checked:x.value)))));
+await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+await page.getByRole("button", { name: "Add an organization" }).click(); await page.waitForTimeout(1200);
+d = page.locator("[role=dialog]").last();
+await audit(page, "pp05-add-org");
+console.log("ORG:", (await d.innerText()).slice(0,2500));
+console.log(await d.locator("input, select, textarea").evaluateAll(s=>s.map(x=>x.tagName+" "+x.type+" "+(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+(x.tagName==='SELECT'?x.options[x.selectedIndex]?.text+" ["+[...x.options].map(o=>o.text).join("/")+"]":(x.type==='checkbox'?x.checked:x.value)))));
+await browser.close();

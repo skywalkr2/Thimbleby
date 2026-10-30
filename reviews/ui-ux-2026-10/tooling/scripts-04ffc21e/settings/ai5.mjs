@@ -1,0 +1,11 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/ai");
+await page.getByRole("button", { name: "Add an account" }).click(); await page.waitForTimeout(1500);
+await audit(page, "ai-add-open");
+const d = page.locator("[role=dialog]");
+console.log("dialog?", await d.count());
+console.log((await (await d.count() ? d : page.locator("main")).innerText()).slice(0, 3000));
+console.log("radios:", await page.getByRole("radio").evaluateAll(r => r.map(x => x.closest("label")?.innerText.replace(/\n/g," / ") || x.value)));
+console.log("buttons:", await page.locator("[role=dialog] button, main button").evaluateAll(b => b.map(x => x.textContent.trim()).filter(Boolean)));
+await browser.close();

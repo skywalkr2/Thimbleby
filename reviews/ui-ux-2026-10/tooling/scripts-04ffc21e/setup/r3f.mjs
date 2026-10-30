@@ -1,0 +1,14 @@
+import { open, audit, mainText } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+await page.getByRole("button", { name: "Go to Today" }).click(); await page.waitForTimeout(2500);
+const hdr = page.locator("header");
+console.log("header buttons:", await hdr.locator("button, a").evaluateAll(els => els.map(e => (e.getAttribute("aria-label") || e.textContent).trim())));
+await hdr.getByText("Reginald", { exact: true }).click(); await page.waitForTimeout(1500);
+console.log("== AFTER CLICK REGINALD\n", (await page.locator("body").innerText()).slice(0, 1800));
+await audit(page, "r3-05-reginald-warning");
+await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+await page.goto(page.url().split("#")[0] + "#settings/you"); await page.waitForTimeout(2000);
+console.log("settings URL:", page.url().split("#")[1]);
+console.log("== SETTINGS YOU\n", (await mainText(page)).slice(0, 500));
+await audit(page, "r3-06-settings-you-skipped");
+await browser.close();

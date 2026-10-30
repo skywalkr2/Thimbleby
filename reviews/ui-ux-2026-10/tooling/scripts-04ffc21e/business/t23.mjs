@@ -1,0 +1,10 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+import { counts, lines } from "./lib2.mjs";
+const { browser, page } = await open(); await go(page, "#today"); await page.waitForTimeout(1500);
+const ln = page.locator("[data-queue-line]", { hasText: "Your inbox" });
+await ln.getByRole("button", { name: "Look over" }).click(); await page.waitForTimeout(2000);
+await page.getByRole("button", { name: "Not right: Get a printed agenda." }).click(); await page.waitForTimeout(1500);
+await audit(page, "t23-not-right");
+console.log((await mainText(page)).split("Look over what was found in Your inbox")[1]?.slice(0,1500));
+console.log(await page.locator("main button, main textarea, main input, main select").evaluateAll(e=>e.map(x=>x.tagName+":"+(x.getAttribute('aria-label')||x.textContent||x.placeholder).trim()).filter(Boolean).slice(0,40).join(" | ")));
+await browser.close();

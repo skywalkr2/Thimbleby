@@ -1,0 +1,15 @@
+import { open, audit, mainText, info } from "./lib.mjs";
+import { aiFake } from "./ai_fake.mjs";
+const I = await info();
+const { browser, page } = await open({ path: "#setup" });
+console.log("landed:", (await mainText(page)).slice(0,30)); console.log("aria:", await page.locator("li[data-step=ai] button").getAttribute("aria-label")); await page.locator("li[data-step=ai] button").click(); await page.waitForTimeout(2000);
+await aiFake(page, I);
+console.log("after AI continue, on:", (await mainText(page)).slice(0, 40).replace(/\n/g," | "));
+await page.getByRole("button", { name: "Finish later" }).click(); await page.waitForTimeout(2500);
+console.log("URL", page.url().split("#")[1]);
+const t = await mainText(page); console.log("== TODAY\n", t.slice(0, 700));
+await audit(page, "r3-08-today-setup-line");
+const more = page.locator("[data-setup-line] button, main button").filter({ hasText: "" });
+const menuBtn = page.getByRole("button", { name: /More|Options|setup/i });
+console.log("candidate buttons:", await page.locator("main button").evaluateAll(els => els.slice(0,8).map(e => (e.getAttribute("aria-label") || e.textContent).trim())));
+await browser.close();

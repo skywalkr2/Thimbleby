@@ -1,0 +1,12 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/ai");
+const log = []; page.on("request", r => { if (r.method() !== "GET") log.push(r.method() + " " + r.url().split("?")[0].slice(-30) + " " + (r.postData()||"").slice(0, 120)); });
+const set = async (name, v) => { const f = page.getByRole("textbox", { name }); await f.click(); await page.keyboard.press("Control+A"); await page.keyboard.type(v); await page.keyboard.press("Tab"); await page.waitForTimeout(3000); };
+await set("Most to spend in a month", "41");
+await set("Ask me before anything over", "0.4");
+await set("Most to spend in a month", "42");
+await page.reload(); await page.waitForTimeout(2500);
+console.log(log.join("\n"));
+console.log("values:", await page.locator("main input[type=text]").evaluateAll(i => i.slice(0, 3).map(x => x.value)));
+await browser.close();

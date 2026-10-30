@@ -1,0 +1,13 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, page } = await open({});
+page.on("response", async r => { if (r.request().method() !== "GET" && r.url().includes("/api/")) console.log("RESP", r.status(), r.url().split("/api/")[1], (await r.text().catch(()=>"")).slice(0, 300)); });
+await go(page, "#work/open");
+await page.getByRole("button", { name: /Add a to-do/ }).first().click(); await page.waitForTimeout(800);
+const d = page.locator("[role=dialog]");
+const long = "Sort out " + "the old paperwork in the hall cupboard ".repeat(12);
+console.log("len", long.length);
+await d.getByLabel("What to do").fill(long);
+await page.waitForTimeout(500);
+await d.getByRole("button", { name: "Add", exact: true }).click(); await page.waitForTimeout(2000);
+await audit(page, "td-d-long-fail", { full: false });
+await browser.close();

@@ -1,0 +1,11 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+const sec = async () => { const t = await mainText(page); return t.slice(t.indexOf("Added so far"), t.indexOf("Reading work mail")).replace(/\n+/g," | "); };
+await page.getByRole("button", { name: "Remove" }).nth(2).click(); await page.waitForTimeout(1200);
+console.log("== AFTER REMOVE CLICK", await sec());
+console.log("dialog:", await page.locator("[role=dialog], [role=alertdialog]").innerText().catch(()=>"none"));
+await audit(page, "r2-05-work-remove");
+await page.getByRole("button", { name: "Rename" }).first().click(); await page.waitForTimeout(800);
+console.log("== RENAME", await sec());
+await audit(page, "r2-06-work-rename");
+await browser.close();

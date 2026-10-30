@@ -1,0 +1,10 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#settings/you");
+const desc = await page.evaluate(() => [...document.querySelectorAll("main input, main select, main textarea")].map(e => `${e.tagName} type=${e.type} id=${e.id} list=${e.getAttribute("list")} aria=${e.getAttribute("aria-label")} disabled=${e.disabled} val=${e.value}`));
+console.log(desc.join("\n"));
+const tz = page.getByLabel("Your time zone");
+await tz.click(); await tz.fill("Lond"); await page.waitForTimeout(800);
+await audit(page, "you-tz-typing", { full: false });
+console.log("opts:", await page.evaluate(() => [...document.querySelectorAll("[role=option], datalist option")].slice(0, 10).map(o => o.textContent || o.value)));
+await browser.close();

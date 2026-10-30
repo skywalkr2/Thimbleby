@@ -1,0 +1,13 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, page } = await open({});
+await go(page, "#records/people");
+await page.getByRole("link", { name: "Priya Hart" }).click(); await page.waitForTimeout(1200);
+await page.getByRole("button", { name: "More actions for Priya Hart" }).click(); await page.waitForTimeout(700);
+console.log("ROW MENU:", (await page.locator("[role=menu]").allInnerTexts()).join(" | "));
+await audit(page, "p-d-person-rowmenu", { full: false });
+await page.keyboard.press("Escape");
+await page.getByRole("link", { name: "Open Priya Hart's page" }).click(); await page.waitForTimeout(1500);
+await audit(page, "p-d-person-full");
+console.log(page.url().split("#")[1], "\n", await mainText(page));
+console.log(await page.locator("main button, main a, main input, main select, main textarea").evaluateAll(els => els.map(e => e.tagName+":"+(e.getAttribute("aria-label")||e.labels?.[0]?.textContent||e.textContent.trim()).slice(0,50))));
+await browser.close();

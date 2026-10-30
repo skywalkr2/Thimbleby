@@ -1,0 +1,11 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open();
+const step = async (name) => { const t = await mainText(page); console.log(`== ${name}\n${t.split("Something else")[1] ?? t}\n`); await audit(page, name); };
+await page.getByRole("radio", { name: /Something else/ }).click(); await page.waitForTimeout(1000);
+await page.getByRole("button", { name: /^Another service/ }).click(); await page.waitForTimeout(1200);
+await step("r1-11-ai-another");
+await page.getByRole("button", { name: /^An app you're signed in/ }).click().catch(e=>console.log("no app btn")); await page.waitForTimeout(1500);
+await step("r1-12-ai-app");
+await page.getByRole("button", { name: /^One on this computer/ }).click().catch(e=>console.log("no local btn")); await page.waitForTimeout(1500);
+await step("r1-13-ai-local");
+await browser.close();

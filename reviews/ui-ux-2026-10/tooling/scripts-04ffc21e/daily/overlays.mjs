@@ -1,0 +1,22 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const [mode] = process.argv.slice(2);
+const cfg = { d: { width: 1440, height: 900, scheme: "light" }, n: { width: 1440, height: 900, scheme: "dark" }, p: { width: 390, height: 844, scheme: "light" } }[mode];
+const { browser, page } = await open(cfg);
+const P = (n) => `o-${mode}-${n}`;
+const dlg = async () => (await page.locator("[role=dialog], [role=menu], dialog[open], [role=tooltip]").allInnerTexts().catch(()=>[])).join("\n----\n");
+const tryStep = async (name, fn) => { try { await fn(); await page.waitForTimeout(900); await audit(page, P(name), { full: false }); console.log("  DLG:", (await dlg()).slice(0, 1200)); } catch (e) { console.log("FAIL", name, e.message.split("\n")[0]); } await page.keyboard.press("Escape"); await page.waitForTimeout(400); };
+await go(page, "#today");
+// header buttons list
+const btns = await page.locator("header button, header a, [role=banner] button").evaluateAll(els => els.map(e => (e.getAttribute("aria-label")||e.textContent||"").trim()));
+console.log("HEADER BUTTONS", btns);
+await tryStep("hand-in", () => page.getByRole("button", { name: /Hand something in/ }).first().click());
+await tryStep("status", () => page.getByRole("button", { name: /Connected/ }).first().click());
+await tryStep("reginald", () => page.getByRole("button", { name: /^Reginald/ }).first().click());
+await tryStep("user-menu", () => page.getByRole("button", { name: /JH|Jordan|account|menu/i }).last().click());
+await tryStep("help", () => page.getByRole("button", { name: /help|\?/i }).first().click());
+await tryStep("shortcuts", async () => { await page.locator("body").click({position:{x:700,y:600}}); await page.keyboard.press("Shift+?"); });
+await tryStep("search-focus", async () => { await page.keyboard.press("/"); });
+await tryStep("search-typed", async () => { await page.keyboard.press("/"); await page.keyboard.type("dentist"); await page.waitForTimeout(1500); });
+await tryStep("search-enter", async () => { await page.keyboard.press("/"); await page.keyboard.type("What do I have to do this week?"); await page.keyboard.press("Enter"); await page.waitForTimeout(4000); });
+if (mode !== "p") await tryStep("sidebar-collapsed", () => page.getByRole("button", { name: /collapse|sidebar|menu/i }).last().click());
+await browser.close();

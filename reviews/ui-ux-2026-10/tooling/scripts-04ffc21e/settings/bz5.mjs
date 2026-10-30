@@ -1,0 +1,12 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/business");
+await page.getByRole("button", { name: "Open the setup guide" }).click().catch(e => console.log("no setup guide button on business page")); await page.waitForTimeout(2000);
+console.log("url:", page.url().split("#")[1]);
+console.log((await mainText(page)).slice(0, 900));
+await audit(page, "bz-setup-guide", { full: false });
+const wf = page.getByText("What it's for", { exact: true }).first();
+await wf.click().catch(()=>console.log("cant click step")); await page.waitForTimeout(1500);
+console.log("STEP:", (await mainText(page)).slice(0, 1500));
+await audit(page, "bz-setup-whatfor");
+await browser.close();

@@ -1,0 +1,13 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, page } = await open({});
+await go(page, "#records/project/PRJ-1");
+await page.getByRole("link", { name: "We skip the gym membership this year." }).first().click(); await page.waitForTimeout(1500);
+await page.getByText("from you, Oct 28").first().click(); await page.waitForTimeout(1500);
+await audit(page, "r-fact-source");
+console.log(page.url().split("#")[1], "\n", (await mainText(page)).slice(0, 1500));
+await go(page, "#records/project/PRJ-1");
+await page.getByText("from Priya Hart's email, Oct 28").first().click(); await page.waitForTimeout(1500);
+await audit(page, "r-email-source");
+console.log(page.url().split("#")[1], "\n", (await mainText(page)).slice(0, 2500));
+console.log("BTNS:", await page.locator("main button, main a").evaluateAll(els => els.map(e => (e.getAttribute("aria-label")||e.textContent.trim()).slice(0,40)).filter(Boolean)));
+await browser.close();

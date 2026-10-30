@@ -1,0 +1,15 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, ctx, page } = await open(); 
+await ctx.grantPermissions(["clipboard-read","clipboard-write"], { origin: process.env.APP.replace(/\/$/,"") });
+await go(page, "#work/followups");
+await page.getByText("Theo Brandt", { exact: true }).first().click(); await page.waitForTimeout(1500);
+await audit(page, "f02-theo");
+console.log("PANE:", (await mainText(page)).split("How your messages")[0].slice(-1500));
+console.log(await page.locator("main button").evaluateAll(e=>e.map(x=>(x.getAttribute('aria-label')||x.textContent).trim()).join(" | ")));
+await page.getByRole("button", { name: "Copy message" }).first().click(); await page.waitForTimeout(1200);
+const clip = await page.evaluate(()=>navigator.clipboard.readText()).catch(e=>"ERR "+e.message);
+console.log("CLIPBOARD:<<<"+clip+">>>");
+await audit(page, "f03-copied");
+console.log("AFTER COPY:", (await mainText(page)).split("How your messages")[0].slice(-1200));
+console.log(await page.locator("main button").evaluateAll(e=>e.map(x=>(x.getAttribute('aria-label')||x.textContent).trim()).join(" | ")));
+await browser.close();

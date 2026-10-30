@@ -1,0 +1,13 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await page.getByRole("button", { name: "Start" }).click(); await page.waitForTimeout(800);
+await page.getByLabel("Your full name").fill("Robin Calloway");
+await audit(page, "s01-you");
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(1000);
+await audit(page, "s02-whatfor");
+await page.getByLabel("A job").check(); await page.waitForTimeout(400);
+await page.getByLabel("My own business").check(); await page.waitForTimeout(600);
+await audit(page, "s03-whatfor-ticked");
+console.log(await mainText(page));
+console.log((await page.locator("input,select,textarea").evaluateAll(els=>els.map(e=>`${e.tagName} id=${e.id} name=${e.name} type=${e.type} aria=${e.getAttribute('aria-label')} ph=${e.placeholder}`))).join("\n"));
+await browser.close();

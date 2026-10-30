@@ -1,0 +1,10 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open({ scheme: "light" });
+await go(page, "#settings/connections");
+await page.getByRole("button", { name: "Add a connection" }).click(); await page.waitForTimeout(1500);
+console.log("dialog:", await page.locator("[role=dialog]").count());
+const t = (await page.locator("[role=dialog]").count()) ? await page.locator("[role=dialog]").innerText() : (await mainText(page)).split("Add a connection").slice(1).join("§");
+console.log(t.slice(0, 2500));
+await audit(page, "cn-add-open");
+console.log("radios:", await page.getByRole("radio").evaluateAll(r => r.map(x => (x.closest("label")?.innerText || x.value).replace(/\n/g, " / "))));
+await browser.close();

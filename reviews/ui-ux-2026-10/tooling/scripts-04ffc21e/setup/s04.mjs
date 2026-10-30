@@ -1,0 +1,16 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open();
+await page.getByLabel("Your full name").fill("Avery");
+await page.waitForTimeout(400);
+console.log("ONE WORD:", (await mainText(page)).split("\n").slice(-4).join(" | "));
+await page.getByLabel("Your full name").fill("Avery Lane");
+const tz = page.getByLabel("Your time zone");
+await tz.fill("Los Angeles"); await page.waitForTimeout(600);
+await page.getByRole("option").first().click(); await page.waitForTimeout(400);
+console.log("TZ value:", await tz.inputValue());
+await audit(page, "r1-04-you-filled");
+await page.getByRole("button", { name: "Continue" }).click();
+await page.waitForTimeout(2500);
+console.log(await audit(page, "r1-05-work-day"));
+await others("r1-05-work");
+await browser.close();

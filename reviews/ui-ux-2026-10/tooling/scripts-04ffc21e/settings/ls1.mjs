@@ -1,0 +1,33 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/lists");
+console.log("url now:", page.url().split("#")[1], "| focused:", await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
+const menuBtns = page.locator("main button[aria-haspopup]");
+console.log("menu buttons:", await menuBtns.evaluateAll(b => b.map(x => x.getAttribute("aria-label"))));
+await menuBtns.first().click(); await page.waitForTimeout(600);
+console.log("choice menu:", await page.locator("[role=menu]").innerText());
+await audit(page, "ls-menu", { full: false });
+await page.getByRole("menuitem", { name: /Stop offering/ }).click(); await page.waitForTimeout(1500);
+console.log("after remove:", await toasts(page), "| dialog:", await page.locator("[role=dialog]").innerText().catch(()=>"none"));
+await audit(page, "ls-removed", { full: false });
+// rename "Underway"
+const uw = page.locator("main button[aria-haspopup][aria-label*='Underway']");
+await uw.click(); await page.waitForTimeout(500);
+await page.getByRole("menuitem", { name: /Rename/ }).click(); await page.waitForTimeout(800);
+await audit(page, "ls-rename-open", { full: false });
+const ri = page.locator("main input:focus");
+console.log("rename input:", await ri.count(), await ri.inputValue().catch(()=>""));
+await ri.fill("In progress"); await page.keyboard.press("Enter"); await page.waitForTimeout(1500);
+console.log("after rename:", await toasts(page));
+// add dup / empty / long
+const nc = page.getByRole("textbox", { name: "Add a choice to Project phase" });
+await nc.fill("Planning"); await nc.press("Enter"); await page.waitForTimeout(1200);
+console.log("dup add:", await toasts(page), (await page.locator("main [role=alert]").allInnerTexts()).join(";"));
+await nc.fill("   "); await nc.press("Enter"); await page.waitForTimeout(800);
+console.log("blank add:", await toasts(page));
+await nc.fill("Waiting on the council permit to come through before anything else can be done"); await nc.press("Enter"); await page.waitForTimeout(1200);
+console.log("long add:", await toasts(page));
+await audit(page, "ls-after");
+console.log((await mainText(page)).split("Project phase")[1]?.split("Project priority")[0].replace(/\n+/g, " / "));
+await browser.close();

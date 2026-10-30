@@ -1,0 +1,16 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, page } = await open({});
+await go(page, "#today");
+const box = page.getByRole("button", { name: "Ask" }).first();
+console.log("search control tag:", await page.locator("header input, header [role=combobox], header [role=searchbox]").count());
+await page.locator("header").getByText("Ask Reginald or search").click(); await page.waitForTimeout(800);
+await page.keyboard.type("ladder", { delay: 50 }); await page.waitForTimeout(2000);
+await audit(page, "se-ladder", { full: false });
+console.log("AFTER TYPE:", (await page.locator("body").innerText()).slice(-1500));
+await page.keyboard.press("Escape");
+await go(page, "#records/people");
+await page.locator("header").getByText("Ask Reginald or search").click(); await page.waitForTimeout(800);
+await page.keyboard.type("Priya", { delay: 50 }); await page.waitForTimeout(2000);
+await audit(page, "se-priya", { full: false });
+console.log("AFTER TYPE PRIYA:", (await page.locator("body").innerText()).slice(-1200));
+await browser.close();

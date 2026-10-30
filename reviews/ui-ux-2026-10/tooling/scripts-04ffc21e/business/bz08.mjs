@@ -1,0 +1,18 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open(); await go(page, "#settings/business");
+await page.getByRole("button", { name: /Rename/ }).nth(2).click(); await page.waitForTimeout(800);
+const box = page.getByLabel("New name for Robin's Market Stall");
+await box.fill(""); await page.waitForTimeout(300);
+const sv = page.getByRole("button", { name: "Save", exact: true });
+console.log("empty: save enabled?", await sv.isEnabled());
+await sv.click().catch(()=>{}); await page.waitForTimeout(800);
+await audit(page, "bz08-rename-empty", {full:false});
+console.log((await mainText(page)).match(/New name for[\s\S]{0,300}/)?.[0]);
+await box.fill("Calloway Upholstery"); await sv.click().catch(()=>{}); await page.waitForTimeout(1200);
+await audit(page, "bz08b-rename-duplicate", {full:false});
+console.log("DUP:", (await mainText(page)).match(/New name for[\s\S]{0,300}/)?.[0] || "(form closed)");
+await box.fill("Robin's Cushion Stall").catch(()=>{}); await sv.click().catch(()=>{}); await page.waitForTimeout(1500);
+await audit(page, "bz09-renamed", {full:false});
+const t = await mainText(page); console.log(t.slice(t.indexOf("What it is called"), t.indexOf("Lists")));
+console.log("nav:", await page.locator("nav, aside").first().innerText().then(x=>x.replace(/\n+/g," ")));
+await browser.close();

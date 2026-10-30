@@ -1,0 +1,15 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/ai");
+page.on("response", async r => { if (r.request().method() !== "GET") console.log("RESP", r.request().method(), r.url().split("?")[0].slice(-40), r.status(), (await r.text().catch(()=>"")).slice(0, 160)); });
+const f = page.getByRole("textbox", { name: "Most to spend in a month" });
+await f.click(); await page.keyboard.press("Control+A"); await page.keyboard.type("50"); await page.keyboard.press("Tab"); await page.waitForTimeout(4000);
+console.log("focused:", await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 100)));
+await page.reload(); await page.waitForTimeout(2500);
+console.log("month alone persisted:", await page.getByRole("textbox", { name: "Most to spend in a month" }).inputValue());
+const g = page.getByRole("textbox", { name: "Most to spend in a day" });
+await g.click(); await page.keyboard.press("Control+A"); await page.keyboard.type("5"); await page.keyboard.press("Tab"); await page.waitForTimeout(1500);
+await page.keyboard.press("Control+A"); await page.keyboard.type("60"); await page.keyboard.press("Tab"); await page.waitForTimeout(4000);
+await page.reload(); await page.waitForTimeout(2500);
+console.log("day then month:", await page.locator("main input[type=text]").evaluateAll(i => i.slice(0, 3).map(x => x.value)));
+await browser.close();

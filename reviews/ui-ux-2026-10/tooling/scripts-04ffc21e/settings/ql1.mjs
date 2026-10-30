@@ -1,0 +1,30 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/links");
+const name = page.getByRole("textbox", { name: "Name" }), addr = page.getByRole("textbox", { name: "Address" });
+const add = page.getByRole("button", { name: "Add this link" });
+console.log("add disabled empty:", await add.isDisabled());
+await add.click().catch(()=>{}); await page.waitForTimeout(800); console.log("empty add:", await toasts(page), (await page.locator("main [role=alert]").allInnerTexts()).join(";"));
+await name.fill("Bank"); await addr.fill("not a web address"); await add.click(); await page.waitForTimeout(1500);
+console.log("bad:", (await page.locator("main [role=alert]").allInnerTexts()).join(";"), "|", await toasts(page));
+await audit(page, "ql-bad", { full: false });
+await addr.fill("javascript:alert(1)"); await add.click(); await page.waitForTimeout(1500);
+console.log("js:", (await page.locator("main [role=alert]").allInnerTexts()).join(";"), "|", await toasts(page));
+await addr.fill("example.org/bank"); await add.click(); await page.waitForTimeout(1500);
+console.log("no scheme:", (await page.locator("main [role=alert]").allInnerTexts()).join(";"), "|", await toasts(page));
+console.log("MAIN:", (await mainText(page)).split("Quick links\n").slice(-1)[0].slice(0, 600));
+await audit(page, "ql-added", { full: false });
+console.log("header links:", await page.locator("header a").evaluateAll(a => a.map(x => x.textContent.trim() + " -> " + x.href)));
+await name.fill("A very long quick link name for the shop's supplier ordering portal"); await addr.fill("https://example.com/orders"); await add.click(); await page.waitForTimeout(1500);
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload MAIN:", (await mainText(page)).split("Quick links\n").slice(-1)[0].slice(0, 800));
+console.log("header links:", await page.locator("header a").evaluateAll(a => a.map(x => x.textContent.trim() + " -> " + x.href)));
+await audit(page, "ql-two", { full: false });
+await browser.close();
+{
+const { browser, page } = await open({ width: 390, height: 844 });
+await go(page, "#today"); await audit(page, "ql-phone-today", { full: false });
+console.log("phone header:", (await page.locator("header").innerText()).replace(/\n/g, " / "));
+await browser.close();
+}

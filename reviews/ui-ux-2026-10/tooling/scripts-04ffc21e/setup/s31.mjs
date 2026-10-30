@@ -1,0 +1,14 @@
+import { open, audit, mainText, others, info } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+await page.locator("main").getByRole("button", { name: "Rename" }).click(); await page.waitForTimeout(600);
+await audit(page, "r1-51-done-rename-open");
+const box = page.locator("main input").first();
+console.log("rename value:", await box.inputValue());
+await box.fill("Avery's very long household and personal life organizer workspace with many words in it"); 
+await page.locator("main").getByRole("button", { name: "Save" }).click(); await page.waitForTimeout(1500);
+let t = await mainText(page); console.log(t.slice(t.indexOf("The name"), t.indexOf("Optional")));
+await audit(page, "r1-52-done-renamed-long");
+await page.getByRole("button", { name: "Go to Today" }).click(); await page.waitForTimeout(3000);
+console.log("URL", page.url().split("#")[1]);
+console.log(await audit(page, "r1-53-today-after-done"));
+await browser.close();

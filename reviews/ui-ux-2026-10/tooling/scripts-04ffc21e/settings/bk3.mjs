@@ -1,0 +1,24 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/backups");
+const sec = async () => (await mainText(page)).split("Backup key")[1]?.split("Synced folder")[0].replace(/\n+/g, " / ");
+console.log("on reload:", await sec());
+await page.getByRole("button", { name: "Replace" }).click(); await page.waitForTimeout(1000);
+console.log("after Replace click:", await sec());
+await audit(page, "bk-replace");
+const k = page.getByRole("textbox", { name: /Key for locking backups/ }).or(page.locator("main input[type=password]")).first();
+await k.fill("abc"); await page.waitForTimeout(300);
+await page.getByRole("button", { name: "Save", exact: true }).first().click(); await page.waitForTimeout(1500);
+console.log("short key:", await sec(), "| toasts:", await toasts(page));
+await audit(page, "bk-short-key");
+await k.fill("a-long-enough-test-key-1234567890"); 
+await page.getByRole("button", { name: "Save", exact: true }).first().click(); await page.waitForTimeout(1500);
+console.log("good key:", await sec(), "| toasts:", await toasts(page));
+await audit(page, "bk-good-key");
+// Back up now from header
+await page.locator("header").getByText("Connected").click(); await page.waitForTimeout(600);
+await page.getByRole("button", { name: "Back up now" }).click(); await page.waitForTimeout(6000);
+console.log("pop after backup:", (await page.locator("[role=dialog]").innerText().catch(()=>"")).replace(/\n+/g," / "), "|", await toasts(page));
+await page.keyboard.press("Escape");
+await browser.close();

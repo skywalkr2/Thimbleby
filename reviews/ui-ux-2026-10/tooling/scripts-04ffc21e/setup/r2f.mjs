@@ -1,0 +1,14 @@
+import { open, audit, mainText } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+const state = async () => { const out = []; for (const cb of await page.locator("main fieldset input[type=checkbox]").all()) out.push((await cb.getAttribute("aria-label") || "") + (await cb.isChecked() ? "[x]" : "[ ]")); return out.join(" "); };
+const p = page.getByRole("checkbox", { name: "Personal" }), h = page.getByRole("checkbox", { name: "Harbor and Pine Consulting" }), s = page.getByRole("checkbox", { name: "The Salt Orchard" });
+await p.click(); await s.click(); await h.click(); await h.click(); await page.waitForTimeout(100); await s.click(); await s.click();
+await page.waitForTimeout(2500);
+console.log("after quick clicks (expect P,S ticked):", await p.isChecked(), await h.isChecked(), await s.isChecked());
+await audit(page, "r2-08-mail-sides-quick");
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload:", await p.isChecked(), await h.isChecked(), await s.isChecked());
+await page.getByText("Set them separately").click(); await page.waitForTimeout(1000);
+const t = await mainText(page); console.log("== SEPARATELY\n", t.slice(t.indexOf("Example mail is connected"), t.lastIndexOf("Back\n")));
+await audit(page, "r2-09-mail-sides-separately");
+await browser.close();

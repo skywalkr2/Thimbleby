@@ -1,0 +1,14 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+import { counts } from "./lib2.mjs";
+const { browser, page } = await open(); await go(page, "#work/since");
+console.log("BEFORE", await counts(page));
+const rows = await page.locator("main button[aria-label^='More actions']").evaluateAll(e=>e.map(x=>x.getAttribute('aria-label')));
+console.log(rows);
+const m = page.getByRole("button", { name: /More actions for Added “Get a catering quote/ }).first();
+await m.click(); await page.waitForTimeout(400);
+console.log("MENU", await page.locator("[role=menu] [role=menuitem]").allInnerTexts());
+await page.getByRole("menuitem", { name: /^Undo/ }).first().click(); await page.waitForTimeout(1200);
+await audit(page, "w10-since-undo");
+console.log("AFTER", await counts(page)); console.log((await mainText(page)).slice(0,900));
+await go(page, "#work/open"); console.log("TODOS:", (await mainText(page)).includes("Get a catering quote") ? "still there" : "gone");
+await browser.close();

@@ -1,0 +1,14 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+import { counts } from "./lib2.mjs";
+const { browser, page } = await open(); await go(page, "#work/changed");
+console.log("BEFORE", await counts(page));
+const m = page.getByRole("button", { name: "More actions for Email from Theo Brandt · Last week's agenda" }).first();
+await m.click(); await page.waitForTimeout(400);
+console.log("MENU", await page.locator("[role=menu] [role=menuitem]").allInnerTexts());
+await page.getByRole("menuitem", { name: /Undo everything/ }).first().click(); await page.waitForTimeout(1200);
+await audit(page, "w11-changed-undo-all", {full:false});
+const d = page.locator("[role=dialog], [role=alertdialog]"); if (await d.count()) console.log("DIALOG", await d.last().innerText());
+await page.waitForTimeout(1500);
+console.log("AFTER", await counts(page));
+await go(page, "#work/open"); console.log("TODOS:", (await mainText(page)).includes("Get a printed agenda") ? "printed agenda still there" : "printed agenda gone");
+await browser.close();

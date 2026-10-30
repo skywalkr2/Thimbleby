@@ -1,0 +1,18 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const inf = await info();
+const { browser, page } = await open();
+const log = async (n) => { console.log("=== " + n + "\n" + (await page.locator("body").innerText()).slice(0, 1200)); };
+await page.getByRole("button", { name: "Start" }).click(); await page.waitForTimeout(1200);
+await page.getByLabel("Your full name").fill("Dana Whitfield");
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(1500);
+await log("after you");
+await page.getByLabel("My own business").check(); await page.waitForTimeout(600);
+await page.locator("#work-business-1-name").fill("Salt Orchard");
+await page.locator("#work-business-1-works-on").fill("Small farm shop and orchard tours");
+await page.getByRole("button", { name: "Add another business" }).click(); await page.waitForTimeout(600);
+await page.locator("#work-business-2-name").fill("Brightline Tutoring");
+await page.locator("#work-business-2-works-on").fill("Maths tutoring for teenagers");
+await audit(page, "setup-business");
+await page.getByRole("button", { name: "Continue" }).click(); await page.waitForTimeout(1500);
+await log("after business");
+await browser.close();

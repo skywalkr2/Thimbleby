@@ -1,0 +1,15 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#records/projects");
+await page.getByRole("button", { name: "More actions for Workshop move" }).click(); await page.waitForTimeout(400);
+await page.getByRole("menuitem", { name: "Edit" }).click(); await page.waitForTimeout(1200);
+const d = page.locator("[role=dialog]").last();
+await audit(page, "p16-edit-project", {full:false});
+console.log(await d.locator("input, select, textarea").evaluateAll(s=>s.map(x=>(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+(x.tagName==='SELECT'?x.options[x.selectedIndex]?.text:x.value))));
+await d.getByLabel("Inside").selectOption({label:"Personal"}); await page.waitForTimeout(800);
+await audit(page, "p17-edit-project-move", {full:false});
+console.log("DIALOG:", (await d.innerText()).slice(-700));
+await d.getByRole("button", { name: /^Save/ }).click(); await page.waitForTimeout(1800);
+await audit(page, "p18-project-moved");
+console.log((await mainText(page)).slice(0,900));
+await browser.close();

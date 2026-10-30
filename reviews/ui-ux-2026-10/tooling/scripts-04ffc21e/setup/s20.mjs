@@ -1,0 +1,11 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open({ path: "#setup" });
+await page.getByRole("button", { name: "Change" }).click(); await page.waitForTimeout(800);
+let t = await mainText(page); console.log("== CHANGE\n", t.slice(t.indexOf("Example mail is"), t.lastIndexOf("Back")));
+await audit(page, "r1-29-mail-setaside-change");
+await page.reload(); await page.waitForTimeout(2000);
+await page.getByText("Connect another").click(); await page.waitForTimeout(1000);
+t = await mainText(page); console.log("== CONNECT ANOTHER\n", t.slice(t.indexOf("Example mail is"), t.lastIndexOf("Back")));
+await audit(page, "r1-30-mail-connect-another");
+await others("r1-28-mail-connected");
+await browser.close();

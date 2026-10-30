@@ -1,0 +1,10 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+import { counts, lines } from "./lib2.mjs";
+const { browser, page } = await open(); await go(page, "#today"); await page.waitForTimeout(1500);
+console.log((await lines(page)).join("\n"));
+const ln = page.locator("[data-queue-line]", { hasText: "Move them?" });
+await ln.getByRole("button", { name: "Look" }).click(); await page.waitForTimeout(2000);
+await audit(page, "t29-move-look");
+const t = await mainText(page); console.log(t.slice(t.indexOf("Move them?"), t.indexOf("Move them?")+1800));
+console.log(await page.locator("main button, main select, main input").evaluateAll(e=>e.map(x=>x.tagName+":"+(x.getAttribute('aria-label')||x.textContent||x.value).trim()).join(" | ")));
+await browser.close();

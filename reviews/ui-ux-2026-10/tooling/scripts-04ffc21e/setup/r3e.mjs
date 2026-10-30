@@ -1,0 +1,10 @@
+import { open, token } from "./lib.mjs";
+const T = await token();
+const st = async () => (await (await fetch(process.env.APP + "api/setup", { headers: { Authorization: "Bearer " + T } })).json()).walkthrough;
+const { browser, page } = await open({ path: "#setup" });
+console.log("opened:", JSON.stringify(await st()));
+await page.getByRole("button", { name: "Finish later" }).click(); await page.waitForTimeout(4000);
+console.log("after Finish later:", JSON.stringify(await st()), page.url().split("#")[1]);
+await page.reload(); await page.waitForTimeout(3000);
+console.log("after reload:", JSON.stringify(await st()), page.url().split("#")[1]);
+await browser.close();

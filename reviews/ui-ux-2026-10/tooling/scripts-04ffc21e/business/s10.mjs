@@ -1,0 +1,11 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open(); await go(page,"#setup");
+await page.getByRole("button", { name: "Set up" }).click(); await page.waitForTimeout(1500);
+await audit(page, "s18-people");
+const sideSel = page.getByLabel("Side");
+console.log("side tag", await sideSel.evaluate(e=>e.tagName+" "+e.type).catch(e=>"none"));
+await sideSel.selectOption({label:"Calloway Upholstery"}).catch(e=>console.log("sel err", e.message.slice(0,100)));
+await page.waitForTimeout(500);
+console.log(await page.locator("main select").evaluateAll(s=>s.map(x=>x.id+": "+[...x.options].map(o=>o.text).join(" / "))));
+await audit(page, "s19-people-business-side");
+await browser.close();

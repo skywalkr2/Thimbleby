@@ -1,0 +1,21 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/business");
+const biz = async () => (await mainText(page)).split("Your business\n").slice(-1)[0].split("Lists")[0].replace(/\n+/g, " / ");
+await page.getByRole("button", { name: /^Remove/ }).nth(1).click(); await page.waitForTimeout(1000);
+await page.getByRole("button", { name: "Move them to Personal" }).click(); await page.waitForTimeout(3000);
+console.log("after move:", await biz(), "|", await toasts(page));
+console.log("nav:", (await page.locator("nav").first().innerText()).replace(/\n/g, " / "));
+console.log("settings nav:", (await page.locator("main nav").innerText().catch(()=>"")).replace(/\n/g, " / "));
+await audit(page, "bz-removed", { full: false });
+const undo = page.getByRole("button", { name: "Undo" });
+console.log("undo count:", await undo.count());
+if (await undo.count()) { await undo.last().click(); await page.waitForTimeout(3000); console.log("after undo:", await biz(), "|", await toasts(page)); }
+console.log("nav2:", (await page.locator("nav").first().innerText()).replace(/\n/g, " / "));
+await audit(page, "bz-undo", { full: false });
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload:", await biz());
+await go(page, "#settings/connections");
+console.log("conn privacy:", (await mainText(page)).match(/Privacy:[^\n]*/g));
+await browser.close();

@@ -1,0 +1,13 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/connections");
+const menus = page.locator("main button[aria-haspopup]");
+await menus.nth(1).click(); await page.waitForTimeout(600);
+await page.getByRole("menuitem", { name: "Change" }).click(); await page.waitForTimeout(1500);
+const d = page.locator("[role=dialog]");
+const txt = (await d.count()) ? await d.innerText() : (await mainText(page)).split("Your inbox")[1]?.slice(0, 3000);
+console.log("CHANGE:", txt);
+await audit(page, "cn-change-inbox");
+console.log("ctrls:", await page.locator("main input, main select, [role=dialog] input, [role=dialog] select").evaluateAll(b => b.map(x => `${x.type} "${(x.closest("label")?.innerText || x.getAttribute("aria-label")||"").trim().slice(0,50)}" val=${x.value} checked=${x.checked}`)));
+await browser.close();

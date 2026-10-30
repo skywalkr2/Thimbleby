@@ -1,0 +1,30 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const toasts = async (page) => (await page.locator("[role=status], [role=alert]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ").replace(/\n/g," ");
+const { browser, ctx, page } = await open();
+await go(page, "#settings/appearance");
+const bg = async () => page.evaluate(() => getComputedStyle(document.body).backgroundColor + " / theme=" + document.documentElement.dataset.theme + " density=" + document.documentElement.dataset.density);
+console.log("start:", await bg());
+await page.locator("[id='setting-ui.theme']").selectOption("dark"); await page.waitForTimeout(1500);
+console.log("dark:", await bg(), "|", await toasts(page));
+await audit(page, "ap-dark", { full: false });
+await page.locator("[id='setting-ui.density']").selectOption("compact"); await page.waitForTimeout(1500);
+console.log("compact:", await bg());
+await go(page, "#today"); await audit(page, "ap-dark-compact-today", { full: false });
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload:", await bg());
+await go(page, "#settings/appearance");
+await page.locator("summary", { hasText: "More settings" }).click(); await page.waitForTimeout(500);
+const ac = page.locator("[id='setting-ui.brand.color']");
+for (const v of ["red", "#ffff00", "#c0392b"]) {
+  await ac.fill(v); await ac.press("Tab"); await page.waitForTimeout(1500);
+  const errs = await page.locator("main [role=alert]").allInnerTexts();
+  console.log("accent", v, "=> err:", errs.join(";"), "| toasts:", (await toasts(page)).slice(0, 300));
+  const btnColor = await page.locator("header button", { hasText: "Hand something in" }).evaluate(b => getComputedStyle(b).backgroundColor);
+  console.log("   button bg:", btnColor);
+  await audit(page, "ap-accent-" + v.replace(/\W/g, ""), { full: false });
+}
+const logo = page.locator("[id='setting-ui.brand.logo']");
+await logo.fill("my-logo.png"); await logo.press("Tab"); await page.waitForTimeout(1500);
+console.log("logo:", (await page.locator("main [role=alert]").allInnerTexts()).join(";"), "|", (await toasts(page)).slice(0, 300));
+await audit(page, "ap-logo", { full: false });
+await browser.close();

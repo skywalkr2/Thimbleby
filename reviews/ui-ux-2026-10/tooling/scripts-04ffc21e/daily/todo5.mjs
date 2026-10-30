@@ -1,0 +1,12 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, ctx, page } = await open({});
+await go(page, "#work/open");
+await page.getByRole("button", { name: "More actions for Pay the water bill" }).click(); await page.waitForTimeout(800);
+console.log("MENU:", (await page.locator("[role=menu]").allInnerTexts()).join(" | "));
+await audit(page, "td-menu", { full: false });
+await page.keyboard.press("Escape");
+await page.getByRole("link", { name: "Where it came from" }).first().click().catch(async () => page.getByRole("button", { name: "Where it came from" }).first().click());
+await page.waitForTimeout(1500);
+await audit(page, "td-where-from", { full: false });
+console.log("WHERE url", page.url().split("#")[1], "\n", (await page.locator("body").innerText()).slice(-1500));
+await browser.close();

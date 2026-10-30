@@ -1,0 +1,15 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const inf = await info();
+const { browser, ctx, page } = await open();
+await go(page, "#settings/connections");
+const menus = page.locator("main button[aria-haspopup]");
+const n = await menus.count();
+await menus.nth(n - 1).click(); await page.waitForTimeout(500);
+await page.getByRole("menuitem", { name: "Change" }).click(); await page.waitForTimeout(1200);
+await page.locator("main input[id$='-setting-path']").fill(inf.source_folder);
+await page.getByRole("button", { name: "Save changes" }).click(); await page.waitForTimeout(3000);
+await menus.nth(n - 1).click(); await page.waitForTimeout(500);
+await page.getByRole("menuitem", { name: "Read now" }).click(); await page.waitForTimeout(8000);
+console.log("ROW:", (await mainText(page)).split("Your sent mail")[1]?.replace(/\n+/g, " / ").slice(0, 900));
+await audit(page, "cn-folder-fixed");
+await browser.close();

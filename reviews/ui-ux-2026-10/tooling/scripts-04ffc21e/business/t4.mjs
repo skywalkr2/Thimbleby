@@ -1,0 +1,11 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open(); await go(page, "#today");
+await page.locator("main").getByRole("radio", { name: "All", exact: true }).click();
+const line = page.locator("[data-queue-line]").first();
+await line.getByRole("button", { name: "Pick" }).click(); await page.waitForTimeout(1500);
+await audit(page, "t04-pick-open");
+console.log(await mainText(page).then(t=>t.slice(0,2500)));
+const insp = page.locator("[data-queue-inspector]");
+console.log("INSPECTOR:", await insp.count(), await insp.first().innerText().catch(()=>""));
+console.log(await insp.first().locator("button, select, input, a").evaluateAll(e=>e.map(x=>x.tagName+":"+(x.textContent||x.value||x.getAttribute('aria-label')).trim().slice(0,50))).catch(()=>[]));
+await browser.close();

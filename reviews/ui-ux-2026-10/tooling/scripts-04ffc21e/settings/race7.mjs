@@ -1,0 +1,13 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, ctx, page } = await open();
+await go(page, "#settings/ai");
+const log = []; page.on("request", r => { if (r.method() !== "GET") log.push((r.postData()||"").slice(0, 70)); });
+const f = page.getByRole("textbox", { name: process.env.F });
+await f.click(); await page.keyboard.press("Control+A"); await page.keyboard.type(process.env.V, { delay: 80 });
+if (process.env.HOW === "heading") await page.locator("main h2, main h3").first().click();
+else if (process.env.HOW === "nav") await page.getByRole("link", { name: "Backups" }).first().click();
+else await page.keyboard.press("Tab");
+await page.waitForTimeout(4000);
+await go(page, "#settings/ai"); await page.reload(); await page.waitForTimeout(2500);
+console.log(process.env.F, process.env.HOW, "posts:", log, "persisted:", await page.getByRole("textbox", { name: process.env.F }).inputValue());
+await browser.close();

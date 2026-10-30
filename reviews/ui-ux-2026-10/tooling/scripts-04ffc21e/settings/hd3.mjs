@@ -1,0 +1,12 @@
+import { open, audit, go, mainText, info } from "./lib.mjs";
+const { browser, page } = await open({ width: 390, height: 844 });
+await go(page, "#settings/you");
+console.log("phone header:", (await page.locator("header").innerText()).replace(/\n/g, " / "));
+console.log("navs:", await page.locator("nav").evaluateAll(n => n.map(x => x.innerText.replace(/\n/g, " / ").slice(0, 200))));
+await page.getByRole("button", { name: "More" }).last().click().catch(()=>console.log("no More")); await page.waitForTimeout(800);
+console.log("phone More:", (await page.locator("[role=dialog], [role=menu]").allInnerTexts()).join(" || "));
+await audit(page, "hd-phone-more", { full: false });
+await page.keyboard.press("Escape");
+await page.locator("header button").last().click(); await page.waitForTimeout(800);
+await audit(page, "hd-phone-usermenu", { full: false });
+await browser.close();

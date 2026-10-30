@@ -1,0 +1,10 @@
+import { open, go, audit, mainText, info } from "../../lib.mjs";
+const { browser, ctx, page } = await open({});
+await go(page, "#work/open");
+const row = page.locator("main li, main [role=row], main article").filter({ hasText: "Pay the water bill" }).first();
+console.log("row html tag count", await row.count());
+console.log("row buttons:", await row.locator("button, a").evaluateAll(els => els.map(e => (e.getAttribute("aria-label")||e.textContent.trim()).slice(0,40))));
+await row.click({ position: { x: 300, y: 12 } }); await page.waitForTimeout(1200);
+await audit(page, "td-row-click", { full: false });
+console.log("AFTER ROW CLICK url", page.url().split("#")[1], "\n", (await page.locator("body").innerText()).slice(-1800));
+await browser.close();

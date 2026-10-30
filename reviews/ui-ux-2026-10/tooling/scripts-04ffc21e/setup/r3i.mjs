@@ -1,0 +1,12 @@
+import { open, audit, mainText } from "./lib.mjs";
+const { browser, page } = await open({ width: 390, height: 844, path: "#setup" });
+await page.getByRole("button", { name: "Steps" }).click(); await page.waitForTimeout(400);
+await page.locator('button[data-screen="ai"]').click(); await page.waitForTimeout(2000);
+await page.getByRole("radio", { name: /Something else/ }).click(); await page.waitForTimeout(800);
+await page.getByRole("button", { name: /^An app you're signed in/ }).click(); await page.waitForTimeout(800);
+await audit(page, "r3-12-ai-else-phone");
+await page.getByRole("button", { name: /^Another service/ }).click(); await page.waitForTimeout(800);
+await page.getByRole("radio", { name: /^Another service that speaks/ }).click(); await page.waitForTimeout(800);
+await page.getByText("Advanced", { exact: true }).click().catch(()=>{}); await page.waitForTimeout(800);
+await audit(page, "r3-13-ai-generic-advanced-phone");
+await browser.close();

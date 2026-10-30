@@ -1,0 +1,12 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#records/projects");
+await page.getByRole("button", { name: "Add a project" }).click(); await page.waitForTimeout(1200);
+await audit(page, "p08-add-project");
+const dlg = page.locator("[role=dialog]").last();
+console.log((await dlg.innerText().catch(()=>mainText(page))).slice(0,2000));
+console.log(await page.locator("[role=dialog] input, [role=dialog] select, [role=dialog] textarea").evaluateAll(s=>s.map(x=>x.tagName+" "+(x.labels?.[0]?.textContent||x.getAttribute('aria-label')||x.id)+" = "+x.value+(x.tagName==='SELECT'?" ["+[...x.options].map(o=>o.text).join("/")+"]":""))));
+await page.getByRole("button", { name: /^(Add|Save|Create)/ }).last().click().catch(()=>{}); await page.waitForTimeout(800);
+await audit(page, "p09-add-project-empty-submit");
+console.log("EMPTY SUBMIT:", (await dlg.innerText().catch(()=>"")).slice(0,600));
+await browser.close();

@@ -1,0 +1,32 @@
+import { open, audit, go, mainText } from "./lib.mjs";
+const { browser, page } = await open();
+await go(page, "#settings/you");
+const toast = async () => (await page.locator("[role=status], [role=alert], .toast, [data-toast]").allInnerTexts().catch(()=>[])).filter(Boolean).join(" | ");
+// time zone
+const tz = page.locator("[id='setting-workspace.user.timezone']");
+await tz.click(); await tz.fill("Los A"); await page.waitForTimeout(700);
+console.log("opts:", await page.evaluate(() => [...document.querySelectorAll("[role=option]")].map(o => o.textContent)));
+await page.getByRole("option").first().click(); await page.waitForTimeout(1500);
+console.log("after tz toast:", await toast());
+await audit(page, "you-tz-set", { full: false });
+// assistant name
+const an = page.getByRole("textbox", { name: "Your assistant's name" });
+await an.fill("Penny"); await an.press("Tab"); await page.waitForTimeout(1500);
+console.log("after name toast:", await toast());
+await audit(page, "you-assistant-renamed", { full: false });
+const top = page.getByRole("textbox", { name: "Name shown at the top" });
+await top.fill("Dana's Desk"); await top.press("Tab"); await page.waitForTimeout(1500);
+console.log("after top toast:", await toast());
+const sp = page.getByRole("combobox", { name: "English spelling" });
+await sp.selectOption({ label: "British" }); await page.waitForTimeout(1500);
+console.log("after spelling toast:", await toast());
+await audit(page, "you-after-changes", { full: false });
+await page.reload(); await page.waitForTimeout(2500);
+console.log("after reload:", await page.evaluate(() => [...document.querySelectorAll("main input, main select")].map(e => e.id + "=" + e.value).join("; ")));
+console.log("BODY:", (await page.locator("body").innerText()).slice(0, 600));
+await go(page, "#today"); await page.waitForTimeout(1000);
+const t = await page.locator("body").innerText();
+console.log("TODAY Reginald mentions:", (t.match(/Reginald/g)||[]).length, "Penny:", (t.match(/Penny/g)||[]).length);
+console.log(t.slice(0, 2500));
+await audit(page, "you-today-after", { full: true });
+await browser.close();

@@ -1,0 +1,14 @@
+import { open, audit, mainText, others } from "./lib.mjs";
+const { browser, page } = await open();
+await page.getByLabel("A job").check(); await page.waitForTimeout(500);
+console.log("JOB:", await mainText(page));
+await audit(page, "r1-06-work-job-ticked");
+await page.getByLabel("My own business").check(); await page.waitForTimeout(500);
+console.log("BOTH:", await mainText(page));
+await audit(page, "r1-06-work-both-ticked");
+await page.getByLabel("A job").uncheck(); await page.getByLabel("My own business").uncheck(); await page.waitForTimeout(400);
+await page.getByRole("button", { name: "Continue" }).click();
+await page.waitForTimeout(2500);
+console.log(await audit(page, "r1-07-ai-day"));
+await others("r1-07-ai");
+await browser.close();
