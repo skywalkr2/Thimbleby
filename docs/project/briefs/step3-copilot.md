@@ -230,6 +230,13 @@ runs the full suites; the coding agent runs only what it touched.
   - A task kind that reads a picture's words and content as text, with its prompt template, playbook entry, knowledge
     section and knowledge log, exactly as `transcribe` has them (the self-check requires these).
   - The reading shows its estimate first, like any run.
+  - **The estimate (decided 2026-10-30):**
+    - each picture counts as `expected_image_tokens` input tokens, a new `TaskSettings` field next to
+      `expected_output` with default 1,600, its description, and demo values in both workspaces;
+    - priced at the model's input price;
+    - the existing calibration from reported usage corrects it as it does for text;
+    - no vendor image pricing in code;
+    - the approval threshold and budgets are unchanged.
   - The words read are handed in as pasted content (outside).
 - **The drawer:** a pasted or dropped picture goes through this when an account can read it, and when none can, the
   message says so in plain words and keeps the picture.

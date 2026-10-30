@@ -15,6 +15,12 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
     service's own listing, or the account's own list `image_models`, the way `transcribe_models` works for speech. It is
     never assumed from a model's or vendor's name, and when no account can read it, the hand-in says so.
   - Anything else is kept in the person's files with a plain "can't be read yet".
+- **What reading a picture is estimated to cost:**
+  - A picture counts as a set number of input tokens, priced like any other input on the model it runs on.
+  - The number is a setting on the task kind (`expected_image_tokens`, default 1,600), next to `expected_output`.
+  - The existing calibration corrects it from each run's reported usage, as it does for text.
+  - The estimate shows first, and the usual "ask above the configured amount" and budgets apply unchanged.
+  - Nothing about a vendor's image pricing is written in code.
 - **The brief's request to move a call (sample 3):** the "Changed overnight" line comes from a to-do asked of the person.
   It is filed overnight from someone else's words, tied to a calendar entry, and names who asked. It is never the
   person's own outgoing question. Whether the assistant ties such a to-do to its calendar entry is checked in the owner's
