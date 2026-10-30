@@ -2,7 +2,7 @@
 // Names come from the fixture's cases and people, never written out here.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { pressStart } from "./journey-helpers";
+import { expectQueueShows, pressStart } from "./journey-helpers";
 
 interface Case {
   id: string;
@@ -99,9 +99,7 @@ async function handIn(page: Page, c: Case) {
   // decision is one line), so the helper waits for any new one of those lines.
   const made = page.locator('[data-queue-line="review"], [data-queue-line="who_is"], [data-queue-line="held"]');
   // Count only once the screen shows what the server holds: right after opening Today the list may not have loaded yet.
-  const lines: Array<{ kind: string }> = await (await page.request.get("api/today/queue")).json();
-  const count = lines.filter((line) => ["review", "who_is", "held"].includes(line.kind)).length;
-  await expect(made).toHaveCount(count, { timeout: 20_000 });
+  await expectQueueShows(page, ["review", "who_is", "held"]);
   const before = await made.allInnerTexts();
   const known: Array<{ changeset?: { id?: string } | null }> = await (await page.request.get("api/changes")).json();
   await page.getByRole("button", { name: "Hand something in" }).first().click();
