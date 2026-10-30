@@ -84,6 +84,12 @@ import { SearchField } from "../ui/SearchField";
 type Edits = Record<string, Draft>;
 
 const SEARCH_ID = "settings-search";
+const NAV_GROUPS = [
+  { key: "you", label: "settings.nav_group.you", sections: ["you", "business"] },
+  { key: "assistant", label: "settings.nav_group.assistant", sections: ["ai", "today"] },
+  { key: "data", label: "settings.nav_group.data", sections: ["connections", "backups", "lists", "files"] },
+  { key: "more", label: "settings.nav_group.more", sections: ["appearance", "links", "addons", "advanced"] },
+] as const;
 
 /** The sections listed down the side of Settings (Connections and Add-ons among them). The pages reached from Settings
  * (what each account can do) show it too, so the person can go to any other section from where they are. */
@@ -105,21 +111,42 @@ export function SettingsNav(props: {
     e.preventDefault();
     run();
   };
+  const link = (id: SettingsSection) => (
+    <a
+      href={viewHref(settingsView(id))}
+      aria-current={id === props.current ? "page" : undefined}
+      onClick={(e) => follow(e, () => props.choose(id))}
+    >
+      {label(id)}
+    </a>
+  );
+  const addonSections = props.listed.filter((id) => id.startsWith("addon/"));
   return (
     <nav aria-label={t("settings.sections")}>
-      <ul className="settings-nav">
-        {props.listed.map((id) => (
-          <li key={id}>
-            <a
-              href={viewHref(settingsView(id))}
-              aria-current={id === props.current ? "page" : undefined}
-              onClick={(e) => follow(e, () => props.choose(id))}
-            >
-              {label(id)}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {NAV_GROUPS.map((group) => {
+        const sections = group.sections.filter((id) => props.listed.includes(id));
+        if (sections.length === 0) return null;
+        const headingId = `settings-nav-${group.key}`;
+        return (
+          <section className="settings-nav-group" aria-labelledby={headingId} key={group.key}>
+            <h3 id={headingId}>{t(group.label)}</h3>
+            <ul className="settings-nav">
+              {sections.map((id) => (
+                <li key={id}>
+                  {link(id)}
+                  {id === "addons" && addonSections.length > 0 && (
+                    <ul className="settings-nav-sublist" aria-label={t("settings.addon_pages")}>
+                      {addonSections.map((addon) => (
+                        <li key={addon}>{link(addon)}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </nav>
   );
 }

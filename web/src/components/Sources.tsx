@@ -28,6 +28,7 @@ import { MissingAddon, addonOfConnector } from "./MissingAddon";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns } from "./SignIns";
+import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -36,9 +37,8 @@ import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
 import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
-import { RowList } from "../ui/RowList";
-import { Row } from "../ui/Row";
 import { FormBlock } from "../ui/FormBlock";
+import { Pill } from "../ui/Pill";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -160,6 +160,7 @@ export function Sources(props: {
   const kinds = useQuery({ queryKey: ["watch-kinds"], queryFn: api.watchKinds });
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
   const [form, setForm] = useState<Form | null>(() => (props.add && !props.add.services ? { type: "add", plugin: props.add.plugin } : null));
+  const [addDirty, setAddDirty] = useState(false);
   const [seen, setSeen] = useState(props.add?.n ?? 0);
   // A request that asks for the services first waits for the list of them: with some, the list is brought into view; with
   // none, the form opens.
@@ -168,7 +169,10 @@ export function Sources(props: {
   if (props.add && props.add.n !== seen) {
     setSeen(props.add.n);
     setServicesFirst(props.add.services === true);
-    if (!props.add.services) setForm({ type: "add", plugin: props.add.plugin });
+    if (!props.add.services) {
+      setAddDirty(false);
+      setForm({ type: "add", plugin: props.add.plugin });
+    }
   }
   useEffect(() => {
     if (!servicesFirst || signIns.isPending) return;
@@ -197,6 +201,7 @@ export function Sources(props: {
   const openAdd = () => {
     const open = form?.type === "add" ? document.querySelector<HTMLElement>("form[data-add-connection]") : null;
     if (!open) {
+      setAddDirty(false);
       setForm({ type: "add", plugin: null });
       return;
     }
@@ -204,6 +209,7 @@ export function Sources(props: {
     (firstField(open) ?? open.querySelector<HTMLElement>("h3"))?.focus({ preventScroll: true });
   };
   const closeAdd = () => {
+    setAddDirty(false);
     setForm(null);
     restoreFocus(() => document.getElementById(addButton));
   };
@@ -240,17 +246,30 @@ export function Sources(props: {
       </p>
       <SignIns
         onOpenAddons={() => props.onOpenAddons?.()}
-        onChooseSource={(plugin) => setForm({ type: "add", plugin })}
+        onChooseSource={(plugin) => {
+          setAddDirty(false);
+          setForm({ type: "add", plugin });
+        }}
       />
-      {form?.type === "add" && (
-        <SourceForm
-          key={`add-${seen}-${form.plugin ?? ""}`}
-          mode={{ type: "add", plugin: form.plugin }}
-          kinds={kinds.data}
-          kindsFailed={kinds.isError}
-          onClose={closeAdd}
-        />
-      )}
+      <Drawer
+        open={form?.type === "add"}
+        title={t("sources.add_title")}
+        dirty={addDirty}
+        wide
+        onClose={closeAdd}
+      >
+        {form?.type === "add" && (
+          <SourceForm
+            key={`add-${seen}-${form.plugin ?? ""}`}
+            mode={{ type: "add", plugin: form.plugin }}
+            kinds={kinds.data}
+            kindsFailed={kinds.isError}
+            twoStep
+            onDirty={setAddDirty}
+            onClose={closeAdd}
+          />
+        )}
+      </Drawer>
       {sources.isPending ? (
         <Skeleton />
       ) : sources.isError ? (
@@ -258,21 +277,31 @@ export function Sources(props: {
       ) : sources.data.length === 0 ? (
         <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
       ) : (
-        <RowList>
-          {sources.data.map((source) => (
-            <SourceRow
-              key={source.id}
-              source={source}
-              alert={announce?.has(source.id) ?? false}
-              kinds={kinds.data}
-              kindsFailed={kinds.isError}
-              onOpenAddons={props.onOpenAddons}
-              changing={form?.type === "change" && form.id === source.id}
-              onChange={() => setForm({ type: "change", id: source.id })}
-              onChanged={() => setForm(null)}
-            />
-          ))}
-        </RowList>
+        <table className="source-table" aria-label={t("sources.title")}>
+          <thead>
+            <tr>
+              <th scope="col">{t("sources.table.connection")}</th>
+              <th scope="col">{t("sources.table.privacy")}</th>
+              <th scope="col">{t("sources.table.status")}</th>
+              <th scope="col">{t("sources.table.actions")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sources.data.map((source) => (
+              <SourceRow
+                key={source.id}
+                source={source}
+                alert={announce?.has(source.id) ?? false}
+                kinds={kinds.data}
+                kindsFailed={kinds.isError}
+                onOpenAddons={props.onOpenAddons}
+                changing={form?.type === "change" && form.id === source.id}
+                onChange={() => setForm({ type: "change", id: source.id })}
+                onChanged={() => setForm(null)}
+              />
+            ))}
+          </tbody>
+        </table>
       )}
     </section>
   );
@@ -300,6 +329,16 @@ function SourceRow(props: {
   const problem = problemOf(source, t, has);
   const lastWhen = source.read_at ? when(source.read_at) : "";
   const lastWords = lastReadText(source, t);
+  const status =
+    !source.enabled
+      ? { text: t("sources.off"), tone: "neutral" }
+      : source.last?.outcome === "failed"
+        ? { text: t("sources.status.failed"), tone: "danger" }
+        : source.last?.outcome === "offline" || source.last?.outcome === "throttled"
+          ? { text: t(source.last.outcome === "offline" ? "sources.status.offline" : "sources.status.waiting"), tone: "warn" }
+          : source.last
+            ? { text: t("sources.status.read"), tone: "ok" }
+            : { text: t("sources.never"), tone: "neutral" };
 
   const readNow = async () => {
     setBusy(true);
@@ -346,48 +385,76 @@ function SourceRow(props: {
     source.read_at && source.items > 0 ? tn("sources.items", source.items) : "",
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
     ...(source.account ? [t("sources.reads_account", { account: source.account })] : []),
-    privacyFact(source, t),
   ].filter(Boolean);
   const schedule = [
-    source.enabled ? tn("sources.read_every", source.every_minutes) : t("sources.off"),
-    source.read_at ? t("sources.last_read", { when: lastWhen }) : t("sources.never"),
+    source.enabled ? tn("sources.read_every", source.every_minutes) : "",
+    source.read_at ? t("sources.last_read", { when: lastWhen }) : "",
   ];
-  const found = [source.last ? lastWords : "", source.failures > 1 ? t("sources.failures", { n: source.failures }) : ""].filter(Boolean);
+  const found = [
+    source.last ? lastWords : "",
+    source.failures > 1 ? t("sources.failures", { n: source.failures }) : "",
+  ].filter(Boolean);
+  const extra = Boolean(
+    source.last?.unsorted ||
+      (!source.connector_label && addonOfConnector(source.connector)) ||
+      problem ||
+      (source.connector === "mailbox" && source.enabled) ||
+      looking ||
+      props.changing,
+  );
   return (
-    <Row
-      aria-labelledby={titleId}
-      title={source.label}
-      titleId={titleId}
-      metaLines={[facts.join(" · "), schedule.join(" · "), found.join(" · ")]}
-      menu={<RowMenu label={source.label} actions={actions} buttonId={menuId} />}
-    >
-      {source.last?.unsorted && (
-        <p className="hint" data-unsorted="">
-          <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
-        </p>
-      )}
-      {!source.connector_label && addonOfConnector(source.connector) && (
-        <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
-      )}
-      {problem && (
-        <p className="problem-note" role={props.alert ? "alert" : undefined}>
-          {problem}
-        </p>
-      )}
-      {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
-      {looking && <LookBack source={source} onClose={() => { setLooking(false); restoreFocus(() => document.getElementById(menuId)); }} />}
-      {props.changing && (
-        <SourceForm
-          mode={{ type: "change", source }}
-          kinds={props.kinds}
-          kindsFailed={props.kindsFailed}
-          onClose={() => {
-            props.onChanged();
-            restoreFocus(() => document.getElementById(menuId));
-          }}
-        />
-      )}
-    </Row>
+    <>
+      <tr className="source-row" aria-labelledby={titleId}>
+        <th scope="row">
+          <strong id={titleId}>{source.label}</strong>
+          <span className="source-summary">{facts.join(" · ")}</span>
+          {schedule.length > 0 && <span className="source-summary">{schedule.join(" · ")}</span>}
+          {found.length > 0 && <span className="source-summary">{found.join(" · ")}</span>}
+          {extra && (
+            <div className="source-row-details">
+              {source.last?.unsorted && (
+                <p className="hint" data-unsorted="">
+                  <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
+                </p>
+              )}
+              {!source.connector_label && addonOfConnector(source.connector) && (
+                <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
+              )}
+              {problem && (
+                <p className="problem-note" role={props.alert ? "alert" : undefined}>
+                  {problem}
+                </p>
+              )}
+              {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
+              {looking && <LookBack source={source} onClose={() => { setLooking(false); restoreFocus(() => document.getElementById(menuId)); }} />}
+              {props.changing && (
+                <SourceForm
+                  mode={{ type: "change", source }}
+                  kinds={props.kinds}
+                  kindsFailed={props.kindsFailed}
+                  onClose={() => {
+                    props.onChanged();
+                    restoreFocus(() => document.getElementById(menuId));
+                  }}
+                />
+              )}
+            </div>
+          )}
+        </th>
+        <td data-label={t("sources.table.privacy")}>
+          <Pill describedAs={privacyFact(source, t)}>{t(`sources.level.${source.data_level ?? "internal"}`)}</Pill>
+        </td>
+        <td data-label={t("sources.table.status")}>
+          <span className="source-status" data-tone={status.tone}>
+            <span className="source-status-dot" data-status-dot="" aria-hidden="true" />
+            <span>{status.text}</span>
+          </span>
+        </td>
+        <td data-label={t("sources.table.actions")}>
+          <RowMenu label={source.label} actions={actions} buttonId={menuId} />
+        </td>
+      </tr>
+    </>
   );
 }
 
@@ -449,7 +516,14 @@ type Mode = { type: "add"; plugin: string | null; kind?: string } | { type: "cha
 
 /** The form for adding a source or changing one: the kind (adding only), a name, how often, a project (adding only)
  * and the settings that kind takes, as the Settings screen shows them. */
-function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed: boolean; onClose: () => void }) {
+function SourceForm(props: {
+  mode: Mode;
+  kinds: Kind[] | undefined;
+  kindsFailed: boolean;
+  onClose: () => void;
+  twoStep?: boolean;
+  onDirty?: (dirty: boolean) => void;
+}) {
   const { t, tn, has } = useWords();
   const afterSave = useAfterSave();
   const fresh = useFreshFingerprint();
@@ -461,6 +535,10 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const { mode } = props;
   const adding = mode.type === "add";
   const source = mode.type === "change" ? mode.source : null;
+  const given = mode.type === "add" ? mode.kind : undefined;
+  const [step, setStep] = useState<"kind" | "details">(props.twoStep && adding && !given ? "kind" : "details");
+  const choosingKind = props.twoStep && adding && !given && step === "kind";
+  const showingDetails = !props.twoStep || !adding || !!given || step === "details";
   // With nothing beside Personal the places a connection can be filed are areas of the person's life.
   const { justMe } = useSides();
 
@@ -472,7 +550,6 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
 
   const available = (props.kinds ?? []).filter((k) => mode.type !== "add" || !mode.plugin || k.plugin === mode.plugin);
   const [picked, setPicked] = useState<string | null>(null);
-  const given = mode.type === "add" ? mode.kind : undefined;
   const chosen = source ? source.connector : (given ?? picked ?? (available.length === 1 ? available[0].name : ""));
   const kind = (props.kinds ?? []).find((k) => k.name === chosen);
   // A mailbox connected through one of the mail services by name takes its own two fields, so the full form steps aside.
@@ -517,6 +594,10 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     // Once, when the form opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    props.onDirty?.(false);
+  }, [props.onDirty]);
 
   useEffect(() => {
     let live = true;
@@ -686,6 +767,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         });
         await afterSave(saved, { message: t("sources.changed_toast", { label: name || mode.source.label }) });
       }
+      props.onDirty?.(false);
       props.onClose();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
@@ -714,15 +796,24 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
       className="panel source-form"
       data-add-connection={adding ? "" : undefined}
       aria-labelledby={titleId}
+      onChange={() => props.onDirty?.(true)}
       onSubmit={(e) => {
         e.preventDefault();
-        void submit();
+        if (showingDetails) void submit();
       }}
     >
       <h3 id={titleId} tabIndex={-1} ref={heading}>
         {source ? t("sources.change_title", { label: source.label }) : t("sources.add_title")}
       </h3>
-      {adding && !given && (
+      {props.twoStep && adding && !given && (
+        <div className="source-step">
+          <h4>{t(choosingKind ? "sources.step.choose_title" : "sources.step.details_title")}</h4>
+          <p className="hint" data-add-step="">
+            {t(choosingKind ? "sources.step.kind" : "sources.step.details")}
+          </p>
+        </div>
+      )}
+      {adding && !given && (!props.twoStep || choosingKind) && (
         <CheckboxGroup legend={t("sources.kind_title")}>
           {props.kindsFailed ? (
             <p className="problem-note">{t("sources.kinds_failed")}</p>
@@ -748,6 +839,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                         value={k.name}
                         checked={chosen === k.name}
                         onChange={() => {
+                          if (chosen !== k.name) setGuide("");
                           setPicked(k.name);
                           setEdits({});
                           setPasted({});
@@ -765,8 +857,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           )}
         </CheckboxGroup>
       )}
-      {adding && chosen === "mailbox" && !given && <MailServiceConnect onPick={setGuide} onConnected={props.onClose} />}
-      {kind && !guided && !listFirst && (
+      {showingDetails && adding && chosen === "mailbox" && !given && <MailServiceConnect onPick={setGuide} onConnected={props.onClose} />}
+      {showingDetails && kind && !guided && !listFirst && (
         <>
           <FormField id={`${base}-label`} label={t("sources.field.label")}>
             <input
@@ -936,10 +1028,28 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         <Button variant="quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </Button>
-        {!guided && (
-          <Button variant="primary" type="submit" disabled={!ready}>
-            {t(busy ? "sources.saving" : adding ? "sources.save_add" : "sources.save_change")}
+        {choosingKind ? (
+          <Button
+            type="button"
+            variant="primary"
+            disabled={!kind || props.kindsFailed || busy}
+            onClick={() => setStep("details")}
+          >
+            {t("sources.step.next")}
           </Button>
+        ) : (
+          <>
+            {props.twoStep && adding && !given && (
+              <Button type="button" variant="quiet" onClick={() => setStep("kind")}>
+                {t("sources.step.back")}
+              </Button>
+            )}
+              {!guided && (
+                <Button variant="primary" type="submit" disabled={!ready}>
+                  {t(busy ? "sources.saving" : adding ? "sources.save_add" : "sources.save_change")}
+                </Button>
+            )}
+          </>
         )}
       </Actions>
     </form>

@@ -30,8 +30,8 @@ test("every Settings page keeps the side bar, and the person can go back to any 
   expect(names.length).toBeGreaterThan(4);
   expect(names).toContain("Connections");
   expect(names).toContain("Add-ons");
-  // The pages of basic settings come first, in plain words, then Quick links; Quality is in the person's menu, not here.
-  expect(names.slice(0, 6)).toEqual(["You", "AI and spending", "Notices", "Backups", "Appearance", "Quick links"]);
+  // Pages stay in their groups: You, Assistant, Your data, then More; Quality is in the person's menu, not here.
+  expect(names.slice(0, 6)).toEqual(["You", "Your business", "AI and spending", "Notices", "Connections", "Backups"]);
   expect(names).not.toContain("Quality");
   // This workspace has no side and has lists to show, so the Lists page is listed; the business page is there too, where a job or
   // a business is added.
@@ -49,6 +49,32 @@ test("every Settings page keeps the side bar, and the person can go back to any 
       await bar(page).getByRole("link", { name: names[0], exact: true }).click();
       await expect(bar(page).getByRole("link", { name: names[0], exact: true })).toHaveAttribute("aria-current", "page", LOADED);
     }
+  }
+});
+
+test("the Settings menu groups its sections and keeps each section address", async ({ page }) => {
+  await page.goto("?token=e2e-token#settings/you");
+  const nav = bar(page);
+  await expect(nav.getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
+  await expect(nav.getByRole("heading", { level: 3 })).toHaveText([
+    "You",
+    "Assistant",
+    "Your data",
+    "More",
+  ]);
+  for (const [name, section] of [
+    ["You", "you"],
+    ["AI and spending", "ai"],
+    ["Connections", "connections"],
+    ["Backups", "backups"],
+    ["Add-ons", "addons"],
+    ["Appearance", "appearance"],
+    ["Advanced", "advanced"],
+  ]) {
+    await expect(nav.getByRole("link", { name, exact: true })).toHaveAttribute(
+      "href",
+      new RegExp(`#settings/${section}$`),
+    );
   }
 });
 
@@ -86,16 +112,16 @@ const CODE_ID = /\b[A-Za-z_]+:(?!\/\/)/;
 const JUST_ME_WORDS = /\b(work|project|stage|organization|owner|template)s?\b/i;
 // What a fresh workspace counts on its pages: the working hours, the quiet hours and the one notices switch make room for
 // Your name. Where reminders go is one row, drawn by a part of its own that is no `.setting`.
-const BASIC_ROWS = 18;
+const BASIC_ROWS = 17;
 // The rarely changed settings sit in each page's closed "More settings" fold, and under the topics of Advanced that have no
 // page. The chat or phone app's address and the pick list of the app it belongs to are two parts of one card, neither a
-// `.setting`, so they are two rows more than the `.setting` rows. With no side beside Personal the words that mean each side
-// are not listed while there is no side, so this workspace's total is the python walk's 30 less those two.
-const MORE_ROWS = 28;
+// `.setting`, so they are two rows more than the `.setting` rows. The synced folder and its sharing choice live in their own
+// section rather than as settings rows. With no side beside Personal, the words that mean each side are not listed.
+const MORE_ROWS = 27;
 const SHOWN = ".setting:not(details.more-settings .setting)";
 const FOLDED = "details.more-settings .setting";
 
-test("the settings walk counts 18 shown and 28 more rows, each labelled in plain words once, with a hint in plain words", async ({ page }) => {
+test("the settings walk counts 17 shown and 27 more rows, each labelled in plain words once, with a hint in plain words", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/you");

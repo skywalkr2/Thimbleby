@@ -37,6 +37,9 @@ const OWN_PART = [
   // The business is its name with Rename and Remove, and the words that mean each side are two lists beside it.
   "workspace.project.business",
   "workspace.project.sides",
+  // The synced folder and its sharing choice are edited together in the dedicated section.
+  "storage.sync.folder",
+  "storage.sync.shared",
 ];
 
 /** Whether a setting is listed as a row of its own: an add-on's, or one the app places on a page or under a topic that no
@@ -70,7 +73,9 @@ export function navSections(items: Item[], has: { business: boolean; lists: bool
             ? has.lists
             : id === "files"
               ? has.files
-              : present.has(id));
+                : id === "backups"
+                ? present.has(id) || items.some((i) => i.key === "storage.sync.folder" || i.key === "storage.sync.shared")
+                : present.has(id));
     if (shown) out.push(id);
   }
   const addons = [...present].filter((s) => s.startsWith("addon/"));
