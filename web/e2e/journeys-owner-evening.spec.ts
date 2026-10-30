@@ -203,12 +203,18 @@ test.describe.serial("journey: the owner's first evening", () => {
     expect(past).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-    // The calendar's entry two days ahead is on the agenda once; the booking made no second entry and no clash.
-    const agenda = page.getByRole("region", { name: "Schedule" });
-    await expect(agenda.getByText(HALL).first()).toBeVisible({ timeout: 60_000 });
-    await expect(agenda.getByText(new RegExp(HALL))).toHaveCount(1);
+    // The calendar's entry two days ahead is not on Today's card, which lists today only; it is on the Schedule screen once,
+    // and the booking made no second entry and no clash.
     // The fake calendar's two back-to-back meetings in different rooms are a real clash line; the appointment is in none.
     await expect(page.locator('[data-queue-line="clash"]').filter({ hasText: HALL })).toHaveCount(0);
+    await page.evaluate(() => {
+      window.location.hash = "schedule";
+    });
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule", exact: true })).toBeVisible();
+    await page.getByRole("radio", { name: "Week", exact: true }).click();
+    const agenda = page.locator("main");
+    await expect(agenda.getByText(HALL).first()).toBeVisible({ timeout: 60_000 });
+    await expect(agenda.getByText(new RegExp(HALL))).toHaveCount(1);
     await visit(page);
 
     // The one-time code is set aside under notices, and is not in What changed, which is the history of the work.
