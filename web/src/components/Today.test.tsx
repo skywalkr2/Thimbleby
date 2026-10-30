@@ -635,6 +635,22 @@ test("lines that arrive while the person is working in the queue wait behind 'N 
   expect(screen.queryByRole("button", { name: "Show 1 new item" })).toBeNull();
 });
 
+test("the queue's own starting cursor holds the list: a line that arrives after the first draw waits behind 'Show 1 new item', which says so", async () => {
+  let lines = [decision];
+  const { refresh } = show([], { "GET today/queue": () => lines });
+  await screen.findByText("Matte or soft-touch?", { selector: "li *" });
+  lines = [decision, review];
+  await refresh();
+  await waitFor(() => {
+    const drawn = document.querySelector('[data-queue-line="review"]') !== null;
+    const announced = screen.queryByRole("button", { name: "Show 1 new item" }) !== null;
+    expect(drawn || announced).toBe(true);
+  });
+  expect(document.querySelector('[data-queue-line="review"]') !== null).toBe(false);
+  await userEvent.setup().click(screen.getByRole("button", { name: "Show 1 new item" }));
+  expect(await screen.findByRole("button", { name: "Look over" })).toBeInTheDocument();
+});
+
 test("a request to look at a changeset opens its line", async () => {
   const { reveal } = await import("../lib/reveal");
   show([review]);

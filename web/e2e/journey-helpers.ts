@@ -215,3 +215,34 @@ export async function widerThanWindow(page: Page, label: string): Promise<string
   await page.setViewportSize(before);
   return found;
 }
+
+/** Waits until the screen draws as many of the given kinds of Today line as the server holds. A mismatch fails with both
+ * lists (the server's kind and key, the screen's data-queue-line and key) and whether the queue is holding new lines behind
+ * its "Show N new" button, so the line that is missing is named. */
+export async function expectQueueShows(page: Page, kinds: string[], { atLeast = 0, timeout = 20_000 }: { atLeast?: number; timeout?: number } = {}): Promise<void> {
+  const selector = kinds.map((kind) => `[data-queue-line="${kind}"]`).join(", ");
+  const served = async () => {
+    const lines: Array<{ kind: string; key: string }> = await (await page.request.get("api/today/queue")).json();
+    return lines.filter((line) => kinds.includes(line.kind));
+  };
+  const drawn = () =>
+    page.locator(selector).evaluateAll((els) => els.map((el) => ({ kind: el.getAttribute("data-queue-line"), key: el.getAttribute("data-line-key") })));
+  const deadline = Date.now() + timeout;
+  let api = await served();
+  let screen = await drawn();
+  const settled = () => screen.length === api.length && api.length >= atLeast;
+  while (!settled() && Date.now() < deadline) {
+    await page.waitForTimeout(250);
+    api = await served();
+    screen = await drawn();
+  }
+  if (settled()) return;
+  const waiting = await page.getByRole("button", { name: /^Show \d+ new items?$/ }).allInnerTexts();
+  const list = (items: Array<{ kind: string | null; key: string | null }>) => (items.length ? items.map((i) => `${i.kind} ${i.key}`).join("; ") : "none");
+  const missing = api.filter((a) => !screen.some((s) => s.key === a.key));
+  throw new Error(
+    `Today's screen shows ${screen.length} of the ${api.length} lines (${kinds.join(", ")}) the server returns (at least ${atLeast} expected) after ${timeout} ms.\n` +
+      `server: ${list(api)}\nscreen: ${list(screen)}\nnot on screen: ${list(missing)}\n` +
+      `"Show N new" button: ${waiting.length ? waiting.join(", ") : "absent"}`,
+  );
+}

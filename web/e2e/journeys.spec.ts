@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Locator } from "@playwright/test";
-import { collectProblems, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
+import { collectProblems, expectQueueShows, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
@@ -160,7 +160,8 @@ test.describe.serial("journeys", () => {
     await page.getByRole("link", { name: /^Today/ }).first().click();
     // The line comes once the server has taken the hand-in in, which on a busy machine can take more than a moment.
     const go = page.locator('[data-queue-line="first_go"]');
-    await expect(go).toHaveCount(1, { timeout: 20_000 });
+    await expectQueueShows(page, ["first_go"], { atLeast: 1 });
+    await expect(go).toHaveCount(1);
     await expect(go).toContainText(/Start the assistant: 1 item, (about \$\d+\.\d\d|less than a cent)/);
     await expect(go).toContainText("Nothing is spent until you press Start.");
     await visit(page);
