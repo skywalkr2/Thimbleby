@@ -338,11 +338,6 @@ From L3 (design 7.18):
 
 From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux-2026-10/answers-25-32.md`, mockups in
 `reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
-- [ ] [B-6b] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
-  the other answer a visible button.
-  *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. *Built (audit A5, then one path on the owner's call 2026-10-28):* "Drop it and tell them" wherever a dropped to-do reached people, with the notes linked to the drop for Undo (`tests/test_drop_and_draft_note.py`, `web/src/components/TodayRecords.test.tsx`; change log 239).
-  *Left:* nothing of this item.
-  - State (2026-10-29): built: the held ask as a question with its reason and evidence, a button naming the result and the other answer visible (`tests/test_held_ask.py`, `web/src/components/TodayRecords.test.tsx`), the one drop-and-tell path (`tests/test_drop_and_draft_note.py`), and a note box on "Keep it open" (`web/src/components/TodayRecords.test.tsx`, "a held answer offers a note box for Keep it open", "a note reaches the held decline API with Keep it open"); left: nothing of this item.
 
 From the original designer's lessons of 2026-10-14:
 - [ ] [B-6b] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention

@@ -99,3 +99,17 @@ def test_every_action_above_is_tried_on_the_world_that_has_its_line(api):  # noq
     assert acts(client, base, lines)["all looks good"]().status_code == 200
     after = client.get(f"{base}/today/queue").json()
     assert len(after) == len(lines) - 1
+
+
+def test_keep_it_open_with_a_note_hands_the_note_in_and_a_refused_note_changes_nothing(api):  # noqa: F811
+    client, base, worker = api
+    store = client.app_store
+    held = first(world(client, base, worker, store, store.plugins.cfg), "held")
+    url = f"{base}/changesets/{held['changeset']}/ops/{held['op']}/decline"
+    # A note on an op the changeset doesn't have is refused before anything changes: the item is still held.
+    wrong = client.post(f"{base}/changesets/{held['changeset']}/ops/999/decline", json={"note": "Still needed"})
+    assert wrong.status_code in (404, 409, 422), wrong.text
+    assert any(line["key"] == held["key"] for line in client.get(f"{base}/today/queue").json())
+    done = client.post(url, json={"note": "Still needed for the launch"})
+    assert done.status_code == 200, done.text
+    assert done.json()["request"], "the note is handed in as the person's own words"

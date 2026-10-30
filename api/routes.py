@@ -1798,15 +1798,16 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         from engine.applier import decline_held
 
         need("changeset", cs_id)
-        guard(lambda: decline_held(store, cs_id, index))
-        request = None
+        # A note is checked before anything changes, so a refused note leaves the held item as it was.
+        action_id = None
         if body and body.note.strip():
-            changeset = store.read().get("changeset", cs_id)
-            op = changeset.data["ops"][index]["op"]
+            ops = store.read().get("changeset", cs_id).data["ops"]
+            op = ops[index]["op"] if 0 <= index < len(ops) else {}
             action_id = op.get("id")
             if not op.get("op", "").startswith("action.") or not isinstance(action_id, str):
                 raise HTTPException(status_code=422, detail="A note can only go with an action choice.")
-            request = hand_note(("action", action_id), body.note, "reopened")
+        guard(lambda: decline_held(store, cs_id, index))
+        request = hand_note(("action", action_id), body.note, "reopened") if action_id else None
         changed()
         return Noted(ok=cs_id, request=request)
 
