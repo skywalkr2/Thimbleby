@@ -63,6 +63,7 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const undos = useRef<Array<{ token: number; run: () => Promise<unknown> | void }>>([]);
   const nextToken = useRef(1);
   // How many toasts have been pushed: an Undo that said what happened itself is not followed by a general word that replaces it.
+  // A notice of the app's own that yields doesn't count: it says nothing about the Undo.
   const pushed = useRef(0);
   const stack = useRef<HTMLDivElement>(null);
 
@@ -85,7 +86,7 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   }, [toasts.length]);
 
   const push = useCallback((toast: ToastInput) => {
-    pushed.current += 1;
+    if (!toast.yields) pushed.current += 1;
     const token = toast.undo ? nextToken.current++ : 0;
     if (toast.undo) undos.current.push({ token, run: toast.undo });
     setToasts((shown) => {

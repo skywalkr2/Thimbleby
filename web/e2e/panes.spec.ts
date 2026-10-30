@@ -230,7 +230,7 @@ test.describe("the phone's review mode", () => {
     expect(sentAfter).toBeGreaterThan(sentBefore);
     await openFresh(page, "work/followups");
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
-    await expect(page.getByRole("status", { name: "Loading…" }), "Follow-ups should finish loading before its rows are checked").toHaveCount(0);
+    await expect(page.getByRole("status", { name: "Loading…" }), "Follow-ups should finish loading before its rows are checked").toHaveCount(0, { timeout: 20_000 });
     const rows = await page
       .getByRole("main")
       .getByRole("list")

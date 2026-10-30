@@ -366,3 +366,25 @@ test("a notice of the app's own never takes the place of the message about what 
   await user.click(screen.getByRole("button", { name: "notice" }));
   expect(region()).toHaveTextContent("A notice of the app's own.");
 });
+
+function NoticeDuringUndo() {
+  const { push } = useToasts();
+  const notice = () => push({ message: "A notice of the app's own.", action: { label: "Act", run: () => undefined }, yields: true });
+  return (
+    <button type="button" onClick={() => push({ message: "Saved the name.", undo: notice })}>
+      save
+    </button>
+  );
+}
+
+test("a notice of the app's own that arrives while an Undo runs doesn't stand in for saying it was undone", async () => {
+  const user = userEvent.setup();
+  render(
+    <ToastProvider seconds={0}>
+      <NoticeDuringUndo />
+    </ToastProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "save" }));
+  await user.click(within(region()).getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(region()).toHaveTextContent("Undone."));
+});
