@@ -270,7 +270,7 @@ test.describe('"Just me" sees no work words', () => {
     await go(page, "settings/connections");
     await heading(page, "Connections", 2);
     await page.getByRole("button", { name: "Add mail, calendar or folder" }).first().click();
-    await expect(page.getByRole("heading", { name: "Add mail, calendar or folder" })).toBeVisible(LOADED);
+    await expect(page.getByRole("dialog", { name: "Add mail, calendar or folder" }).getByRole("heading", { name: "Add mail, calendar or folder" })).toBeVisible(LOADED);
     await read("Add mail, calendar or folder");
     await close();
 
