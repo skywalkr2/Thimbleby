@@ -1,8 +1,4 @@
-// The Quality screen (design 6.32, "Measures"): one section for each measure, each a sentence with its number out of its
-// denominator and a short list by day, never a bare percentage and never a colour. The person's own daily count of
-// promises the app missed is entered here: a day, how many promises are on their own list, how many of those the app
-// didn't have. Saving acts at once with an Undo toast, and saving the same day again corrects it. The screen is not on
-// Today: status and progress never go there.
+// The Quality screen: outcome measures, weekly totals, grouped missed items, and the person's own count form.
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { api, type S } from "../lib/api";
@@ -10,14 +6,15 @@ import { useAct } from "../lib/act";
 import { todayOn, monthDay } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { DateField } from "../ui/DateField";
+import { EmptyState } from "../ui/EmptyState";
+import { FormField } from "../ui/FormField";
 import { LoadFailed } from "../ui/LoadFailed";
+import { PageHeader } from "../ui/PageHeader";
+import { Panel } from "../ui/Panel";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Quality.module.css";
 
-import { EmptyState } from "../ui/EmptyState";
-import { PageHeader } from "../ui/PageHeader";
-import { DateField } from "../ui/DateField";
-import { FormField } from "../ui/FormField";
 type View = S["QualityView"];
 
 /** A whole number typed in a field, or null when it isn't one. */
@@ -25,7 +22,20 @@ function whole(text: string): number | null {
   return /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
 }
 
-function Section(props: { id: string; title: string; hint?: string; children: React.ReactNode }) {
+function Section(props: { id: string; title: string; hint?: string; children: React.ReactNode; collapsed?: boolean; empty?: boolean }) {
+  const { t } = useWords();
+  if (props.collapsed) {
+    return (
+      <details className={`${styles.section} ${styles.collapsed}`} data-quality-section={props.id}>
+        <summary>
+          <span>{props.title}</span>
+          {props.empty && <span className={styles.emptySummary}>{` · ${t("quality.section.empty")}`}</span>}
+        </summary>
+        {props.hint && <p className="hint">{props.hint}</p>}
+        <div className={styles.detailBody}>{props.children}</div>
+      </details>
+    );
+  }
   return (
     <section className={styles.section} aria-labelledby={`${props.id}-title`} data-quality-section={props.id}>
       <h2 id={`${props.id}-title`}>{props.title}</h2>
@@ -53,6 +63,32 @@ function Days(props: { label: string; rows: string[] }) {
       ))}
     </ul>
   );
+}
+
+function StatTile(props: { title: string; value: string; change?: string }) {
+  const id = useId();
+  return (
+    <article className={styles.tile} aria-labelledby={id}>
+      <h3 id={id}>{props.title}</h3>
+      <p className={styles.value}>{props.value}</p>
+      {props.change && <p className={styles.change}>{props.change}</p>}
+    </article>
+  );
+}
+
+function outcomeChange(
+  t: (key: string) => string,
+  tn: (key: string, count: number, values?: Record<string, string | number>) => string,
+  change: number,
+  time = false,
+): string {
+  if (change === 0) return t("quality.stat.no_change");
+  const amount = Math.abs(change);
+  if (time) {
+    const minutes = minutesOf(amount);
+    return tn(`quality.stat.time.${change > 0 ? "more" : "fewer"}`, minutes, { minutes });
+  }
+  return tn(`quality.stat.count.${change > 0 ? "more" : "fewer"}`, amount, { n: amount });
 }
 
 function CountForm(props: { view: View }) {
@@ -238,6 +274,15 @@ export function Quality(props: { onBack: () => void }) {
   const page = useQuery({ queryKey: ["quality"], queryFn: api.quality });
   const view = page.data;
   const work = (kind: string) => (has(`task.${kind}`) ? t(`task.${kind}`) : t("task.other"));
+  const weeks = view?.outcome.weeks ?? [];
+  const previous = weeks.length > 1 ? weeks[weeks.length - 2] : undefined;
+  const latest = weeks[weeks.length - 1];
+  const delta = (current: number | undefined, before: number | undefined, time = false) =>
+    current === undefined || before === undefined ? undefined : outcomeChange(t, tn, current - before, time);
+  const alertCount = view ? view.outcome.dismissed + view.outcome.corrected : 0;
+  const latestAlerts = latest ? latest.dismissed + latest.corrected : undefined;
+  const previousAlerts = previous ? previous.dismissed + previous.corrected : undefined;
+  const missedItems = view?.missed ?? [];
   // The screen opens with the cursor on its heading.
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus({ preventScroll: true }), []);
@@ -264,82 +309,134 @@ export function Quality(props: { onBack: () => void }) {
           <p className={styles.window} data-quality-window="">
             {t("quality.window", { from: monthDay(view.since), to: monthDay(view.until) })}
           </p>
-          <p className="hint">{t("quality.intro")}</p>
+          <div className={styles.tiles} role="region" aria-label={t("quality.tiles.title")} data-quality-section="quality-outcome">
+            <StatTile title={t("quality.stat.found")} value={String(view.outcome.promises_found)} change={delta(latest?.promises_found, previous?.promises_found)} />
+            <StatTile title={t("quality.stat.kept")} value={String(view.outcome.promises_kept)} change={delta(latest?.promises_kept, previous?.promises_kept)} />
+            <StatTile title={t("quality.stat.alerts")} value={String(alertCount)} change={delta(latestAlerts, previousAlerts)} />
+            <StatTile
+              title={t("quality.stat.review")}
+              value={view.review.median_seconds == null ? t("quality.stat.no_days") : t("quality.stat.minutes", { minutes: minutesOf(view.review.median_seconds) })}
+              change={delta(latest?.review_seconds, previous?.review_seconds, true)}
+            />
+          </div>
           <div className={styles.sections}>
-            <Section id="quality-outcome" title={t("quality.outcome.title")} hint={t("quality.outcome.hint")}>
-              {view.outcome.promises_found + view.outcome.promises_kept + view.outcome.dismissed + view.outcome.corrected + view.outcome.review_seconds + view.outcome.follow_ups_completed === 0 ? (
-                <Empty text={t("quality.outcome.empty")} />
-              ) : (
-                <>
-                  <Days
-                    label={t("quality.outcome.title")}
-                    rows={[
-                      tn("quality.outcome.found", view.outcome.promises_found, { kept: view.outcome.promises_kept }),
-                      t("quality.outcome.false", { dismissed: view.outcome.dismissed, corrected: view.outcome.corrected }),
-                      tn("quality.outcome.review", view.outcome.review_visits, { minutes: minutesOf(view.outcome.review_seconds) }),
-                      tn("quality.outcome.follow_ups", view.outcome.follow_ups_completed),
-                    ]}
-                  />
-                  <Days
-                    label={t("quality.day_list")}
-                    rows={view.outcome.weeks.map((w) =>
-                      t("quality.outcome.week", {
-                        from: monthDay(w.week),
-                        to: monthDay(w.week_end),
-                        found: w.promises_found,
-                        kept: w.promises_kept,
-                        alerts: w.dismissed + w.corrected,
-                        minutes: minutesOf(w.review_seconds),
-                        follow_ups: w.follow_ups_completed,
-                      }),
+            <Panel title={t("quality.weeks.title")} className={styles.weekPanel}>
+              <div className={styles.tableWrap}>
+                <table className={styles.table} aria-label={t("quality.weeks.title")}>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("quality.weeks.week")}</th>
+                      <th scope="col">{t("quality.stat.found")}</th>
+                      <th scope="col">{t("quality.stat.kept")}</th>
+                      <th scope="col">{t("quality.stat.alerts")}</th>
+                      <th scope="col">{t("quality.weeks.review")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeks.map((week) => (
+                      <tr key={week.week}>
+                        <th scope="row">{t("quality.weeks.range", { from: monthDay(week.week), to: monthDay(week.week_end) })}</th>
+                        <td>{week.promises_found}</td>
+                        <td>{week.promises_kept}</td>
+                        <td>{week.dismissed + week.corrected}</td>
+                        <td>{t("quality.stat.minutes", { minutes: minutesOf(week.review_seconds) })}</td>
+                      </tr>
+                    ))}
+                    {weeks.length === 0 && (
+                      <tr>
+                        <td colSpan={5}>{t("quality.weeks.empty")}</td>
+                      </tr>
                     )}
-                  />
-                </>
-              )}
-            </Section>
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
 
-            <Section id="quality-closes" title={t("quality.closes.title")} hint={t("quality.closes.hint")}>
-              {view.closes.total === 0 ? (
-                <Empty text={t("quality.closes.empty")} />
-              ) : (
-                <>
-                  <p className={styles.sum}>{tn("quality.closes.sum", view.closes.total, { silent: view.closes.silent })}</p>
-                  <Days
-                    label={t("quality.day_list")}
-                    rows={view.closes.days.map((d) => tn("quality.closes.day", d.total, { day: monthDay(d.day), silent: d.silent }))}
-                  />
-                </>
-              )}
-            </Section>
+            <div className={styles.side}>
+              <div data-quality-section="quality-missed">
+                <Panel title={t("quality.mistakes.title")} count={missedItems.length} className={styles.mistakes}>
+                  {missedItems.length === 0 ? (
+                    <Empty text={t("quality.missed.empty")} />
+                  ) : (
+                    <ul className={styles.mistakeList}>
+                      {missedItems.map((item) => (
+                        <li key={`${item.person}-${item.week}`}>
+                          <div className={styles.mistakeTitle}>
+                            {item.person ? (
+                              <a href={`#records/person/${encodeURIComponent(item.person)}`}>{item.person_name}</a>
+                            ) : (
+                              <span>{item.person_name}</span>
+                            )}
+                          </div>
+                          <p>{tn("quality.mistakes.week", item.count, { from: monthDay(item.week), to: monthDay(item.week_end) })}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
+              </div>
 
-            <Section id="quality-endings" title={t("quality.endings.title")} hint={t("quality.endings.hint")}>
-              {view.endings.made === 0 ? (
-                <Empty text={t("quality.endings.empty")} />
-              ) : (
-                <>
-                  <p className={styles.sum}>{tn("quality.endings.sum", view.endings.made, { wrong: view.endings.wrong })}</p>
-                  <p>{t("quality.endings.how", { declined: view.endings.declined, undone: view.endings.undone, reopened: view.endings.reopened })}</p>
-                  <Days
-                    label={t("quality.day_list")}
-                    rows={view.endings.days.map((d) => tn("quality.endings.day", d.made, { day: monthDay(d.day), wrong: d.wrong }))}
-                  />
-                </>
-              )}
-            </Section>
+              <div data-quality-section="quality-counts">
+                <Panel title={t("quality.counts.own_title")} actions={<span className={styles.cardHint}>{t("quality.counts.own_hint")}</span>}>
+                  {view.counts.entered === 0 ? (
+                    <Empty text={t("quality.counts.empty")} />
+                  ) : (
+                    <>
+                      <p className={styles.sum}>{tn("quality.counts.sum", view.counts.present, { missed: view.counts.missed })}</p>
+                      <Days
+                        label={t("quality.day_list")}
+                        rows={view.counts.days.map((d) => tn("quality.counts.day", d.present, { day: monthDay(d.day), missed: d.missed }))}
+                      />
+                    </>
+                  )}
+                  <CountForm view={view} />
+                </Panel>
+              </div>
+            </div>
 
-            <Section id="quality-lost" title={t("quality.lost.title")} hint={t("quality.lost.hint")}>
-              {view.lost.existed === 0 ? (
-                <Empty text={t("quality.lost.empty")} />
-              ) : (
-                <>
-                  <p className={styles.sum}>{tn("quality.lost.sum", view.lost.existed, { lost: view.lost.lost })}</p>
-                  <Days label={t("quality.day_list")} rows={view.lost.days.map((d) => tn("quality.lost.day", d.existed, { day: monthDay(d.day), lost: d.lost }))} />
-                  <Days label={t("quality.lost.items")} rows={view.lost.items.map((i) => t("quality.lost.item", { day: monthDay(i.day), text: i.text }))} />
-                </>
-              )}
-            </Section>
+            <div className={styles.more}>
+              <Section id="quality-closes" title={t("quality.closes.title")} hint={t("quality.closes.hint")} collapsed empty={view.closes.total === 0}>
+                {view.closes.total === 0 ? (
+                  <Empty text={t("quality.closes.empty")} />
+                ) : (
+                  <>
+                    <p className={styles.sum}>{tn("quality.closes.sum", view.closes.total, { silent: view.closes.silent })}</p>
+                    <Days
+                      label={t("quality.day_list")}
+                      rows={view.closes.days.map((d) => tn("quality.closes.day", d.total, { day: monthDay(d.day), silent: d.silent }))}
+                    />
+                  </>
+                )}
+              </Section>
 
-            <Section id="quality-sources" title={t("quality.sources.title")} hint={t("quality.sources.hint")}>
+              <Section id="quality-endings" title={t("quality.endings.title")} hint={t("quality.endings.hint")} collapsed empty={view.endings.made === 0}>
+                {view.endings.made === 0 ? (
+                  <Empty text={t("quality.endings.empty")} />
+                ) : (
+                  <>
+                    <p className={styles.sum}>{tn("quality.endings.sum", view.endings.made, { wrong: view.endings.wrong })}</p>
+                    <p>{t("quality.endings.how", { declined: view.endings.declined, undone: view.endings.undone, reopened: view.endings.reopened })}</p>
+                    <Days
+                      label={t("quality.day_list")}
+                      rows={view.endings.days.map((d) => tn("quality.endings.day", d.made, { day: monthDay(d.day), wrong: d.wrong }))}
+                    />
+                  </>
+                )}
+              </Section>
+
+              <Section id="quality-lost" title={t("quality.lost.title")} hint={t("quality.lost.hint")} collapsed empty={view.lost.existed === 0}>
+                {view.lost.existed === 0 ? (
+                  <Empty text={t("quality.lost.empty")} />
+                ) : (
+                  <>
+                    <p className={styles.sum}>{tn("quality.lost.sum", view.lost.existed, { lost: view.lost.lost })}</p>
+                    <Days label={t("quality.day_list")} rows={view.lost.days.map((d) => tn("quality.lost.day", d.existed, { day: monthDay(d.day), lost: d.lost }))} />
+                    <Days label={t("quality.lost.items")} rows={view.lost.items.map((i) => t("quality.lost.item", { day: monthDay(i.day), text: i.text }))} />
+                  </>
+                )}
+              </Section>
+
+            <Section id="quality-sources" title={t("quality.sources.title")} hint={t("quality.sources.hint")} collapsed empty={view.sources.checked === 0}>
               {view.sources.checked === 0 ? (
                 <Empty text={t("quality.sources.empty")} />
               ) : (
@@ -353,7 +450,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-review" title={t("quality.review.title")} hint={t("quality.review.hint")}>
+            <Section id="quality-review" title={t("quality.review.title")} hint={t("quality.review.hint")} collapsed empty={view.review.days_reviewed === 0 || view.review.median_seconds == null}>
               {view.review.days_reviewed === 0 || view.review.median_seconds == null ? (
                 <Empty text={t("quality.review.empty")} />
               ) : (
@@ -367,26 +464,11 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-counts" title={t("quality.counts.title")} hint={t("quality.counts.hint")}>
-              {view.counts.entered === 0 ? (
-                <Empty text={t("quality.counts.empty")} />
-              ) : (
-                <>
-                  <p className={styles.sum}>{tn("quality.counts.sum", view.counts.present, { missed: view.counts.missed })}</p>
-                  <Days
-                    label={t("quality.day_list")}
-                    rows={view.counts.days.map((d) => tn("quality.counts.day", d.present, { day: monthDay(d.day), missed: d.missed }))}
-                  />
-                </>
-              )}
-              <CountForm view={view} />
-            </Section>
-
-            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")}>
+            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")} collapsed empty={!view.sample}>
               <Sample view={view} />
             </Section>
 
-            <Section id="quality-total" title={t("quality.total.title")} hint={t("quality.total.hint")}>
+            <Section id="quality-total" title={t("quality.total.title")} hint={t("quality.total.hint")} collapsed empty={view.missed_total.present === 0}>
               {view.missed_total.present === 0 ? (
                 <Empty text={t("quality.total.empty")} />
               ) : (
@@ -396,18 +478,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-missed" title={t("quality.missed.title")} hint={t("quality.missed.hint")}>
-              {(view.missed ?? []).length === 0 ? (
-                <Empty text={t("quality.missed.empty")} />
-              ) : (
-                <Days
-                  label={t("quality.missed.title")}
-                  rows={(view.missed ?? []).map((w) => tn("quality.missed.week", w.count, { name: w.person_name, from: monthDay(w.week), to: monthDay(w.week_end) }))}
-                />
-              )}
-            </Section>
-
-            <Section id="quality-apart" title={t("quality.apart.title")} hint={t("quality.apart.hint")}>
+            <Section id="quality-apart" title={t("quality.apart.title")} hint={t("quality.apart.hint")} collapsed empty={view.apart.missed + view.apart.declined + view.apart.dropped === 0}>
               {view.apart.missed + view.apart.declined + view.apart.dropped === 0 ? (
                 <Empty text={t("quality.apart.empty")} />
               ) : (
@@ -430,7 +501,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-answers" title={t("quality.answers.title")} hint={t("quality.answers.hint")}>
+            <Section id="quality-answers" title={t("quality.answers.title")} hint={t("quality.answers.hint")} collapsed empty={view.answers.helpful + view.answers.not_helpful === 0}>
               {view.answers.helpful + view.answers.not_helpful === 0 ? (
                 <Empty text={t("quality.answers.empty")} />
               ) : (
@@ -449,7 +520,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-replays" title={t("quality.replays.title")} hint={t("quality.replays.hint")}>
+            <Section id="quality-replays" title={t("quality.replays.title")} hint={t("quality.replays.hint")} collapsed empty={view.replays.count === 0}>
               {view.replays.count === 0 ? (
                 <Empty text={t("quality.replays.empty")} />
               ) : (
@@ -460,7 +531,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-knowledge" title={t("quality.knowledge.title")} hint={t("quality.knowledge.hint")}>
+            <Section id="quality-knowledge" title={t("quality.knowledge.title")} hint={t("quality.knowledge.hint")} collapsed empty={view.knowledge_used.length === 0}>
               {view.knowledge_used.length === 0 ? (
                 <Empty text={t("quality.knowledge.empty")} />
               ) : (
@@ -471,7 +542,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-repeats" title={t("quality.repeats.title")} hint={t("quality.repeats.hint")}>
+            <Section id="quality-repeats" title={t("quality.repeats.title")} hint={t("quality.repeats.hint")} collapsed empty={view.repeat_corrections.length === 0}>
               {view.repeat_corrections.length === 0 ? (
                 <Empty text={t("quality.repeats.empty")} />
               ) : (
@@ -486,7 +557,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-lacking" title={t("quality.lacking.title")} hint={t("quality.lacking.hint")}>
+            <Section id="quality-lacking" title={t("quality.lacking.title")} hint={t("quality.lacking.hint")} collapsed empty={view.missing.length === 0}>
               {view.missing.length === 0 ? (
                 <Empty text={t("quality.lacking.empty")} />
               ) : (
@@ -498,6 +569,7 @@ export function Quality(props: { onBack: () => void }) {
                 ))
               )}
             </Section>
+            </div>
           </div>
         </>
       )}

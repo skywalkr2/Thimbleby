@@ -171,6 +171,18 @@ test.describe("no screen is wider than the window", () => {
     expect(wide).toEqual([]);
   });
 
+  test("Quality fits the smallest and largest supported widths", async ({ page }) => {
+    for (const width of [320, 2000]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("?token=e2e-token");
+      await page.evaluate(() => {
+        window.location.hash = "quality";
+      });
+      await expect(page.getByRole("heading", { level: 1, name: /^How .+ is doing$/ })).toBeVisible(LOADED);
+      expect(tooWide(await overflow(page)), `Quality at ${width}px`).toBe(false);
+    }
+  });
+
   test("a change's row grows with its title, and the detail's menu stays on the line of its state", async ({ page }) => {
     test.setTimeout(120_000);
     for (const size of [

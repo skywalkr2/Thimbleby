@@ -869,7 +869,7 @@ S5. **Manner and proof:**
   questions, and Knowledge (`tests/test_outcome.py::test_every_screen_that_looks_over_the_assistants_work_counts_its_time_in_the_same_measure`,
   `web/src/components/Handled.test.tsx`, `web/src/components/FollowUps.test.tsx`, `web/src/components/OpenItems.test.tsx`,
   `web/src/components/Knowledge.test.tsx`). **Left:** the exit is the owner's measured week.
-  - State (2026-10-29): built: the four measures per week and for the window, review time from every review screen (`tests/test_outcome.py`, `web/src/components/Quality.test.tsx`); left: the owner's measured week, which is the exit.
+  - State (2026-10-30): built: the four measures per week and for the window, review time from every review screen, and the VS15 presentation (`tests/test_outcome.py`, `web/src/components/Quality.test.tsx`, `web/e2e/layout.spec.ts`); left: the owner's measured week, which is the exit.
 
 Decided by the owner (2026-10-17): approved mail and calendar management in 1.0 (S1b); reminders reach a sleeping
 person through their own calendar or a mail to themselves, no third-party push, a companion phone app after 1.0; the

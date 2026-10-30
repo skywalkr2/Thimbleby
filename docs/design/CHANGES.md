@@ -10,6 +10,12 @@ Those are unchanged. What changed falls into three groups: the design was **prod
 work plug into, deployable locally or hosted), **lessons from the running deployment** were added, and a **systems review**
 changed the storage, identity and safety models underneath.
 
+## NEXT
+
+| Where | Before | Now |
+|---|---|---|
+| Quality screen (Task 19, VS15; `web/src/components/Quality.tsx`) | The existing measures, weekly figures and count form were shown as separate prose-first sections, without the review's outcome tiles, compact weekly table, grouped missed-item list or compact count card. | Four tiles and their latest-week comparisons use only `GET /api/quality` and preserve each measure's meaning; the table uses its weekly figures; missed counts stay grouped by person and week and link to a person's page when available; the count form retains save, correction and Undo; secondary sections fold to one-line summaries. No API or counted data changed. |
+
 ## 1. Productized: a generic core plus plugins
 
 - **The workplace PM workflow is now a pack, not the product.** The core keeps the loop, the safety rules and a set of

@@ -41,6 +41,7 @@ const FULL = quality({
   endings: { made: 12, wrong: 3, declined: 1, undone: 1, reopened: 1, days: [{ day: "2026-10-19", made: 12, wrong: 3 }] },
   counts: { person: "PER-1", present: 30, missed: 4, entered: 2, days: [{ day: "2026-10-18", present: 20, missed: 3 }, { day: "2026-10-19", present: 10, missed: 1 }] },
   missed: [
+    { person: "PER-1", person_name: "Casey Example", week: "2026-10-05", week_end: "2026-10-11", count: 0 },
     { person: "PER-1", person_name: "Casey Example", week: "2026-10-12", week_end: "2026-10-18", count: 3 },
     { person: "PER-1", person_name: "Casey Example", week: "2026-10-19", week_end: "2026-10-25", count: 1 },
   ],
@@ -105,7 +106,11 @@ function show(view: View, routes: Routes = {}, onBack = () => undefined) {
 /** The screen once its figures have arrived. */
 const loaded = () => screen.findByText(/^Counting from /);
 
-const section = (id: string) => document.querySelector<HTMLElement>(`[data-quality-section="${id}"]`) as HTMLElement;
+const section = (id: string) => {
+  const found = document.querySelector<HTMLElement>(`[data-quality-section="${id}"]`) as HTMLElement;
+  if (found.tagName === "DETAILS") (found as HTMLDetailsElement).open = true;
+  return found;
+};
 
 test("the screen has a section for each measure and shows the window's dates", async () => {
   show(FULL);
@@ -114,37 +119,127 @@ test("the screen has a section for each measure and shows the window's dates", a
   expect(screen.queryByRole("heading", { level: 1, name: "Quality" })).toBeNull();
   expect(await screen.findByText("Counting from Sep 21 to Oct 19.")).toBeInTheDocument();
   const titles = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-  expect(titles).toEqual([
-    "What the assistant's work came to",
-    "Closes you didn't see",
-    "Wrong endings",
-    "Promises that disappeared",
-    "Sources not read",
-    "Time looking its work over",
-    "Promises the app missed",
-    "Messages you read yourself",
-    "Missed out of present, all together",
-    "Missed something?",
-    "Missed, declined and dropped",
-    "Helpful and not helpful answers",
-    "Replays",
-    "Using what it learned",
-    "Corrections that repeated",
-    "Things it couldn't do",
+  expect(titles).toEqual(["Week by week", "Mistakes to look at", "Your own count"]);
+  expect(screen.getAllByText(/Nothing yet\./).length).toBeGreaterThan(0);
+});
+
+test("the four outcome tiles keep the API measures' meanings and compare the latest two weeks", async () => {
+  show(FULL);
+  await loaded();
+  const tiles = screen.getByRole("region", { name: "Outcome measures" });
+  const found = within(tiles).getByRole("article", { name: "Promises found" });
+  expect(within(found).getByText("9")).toBeInTheDocument();
+  expect(within(found).getByText("1 more than the week before")).toBeInTheDocument();
+  const kept = within(tiles).getByRole("article", { name: "Promises closed as done" });
+  expect(within(kept).getByText("6")).toBeInTheDocument();
+  expect(within(kept).getByText("2 more than the week before")).toBeInTheDocument();
+  expect(within(tiles).queryByText(/on time/i)).toBeNull();
+  const alerts = within(tiles).getByRole("article", { name: "False alerts" });
+  expect(within(alerts).getByText("3")).toBeInTheDocument();
+  expect(within(alerts).getByText("1 more than the week before")).toBeInTheDocument();
+  const review = within(tiles).getByRole("article", { name: "Time spent looking over" });
+  expect(within(review).getByText("8 min")).toBeInTheDocument();
+  expect(within(review).getByText("5 min more than the week before")).toBeInTheDocument();
+});
+
+test("outcome tiles omit comparisons when the API has fewer than two weeks", async () => {
+  show(quality({ outcome: { ...FULL.outcome, weeks: [FULL.outcome.weeks[0]] } }));
+  await loaded();
+  const tiles = screen.getByRole("region", { name: "Outcome measures" });
+  expect(within(tiles).queryByText(/week before/)).toBeNull();
+});
+
+test("the outcome weeks are a table with one row per week and one column per measure", async () => {
+  show(FULL);
+  await loaded();
+  const table = screen.getByRole("table", { name: "Week by week" });
+  expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+    "Week",
+    "Promises found",
+    "Promises closed as done",
+    "False alerts",
+    "Time looking over",
   ]);
+  expect(within(table).getAllByRole("row")).toHaveLength(3);
+  expect(within(table).getByRole("row", { name: /Oct 19 to Oct 25.*5.*4.*2.*15 min/ })).toBeInTheDocument();
+  expect(within(table).getByRole("row", { name: /Oct 12 to Oct 18.*4.*2.*1.*10 min/ })).toBeInTheDocument();
+});
+
+test("mistakes to look at use the existing person-week counts and link only when a person page exists", async () => {
+  show(FULL);
+  await loaded();
+  const mistakes = screen.getByRole("region", { name: "Mistakes to look at" });
+  expect(within(mistakes).getAllByText("Casey Example").map((person) => person.getAttribute("href"))).toEqual([
+    "#records/person/PER-1",
+    "#records/person/PER-1",
+    "#records/person/PER-1",
+  ]);
+  expect(within(mistakes).getByText("Oct 5 to Oct 11: said 0 times.")).toBeInTheDocument();
+  expect(within(mistakes).getByText("Oct 12 to Oct 18: said 3 times.")).toBeInTheDocument();
+  expect(within(mistakes).getByText("Oct 19 to Oct 25: said once.")).toBeInTheDocument();
+  expect(within(mistakes).queryByRole("button", { name: /look/i })).toBeNull();
+});
+
+test("mistake rows without a person id are text, not broken person links", async () => {
+  show(quality({ missed: [{ person: "", person_name: "Unmatched sender", week: "2026-10-12", week_end: "2026-10-18", count: 2 }] }));
+  await loaded();
+  const mistakes = screen.getByRole("region", { name: "Mistakes to look at" });
+  expect(within(mistakes).getByText("Unmatched sender").tagName).toBe("SPAN");
+  expect(within(mistakes).queryByRole("link")).toBeNull();
+});
+
+test("the person's own count remains the existing save-and-undo form in a compact card", async () => {
+  const user = userEvent.setup();
+  const calls = show(FULL, {
+    "PUT quality/counts/2026-10-19": () => ({ id: "PCNT-1", day: "2026-10-19", present: 11, missed: 0, previous: { present: 10, missed: 1 } }),
+    "POST quality/counts/2026-10-19/undo": () => ({ ok: "2026-10-19" }),
+  });
+  await loaded();
+  const count = screen.getByRole("region", { name: "Your own count" });
+  const present = within(count).getByLabelText("Promises on your own list");
+  expect(present).toHaveValue(10);
+  expect(within(count).getByLabelText("Of those, how many the app didn't have")).toHaveValue(1);
+  await user.clear(present);
+  await user.type(present, "11");
+  await user.clear(within(count).getByLabelText("Of those, how many the app didn't have"));
+  await user.type(within(count).getByLabelText("Of those, how many the app didn't have"), "0");
+  await user.click(within(count).getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("Corrected Oct 19: missed 0 of 11.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST quality/counts/2026-10-19/undo")?.body).toEqual({ previous: { present: 10, missed: 1 } }));
+});
+
+test("empty secondary sections stay as one-line summaries", async () => {
+  show(quality());
+  await loaded();
+  expect(screen.getByText("Corrections that repeated").closest("summary")).toHaveTextContent("Nothing yet.");
+  expect(screen.getByText("Things it couldn't do").closest("summary")).toHaveTextContent("Nothing yet.");
+  expect(screen.getByText("Replays").closest("summary")).toHaveTextContent("Nothing yet.");
+  expect(document.querySelector<HTMLDetailsElement>('[data-quality-section="quality-lacking"]')?.open).toBe(false);
+  expect(document.querySelector<HTMLDetailsElement>('[data-quality-section="quality-replays"]')?.open).toBe(false);
+  expect(screen.getByText("The assistant hasn't said it lacked anything in this window.")).not.toBeVisible();
+  expect(screen.getByText("No misses have been kept as replays yet.")).not.toBeVisible();
 });
 
 test("each measure is a number out of its denominator in words, never a bare percentage", async () => {
   show(FULL);
   await loaded();
+  const outcome = section("quality-outcome");
+  expect(within(outcome).getByText("Promises found")).toBeInTheDocument();
+  expect(within(outcome).getByText("9")).toBeInTheDocument();
+  expect(within(outcome).getByText("Promises closed as done")).toBeInTheDocument();
+  expect(within(outcome).getByText("6")).toBeInTheDocument();
+  expect(within(outcome).getByText("False alerts")).toBeInTheDocument();
+  expect(within(outcome).getByText("3")).toBeInTheDocument();
+  expect(within(outcome).getByText("8 min")).toBeInTheDocument();
   expect(within(section("quality-closes")).getByText("2 of 41 closes weren't seen by you.")).toBeInTheDocument();
   expect(within(section("quality-closes")).getByText("Oct 18: 1 of 30 closes weren't seen by you.")).toBeInTheDocument();
   expect(within(section("quality-endings")).getByText("3 of 12 endings were wrong.")).toBeInTheDocument();
   expect(within(section("quality-endings")).getByText(/You kept 1 as they were, undid 1 and reopened 1 that a nudge had recorded as done\./)).toBeInTheDocument();
   expect(within(section("quality-counts")).getByText("The app missed 4 of the 30 promises you counted.")).toBeInTheDocument();
   expect(within(section("quality-counts")).getByText("Oct 19: missed 1 of 10 promises.")).toBeInTheDocument();
-  expect(within(section("quality-missed")).getByText("Casey Example, Oct 12 to Oct 18: said 3 times.")).toBeInTheDocument();
-  expect(within(section("quality-missed")).getByText("Casey Example, Oct 19 to Oct 25: said once.")).toBeInTheDocument();
+  expect(within(section("quality-missed")).getByText("Oct 12 to Oct 18: said 3 times.")).toBeInTheDocument();
+  expect(within(section("quality-missed")).getByText("Oct 19 to Oct 25: said once.")).toBeInTheDocument();
   expect(within(section("quality-replays")).getByText("2 replays are kept.")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/\d\s?%/);
 });
@@ -268,18 +363,15 @@ test("helpful and not helpful answers are counted on their own, a week at a time
 test("the outcome is each measure on its own line, then each week's numbers in words", async () => {
   show(FULL);
   await loaded();
-  const found = section("quality-outcome");
-  expect(within(found).getByText("Promises found: it found 9 promises of yours, and you kept 6 of the promises it had found.")).toBeInTheDocument();
-  expect(within(found).getByText("False alerts: suggestions you left as they were, 2; its work you corrected, 1.")).toBeInTheDocument();
-  expect(within(found).getByText("Looking its work over: 25 min in 12 visits.")).toBeInTheDocument();
-  expect(within(found).getByText("Follow-ups completed: 3 things you chased were settled.")).toBeInTheDocument();
-  expect(within(found).getByText("Oct 19 to Oct 25: found 5, kept 4; false alerts 2; looked over 15 min; follow-ups completed 2.")).toBeInTheDocument();
+  const table = screen.getByRole("table", { name: "Week by week" });
+  expect(within(table).getByRole("row", { name: "Oct 19 to Oct 25 5 4 2 15 min" })).toBeInTheDocument();
+  expect(within(table).getByRole("row", { name: "Oct 12 to Oct 18 4 2 1 10 min" })).toBeInTheDocument();
 });
 
 test("a screen with nothing to show says so in plain words in every section", async () => {
   show(quality());
   await loaded();
-  expect(within(section("quality-outcome")).getByText("Nothing to count yet in this window.")).toBeInTheDocument();
+  expect(within(section("quality-outcome")).getAllByText("0").length).toBeGreaterThan(0);
   expect(within(section("quality-closes")).getByText("Nothing was closed in this window.")).toBeInTheDocument();
   expect(within(section("quality-endings")).getByText("The assistant hasn't ended anything in this window.")).toBeInTheDocument();
   expect(within(section("quality-counts")).getByText("You haven't entered a count in this window.")).toBeInTheDocument();
