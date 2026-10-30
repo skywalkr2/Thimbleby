@@ -137,20 +137,36 @@ test("the section list sits down the side: the pages, Your business (where a job
   await waitFor(() => expect(within(nav).getByRole("link", { name: "Your business" })).toBeInTheDocument());
   expect(within(nav).getAllByRole("link").map((a) => a.textContent)).toEqual([
     "You",
+    "Your business",
     "AI and spending",
     "Notices",
+    "Connections",
     "Backups",
     "Appearance",
-    "Your business",
-    "Connections",
     "Add-ons",
     "Advanced",
   ]);
+  expect(within(nav).getByRole("heading", { name: "You" })).toBeInTheDocument();
+  expect(within(nav).getByRole("heading", { name: "Assistant" })).toBeInTheDocument();
+  expect(within(nav).getByRole("heading", { name: "Your data" })).toBeInTheDocument();
+  expect(within(nav).getByRole("heading", { name: "More" })).toBeInTheDocument();
   expect(within(nav).getByRole("link", { name: "You" })).toHaveAttribute("aria-current", "page");
   expect(within(nav).queryByRole("link", { name: "Quality" })).toBeNull();
   expect(within(nav).getByRole("link", { name: "Backups" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
   expect(within(nav).getByRole("link", { name: "Connections" })).toHaveAttribute("href", expect.stringMatching(/#settings\/connections$/));
   expect(within(nav).getByRole("link", { name: "Add-ons" })).toHaveAttribute("href", expect.stringMatching(/#settings\/addons$/));
+});
+
+test("the synced folder is shown only in its dedicated section, not as duplicate setting rows", async () => {
+  api([
+    ...ITEMS,
+    item("storage.sync.folder", { group: "storage.sync", description: "Where to keep a synced copy." }),
+    item("storage.sync.shared", { group: "storage.sync", type: "yes_no", description: "Whether others can edit the folder." }),
+  ]);
+  open("backups");
+  expect(await screen.findByRole("heading", { name: "Synced folder" })).toBeInTheDocument();
+  expect(document.querySelector('[data-key="storage.sync.folder"]')).toBeNull();
+  expect(document.querySelector('[data-key="storage.sync.shared"]')).toBeNull();
 });
 
 const NO_SIDE = {
@@ -740,6 +756,7 @@ test("each page's More settings fold is its own and starts closed: opening one n
     [
       ...ITEMS,
       item("steward.attention.daily_cap", { group: "steward.attention", type: "integer", value: 5, default: 5, basic: false, topic: "notices", description: "Most notices a day." }),
+      item("storage.backups.automatic", { group: "storage.backups", type: "yes_no", value: true, default: true, basic: false, topic: "backups" }),
       item("storage.sync.shared", { group: "storage.sync", type: "yes_no", value: false, default: false, basic: false, topic: "backups", description: "Share the folder." }),
     ],
     { "GET sync": () => ({ folder: "", problem: null, stopped: false, changed_outside: [], removed_outside: [], rebuilt: [], outside_edits: [], conflict_copies: [], shared: false, handover: null }), "GET jobs": () => [] },
@@ -951,6 +968,7 @@ test("Connections and Add-ons are sections of Settings, chosen like any other, a
 });
 
 test("the business page holds its sides with Rename, the words that mean it, and the Lists the choices dropdowns offer", async () => {
+  const user = userEvent.setup();
   api(
     [
       ...ITEMS,
@@ -968,10 +986,10 @@ test("the business page holds its sides with Rename, the words that mean it, and
   // The words that mean a side are not here: they are with Filing, under Advanced.
   expect(screen.queryByLabelText("Words that mean Orchard Press")).toBeNull();
   expect(await screen.findByText("Project status")).toBeInTheDocument();
+  await user.click(screen.getByText("Project status").closest("summary")!);
   expect(screen.getByRole("textbox", { name: "Add a choice to Project status" })).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
   first.unmount();
-  const user = userEvent.setup();
   open("advanced");
   await user.click(await screen.findByRole("button", { name: "Filing" }));
   // With one side, the words that mean it are named for it, as chips.
@@ -1007,7 +1025,7 @@ test("each add-on has a section of its own, after the app's own, and its setting
   await screen.findByLabelText("What greeting does for the add-on");
   const nav = screen.getByRole("navigation", { name: "Settings sections" });
   const links = within(nav).getAllByRole("link").map((a) => a.textContent);
-  expect(links.slice(-2)).toEqual(["Sample pack", "Other pack"]);
+  expect(links.slice(-3)).toEqual(["Sample pack", "Other pack", "Advanced"]);
   expect(links.indexOf("You and the workspace")).toBeLessThan(links.indexOf("Sample pack"));
   expect(within(nav).getByRole("link", { name: "Sample pack" })).toHaveAttribute("aria-current", "page");
   expect(document.body).not.toHaveTextContent("plugins/");

@@ -20,6 +20,7 @@ import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
 import { ItemList, Item } from "../ui/ItemList";
+import { Pill } from "../ui/Pill";
 type SignIn = S["SignInView"];
 type Account = S["SignInAccount"];
 
@@ -127,6 +128,8 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   const pasted = item.app === "pasted";
   const allows = signedIn ? [] : (item.allows ?? []);
   const missing = signedIn ? (item.missing ?? []) : [];
+  const status = t(`sign_in.status.${item.status}`);
+  const statusTone = signedIn ? "ok" : item.status === "expired" ? "warn" : "neutral";
   const showHint = notReady && !formOpen;
   const describedBy = [
     problem && `${base}-problem`,
@@ -204,15 +207,11 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   return (
     <Row
       aria-labelledby={`${base}-title`}
+      className="connection-account"
+      pill={<Pill tone={statusTone}>{status}</Pill>}
       title={item.label}
       titleId={`${base}-title`}
-      meta={
-        accounts.length === 0
-          ? signedIn && item.account
-            ? t("sign_in.status.signed_in_as", { account: item.account })
-            : t(`sign_in.status.${item.status}`)
-          : undefined
-      }
+      meta={accounts.length === 0 && signedIn && item.account ? t("sign_in.status.signed_in_as", { account: item.account }) : undefined}
       primary={
         <Button
           variant="primary"

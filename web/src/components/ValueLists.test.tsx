@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { project } from "../lib/records-fixtures";
@@ -25,13 +25,28 @@ function api(extra: Routes = {}) {
 }
 
 async function block(label: string) {
-  return (await screen.findByText(label)).closest("li")! as HTMLElement;
+  const found = await screen.findByText(label);
+  const details = found.closest("details")!;
+  if (!details.open) fireEvent.click(found.closest("summary")!);
+  return details;
 }
 
 async function pick(user: ReturnType<typeof userEvent.setup>, row: HTMLElement, value: string, action: string) {
   await user.click(within(row).getByRole("button", { name: new RegExp(`More actions for ${value}`) }));
   await user.click(await screen.findByRole("menuitem", { name: action }));
 }
+
+test("lists start folded and each list opens as its own accordion", async () => {
+  api();
+  renderApp(<ValueLists />);
+  const label = await screen.findByText("Project status");
+  const accordion = label.closest("details")!;
+  expect(accordion).not.toHaveAttribute("open");
+  expect(within(accordion).queryByRole("list", { name: "Choices in Project status" })).toBeNull();
+  fireEvent.click(label.closest("summary")!);
+  expect(accordion).toHaveAttribute("open");
+  expect(within(accordion).getByRole("list", { name: "Choices in Project status" })).toBeInTheDocument();
+});
 
 test("each list shows its label, where it is used in plain words, and its values in order", async () => {
   api();

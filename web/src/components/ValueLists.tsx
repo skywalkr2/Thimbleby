@@ -14,7 +14,6 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { Select } from "../ui/Select";
 import { RowList } from "../ui/RowList";
-import { Row } from "../ui/Row";
 import { RowBody } from "../ui/RowBody";
 const slug = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, "-");
 
@@ -83,6 +82,7 @@ function ListBlock(props: { list: ValueList }) {
   const [chosenMeaning, setChosenMeaning] = useState<Meaning | null>(null);
   const [showRetired, setShowRetired] = useState(false);
   const [problem, setProblem] = useState("");
+  const [expanded, setExpanded] = useState(false);
   // What the typed value suggests: its tone, and on a status list its meaning. The person can change either.
   const typed = newValue.trim();
   const suggestion = useQuery({
@@ -111,15 +111,21 @@ function ListBlock(props: { list: ValueList }) {
   };
 
   return (
-    <Row
-      title={
-        <span id={`${base}-name`} tabIndex={-1}>
-          {list.label}
-        </span>
-      }
-      meta={used || undefined}
-    >
-      <RowBody>
+    <li className="list-accordion-item">
+      <details className="list-accordion" open={expanded}>
+        <summary
+          onClick={(event) => {
+            event.preventDefault();
+            setExpanded((open) => !open);
+          }}
+        >
+          <span id={`${base}-name`} className="list-accordion-title" tabIndex={-1}>
+            {list.label}
+          </span>
+          {used && <span className="list-accordion-meta">{used}</span>}
+        </summary>
+        <div className="list-accordion-body" hidden={!expanded}>
+          <RowBody pane>
         {list.values.length === 0 ? (
           <p className="hint">{t("lists.no_values")}</p>
         ) : (
@@ -269,8 +275,10 @@ function ListBlock(props: { list: ValueList }) {
             )}
           </div>
         )}
-      </RowBody>
-    </Row>
+          </RowBody>
+        </div>
+      </details>
+    </li>
   );
 }
 
