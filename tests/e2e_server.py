@@ -274,6 +274,11 @@ def main() -> None:
         "work words; /__e2e/just-me says what was seeded",
     )
     parser.add_argument(
+        "--capture",
+        action="store_true",
+        help="make a disabled capture-folder source and a private folder for the capture journey",
+    )
+    parser.add_argument(
         "--sides",
         action="store_true",
         help="make the workspace as --just-me does, add a job and a business as setup adds them, and seed a to-do and "
@@ -316,6 +321,9 @@ def main() -> None:
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
     atexit.register(shutil.rmtree, tmp, ignore_errors=True)
+    capture_folder = tmp / "capture" if args.capture else None
+    if capture_folder is not None:
+        capture_folder.mkdir()
     if args.just_me or args.first_day or args.sides:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
@@ -372,6 +380,20 @@ def main() -> None:
         watch = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         watch["sources"] = calendar_sources()
         path.write_text(yaml.safe_dump(watch, sort_keys=False), encoding="utf-8")
+    if capture_folder is not None:
+        path = ws.config_dir / "watch.yaml"
+        watch = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        watch.setdefault("sources", []).append(
+            {
+                "id": "capture-journey",
+                "connector": "capture",
+                "label": "Capture folder",
+                "enabled": False,
+                "every_minutes": 43200,
+                "settings": {"path": str(capture_folder)},
+            }
+        )
+        path.write_text(yaml.safe_dump(watch, sort_keys=False), encoding="utf-8")
     if args.standin_account:
         # In the settings file, not a flag, so Allow's save is what the app reads afterwards.
         path = ws.config_dir / "ai.yaml"
@@ -394,12 +416,16 @@ def main() -> None:
     cases = load_cases(DEMO_B)
     project = fixture_records(DEMO_B, "project")[0]["id"]
 
+    capture_text: dict[str, str | None] = {"text": None}
+
     def responder(task):  # the case whose longest pasted line is in the request
         request = normalize(task.request)
         for case in cases:
             longest = max(case.get("pasted", "").splitlines() or [""], key=len)
             if longest.strip() and normalize(longest) in request:
                 return json.dumps(case["stub_answer"])
+        if capture_text["text"] and normalize(capture_text["text"]) in request:
+            return json.dumps({"summary": "Filed as a note.", "ops": [{"op": "note", "text": capture_text["text"]}]})
         # A note that says it belongs to a project is filed under the fixture's first one; any other is filed loose.
         note = {
             "op": "note",
@@ -528,6 +554,27 @@ def main() -> None:
         """What the side filter's records are."""
         return JSONResponse({"enabled": sided is not None, **(sided or {})})
 
+    capture_count = 0
+
+    async def capture_fixture(request):
+        """A private folder for the capture journey; files get fixed names, never paths supplied by the browser."""
+        nonlocal capture_count
+        if capture_folder is None:
+            return JSONResponse({"enabled": False}, status_code=404)
+        if request.method == "GET":
+            return JSONResponse({"label": "Capture folder"})
+        try:
+            data = await request.json()
+        except ValueError:
+            return JSONResponse({"detail": "a note is required"}, status_code=400)
+        text = data.get("text") if isinstance(data, dict) else None
+        if not isinstance(text, str) or not text.strip():
+            return JSONResponse({"detail": "a note is required"}, status_code=400)
+        capture_count += 1
+        (capture_folder / f"capture-{capture_count}.txt").write_text(text, encoding="utf-8")
+        capture_text["text"] = text
+        return JSONResponse({"written": True}, status_code=201)
+
     outer = Starlette(
         routes=[
             Route("/__e2e/just-me", alone),
@@ -535,6 +582,7 @@ def main() -> None:
             Route("/__e2e/delivered", delivered),
             Route("/__e2e/meetings", met),
             Route("/__e2e/acts", acted),
+            Route("/__e2e/capture", capture_fixture, methods=["GET", "POST"]),
             Route("/__e2e/cases", case_list),
             Route("/__e2e/ledger", ledger),
             Route("/__e2e/standing", standing),
