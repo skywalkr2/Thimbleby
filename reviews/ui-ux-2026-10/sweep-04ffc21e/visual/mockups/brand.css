@@ -1,0 +1,41 @@
+/* Brand preview: the product's own colours, type and mark over the same mockups. Loaded after tokens.css and mock.css.
+   Fonts: Fraunces for page titles only, Inter for the interface (both open-source; the app would bundle them). */
+@font-face { font-family: Fraunces; src: url('fonts/fraunces-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: Inter; src: url('fonts/inter-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+:root {
+  --font-ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: Fraunces, Georgia, serif;
+  --canvas: #f5f3ee;          /* warm paper */
+  --surface: #fefdfb;
+  --surface-sunk: #f8f5ef;
+  --surface-hover: #f7f3ec;
+  --border: #e6e1d8;
+  --border-strong: #857f74;   /* 3.9:1 on surface */
+  --text: #171717;            /* 17:1 */
+  --text-muted: #5c5c5c;      /* 6.0:1 on canvas */
+  --text-subtle: #6a6a6a;     /* 4.9:1 on canvas */
+  --accent: #741e25;          /* burgundy: primary buttons, selected view */
+  --accent-hover: #5e171d;
+  --accent-text: #741e25;     /* 10:1 */
+  --accent-soft: #f3ecdf;     /* cream: selected nav and rows */
+  --text-on-accent: #fff2d8;  /* cream on burgundy 9.7:1 */
+  --danger: #b93815; --danger-soft: #fbece6;   /* moved 18° off the burgundy, and always with a word */
+  --brass: #b59859;           /* decoration only: 2.7:1, never text */
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --canvas: #0c0d0e; --surface: #151617; --surface-sunk: #1b1c1e; --surface-hover: #1d1e20;
+  --border: #2c3030; --border-strong: #6f7473;
+  --text: #f4f4f2; --text-muted: #aaaead; --text-subtle: #8f9392;
+  --accent: #e5c78d; --accent-hover: #f0d7a6; --accent-text: #e5c78d; --accent-soft: #251c1e;  /* gold on burgundy-black */
+  --text-on-accent: #2a0c10;  /* 11:1 on gold */
+  --warn: #ff9a5c; --warn-soft: #2a1d14;     /* moved 17° off the gold */
+} }
+.brand { font: 450 19px/1 var(--font-display); letter-spacing: -0.01em; gap: 10px; }
+.brand img { width: 28px; height: 28px; }
+.brand .logo-dark { display: none; }
+@media (prefers-color-scheme: dark) { .brand .logo-light { display: none; } .brand .logo-dark { display: block; } }
+.ph h1, .wiz h1, h1 { font-family: var(--font-display); font-weight: 450; letter-spacing: -0.025em; font-size: 26px; line-height: 32px; }
+.group { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; }
+.btn { border-radius: 999px; }
+.nav .item.on { box-shadow: inset 2px 0 0 var(--accent); }
+.pill.danger::before { content: "⚠"; margin-right: 4px; }

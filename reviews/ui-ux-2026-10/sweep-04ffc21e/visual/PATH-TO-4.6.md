@@ -11,12 +11,14 @@
 | The app at `04ffc21e` | **2.6** | empty states, layout, hierarchy | Looks unfinished in places |
 | **The six mockups**, scored cold by a separate reviewer on the same rubric | **3.6** (3.5–3.7) | empty and edge states 2.5–3.0, phone 3.0–3.4, layout fit 3.0–3.7, components 3.5–3.7 | Clean and consistent, but not yet crafted |
 | Target | **4.6** | no point below 4.3 | A design lead at a top app company would ship it with only nits |
+| **Brand** (the new point 9, section 4b) | about **1.5** in the app and about **4.0** in the brand preview (the reviewer's estimate; scored cold in the re-sweep) | No mark, no brand colour, no brand type | The app looks like a generic tool, not like the product on its website |
 
-**The honest consequence:** building the mockups exactly (E11) lands the app at about 3.5–3.7. That is enough for E9, and no more. **The gap to 4.6 is about one full point on every screen.** Most of it is in four places a static mockup doesn't show:
+**The honest consequence:** building the mockups exactly (E11) lands the app at about 3.5–3.7. That is enough for E9, and no more. **The gap to 4.6 is about one full point on every screen.** Most of it is in five places. The first four don't show in a static mockup:
 1. **States:** empty, loading, error, offline, conflict, and 0, 1 or 100+ items.
 2. **The phone:** a real tab bar and rows that stack.
 3. **Interaction:** hover, pressed, focus, motion, keyboard and undo.
 4. **Craft:** shared edges, a tighter type scale, one primary per view, status that isn't colour alone.
+5. **Brand:** the product has a finished identity (a thimble mark, burgundy, cream and brass, a serif for headlines), and **none of it is in the app**. The app still uses the generic indigo default, system fonts and an initials monogram.
 
 **Checked by the reviewer before acting on the cold scoring:**
 - **Correct:** the setup mockup's render was broken: the footer was stuck mid-page over clipped content. It's fixed and re-rendered, along with its before-and-after image. The setup mockup also showed "Works" next to an empty key. Now it shows a masked key.
@@ -35,6 +37,7 @@
 | 5 Components | VC01–VC13 shared and used everywhere | **Two secondary styles only** (outline, accent text). **One status pattern** (a dot plus a word). Questions look different from to-dos. Every component has its hover, pressed, focus, disabled, loading and error states, shown in the style guide |
 | 6 Colour | Restrained accent; day and night both readable | **State is never colour alone:** a 3px edge or dot plus a word. Deltas have their direction defined once. Night cards lift off the canvas without needing their hairline. Focus is at least 3:1 on every surface, tinted rows included |
 | 7 Empty and edge | A designed EmptyState on every list | **A state sheet for every screen:** first run, filtered to nothing, loading (a skeleton matching row height, no layout shift), error with retry, offline or sync degraded, conflict ("Updated just now · See change"), and 0, 1 and 100+ |
+| **9 Brand** (new; scored from stage B on and reported apart, so the 8-point average still compares with 2.6) | Not scored this round | **It feels like the product on its website:** the mark at the top left, on Welcome and Done, and in the icon and favicon. Burgundy and cream by day, gold on near-black by night. The serif for page titles only. State colours never mistaken for the brand. Brand moments in empty and all-clear states, without decoration on working screens. A person's own brand colour still overrides the accent (`ui.brand.color`) |
 | 8 Phone | Nothing squeezed or broken | **Designed for a phone:** a 56px tab bar plus the safe area, 24px icons with labels and an active state, and add as a 44px accent circle. Rows stack their actions below the meta. Titles are never under 60% of the card's width. Filters live in one "Filter" sheet. Nothing hides under the bar |
 
 ## 3. The ladder
@@ -42,8 +45,8 @@
 | Stage | Bar | Built from | Exit |
 |---|---|---|---|
 | **A, this round** | 3.5 overall, no point under 3 | VC01–VC13, the six mockups, the CI guards | E9–E12 |
-| **B, next round** | **4.0 overall, no point under 3.5**, including state and phone captures | Mockups v2 (VP14a), VP01–VP08 | **E13** |
-| **C, the target** | **4.6 overall, no point under 4.3**, by the stricter method in section 6 | Mockups v3 (VP14b), VP09–VP13, VP15 | **E14** |
+| **B, next round** | **4.0 overall, no point under 3.5**, including state and phone captures; **brand at least 4.0** | Mockups v2 (VP14a) in the brand, VP01–VP08, **VP16** | **E13** |
+| **C, the target** | **4.6 overall, no point under 4.3**, by the stricter method in section 6; **brand at least 4.5** | Mockups v3 (VP14b), VP09–VP13, VP15, **VP17** | **E14** |
 
 **Why in stages:** 4.6 is mostly craft, and craft only pays once the structure is right. Polishing the motion on a row that still has a pill column is wasted work. Each stage also builds the components the next stage polishes.
 
@@ -67,7 +70,52 @@ Each VP row is shared work: fixed once, and every screen gains. The standards ca
 | **VP12** | C | **In-between widths** | Checked at 1024 and 768 as well as 1440 and 390. The right rail drops under the main column below 1100. The left menu folds to icons below 900. No sideways scroll anywhere from 360 to 1920 | Only 1440 and 390 are rendered. At 1024, Today's main column would get about 450px |
 | **VP13** | C | **Hit targets** | Touch: 24px visible, 44px to hit. Desktop: 32px minimum to hit. At least 8px between neighbours. The "…" is at least 4.5:1 when shown and fully opaque on hover | To-dos: 18px check circles and a 16px "…" |
 | **VP14** | B, C | **Mockups v2, then v3** (reviewer's work) | **v2:** fixes every per-mockup gap in section 5, adds phone renders for all six, a state sheet per mockup, and real icons. Re-scored cold, it must reach 4.0. **v3:** the polish pass with short interaction recordings (tick and undo, expand, open a drawer, keyboard through a list), re-scored cold to 4.6 | |
+| **VP16** | B | **The brand in the app** (section 4b) | Brand tokens by day and by night (palette and contrasts in 4b) as the product default, replacing indigo. The mark at the top left (clean by day, the dark variant by night) beside the product name, plus the favicon and app icon. The serif for page titles, Inter for the interface, both bundled with nothing fetched at run time. The state colours moved off the brand: danger off the burgundy by day, warning off the gold by night, always with an icon and a word. Brass for decoration only | Every mockup and the whole app: an initials monogram, indigo, the system font. The two hue collisions measured in 4b |
+| **VP17** | C | **Brand moments** | The mark and the ✳ star on Welcome, Done, the all-clear Today and the empty states (one line in the brand voice, for example "Nothing needs you. A little more room to think."). Numbered setup steps in italic serif numerals, as on the website's three promises. A cream "identity card" for the assistant in the Ask pane and on the You page. Motion on the mark only at first launch and on finishing setup, honouring reduced motion. No brand decoration on working lists | Not in any mockup yet |
 | **VP15** | C | **Design QA in the build** | Every UI batch hands over before-and-after captures from the fixed list in section 6. Screenshot comparisons in CI on every inventory screen (day, night, phone) so nothing slips back. The style guide shows every component in every state, in both themes | |
+
+## 4b. The brand
+
+**Source.** The product's website (thimbleby.app, light and dark) and `docs/design/brand/` on the host branch (the icon masters and their README). The reviewer captured the site by day, by night and on a phone (`brand-reference/`), and measured every colour pair below.
+
+**Palette, as the app would use it** (`mockups/brand.css` holds these values):
+
+| Role | Day | Night | Contrast |
+|---|---|---|---|
+| Page (canvas) | warm paper `#f5f3ee` (the site uses `#fafaf9`) | near-black `#0c0d0e` | |
+| Panes (surface) | `#fefdfb` | `#151617`, lifted off the canvas (VP06) | |
+| Text | ink `#171717` | `#f4f4f2` | 17:1 and 17.7:1 |
+| Muted text | `#5c5c5c` | `#aaaead` | 6.0:1 and 8.7:1 |
+| Accent: primary button, selected view | **burgundy `#741e25`** with cream text `#fff2d8` | **gold `#e5c78d`** with deep burgundy text `#2a0c10` | button text 9.7:1 and 11:1; burgundy on paper 10:1 |
+| Accent soft: selected rows and nav | **cream `#f3ecdf`** | burgundy-black `#251c1e` | burgundy on cream 9.1:1; gold on it 10:1 |
+| Brass `#b59859` | the icon's rim, small dividers on brand moments | the same | **2.7:1: never text, never a control boundary** |
+
+**Two collisions to fix before the brand ships (measured):**
+- **By day, burgundy is 8° of hue from the app's danger red** (`#741e25` at 355° against `#b3261e` at 3°). A "Clash" pill and a primary button would read as the same thing. Move danger to `#b93815` (13°, brighter, 5.2:1 on paper), and always pair it with a ⚠ and a word.
+- **By night, gold is 4° from the app's warning amber** (`#e5c78d` at 40° against `#f2b65c` at 36°). Move the night warning to `#ff9a5c` (23°, 8.7:1), with an icon and a word.
+
+**Type.**
+- **Fraunces** (the website's serif, weight 450, tracking −0.025em) for page titles and brand moments only. The token `--font-display` already exists for this.
+- **Inter** for everything else.
+- Group labels in uppercase, 11px, with 0.12em tracking: a quieter version of the website's eyebrows (0.23em is for marketing).
+- Both fonts are open source and are bundled with the app, as the icons are.
+
+**Shape.** The website uses pill buttons, and the preview tries them on every button. It's an **owner's call**: pills everywhere (on brand, softer), or pills for primary buttons only, with 8px corners elsewhere (denser, closer to today).
+
+**Where it lives (the boundary).**
+- The product name, mark and default palette come from the product's one place (the phase I decision: "Thimbleby on screen, in the installers and in the docs from one place"), not from `web/src`.
+- Core code keeps the tokens and a generic `--font-display`.
+- `ui.brand.color` and `ui.brand.logo` still let a person or business put their own colour and logo on top. The product mark stays in the app icon and the About page.
+- The host decides the exact mechanism. The reviewer suggests: a product brand file beside `catalog/product.yaml`, plus the assets in the build.
+
+**Preview.** `mockups/today-brand`, `todos-brand` and `setup-ai-brand` are the same mockups with `brand.css` and the real mark. They come by day and by night at 1440, plus the phone for Today. `before-after/brand-today.jpg` puts them beside the current-token version.
+- **What the preview shows:** the app reads as the product at once. The burgundy primary is calm and distinct. The cream selection is warmer and clearer than indigo tint. The serif title gives the pages a face without slowing anything down.
+- **What it doesn't solve yet:**
+  - The "Not right" links in burgundy, four in a row, are too loud. Make them ink with an underline, and keep the accent for the one primary.
+  - The phone header still shows text and no mark.
+  - The nav icons are still mockup placeholders.
+
+The open HTML falls back to Georgia and the system font, because the fonts aren't committed; the PNGs were rendered with the real fonts.
 
 ## 5. The gaps in each mockup (what v2 fixes)
 
@@ -137,16 +185,17 @@ At 4.6 the differences are small, and one reviewer's score varies by about ±0.3
 2. **Two independent reviewers** score from the same captures without seeing each other's scores. The lower score counts.
 3. **The owner signs off** on the recordings. A number alone doesn't settle 4.6.
 4. **No screen drops** between rounds (VP15's screenshot comparisons enforce it).
+5. **The brand point** is scored against section 4b and the website captures, by day and by night. It covers the palette, the mark, the type, the brand moments, and whether any state colour is mistaken for the brand.
 
 ## 7. Exit criteria (added to `../TRACKING.md`)
 
 - **E13 (Stage B, 4.0).**
   - Every inventory screen scores **at least 4.0 overall with no point below 3.5**, from day, night and phone captures and its state sheet.
-  - VP01–VP08 done.
+  - VP01–VP08 and **VP16** done; **the brand point at least 4.0** on every screen.
   - Mockups v2 re-scored cold at 4.0 or higher, then built.
 - **E14 (Stage C, 4.6).**
   - Every inventory screen scores **at least 4.6 overall with no point below 4.3**, by the method in section 6.
-  - VP09–VP13 and VP15 done.
+  - VP09–VP13, VP15 and **VP17** done; **the brand point at least 4.5** on every screen.
   - Mockups v3 built.
   - The screenshot comparisons in CI pass.
   - The owner has signed off on the recordings.

@@ -143,6 +143,8 @@ Stage B items gate E13 (4.0); stage C items gate E14 (4.6). None block the curre
 | VP13 | Visual C | Shared | Hit targets | PATH-TO-4.6 §4 | 24px visible / 44px touch, 32px desktop, 8px apart | To do | | | |
 | VP14 | Visual B, C | Shared | Mockups v2 then v3 (reviewer) | PATH-TO-4.6 §4 | v2 re-scored cold at 4.0 or more with phone and state sheets; v3 at 4.6 with interaction recordings | To do | | | |
 | VP15 | Visual C | Shared | Design QA in the build | PATH-TO-4.6 §4 | Before/after captures per UI batch; screenshot comparisons in CI on every inventory screen; style guide shows every state | To do | | | |
+| VP16 | Visual B | Shared | The brand in the app | PATH-TO-4.6 §4, §4b | Brand tokens day and night as the product default; mark, favicon and app icon; serif page titles and bundled Inter; danger moved off burgundy and night warning off gold, each with icon and word; brass decoration only | To do | | | |
+| VP17 | Visual C | Shared | Brand moments | PATH-TO-4.6 §4 | Mark and star on Welcome, Done, all-clear Today and empty states in the brand voice; serif step numerals; the assistant's identity card; mark motion only at first launch and finishing setup | To do | | | |
 
 ## Exit criteria (README section 3, plus visual E9–E12, then E13–E14 for the path to 4.6)
 
@@ -160,5 +162,5 @@ Stage B items gate E13 (4.0); stage C items gate E14 (4.6). None block the curre
 | E10 | VC01–VC13 built as shared components or tokens and used everywhere; the style guide shows each in both themes | To do | | |
 | E11 | The six mockup screens built to their mockup (or an owner-approved variant), shown side by side in the hand-over | To do | | |
 | E12 | Visual guards in CI: no native unstyled fieldset/select/date/time/file; no paragraph under 13px; no autofocus on page load; at most one solid primary per region; no empty leading column in a row | To do | | |
-| E13 | Stage B: every inventory screen at least 4.0 overall, no point below 3.5, from day, night, phone and state-sheet captures; VP01–VP08 done; mockups v2 at 4.0 or more, built | To do | | |
-| E14 | Stage C: every inventory screen at least 4.6 overall, no point below 4.3, by the PATH-TO-4.6 §6 method (fixed captures and recordings, two reviewers, lower counts, owner signs off); VP09–VP13 and VP15 done; mockups v3 built; CI screenshot comparisons pass | To do | | |
+| E13 | Stage B: every inventory screen at least 4.0 overall, no point below 3.5, from day, night, phone and state-sheet captures; VP01–VP08 and VP16 done; brand point at least 4.0; mockups v2 in the brand at 4.0 or more, built | To do | | |
+| E14 | Stage C: every inventory screen at least 4.6 overall, no point below 4.3, by the PATH-TO-4.6 §6 method (fixed captures and recordings, two reviewers, lower counts, owner signs off); VP09–VP13, VP15 and VP17 done; brand point at least 4.5; mockups v3 built; CI screenshot comparisons pass | To do | | |

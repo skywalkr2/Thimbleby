@@ -125,6 +125,7 @@ A fix claimed with no test named counts as Partly.
   - the overall score
   - **the stage it has reached:** A at 3.5 or more with no point under 3; B at 4.0 or more with no point under 3.5; C at 4.6 or more with no point under 4.3
   - **the VP items that stand between it and the next stage**
+  - **the brand point (9)**, scored against PATH-TO-4.6 section 4b and `sweep-04ffc21e/visual/brand-reference/`. It covers the mark, the palette, the type, the brand moments, and any state colour mistaken for the brand
 - **The mockups:** the six built mockup screens are captured side by side with their mockups for E11.
 - **Re-scoring the mockups:** if mockups v2 exist by then (VP14), have a separate agent re-score them cold.
 
@@ -150,8 +151,9 @@ A fix claimed with no test named counts as Partly.
 3. **Several businesses and accounts (S5):** what breaks or looks wrong with 3 or 4 sides and 3 accounts, and the new ids.
 4. **The path to 4.6:**
    - **The scores:** the average now, against 2.6 at `04ffc21e`. How many screens are at stage A, B and C, and the five lowest screens.
-   - **What's left to reach 4.0 (E13):** the VP01–VP08 items still open, ranked by how many screens each one holds back.
-   - **What's left to reach 4.6 (E14):** the VP09–VP15 items, and whether the method in PATH-TO-4.6 section 6 can be run yet (captures, recordings, two reviewers).
+   - **The brand:** the average brand point now, and where the app still looks generic (no mark, indigo, the system font) or where a state colour reads as the brand.
+   - **What's left to reach 4.0 (E13):** the VP01–VP08 and VP16 items still open, ranked by how many screens each one holds back.
+   - **What's left to reach 4.6 (E14):** the VP09–VP15 and VP17 items, and whether the method in PATH-TO-4.6 section 6 can be run yet (captures, recordings, two reviewers).
    - **The next five moves,** in order, each with the screens it lifts and by roughly how much.
    - **Anything that moved backwards** since `04ffc21e`.
 5. **What I need from the host:** missing fakes, deferred items to confirm, and questions for the owner.

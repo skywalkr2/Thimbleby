@@ -8,4 +8,4 @@ The reviewer's tools for the full UI/UX sweep. They're kept here so a re-sweep c
 | `BRIEF-COMMON.md` | The brief for each functional sweep agent. Fill in `{{WORKTREE}}`, `{{SWEEP}}`, `{{SCRATCH}}` and `{{COMMIT}}` |
 | `BRIEF-VISUAL.md` | The brief for each visual scoring agent, with the 8-point rubric. Same placeholders |
 | `scripts-04ffc21e/<sweep>/` | The scripts the four sweeps ran at `04ffc21e`. Use them as working examples of selectors and flows, not as fixed tests |
-| `mockup-tools/` | `gen_mock.py` writes the mockup pages, and `render-mock.mjs` renders them by day and by night at 1440, plus the phone at 390 (env `WEB_DIR`, `M` = the mockups folder) |
+| `mockup-tools/` | `gen_mock.py` writes the mockup pages; `render-mock.mjs` renders them, and `render-brand.mjs` renders the brand previews (it needs the brand fonts copied into `mockups/fonts/` while it runs) by day and by night at 1440, plus the phone at 390 (env `WEB_DIR`, `M` = the mockups folder) |
