@@ -5,6 +5,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: Settings and Connections follow the review's VS17 and VS18 rows (batch 7b)
+
+**Decided:**
+- Settings' menu is grouped (You / Assistant / Your data / More), with add-on pages under Add-ons, and every section
+  keeps its address.
+- Connections follows the `connections` mockup: account cards, a sources table, and a two-step drawer to add.
+
+**Decided by:** the UI/UX review (VS17, VS18), built from brief 18.
+
+**Why:** the review's findings V3-1 to V3-3, V3-11 to V3-13, V3-26 to V3-28, V3-32 and V3-33.
+
+**Impact:** Settings and Connections only; links into Settings are unchanged. Change log: section 270.
+
 ## 2026-10-30: The Schedule follows the review's VS06 row (batch 7b)
 
 **Decided:**

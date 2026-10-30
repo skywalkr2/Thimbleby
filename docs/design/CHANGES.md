@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 270. Settings grouped, and Connections as account cards with a sources table (2026-10-30; batch 7b, VS17, VS18)
+
+| Where | Before | Now |
+|---|---|---|
+| Settings menu (7.x) | One flat list of sections | Grouped: You, Assistant, Your data, More; add-on pages under Add-ons. Every section keeps its address |
+| Settings sections | Synced-folder fields as separate rows; value lists always open; radio rows and setting rows laid out per section | One synced-folder section; value lists as accordions; radio rows on one grid; setting rows stack on a phone |
+| Settings › Connections | A row list, with a one-step add form in place | An account card with a status pill, "Choose what to read" and a ⋯ menu; sources as a table with privacy pills and status dots; adding is a two-step drawer |
+
 ## 269. The Schedule to the review (2026-10-30; batch 7b, VS06)
 
 | Where | Before | Now |
