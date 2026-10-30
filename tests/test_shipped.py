@@ -10,7 +10,7 @@ import pytest
 
 import engine.cli
 from engine.cli import main
-from engine.shipped import CHECKOUT, demo, product, shipped
+from engine.shipped import CHECKOUT, demo, is_shipped_catalog, product, shipped
 
 
 def test_a_packaged_copy_wins_over_the_checkout(tmp_path):
@@ -69,6 +69,19 @@ def test_product_facts_come_from_the_shipped_catalog(tmp_path):
     assert product(packaged=tmp_path)["feedback_to"] == "someone@example.com"
     (tmp_path / "catalog" / "product.yaml").write_text(": not yaml [")
     assert product(packaged=tmp_path) == {}
+
+
+def test_the_shipped_catalog_address_uses_the_current_repository_name():
+    facts = product()
+    current = facts["pack_catalog"]
+
+    assert current.startswith("https" + "://raw.githubusercontent.com/")
+    assert current.endswith("/Thimbleby-Catalog/main/packs.yaml")
+    former = facts["pack_catalog_former"]
+    assert former == [current.replace("/Thimbleby-Catalog/", "/PMCockpit-Catalog/")]
+    assert is_shipped_catalog(current, facts)
+    assert all(is_shipped_catalog(address, facts) for address in former)
+    assert not is_shipped_catalog("other", facts)
 
 
 def test_the_demo_tries_a_plugin_from_its_folder_or_by_name(tmp_path, monkeypatch, capsys):

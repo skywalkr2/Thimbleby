@@ -52,3 +52,11 @@ def product(packaged: Path = PACKAGED, checkout: Path = CHECKOUT) -> dict[str, A
     except (OSError, yaml.YAMLError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def is_shipped_catalog(address: str, facts: dict[str, Any] | None = None) -> bool:
+    """Whether an address is the current shipped catalog or one of its former addresses."""
+    facts = product() if facts is None else facts
+    current = facts.get("pack_catalog")
+    former = facts.get("pack_catalog_former")
+    return address == current or isinstance(former, list) and address in former

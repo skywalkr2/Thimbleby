@@ -22,7 +22,7 @@ from engine import backup, pack_install, packs
 from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
 from engine.plugin_manifest import declared_plugins, shipped_plugins
-from engine.shipped import product
+from engine.shipped import is_shipped_catalog, product
 from engine.storage import Store
 from engine.worker import Worker
 from engine.workspace import Workspace
@@ -110,8 +110,9 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         }
         now = _saved(ws, cfg)  # a catalog added since the start is listed at once
         settings = now.workspace.plugins.catalog
+        product_facts = product()
         feeds = packs.read_feeds(
-            packs.feed_urls(now, product()), ws.private_dir, settings.refresh_hours, refresh=refresh
+            packs.feed_urls(now, product_facts), ws.private_dir, settings.refresh_hours, refresh=refresh
         )
         # As saved now: an add-on just turned on shows as on (it starts after the restart the person chooses).
         try:
@@ -187,7 +188,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                     read_at=datetime.fromtimestamp(f.read_at, UTC).isoformat() if f.read_at else None,
                     address=f.url,
                     removable=f.url in settings.feeds,
-                    own=settings.shipped_feed and f.url == product().get("pack_catalog"),
+                    own=settings.shipped_feed and is_shipped_catalog(f.url, product_facts),
                 )
                 for f in feeds
             ],
