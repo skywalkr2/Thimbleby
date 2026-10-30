@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-30: The weekly message is the Monday briefing's, not a Today line
+
+**Decided:**
+- Design 7.x named the weekly message as a Today line that changes from "Write" to "Send". The code keeps it in the
+  Monday briefing's card instead, and Today has no such line.
+- The design text now says so.
+- The count rule is checked for the weekly message by a test that writing and sending it leaves Today's lines as they
+  were.
+
+**Decided by:** the main session, after the coding agent found the mismatch while building brief 22.
+
+**Why:** the code already has the right shape. One item has one place, and the briefing is where the weekly message is
+written.
+
+**Impact:** design text only, with no code change. Change log: section 274.
+
 ## 2026-10-30: To-dos follow the VS10 phone mockup (Task 21)
 
 **Decided:**
