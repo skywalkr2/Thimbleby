@@ -311,3 +311,29 @@ runs the full suites; the coding agent runs only what it touched.
   - the shipped address is the new one.
 - **Done when:** the tests pass, and the P96 row in `docs/project/open-promises.md` moves the catalog address to
   "Done since", citing them.
+
+## Task 16: the walkthrough-look check that still fails on CI
+- **The failure:** `web/e2e/panes.spec.ts`, "the walkthrough's look › fields are as wide as what they hold…", failed on
+  CI at `78cb550`:
+  - after `signIn(page, "setup")`, Start, and the "You" step, the step's heading "You" was shown;
+  - but `main.getByLabel("Your full name")` was never found;
+  - it passed in the runs before and after, and passes locally.
+- **Find which of these it was:**
+  - the "You" step showing something other than its form (for example, a summary because an earlier test on the shared
+    server already filled it in);
+  - the field still loading;
+  - its label being different in some state.
+- **Do it the way task 11 did** (it found the phone check's cause this way):
+  - run CI's order: build, then `PW_CHANNEL=chrome PW_WORKERS=1 npx playwright test --project=root-panes` from `web/`
+    (with its dependency), then three times;
+  - if it never fails locally, add checks before the field is looked for that say what the step shows (its heading,
+    whether a form or a summary, the labels present), so the next CI failure names the cause;
+  - if the cause is the test's own setup (state left by another test), make the test bring the state it needs, through
+    the same API or page actions other tests use;
+  - if a person could hit it (the form missing when they open the "You" step), stop and report instead.
+  - Don't skip the test, add retries, or lengthen timeouts as the fix, except to wait for loading to finish as task
+    11's fix does.
+- **Done when:**
+  - the cause is fixed, or the checks that will name it are in;
+  - the whole `root-panes` project passes with its dependency;
+  - and P96 in `docs/project/open-promises.md` says which.
