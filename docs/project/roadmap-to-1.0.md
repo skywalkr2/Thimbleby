@@ -836,8 +836,7 @@ S4. **What arrives, and where it may go:**
   no way to hand it sound) refuse a voice note, and only the common OpenAI-compatible path (`openai-compatible`) takes one;
   a vendor adapter whose service offers speech-to-text will take it the day it has the call
   (`tests/test_capture.py::test_which_adapters_take_speech_is_decided_for_each_one_and_a_new_adapter_must_be_decided_too`).
-  **Left:** a browser journey in the end-to-end tests.
-  - State (2026-10-29): built: capture folders, voice notes through `transcribe`, and forward-to through mail (`tests/test_capture.py`, `tests/test_capture_mail.py`, `tests/test_capture_mail_setting.py`, `web/src/components/SourcesCapture.test.tsx`); left: the global shortcut (phase I's packaged app), speech-to-text on the other adapters, and a browser journey (none in `web/e2e`).
+  - State (2026-10-30): built: capture folders, voice notes through `transcribe`, forward-to through mail, and the browser journey for filing, Undo, and repeated reads (`tests/test_capture.py`, `tests/test_capture_mail.py`, `tests/test_capture_mail_setting.py`, `web/src/components/SourcesCapture.test.tsx`, `web/e2e/capture-journey.spec.ts::a capture folder files notes once and offers Undo`); left: the global shortcut (phase I's packaged app) and speech-to-text on the other adapters.
 
 S5. **Manner and proof:**
 - [ ] [S5] **The outcome, measured** on the Quality screen (6.20): open promises found that the person kept, false alerts

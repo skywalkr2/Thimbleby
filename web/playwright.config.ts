@@ -37,6 +37,7 @@ const meetings = { port: 8798 + offset };
 // And the "Just me" check: its server is made as a person with no work makes one (nothing besides Personal), with an area, a
 // person, a to-do and a question seeded, so no screen is read with work words on it.
 const justMe = { port: 8799 + offset };
+const capture = { port: 8800 + offset };
 
 // And the check that a business is a group and not a project: a workspace made like the "Just me" one, to which the test adds a
 // business and a project before it looks at their pages.
@@ -142,6 +143,7 @@ export default defineConfig({
     { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },
     { name: "acts", testMatch: /acts-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${acts.port}/` } },
     { name: "meetings", testMatch: /meetings-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${meetings.port}/` } },
+    { name: "capture", testMatch: /capture-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capture.port}/` } },
     { name: "just-me", testMatch: /just-me\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${justMe.port}/` } },
     { name: "sides", testMatch: /side-is-a-group\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sides.port}/` } },
     { name: "side-filter", testMatch: /side-filter\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sideFilter.port}/` } },
@@ -219,6 +221,13 @@ export default defineConfig({
       command: `uv run python -m tests.e2e_server --port ${meetings.port} --base-path / --meetings`,
       cwd: "..",
       url: `http://127.0.0.1:${meetings.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `uv run python -m tests.e2e_server --port ${capture.port} --base-path / --capture --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${capture.port}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
     },
