@@ -38,6 +38,7 @@ from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 from tests.e2e_just_me import seed_first_go, seed_just_me, the_person
+from tests.e2e_many_sides import seed_many_sides
 from tests.e2e_meetings import seed_meetings
 from tests.e2e_sides import calendar_sources, seed_sides
 from tests.roundtrip import round_trip
@@ -288,6 +289,13 @@ def main() -> None:
         "/__e2e/sides says what was seeded",
     )
     parser.add_argument(
+        "--many-sides",
+        action="store_true",
+        help="make the workspace as --just-me does and add a job and three businesses as setup adds them (five sides "
+        "with Personal), three of them with long names, for the check on a person with several businesses; "
+        "/__e2e/many-sides says what was seeded",
+    )
+    parser.add_argument(
         "--first-day",
         action="store_true",
         help="make the workspace as --just-me does but seed nothing except one run waiting for the person's first go, "
@@ -324,7 +332,7 @@ def main() -> None:
     capture_folder = tmp / "capture" if args.capture else None
     if capture_folder is not None:
         capture_folder.mkdir()
-    if args.just_me or args.first_day or args.sides:
+    if args.just_me or args.first_day or args.sides or args.many_sides:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
         ws = init_workspace(tmp / "ws", git=False, you=the_person(), name=f"{the_person().split()[0]}'s")
@@ -448,12 +456,14 @@ def main() -> None:
     acts = seed_acts(ws, store, cfg) if args.acts else None
     meetings = seed_meetings(store, cfg) if args.meetings else None
     just_me = seed_just_me(store, cfg) if args.just_me else None
-    if args.sides:
+    many_sided = None
+    if args.sides or args.many_sides:
         from starlette.testclient import TestClient
 
         # The sides are made through the setup route, as setup makes them, so the running app takes them in at once.
         client = TestClient(app, base_url=f"http://127.0.0.1:{args.port}", headers={"Authorization": f"Bearer {TOKEN}"})
-        sided = seed_sides(client, store, cfg)
+        sided = seed_sides(client, store, cfg) if args.sides else None
+        many_sided = seed_many_sides(client) if args.many_sides else None
     else:
         sided = None
     if args.first_day:
@@ -554,6 +564,10 @@ def main() -> None:
         """What the side filter's records are."""
         return JSONResponse({"enabled": sided is not None, **(sided or {})})
 
+    async def with_many_sides(_request):
+        """The sides the many-sides seed made, with their long names."""
+        return JSONResponse({"enabled": many_sided is not None, **(many_sided or {})})
+
     capture_count = 0
 
     async def capture_fixture(request):
@@ -579,6 +593,7 @@ def main() -> None:
         routes=[
             Route("/__e2e/just-me", alone),
             Route("/__e2e/sides", with_sides),
+            Route("/__e2e/many-sides", with_many_sides),
             Route("/__e2e/delivered", delivered),
             Route("/__e2e/meetings", met),
             Route("/__e2e/acts", acted),

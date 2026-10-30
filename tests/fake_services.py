@@ -97,6 +97,12 @@ class State:
         self.evening = False  # the owner-evening journey's extra mail, event and retired model
         self.sent_mail = False  # the mailbox also has a sent folder, which the mail service lists by its name
         self.later_mail: list[dict] = []  # messages that arrive after the first read (added by a helper route)
+        #: With `--accounts N` (more than none) each sign-in is one of N people, each with a mailbox and calendar of
+        #: their own; 0 is the single sign-in of every other journey.
+        self.accounts = 0
+        self.failing_account = 0  # the number (from 1) of the account whose reads fail; 0 for none
+        self.failing_how = "expired"  # "expired": the sign-in is refused; "retrying": the service asks to try again
+        self.account_of: dict[str, int] = {}  # the account each code, access token and refresh token belongs to
         self.seen = {
             "authorizations": 0,
             "exchanges": 0,
@@ -229,17 +235,19 @@ def account_routes(state: State) -> list[Route]:
     """The made-up service's sign-in: the page sends the person straight back, as a person already signed in to it
     would be; the token address is where the app proves it started the sign-in (PKCE)."""
 
-    def issue(with_refresh: bool, scope: str, refresh: str | None = None) -> dict:
+    def issue(with_refresh: bool, scope: str, account: int = 0) -> dict:
         """A token holding `scope`, which is what the service says it granted: a sign-in that asked for more (acting) is
         given more, and the token that renews it keeps the same."""
         access = "access-" + secrets.token_urlsafe(12)
         state.access.add(access)
         state.scopes[access] = scope
+        state.account_of[access] = account
         body = {"access_token": access, "token_type": "Bearer", "expires_in": TOKEN_SECONDS, "scope": scope}
         if with_refresh:
             refresh = "refresh-" + secrets.token_urlsafe(12)
             state.refresh.add(refresh)
             state.scopes[refresh] = scope
+            state.account_of[refresh] = account
             body["refresh_token"] = refresh
         return body
 
@@ -259,11 +267,20 @@ def account_routes(state: State) -> list[Route]:
             or not _loopback(redirect)
         ):
             return refused("invalid_request")
+        number = 0
+        if state.accounts:
+            chosen = account_for_hint(state, q.get("login_hint", ""))
+            if chosen is None and q.get("login_hint"):
+                return refused("invalid_request")
+            if chosen is None and state.accounts > 1:
+                return chooser(state, request)
+            number = chosen or 0
         code = "code-" + secrets.token_urlsafe(12)
         state.codes[code] = {
             "challenge": q["code_challenge"],
             "redirect": redirect,
             "scope": q.get("scope") or SCOPES,
+            "account": number,
         }
         state.seen["authorizations"] += 1
         return RedirectResponse(f"{redirect}?{urlencode({'code': code, 'state': q['state']})}", status_code=302)
@@ -281,10 +298,14 @@ def account_routes(state: State) -> list[Route]:
             ):
                 return refused("invalid_grant")
             state.seen["exchanges"] += 1
-            return JSONResponse(issue(with_refresh=True, scope=grant["scope"]))
+            return JSONResponse(issue(with_refresh=True, scope=grant["scope"], account=grant.get("account", 0)))
         if form.get("grant_type") == "refresh_token" and form.get("refresh_token") in state.refresh:
+            account = state.account_of.get(form["refresh_token"], 0)
+            if is_failing(state, account) and state.failing_how == "expired":
+                return refused("invalid_grant")
             state.seen["renewals"] += 1
-            return JSONResponse(issue(with_refresh=False, scope=state.scopes.get(form["refresh_token"], SCOPES)))
+            scope = state.scopes.get(form["refresh_token"], SCOPES)
+            return JSONResponse(issue(with_refresh=False, scope=scope, account=account))
         return refused("invalid_grant")
 
     async def revoke(request: Request) -> Response:
@@ -297,7 +318,7 @@ def account_routes(state: State) -> list[Route]:
     async def me(request: Request) -> JSONResponse:
         if not signed_in(state, request):
             return unauthorized()
-        return JSONResponse({"email": address_of(people()[0])})
+        return JSONResponse({"email": account_address(account_of(state, request))})
 
     return [
         Route("/authorize", authorize),
@@ -305,6 +326,45 @@ def account_routes(state: State) -> list[Route]:
         Route("/revoke", revoke, methods=["POST"]),
         Route("/v1/me", me),
     ]
+
+
+#: Words that tell the made-up accounts apart in their addresses: the first is the person's own (job) address.
+ACCOUNT_TAGS = ("", "home", "studio", "market", "garden", "workshop")
+
+
+def account_address(number: int) -> str:
+    """The address of the numbered account (from 0): the person's own address, then the same name with a tag."""
+    own = address_of(people()[0])
+    tag = ACCOUNT_TAGS[number % len(ACCOUNT_TAGS)]
+    local, domain = own.split("@")
+    return own if not tag else f"{local}.{tag}@{domain}"
+
+
+def account_for_hint(state: State, hint: str) -> int | None:
+    """The account a sign-in hint names (its address, or its number from 1), None when it names none."""
+    for number in range(max(state.accounts, 1)):
+        if hint in (account_address(number), str(number + 1)):
+            return number
+    return None
+
+
+def chooser(state: State, request: Request) -> Response:
+    """The made-up sign-in page for a service with several accounts: one link for each, which asks again with a hint."""
+    base = str(request.url)
+    links = "".join(
+        f'<li><a href="{base}&{urlencode({"login_hint": account_address(n)})}">{account_address(n)}</a></li>'
+        for n in range(state.accounts)
+    )
+    page = f"<!doctype html><title>Choose an account</title><h1>Choose an account</h1><ul>{links}</ul>"
+    return Response(page, media_type="text/html")
+
+
+def account_of(state: State, request: Request) -> int:
+    return state.account_of.get(request.headers.get("authorization", "")[7:], 0)
+
+
+def is_failing(state: State, account: int) -> bool:
+    return state.failing_account > 0 and account == state.failing_account - 1
 
 
 def signed_in(state: State, request: Request) -> bool:
@@ -581,12 +641,145 @@ def intake_items(now: datetime, days: int = 14) -> dict[str, list[str]]:
     }
 
 
+def failure(state: State, request: Request) -> JSONResponse | None:
+    """What the failing account's reads get: the sign-in refused, or the service asking to try again later."""
+    if not is_failing(state, account_of(state, request)):
+        return None
+    if state.failing_how == "retrying":
+        return JSONResponse({"error": {"code": "ServiceBusy"}}, status_code=503, headers={"Retry-After": "120"})
+    state.seen["unauthorized"] += 1
+    return unauthorized()
+
+
+#: A shared thread, copied to two mailboxes, and a made-up supplier who writes to the job address and a business one.
+SHARED_THREAD = ("thread-joint-lease", "Joint lease renewal", "Landlord Example", "landlord@property.example.com")
+SUPPLIER = ("Harbor Supplies", "orders@harbor.example.com")
+#: An invitation that sits on two calendars, and the people who sent it.
+SHARED_INVITE = ("invite-quarterly-review", "Quarterly review")
+
+
+def account_messages(state: State, number: int) -> list[dict]:
+    """The numbered account's inbox when there are several: its own mail, with the thread copied to the first two
+    mailboxes and the supplier's mail to the first two addresses (each message lists whom it was written to)."""
+    now = state.moment
+    me = account_address(number)
+    out = [
+        message(
+            f"a{number}-own-1",
+            ("Pat Sample", "pat.sample@partner.example.com"),
+            f"Question for account {number + 1}",
+            timedelta(hours=2 + number),
+            True,
+            f"Can you confirm the plan for account {number + 1}?",
+            now=now,
+        )
+    ]
+    if number == 0:
+        out += messages(now, state.later_mail, state.evening)
+    if number < 2:
+        key, subject, name, address = SHARED_THREAD
+        copy = message(
+            f"a{number}-thread", (name, address), subject, timedelta(hours=6), True, "Please sign the renewal.", now=now
+        )
+        out.append({**copy, "thread": key, "to": [account_address(0), account_address(1)]})
+        supplier = message(
+            f"a{number}-supplier",
+            SUPPLIER,
+            f"Order {number + 1} is ready" if number == 0 else "Your business order is ready",
+            timedelta(hours=3, minutes=number),
+            True,
+            "The order can be collected.",
+            now=now,
+        )
+        out.append({**supplier, "to": [me]})
+    if number == 2:
+        # One mailbox that serves two businesses: mail for each of them arrives here.
+        for tag, label in (("one", "first"), ("two", "second")):
+            out.append(
+                {
+                    **message(
+                        f"a2-business-{tag}",
+                        ("Customer Example", f"customer.{tag}@clients.example.com"),
+                        f"Order for the {label} business",
+                        timedelta(hours=4),
+                        True,
+                        f"Please confirm the order for the {label} business.",
+                        now=now,
+                    ),
+                    "to": [me],
+                }
+            )
+    return [{"to": [me], **m} for m in out]
+
+
+def account_events(now: datetime, number: int) -> list[dict]:
+    """The numbered account's calendar when there are several. A meeting in the first overlaps one in the second, the
+    first two hold one invitation, the second has an all-day entry, and the third has a read-only holiday."""
+
+    def entry(key: str, title: str, begin: datetime, minutes: int, **more) -> dict:
+        return {
+            "id": f"a{number}-{key}",
+            "title": title,
+            "start": stamp(begin),
+            "end": stamp(begin + timedelta(minutes=minutes)),
+            "where": "Room 1",
+            "organizer": people()[1],
+            "cancelled": False,
+            "notes": "",
+            "read_only": False,
+            **{k: v for k, v in more.items() if k not in ("start", "end")},
+        } | {k: more[k] for k in ("start", "end") if k in more}
+
+    base = (now + timedelta(hours=2)).replace(minute=0, second=0, microsecond=0)
+    day = (now + timedelta(days=1)).date()
+    out = []
+    if number == 0:
+        out += events(now)
+        out.append(entry("call", "Supplier call", base, 60))
+    if number == 1:
+        out.append(entry("fitting", "Fitting appointment", base + timedelta(minutes=30), 60))
+        out.append(
+            entry(
+                "stock",
+                "Stock count",
+                datetime.fromisoformat(day.isoformat() + "T00:00:00+00:00"),
+                1440,
+                all_day=True,
+                start=day.isoformat(),
+                end=(day + timedelta(days=1)).isoformat(),
+            )
+        )
+    if number == 2:
+        out.append(
+            entry(
+                "holiday",
+                "Public holiday",
+                datetime.fromisoformat((day + timedelta(days=2)).isoformat() + "T00:00:00+00:00"),
+                1440,
+                all_day=True,
+                read_only=True,
+                start=(day + timedelta(days=2)).isoformat(),
+                end=(day + timedelta(days=3)).isoformat(),
+            )
+        )
+    if number < 2:
+        uid, title = SHARED_INVITE
+        out.append(entry("review", title, base + timedelta(days=1, hours=2), 45, uid=uid))
+    return out
+
+
 def mail_routes(state: State) -> list[Route]:
     async def listed(request: Request) -> JSONResponse:
         if not signed_in(state, request):
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["mail_reads"] += 1
+        if state.accounts:
+            failed = failure(state, request)
+            if failed is not None:
+                return failed
+            if (request.query_params.get("folder") or "inbox") == "inbox":
+                return JSONResponse({"messages": account_messages(state, account_of(state, request))})
         folder = request.query_params.get("folder") or "inbox"
         if folder not in MAIL_FOLDERS:
             # A real service says there is no such folder; it never lists the inbox's mail under another name.
@@ -668,6 +861,11 @@ def calendar_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["calendar_reads"] += 1
+        if state.accounts:
+            failed = failure(state, request)
+            if failed is not None:
+                return failed
+            return JSONResponse({"events": account_events(state.moment, account_of(state, request))})
         return JSONResponse({"events": events(state.moment, state.evening)})
 
     return [Route("/events", listed)]
@@ -786,6 +984,20 @@ def helper_routes(state: State, base: str) -> list[Route]:
             }
         )
 
+    async def accounts(_request: Request) -> JSONResponse:
+        count = max(state.accounts, 1)
+        return JSONResponse(
+            {
+                "accounts": [
+                    {
+                        "address": account_address(n),
+                        "failing": state.failing_how if is_failing(state, n) else None,
+                    }
+                    for n in range(count)
+                ]
+            }
+        )
+
     async def sign_in(_request: Request) -> JSONResponse:
         return JSONResponse(
             {
@@ -843,6 +1055,7 @@ def helper_routes(state: State, base: str) -> list[Route]:
         Route("/__e2e/script", script, methods=["POST"]),
         Route("/__e2e/ai-requests", requests),
         Route("/__e2e/sign-in", sign_in),
+        Route("/__e2e/accounts", accounts),
         Route("/__e2e/source-file", put_source_file, methods=["POST"]),
         Route("/__e2e/mail-later", mail_later, methods=["POST"]),
         Route("/__e2e/mail-acts", mail_acts),
@@ -904,7 +1117,11 @@ def start_secure(state: State, port: int, add_ons: tuple[str, ...] = ("journey_p
     raise RuntimeError("the HTTPS fake services did not start")
 
 
-def main() -> None:
+def configure(argv: list[str] | None = None) -> State:
+    return _configure(argv)[1]
+
+
+def _configure(argv: list[str] | None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--https-port", type=int, default=0)
@@ -921,10 +1138,29 @@ def main() -> None:
         help="put one message in the mailbox's sent folder (the mail add-on names that folder by default, so a walk by "
         "hand reads it with no other switch; tests/e2e_fresh_server.py --no-sent-mail turns that off)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--accounts",
+        type=int,
+        default=0,
+        help="several people sign in, each with an address, mailbox and calendar of their own (choose on the sign-in "
+        "page or with a login_hint); shared mail and meetings are seeded between them",
+    )
+    parser.add_argument("--failing-account", type=int, default=0, help="the account (from 1) whose reads fail")
+    parser.add_argument("--failing-how", choices=("expired", "retrying"), default="expired")
+    args = parser.parse_args(argv)
+    if args.failing_account > args.accounts:
+        parser.error("--failing-account must be one of the --accounts")
     state = State(args.state)
     state.evening = args.evening
     state.sent_mail = args.sent_mail
+    state.accounts = args.accounts
+    state.failing_account = args.failing_account
+    state.failing_how = args.failing_how
+    return args, state
+
+
+def main(argv: list[str] | None = None) -> None:
+    args, state = _configure(argv)
     if args.https_port:
         start_secure(state, args.https_port, tuple(name for name in args.catalog.split(",") if name))
     uvicorn.run(build_app(state, args.port), host=HOST, port=args.port, log_level="warning")

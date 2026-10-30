@@ -103,7 +103,11 @@ def poll_calendar(settings: CalendarSettings, state: dict, context) -> Poll:
                 author=event.get("organizer"),
                 changed_at=event["start"],
                 event=EventDetails(
-                    start=event["start"], end=event["end"], where=event["where"], cancelled=event["cancelled"]
+                    start=event["start"],
+                    end=event["end"],
+                    where=event["where"],
+                    cancelled=event["cancelled"],
+                    all_day=event.get("all_day", False),
                 ),
             )
         )
