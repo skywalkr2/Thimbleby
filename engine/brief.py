@@ -377,31 +377,25 @@ def _fact_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
 
 
 def _requested_action_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
+    """To-dos someone else asked of the person, filed since the last brief from an outside message and tied to a
+    calendar entry. It starts from the messages that arrived in the window, so it never reads the whole history."""
+    arrived: dict[str, datetime] = {}
+    for request in c.view.list("request"):
+        data = request.data
+        when = _stamp(data.get("created_at") or "")
+        if data.get("origin") != "input" or not data.get("source") or when is None or not since < when <= c.now:
+            continue
+        source = c.view.get("source", data["source"])
+        if source is not None and source.data.get("trust") == "untrusted":
+            arrived[data["source"]] = when
+    if not arrived:
+        return []
     found = []
-    for row in c.view.ledger(kind="action"):
-        when = _stamp(row["at"])
-        if (
-            row["op"].partition("#")[0] != "action.add"
-            or row["field"] != "text"
-            or row["trust"] != "untrusted"
-            or when is None
-            or not since < when <= c.now
-            or not row.get("request")
-        ):
-            continue
-        request = c.view.get("request", row["request"])
-        action = c.view.get("action", row["record_id"])
-        if request is None or request.data.get("origin") != "input" or not request.data.get("source") or action is None:
-            continue
+    for action in c.view.list("action"):
         data = action.data
+        when = arrived.get(data.get("source") or "")
         asker = data.get("said_by")
-        if (
-            data.get("source") != request.data["source"]
-            or not c.mine(data)
-            or not data.get("event")
-            or not asker
-            or asker == c.pm
-        ):
+        if when is None or not c.mine(data) or not data.get("event") or not asker or asker == c.pm:
             continue
         found.append(
             (
