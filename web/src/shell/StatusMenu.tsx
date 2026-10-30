@@ -7,7 +7,7 @@ import { RestartNotice, useRestart } from "../lib/restart";
 import { useRestartWhat } from "../lib/restart-for";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { backupChipAge, backupText } from "../lib/backup";
+import { backupText } from "../lib/backup";
 import { time, whenText } from "../lib/dates";
 import type { LiveState } from "../lib/live";
 import { useTotal } from "../lib/money";
@@ -75,8 +75,6 @@ export function StatusMenu(props: {
   const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase, connections: connectionState(found) });
   const word = t(CHIP_WORD[kind]);
   const b = status.data?.backup;
-  // Once a backup has succeeded the chip keeps its age in view beside its word; the popover says the same in full.
-  const age = b ? backupChipAge(b, t) : null;
   const ai = status.data?.ai;
   const spend = status.data ? spendText(status.data.spend, t, total) : null;
   const wait = status.data?.network_wait;
@@ -98,9 +96,8 @@ export function StatusMenu(props: {
     <DialogTrigger>
       <StatusChip
         tone={toneOf(kind)}
-        aria-label={t("status.chip_named", { state: age ? t("status.chip_with", { state: word, detail: age }) : word })}
+        aria-label={t("status.chip_named", { state: word })}
         data-status={kind}
-        detail={age ?? undefined}
       >
         {word}
       </StatusChip>

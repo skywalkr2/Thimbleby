@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## NEXT. Today's remaining mockup: brief, status pill and Tomorrow (Task 20, VS05, VC13)
+
+| Where | Before | Now |
+|---|---|---|
+| Morning brief (`web/src/components/BriefCard.tsx`) | The brief's details were shown by default at wide widths; the summary did not stay to one line | The brief folds by default at every width, keeps its summary and actions visible, and opens its details on request; the summary truncates visually to one line |
+| Schedule card (`web/src/components/ScheduleCard.tsx`) | The Today rail showed agenda rows for upcoming days without a Tomorrow footer | The card shows today's agenda and a Tomorrow footer with the non-cancelled event count and add action |
+| Header status (`web/src/shell/StatusMenu.tsx`, `web/src/ui/StatusChip.tsx`) | The status pill included backup-age detail | The pill keeps a short status label; backup detail stays in the status popover |
+| “Not right” correction (`web/src/components/Today.tsx`) | The quiet, link-like button already opened the inline correction form | No behavior change; the button remains link-like and keeps button semantics for expanding the form |
+
 ## 271. How the assistant is doing, as tiles, a weekly table and grouped misses (2026-10-30; batch 7b, VS15)
 
 | Where | Before | Now |

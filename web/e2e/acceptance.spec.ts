@@ -827,7 +827,7 @@ test.describe.serial("acceptance scenario", () => {
     expect(facts.length).toBeGreaterThan(0);
   });
 
-  test("7. With no off-device backup configured, Today and the header say so; after one succeeds, the header shows its age.", async ({ page }) => {
+  test("7. With no off-device backup configured, Today and the header say so; after one succeeds, the status popover shows its age.", async ({ page }) => {
     // No backup folder at all: the header chip, its popover and Today's At risk line each say there is none.
     await helperJson(page, "backup-targets?configured=0", "POST");
     await signIn(page);
@@ -848,12 +848,12 @@ test.describe.serial("acceptance scenario", () => {
     await expect(chip).not.toContainText("ago");
     await expect(line).toContainText("No backup has worked yet");
 
-    // After one succeeds Today's line goes, and the header chip itself shows how long ago it ran.
+    // After one succeeds Today's line goes; the chip stays concise and the popover shows how long ago it ran.
     await line.getByRole("button", { name: "Back up now" }).click();
     await expect(line).toHaveCount(0);
-    await expect(chip).toContainText("All good");
-    await expect(chip).toContainText("Backed up less than an hour ago");
-    await expect(chip).toHaveAccessibleName(/^App status: All good, Backed up less than an hour ago$/);
+    await expect(chip).toHaveText("All good");
+    await expect(chip).not.toContainText("Backed up less than an hour ago");
+    await expect(chip).toHaveAccessibleName("App status: All good");
     const status = await openStatus(page);
     await expect(status).toContainText("Backed up less than an hour ago");
     await checkAccessibility(page);

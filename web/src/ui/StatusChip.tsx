@@ -7,20 +7,17 @@ import styles from "./StatusChip.module.css";
 export interface StatusChipProps extends Omit<AriaButtonProps, "children" | "className"> {
   tone?: "ok" | "warn" | "danger";
   children: ReactNode;
-  /** A muted phrase after the word, such as how long ago the last backup ran; hidden below 1440px, and when the row has no room for it. */
-  detail?: string;
   className?: string;
 }
 
 export function StatusChip(props: StatusChipProps) {
-  const { tone = "ok", children, detail, className, ...rest } = props;
+  const { tone = "ok", children, className, ...rest } = props;
   return (
     <AriaButton {...rest} className={[styles.chip, tone === "warn" ? styles.warn : "", tone === "danger" ? styles.danger : "", className ?? ""].filter(Boolean).join(" ")} data-tone={tone}>
       <span className={styles.head}>
         <span className={styles.dot} aria-hidden="true" />
         <span className={styles.word}>{children}</span>
       </span>
-      {detail && <span className={styles.detail}>{detail}</span>}
     </AriaButton>
   );
 }

@@ -549,9 +549,8 @@ export function BriefCard(props: {
   const act = useAct();
   const [asked, setAsked] = useState<Form | null>(null);
   useBriefClosings();
-  // On the phone the card is folded to its title until it is opened.
+  const [unfolded, setUnfolded] = useState<boolean | null>(null);
   const narrow = useIsNarrow();
-  const [unfolded, setUnfolded] = useState(false);
   const found = useBrief(asked);
   const queue = useQueue();
   const filter = useSideFilter();
@@ -576,28 +575,14 @@ export function BriefCard(props: {
   const title = form === "morning" ? t(isAfternoon(new Date(), data.afternoon_from_hour) ? "brief.title.afternoon" : "brief.title.morning") : form === "evening" ? t("brief.title.evening") : t("brief.title.monday");
   const showWords = (f: Form) => (f === "morning" ? t("brief.show.morning") : f === "evening" ? t("brief.show.evening") : t("brief.show.monday"));
   const quiet = form === "morning" ? t("brief.quiet.morning") : form === "evening" ? t("brief.quiet.evening") : t("brief.quiet.monday");
-  if (narrow && !unfolded) {
-    return (
-      <section className={styles.card} aria-labelledby={`${id}-head`} data-brief={form} data-folded="">
-        <h2 id={`${id}-head`} className={styles.title}>
-          <button type="button" className={styles.foldToggle} aria-expanded={false} onClick={() => setUnfolded(true)}>
-            {title}
-          </button>
-        </h2>
-      </section>
-    );
-  }
+  const isUnfolded = unfolded ?? (!narrow && form !== "morning");
   return (
-    <section className={styles.card} aria-labelledby={`${id}-head`} data-brief={form}>
+    <section className={styles.card} aria-labelledby={`${id}-head`} data-brief={form} data-folded={!isUnfolded ? "" : undefined}>
       <div className={styles.head}>
         <h2 id={`${id}-head`} className={styles.title}>
-          {narrow ? (
-            <button type="button" className={styles.foldToggle} aria-expanded onClick={() => setUnfolded(false)}>
-              {title}
-            </button>
-          ) : (
-            title
-          )}
+          <button type="button" className={styles.foldToggle} aria-expanded={isUnfolded} aria-controls={`${id}-body`} onClick={() => setUnfolded(!isUnfolded)}>
+            {title}
+          </button>
         </h2>
         <div className={styles.headActions}>
           {/* A day with nothing in it has no other forms to ask for: the brief shows by itself at its time. */}
@@ -641,20 +626,22 @@ export function BriefCard(props: {
           {tn("brief.on_today", data.on_today)}
         </p>
       )}
-      {data.message && (data.message.state === "ask" ? <WhoFor message={data.message} /> : <Message message={data.message} />)}
-      {data.sections.map((section) => ({ section, lines: section.lines.filter((line) => onSide(line.side, filter.choice)) })).filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0).map(({ section, lines }) => (
-        <div key={section.key} className={styles.section} data-section={section.key}>
-          <h3 className={styles.sub}>{heading(section.key, t)}</h3>
-          <ul className={styles.lines}>
-            {lines.map((line) => (
-              <LineRow key={line.key} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
-            ))}
-          </ul>
-          {section.more > 0 && <p className="hint">{tn("brief.more", section.more)}</p>}
-        </div>
-      ))}
-      {data.quiet && <p className={styles.quiet}>{quiet}</p>}
-      {data.goals && <Goals goals={data.goals} />}
+      <div id={`${id}-body`} hidden={!isUnfolded}>
+        {data.message && (data.message.state === "ask" ? <WhoFor message={data.message} /> : <Message message={data.message} />)}
+        {data.sections.map((section) => ({ section, lines: section.lines.filter((line) => onSide(line.side, filter.choice)) })).filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0).map(({ section, lines }) => (
+          <div key={section.key} className={styles.section} data-section={section.key}>
+            <h3 className={styles.sub}>{heading(section.key, t)}</h3>
+            <ul className={styles.lines}>
+              {lines.map((line) => (
+                <LineRow key={line.key} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
+              ))}
+            </ul>
+            {section.more > 0 && <p className="hint">{tn("brief.more", section.more)}</p>}
+          </div>
+        ))}
+        {data.quiet && <p className={styles.quiet}>{quiet}</p>}
+        {data.goals && <Goals goals={data.goals} />}
+      </div>
     </section>
   );
 }

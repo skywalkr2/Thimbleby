@@ -5,6 +5,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: Today's remaining mockup keeps the existing count and corrections (Task 20)
+
+**Decided:**
+- Fold the morning brief by default at every width, keeping its one-line summary and actions visible; opening it reveals its detail.
+- Keep the header status pill to one short label and show backup detail in its popover.
+- Keep the Schedule card focused on today and add a Tomorrow footer for tomorrow's non-cancelled events with an add action.
+- Keep “Not right” as a link-like button that opens its inline correction form; it changes view state, so it retains button semantics.
+- Do not add a line or change what Today counts.
+
+**Decided by:** the UI/UX review (VS05, VC13), built from brief 20.
+
+**Why:** the 1440px and 390px mockups clarify the remaining Today hierarchy without changing the meaning or count of its lines.
+
+**Impact:** Today and its header presentation only. Change log: section NEXT.
+
 ## 2026-10-30: Quality follows the review's VS15 row (Task 19)
 
 **Decided:**

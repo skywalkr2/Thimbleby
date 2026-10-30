@@ -334,7 +334,9 @@ test("Look over opens the batch in the details, and All looks good there confirm
   const open = row("review");
   // Each thing that needs a look is one line with Not right; nothing was marked or left.
   expect(await within(open).findByText("Send two spine options")).toBeInTheDocument();
-  expect(within(open).getAllByRole("button", { name: /^Not right/ })).toHaveLength(3);
+  const corrections = within(open).getAllByRole("button", { name: /^Not right/ });
+  expect(corrections).toHaveLength(3);
+  expect(corrections[0]).toHaveAttribute("data-variant", "quiet");
   expect(calls.filter((c) => c.route.startsWith("POST"))).toEqual([]);
   expect(onView).not.toHaveBeenCalled();
   await user.click(within(open).getByRole("button", { name: "All looks good" }));
