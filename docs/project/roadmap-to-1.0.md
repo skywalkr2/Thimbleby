@@ -750,7 +750,7 @@ management (not just read only) lets do it"):
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*
-- [ ] [S2] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
+- [x] [S2] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
   Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.
   **Built so far (S2):** the morning brief, the evening wrap-up and the card on Today that shows the one that is due
@@ -766,11 +766,14 @@ S2. **Time and attention:**
   (`tests/test_brief.py::test_a_deadline_renewal_or_expiry_within_the_window_is_an_at_risk_line_soonest_first`,
   `tests/test_brief.py::test_a_promise_to_the_person_whose_words_name_a_meeting_today_is_at_risk_at_that_meeting`,
   `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
-  **Left:** sample 3's request in words to move a call (needs reading a request out of a message: an AI call or a request
-  record, for the main session).
+  **Left:** the owner's AI re-run must check whether the assistant ties a to-do from a message to its calendar entry.
   - State (2026-10-30): built: sample 7's changed line from the document carries the words from it as evidence
-  (`tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`); left: sample 3's request in words to
-  move a call (needs reading a request out of a message: an AI call or a request record, for the main session).
+  (`tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`); sample 3's overnight outside request
+  creates a changed line naming who asked and linked to its calendar entry, while the person's own to-dos do not
+  (`tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`,
+  `tests/test_brief.py::test_a_persons_own_action_does_not_make_an_overnight_requested_action_line`,
+  `web/src/components/BriefCard.test.tsx`, "a requested action names who asked and opens the linked calendar entry");
+  the owner's AI re-run checks whether the assistant ties such a to-do to its calendar entry.
 
 S3. **People and meetings:**
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their

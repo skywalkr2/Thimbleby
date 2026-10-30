@@ -3037,3 +3037,30 @@ personas (`reviews/ui-ux-2026-10/validate-82d24cc/`): G1 to G4 fixed, phase U cl
   *Left:* nothing of this item.
   - State (2026-10-29): built: the held ask as a question with its reason and evidence, a button naming the result and the other answer visible (`tests/test_held_ask.py`, `web/src/components/TodayRecords.test.tsx`), the one drop-and-tell path (`tests/test_drop_and_draft_note.py`), and a note box on "Keep it open" (`web/src/components/TodayRecords.test.tsx`, "a held answer offers a note box for Keep it open", "a note reaches the held decline API with Keep it open"); left: nothing of this item.
   - Finished (2026-10-30): the note on "Keep it open" is checked before the choice applies (`tests/test_today_adds_no_lines.py::test_keep_it_open_with_a_note_hands_the_note_in_and_a_refused_note_changes_nothing`).
+
+### Phase S: finished after the check (2026-10-30)
+
+- [x] [S2] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
+  evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
+  Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.
+  **Built so far (S2):** the morning brief, the evening wrap-up and the card on Today that shows the one that is due
+  and closes for the day, by rules and never AI (`engine/brief.py`, `tests/test_brief.py`,
+  `web/src/components/BriefCard.test.tsx`); the ten samples are cases in both fictional workspaces
+  (`workspaces/*/briefs/`, `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`), each scored
+  exactly, with what it still lacks named. **Built (S2, capacity and clashes):** the capacity line first in the at-risk
+  section (sample 6), clashes from today onward with travel time, and the reminder offer (sample 7)
+  (`tests/test_day_capacity.py`, `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`).
+  **Built (S2, dates and meetings in words):** a deadline, renewal or expiry a fact records, from today through
+  `steward.brief.dated_risk_days`, is an at-risk line ("the last day to cancel", samples 7 and 9), and what someone owes the
+  person whose words name one timed calendar entry today is an at-risk line at that meeting (samples 4 and 8)
+  (`tests/test_brief.py::test_a_deadline_renewal_or_expiry_within_the_window_is_an_at_risk_line_soonest_first`,
+  `tests/test_brief.py::test_a_promise_to_the_person_whose_words_name_a_meeting_today_is_at_risk_at_that_meeting`,
+  `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
+  **Left:** the owner's AI re-run must check whether the assistant ties a to-do from a message to its calendar entry.
+  - State (2026-10-30): built: sample 7's changed line from the document carries the words from it as evidence
+  (`tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`); sample 3's overnight outside request
+  creates a changed line naming who asked and linked to its calendar entry, while the person's own to-dos do not
+  (`tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`,
+  `tests/test_brief.py::test_a_persons_own_action_does_not_make_an_overnight_requested_action_line`,
+  `web/src/components/BriefCard.test.tsx`, "a requested action names who asked and opens the linked calendar entry");
+  the owner's AI re-run checks whether the assistant ties such a to-do to its calendar entry.

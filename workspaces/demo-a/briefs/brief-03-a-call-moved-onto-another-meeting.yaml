@@ -9,6 +9,8 @@ given:
 - {kind: event, id: EVT-92, fields: {title: Dentist appointment, start: '2026-10-21T10:30:00-05:00', end: '2026-10-21T11:30:00-05:00', trust: trusted}}
 - {kind: question, id: Q-91, fields: {to: PER-4, title: 'Could we meet at eleven instead?'}}
 then:
+- at: '2026-10-20T20:10'
+  ask: {owner: PER-1, asker: PER-4, event: EVT-91, text: move your call to Friday at 10, quote: Ines Albescu asked to move your call to Friday at 10}
 - at: '2026-10-20T20:00'
   update: {kind: event, id: EVT-91, rule: calendar, fields: {start: '2026-10-21T10:00:00-05:00', end: '2026-10-21T11:00:00-05:00'}}
 expect:
@@ -16,5 +18,5 @@ expect:
   - {kind: on_today, change: need, count: 1, queue: 'send:PER-4'}
   - {kind: on_today, change: clash, count: 1, queue: 'clash:EVT-91:EVT-92:2026-10-21'}
   changed:
+  - {kind: requested_action, text: move your call to Friday at 10, person_name: Ines Albescu, link: [event, EVT-91]}
   - {kind: invitation, change: moved, text: Call about the schedule, person_name: Ines Albescu, day: '2026-10-21', at: '10:00', from_day: '2026-10-21', from_at: '14:00', link: [event, EVT-91]}
-left: [meeting_dependency]

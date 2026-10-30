@@ -135,6 +135,32 @@ test("changed facts keep their evidence", async () => {
   expect(await screen.findByText(/The studio renewal letter says Friday is the last day to cancel.*Friday 30 October is the last day to cancel/)).toBeInTheDocument();
 });
 
+test("a requested action names who asked and opens the linked calendar entry", async () => {
+  const user = userEvent.setup();
+  const { onOpenRecord } = show({
+    ...MORNING,
+    sections: [
+      {
+        key: "changed",
+        more: 0,
+        lines: [
+          line({
+            key: "requested:ACT-1",
+            kind: "requested_action",
+            text: "move your call to Friday at 10",
+            person_name: SENDER,
+            link: { kind: "event", id: "EVT-1" },
+          }),
+        ],
+      },
+    ],
+  });
+  const requested = await screen.findByText(`${SENDER} asked to move your call to Friday at 10`);
+  const row = requested.closest("li") as HTMLElement;
+  await user.click(within(row).getByRole("button", { name: "Open" }));
+  expect(onOpenRecord).toHaveBeenCalledWith("event", "EVT-1");
+});
+
 test("a line that waits for the person's yes is titled as Today's own line and says a draft is ready, and a section says how many more", async () => {
   show(MORNING);
   const yes = (await screen.findByText("Follow up with Dev Example")).closest("li");

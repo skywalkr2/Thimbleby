@@ -14,6 +14,7 @@ workspace's cases are the files in its `briefs/` folder, one case each:
                                 # own actions, questions and calendar entries are left out so each case is alone)
     then:                       # what happened after, oldest first; each has `at` (a moment on the workspace's clock)
     - news: {action, text, by}  # a message from a person said something about an action (it applies on its own)
+    - ask: {owner, asker, event, text, quote}  # outside words asked the person to do something
     - update: {kind, id, fields, rule}   # a record changed: `rule: calendar` is a calendar read, none is the person
     - create: {kind, id, fields, rule}   # a record made, the same way
     expect:                     # the sections in order, each the lines it holds, each line the values it must have
@@ -105,8 +106,12 @@ def _check(name: str, case: Any) -> None:
         if not isinstance(record, dict) or record.get("kind") not in REGISTRY or not record.get("id"):
             raise ValueError(f"{name}: every starting record needs a kind, an id and its fields")
     for step in case.get("then") or []:
-        if not isinstance(step, dict) or not step.get("at") or len({"news", "update", "create"} & set(step)) != 1:
-            raise ValueError(f"{name}: every later step says `at` and one of news, update or create")
+        if (
+            not isinstance(step, dict)
+            or not step.get("at")
+            or len({"ask", "news", "update", "create"} & set(step)) != 1
+        ):
+            raise ValueError(f"{name}: every later step says `at` and one of ask, news, update or create")
 
 
 def _moment(text: str, cfg: Any) -> datetime:
@@ -175,9 +180,73 @@ def _news(store: Store, cfg: Any, step: dict[str, Any], at: datetime) -> None:
     apply_changeset(changeset, [], ctx, run=None, now=at.astimezone(UTC))
 
 
+def _ask(store: Store, cfg: Any, step: dict[str, Any], at: datetime) -> None:
+    """File an action asked of the person by applying an outside message as untrusted input."""
+    from engine.applier import Context, Inputs, apply_changeset
+    from engine.names import People
+    from engine.ops import CHANGESET
+
+    asked = step["ask"]
+    people = People(store, cfg)
+    words = str(asked["quote"]).strip()
+    with store.transaction() as tx:
+        source = tx.create(
+            "source",
+            {
+                "received_at": at.astimezone(UTC).isoformat(),
+                "kind": "watched:mailbox",
+                "title": "A message",
+                "content_hash": "0" * 64,
+                "trust": "untrusted",
+                "watched": {
+                    "source": "inbox",
+                    "key": f"<{asked['event']}@example.com>",
+                    "change": "new",
+                    "author": people.name(asked["asker"]),
+                    "by_you": False,
+                    "by_us": False,
+                },
+            },
+            _STARTING,
+        ).id
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "input",
+                "state": "done",
+                "created_at": at.astimezone(UTC).isoformat(),
+                "source": source,
+            },
+            _STARTING,
+        ).id
+    ctx = Context(
+        store,
+        cfg,
+        people,
+        tuple(store.plugins.ops),
+        Inputs(request, source, f"{words}.", "", "untrusted"),
+        actor="assistant",
+        confirmed_by_pm=False,
+    )
+    op = {
+        "op": "action.add",
+        "text": asked["text"],
+        "owners": [asked["owner"]],
+        "said_by": asked["asker"],
+        "event": asked["event"],
+        "evidence": {"quote": words},
+    }
+    changeset = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    apply_changeset(changeset, [], ctx, run=None, now=at.astimezone(UTC))
+
+
 def _step(store: Store, cfg: Any, clock: Clock, step: dict[str, Any]) -> None:
     at = _moment(step["at"], cfg)
     clock.now = at
+    if "ask" in step:
+        _ask(store, cfg, step, at)
+        return
     if "news" in step:
         _news(store, cfg, step, at)
         return
