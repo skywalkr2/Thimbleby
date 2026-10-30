@@ -246,10 +246,24 @@ runs the full suites; the coding agent runs only what it touched.
   - sample 3 in `docs/project/steward-brief-samples.md` ("Tess asked to move your call to Friday at 10");
   - both workspaces' `brief-03` cases;
   - `engine/brief.py`, including `_fact_lines`, the pattern for "filed since", read from the ledger.
+- **How a case files it (decided after a first attempt stopped at the trust boundary, rightly):**
+  - Add a case step `ask` to `engine/brief_cases.py`, built exactly like the existing `news` step (`_news`).
+  - It creates the outside message (an untrusted `source` and a `request` with origin `input`), then applies an
+    `action.add` op through the real `apply_changeset`, with untrusted `Inputs` and actor `assistant`, as the assistant
+    files a to-do from a message.
+  - The op carries `owners` (the person), `said_by` (who asked), `event` (the call), and `evidence` with the exact
+    words.
+  - No trusted write stands in for it, and nothing bypasses the applier.
+  - Describe the step in the module's docstring beside `news`.
+- **The brief's rule:** the line comes from an action:
+  - filed since the brief's start, from an input (its ledger entry is untrusted, from a request whose origin is
+    `input`);
+  - with an `event`;
+  - whose `said_by` is someone other than the person.
 - **Build:**
-  1. First add to both brief-03 cases, in `given` and `then`:
-     - an action asked of the person: owners are the person, `promised_to` is the one who asked, `event` is the call,
-       and it is filed overnight from outside content;
+  1. First add to both brief-03 cases, in `then`:
+     - an `ask` step overnight, in the words of sample 3 ("<asker> asked to move the call to Friday at 10", with
+       names from the case's people);
      - and the expected changed line, with its kind and text, naming who asked, linked to the event.
      Remove `meeting_dependency` from `left`. Run the case test: it fails.
   2. Then build the line in `engine/brief.py`, rules only. The person's own questions and to-dos never make this line.
