@@ -37,6 +37,35 @@ export function ShortcutHelp(props: { open: boolean; onClose: () => void; keys: 
           <dd>{t("help.escape")}</dd>
         </div>
       </dl>
+      <h3 className={styles.group}>
+        {t("help.schedule_title")}
+      </h3>
+      <dl className={styles.list}>
+          <div className={styles.row}>
+            <dt>
+              <kbd>{t("help.schedule_keys")}</kbd>
+            </dt>
+            <dd>{t("help.schedule_move")}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>
+              <kbd>{t("help.schedule_views_keys")}</kbd>
+            </dt>
+            <dd>{t("help.schedule_views")}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>
+              <kbd>{t("help.escape_key")}</kbd>
+            </dt>
+            <dd>{t("help.schedule_escape")}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>
+              <kbd>{t("help.schedule_swipe_key")}</kbd>
+            </dt>
+            <dd>{t("help.schedule_swipe")}</dd>
+          </div>
+      </dl>
       <div className={styles.end}>
         <Button variant="primary" onClick={props.onClose} autoFocus>
           {t("action.close")}

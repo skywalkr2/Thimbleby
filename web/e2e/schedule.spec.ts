@@ -181,4 +181,53 @@ test.describe("the calendar page", () => {
     await expect(dialog).toHaveCount(0);
     await expect(entry).toBeFocused();
   });
+
+  test("the Schedule keeps to the review: a 64px hour gutter, entries at least 28px, now in view, a two-row toolbar and no key sentence", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seed(page);
+    await open(page);
+    await pick(page, "1");
+    const box = (selector: string) => page.locator(selector).first().evaluate((el) => el.getBoundingClientRect().toJSON());
+    const grid = await box("main [data-grid]");
+    const lane = await box("main ul[data-day]");
+    // The grid has a 1px border.
+    expect(Math.round(lane.left - grid.left) - 1).toBe(64);
+    // Every hour label sits inside the grid, the first one too.
+    for (const label of await page.locator("main [data-grid] [data-hour]").all()) {
+      const found = await label.boundingBox();
+      expect(found!.x).toBeGreaterThanOrEqual(grid.left);
+      expect(found!.x + found!.width).toBeLessThanOrEqual(lane.left);
+      expect(found!.y).toBeGreaterThanOrEqual(grid.top);
+    }
+    for (const entry of await page.locator("main ul[data-day] button").all()) expect((await entry.boundingBox())!.height).toBeGreaterThanOrEqual(28);
+    // It opens scrolled to now, with a dot on the line, when now is among the hours shown.
+    const now = page.locator("main [data-now]");
+    if ((await now.count()) > 0) {
+      await expect(now).toBeInViewport();
+      const dot = await now.evaluate((el) => getComputedStyle(el, "::before").width);
+      expect(parseFloat(dot)).toBeGreaterThan(0);
+    }
+    // Two rows: the arrows and the range, then the views and the filter.
+    const rows = await page.locator("main [data-bar-row]").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toBeGreaterThan(rows[0]);
+    await expect(page.getByText(/hold Shift to move a week/).first()).toBeHidden();
+    // The keys are in the shortcuts list.
+    await page.locator("body").press("?");
+    await expect(page.getByRole("dialog").getByText("Pick Day, Work week, Week or Month")).toBeVisible();
+  });
+
+  test("the month's cells are white and today is a filled circle", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seed(page);
+    await open(page);
+    await pick(page, "4");
+    const surface = await page.locator("main [data-month]").evaluate((el) => getComputedStyle(el).backgroundColor);
+    const cells = await page.locator("main section[data-day]").evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor));
+    for (const color of cells) expect(["rgba(0, 0, 0, 0)", surface]).toContain(color);
+    const today = page.locator("main section[data-today] > button > span").first();
+    const circle = await today.evaluate((el) => ({ radius: getComputedStyle(el).borderRadius, fill: getComputedStyle(el).backgroundColor }));
+    expect(parseFloat(circle.radius)).toBeGreaterThan(0);
+    expect(circle.fill).not.toBe("rgba(0, 0, 0, 0)");
+  });
 });

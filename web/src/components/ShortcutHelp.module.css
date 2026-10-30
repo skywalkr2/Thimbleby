@@ -3,3 +3,4 @@
 .row { display: grid; grid-template-columns: var(--space-12) 1fr; gap: var(--space-4); align-items: baseline; }
 .row dd { margin: 0; }
 .end { display: flex; justify-content: flex-end; }
+.group { margin: var(--space-4) 0 var(--space-2); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
