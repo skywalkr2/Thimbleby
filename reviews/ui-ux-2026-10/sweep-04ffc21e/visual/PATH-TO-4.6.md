@@ -100,7 +100,16 @@ Each VP row is shared work: fixed once, and every screen gains. The standards ca
 - Group labels in uppercase, 11px, with 0.12em tracking: a quieter version of the website's eyebrows (0.23em is for marketing).
 - Both fonts are open source and are bundled with the app, as the icons are.
 
-**Shape.** The website uses pill buttons, and the preview tries them on every button. It's an **owner's call**: pills everywhere (on brand, softer), or pills for primary buttons only, with 8px corners elsewhere (denser, closer to today).
+**Shape (decided: the owner asked for current best practice).**
+- **Every button is a pill:** primary, secondary, quiet, the small row actions, and filter chips. Icon-only buttons are circles.
+- **Inputs, selects and search fields keep 8px corners,** so a field never looks like a button.
+- **Cards and panes keep 12px, and dialogs 16px.** Anything inside a card uses a smaller radius than the card (concentric corners).
+- **Why:**
+  - It's where the major platform design systems have settled for buttons: capsule-shaped by default on both the main mobile platforms and in the major web component libraries.
+  - It matches the website.
+  - The difference in shape tells actions apart from fields, which helps a beginner.
+  - The brand preview already uses it.
+- Ships with VP16. Through the radius tokens only (`--radius-full` on the Button component and chips), with no local overrides.
 
 **Where it lives (the boundary).**
 - The product name, mark and default palette come from the product's one place (the phase I decision: "Thimbleby on screen, in the installers and in the docs from one place"), not from `web/src`.
