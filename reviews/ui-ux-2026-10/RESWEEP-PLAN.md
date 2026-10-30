@@ -14,6 +14,9 @@ This file and `tooling/` are committed so the run can start from a fresh contain
 - [ ] Their tracking copy, `docs/project/sweep-04ffc21e-tracking.md`, with Status, Commit and Test filled in.
 - [ ] **The several-accounts fakes** (section 3.1): the flag names and how to start them. If they're missing, sweep S5 runs with what exists and the gap is a finding against the hand-over.
 - [ ] Anything the host marked deferred, or "done differently", with its reason.
+- [ ] **Two fixes announced for this hand-over, to check by name:**
+  - Setup's mail step with **two accounts of one service**: the sides question grouped by account and named by address. S1 and S5 check it.
+  - The promises step's findings **move from the wizard to Today**. S1 checks the wizard; S2, S3 and S5 check Today.
 
 ## 1. Build
 
