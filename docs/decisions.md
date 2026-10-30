@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-30: To-dos follow the VS10 phone mockup (Task 21)
+
+**Decided:**
+- Add an inline "Add a to-do…" row to the phone list and open the existing add form from it.
+- Keep each to-do's source link inline with its owner, date and other metadata.
+- Keep the built wide layout and the existing edit, menu, filter and one-editor behavior unchanged.
+
+**Decided by:** the UI/UX review (VS10), following the Task 21 brief.
+
+**Why:** close the phone-specific gaps without adding a second add flow or changing the established wide presentation.
+
+**Impact:** the To-dos screen at phone widths only. Change log: section NEXT.
+
 
 ## 2026-10-30: Today's remaining mockup keeps the existing count and corrections (Task 20)
 

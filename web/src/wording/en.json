@@ -4933,6 +4933,8 @@
   "open.tab.questions": "Questions",
   "open.list.actions": "Open to-dos",
   "open.list.questions": "Open questions",
+  "open.inline_add": "Add a to-do…",
+  "open.inline_add_hint": "(type \"by Friday\" or \"every Monday\" and it's understood)",
   "open.filters": "Narrow the list",
   "open.filter.project": "Project",
   "open.filter.area": "Area",

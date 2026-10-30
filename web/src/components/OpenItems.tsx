@@ -8,6 +8,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
 import { useAct } from "../lib/act";
+import { useIsNarrow } from "../lib/media";
 import { day, monthDay } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
 import {
@@ -57,6 +58,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { FilterChip } from "../ui/FilterChip";
 import { PageHeader } from "../ui/PageHeader";
 import { RoundCheck } from "../ui/RoundCheck";
+import { RowItem } from "../ui/Row";
 import { TabStrip } from "../ui/TabStrip";
 import { RowList } from "../ui/RowList";
 type Tab = "actions" | "questions";
@@ -67,6 +69,7 @@ export function OpenItems() {
   useReviewTime("open");
   const items = useQuery({ queryKey: ["open-items"], queryFn: api.openItems });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const narrow = useIsNarrow();
   const [tab, setTab] = useState<Tab>("actions");
   const [filters, setFilters] = useState<Filters>(takeFilters);
   const ids = useId();
@@ -155,14 +158,22 @@ export function OpenItems() {
             <EmptyState text={t("open.none_match")} />
           ) : tab === "actions" ? (
             <RowList aria-label={t("open.list.actions")}>
+              {narrow && (
+                <RowItem>
+                  <Button variant="quiet" icon="plus" onClick={addTodo.open}>
+                    {t("open.inline_add")}
+                  </Button>{" "}
+                  <span className="hint">{t("open.inline_add_hint")}</span>
+                </RowItem>
+              )}
               {shownActions.map((a) => (
-                <ActionRow key={a.id} action={a} />
+                <ActionRow key={a.id} action={a} inlineOrigin={narrow} />
               ))}
             </RowList>
           ) : (
             <RowList aria-label={t("open.list.questions")}>
               {shownQuestions.map((q) => (
-                <QuestionRow key={q.id} question={q} />
+                <QuestionRow key={q.id} question={q} inlineOrigin={narrow} />
               ))}
             </RowList>
           )}
@@ -190,7 +201,7 @@ function join(parts: Array<ReactNode | null | undefined | false | "">): ReactNod
   ));
 }
 
-function ActionRow(props: { action: OpenAction }) {
+function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
   const { t, tn } = useWords();
   const place = usePlaceText();
   const act = useAct();
@@ -277,7 +288,7 @@ function ActionRow(props: { action: OpenAction }) {
       meta={
         <>
           {meta}
-          <OriginLink origin={a.origin} />
+          <OriginLink origin={a.origin} inline={props.inlineOrigin} />
         </>
       }
       primary={
@@ -334,7 +345,7 @@ function pillOf(a: OpenAction, t: T): ReactNode {
   }
 }
 
-function QuestionRow(props: { question: OpenQuestion }) {
+function QuestionRow(props: { question: OpenQuestion; inlineOrigin: boolean }) {
   const { t, tn } = useWords();
   const place = usePlaceText();
   const q = props.question;
@@ -376,7 +387,7 @@ function QuestionRow(props: { question: OpenQuestion }) {
       meta={
         <>
           {meta}
-          <OriginLink origin={q.origin} />
+          <OriginLink origin={q.origin} inline={props.inlineOrigin} />
         </>
       }
       primary={

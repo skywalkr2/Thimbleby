@@ -83,7 +83,7 @@ function api(extra: Routes = {}, shown: { actions?: S["OpenActionView"][]; quest
 
 async function rows() {
   const list = await screen.findByRole("list", { name: "Open to-dos" });
-  return within(list).getAllByRole("listitem");
+  return within(list).getAllByRole("listitem").filter((row) => row.hasAttribute("data-row"));
 }
 
 test("the time this screen is open and in view is counted as time spent looking over the assistant's work, once, when the person leaves it", async () => {
@@ -114,6 +114,99 @@ test("every open to-do is a row with its owners, due date, project and the proje
   expect(all[2]).toHaveTextContent("Not touched for 30 days");
   expect(all[3]).toHaveTextContent("Nobody yet");
   expect(all[4]).toHaveTextContent("Paused: the printer's quote");
+});
+
+test("a to-do has a round button to mark it done", async () => {
+  api();
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  const done = within(first).getByRole("button", { name: "Mark done" });
+  expect(done.querySelector("span")).toHaveAttribute("aria-hidden", "true");
+  expect(within(first).queryByRole("checkbox")).toBeNull();
+});
+
+test("a to-do's owner, date and source share one meta line on a phone", async () => {
+  api(
+    {},
+    {
+      actions: [
+        action("A-1", "Send the venue list", {
+          due: "2026-10-12",
+          origin: { kind: "link", url: `${WEB}docs.example.com/plan`, source: "S-1" },
+        }),
+      ],
+      questions: [],
+    },
+  );
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    renderApp(<OpenItems />);
+    const [first] = await rows();
+    const main = first.querySelector(":scope > div:nth-child(2)")!;
+    expect(main.querySelectorAll(":scope > p")).toHaveLength(1);
+    const origin = within(first).getByRole("link", { name: "Where it came from" });
+    expect(origin).toBeVisible();
+    expect(origin.closest(".origin")).toHaveClass("inline");
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
+});
+
+test("the inline add row opens the to-do form", async () => {
+  const user = userEvent.setup();
+  api();
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    renderApp(<OpenItems />);
+    const list = await screen.findByRole("list", { name: "Open to-dos" });
+    const add = within(list).getByRole("button", { name: "Add a to-do…" });
+    expect(add.closest("li")).toBe(list.firstElementChild);
+    expect(within(add.closest("li")!).getByText(/type "by Friday" or "every Monday"/i)).toBeVisible();
+    await user.click(add);
+    expect(await screen.findByRole("textbox", { name: "What to do" })).toBeVisible();
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
+});
+
+test("the established wide to-do layout has no phone-only inline add row", async () => {
+  document.documentElement.removeAttribute("data-narrow");
+  api(
+    {},
+    {
+      actions: [
+        action("A-1", "Send the venue list", {
+          origin: { kind: "link", url: `${WEB}docs.example.com/plan`, source: "S-1" },
+        }),
+      ],
+      questions: [],
+    },
+  );
+  renderApp(<OpenItems />);
+  const list = await screen.findByRole("list", { name: "Open to-dos" });
+  expect(within(list).queryByRole("button", { name: "Add a to-do…" })).toBeNull();
+  expect(within(list).getByRole("link", { name: "Where it came from" }).closest(".origin")).not.toHaveClass("inline");
+});
+
+test("the to-do filters remain compact choice controls", async () => {
+  api();
+  renderApp(<OpenItems />);
+  await rows();
+  expect(screen.getByRole("combobox", { name: "Person" })).toBeVisible();
+  expect(screen.getByRole("combobox", { name: "State" })).toBeVisible();
+  expect(screen.getByRole("combobox", { name: "Project" })).toBeVisible();
+});
+
+test("the to-do menu is sectioned and marks Drop as a dangerous action", async () => {
+  const user = userEvent.setup();
+  api();
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  await user.click(within(first).getByRole("button", { name: /More actions for Send the proof/ }));
+  const menu = await screen.findByRole("menu");
+  expect(within(menu).getAllByRole("group")).toHaveLength(3);
+  expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(2);
+  expect(within(menu).getByRole("menuitem", { name: "Drop" })).toHaveAttribute("data-danger", "");
 });
 
 test("a row whose date is to be checked says so beside the date and is not shown as overdue", async () => {

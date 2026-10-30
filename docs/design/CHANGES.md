@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## NEXT. To-dos at phone widths (2026-10-30; VS10)
+
+| Where | Before | Now |
+|---|---|---|
+| To-dos (`web/src/components/OpenItems.tsx`) | Round completion, wrapping filter chips, sectioned menus with a dangerous Drop action, and a single-editor mechanism were already in place. The source link sat as a block in the row metadata, and the list had no inline add row. | The source is inline with the metadata, and the phone layout starts with an accessible inline add row that opens the existing form. The row is limited to narrow layouts; the 1440px presentation and existing add flow remain unchanged. |
+
 ## 272. Today's remaining mockup: the brief folded, one status pill, and Tomorrow (2026-10-30; VS05, VC13)
 
 | Where | Before | Now |
