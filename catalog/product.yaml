@@ -1,4 +1,6 @@
 # Facts about this build of the product, shipped with it. A release build may replace these from repository variables.
 feedback_to: null   # where the feedback button writes, unless a workspace sets ui.feedback_to
 # The product's own packs catalog feed, which the Add-ons screen always reads; set by the maintainers, not a setting.
-pack_catalog: "https://raw.githubusercontent.com/skywalkr2/PMCockpit-Catalog/main/packs.yaml"
+pack_catalog: "https://raw.githubusercontent.com/skywalkr2/Thimbleby-Catalog/main/packs.yaml"
+pack_catalog_former:
+  - "https://raw.githubusercontent.com/skywalkr2/PMCockpit-Catalog/main/packs.yaml"

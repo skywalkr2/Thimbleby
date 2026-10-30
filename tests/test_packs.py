@@ -145,6 +145,46 @@ def test_the_app_s_own_catalog_is_marked_and_the_ones_the_person_added_are_not(t
     assert by_address[FEED]["own"] is False and by_address[FEED]["removable"] is True
 
 
+def test_a_saved_former_shipped_catalog_is_read_at_the_current_address(tmp_path, monkeypatch):
+    from api.app import create_app
+    from engine.workspace import init_workspace
+
+    former = f"https://{N['catalog_host']}/former/packs.yaml"
+    current = f"https://{N['catalog_host']}/current/packs.yaml"
+    requests = []
+
+    def serve(request):
+        requests.append(str(request.url))
+        return httpx.Response(200, text=FEED_TEXT)
+
+    monkeypatch.setattr(engine.net, "TRANSPORT", httpx.MockTransport(serve))
+    monkeypatch.setattr(
+        "api.pack_routes.product",
+        lambda: {"pack_catalog": current, "pack_catalog_former": [former]},
+    )
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    settings = yaml.safe_load((ws.config_dir / "workspace.yaml").read_text())
+    settings["plugins"]["catalog"]["feeds"] = [former, FEED]
+    settings["plugins"]["catalog"]["shipped_feed"] = True
+    (ws.config_dir / "workspace.yaml").write_text(yaml.safe_dump(settings))
+    cfg = load_config(ws.config_dir, env={})
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+
+    c.headers["Authorization"] = "Bearer t"
+    response = c.get(cfg.server.base_path.rstrip("/") + "/api/packs")
+    assert response.status_code == 200, response.text
+    feeds = response.json()["feeds"]
+    by_address = {feed["address"]: feed for feed in feeds}
+
+    assert set(requests) == {current, FEED}
+    assert set(by_address) == {current, FEED}
+    assert by_address[current]["own"] is True and by_address[current]["removable"] is False
+    assert by_address[FEED]["own"] is False and by_address[FEED]["removable"] is True
+    saved = yaml.safe_load((ws.config_dir / "workspace.yaml").read_text())
+    assert saved["plugins"]["catalog"]["feeds"] == [former, FEED]
+
+
 def test_the_shipped_feed_template_reads_cleanly():
     template = Path(__file__).parents[1] / "deploy" / "pack-catalog.example.yaml"
     feed = packs.parse(FEED, template.read_text())

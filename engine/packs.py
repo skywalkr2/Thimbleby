@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from engine.config import Config
 from engine.connectors import READS_WORDS, reads
+from engine.shipped import is_shipped_catalog
 from engine.state_file import write_whole
 from engine.yaml_load import load_yaml
 
@@ -170,7 +171,7 @@ def feed_urls(cfg: Config, product: dict[str, Any]) -> list[str]:
         return []
     shipped = product.get("pack_catalog") if settings.shipped_feed else None
     urls = [shipped] if isinstance(shipped, str) and shipped.startswith("https://") else []
-    return [*urls, *(u for u in settings.feeds if u not in urls)]
+    return [*urls, *(u for u in settings.feeds if u not in urls and not is_shipped_catalog(u, product))]
 
 
 def parse(url: str, text: str) -> Feed:
