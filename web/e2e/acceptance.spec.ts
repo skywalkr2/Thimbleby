@@ -1170,6 +1170,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(status.getByText("On the shelf", { exact: true })).toBeVisible();
     await status.getByRole("button", { name: /More actions for On the shelf/ }).click();
     await page.getByRole("menuitem", { name: "Stop offering" }).click();
+    // The row that held the cursor is gone, so the cursor goes to the list's own name (which scrolls the page to it).
+    await expect(status.getByText("Project status", { exact: true })).toBeFocused();
     await status.getByRole("button", { name: /No longer offered/ }).click();
     await expect(status.locator(".list-value", { hasText: "On the shelf" })).toBeVisible();
     await expect(status.getByRole("button", { name: "Offer again On the shelf" })).toBeVisible();

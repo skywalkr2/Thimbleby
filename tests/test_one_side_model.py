@@ -41,15 +41,23 @@ def _workspace(tmp_path, *, with_calendars: bool):
 @pytest.fixture
 def sided(tmp_path):
     """A workspace with Personal, a job and a business, each with a to-do, a question and a promise, a calendar for each
-    side and two meetings of the business calendar that clash."""
-    ws = _workspace(tmp_path, with_calendars=True)
-    cfg = ws.config(env={}, flags={"storage.backups.automatic": False})
-    app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui", start_worker=False)
-    with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
-        seeded = seed_sides(client, app.state.store, cfg)
-        # The sides are a live setting: the running app takes them in as the app's own loop does.
-        app.state.worker.apply_live()
-        yield client, app.state.store, cfg, seeded
+    side and two meetings of the business calendar that clash. The meetings are tomorrow, so the clock starts on the
+    coming Monday morning: tomorrow is then inside this week's working days whatever day the tests run."""
+    from datetime import UTC, datetime, timedelta
+
+    import time_machine
+
+    now = datetime.now(UTC)
+    monday = (now + timedelta(days=7 - now.weekday())).replace(hour=6, minute=0, second=0, microsecond=0)
+    with time_machine.travel(monday, tick=True):
+        ws = _workspace(tmp_path, with_calendars=True)
+        cfg = ws.config(env={}, flags={"storage.backups.automatic": False})
+        app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui", start_worker=False)
+        with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
+            seeded = seed_sides(client, app.state.store, cfg)
+            # The sides are a live setting: the running app takes them in as the app's own loop does.
+            app.state.worker.apply_live()
+            yield client, app.state.store, cfg, seeded
 
 
 @pytest.fixture
