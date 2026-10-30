@@ -15,7 +15,7 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Why:** close the phone-specific gaps without adding a second add flow or changing the established wide presentation.
 
-**Impact:** the To-dos screen at phone widths only. Change log: section NEXT.
+**Impact:** the To-dos screen at phone widths only. Change log: section 273.
 
 
 ## 2026-10-30: Today's remaining mockup keeps the existing count and corrections (Task 20)
