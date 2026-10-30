@@ -171,6 +171,22 @@ test.describe("no screen is wider than the window", () => {
     expect(wide).toEqual([]);
   });
 
+  test("To-dos show the inline add row and fit phone widths without sideways page scroll", async ({ page }) => {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("?token=e2e-token");
+      await page.evaluate(() => {
+        window.location.hash = "work/open";
+      });
+      await heading(page, "To-dos and questions");
+      const list = page.getByRole("list", { name: "Open to-dos" });
+      await expect(list).toBeVisible(LOADED);
+      await expect(list.getByRole("button", { name: "Add a to-do…" })).toBeVisible();
+      const found = await overflow(page);
+      expect(tooWide(found), `To-dos at ${width}px: ${JSON.stringify(found)}`).toBe(false);
+    }
+  });
+
   test("Quality fits the smallest and largest supported widths", async ({ page }) => {
     for (const width of [320, 2000]) {
       await page.setViewportSize({ width, height: 900 });
