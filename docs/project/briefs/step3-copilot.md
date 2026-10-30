@@ -67,18 +67,23 @@ runs the full suites; the coding agent runs only what it touched.
 ## Task 8: the model picker's role words
 - **Item:** `[B-11] A recommended setup per AI service`. Its State line says the model picker's role words are not
   checked, and two examples may still share "stronger".
-- **Read:** the role words in `web/src/wording/en.json` (`welcome.ai.role.*` and any other role or tier words the model
-  picker shows), and where the picker chooses the word for each model. Say in the report which two models share a word
-  and when.
-- **Build:**
-  - a unit test that, for every tier in every shipped preset, the picker's role word is one of the defined role words;
-  - and that no two models offered in one picker share a role word, unless they are the same model;
-  - then the fix: the role comes from the model's tier or its place in the preset, never from a vendor or model name.
-- **Rules:**
-  - No vendor or model name in code, wording or tests outside `engine/ai/adapters/` and config.
-  - The model's name is never shown as its role.
-- **Done when:** the test passes, and the State line says the role words are checked, citing the test. The rest of
-  B-11's "Left" list stays for the main session.
+- **What the design says (checked; don't change it):**
+  - Design 7.14 (`docs/design/07-ui.md`, near "an app's examples are Recommended, Stronger and Faster"): a program's
+    example models are offered as Recommended, Stronger and Faster, from the catalog's `model_roles`.
+  - When two share a purpose, they are numbered ("Stronger 1", "Stronger 2"), never named by the program's own model
+    name.
+  - So two examples sharing "Stronger" is the designed behavior, not a bug.
+- **Build only tests, unless a test finds the code breaking the design:**
+  - a Python test that every role in every shipped catalog entry's `model_roles` is one of the three words, and names an
+    example the entry lists;
+  - a component test that two examples sharing a role are shown with the role word and a number, and a single one with
+    the word alone, and no example ever shows the program's own model name as its label.
+- **Don't add new role words**, don't derive roles from tiers, and don't change the catalog's roles. If the test finds
+  the code breaking the design, fix the code to match the design.
+- **A first attempt** (`copilot-step3-8`, `78ae331`) changed the design and was not taken. Start fresh from the check
+  branch.
+- **Done when:** the tests pass, and the B-11 State line says the role words are checked against design 7.14, citing
+  the tests. The rest of B-11's "Left" list stays for the main session.
 
 ## Task 9: the morning brief's two remaining samples
 - **Item:** `[S2] The morning brief as what changed, what is at risk and what needs your yes`. Its **Left:** sample 7's
