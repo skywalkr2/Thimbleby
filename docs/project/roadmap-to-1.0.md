@@ -653,8 +653,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   screen with the tiers and their cost per day, and "Measure"). **B-11a built:** `engine/ai/presets.py`,
   `tests/test_tier_presets.py` (presets for the two services whose families are certain; effort reaches a service only
   through its confirmed `effort_param` or `effort_option`, none set yet). *Built for B-11b (audit A5):* each tier's cost per day on the Settings AI page (`tests/test_tier_costs.py`, `web/src/components/AiRouting.test.tsx`). *Left for B-11b:* the Settings screen's recommendation by cost per passing answer,
-  "Measure", the model picker's role words (two examples now share "stronger"), effort in the pre-save account check,
-  and confirming each service's effort parameter. *Found while confirming it (2026-10-21):* the recommended service is
+  "Measure", effort in the pre-save account check, and confirming each service's effort parameter. *The model picker's role
+  words are checked against design 7.14* (two examples sharing "stronger" is designed): every catalog role is one of the three words and names a listed example
+  (`tests/test_catalog_model_roles.py`), and the picker shows a shared word numbered, a single one alone, and never the program's own name
+  (`web/src/components/WelcomeAi.test.tsx`, "examples sharing a role show the word with a number…"). *Found while confirming it (2026-10-21):* the recommended service is
   reached through its chat-format compatibility endpoint, which per its own documentation ignores `reasoning_effort`,
   supports no prompt caching, is "not considered a long-term or production-ready solution", and refuses any
   temperature below 1 on current models; **fixed:** `send_temperature` (off for that entry,
