@@ -14,8 +14,14 @@ runs the full suites; the coding agent runs only what it touched.
 - **Stop and report instead of building when:**
   - the part needs a new op, a new AI task kind, a new config key, a plugin API change, or a design decision the item
     doesn't make;
-  - or it would touch the applier, Undo, the publisher, spending, credentials, or trust and plugin boundaries.
+  - or it would change the applier, Undo, the publisher, spending, credentials, or trust and plugin boundaries.
   In those cases, say what is needed and why.
+  - **Using them as they are is not a stop.** Examples:
+    - calling the applier the way existing code does;
+    - handing text in through `engine.intake.hand_in` as "someone else's words", the way `POST /handin` does (that
+      function marks it untrusted);
+    - running an AI task through the router.
+  - Stop only when the task needs to change how one of them decides.
 - **Rules that catch new code:**
   - No user-facing words in code: they go in `web/src/wording/en.json` (screens) or the core's wording files.
   - No real names, companies, systems or addresses: tests read names from the fixtures.
@@ -171,7 +177,8 @@ runs the full suites; the coding agent runs only what it touched.
 - **Build:**
   - `POST /handin/file`, following `/handin/audio`:
     - read the file with `read_file` (a saved mail `.eml` with its attachments through `attached.py`);
-    - hand the text in as **pasted content** (someone else's words: outside, never instructions), named by the file;
+    - hand the text in through `engine.intake.hand_in`, exactly as `POST /handin` does for "someone else's" words.
+      That existing call marks it untrusted; this task adds no trust handling of its own. Name it by the file;
     - the person's optional note goes with it, as with pasted text;
     - a file nothing reads is kept through the same function `POST /files` uses, and the answer says "can't be read
       yet" in plain words;
