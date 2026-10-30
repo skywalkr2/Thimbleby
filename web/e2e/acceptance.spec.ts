@@ -909,15 +909,18 @@ test.describe.serial("acceptance scenario", () => {
   test("Connections shows how often each connection is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {
     await signIn(page);
     await go(page, "Connections");
-    const sources = page.getByRole("main").locator("ul[data-row-list]").first();
-    // One row per source, each saying it reads by itself and when it last did.
-    await expect(sources.getByRole("listitem").first()).toContainText(/Read every \d+ minutes · /);
+    const sources = page.getByRole("table", { name: "Connections" });
+    // One row per source, each saying it reads by itself and when it last did, with its privacy level and status in their own columns.
+    const rows = sources.getByRole("row").filter({ has: page.getByRole("button", { name: /^More actions for / }) });
+    await expect(rows.first()).toContainText(/Read every \d+ minutes · /);
     await page.getByRole("button", { name: "Add mail, calendar or folder" }).click();
-    const form = page.getByRole("form", { name: "Add mail, calendar or folder" });
+    const form = page.getByRole("dialog", { name: "Add mail, calendar or folder" }).getByRole("form", { name: "Add mail, calendar or folder" });
     await expect(form).toBeVisible();
     // The cursor starts in the form's first field: the kind of source to add (design 7.0).
     await expect(form.getByRole("radio").first()).toBeFocused();
     await form.getByRole("radio").first().check();
+    // Adding takes two steps: the kind, then its details.
+    await form.getByRole("button", { name: "Continue" }).click();
     await expect(form.getByLabel("Name", { exact: true })).toBeVisible();
     // How often, the area and who writes in it are options, kept behind one line.
     await expect(form.getByLabel("How often to read")).toBeHidden();
@@ -927,7 +930,7 @@ test.describe.serial("acceptance scenario", () => {
     await form.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByRole("button", { name: "Add mail, calendar or folder" })).toBeFocused();
     // A row's menu: read now, change, turn off or on, remove; Change opens the same form filled in.
-    const first = sources.getByRole("listitem").first();
+    const first = rows.first();
     await first.getByRole("button", { name: /^More actions for / }).click();
     await expect(page.getByRole("menuitem")).toHaveText(["Read now", "Look at the last day", "Change", /^Turn o(ff|n)$/, "Remove"]);
     await page.getByRole("menuitem", { name: "Change" }).click();
@@ -1157,9 +1160,12 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Lists" }).click();
     const lists = page.getByRole("region", { name: "Lists" });
     await expect(lists).toBeVisible();
-    const status = lists.locator("[data-row-list] > li", { hasText: "Project status" });
+    const status = lists.locator("details", { hasText: "Project status" });
     // A line that only repeats the list's own name says nothing, so there is none.
     await expect(status).not.toContainText("Used for");
+    // Each list starts folded; its summary opens it.
+    await expect(status.getByText("Parked for now", { exact: true })).toBeHidden();
+    await status.locator("summary").click();
     await expect(status.getByText("Parked for now", { exact: true })).toBeVisible();
     await checkAccessibility(page);
     await status.getByRole("button", { name: /More actions for Parked for now/ }).click();

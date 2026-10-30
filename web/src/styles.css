@@ -310,6 +310,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .list-accordion-body { min-width: 0; padding: 0 var(--row-px) var(--space-3); }
 @media (max-width: 640px) {
   .source-table, .source-table tbody { display: block; }
+  .source-table thead tr, .source-table thead th { display: block; }
   .source-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .source-table tbody { display: grid; }
   .source-table tbody > tr { display: grid; }
