@@ -5,6 +5,32 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: The postponed UI/UX items go to the coding agent before the installers; redo of one item moves after them
+
+**Decided:**
+- **Before the installers, as briefs 17 to 22 for the coding agent (`docs/project/briefs/step3-copilot.md`):**
+  - 7b: the Schedule (VS06), Settings and Connections (VS17, VS18), and Quality (VS15), to the review's mockups;
+  - the rest of Today's mockup (VS05);
+  - To-dos at phone widths (VS10);
+  - a check that Today's count rule holds for the two cases design 7.x names (a reassign's line becomes "Tell <name>";
+    "Write the weekly message" becomes "Send the weekly message"). The rule is already in the design and built for
+    every other act.
+- **After the installers:** redoing one sent-back item on its own. Until then the whole-task redo stays, and says so
+  before it runs, as decided in batch 4.
+- The reviewer's re-sweep, with batch 8's captures and hand-over, follows once 17 to 22 are in.
+
+**Decided by:** the owner (the postponed items before the installers, using the coding agent's credit; 2026-10-30) and
+the main session (the order, and redo of one item after the installers).
+
+**Why:**
+- The mockups and the review's rows say what done looks like, so the layout work can be briefed.
+- Redoing one item changes how a run is asked and what its result may touch. That is applier and learning work, and the
+  whole-task redo already works.
+
+**Impact:**
+- Phase B's leftovers close before phase I.
+- The redo of one item joins the post-installer list. Change log: none.
+
 ## 2026-10-30: How Hand something in reads attachments, a request to move a call in the brief, thinking off, the catalog address, and languages for dates
 
 **Decided:**

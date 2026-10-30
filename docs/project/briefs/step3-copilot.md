@@ -337,3 +337,103 @@ runs the full suites; the coding agent runs only what it touched.
   - the cause is fixed, or the checks that will name it are in;
   - the whole `root-panes` project passes with its dependency;
   - and P96 in `docs/project/open-promises.md` says which.
+
+## The UI/UX tasks (17 to 21): how they work
+These build screens to the UI/UX review's mockups.
+- **The review** is on the branch `origin/claude/sweet-einstein-s840wp`. Run `git fetch origin
+  claude/sweet-einstein-s840wp` and read with `git show FETCH_HEAD:<path>`:
+  - `reviews/ui-ux-2026-10/sweep-04ffc21e/visual/README.md`: section 4's row for the task (its VS id), and section 3's
+    shared components VC01 to VC13;
+  - `reviews/ui-ux-2026-10/sweep-04ffc21e/visual/appendix/` for the findings each row names (V2-…, V3-…);
+  - the mockups in `reviews/ui-ux-2026-10/sweep-04ffc21e/visual/mockups/` (`<name>.html` with `mock.css` and
+    `tokens.css`, and the PNGs). Save them to a folder outside the repository to open them.
+- **Check the code first:** say which of the row's points are already built (earlier batches did some) and build only
+  the rest.
+- **Build with the shared components** in `web/src/ui/`. Don't make local copies.
+  - Add a state to a component only if the mockup needs one, and say so.
+  - `web/e2e/guards.spec.ts` must still pass.
+- **Rules:**
+  - every word from `web/src/wording/en.json`;
+  - both themes;
+  - 320 to 2000 px with no sideways scroll;
+  - the keyboard and a screen reader work as well as before or better;
+  - WCAG 2.2 AA;
+  - status never by color alone;
+  - the cursor on the heading when a screen opens.
+- **Tests:**
+  - a component test for each behavior the row asks for;
+  - the screen's browser spec at the widths `web/e2e/layout.spec.ts` uses, run as that one project.
+  - Measure a layout fault before changing CSS (CLAUDE.md).
+- **Record it:**
+  - a `## NEXT` section at the top of the numbered sections in `docs/design/CHANGES.md` (Where, Before, Now);
+  - a decision entry at the top of `docs/decisions.md` citing "Change log: section NEXT";
+  - the main session numbers it. The self-check failing only on that NEXT citation is expected; say so in the report.
+- **Not these tasks:** anything the row's mockup doesn't show, and the captures for the reviewer (the main session's).
+
+## Task 17: the Schedule to the review (VS06, batch 7b)
+- **Row VS06:**
+  - a 64px hour gutter with no clipped labels;
+  - entries at least 28px tall;
+  - opens scrolled to now, with a now-dot;
+  - a two-row toolbar;
+  - month cells white, with today as a filled circle;
+  - keyboard help moved to the ? menu.
+- **Findings:** V2-6, V2-7, V2-13, V2-19 to V2-22, V2-28. There is no mockup; the row and the findings say what done
+  looks like.
+- **Browser check:** extend `web/e2e/schedule.spec.ts`.
+
+## Task 18: Settings' menu and sections, and Connections (VS17, VS18, batch 7b)
+- **VS17:**
+  - a grouped Settings menu (You / Assistant / Your data / More), with add-on pages under Add-ons;
+  - setting rows that stack on a phone;
+  - one synced-folder section;
+  - lists as accordions;
+  - radio rows on one grid.
+- **VS18:** follow the `connections` mockup:
+  - an account card with a status pill, "Choose what to read" and a ⋯ menu;
+  - sources as a table with privacy pills and status dots;
+  - adding is a two-step drawer.
+- **Keep:** every Settings link keeps its address (`#settings/<section>`), and no section is dropped.
+- **Browser check:** extend `web/e2e/settings-walk.spec.ts`.
+
+## Task 19: How the assistant is doing (Quality, VS15, batch 7b)
+- **Follow the `quality` mockup:**
+  - 4 stat tiles;
+  - a weekly table;
+  - a "mistakes to look at" list;
+  - the person's own count as a small card;
+  - empty sections in one line.
+- **Keep:** the numbers come from the same API as today. Don't change what is counted.
+
+## Task 20: the rest of Today's mockup (VS05)
+- **What's left** (batch 4 built the rest):
+  - "Not right" as a link under the opened row;
+  - the morning brief folded behind its one-line summary;
+  - the header's status pill (VC13: one pill with a short label, the detail in its popover);
+  - the Tomorrow footer.
+- **Follow the `today` mockup** at 1440 and 390.
+- **Keep:** the count rule (nothing the person does adds a line), and `tests/test_today_adds_no_lines.py` and the
+  Today browser specs pass.
+
+## Task 21: To-dos at phone widths (VS10)
+- **Follow the `todos` mockup at 390** (`todos-day-390.png`):
+  - a round checkbox;
+  - one meta line;
+  - an inline add row;
+  - filter chips that scroll or wrap without a sideways page scroll;
+  - the sectioned menu with Drop in red;
+  - one editor at a time.
+- The 1440 layout is built (batch 4). Don't change it.
+
+## Task 22: Today's count rule for the two named cases
+- **The rule:** design 7.x, "No action on Today adds lines to Today": a line made by the person's own act replaces the
+  line it came from.
+  - The design names two cases: a reassign's to-do line becomes "Tell <name>", and "Write the weekly message" becomes
+    "Send the weekly message".
+  - `tests/test_today_adds_no_lines.py` covers the other acts.
+- **Build:**
+  - a test for each case: the line count is the same before and after, and the new line is there with the old one gone;
+  - if either fails, fix it at the root (where the line is made), keeping every other act's test passing.
+- This is not a UI task. No CHANGES section is needed unless the design text changes.
+- **Done when:** both tests pass, and the item in the roadmap or P96 that names "Today's count rule for a person's own
+  act" says so, citing them.
