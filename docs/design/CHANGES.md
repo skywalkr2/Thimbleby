@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 271. How the assistant is doing, as tiles, a weekly table and grouped misses (2026-10-30; batch 7b, VS15)
+
+| Where | Before | Now |
+|---|---|---|
+| Quality screen (Task 19, VS15; `web/src/components/Quality.tsx`) | The existing measures, weekly figures and count form were shown as separate prose-first sections, without the review's outcome tiles, compact weekly table, grouped missed-item list or compact count card. | Four tiles and their latest-week comparisons use only `GET /api/quality` and preserve each measure's meaning; the table uses its weekly figures; missed counts stay grouped by person and week and link to a person's page when available; the count form retains save, correction and Undo; secondary sections fold to one-line summaries. No API or counted data changed. |
+
 ## 270. Settings grouped, and Connections as account cards with a sources table (2026-10-30; batch 7b, VS17, VS18)
 
 | Where | Before | Now |

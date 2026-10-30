@@ -5,6 +5,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: Quality follows the review's VS15 row (Task 19)
+
+**Decided:**
+- Keep the four existing outcome measures, weekly figures, and the person's own count form; present them as four tiles, a weekly table, and a compact count card.
+- Compare only the latest two weekly figures when both exist; use the existing grouped missed counts and link to a person's page when an id is available.
+- Keep each measure's current meaning and the existing API; do not add item-level misses, actions, or counts.
+- Keep secondary sections as one-line summaries when collapsed.
+
+**Decided by:** the UI/UX review (VS15), on the main session's decision of the same day; built from brief 19.
+
+**Why:** the screen should match the VS15 review without changing the existing measures or inventing unsupported detail.
+
+**Impact:** Quality screen presentation only. Change log: section 271.
 ## 2026-10-30: The Quality screen takes the mockup's layout, not new measures (VS15)
 
 **Decided:**
