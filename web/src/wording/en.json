@@ -172,6 +172,12 @@
   "handin.todo_placeholder": "For example: find the to-dos and save the dates",
   "handin.drop_text_only": "Only text files and voice notes were added. Other files were left out.",
   "handin.picture_not_read": "A picture can't be read yet. Type or paste the words in it instead.",
+  "handin.file.choose": "Choose a file",
+  "handin.file.list": "Files handed in",
+  "handin.file.read": "Read and handed in",
+  "handin.file.kept": "Kept; can't be read yet",
+  "handin.file.refused": "Refused: {reason}",
+  "handin.file.voice": "Handed in; turned into text first",
   "handin.go": "Hand in",
 
   "ai.not_set_up.title": "The assistant isn't set up yet",

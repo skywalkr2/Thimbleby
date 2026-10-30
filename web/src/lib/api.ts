@@ -257,6 +257,20 @@ export const api = {
       body: file,
     });
   },
+  /** Read an uploaded document as outside content, or keep an unreadable file for later. */
+  handInFile: (
+    file: Blob & { name: string },
+    options: { note?: string; project?: string; data_level?: "open" | "internal" | "restricted" } = {},
+  ) => {
+    const query = new URLSearchParams({ name: file.name });
+    if (options.note) query.set("note", options.note);
+    if (options.project) query.set("project", options.project);
+    if (options.data_level) query.set("data_level", options.data_level);
+    return send<S["HandedFile"]>("POST", `handin/file?${query.toString()}`, {
+      headers: { "content-type": file.type || "application/octet-stream" },
+      body: file,
+    });
+  },
   /** Keep the area offered for a word, under the name the person chose: start it and file the items that share the word under it. */
   keepArea: (word: string, name?: string) => call<S["AreaKept"]>("POST", "areas/keep", { word, name: name || null }),
   looksGood: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/looks-good`),

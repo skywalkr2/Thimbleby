@@ -60,6 +60,22 @@ def test_a_file_sent_with_no_type_or_a_generic_one_takes_the_type_its_name_gives
     assert record.data["media_type"] == "image/png"
 
 
+def test_an_unreadable_upload_can_be_kept_as_an_opaque_download(env):
+    _, cfg, store = env
+    with pytest.raises(StoreError, match="can't be added"):
+        add_file(store, cfg, b"\x00binary", name="archive.zip", media_type="application/zip")
+    record = add_file(
+        store,
+        cfg,
+        b"\x00binary",
+        name="archive.zip",
+        media_type="application/octet-stream",
+        preserve_generic=True,
+    )
+    assert record.data["name"] == "archive.zip"
+    assert record.data["media_type"] == "application/octet-stream"
+
+
 def test_changed_bytes_on_disk_are_caught(env):
     _, cfg, store = env
     record = add_file(store, cfg, PNG, name="cover.png", media_type="image/png")

@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, Refuse, renderApp } from "../test-utils";
 import { HandIn } from "./HandIn";
 
 const handed = () => ({ request: "REQ-1", source: null });
@@ -88,7 +88,8 @@ test("nothing can be handed in with an empty box", async () => {
 test("the choice can be made from the keyboard", async () => {
   const { user, calls } = await setup();
   await user.type(screen.getByLabelText("Paste or type it here"), "my own words");
-  await user.tab(); // the choice (a segmented control: arrows move along it, Space chooses)
+  await user.tab(); // Choose a file.
+  await user.tab(); // The choice (a segmented control: arrows move along it, Space chooses).
   await user.keyboard("{ArrowRight} ");
   expect(screen.getByRole("radio", { name: "Mine" })).toBeChecked();
   await user.click(screen.getByRole("button", { name: "Hand in" }));
@@ -211,11 +212,59 @@ test("a voice note dropped on the box is handed in as sound, and the box keeps i
 });
 
 test("a dropped file that is neither text nor sound is left out and the box says so", async () => {
-  const { user } = await setup();
+  const user = userEvent.setup();
+  fakeApi({
+    "POST handin": handed,
+    "POST handin/file": () => ({
+      name: "plan.epub",
+      status: "kept",
+      request: null,
+      source: null,
+      file: "FILE-1",
+      reason: "files of this kind can't be read yet",
+    }),
+    "GET projects": () => PROJECTS,
+  });
+  renderApp(<HandIn onClose={vi.fn()} />);
   const box = screen.getByRole("textbox", { name: "Paste or type it here" });
   await user.click(box);
-  fireEvent.drop(box, { dataTransfer: { files: [new File(["x"], "plan.zip", { type: "application/zip" })] } });
-  expect(await screen.findByText("Only text files and voice notes were added. Other files were left out.")).toBeInTheDocument();
+  fireEvent.drop(box, { dataTransfer: { files: [new File(["x"], "plan.epub", { type: "application/epub+zip" })] } });
+  expect(await screen.findByText("Kept; can't be read yet")).toBeInTheDocument();
+});
+
+test("dropped, pasted, and picked files each get a row with their outcome", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET projects": () => PROJECTS,
+    "POST handin/file": (_body, query) => {
+      switch (query?.get("name")) {
+        case "plan.pdf":
+          return { name: "plan.pdf", status: "read", request: "REQ-8", source: "SRC-8", file: null, reason: null };
+        case "archive.epub":
+          return { name: "archive.epub", status: "kept", request: null, source: null, file: "FILE-8", reason: null };
+        default:
+          return new Refuse(413, "large.txt is larger than 50 MB");
+      }
+    },
+  });
+  renderApp(<HandIn onClose={vi.fn()} />);
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  await user.type(box, "Notes so far");
+  await user.type(screen.getByLabelText("Anything to do with it? (optional)"), "File these words");
+  fireEvent.drop(box, { dataTransfer: { files: [new File(["pdf"], "plan.pdf", { type: "application/pdf" })] } });
+  expect(await screen.findByText("Read and handed in")).toBeInTheDocument();
+
+  fireEvent.paste(box, {
+    clipboardData: { files: [new File(["archive"], "archive.epub", { type: "application/epub+zip" })], types: ["Files"], getData: () => "" },
+  });
+  expect(await screen.findByText("Kept; can't be read yet")).toBeInTheDocument();
+
+  await user.upload(screen.getByLabelText("Choose a file"), new File(["large"], "large.txt", { type: "text/plain" }));
+  expect(await screen.findByText(/Refused: large\.txt is larger than 50 MB/)).toBeInTheDocument();
+  expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  expect(box).toHaveValue("Notes so far");
+  expect(calls.filter((call) => call.route.startsWith("POST handin/file")).map((call) => call.route)).toHaveLength(3);
+  expect(calls.filter((call) => call.route.startsWith("POST handin/file")).every((call) => call.body instanceof File)).toBe(true);
 });
 
 test("handing in while Today waits for Start says it waits for Start, with a way to Today, and does not say the assistant is on it", async () => {

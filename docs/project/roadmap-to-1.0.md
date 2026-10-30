@@ -414,6 +414,13 @@ From the original designer's lessons of 2026-10-14:
     can, it says so; anything else is kept with a plain "can't be read yet". What is read stays outside content (never a
     rule or an instruction), each reading shows its estimate first, and the result lands as an input like any hand-in.
     Before the installers.
+    - State (2026-10-30): built: documents are read or kept through `POST /handin/file`, with pasted content marked
+      outside and per-file outcomes in the drawer (`tests/test_capture.py::test_handin_file_reads_documents_as_untrusted_content`,
+      `tests/test_capture.py::test_handin_file_reads_a_saved_mail_and_its_attachment`,
+      `tests/test_capture.py::test_handin_file_keeps_an_unreadable_file_for_later`,
+      `tests/test_capture.py::test_handin_file_refuses_a_file_over_the_existing_single_file_limit`,
+      `web/src/components/HandIn.test.tsx::dropped, pasted, and picked files each get a row with their outcome`);
+      left: reading pictures, which remains Task 13.
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.

@@ -93,6 +93,7 @@ def check_file(
     meta: dict[str, Any] | None = None,
     project: str | None = None,
     replaces: str | None = None,
+    allow_generic: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Check a file against the limits and its kind. Returns its cleaned name and validated details; refusals say why
     in words."""
@@ -105,7 +106,7 @@ def check_file(
         raise StoreError("the file needs a name")
     # A kind narrows the workspace's accepted types; it never widens them.
     accepted = [t for t in kind.accept if t in limits.accepted_types] if kind.accept else limits.accepted_types
-    if media_type not in accepted:
+    if media_type not in accepted and not (allow_generic and media_type == "application/octet-stream"):
         raise StoreError(f"files of type {media_type} can't be added here")
     cap = min(limits.max_file_mb, kind.max_mb or limits.max_file_mb)
     if size > cap * 1024 * 1024:
@@ -157,14 +158,24 @@ def add_file(
     origin: str = "upload",
     replaces: str | None = None,
     data_level: str | None = None,
+    preserve_generic: bool = False,
     context: WriteContext = _PM,
     now: datetime | None = None,
 ) -> Stored:
     """Check a file against the limits and its kind, store its bytes once, and record it. `data_level` is the person's
-    explicit choice; without one the file takes its kind's level."""
-    media_type = effective_type(name, media_type, data)
+    explicit choice; without one the file takes its kind's level. `preserve_generic` keeps an opaque upload as a
+    download instead of inferring a media type from its name."""
+    media_type = media_type if preserve_generic else effective_type(name, media_type, data)
     check_file(
-        store, cfg, store.read(), name=name, media_type=media_type, size=len(data), file_kind=file_kind, meta=meta
+        store,
+        cfg,
+        store.read(),
+        name=name,
+        media_type=media_type,
+        size=len(data),
+        file_kind=file_kind,
+        allow_generic=preserve_generic,
+        meta=meta,
     )
     digest = store_blob(store, data)
     level = level_for(store.plugins.file_kinds().get(file_kind), data_level)
@@ -177,6 +188,7 @@ def add_file(
             media_type=media_type,
             size=len(data),
             file_kind=file_kind,
+            allow_generic=preserve_generic,
             meta=meta,
             project=project,
             replaces=replaces,
