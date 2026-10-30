@@ -151,6 +151,7 @@ export function Sources(props: {
   onOpenLinks?: () => void;
 }) {
   const { t } = useWords();
+  const addTitleId = useId();
   // A source that has never been read is checked on again soon: it is read within a minute of being added.
   const sources = useQuery({
     queryKey: ["watch"],
@@ -254,6 +255,7 @@ export function Sources(props: {
       <Drawer
         open={form?.type === "add"}
         title={t("sources.add_title")}
+        titleId={addTitleId}
         dirty={addDirty}
         wide
         onClose={closeAdd}
@@ -265,6 +267,7 @@ export function Sources(props: {
             kinds={kinds.data}
             kindsFailed={kinds.isError}
             twoStep
+            titleId={addTitleId}
             onDirty={setAddDirty}
             onClose={closeAdd}
           />
@@ -523,6 +526,8 @@ function SourceForm(props: {
   onClose: () => void;
   twoStep?: boolean;
   onDirty?: (dirty: boolean) => void;
+  /** Inside a drawer, the id of the drawer's title: the form is named by it and does not repeat it. */
+  titleId?: string;
 }) {
   const { t, tn, has } = useWords();
   const afterSave = useAfterSave();
@@ -590,7 +595,7 @@ function SourceForm(props: {
   const formEl = useRef<HTMLFormElement>(null);
   useEffect(() => {
     heading.current?.scrollIntoView?.({ block: "nearest" });
-    return formEl.current ? startCursor(formEl.current, `${base}-title`) : undefined;
+    return formEl.current ? startCursor(formEl.current, props.titleId ?? `${base}-title`) : undefined;
     // Once, when the form opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -789,7 +794,7 @@ function SourceForm(props: {
     }
   };
 
-  const titleId = `${base}-title`;
+  const titleId = props.titleId ?? `${base}-title`;
   return (
     <form
       ref={formEl}
@@ -802,9 +807,11 @@ function SourceForm(props: {
         if (showingDetails) void submit();
       }}
     >
-      <h3 id={titleId} tabIndex={-1} ref={heading}>
-        {source ? t("sources.change_title", { label: source.label }) : t("sources.add_title")}
-      </h3>
+      {!props.titleId && (
+        <h3 id={titleId} tabIndex={-1} ref={heading}>
+          {source ? t("sources.change_title", { label: source.label }) : t("sources.add_title")}
+        </h3>
+      )}
       {props.twoStep && adding && !given && (
         <div className="source-step">
           <h4>{t(choosingKind ? "sources.step.choose_title" : "sources.step.details_title")}</h4>

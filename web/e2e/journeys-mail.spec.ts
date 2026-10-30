@@ -459,6 +459,7 @@ test.describe.serial("journey: mail", () => {
       const form = page.locator("form[data-add-connection]");
       await expect(form).toBeVisible();
       await form.getByRole("radio", { name: /Example mail/ }).check();
+      await form.getByRole("button", { name: "Continue" }).click();
       return form;
     };
     const tryFolder = async (folder: string) => {

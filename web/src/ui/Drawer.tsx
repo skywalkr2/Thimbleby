@@ -16,6 +16,8 @@ export function Drawer(props: {
   title: string;
   /** Makes the title a link, to the thing the drawer is about. */
   titleHref?: string;
+  /** The id of the title, when what is inside names itself by it. */
+  titleId?: string;
   onClose: () => void;
   /** Unsaved text: closing then asks "keep editing or discard". */
   dirty?: boolean;
@@ -28,7 +30,8 @@ export function Drawer(props: {
   const { t } = useWords();
   const [guarding, setGuarding] = useState(false);
   // Each drawer has its own heading id, so one opened over another is named by its own title.
-  const titleId = useId();
+  const ownId = useId();
+  const titleId = props.titleId ?? ownId;
   // The cursor starts in the drawer's first field, or on its heading when it has none (design 7.0).
   const cursor = useCursorRef(titleId);
   // Remember what opened the drawer and give it focus back once the drawer has gone. If the opener was re-rendered in the

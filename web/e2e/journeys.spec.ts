@@ -207,17 +207,18 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Connections" })).toBeVisible();
     await page.getByRole("button", { name: /Add mail, calendar or folder/ }).first().click();
     await page.getByRole("radio", { name: /^A folder on this computer/ }).check();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel(/^The folder/).fill(info.source_folder);
     // With no name typed, the connection is named after what it reads: the folder's own name.
     const name = info.source_folder.split(/[\\/]/).filter(Boolean).pop() ?? "";
     await visit(page);
     await page.getByRole("button", { name: "Add connection", exact: true }).click();
-    await expect(page.getByRole("listitem", { name })).toBeVisible();
+    await expect(page.getByRole("row", { name })).toBeVisible();
     await visit(page);
 
     // The connection's own menu has Read now: Today's Came in card is drawn only when mail arrived, so an empty folder has no
     // Check now there. The first read only notes what is there, so nothing is handed in yet.
-    const folder = page.getByRole("listitem", { name });
+    const folder = page.getByRole("row", { name });
     const readNow = async () => {
       await folder.getByRole("button", { name: /^More actions for / }).click();
       await page.getByRole("menuitem", { name: "Read now" }).click();
