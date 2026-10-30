@@ -17,14 +17,10 @@ async function openAsk(page: Page) {
   await page.getByRole("list", { name: "Results" }).getByRole("button", { name: /^Ask / }).click();
 }
 
+/** Opens the app the way a bookmark does: the address names the screen, so the app starts on it. */
 async function signIn(page: Page, hash = "") {
-  await page.goto("?token=e2e-token");
+  await page.goto(hash ? `?token=e2e-token#${hash}` : "?token=e2e-token");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-  if (hash) {
-    await page.evaluate((h) => {
-      window.location.hash = h;
-    }, hash);
-  }
 }
 
 const noSidewaysScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
