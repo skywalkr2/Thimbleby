@@ -9587,13 +9587,16 @@
           "model_roles": {
             "additionalProperties": {
               "enum": [
+                "routine",
+                "deep",
+                "hardest",
                 "recommended",
                 "stronger",
                 "faster"
               ],
               "type": "string"
             },
-            "description": "What each example model is for, by name: the one chosen first, a stronger one or a faster one.",
+            "description": "The role or preset tier word the model picker shows for each example.",
             "title": "Model Roles",
             "type": "object"
           },

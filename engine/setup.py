@@ -25,7 +25,7 @@ from typing import Any
 
 import yaml
 
-from engine.ai.presets import clean_presets
+from engine.ai.presets import clean_presets, match_family
 from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN
 from engine.connectors import CORE, declared_reads, reads
 from engine.shipped import shipped
@@ -607,15 +607,17 @@ def list_folders(raw: str | None, files: str | None = None) -> FolderList:
 # ---- AI accounts -----------------------------------------------------------------------------------------------------
 
 
-#: What an example model can be for, in the catalog's `model_roles`: the one chosen first, a stronger one, a faster one.
-MODEL_ROLES = ("recommended", "stronger", "faster")
+#: Words an example model may be offered by: its preset tier, or a catalog role when it has no preset.
+MODEL_ROLES = ("routine", "deep", "hardest", "recommended", "stronger", "faster")
+PRESET_ROLE_WORDS = ("routine", "deep", "hardest")
 
 
 def known_endpoints() -> list[dict[str, Any]]:
     """The kinds of AI account the Add account screen offers, from the product's catalog: id, name, adapter,
     base_url, key_url, signup_url, credit_url, install_url, needs_key, local, recommended, alternative, allowed_data,
-    settings (a new account's starting provider settings), model_examples with model_roles (what each is for, only for
-    an example the entry lists), tier_presets (the model family and effort each tier takes, by tier name) and a note.
+    settings (a new account's starting provider settings), program, model_examples with model_roles (tier words take
+    precedence over fallback roles for an example), tier_presets (the model family and effort each tier takes, by tier
+    name) and a note.
     Entries missing an id, a name or an adapter are left out. At most one entry is the recommended one and at most one
     the alternative: the first marked, so the guide never offers two."""
     try:
@@ -637,6 +639,18 @@ def known_endpoints() -> list[dict[str, Any]]:
             marked[flag] = marked[flag] or taken
         levels = [str(x) for x in e.get("allowed_data") or ["open"] if str(x) in ("open", "internal", "restricted")]
         examples = [str(m) for m in e.get("model_examples") or []]
+        presets = clean_presets(e.get("tier_presets"))
+        roles = {
+            str(name): str(role)
+            for name, role in (e.get("model_roles") if isinstance(e.get("model_roles"), dict) else {}).items()
+            if str(name) in examples and str(role) in MODEL_ROLES
+        }
+        for tier, preset in presets.items():
+            if tier not in PRESET_ROLE_WORDS:
+                continue
+            model = match_family(preset["family"], examples)
+            if model:
+                roles[model] = tier
         found.append(
             {
                 "id": str(e["id"]),
@@ -655,13 +669,9 @@ def known_endpoints() -> list[dict[str, Any]]:
                 "settings": dict(e.get("settings") or {}),
                 "program": str(e.get("program") or ""),
                 "model_examples": examples,
-                "model_roles": {
-                    str(name): str(role)
-                    for name, role in (e.get("model_roles") if isinstance(e.get("model_roles"), dict) else {}).items()
-                    if str(name) in examples and str(role) in MODEL_ROLES
-                },
+                "model_roles": roles,
                 "model_optional": bool(e.get("model_optional", False)),
-                "tier_presets": clean_presets(e.get("tier_presets")),
+                "tier_presets": presets,
                 "note": str(e.get("note") or ""),
             }
         )

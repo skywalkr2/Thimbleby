@@ -59,9 +59,8 @@ const isService = (kind: Kind) => kind.needs_key && kind.base_url !== "" && !kin
 /** A command-line program the app knows how to start: the person names no command. */
 const isBuiltin = (kind: Kind) => (kind.program ?? "") !== "" && !takesAddress(kind);
 
-/** The three words a program's example models are offered by, in the order they are listed; the catalog says which example
- * is which, and the program's own name for one is only ever a hint. */
-const MODEL_ROLE_ORDER = ["recommended", "stronger", "faster"] as const;
+/** The words a program's example models are offered by, in picker order. */
+const MODEL_ROLE_ORDER = ["routine", "deep", "hardest", "recommended", "stronger", "faster"] as const;
 
 /** A program's example models in the order they are offered: by role, then as the catalog lists the others. */
 function examplesOf(kind: Kind): string[] {
@@ -176,12 +175,12 @@ export function WelcomeAi(props: {
   const builtin = !!kind && isBuiltin(kind);
   const generic = agent && !builtin;
   const examples = builtin ? examplesOf(kind) : [];
-  // Each example is named by what it is for; two with the same purpose are told apart by a number, never by the program's own name.
+  // Each example is named by its role; duplicate roles use a numbered choice, never the program's own name.
   const roleLabel = (model: string, at: number) => {
     const role = kind?.model_roles?.[model];
     if (!role) return t("welcome.ai.model_choice_n", { n: at + 1 });
     const same = examples.filter((m) => kind?.model_roles?.[m] === role);
-    return same.length > 1 ? t("welcome.ai.role_numbered", { role: t(`welcome.ai.role.${role}`), n: same.indexOf(model) + 1 }) : t(`welcome.ai.role.${role}`);
+    return same.length > 1 ? t("welcome.ai.model_choice_n", { n: at + 1 }) : t(`welcome.ai.role.${role}`);
   };
   const optional = builtin && !!kind.model_optional;
   // The program picks its own model when none is named and the person has not typed one.

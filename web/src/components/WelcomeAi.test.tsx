@@ -1028,7 +1028,27 @@ test("an app's example models are offered as Recommended, Stronger and Faster, a
   expect(document.body.textContent).not.toMatch(/alpha|beta/);
 });
 
-test("two examples with the same purpose are told apart by a number, not by the program's name for them", async () => {
+test("models in different preset tiers use tier words as their roles", async () => {
+  const user = userEvent.setup();
+  api({
+    "GET ai/endpoints": () =>
+      KINDS.map((k) =>
+        k.id === "app-a"
+          ? {
+              ...k,
+              model_examples: ["alpha", "beta", "gamma"],
+              model_roles: { alpha: "routine", beta: "deep", gamma: "hardest" },
+            }
+          : k,
+      ),
+  });
+  open();
+  await pickElse(user, "App A");
+  const options = within(screen.getByLabelText("AI model")).getAllByRole("option").map((o) => o.textContent);
+  expect(options).toEqual(["Let the app choose", "Everyday", "Harder", "Hardest", "Another AI model"]);
+});
+
+test("duplicate roles get distinct choice labels, never the program's name for them", async () => {
   const user = userEvent.setup();
   api({
     "GET ai/endpoints": () =>
@@ -1037,7 +1057,8 @@ test("two examples with the same purpose are told apart by a number, not by the 
   open();
   await pickElse(user, "App A");
   const options = within(screen.getByLabelText("AI model")).getAllByRole("option").map((o) => o.textContent);
-  expect(options).toEqual(["Let the app choose", "Recommended", "Stronger 1", "Stronger 2", "Another AI model"]);
+  expect(options).toEqual(["Let the app choose", "Recommended", "Choice 2", "Choice 3", "Another AI model"]);
+  expect(new Set(options).size).toBe(options.length);
 });
 
 test("an example the catalog gives no role is offered by number, never by its name", async () => {

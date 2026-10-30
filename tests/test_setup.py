@@ -861,8 +861,7 @@ def test_a_check_is_priced_from_its_size_and_the_models_price_and_never_guessed(
 
 
 def test_a_program_names_what_each_example_model_is_for_so_the_screen_never_shows_the_model(tmp_path):
-    """Every example model of a built-in program says what it is for (recommended, stronger or faster), the
-    recommended one comes first, and a role the catalog gives to a name it doesn't list is dropped."""
+    """Every example model of a built-in program has a picker role, and a role for an unlisted name is dropped."""
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     with_examples = [k for k in c.get(f"{api}/ai/endpoints").json() if k["model_examples"]]
@@ -870,10 +869,28 @@ def test_a_program_names_what_each_example_model_is_for_so_the_screen_never_show
     for kind in with_examples:
         roles = kind["model_roles"]
         assert sorted(roles) == sorted(kind["model_examples"]), kind["id"]
-        assert set(roles.values()) <= {"recommended", "stronger", "faster"}
-        assert list(roles.values()).count("recommended") == 1
-        assert roles[kind["model_examples"][0]] == "recommended"
+        assert set(roles.values()) <= {"routine", "deep", "hardest", "recommended", "stronger", "faster"}
+        if set(roles.values()) & {"routine", "deep", "hardest"}:
+            assert roles[kind["model_examples"][0]] == "routine"
+        else:
+            assert roles[kind["model_examples"][0]] == "recommended"
     assert all(k["model_roles"] == {} for k in c.get(f"{api}/ai/endpoints").json() if not k["model_examples"])
+
+
+def test_every_preset_tier_has_a_distinct_picker_role_word():
+    for kind in known_endpoints():
+        examples = kind["model_examples"]
+        roles = kind["model_roles"]
+        presets = kind["tier_presets"]
+        if not examples or not presets:
+            continue
+
+        assert len(set(roles.values())) == len(roles), kind["id"]
+        for tier, preset in presets.items():
+            family = preset["family"].casefold()
+            model = next((name for name in examples if family in name.casefold()), None)
+            assert model is not None, (kind["id"], tier)
+            assert roles[model] == tier, (kind["id"], tier)
 
 
 def test_a_catalog_role_for_an_unlisted_example_or_an_unknown_role_is_dropped(tmp_path, monkeypatch):
