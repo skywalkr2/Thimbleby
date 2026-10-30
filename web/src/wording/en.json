@@ -5038,6 +5038,7 @@
   "brief.line.news_unnamed": "News on {text}: {detail}",
   "brief.line.news_bare": "{name} sent news about {text}",
   "brief.line.news_bare_unnamed": "There is news about {text}",
+  "brief.line.fact.evidence": "{text} — “{evidence}”",
   "brief.line.invitation.new": "{name} invited you to {text} on {date}",
   "brief.line.invitation.new_at": "{name} invited you to {text} on {date} at {time}",
   "brief.line.invitation.new_unnamed": "You are invited to {text} on {date}",

@@ -113,6 +113,28 @@ test("every kind of line is worded from the sheet: one fact each, the day and th
   expect(screen.queryByText(/done|progress|so far/i)).toBeNull();
 });
 
+test("changed facts keep their evidence", async () => {
+  show({
+    ...MORNING,
+    sections: [
+      {
+        key: "changed",
+        more: 0,
+        lines: [
+          line({
+            key: "fact:FACT-91",
+            kind: "fact",
+            text: "The studio renewal letter says Friday is the last day to cancel",
+            detail: "Friday 30 October is the last day to cancel",
+            link: { kind: "fact", id: "FACT-91" },
+          }),
+        ],
+      },
+    ],
+  });
+  expect(await screen.findByText(/The studio renewal letter says Friday is the last day to cancel.*Friday 30 October is the last day to cancel/)).toBeInTheDocument();
+});
+
 test("a line that waits for the person's yes is titled as Today's own line and says a draft is ready, and a section says how many more", async () => {
   show(MORNING);
   const yes = (await screen.findByText("Follow up with Dev Example")).closest("li");
