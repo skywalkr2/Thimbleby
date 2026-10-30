@@ -819,46 +819,63 @@ test("an add-on with no release keeps the install text to copy, and has no Insta
   }
 });
 
-test("Remove is in the menu only for an add-on the app installed that is off, and it acts at once with the restart note", async () => {
+test("after Remove succeeds, the refreshed add-on list no longer contains its row", async () => {
   const user = userEvent.setup();
-  const calls = open(
+  let removed = false;
+  const packs = () =>
     view({
       available: [
-        pack("mine", { installed_version: "1.0.0", enabled: false, removable: true }),
+        pack("mine", { installed_version: removed ? null : "1.0.0", enabled: false, removable: !removed }),
         pack("running", { installed_version: "1.0.0", enabled: true, removable: true }),
         pack("other", { installed_version: "1.0.0", enabled: false, removable: false }),
       ],
-    }),
-    { "POST packs/mine/uninstall": () => INSTALLED("mine") },
+    });
+  const calls = open(
+    packs(),
+    {
+      "GET packs": () => packs(),
+      "POST packs/mine/uninstall": () => {
+        removed = true;
+        return INSTALLED("mine");
+      },
+    },
   );
   expect(within(await row("Name of running")).queryByRole("button", { name: /More actions/ })).toBeNull();
   expect(within(await row("Name of other")).queryByRole("button", { name: /More actions/ })).toBeNull();
   const mine = await row("Name of mine");
+  const before = calls.calls.filter((call) => call.route === "GET packs").length;
   await user.click(within(mine).getByRole("button", { name: "More actions for Name of mine" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
-  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
-  expect(await within(mine).findByText(/Name of mine is removed\. Restart to finish\./)).toBeInTheDocument();
+  await waitFor(() => expect(calls.calls.filter((call) => call.route === "GET packs").length).toBeGreaterThan(before));
+  await waitFor(() => expect(screen.queryByRole("listitem", { name: "Name of mine" })).toBeNull());
 });
 
 test("on Installed, Remove is offered for an add-on the app installed that is off", async () => {
   const user = userEvent.setup();
+  let removed = false;
+  const installed = () => [
+    ...(removed ? [] : [{ ...installedRows(false)[0], name: "mine", removable: true }]),
+    { ...installedRows(false)[0], name: "other", removable: false },
+    { ...installedRows(true)[0], name: "on", removable: true },
+  ];
   const calls = open(
-    view({
-      installed: [
-        { ...installedRows(false)[0], name: "mine", removable: true },
-        { ...installedRows(false)[0], name: "other", removable: false },
-        { ...installedRows(true)[0], name: "on", removable: true },
-      ],
-    }),
-    { "POST packs/mine/uninstall": () => INSTALLED("mine") },
+    view({ installed: installed() }),
+    {
+      "GET packs": () => view({ installed: installed() }),
+      "POST packs/mine/uninstall": () => {
+        removed = true;
+        return INSTALLED("mine");
+      },
+    },
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
   expect(within(await row("other")).queryByRole("button", { name: /More actions/ })).toBeNull();
   expect(within(await row("on")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  const before = calls.calls.filter((call) => call.route === "GET packs").length;
   await user.click(within(await row("mine")).getByRole("button", { name: "More actions for mine" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
-  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
-  expect(await within(await row("mine")).findByText(/mine is removed\./)).toBeInTheDocument();
+  await waitFor(() => expect(calls.calls.filter((call) => call.route === "GET packs").length).toBeGreaterThan(before));
+  await waitFor(() => expect(screen.queryByRole("listitem", { name: "mine" })).toBeNull());
 });
 
 test("the introduction says installing happens here and that the app never takes payment", async () => {

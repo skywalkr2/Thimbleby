@@ -50,8 +50,12 @@ type Installed = S["InstalledPackView"];
 /** `onBack` is for a screen that opens Add-ons away from Settings; as a section of Settings it has none. */
 export function Addons(props: { onBack?: () => void }) {
   const { t } = useWords();
+  const { restarts } = useRestart();
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
   const [tab, setTab] = useState("available");
+  const [removed, setRemoved] = useState<Set<string>>(() => new Set());
+  useEffect(() => setRemoved(new Set()), [restarts]);
+  const hideRemoved = (id: string) => setRemoved((current) => new Set(current).add(id));
   return (
     <section className="panel-section" aria-labelledby="addons-title">
       <div className="heading">
@@ -75,10 +79,10 @@ export function Addons(props: { onBack?: () => void }) {
           </Tab>
         </TabList>
         <TabPanel id="available" className="tab-panel">
-          <Loaded query={packs}>{(view) => <Available view={view} />}</Loaded>
+          <Loaded query={packs}>{(view) => <Available view={view} removed={removed} onRemove={hideRemoved} />}</Loaded>
         </TabPanel>
         <TabPanel id="installed" className="tab-panel">
-          <Loaded query={packs}>{(view) => <InstalledList items={view.installed} />}</Loaded>
+          <Loaded query={packs}>{(view) => <InstalledList items={view.installed} removed={removed} onRemove={hideRemoved} />}</Loaded>
         </TabPanel>
       </Tabs>
       <DeveloperSettings />
@@ -117,7 +121,13 @@ function useSwitch(name: string, label: string) {
 /** Installing, updating or removing an add-on from the screen: acts at once, then the row says a restart is needed until
  * the app has restarted. A refusal is kept for the row to show in the server's own words; `note` is what the row says
  * after a success. */
-export function usePackChange(packId: string, name: string, focusRow: () => void, nameOf: (id: string) => string = (id) => id) {
+export function usePackChange(
+  packId: string,
+  name: string,
+  focusRow: () => void,
+  nameOf: (id: string) => string = (id) => id,
+  onRemoved?: () => void,
+) {
   const { t } = useWords();
   const client = useQueryClient();
   const { push } = useToasts();
@@ -144,6 +154,7 @@ export function usePackChange(packId: string, name: string, focusRow: () => void
     setTokenSaved(false);
     try {
       const result = await (what === "install" ? api.installPack : api.removePack)(packId);
+      if (what === "remove") onRemoved?.();
       if (result.file_kept) {
         // Only this add-on went: the file stays while others of the same file use it, and nothing needs a restart.
         push({ message: t("addons.removed_kept_note", { name, others: (result.still_used_by ?? []).map(nameOf).join(", ") }) });
@@ -247,18 +258,19 @@ export function emptyReason(view: S["PacksView"], t: (key: string) => string): s
   return view.feeds.every((feed) => feed.error) ? t("addons.no_packs_failed") : t("addons.no_packs");
 }
 
-function Available(props: { view: S["PacksView"] }) {
+function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; onRemove: (id: string) => void }) {
   const { t } = useWords();
   const { view } = props;
+  const available = view.available.filter((pack) => !props.removed.has(pack.id));
   const [getting, setGetting] = useState<number | null>(null);
-  const empty = emptyReason(view, t);
+  const empty = emptyReason({ ...view, available }, t);
   return (
     <div className="addons-body">
       {empty ? (
         <EmptyState text={empty} />
       ) : (
         <RowList>
-          {groupByFile(view.available).map((slots) =>
+          {groupByFile(available).map((slots) =>
             slots.length === 1 ? (
               <PackRow
                 key={`${slots[0].item.id}-${slots[0].index}`}
@@ -266,14 +278,16 @@ function Available(props: { view: S["PacksView"] }) {
                 index={slots[0].index}
                 restartNeeded={restartNeeded(slots[0].item, view.installed)}
                 onGet={() => setGetting(slots[0].index)}
+                onRemoved={() => props.onRemove(slots[0].item.id)}
               />
             ) : (
               <PackGroup
                 key={`group-${slots[0].index}`}
                 slots={slots.map((slot) => ({ pack: slot.item, index: slot.index }))}
                 installed={view.installed}
-                nameOf={(id) => view.available.find((p) => p.id === id)?.name ?? id}
+                nameOf={(id) => available.find((p) => p.id === id)?.name ?? id}
                 onGet={(i) => setGetting(i)}
+                onRemove={props.onRemove}
               />
             ),
           )}
@@ -281,9 +295,9 @@ function Available(props: { view: S["PacksView"] }) {
       )}
       {view.enabled && view.feeds.length === 0 && <AddCatalog first />}
       {view.enabled && view.feeds.length > 0 && <Catalog feeds={view.feeds} />}
-      {getting !== null && view.available[getting] && (
+      {getting !== null && available[getting] && (
         <GetIt
-          pack={view.available[getting]}
+          pack={available[getting]}
           onClose={() => {
             const index = getting;
             setGetting(null);
@@ -332,6 +346,7 @@ function PackRow(props: {
   index: number;
   restartNeeded: boolean;
   onGet: () => void;
+  onRemoved: () => void;
   group?: { anyInstalled: boolean; nameOf: (id: string) => string };
 }) {
   const { t } = useWords();
@@ -356,8 +371,9 @@ function PackRow(props: {
   const change = usePackChange(
     pack.id,
     pack.name,
-    () => restoreFocus(() => document.getElementById(`pack-row-${index}`)),
+    () => restoreFocus(() => document.getElementById(`pack-row-${index}`) ?? document.getElementById("addons-title")),
     props.group?.nameOf,
+    props.onRemoved,
   );
   const problem = change.problem || power.problem;
   // In a group, the file is installed from the group's row; this row offers it only once the others are installed.
@@ -479,6 +495,7 @@ function PackGroup(props: {
   installed: Installed[];
   nameOf: (id: string) => string;
   onGet: (index: number) => void;
+  onRemove: (id: string) => void;
 }) {
   const { t } = useWords();
   const price = usePrice();
@@ -545,6 +562,7 @@ function PackGroup(props: {
                 index={slot.index}
                 restartNeeded={restartNeeded(slot.pack, props.installed)}
                 onGet={() => props.onGet(slot.index)}
+                onRemoved={() => props.onRemove(slot.pack.id)}
                 group={{ anyInstalled, nameOf: props.nameOf }}
               />
             ))}
@@ -805,16 +823,22 @@ const restartNeeded = (pack: Pack, installed: Installed[]) => {
   return pack.enabled && running !== undefined && waitsForRestart(running);
 };
 
-function InstalledList(props: { items: Installed[] }) {
+function InstalledList(props: { items: Installed[]; removed: ReadonlySet<string>; onRemove: (id: string) => void }) {
   const { t } = useWords();
-  if (props.items.length === 0) return <EmptyState text={t("addons.installed.empty")} />;
+  const items = props.items.filter((item) => !props.removed.has(item.name));
+  if (items.length === 0) return <EmptyState text={t("addons.installed.empty")} />;
   return (
     <RowList>
-      {groupByFile(props.items).map((slots) =>
+      {groupByFile(items).map((slots) =>
         slots.length === 1 ? (
-          <InstalledRow key={`${slots[0].item.name}-${slots[0].index}`} item={slots[0].item} index={slots[0].index} />
+          <InstalledRow
+            key={`${slots[0].item.name}-${slots[0].index}`}
+            item={slots[0].item}
+            index={slots[0].index}
+            onRemoved={() => props.onRemove(slots[0].item.name)}
+          />
         ) : (
-          <InstalledGroup key={`group-${slots[0].index}`} slots={slots} />
+          <InstalledGroup key={`group-${slots[0].index}`} slots={slots} onRemove={props.onRemove} />
         ),
       )}
     </RowList>
@@ -822,7 +846,7 @@ function InstalledList(props: { items: Installed[] }) {
 }
 
 /** Installed add-ons that come in one file, as one row with each one's own state, switch and Remove under it. */
-function InstalledGroup(props: { slots: { item: Installed; index: number }[] }) {
+function InstalledGroup(props: { slots: { item: Installed; index: number }[]; onRemove: (id: string) => void }) {
   const { t } = useWords();
   const names = props.slots.map((s) => s.item.name);
   const base = `installed-group-${props.slots[0].index}`;
@@ -839,20 +863,29 @@ function InstalledGroup(props: { slots: { item: Installed; index: number }[] }) 
       </p>
       <RowList aria-labelledby={`${base}-includes`}>
         {props.slots.map((slot) => (
-          <InstalledRow key={`${slot.item.name}-${slot.index}`} item={slot.item} index={slot.index} />
+          <InstalledRow
+            key={`${slot.item.name}-${slot.index}`}
+            item={slot.item}
+            index={slot.index}
+            onRemoved={() => props.onRemove(slot.item.name)}
+          />
         ))}
       </RowList>
     </Row>
   );
 }
 
-function InstalledRow(props: { item: Installed; index: number }) {
+function InstalledRow(props: { item: Installed; index: number; onRemoved: () => void }) {
   const { t } = useWords();
   const { item } = props;
   const base = `installed-${props.index}`;
   const power = useSwitch(item.name, item.name);
-  const change = usePackChange(item.name, item.name, () =>
-    restoreFocus(() => document.getElementById(`${base}-row`)),
+  const change = usePackChange(
+    item.name,
+    item.name,
+    () => restoreFocus(() => document.getElementById(`${base}-row`) ?? document.getElementById("addons-title")),
+    undefined,
+    props.onRemoved,
   );
   const problem = change.problem || power.problem;
   const actions: MenuAction[] = [];

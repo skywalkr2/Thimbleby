@@ -352,7 +352,7 @@ From the original designer's lessons of 2026-10-14:
   *Left:* the removed add-on's row and note going together (after Remove the row stays and says "<name> is removed.
   Restart to finish." (`web/src/components/Addons.test.tsx`); whether the row also goes from the list was not checked
   in a browser).
-  - State (2026-10-29): built: the first results as one list with every open question open (`web/src/components/WhatChanged.test.tsx`); left: after Remove the add-on's row stays and says it is removed (`web/src/components/Addons.test.tsx` pins the message, not the row going), so the row and note going together is not built and not checked in a browser.
+  - State (2026-10-29): built: the first results as one list with every open question open (`web/src/components/WhatChanged.test.tsx`), and after Remove succeeds the refreshed add-on list no longer contains its row (`web/src/components/Addons.test.tsx`, "after Remove succeeds, the refreshed add-on list no longer contains its row"); left: none.
 - [ ] [I-1] **A launcher for people who never open a terminal** (owner, 2026-10-13): moved to phase I, where the macOS and
   Windows installers give the app icon and Start menu entry.
   The UI/UX reviewer's first-run review (2026-10-20, F1, `reviews/ui-ux-2026-10/first-run/`) sets the bar N1: a person who
