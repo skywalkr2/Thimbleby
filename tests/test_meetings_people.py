@@ -757,3 +757,75 @@ def test_the_memory_route_gives_each_part_of_a_persons_page(client):
         "Ana Guest prefers short notes"
     ]
     assert body["last_in_touch"] is None and http.get("/api/people/PER-9999/memory").status_code == 404
+
+
+# ---- their dates, written in other languages -------------------------------------------------------------------------
+
+
+def project(store, language: str) -> str:
+    with store.transaction() as tx:
+        return tx.create("project", {"name": "Notes in another language", "language": language}, _TEST).id
+
+
+def set_language(cfg, tag: str) -> None:
+    cfg.workspace.language = tag
+
+
+@pytest.mark.parametrize(
+    ("tag", "yearly", "once"),
+    [
+        (
+            "de-DE",
+            ("Anas Geburtstag ist am 3. März", date(2027, 3, 3)),
+            ("Anas Vertrag endet am 15. Januar 2027", date(2027, 1, 15)),
+        ),
+        (
+            "fr-FR",
+            ("L'anniversaire d'Ana est le 3 mars", date(2027, 3, 3)),
+            ("Le contrat d'Ana finit le 15 janvier 2027", date(2027, 1, 15)),
+        ),
+        (
+            "es-ES",
+            ("El cumpleaños de Ana es el 3 de marzo", date(2027, 3, 3)),
+            ("El contrato de Ana acaba el 15 de enero de 2027", date(2027, 1, 15)),
+        ),
+    ],
+)
+def test_a_date_written_in_the_workspace_language_is_read_as_that_date(env, tag, yearly, once):
+    _, cfg, store = env
+    set_language(cfg, tag)
+    ana = person(store, "Ana Guest")
+    kept_yearly = fact(store, yearly[0] + " (Ana Guest)")
+    kept_once = fact(store, once[0] + " (Ana Guest)")
+    found = people_memory.memory(store, cfg, ana, NOW)
+    assert {d.fact: (d.on, d.yearly) for d in found.dates} == {
+        kept_yearly: (yearly[1], True),
+        kept_once: (once[1], False),
+    }
+
+
+def test_a_notes_project_language_decides_how_its_dates_are_read_not_the_words(env):
+    _, cfg, store = env
+    ana = person(store, "Ana Guest")
+    german = fact(store, "Anas Geburtstag ist am 3. März (Ana Guest)", project=project(store, "de-DE"))
+    french = fact(store, "Le 3 mars, c'est l'anniversaire d'Ana Guest", project=project(store, "fr-FR"))
+    plain = fact(store, "Ana Guest's birthday is March 3")
+    found = people_memory.memory(store, cfg, ana, NOW)
+    assert {d.fact: d.on for d in found.dates} == {
+        german: date(2027, 3, 3),
+        french: date(2027, 3, 3),
+        plain: date(2027, 3, 3),
+    }
+
+
+def test_a_date_in_words_is_not_read_in_a_language_the_app_does_not_know_or_one_set_for_another_language(env):
+    _, cfg, store = env
+    ana = person(store, "Ana Guest")
+    set_language(cfg, "xx-XX")
+    unknown = fact(store, "Anas Geburtstag ist am 3. März (Ana Guest)")
+    found = people_memory.memory(store, cfg, ana, NOW)
+    assert found.dates == [] and [k.fact for k in found.matters] == [unknown]
+    set_language(cfg, "en-US")
+    german = fact(store, "Ana Guest hat am 3. März Geburtstag")
+    found = people_memory.memory(store, cfg, ana, NOW)
+    assert found.dates == [] and {k.fact for k in found.matters} == {unknown, german}

@@ -787,8 +787,8 @@ S3. **People and meetings:**
   when it names exactly one known person other than who it is for, and "asked by them" includes those questions
   (`tests/test_meetings_people.py::test_a_question_someone_put_to_the_person_is_asked_by_them_and_no_other_question_is`,
   `tests/test_meetings_people.py::test_the_assistant_names_who_asked_a_question_by_name_and_it_is_kept_only_for_one_known_person`).
-  **Left:** dates from a contact source or in other languages.
-  - State (2026-10-29): built: What to remember with evidence, the quiet-promise line with Send and Snooze, who asked (`tests/test_meetings_people.py`, `tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`, `web/e2e/meetings-journey.spec.ts`); left: dates from a contact source or in other languages.
+  **Left:** dates from a contact source.
+  - State (2026-10-29): built: What to remember with evidence, the quiet-promise line with Send and Snooze, who asked (`tests/test_meetings_people.py`, `tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`, `web/e2e/meetings-journey.spec.ts`); dates written in other languages (German, French, Spanish) are read from the month names, date words and day endings in `engine/defaults/date_names/<language>.yaml`, by the language setting (the note's project, else the workspace) and never guessed from the words, and a language with no file reads none (`tests/test_meetings_people.py::test_a_date_written_in_the_workspace_language_is_read_as_that_date`, `::test_a_notes_project_language_decides_how_its_dates_are_read_not_the_words`, `::test_a_date_in_words_is_not_read_in_a_language_the_app_does_not_know_or_one_set_for_another_language`); left: dates from a contact source.
 
 S4. **What arrives, and where it may go:**
 - [ ] [S4] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
