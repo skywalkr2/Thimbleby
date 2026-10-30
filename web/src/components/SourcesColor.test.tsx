@@ -43,7 +43,7 @@ function open(sources: Source[], extra: Record<string, (b: unknown) => unknown> 
 }
 
 async function change(user: ReturnType<typeof userEvent.setup>, label: string) {
-  const item = await screen.findByRole("listitem", { name: label });
+  const item = await screen.findByRole("row", { name: label });
   await user.click(within(item).getByRole("button", { name: `More actions for ${label}` }));
   await user.click(await screen.findByRole("menuitem", { name: "Change" }));
   return screen.findByRole("form", { name: `Change ${label}` });

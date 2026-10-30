@@ -91,9 +91,13 @@ test("Connect on Today's empty card opens Sources with the add form open, and on
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Connect a calendar" }));
-  expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
-  expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
+  // The add form opens in a drawer over Connections, which the drawer sets aside while it is open.
+  const drawer = await screen.findByRole("dialog", { name: "Add mail, calendar or folder" });
+  expect(within(drawer).getByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Connections", hidden: true })).toBeInTheDocument();
   // Going away and coming back by the views doesn't open it again.
+  await user.click(within(drawer).getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
   await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Settings" }));
