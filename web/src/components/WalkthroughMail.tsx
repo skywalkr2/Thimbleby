@@ -719,16 +719,50 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
     if (phase === "done") void client.invalidateQueries();
   }, [phase, client]);
   const signedIn = item.status === "signed_in";
+  const several = Boolean(item.several);
+  const signedAccounts = (item.accounts ?? []).filter((a) => a.status === "signed_in").map((a) => a.address);
   const again = item.status === "expired";
   const busy = phase === "starting" || phase === "waiting";
   const retry = phase === "refused" || phase === "closed" || phase === "failed" || phase === "blocked";
   return (
     <div className="service-sign-in" data-sign-in={item.name}>
       {signedIn ? (
-        <p className="hint">
-          <Icon name="check" size={14} />{" "}
-          {item.account ? t("walkthrough.mail.signed_in_as", { account: item.account }) : t("walkthrough.mail.signed_in")}
-        </p>
+        <>
+          {/* A service that names its accounts can be signed in to more than once (a personal and a work mail): each
+              account is listed, and Add another account opens the service's own page again. */}
+          {(several && signedAccounts.length > 0 ? signedAccounts : [item.account]).map((address, i) => (
+            <p className="hint" key={address ?? `account-${i}`}>
+              <Icon name="check" size={14} />{" "}
+              {address ? t("walkthrough.mail.signed_in_as", { account: address }) : t("walkthrough.mail.signed_in")}
+            </p>
+          ))}
+          {several && (
+            <>
+              {phase === "waiting" && (
+                <p className="hint" role="status">
+                  {t("sign_in.window.waiting")}
+                </p>
+              )}
+              {text && (
+                <p className="problem-note" role="alert">
+                  {text}
+                </p>
+              )}
+              <Actions align="end">
+                <Button variant="quiet"
+                  disabled={busy || !item.ready}
+                  aria-label={t("sign_in.add_account_named", { label: item.label })}
+                  onClick={() => {
+                    props.onStarted?.();
+                    void start();
+                  }}
+                >
+                  {busy ? t("sign_in.working") : t("sign_in.add_account")}
+                </Button>
+              </Actions>
+            </>
+          )}
+        </>
       ) : (
         <>
           {(item.allows ?? []).length > 0 && (

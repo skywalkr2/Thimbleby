@@ -2068,6 +2068,36 @@ describe("Mail and calendar", () => {
     expect(mine).toHaveAttribute("data-signed-in");
   });
 
+  test("a service that names its accounts lists each one signed in and offers Add another account, which opens the sign-in again", async () => {
+    const user = userEvent.setup();
+    const { state } = service("on");
+    state.signed = false;
+    const accounts = [
+      { key: "k1", address: "me@example.com", status: "signed_in" as const, missing: [] as string[], acting: false },
+      { key: "k2", address: "work@example.com", status: "signed_in" as const, missing: [] as string[], acting: false },
+    ];
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { installed_version: "1.0.0", enabled: true })],
+        installed: [installedPack("mail-addon", { enabled: true, state: "enabled" })],
+      }),
+      "GET sign-ins": () => [
+        signIn("mail-addon/account", { status: "signed_in", several: true, account: "me@example.com", accounts }),
+      ],
+      "POST sign-ins/mail-addon/account/start": () => ({ url: "http://localhost:9090/login?another=1" }),
+    });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Connect another" }));
+    const mine = await row();
+    expect(await within(mine).findByText("Signed in as me@example.com")).toBeInTheDocument();
+    expect(within(mine).getByText("Signed in as work@example.com")).toBeInTheDocument();
+    await user.click(within(mine).getByRole("button", { name: "Add another account to The account" }));
+    await waitFor(() => expect(popup.location.href).toBe("http://localhost:9090/login?another=1"));
+  });
+
   test("a sign-in that has run out still offers Sign in, and the row doesn't claim to be reading", async () => {
     const { state } = service("on");
     state.signed = false;
