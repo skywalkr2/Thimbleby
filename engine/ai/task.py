@@ -75,6 +75,15 @@ class Audio:
 
 
 @dataclass(frozen=True)
+class Image:
+    """A picture handed to a model that reads images: its bytes, its media type and its file name."""
+
+    data: bytes
+    media_type: str
+    name: str
+
+
+@dataclass(frozen=True)
 class AiTask:
     """One call: what kind of work, the packet split into its stable part and its request part, and limits."""
 
@@ -98,6 +107,8 @@ class AiTask:
     # A voice note to turn into text (the kind "transcribe"): only an account whose model is listed as taking audio
     # is ever given it, and the answer is the words spoken.
     audio: Audio | None = None
+    # A picture to read as text (the kind "read-image"): only an account listed as reading images is ever given it.
+    image: Image | None = None
     # The smallest context window, in tokens, a model must have for this kind of work, whatever the packet's size.
     min_context: int = 0
 
@@ -141,6 +152,7 @@ class ModelInfo:
     # a model is never assumed to from its name or its vendor.
     transcribes: bool | None = None
     audio_per_minute: float | None = None  # what it costs a minute of speech in USD, where that is known
+    reads_images: bool | None = None  # whether the model listing says it accepts images
     # Whether the service lists the model as retired (or on its way out), and whether it answers in text as a chat
     # model does; None means the listing didn't say, and a model is never judged from its name.
     retired: bool | None = None

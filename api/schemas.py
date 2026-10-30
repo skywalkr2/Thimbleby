@@ -495,6 +495,15 @@ class HandedFile(BaseModel):
     reason: str | None
 
 
+class HandedImage(BaseModel):
+    """What happened to a picture handed in: queued for reading or kept when no listed account can read it."""
+
+    status: Literal["queued", "kept"]
+    request: str | None
+    file: str
+    reason: str | None
+
+
 class Requeued(BaseModel):
     request: str
 

@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from engine import booking_entries, follow_on, learn, new_terms, pack_tiers, quality, transcribe
+from engine import booking_entries, follow_on, learn, new_terms, pack_tiers, quality, read_image, transcribe
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -158,6 +158,9 @@ def process(
     if req.data["task"] == transcribe.TASK:
         # A voice note: its own estimate, go and call, and its words go on as the person's own note.
         return transcribe.process(ws, store, cfg, router, request_id, now=now)
+    if req.data["task"] == read_image.TASK:
+        # A picture: its estimate, go and call, and its reading goes on as outside material.
+        return read_image.process(ws, store, cfg, router, request_id, now=now)
     if not person_is_set(store, cfg):
         # Nothing is estimated or asked before the person is named: the assistant's work needs someone to address.
         return needs_you(store, request_id, SAY_WHO_FIRST, cause={"kind": "no_person"})

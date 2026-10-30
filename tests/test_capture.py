@@ -27,6 +27,7 @@ from tests.conftest import DEMO_B
 
 NOW = datetime(2030, 3, 4, 9, 0, tzinfo=UTC)
 SOUND = b"\x00\x01fake sound bytes" * 200
+PICTURE = b"\x89PNG\r\n\x1a\nrecorded fixture image bytes"
 HOST = "api.example.com"
 
 
@@ -39,7 +40,9 @@ def workspace(tmp_path, *, speech=True, price=None, ai=None, watch=None, budgets
     if speech:
         data["providers"]["stub"]["transcribe_models"] = ["default"]
     if price is not None:
-        data["prices"] = {"stub/default": {"audio_per_minute": price}}
+        data["prices"] = {
+            "stub/default": {"audio_per_minute": price, "input_per_million": price, "output_per_million": price}
+        }
     for key, value in (ai or {}).items():
         data["providers"]["stub"][key] = value
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
@@ -112,6 +115,45 @@ def test_a_model_is_never_assumed_to_take_speech_from_its_name_or_its_account(tm
             router.transcribers(transcribe.TASK, "internal")
     finally:
         store.close()
+
+
+def test_only_accounts_listed_as_reading_images_are_returned_and_none_has_a_plain_error(tmp_path):
+    ws, cfg, store = workspace(tmp_path, ai={"image_models": ["default"]})
+    try:
+        router = Router(cfg, store, env={})
+        readers = router.image_readers("read-image", "internal")
+        assert [(choice.provider, choice.model_key) for choice in readers] == [("stub", "default")]
+
+        _ws_without_reader, cfg_without_reader, store_without_reader = workspace(
+            tmp_path / "without-reader", ai={"image_models": ["a-different-model"]}
+        )
+        try:
+            no_readers = Router(cfg_without_reader, store_without_reader, env={})
+            with pytest.raises(Exception, match="can't read pictures"):
+                no_readers.image_readers("read-image", "internal")
+        finally:
+            store_without_reader.close()
+    finally:
+        store.close()
+
+
+def test_an_adapter_that_cannot_read_images_refuses_them():
+    from engine.ai.adapters import ADAPTERS
+    from engine.ai.task import AiError, AiTask, Image
+    from engine.config.schema import AgentSettings
+
+    task = AiTask("read-image", "", "", "", {}, image=Image(b"x", "image/png", "a.png"))
+    settings = type(
+        "S",
+        (),
+        {
+            "base_url": "https://" + HOST,
+            "timeout_seconds": 5,
+            "agent": AgentSettings(command=["example-agent"]),
+        },
+    )()
+    with pytest.raises(AiError, match="can't read pictures"):
+        ADAPTERS["cli-agent"](settings, None).run(task, "m")
 
 
 def test_the_estimate_comes_first_and_the_run_waits_for_the_persons_go_above_the_amount(tmp_path):
@@ -258,6 +300,31 @@ def test_the_hand_in_route_takes_a_voice_note_and_refuses_what_is_not_sound(tmp_
         assert request.data["task"] == "transcribe"
         bad = client.post("/api/handin/audio?name=notes.txt", content=b"words", headers={"Content-Type": "text/plain"})
         assert bad.status_code == 409 and "isn't a kind of sound" in bad.json()["detail"]
+
+
+def test_the_hand_in_image_route_uses_the_stand_in_and_hands_its_reading_in_as_outside_content(tmp_path):
+    ws, cfg, store = workspace(tmp_path, price=0.5, ai={"image_models": ["default"]})
+    store.close()
+    app = create_app(ws, cfg, "token", ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(app, headers={"Authorization": "Bearer token"}) as client:
+        response = client.post(
+            "/api/handin/image?name=diagram.png&note=Please+file+the+words",
+            content=PICTURE,
+            headers={"Content-Type": "image/png"},
+        )
+        assert response.status_code == 200, response.text
+        handed = response.json()
+        assert handed["status"] == "queued" and handed["file"]
+        request = app.state.store.read().get("request", handed["request"])
+        assert request.data["task"] == "read-image"
+        assert run(ws, cfg, app.state.store, request.id) is not None
+        notes = [item for item in app.state.store.read().list("request") if item.data.get("task") == "notes"]
+        assert len(notes) == 1 and notes[0].data["note"] == "Please file the words"
+        source = app.state.store.read().get("source", notes[0].data["source"])
+        text = (ws.sources_dir / f"{source.data['content_hash']}.txt").read_text()
+        assert source.data["trust"] == "untrusted" and source.data["kind"] == "pasted"
+        assert "Stand-in reading" in text
+        assert app.state.store.read().get("request", request.id).data["range_usd"] is not None
 
 
 @pytest.mark.parametrize(

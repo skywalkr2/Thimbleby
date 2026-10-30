@@ -763,6 +763,12 @@ class ProviderSettings(ConfigModel):
         "(or their ids). The app never assumes a model can; with none listed, and none the service says can, this "
         "account is never given a voice note.",
     )
+    image_models: list[str] = Field(
+        default_factory=list,
+        description="The models of this account that read pictures, by the short names under models (or their ids). "
+        "The app never assumes a model can; with none listed, and none the service says can, this account is never "
+        "given a picture.",
+    )
     identity_level: list[DataLevel] | None = Field(
         None,
         description="For a command-line agent: the data levels the sign-in it runs as may see, such as a personal "
@@ -871,6 +877,11 @@ class TaskSettings(ConfigModel):
     max_output: int = Field(4000, ge=256, description="The most tokens an answer may use.")
     expected_output: int = Field(
         800, ge=1, description="Typical answer size in tokens, for estimates until there are past runs to go by."
+    )
+    expected_image_tokens: int = Field(
+        1600,
+        ge=1,
+        description="Tokens one picture counts as, for estimates until there are past runs to go by.",
     )
     same_account: bool | None = Field(
         None,

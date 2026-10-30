@@ -11,7 +11,7 @@ from typing import Any
 
 from engine.ai.adapters import Adapter, make_adapter
 from engine.ai.borrow import Borrowed, borrowed_path, chain
-from engine.ai.calibration import Calibration, learn_from_run, lookup, scaled, tokens_for
+from engine.ai.calibration import Calibration, estimate_tokens, learn_from_run, lookup, scaled
 from engine.ai.catalog import Catalogs
 from engine.ai.checked import folder_of
 from engine.ai.pauses import Pauses, pauses_path, waiting_text
@@ -82,10 +82,18 @@ class CannotTranscribe(NoProvider):
     """No account that may take the work is listed as turning speech into text. The message says so in plain words."""
 
 
+class CannotReadImages(NoProvider):
+    """No account that may take the work is listed as reading pictures. The message says so in plain words."""
+
+
 #: What the person reads when no account can turn a voice note into text.
 CANNOT_TRANSCRIBE = (
     "This account can't transcribe: none of your AI accounts lists a model that turns speech into text. Type or paste "
     "what the voice note says, or list such a model under the account's settings."
+)
+CANNOT_READ_IMAGES = (
+    "This account can't read pictures: none of your AI accounts lists a model that reads pictures. Keep the picture "
+    "in your files, or list such a model under the account's settings."
 )
 
 
@@ -360,7 +368,12 @@ class Router:
             unchecked=self._unchecked(),
             identity_held=self._identity_held(task.kind, tier, use),
         )
-        options = self._that_transcribe(picked) if task.audio is not None else self._that_fit(task, list(picked))
+        if task.audio is not None:
+            options = self._that_transcribe(picked)
+        elif task.image is not None:
+            options = self._that_fit(task, self._that_read_images(picked))
+        else:
+            options = self._that_fit(task, list(picked))
         paused: dict[str, datetime] = {}
         offline = 0  # accounts that could not be reached at all
         over: list[Choice] = []  # accounts in line that would cost more than the person allowed
@@ -484,6 +497,10 @@ class Router:
     ) -> Choice:
         """The account a request would use first: the first that fits, or the account lent for the tier while every
         one of its own accounts is paused."""
+        if task.audio is not None:
+            options = self._that_transcribe(options)
+        elif task.image is not None:
+            options = self._that_read_images(options)
         fitting = self._that_fit(task, list(options))
         if all(self.pauses.until(c.provider) is not None for c in fitting):
             lent = self._lent(options[0].tier, independent)
@@ -611,8 +628,20 @@ class Router:
         if info.input_per_million is None or info.output_per_million is None:
             return None
         output = task.expected_output or self.typical_output(task.kind)
-        read = tokens_for(task.size, self.calibration(choice))
+        read = self._input_tokens(task, choice)
         return (read * info.input_per_million + output * info.output_per_million) / 1e6
+
+    def _expected_image_tokens(self, task: AiTask) -> int:
+        if task.image is None:
+            return 0
+        from engine.tasks import settings
+
+        return settings(self.cfg, self.store.plugins.tasks.get(task.kind), task.kind).expected_image_tokens
+
+    def _input_tokens(self, task: AiTask, choice: Choice) -> int:
+        """Estimate text plus the configured input tokens for one image, corrected by the account's calibration."""
+        raw = estimate_tokens(task.size) + self._expected_image_tokens(task)
+        return scaled(raw, self.calibration(choice))
 
     def estimate_for(
         self, kind: str, input_tokens: int, output_tokens: int | None = None, *, data_level: str = "internal"
@@ -670,7 +699,7 @@ class Router:
                 folder_of(self.store),
                 choice.provider,
                 choice.model_id,
-                input_chars=task.size,
+                input_chars=task.size + 4 * self._expected_image_tokens(task),
                 input_tokens=result.input_tokens,
                 now=self.now(),
             )
@@ -731,6 +760,13 @@ class Router:
             raise CannotTranscribe(CANNOT_TRANSCRIBE)
         return able
 
+    def _that_read_images(self, options: list[Choice]) -> list[Choice]:
+        """Keep only accounts whose model listing or account setting says it reads pictures."""
+        able = [choice for choice in options if self.model_info(choice).reads_images]
+        if not able:
+            raise CannotReadImages(CANNOT_READ_IMAGES)
+        return able
+
     def transcribers(
         self, kind: str, data_level: str = "internal", content: frozenset[str] = frozenset()
     ) -> list[Choice]:
@@ -738,6 +774,12 @@ class Router:
         the work's tier tries them. Raises `CannotTranscribe` when none is, and `NoProvider` when no account may see
         the material at all."""
         return self._that_transcribe(choices(self.cfg, kind, data_level, content=content, unchecked=self._unchecked()))
+
+    def image_readers(
+        self, kind: str, data_level: str = "internal", content: frozenset[str] = frozenset()
+    ) -> list[Choice]:
+        """Accounts allowed to read the material whose models are listed as reading pictures, in tier order."""
+        return self._that_read_images(choices(self.cfg, kind, data_level, content=content, unchecked=self._unchecked()))
 
     def _that_fit(self, task: AiTask, options: list[Choice]) -> list[Choice]:
         """Drop accounts whose model can't hold this request plus its answer, by the account's model list (the catalog's
@@ -773,7 +815,7 @@ class Router:
         """What this request needs of a model's window on this account: its tokens (the app's own count corrected for
         the account's model, or the account's own count when the packet is within `ai.estimates.context_margin` of the
         window and the service offers one) plus the most its answer may use."""
-        guess = tokens_for(task.size, self.calibration(choice)) + task.max_output
+        guess = self._input_tokens(task, choice) + task.max_output
         if abs(guess - window) <= self.cfg.ai.estimates.context_margin * window:
             counted = self._counted(task, choice)
             if counted is not None:
@@ -783,7 +825,19 @@ class Router:
     def _counted(self, task: AiTask, choice: Choice) -> int | None:
         """The tokens the account's own service counts for this request, where its adapter can count one without
         running it; None when it can't, or the count fails (the app's own count then stands). Kept for the request."""
-        key = (choice.provider, choice.model_id, hash((task.instructions, task.stable, task.request)))
+        key = (
+            choice.provider,
+            choice.model_id,
+            hash(
+                (
+                    task.instructions,
+                    task.stable,
+                    task.request,
+                    task.image.media_type if task.image else None,
+                    task.image.data if task.image else None,
+                )
+            ),
+        )
         if key in self._counts:
             return self._counts[key]
         found: int | None = None
@@ -820,6 +874,8 @@ class Router:
                 info.audio_per_minute = price.audio_per_minute
         if {choice.model_key, choice.model_id} & set(settings.transcribe_models):
             info.transcribes = True  # the account lists this model as taking speech; nothing else is assumed
+        if {choice.model_key, choice.model_id} & set(settings.image_models):
+            info.reads_images = True  # the account lists this model as reading pictures; nothing else is assumed
         return info
 
     def _cost(self, choice: Choice, result: AiResult | None) -> float | None:
