@@ -187,6 +187,8 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       return name ? t("brief.line.news_bare", { name, text }) : t("brief.line.news_bare_unnamed", { text });
     case "fact":
       return line.detail ? t("brief.line.fact.evidence", { text, evidence: line.detail }) : text;
+    case "requested_action":
+      return t("brief.line.requested_action", { name, text });
     case "invitation":
       return invitation(line, t);
     case "own_due":

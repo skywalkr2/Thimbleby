@@ -376,6 +376,49 @@ def _fact_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
     return found
 
 
+def _requested_action_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
+    found = []
+    for row in c.view.ledger(kind="action"):
+        when = _stamp(row["at"])
+        if (
+            row["op"].partition("#")[0] != "action.add"
+            or row["field"] != "text"
+            or row["trust"] != "untrusted"
+            or when is None
+            or not since < when <= c.now
+            or not row.get("request")
+        ):
+            continue
+        request = c.view.get("request", row["request"])
+        action = c.view.get("action", row["record_id"])
+        if request is None or request.data.get("origin") != "input" or not request.data.get("source") or action is None:
+            continue
+        data = action.data
+        asker = data.get("said_by")
+        if (
+            data.get("source") != request.data["source"]
+            or not c.mine(data)
+            or not data.get("event")
+            or not asker
+            or asker == c.pm
+        ):
+            continue
+        found.append(
+            (
+                when,
+                Line(
+                    f"requested:{action.id}",
+                    "requested_action",
+                    text=data["text"],
+                    person=asker,
+                    person_name=c.people.name(asker),
+                    link=("event", data["event"]),
+                ),
+            )
+        )
+    return found
+
+
 def _changed(c: _Day) -> list[Line]:
     since = overnight_start(c.cfg, c.now)
     found: list[tuple[datetime, Line]] = []
@@ -399,6 +442,7 @@ def _changed(c: _Day) -> list[Line]:
     invitations = _invitation_lines(c, since)
     found += invitations
     found += _fact_lines(c, since)
+    found += _requested_action_lines(c, since)
     found.sort(key=lambda pair: (pair[0], pair[1].key), reverse=True)
     return [line for _, line in found]
 

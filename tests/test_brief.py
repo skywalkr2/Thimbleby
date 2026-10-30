@@ -992,8 +992,22 @@ def test_a_case_names_what_no_rule_makes_yet_and_only_that():
     for ws in WORKSPACES:
         for case in load_cases(ws):
             assert set(case.get("left") or []) <= set(LEFT)
-    leftover = {c["sample"]: c.get("left") for c in load_cases(DEMO_B) if c.get("left")}
-    assert leftover == {3: ["meeting_dependency"]}
+    leftover = {
+        f"{ws.name}-{case['sample']}": case.get("left")
+        for ws in WORKSPACES
+        for case in load_cases(ws)
+        if case.get("left")
+    }
+    assert leftover == {}
+
+
+def test_a_persons_own_action_does_not_make_an_overnight_requested_action_line(env):
+    ws, cfg, store, _ = env
+    asker = someone(store, "Quinn Fictional")
+    event = make(store, "event", title="Schedule call", start="2026-10-20T10:00:00+00:00")
+    own(store, cfg, "Move the call", said_by=asker, event=event)
+
+    assert not [line for line in lines_of(built(env, "morning"), "changed") if line.kind == "requested_action"]
 
 
 def test_the_scoring_is_exact_a_missing_extra_or_changed_line_and_a_wrong_order_are_each_a_problem(tmp_path):
