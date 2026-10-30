@@ -2,6 +2,7 @@
 // top for what has no time (all-day events, due dates, dated deliveries) and each day's timed entries placed by start and end,
 // overlapping ones side by side. The hours are the configured ones, grown to hold an entry outside them. A line marks now on
 // today's column. Today is named in words in its heading, never only by color.
+import { useEffect, useRef } from "react";
 import { gridHours, minutesOf, placeOverlaps, SHORT, type Span } from "../lib/calendar";
 import { day, onTheClock, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
@@ -45,10 +46,17 @@ export function TimeGrid(props: {
     props.endsAt,
   );
   const hours = Array.from({ length: to - from }, (_, n) => from + n);
+  const gridRef = useRef<HTMLDivElement>(null);
   const nowMinutes = onTheClock(props.now).minutes;
   const label = (date: string) => (date === props.today ? t("schedule.day_today", { date: day(date) }) : t("schedule.day_plain", { date: day(date) }));
+  const showsNow = props.days.some((d) => d.date === props.today) && nowMinutes >= from * 60 && nowMinutes <= to * 60;
+  // The grid opens with now in view, once for each time it is drawn from nothing (a view or a day picked).
+  useEffect(() => {
+    if (showsNow) gridRef.current?.querySelector("[data-now]")?.scrollIntoView?.({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.days[0]?.date, props.days.length]);
   return (
-    <div className={styles.grid} style={{ ["--cols" as string]: props.days.length, ["--rows" as string]: to - from }} data-grid="">
+    <div ref={gridRef} className={styles.grid} style={{ ["--cols" as string]: props.days.length, ["--rows" as string]: to - from }} data-grid="">
       <div aria-hidden="true" />
       {props.days.map((d) => (
         <h3 key={d.date} className={styles.colHead} data-today={d.date === props.today ? "" : undefined}>
@@ -67,8 +75,8 @@ export function TimeGrid(props: {
       ))}
       <div className={styles.hours} aria-hidden="true">
         {hours.map((h) => (
-          <span key={h} className={styles.hour} style={{ top: `calc(${h - from} * var(--hour))` }}>
-            {h === from ? "" : wallTime(`2000-01-01T${String(h).padStart(2, "0")}:00`)}
+          <span key={h} className={styles.hour} data-hour="" data-first={h === from ? "" : undefined} style={{ top: `calc(${h - from} * var(--hour))` }}>
+            {wallTime(`2000-01-01T${String(h).padStart(2, "0")}:00`)}
           </span>
         ))}
       </div>

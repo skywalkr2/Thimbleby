@@ -212,7 +212,10 @@ test("today's column in the calendar is a low-chroma tint, never the full soft a
   expect(dark["--today-tint"]).toMatch(/color-mix\(in srgb, var\(--accent-soft\) 35%/);
   const css = read("components/Schedule.module.css");
   expect(css).not.toMatch(/\[data-today\][^{]*\{[^}]*var\(--accent-soft\)/);
-  expect(css).toMatch(/\.cell\[data-today\] \{ background: var\(--today-tint\)/);
+  expect(css).toMatch(/\.colHead\[data-today\] \{ background: var\(--today-tint\)/);
+  // The month's cells are white; today is a filled circle on its number.
+  expect(css).not.toMatch(/\.cell\[data-today\] \{/);
+  expect(css).toMatch(/\.cell\[data-today\] \.dayNumber \{ background: var\(--accent\)/);
 });
 
 test("the selected state in navigation is the soft accent, and the tonal pairs keep AA contrast by night", () => {

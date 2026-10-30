@@ -1,6 +1,7 @@
 /* The calendar page: a bar of controls, then the day, week or month, with an entry's details beside it. Nothing here is wider
    than its column: titles wrap, a day's columns share the room, and a month cell shrinks to a count and dots. */
-.bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); min-width: 0; }
+.bar { display: grid; gap: var(--space-2); min-width: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); min-width: 0; }
 .nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .back svg { transform: rotate(180deg); }
 .range { margin: 0; flex: 1 1 12rem; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
@@ -13,7 +14,7 @@
    screen reader. The app's own entries and due dates have a dashed edge as well, so the kinds differ by shape. */
 .chip {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-1); width: 100%; min-width: 0; max-width: 100%; height: 100%;
-  padding: var(--space-1) var(--space-2); text-align: left; font: inherit; font-size: var(--text-xs); line-height: var(--lh-xs);
+  min-height: 1.75rem; padding: var(--space-1) var(--space-2); text-align: left; font: inherit; font-size: var(--text-xs); line-height: var(--lh-xs);
   color: var(--text); background: var(--surface-sunk); border: 0; border-left: 3px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; overflow: hidden;
 }
 .chip:hover { background: var(--surface-hover); }
@@ -36,7 +37,7 @@
 
 /* The time grid: an hour column and a column for each day, in three rows: the day headings, the all-day strip and the hours. */
 .grid {
-  --hour: 3.5rem; --hours-w: 3.5rem;
+  --hour: 3.5rem; --hours-w: 4rem;
   display: grid; grid-template-columns: var(--hours-w) repeat(var(--cols, 1), minmax(0, 1fr)); min-width: 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
 }
@@ -48,14 +49,16 @@
 .strip .chip { height: auto; }
 .strip[data-today] { background: var(--today-tint); }
 .hours { position: relative; height: calc(var(--rows, 12) * var(--hour)); }
-.hour { position: absolute; right: var(--space-1); transform: translateY(-50%); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hour { position: absolute; right: var(--space-2); transform: translateY(-50%); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lane {
   list-style: none; margin: 0; padding: 0; position: relative; min-width: 0; height: calc(var(--rows, 12) * var(--hour)); border-left: 1px solid var(--border);
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--hour) - 1px), var(--border) calc(var(--hour) - 1px), var(--border) var(--hour));
 }
 .lane[data-today] { background-color: var(--today-tint); }
 .slot { position: absolute; min-width: 0; min-height: 1.75rem; padding: 0; box-sizing: border-box; border: 1px solid transparent; }
+.hour[data-first] { transform: none; }
 .now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--danger); z-index: 2; pointer-events: none; }
+.now::before { content: ""; position: absolute; left: -0.3rem; top: -0.3rem; width: 0.6rem; height: 0.6rem; border-radius: var(--radius-full); background: var(--danger); }
 
 /* The Month view. */
 .month { container-type: inline-size; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -64,13 +67,13 @@
 .cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cell { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; min-height: 6.5rem; padding: var(--space-1); border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
 .cell:nth-child(7n + 1) { border-left: 0; }
-.cell[data-today] { background: var(--today-tint); }
-.cell[data-outside] { background: var(--surface-sunk); color: var(--text-muted); }
+.cell[data-outside] { color: var(--text-muted); }
 .dayButton { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); width: 100%; padding: var(--space-1); font: inherit; font-size: var(--text-sm); color: inherit; background: transparent; border: 0; border-radius: var(--radius-sm); cursor: pointer; text-align: left; }
 .dayButton:hover { background: var(--surface-hover); }
 .dayButton:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .dayNumber { font-weight: var(--weight-semibold); }
-.cell[data-today] .dayNumber { text-decoration: underline; }
+.dayNumber { display: inline-flex; align-items: center; justify-content: center; min-width: 1.75rem; height: 1.75rem; border-radius: var(--radius-full); }
+.cell[data-today] .dayNumber { background: var(--accent); color: var(--text-on-accent); }
 .count { display: none; min-width: 1.25rem; padding: 0 var(--space-1); text-align: center; font-size: var(--text-xs); line-height: var(--lh-xs); border-radius: var(--radius-full); box-shadow: inset 0 0 0 1px var(--border-strong); }
 .titles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); min-width: 0; }
 .titles > li { min-width: 0; }

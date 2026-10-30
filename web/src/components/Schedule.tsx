@@ -1,7 +1,7 @@
 // The calendar page (design 7.7): Day, Work week, Week and Month views of everything the app knows is on a day (the person's
 // calendars, the app's own entries, deliveries and due dates), each entry a button that opens its details beside the calendar.
 // The arrows and the Today button move by the view's unit, the keys 1 to 4 pick the view (which is remembered on this
-// browser), the side filter narrows the entries, and Escape closes the details and returns the cursor to the entry. Week and
+// browser), the side filter narrows the entries, and Escape closes the details and returns the cursor to the entry (the keys are listed in the shortcuts menu). Week and
 // Work week fall back to Day in a space too narrow for their columns. Read and open only: nothing here changes a calendar.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
@@ -202,16 +202,20 @@ export function Schedule() {
         }
       />
       <div className={styles.bar}>
-        <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
-          <IconButton icon="chevron" label={back} className={styles.back} variant="secondary" onPress={() => go(-1)} />
-          <Button onClick={() => setAnchor(null)}>{t("schedule.today")}</Button>
-          <IconButton icon="chevron" label={forward} variant="secondary" onPress={() => go(1)} />
+        <div className={styles.row} data-bar-row="">
+          <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
+            <IconButton icon="chevron" label={back} className={styles.back} variant="secondary" onPress={() => go(-1)} />
+            <Button onClick={() => setAnchor(null)}>{t("schedule.today")}</Button>
+            <IconButton icon="chevron" label={forward} variant="secondary" onPress={() => go(1)} />
+          </div>
+          <h2 className={styles.range} aria-live="polite">
+            {heading}
+          </h2>
         </div>
-        <h2 className={styles.range} aria-live="polite">
-          {heading}
-        </h2>
-        <SegmentedControl<CalendarView> label={t("schedule.views")} value={view} onChange={choose} options={options} className={styles.views} />
-        <SideFilter />
+        <div className={styles.row} data-bar-row="">
+          <SegmentedControl<CalendarView> label={t("schedule.views")} value={view} onChange={choose} options={options} className={styles.views} />
+          <SideFilter />
+        </div>
       </div>
       <ListDetail
         title={found ? entryTitle(found.entry, t) : ""}
@@ -248,7 +252,6 @@ export function Schedule() {
           </section>
         )}
       </ListDetail>
-      <p className="hint">{t("schedule.hint")}</p>
     </section>
   );
 }
