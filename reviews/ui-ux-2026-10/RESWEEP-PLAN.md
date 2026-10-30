@@ -55,7 +55,11 @@ These run in every sweep from now on. The reasons are in `owner-reports/old-name
    - unfilled placeholders
    - text that breaks a promise
 4. **Owner-path parity:** each of these is present in at least one run, or named as a gap:
-   - cloud drive folders in the home folder (iCloud Drive, OneDrive, Dropbox, Google Drive) for one setup run
+   - cloud drive folders in the home folder for one setup run
+     - **How:** start the app and the fakes with an explicit temporary `HOME`. The e2e server otherwise reads the real HOME; the host has a test-isolation fix on its list.
+     - **On Linux,** make `$HOME/OneDrive/`, `$HOME/Dropbox/` and `"$HOME/Google Drive/"`. The list lives in `engine/defaults/cloud_folders.yaml` and is read by `engine/cloud_folders.py`; the first folder found is the one recommended.
+     - **iCloud has no Linux place.** To see the iCloud card (the one in the owner's screenshot), override `storage.backups.cloud_folders` in the test workspace with an iCloud entry pointing at a temporary folder. If that isn't possible, name it as a gap.
+     - **Check:** the folder named on each card, the folder actually created, that the old name appears nowhere (X66), and that an existing old-name folder is still found.
    - several accounts (S5)
    - an existing backup folder under the old name
 5. **Worst-case content:** script the AI stand-in (the fake's one-answer script) to return:
