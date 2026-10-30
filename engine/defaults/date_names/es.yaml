@@ -1,0 +1,20 @@
+# How a person's dates are written in running text in this language: the month names read as a month, the words that
+# make a fact about a person a date that comes round every year, the endings and joining words around a day, and
+# whether the day or the month comes first. One file for each language, named by its primary language tag.
+months:
+  - [enero, ene]
+  - [febrero, feb]
+  - [marzo, mar]
+  - [abril, abr]
+  - [mayo]
+  - [junio, jun]
+  - [julio, jul]
+  - [agosto, ago]
+  - [septiembre, setiembre, sep, sept]
+  - [octubre, oct]
+  - [noviembre, nov]
+  - [diciembre, dic]
+yearly_words: [cumpleaños, aniversario]
+day_endings: []
+joining_words: [de]
+orders: [day_first]

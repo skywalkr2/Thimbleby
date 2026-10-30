@@ -25,34 +25,13 @@ from zoneinfo import ZoneInfo
 
 from engine import entry_rules, promises
 from engine.blocked import standing_hold
+from engine.date_names import DateNames, date_names
 from engine.firm_due import firm_due
 from engine.meeting_guests import guests, window
 from engine.names import entry_parts
+from engine.projects import language_for
 
-MONTHS = {
-    name: number
-    for number, names in enumerate(
-        (
-            ("january", "jan"),
-            ("february", "feb"),
-            ("march", "mar"),
-            ("april", "apr"),
-            ("may",),
-            ("june", "jun"),
-            ("july", "jul"),
-            ("august", "aug"),
-            ("september", "sep", "sept"),
-            ("october", "oct"),
-            ("november", "nov"),
-            ("december", "dec"),
-        ),
-        start=1,
-    )
-    for name in names
-}
 _ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
-_MONTH_FIRST = re.compile(r"\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b")
-_DAY_FIRST = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([A-Za-z]{3,9})\.?(?:,?\s+(\d{4}))?\b")
 
 
 @dataclass(frozen=True)
@@ -377,14 +356,15 @@ def reach_of(view: Any, person: Any, written_from: str | None, written_record: s
 # ---- dates and what matters ----------------------------------------
 
 
-def _month_day(text: str) -> tuple[int, int, int | None] | None:
-    """A month, a day and perhaps a year written in a text: an ISO date, "March 3 (2026)" or "3 March (2026)"."""
+def _month_day(text: str, names: DateNames | None) -> tuple[int, int, int | None] | None:
+    """A month, a day and perhaps a year written in a text: an ISO date, or a month name and a day the way the
+    language writes them (none of the second kind without a language the app has names for)."""
     found = _ISO.search(text)
     if found:
         return int(found.group(2)), int(found.group(3)), int(found.group(1))
-    for pattern, month_at, day_at in ((_MONTH_FIRST, 1, 2), (_DAY_FIRST, 2, 1)):
+    for pattern, month_at, day_at in names.patterns if names else ():
         for match in pattern.finditer(text):
-            month = MONTHS.get(match.group(month_at).casefold())
+            month = names.months.get(match.group(month_at).casefold()) if names else None
             day = int(match.group(day_at))
             if month and 1 <= day <= 31:
                 return month, day, int(match.group(3)) if match.group(3) else None
@@ -416,7 +396,7 @@ def facts_about(
     from engine.today import zone
 
     rules = cfg.steward.people
-    words = [w.casefold() for w in rules.date_words if w.strip()]
+    set_words = [w.casefold() for w in rules.date_words if w.strip()]
     facts = view.list("fact")
     replaced = {f.data["supersedes"] for f in facts if f.data.get("supersedes")}
     dates: list[Dated] = []
@@ -433,7 +413,9 @@ def facts_about(
         evidence = d.get("evidence") or {}
         text = str(d["text"])
         shared = {"quote": evidence.get("quote"), "source": d.get("source") or evidence.get("source")}
-        parsed = _month_day(text)
+        names = date_names(language_for(view, cfg.workspace.language, fact))
+        words = set_words + list(names.yearly_words if names else ())
+        parsed = _month_day(text, names)
         if parsed is not None and any(w in text.casefold() for w in words):
             dates.append(Dated(fact.id, text, _next_on(parsed[0], parsed[1], today), True, **shared))
         elif any(w in text.casefold() for w in words):
