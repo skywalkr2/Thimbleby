@@ -5,6 +5,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/decisions.md`, not here.
 
 
+## 2026-10-30: The Schedule follows the review's VS06 row (batch 7b)
+
+**Decided:**
+- The Schedule takes the review's VS06 points: a 64px hour gutter, entries at least 28px, opening at now with a dot,
+  a two-row toolbar, white month cells with today as a filled circle, and its keys in the ? list.
+- The month view no longer tints today's whole cell. The week view's day heading keeps its tint.
+
+**Decided by:** the UI/UX review (VS06), built from brief 17.
+
+**Why:** the review's findings V2-6, V2-7, V2-13, V2-19 to V2-22 and V2-28.
+
+**Impact:** the Schedule screen only. Change log: section 269.
+
 ## 2026-10-30: The postponed UI/UX items go to the coding agent before the installers; redo of one item moves after them
 
 **Decided:**

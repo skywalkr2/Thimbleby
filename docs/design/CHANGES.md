@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 269. The Schedule to the review (2026-10-30; batch 7b, VS06)
+
+| Where | Before | Now |
+|---|---|---|
+| Schedule, week and day (7.x) | A 56px hour gutter with the first label blanked; entries' 28px minimum only on lanes; opens at the start of the day; the now line with no dot | A 64px gutter with every label shown; every entry at least 28px; opens scrolled to now, with a now-dot |
+| Schedule toolbar | One wrapping row | Two rows: the arrows, Today and the range; then the view switch and the side filter |
+| Schedule, month | Today's cell tinted, outside-month cells dimmed | White cells, with today as a filled circle on its number |
+| Schedule's keyboard help | A sentence under the calendar | In the ? shortcuts list, under "On the Schedule" |
+
 ## 268. Hand something in reads attachments; pictures through accounts listed as reading images (2026-10-30)
 
 | Where | Before | Now |
