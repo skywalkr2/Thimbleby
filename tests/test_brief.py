@@ -993,7 +993,7 @@ def test_a_case_names_what_no_rule_makes_yet_and_only_that():
         for case in load_cases(ws):
             assert set(case.get("left") or []) <= set(LEFT)
     leftover = {c["sample"]: c.get("left") for c in load_cases(DEMO_B) if c.get("left")}
-    assert 6 not in leftover and leftover[7] == ["document_dates"]
+    assert leftover == {3: ["meeting_dependency"]}
 
 
 def test_the_scoring_is_exact_a_missing_extra_or_changed_line_and_a_wrong_order_are_each_a_problem(tmp_path):

@@ -5,14 +5,17 @@ received: '2026-10-27'
 now: '2026-10-27T09:00'
 form: morning
 given:
-- {kind: fact, id: FACT-91, fields: {text: The studio renewal letter says Friday is the last day to cancel, 'on': '2026-10-30', on_kind: renewal, trust: untrusted, evidence: {source: note, quote: Friday 30 October is the last day to cancel}}}
 - {kind: action, id: ACT-91, fields: {text: Decide on the studio renewal, owners: [{person: PER-1}], due: '2026-10-30'}}
 - {kind: question, id: Q-91, fields: {to: PER-1, title: 'Renew the studio for another year?', kind: decision, options: [Renew, Cancel]}}
+then:
+- at: '2026-10-26T20:00'
+  create: {kind: fact, id: FACT-91, fields: {text: The studio renewal letter says Friday is the last day to cancel, 'on': '2026-10-30', on_kind: renewal, trust: untrusted, evidence: {source: note, quote: Friday 30 October is the last day to cancel}}}
 expect:
   today:
   - {kind: on_today, change: need, count: 1, queue: 'question:Q-91'}
+  changed:
+  - {kind: fact, text: The studio renewal letter says Friday is the last day to cancel, detail: Friday 30 October is the last day to cancel, link: [fact, FACT-91]}
   risk:
   - {kind: dated, change: renewal, text: The studio renewal letter says Friday is the last day to cancel, day: '2026-10-30', days: 3, link: [fact, FACT-91]}
   'yes':
   - {kind: 'yes', change: reminder_offer, text: Decide on the studio renewal, day: '2026-10-29', at: '08:30', link: [action, ACT-91]}
-left: [document_dates]

@@ -766,9 +766,11 @@ S2. **Time and attention:**
   (`tests/test_brief.py::test_a_deadline_renewal_or_expiry_within_the_window_is_an_at_risk_line_soonest_first`,
   `tests/test_brief.py::test_a_promise_to_the_person_whose_words_name_a_meeting_today_is_at_risk_at_that_meeting`,
   `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
-  **Left:** sample 7's changed line from the document ("your renewal letter says Friday is the last day to cancel") and
-  sample 3's request in words to move a call; neither is a rule yet.
-  - State (2026-10-29): built: the morning brief, evening wrap-up and Today's card, the ten samples as cases, capacity and clashes, dated risks and meeting-tied promises (`tests/test_brief.py`, `tests/test_day_capacity.py`, `web/src/components/BriefCard.test.tsx`); left: sample 7's changed line from the document and sample 3's request in words to move a call.
+  **Left:** sample 3's request in words to move a call (needs reading a request out of a message: an AI call or a request
+  record, for the main session).
+  - State (2026-10-30): built: sample 7's changed line from the document carries the words from it as evidence
+  (`tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`); left: sample 3's request in words to
+  move a call (needs reading a request out of a message: an AI call or a request record, for the main session).
 
 S3. **People and meetings:**
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their

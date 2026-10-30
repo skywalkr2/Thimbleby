@@ -350,6 +350,32 @@ def _invitation_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
     return found
 
 
+def _fact_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
+    found = []
+    for fact in c.view.list("fact"):
+        data = fact.data
+        evidence = data.get("evidence") or {}
+        if data.get("trust") != "untrusted" or not evidence.get("quote"):
+            continue
+        history = c.view.ledger(kind="fact", record_id=fact.id)
+        when = _stamp(history[0]["at"]) if history else None
+        if when is None or not since < when <= c.now:
+            continue
+        found.append(
+            (
+                when,
+                Line(
+                    f"fact:{fact.id}",
+                    "fact",
+                    text=data["text"],
+                    detail=evidence["quote"],
+                    link=("fact", fact.id),
+                ),
+            )
+        )
+    return found
+
+
 def _changed(c: _Day) -> list[Line]:
     since = overnight_start(c.cfg, c.now)
     found: list[tuple[datetime, Line]] = []
@@ -370,7 +396,9 @@ def _changed(c: _Day) -> list[Line]:
             link=e.record,
         )
         found.append((when, line))
-    found += _invitation_lines(c, since)
+    invitations = _invitation_lines(c, since)
+    found += invitations
+    found += _fact_lines(c, since)
     found.sort(key=lambda pair: (pair[0], pair[1].key), reverse=True)
     return [line for _, line in found]
 
