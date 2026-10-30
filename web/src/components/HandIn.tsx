@@ -5,7 +5,7 @@
 // it was opened from stays in view; closing it with words in the box asks first.
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, type S } from "../lib/api";
+import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { PlaceOptions } from "./PlaceOptions";
 import { useSides } from "../lib/sides";
@@ -39,13 +39,13 @@ export function useAddOwnRequest(): (id: string) => void {
   return useContext(OwnContext).add;
 }
 
-const TEXT_FILE = /^text\/|\/(json|xml)$|message\/rfc822/;
 /** A voice note: a sound file, kept and turned into text by an account that takes speech once it runs. */
 const SOUND_FILE = /^audio\/|\.(m4a|mp3|wav|ogg|oga|opus|webm|flac|aac)$/i;
 
 type Whose = "others" | "mine";
 /** How sensitive the person says it is: the usual sends nothing, so the workspace's own rules decide. */
 type Sensitivity = "" | "internal" | "restricted";
+type FileRow = { id: number; name: string; status: "read" | "kept" | "refused" | "voice"; reason?: string; picture?: boolean };
 
 export function HandIn(props: { onClose: () => void }) {
   const { t } = useWords();
@@ -60,10 +60,72 @@ export function HandIn(props: { onClose: () => void }) {
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  const [fileBusy, setFileBusy] = useState(false);
+  const [fileRows, setFileRows] = useState<FileRow[]>([]);
   const waitsForStart = useWaitsForStart();
   const toast = useHandedToast();
   const first = useRef<HTMLTextAreaElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const nextFileRow = useRef(0);
   useEffect(() => first.current?.focus(), []);
+
+  const addFileRow = (row: Omit<FileRow, "id">) => {
+    const id = ++nextFileRow.current;
+    setFileRows((previous) => [...previous, { id, ...row }]);
+  };
+
+  const processFiles = async (files: File[]) => {
+    setDropProblem("");
+    const sounds = files.filter((f) => SOUND_FILE.test(f.type) || SOUND_FILE.test(f.name));
+    const documents = files.filter((f) => !sounds.includes(f));
+    setFileBusy(true);
+    for (const file of documents) {
+      let refusal: ApiError | undefined;
+      const result = await act(async () => {
+        try {
+          return await api.handInFile(file, {
+            note: whose === "others" ? todo : undefined,
+            project: project || undefined,
+            data_level: sensitivity || undefined,
+          });
+        } catch (error) {
+          if (error instanceof ApiError) refusal = error;
+          throw error;
+        }
+      });
+      if (result) {
+        if (result.request) own.add(result.request);
+        addFileRow({
+          name: result.name,
+          status: result.status,
+          picture: file.type.startsWith("image/") && result.status === "kept",
+        });
+      } else if (refusal) {
+        addFileRow({ name: file.name, status: "refused", reason: refusal.detail });
+      }
+    }
+    for (const sound of sounds) {
+      let refusal: ApiError | undefined;
+      const handed = await act(
+        async () => {
+          try {
+            return await api.handInAudio(sound, project || undefined);
+          } catch (error) {
+            if (error instanceof ApiError) refusal = error;
+            throw error;
+          }
+        },
+        () => ({ message: t("toast.voice_handed_in", { name: sound.name }) }),
+      );
+      if (handed) {
+        own.add(handed.request);
+        addFileRow({ name: sound.name, status: "voice" });
+      } else if (refusal) {
+        addFileRow({ name: sound.name, status: "refused", reason: refusal.detail });
+      }
+    }
+    setFileBusy(false);
+  };
 
   const submit = async () => {
     setBusy(true);
@@ -92,30 +154,21 @@ export function HandIn(props: { onClose: () => void }) {
   // carries its words as well is an ordinary paste of text.
   const onPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const data = event.clipboardData;
-    const pictures = Array.from(data?.files ?? []).filter((f) => f.type.startsWith("image/"));
-    if (pictures.length === 0 || data.getData("text")) return;
+    const files = Array.from(data?.files ?? []);
+    if (files.length === 0 || data.getData("text")) return;
     event.preventDefault();
-    setDropProblem(t("handin.picture_not_read"));
+    if (files.some((file) => file.type.startsWith("image/"))) {
+      setDropProblem(t("handin.picture_not_read"));
+      return;
+    }
+    void processFiles(files);
   };
 
   const onDrop = async (event: React.DragEvent<HTMLTextAreaElement>) => {
     const files = Array.from(event.dataTransfer.files);
     if (!files.length) return;
     event.preventDefault();
-    const sounds = files.filter((f) => SOUND_FILE.test(f.type) || SOUND_FILE.test(f.name));
-    const readable = files.filter((f) => !sounds.includes(f) && (TEXT_FILE.test(f.type) || /\.(txt|md|eml|csv)$/i.test(f.name)));
-    setDropProblem(readable.length + sounds.length < files.length ? t("handin.drop_text_only") : "");
-    const texts = await Promise.all(readable.map((f) => f.text()));
-    if (texts.length) setText((prev) => [prev, ...texts].filter(Boolean).join("\n\n"));
-    // A voice note goes in at once, as its own hand-in: the words are not there to read until an account has turned
-    // them into text, which the request says when it waits for the person's go.
-    for (const sound of sounds) {
-      const handed = await act(
-        () => api.handInAudio(sound, project || undefined),
-        () => ({ message: t("toast.voice_handed_in", { name: sound.name }) }),
-      );
-      if (handed) own.add(handed.request);
-    }
+    await processFiles(files);
   };
 
   return (
@@ -164,6 +217,40 @@ export function HandIn(props: { onClose: () => void }) {
             </p>
           )}
         </FormField>
+        <Button type="button" variant="quiet" disabled={fileBusy} onClick={() => fileInput.current?.click()}>
+          {t("handin.file.choose")}
+        </Button>
+        <input
+          ref={fileInput}
+          hidden
+          type="file"
+          multiple
+          aria-label={t("handin.file.choose")}
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            void processFiles(files);
+          }}
+        />
+        {fileRows.length > 0 && (
+          <ul aria-label={t("handin.file.list")}>
+            {fileRows.map((row) => (
+              <li key={row.id}>
+                <span>{row.name}</span>
+                <span>
+                  {row.status === "read"
+                    ? t("handin.file.read")
+                    : row.status === "kept"
+                      ? t("handin.file.kept")
+                      : row.status === "voice"
+                        ? t("handin.file.voice")
+                        : t("handin.file.refused", { reason: row.reason ?? "" })}
+                </span>
+                {row.picture && <span>{t("handin.picture_not_read")}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
         <FormBlock className="choice">
           <span aria-hidden="true">{t("handin.whose")}</span>
           <SegmentedControl

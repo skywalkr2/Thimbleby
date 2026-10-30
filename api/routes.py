@@ -75,6 +75,7 @@ from api.schemas import (
     FollowupSection,
     GenericRecordView,
     Handed,
+    HandedFile,
     HandIn,
     HandoverChoice,
     HandoverSideView,
@@ -1516,6 +1517,117 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         worker.poke()
         return Handed(request=handed, source=None)
+
+    @r.post("/handin/file")
+    async def handin_file(
+        request: Request,
+        name: str,
+        note: str = "",
+        project: str | None = None,
+        data_level: Literal["open", "internal", "restricted"] | None = None,
+    ) -> HandedFile:
+        """Read a document as outside content, or keep it in the person's files if no reader can take it."""
+        from email import policy
+        from email.parser import BytesParser
+
+        from engine.connectors import SourceItem
+        from engine.connectors.mailbox import attachments, body_text
+        from engine.extract import GENERIC, media_type_of, read_file
+        from engine.extract.attached import with_files_read
+        from engine.extract.core import ExtractError
+        from engine.files import add_file
+        from engine.intake import hand_in
+
+        limits = cfg.storage.files
+        cap = limits.max_file_mb * 1024 * 1024
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > cap:
+            raise HTTPException(status_code=413, detail=f"{name} is larger than {limits.max_file_mb:g} MB")
+        data = await request.body()
+        if len(data) > cap:
+            raise HTTPException(status_code=413, detail=f"{name} is larger than {limits.max_file_mb:g} MB")
+        media_type = (request.headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+        try:
+            if name.lower().endswith(".eml") or media_type == "message/rfc822":
+                message = BytesParser(policy=policy.default).parsebytes(data)
+                mail_text = "\n".join(
+                    part for part in (f"Subject: {message.get('Subject') or ''}".strip(), body_text(message)) if part
+                )
+                item = SourceItem(name, name, mail_text, files=attachments(message))
+                text = with_files_read(ws, store, cfg, item, f"handed-in file {name}").text
+                if not text.strip():
+                    raise ExtractError("the message has no text in it")
+            else:
+                text = read_file(
+                    data,
+                    name,
+                    media_type,
+                    max_chars=limits.read_max_chars,
+                    max_bytes=int(limits.read_max_mb * 1024 * 1024),
+                    plugin=store.plugins.read_with_plugins,
+                ).text
+        except ExtractError as err:
+            stored_type = media_type_of(name, media_type)
+            keep_generic = stored_type in GENERIC or stored_type not in limits.accepted_types
+            if keep_generic:
+                stored_type = "application/octet-stream"
+            record = guard(
+                lambda: add_file(
+                    store,
+                    cfg,
+                    data,
+                    name=name,
+                    media_type=stored_type,
+                    project=project,
+                    data_level=data_level,
+                    preserve_generic=keep_generic,
+                )
+            )
+            note_request = None
+            if note.strip():
+                note_request = guard(
+                    lambda: hand_in(
+                        ws,
+                        store,
+                        note=note,
+                        data_level=data_level,
+                        project=project,
+                        cfg=cfg,
+                    )
+                ).request
+            changed()
+            if note_request:
+                worker.poke()
+            return HandedFile(
+                name=record.data["name"],
+                status="kept",
+                request=note_request,
+                source=None,
+                file=record.id,
+                reason=err.reason,
+            )
+        pasted = f"Attached file: {name}\n{text}\nEnd of attached file: {name}"
+        handed = guard(
+            lambda: hand_in(
+                ws,
+                store,
+                note=note,
+                pasted=pasted,
+                data_level=data_level,
+                project=project,
+                cfg=cfg,
+            )
+        )
+        changed()
+        worker.poke()
+        return HandedFile(
+            name=name,
+            status="read",
+            request=handed.request,
+            source=handed.source,
+            file=None,
+            reason=None,
+        )
 
     @r.get("/changes")
     def changes() -> list[ChangeItem]:

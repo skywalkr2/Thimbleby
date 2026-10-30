@@ -6,6 +6,7 @@ the stub and nothing reaches a network."""
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from email.message import EmailMessage
 
 import pytest
 import yaml
@@ -17,6 +18,7 @@ from engine.ai.adapters.stub import set_responder
 from engine.ai.router import CANNOT_TRANSCRIBE, Router
 from engine.config import load_config
 from engine.dispatcher import process
+from engine.extract import DOCUMENT, PDF, SPREADSHEET, fixtures
 from engine.intake import IntakeError
 from engine.storage import Store
 from engine.watch import refresh
@@ -256,6 +258,113 @@ def test_the_hand_in_route_takes_a_voice_note_and_refuses_what_is_not_sound(tmp_
         assert request.data["task"] == "transcribe"
         bad = client.post("/api/handin/audio?name=notes.txt", content=b"words", headers={"Content-Type": "text/plain"})
         assert bad.status_code == 409 and "isn't a kind of sound" in bad.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    ("name", "media_type", "data", "phrase"),
+    [
+        ("plan.pdf", PDF, fixtures.pdf("A fictional route goes east."), "A fictional route goes east."),
+        ("plan.docx", DOCUMENT, fixtures.document(body="A fictional route goes east."), "A fictional route goes east."),
+        (
+            "plan.xlsx",
+            SPREADSHEET,
+            fixtures.spreadsheet(title="A fictional route goes east."),
+            "A fictional route goes east.",
+        ),
+    ],
+)
+def test_handin_file_reads_documents_as_untrusted_content(tmp_path, name, media_type, data, phrase):
+    ws, cfg, store = workspace(tmp_path)
+    store.close()
+    token = "capture-test-token"
+    app = create_app(ws, cfg, token, ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
+        result = client.post(
+            f"/api/handin/file?name={name}&note=Please+file+this",
+            content=data,
+            headers={"Content-Type": media_type},
+        )
+        assert result.status_code == 200, result.text
+        handed = result.json()
+        assert handed["status"] == "read" and handed["name"] == name
+        request = app.state.store.read().get("request", handed["request"])
+        source = app.state.store.read().get("source", handed["source"])
+        text = (ws.sources_dir / f"{source.data['content_hash']}.txt").read_text()
+        assert request.data["note"] == "Please file this"
+        assert source.data["trust"] == "untrusted" and source.data["kind"] == "pasted"
+        assert f"Attached file: {name}" in text and phrase in text
+
+
+def test_handin_file_reads_a_saved_mail_and_its_attachment(tmp_path):
+    message = EmailMessage()
+    message["Subject"] = "A fictional message"
+    message["From"] = "sender@example.com"
+    message.set_content("The message body is outside content.")
+    message.add_attachment(
+        fixtures.document(body="The attached document is outside content."),
+        maintype="application",
+        subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename="attached.docx",
+    )
+    ws, cfg, store = workspace(tmp_path)
+    store.close()
+    token = "capture-test-token"
+    app = create_app(ws, cfg, token, ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
+        result = client.post(
+            "/api/handin/file?name=message.eml",
+            content=message.as_bytes(),
+            headers={"Content-Type": "message/rfc822"},
+        )
+        assert result.status_code == 200, result.text
+        handed = result.json()
+        source = app.state.store.read().get("source", handed["source"])
+        text = (ws.sources_dir / f"{source.data['content_hash']}.txt").read_text()
+        assert handed["status"] == "read"
+        assert "The message body is outside content." in text
+        assert "The attached document is outside content." in text
+        assert source.data["trust"] == "untrusted"
+
+
+def test_handin_file_keeps_an_unreadable_file_for_later(tmp_path):
+    ws, cfg, store = workspace(tmp_path)
+    store.close()
+    token = "capture-test-token"
+    app = create_app(ws, cfg, token, ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
+        result = client.post(
+            "/api/handin/file?name=archive.bin&note=Please+review",
+            content=b"\x00\x01unreadable",
+            headers={"Content-Type": "application/zip"},
+        )
+        assert result.status_code == 200, result.text
+        kept = result.json()
+        assert kept["status"] == "kept" and kept["name"] == "archive.bin"
+        assert kept["file"] is not None and kept["request"] is not None
+        assert app.state.store.read().get("request", kept["request"]).data["note"] == "Please review"
+        saved = app.state.store.read().get("file", kept["file"])
+        assert saved.data["name"] == "archive.bin"
+        assert saved.data["media_type"] == "application/octet-stream"
+        assert saved.data["sha256"]
+        from engine.files import read_bytes
+
+        assert read_bytes(app.state.store, kept["file"])[1] == b"\x00\x01unreadable"
+
+
+def test_handin_file_refuses_a_file_over_the_existing_single_file_limit(tmp_path):
+    ws, cfg, store = workspace(tmp_path)
+    store.close()
+    cfg = ws.config(env={"COCKPIT__STORAGE__FILES__MAX_FILE_MB": "0.00001"})
+    token = "capture-test-token"
+    app = create_app(ws, cfg, token, ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
+        result = client.post(
+            "/api/handin/file?name=large.txt",
+            content=b"This file is over the configured limit.",
+            headers={"Content-Type": "text/plain"},
+        )
+        assert result.status_code == 413
+        assert "larger than" in result.json()["detail"]
 
 
 # ---- a capture folder ----------------------------------------------------------------------------------------------

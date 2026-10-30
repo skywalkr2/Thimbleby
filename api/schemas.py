@@ -484,6 +484,17 @@ class Handed(BaseModel):
     source: str | None
 
 
+class HandedFile(BaseModel):
+    """What happened to a file handed in: read as an outside input, or kept in the person's files."""
+
+    name: str
+    status: Literal["read", "kept"]
+    request: str | None
+    source: str | None
+    file: str | None
+    reason: str | None
+
+
 class Requeued(BaseModel):
     request: str
 
