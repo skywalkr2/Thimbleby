@@ -2492,6 +2492,9 @@ Kept for the record; details are in `docs/decisions.md` and the git history.
   with the message's own Copy and Mark sent and Next in the bar (`web/src/components/FollowUpsListDetail.test.tsx`: "review mode
   on a phone"). The review-mode browser tests no longer skip: each hands in its own item (`web/e2e/panes.spec.ts`, which
   has run in the full run since; What changed has no phone review mode now, it is the history, change log 229).
+  - State (2026-10-29): built: the Follow-ups phone review test creates its own check-in and waits for at least two people
+    with messages waiting (`web/e2e/panes.spec.ts`: "goes through the messages waiting to be sent one person at a time,
+    with the message's own Copy and Next across the bottom"); passed three consecutive runs.
   *Not a separate screen any more:* Waiting to go out is the To send tab of Follow-ups, with its review mode (change log 229).
 - [x] [B-6b] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
   version opens a generated page with a copy button; decided on review, design 7.5): the preview on screen is what is
