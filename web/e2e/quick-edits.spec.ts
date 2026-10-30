@@ -7,11 +7,15 @@ const LOADED = { timeout: 20_000 };
 const LABELS = ["Ask me before anything over", "Most to spend in a month", "Most to spend in a day"];
 const STEPS = [0, 600, 300];
 
-/** Amounts no earlier run left behind, so a change that was dropped can't look like one that held. */
-let round = 0;
-const nextFields = () => {
-  round += 1;
-  const base = (Date.now() % 300) + round;
+/** Amounts that differ from what the boxes hold now, so a change that was dropped can't look like one that held. */
+const nextFields = async (page: Page) => {
+  const held = await Promise.all(LABELS.map((label) => page.getByRole("textbox", { name: label }).inputValue()));
+  let base = (Date.now() % 300) + 1;
+  for (;;) {
+    base += 1;
+    const shown = STEPS.map((step) => `$${base + step}.00`);
+    if (!shown.some((s) => held.includes(s))) break;
+  }
   return LABELS.map((label, n) => {
     const amount = base + STEPS[n];
     return { label, typed: String(amount), shown: `$${amount}.00` };
@@ -56,7 +60,7 @@ for (const [gap, lag] of [[0, 0], [250, 400], [1500, 0]]) {
       const saves = watchSaves(page);
       await page.goto("?token=e2e-token#settings/ai");
       await expect(box(page, LABELS[0])).toBeVisible(LOADED);
-      const fields = nextFields();
+      const fields = await nextFields(page);
       for (const f of fields) {
         await typeInto(page, f.label, f.typed, how);
         if (gap) await page.waitForTimeout(gap);
@@ -77,7 +81,7 @@ test("three Resets pressed one right after another all hold after a reload", asy
   const saves = watchSaves(page);
   await page.goto("?token=e2e-token#settings/ai");
   await expect(box(page, LABELS[0])).toBeVisible(LOADED);
-  const fields = nextFields();
+  const fields = await nextFields(page);
   for (const f of fields) await typeInto(page, f.label, f.typed, "tab");
   await expect.poll(() => saves.answered, { timeout: 60_000 }).toBe(3);
   const resets = LABELS.map((label) => page.getByRole("button", { name: `Reset: ${label}` }));
@@ -102,7 +106,7 @@ test("a field still being typed in when the save before it is answered keeps the
   });
   await page.goto("?token=e2e-token#settings/ai");
   await expect(box(page, LABELS[0])).toBeVisible(LOADED);
-  const fields = nextFields();
+  const fields = await nextFields(page);
   for (const f of fields) {
     await box(page, f.label).click();
     await box(page, f.label).fill("");
