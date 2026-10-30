@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
@@ -24,6 +24,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  document.documentElement.removeAttribute("data-narrow");
 });
 
 const SENDER = "Mira Example";
@@ -80,10 +81,18 @@ const MONDAY: Brief = {
   message: { state: "none", to: [{ person: "PER-9", name: "Lena Example" }] },
 };
 
-function show(brief: Brief, extra: Routes = {}, over: { unnamed?: boolean } = {}) {
+async function show(brief: Brief, extra: Routes = {}, over: { unnamed?: boolean } = {}) {
   const calls = fakeApi({ "GET brief": () => brief, "GET today/queue": () => [NUDGE], ...extra });
   const onOpenRecord = vi.fn();
   renderApp(<BriefCard workspace="ws" onOpenRecord={onOpenRecord} />, {}, over);
+  if (brief.form !== null) {
+    await waitFor(() => {
+      const card = document.querySelector<HTMLElement>("[data-brief], [data-brief-closed]");
+      if (!card) throw new Error("The brief has not loaded");
+      const toggle = card.querySelector<HTMLButtonElement>("h2 button[aria-controls]");
+      if (toggle?.getAttribute("aria-expanded") === "false") fireEvent.click(toggle);
+    });
+  }
   return { calls, onOpenRecord };
 }
 
@@ -94,14 +103,14 @@ const sectionsOf = () => Array.from(document.querySelectorAll<HTMLElement>("[dat
 const headings = () => sectionsOf().map((s) => within(s).getByRole("heading", { level: 3 }).textContent);
 
 test("the morning brief has its sections in order with their headings, and a section with nothing is left out", async () => {
-  show({ ...MORNING, sections: MORNING.sections.filter((s) => s.key !== "changed") });
+  await show({ ...MORNING, sections: MORNING.sections.filter((s) => s.key !== "changed") });
   expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
   expect(headings()).toEqual(["At risk today", "Needs your yes"]);
-  expect(screen.queryByText("Changed overnight")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Changed overnight" })).toBeNull();
 });
 
 test("every kind of line is worded from the sheet: one fact each, the day and the time said, no status or progress", async () => {
-  show(MORNING);
+  await show(MORNING);
   await screen.findByRole("heading", { level: 2, name: "Morning brief" });
   expect(headings()).toEqual(["Changed overnight", "At risk today", "Needs your yes"]);
   expect(screen.getByText(`${SENDER} moved Send the draft to Thu, Oct 22`)).toBeInTheDocument();
@@ -114,7 +123,7 @@ test("every kind of line is worded from the sheet: one fact each, the day and th
 });
 
 test("changed facts keep their evidence", async () => {
-  show({
+  await show({
     ...MORNING,
     sections: [
       {
@@ -137,7 +146,7 @@ test("changed facts keep their evidence", async () => {
 
 test("a requested action names who asked and opens the linked calendar entry", async () => {
   const user = userEvent.setup();
-  const { onOpenRecord } = show({
+  const { onOpenRecord } = await show({
     ...MORNING,
     sections: [
       {
@@ -162,7 +171,7 @@ test("a requested action names who asked and opens the linked calendar entry", a
 });
 
 test("a line that waits for the person's yes is titled as Today's own line and says a draft is ready, and a section says how many more", async () => {
-  show(MORNING);
+  await show(MORNING);
   const yes = (await screen.findByText("Follow up with Dev Example")).closest("li");
   expect(yes).not.toBeNull();
   expect(within(yes as HTMLElement).getByText("draft ready")).toBeInTheDocument();
@@ -173,7 +182,7 @@ test("Open on a yes line opens Today's own line; on another it opens its record"
   const user = userEvent.setup();
   const revealed = vi.fn((event: Event) => event.preventDefault());
   window.addEventListener("reveal-row", revealed);
-  const { onOpenRecord } = show(MORNING);
+  const { onOpenRecord } = await show(MORNING);
   const yes = (await screen.findByText("Follow up with Dev Example")).closest("li") as HTMLElement;
   await user.click(within(yes).getByRole("button", { name: "Open" }));
   expect((revealed.mock.calls[0][0] as CustomEvent).detail).toEqual({ type: "line", id: "nudge:PER-2" });
@@ -204,7 +213,7 @@ test("what Today already has is counted, never listed: '1 thing needs you, 1 cla
   const user = userEvent.setup();
   const revealed = vi.fn((event: Event) => event.preventDefault());
   window.addEventListener("reveal-row", revealed);
-  show(COUNTED);
+  await show(COUNTED);
   expect(await screen.findByRole("heading", { level: 3, name: "On Today" })).toBeInTheDocument();
   expect(screen.getByText("1 thing needs you")).toBeInTheDocument();
   expect(screen.getByText("1 thing is late")).toBeInTheDocument();
@@ -218,7 +227,7 @@ test("what Today already has is counted, never listed: '1 thing needs you, 1 cla
 
 test("the brief's count of what needs you is the number Today's heading shows", async () => {
   const more = ["a", "b", "c"].map((k) => queued({ key: `nudge:${k}`, group: "send", kind: "nudge" }));
-  show(COUNTED, { "GET today/queue": () => more });
+  await show(COUNTED, { "GET today/queue": () => more });
   expect(await screen.findByText("3 things need you")).toBeInTheDocument();
 });
 
@@ -240,20 +249,20 @@ test("the week's briefing is offered by a name that fits any day, and Not this w
 });
 
 test("no offer of the week's briefing when it is not among the forms due", async () => {
-  show(MORNING);
+  await show(MORNING);
   await screen.findByRole("heading", { level: 2, name: "Morning brief" });
   expect(screen.queryByRole("button", { name: "Not this week" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Show this week's briefing" })).toBeNull();
 });
 
 test("a quiet day is one line and no section", async () => {
-  show(QUIET);
+  await show(QUIET);
   expect(await screen.findByText("Nothing needs you this morning.")).toBeInTheDocument();
   expect(sectionsOf()).toHaveLength(0);
 });
 
 test("nothing shows before the brief is due, or when it can't be read", async () => {
-  show({ ...QUIET, form: null, forms: [] });
+  await show({ ...QUIET, form: null, forms: [] });
   await waitFor(() => expect(document.querySelector("[data-brief]")).toBeNull());
   cleanup();
   fakeApi({ "GET brief": () => new Refuse(500, "no"), "GET today/queue": () => [] });
@@ -262,7 +271,7 @@ test("nothing shows before the brief is due, or when it can't be read", async ()
 });
 
 test("the evening wrap-up credits the work to whoever did it, and its quiet day is its own line", async () => {
-  show(EVENING);
+  await show(EVENING);
   expect(await screen.findByRole("heading", { level: 2, name: "Evening wrap-up" })).toBeInTheDocument();
   expect(headings()).toEqual(["Done today", "Moved to tomorrow", "Still waiting on others"]);
   expect(screen.getByText("You finished the proposal")).toBeInTheDocument();
@@ -271,47 +280,47 @@ test("the evening wrap-up credits the work to whoever did it, and its quiet day 
   expect(screen.getByText("Print the estimate is still open and was due today")).toBeInTheDocument();
   expect(screen.getByText("Dev Example still owes you the measurements, due Thu, Oct 22")).toBeInTheDocument();
   cleanup();
-  show({ ...EVENING, quiet: true, sections: [] });
+  await show({ ...EVENING, quiet: true, sections: [] });
   expect(await screen.findByText("Nothing carries over to tomorrow.")).toBeInTheDocument();
 });
 
 test("closing the card for the day hides it, is remembered for that day only, and records nothing", async () => {
   const user = userEvent.setup();
-  const { calls } = show(MORNING);
+  const { calls } = await show(MORNING);
   await user.click(await screen.findByRole("button", { name: "Close for today" }));
   expect(document.querySelector("[data-brief]")).toBeNull();
   expect(window.localStorage.getItem("brief-closed:ws:morning:2026-10-20")).toBe("1");
   expect(calls.filter((c) => c.route.startsWith("POST") || c.route.startsWith("PUT"))).toEqual([]);
   cleanup();
-  show(MORNING);
+  await show(MORNING);
   await waitFor(() => expect(document.querySelector("[data-brief]")).toBeNull());
   cleanup();
-  show({ ...MORNING, day: "2026-10-21" });
+  await show({ ...MORNING, day: "2026-10-21" });
   expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
   cleanup();
-  show({ ...EVENING });
+  await show({ ...EVENING });
   expect(await screen.findByRole("heading", { level: 2, name: "Evening wrap-up" })).toBeInTheDocument();
 });
 
 test("the morning form is named by the time of day: Morning brief before noon, Afternoon brief after", async () => {
   vi.setSystemTime(new Date(2026, 9, 20, 14, 30));
   {
-    show(MORNING);
+    await show(MORNING);
     expect(await screen.findByRole("heading", { level: 2, name: "Afternoon brief" })).toBeInTheDocument();
     cleanup();
     vi.setSystemTime(new Date(2026, 9, 20, 9, 0));
-    show(MORNING);
+    await show(MORNING);
     expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
     cleanup();
     vi.setSystemTime(new Date(2026, 9, 20, 14, 30));
-    show({ ...MORNING, afternoon_from_hour: 15 });
+    await show({ ...MORNING, afternoon_from_hour: 15 });
     expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
   }
 });
 
 test("closing the card for the day has Undo, and a button in its place brings the brief back", async () => {
   const user = userEvent.setup();
-  show(MORNING);
+  await show(MORNING);
   await user.click(await screen.findByRole("button", { name: "Close for today" }));
   expect(document.querySelector("[data-brief]")).toBeNull();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
@@ -325,13 +334,13 @@ test("closing the card for the day has Undo, and a button in its place brings th
 
 test("on a quiet day the card has no buttons for the other forms, and on a day with something in it it has them", async () => {
   const forms: Brief["forms"] = ["morning", "evening", "monday"];
-  show({ ...QUIET, forms, message: { state: "none", to: [{ person: "PER-9", name: "Lena Example" }] } });
+  await show({ ...QUIET, forms, message: { state: "none", to: [{ person: "PER-9", name: "Lena Example" }] } });
   expect(await screen.findByRole("heading", { level: 2, name: "Morning brief" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^Show the/ })).toBeNull();
   // Closing for the day is still there.
   expect(screen.getByRole("button", { name: "Close for today" })).toBeInTheDocument();
   cleanup();
-  show({ ...MORNING, forms });
+  await show({ ...MORNING, forms });
   expect(await screen.findByRole("button", { name: "Show the evening wrap-up" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Show this week's briefing" })).toBeInTheDocument();
 });
@@ -348,7 +357,7 @@ test("another form that is due can be shown from the card", async () => {
 });
 
 test("the Monday briefing lists the week by who owns it, says how much Today already holds and repeats none of it", async () => {
-  show(MONDAY);
+  await show(MONDAY);
   expect(await screen.findByRole("heading", { level: 2, name: "This week's briefing" })).toBeInTheDocument();
   expect(headings()).toEqual(["Your promises this week", "Promised to you", "Questions to send"]);
   expect(screen.getByText("Draft the proposal, due Wed, Oct 21")).toBeInTheDocument();
@@ -360,7 +369,7 @@ test("the Monday briefing lists the week by who owns it, says how much Today alr
 
 test("the proposed goals are confirmed as they are in one press, and Undo sends back what they replaced", async () => {
   const user = userEvent.setup();
-  const calls = show(MONDAY, { "PUT brief/goals": () => ({ previous: [] }) }).calls;
+  const calls = (await show(MONDAY, { "PUT brief/goals": () => ({ previous: [] }) })).calls;
   const block = (await screen.findByRole("heading", { name: "Goals for the week" })).closest("[data-block]") as HTMLElement;
   expect(within(block).getAllByRole("listitem").map((x) => x.textContent)).toEqual(GOALS_PROPOSED.proposed);
   await user.click(within(block).getByRole("button", { name: "Confirm these goals" }));
@@ -373,7 +382,7 @@ test("the proposed goals are confirmed as they are in one press, and Undo sends 
 
 test("changing the goals puts the cursor in the first field, drops and adds rows within the most, and keeps what was typed", async () => {
   const user = userEvent.setup();
-  const calls = show(MONDAY, { "PUT brief/goals": () => ({ previous: [] }) }).calls;
+  const calls = (await show(MONDAY, { "PUT brief/goals": () => ({ previous: [] }) })).calls;
   await user.click(await screen.findByRole("button", { name: "Change goals" }));
   const first = screen.getByRole("textbox", { name: "Goal 1" });
   await waitFor(() => expect(first).toHaveFocus());
@@ -388,7 +397,7 @@ test("changing the goals puts the cursor in the first field, drops and adds rows
 
 test("fewer goals than the fewest are not sent, and the reason is said", async () => {
   const user = userEvent.setup();
-  const calls = show(MONDAY).calls;
+  const calls = (await show(MONDAY)).calls;
   await user.click(await screen.findByRole("button", { name: "Change goals" }));
   await user.click(screen.getByRole("button", { name: "Drop goal 3" }));
   await user.click(screen.getByRole("button", { name: "Confirm goals" }));
@@ -398,30 +407,30 @@ test("fewer goals than the fewest are not sent, and the reason is said", async (
 
 test("a week with no goals to propose offers to set them, and confirmed goals say they are kept", async () => {
   const user = userEvent.setup();
-  show({ ...MONDAY, goals: { ...GOALS_PROPOSED, proposed: [] } });
+  await show({ ...MONDAY, goals: { ...GOALS_PROPOSED, proposed: [] } });
   const block = (await screen.findByRole("heading", { name: "Goals for the week" })).closest("[data-block]") as HTMLElement;
   expect(within(block).queryByRole("button", { name: "Confirm these goals" })).toBeNull();
   await user.click(within(block).getByRole("button", { name: "Set goals" }));
   expect(screen.getByRole("textbox", { name: "Goal 1" })).toHaveValue("");
   cleanup();
-  show({ ...MONDAY, goals: { ...GOALS_PROPOSED, confirmed: true, goals: ["One", "Two", "Three"], proposed: [] } });
+  await show({ ...MONDAY, goals: { ...GOALS_PROPOSED, confirmed: true, goals: ["One", "Two", "Three"], proposed: [] } });
   expect(await screen.findByText("Kept for the week.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Confirm these goals" })).toBeNull();
 });
 
 test("a morning brief shows no goals form, and the Monday message is only there when the person reports to someone", async () => {
-  show({ ...MONDAY, message: null });
+  await show({ ...MONDAY, message: null });
   await screen.findByRole("heading", { level: 2, name: "This week's briefing" });
   expect(screen.queryByRole("heading", { name: /^Message to/ })).toBeNull();
   cleanup();
-  show(MORNING);
+  await show(MORNING);
   await screen.findByRole("heading", { level: 2, name: "Morning brief" });
   expect(screen.queryByRole("heading", { name: "Goals for the week" })).toBeNull();
 });
 
 test("asking for the message says who it is for, queues it and says a draft will wait", async () => {
   const user = userEvent.setup();
-  const calls = show(MONDAY, { "POST brief/message": () => ({ request: "REQ-1" }) }).calls;
+  const calls = (await show(MONDAY, { "POST brief/message": () => ({ request: "REQ-1" }) })).calls;
   expect(await screen.findByRole("heading", { name: "Message to Lena Example" })).toBeInTheDocument();
   expect(screen.getByText("A draft for you to read, change and send yourself. Nothing is sent from here.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Draft the message" }));
@@ -436,10 +445,10 @@ const ASKING: Brief = {
 
 test("with nobody marked the briefing asks once who the message is for, and marking someone is one change with Undo", async () => {
   const user = userEvent.setup();
-  const calls = show(ASKING, {
+  const calls = (await show(ASKING, {
     "POST brief/message/for": () => ({ changeset: "CS-7" }),
     "POST changesets/CS-7/undo": () => ({ reopened: 1 }),
-  }).calls;
+  })).calls;
   expect(await screen.findByRole("heading", { name: "Who do you report to?" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Draft the message" })).toBeNull();
   const save = screen.getByRole("button", { name: "This is who I report to" });
@@ -454,7 +463,7 @@ test("with nobody marked the briefing asks once who the message is for, and mark
 
 test("the question offers the people on the job but not customers, suppliers or staff, and starts on the one who is the manager", async () => {
   const user = userEvent.setup();
-  const calls = show(
+  const calls = (await show(
     {
       ...MONDAY,
       message: {
@@ -469,7 +478,7 @@ test("the question offers the people on the job but not customers, suppliers or 
       },
     },
     { "POST brief/message/for": () => ({ changeset: "CS-7" }) },
-  ).calls;
+  )).calls;
   const who = await screen.findByLabelText("The person you report to");
   expect(within(who).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick a person", "Pat Example", "Lena Example"]);
   expect(who).toHaveValue("PER-9");
@@ -479,7 +488,7 @@ test("the question offers the people on the job but not customers, suppliers or 
 
 test("saying nobody stops the question, and Undo asks again", async () => {
   const user = userEvent.setup();
-  const calls = show(ASKING, { "POST brief/message/for": () => ({ changeset: null }) }).calls;
+  const calls = (await show(ASKING, { "POST brief/message/for": () => ({ changeset: null }) })).calls;
   await user.click(await screen.findByRole("button", { name: "I report to no one" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST brief/message/for")?.body).toEqual({ nobody: true }));
   expect(await screen.findByText("Got it. You won't be asked again.")).toBeInTheDocument();
@@ -488,22 +497,22 @@ test("saying nobody stops the question, and Undo asks again", async () => {
 });
 
 test("the unnamed assistant is your assistant", async () => {
-  show({ ...MONDAY, message: { state: "working", to: [{ person: "PER-9", name: "Lena Example" }] } }, {}, { unnamed: true });
+  await show({ ...MONDAY, message: { state: "working", to: [{ person: "PER-9", name: "Lena Example" }] } }, {}, { unnamed: true });
   expect(await screen.findByText("Your assistant is drafting it")).toBeInTheDocument();
 });
 
 test("a message waiting for the go says so, with the estimate when there is one", async () => {
-  show({ ...MONDAY, message: { state: "needs_go", to: [{ person: "PER-9", name: "Lena Example" }], estimate_usd: 0.31 } });
+  await show({ ...MONDAY, message: { state: "needs_go", to: [{ person: "PER-9", name: "Lena Example" }], estimate_usd: 0.31 } });
   expect(await screen.findByText("Waiting for your go ($0.31)")).toBeInTheDocument();
 });
 
 test("a draft is shown as a draft and Copy puts it on the clipboard and makes it the persons own", async () => {
   const user = userEvent.setup();
   const text = "Hello,\n\nThe proof shipped.\n";
-  const calls = show(
+  const calls = (await show(
     { ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text } },
     { "POST brief/message/copied": () => ({ ok: "copied" }) },
-  ).calls;
+  )).calls;
   expect(await screen.findByText("Draft, not yet reviewed")).toBeInTheDocument();
   expect(document.querySelector("[data-message='draft']")?.textContent).toBe(text);
   await user.click(screen.getByRole("button", { name: "Copy message" }));
@@ -514,7 +523,7 @@ test("a draft is shown as a draft and Copy puts it on the clipboard and makes it
 
 test("if the browser blocks copying, the draft is not made the persons and they are told", async () => {
   const user = userEvent.setup();
-  const calls = show({ ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text: "Hello." } }).calls;
+  const calls = (await show({ ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text: "Hello." } })).calls;
   await screen.findByText("Draft, not yet reviewed");
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
   await user.click(screen.getByRole("button", { name: "Copy message" }));
@@ -524,7 +533,7 @@ test("if the browser blocks copying, the draft is not made the persons and they 
 
 test("a message already copied can be copied again without approving anything", async () => {
   const user = userEvent.setup();
-  const calls = show({ ...MONDAY, message: { state: "kept", to: [{ person: "PER-9", name: "Lena Example" }], text: "Hello." } }).calls;
+  const calls = (await show({ ...MONDAY, message: { state: "kept", to: [{ person: "PER-9", name: "Lena Example" }], text: "Hello." } })).calls;
   expect(await screen.findByText("Your message, as copied")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Copy message" }));
   expect(await navigator.clipboard.readText()).toBe("Hello.");
@@ -536,10 +545,10 @@ const SEND_OPTIONS = { can_act: true, account: "mailbox:work", account_label: "W
 test("where an account can act, Send sits beside Copy, drafts the message as an act to the person and opens it for the yes", async () => {
   const user = userEvent.setup();
   const text = "Hello,\n\nThe proof shipped.\n";
-  const calls = show(
+  const calls = (await show(
     { ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text } },
     { "GET acts/send-options": () => SEND_OPTIONS, "POST acts": () => actFixture({ id: "XACT-7" }) },
-  ).calls;
+  )).calls;
   const send = await screen.findByRole("button", { name: "Send message" });
   expect(send).toHaveAttribute("data-variant", "primary");
   expect(screen.getByRole("button", { name: "Copy message" })).not.toHaveAttribute("data-variant", "primary");
@@ -557,7 +566,7 @@ test("where an account can act, Send sits beside Copy, drafts the message as an 
 });
 
 test("where no account can act, Copy stays the one button and there is no Send", async () => {
-  show(
+  await show(
     { ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text: "Hello." } },
     { "GET acts/send-options": () => ({ can_act: false }) },
   );
@@ -590,7 +599,7 @@ const MORE: Brief = {
 };
 
 test("the capacity line says what the to-dos need and what the calendar has, and a clash a few days on says its day and the travel", async () => {
-  show(MORE);
+  await show(MORE);
   await screen.findByRole("heading", { level: 2, name: "Morning brief" });
   expect(screen.getByText("Your to-dos need about 3 hours; your calendar has about 30 minutes free")).toBeInTheDocument();
   // The travel line says how many minutes are between the meetings, how many the travel needs, and where each one is.
@@ -600,13 +609,13 @@ test("the capacity line says what the to-dos need and what the calendar has, and
 
 test("a travel clash whose meetings have no places says it for getting from one to the other, and a minute reads as one", async () => {
   const travel = (over: Partial<Line>) => line({ key: "clash:x", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", day: "2026-10-22", at: "11:10", ...over });
-  show({ ...MORE, sections: [{ key: "risk", more: 0, lines: [travel({ minutes: 29, needed_minutes: 30 })] }] });
+  await show({ ...MORE, sections: [{ key: "risk", more: 0, lines: [travel({ minutes: 29, needed_minutes: 30 })] }] });
   expect(await screen.findByText("Site visit and Supplier call, Thu, Oct 22 from 11:10 AM. Only 1 minute between them; you need about 30 minutes to get from one to the other")).toBeInTheDocument();
 });
 
 test("a deadline, renewal or expiry from a mail or a booking is an at-risk line that says how far away it is", async () => {
   const dated = (key: string, change: string, days: number, over: Partial<Line> = {}) => line({ key, kind: "dated", change, text: "The studio letter says to cancel by Friday", day: "2026-10-23", days, link: { kind: "fact", id: key }, ...over });
-  show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [dated("FACT-1", "renewal", 3), dated("FACT-2", "deadline", 0, { text: "The room is free to cancel until noon" }), dated("FACT-3", "expiry", 1, { text: "The pass runs out" }), dated("FACT-4", "deadline", 2, { text: "The form is due" })] }] });
+  await show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [dated("FACT-1", "renewal", 3), dated("FACT-2", "deadline", 0, { text: "The room is free to cancel until noon" }), dated("FACT-3", "expiry", 1, { text: "The pass runs out" }), dated("FACT-4", "deadline", 2, { text: "The form is due" })] }] });
   expect(await screen.findByText("Renewal in 3 days, Fri, Oct 23: The studio letter says to cancel by Friday")).toBeInTheDocument();
   expect(screen.getByText("Deadline today: The room is free to cancel until noon")).toBeInTheDocument();
   expect(screen.getByText("Expires tomorrow: The pass runs out")).toBeInTheDocument();
@@ -614,20 +623,20 @@ test("a deadline, renewal or expiry from a mail or a booking is an at-risk line 
 });
 
 test("a promise whose words name a meeting today says so, with who owes it and when the meeting is", async () => {
-  show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [line({ key: "meeting_wait:ACT-2", kind: "meeting_wait", text: "Send the third drawing", person_name: "Mira Example", other: "Design review", day: "2026-10-20", at: "14:00", link: { kind: "action", id: "ACT-2" } }), line({ key: "meeting_wait:ACT-3", kind: "meeting_wait", text: "Send the quote", other: "Budget review", day: "2026-10-20", at: "12:00" })] }] });
+  await show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [line({ key: "meeting_wait:ACT-2", kind: "meeting_wait", text: "Send the third drawing", person_name: "Mira Example", other: "Design review", day: "2026-10-20", at: "14:00", link: { kind: "action", id: "ACT-2" } }), line({ key: "meeting_wait:ACT-3", kind: "meeting_wait", text: "Send the quote", other: "Budget review", day: "2026-10-20", at: "12:00" })] }] });
   expect(await screen.findByText("Mira Example: Send the third drawing is still open, and Design review is today at 2:00 PM")).toBeInTheDocument();
   expect(screen.getByText("Send the quote is still open, and Budget review is today at 12:00 PM")).toBeInTheDocument();
 });
 
 test("a title with a raw date in it never shows it in the brief: the date is written as elsewhere", async () => {
-  show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [line({ key: "own:ACT-9", kind: "own_due", text: "Send the venue list by 2026-11-02", state: "today", day: "2026-10-20", days: 0 })] }] });
+  await show({ ...MORNING, sections: [{ key: "risk", more: 0, lines: [line({ key: "own:ACT-9", kind: "own_due", text: "Send the venue list by 2026-11-02", state: "today", day: "2026-10-20", days: 0 })] }] });
   expect(await screen.findByText(`Send the venue list by ${day("2026-11-02")} is due today`)).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/2026-11-02/);
 });
 
 test("a reminder offer says when and Remind me sets it at that moment, with Undo", async () => {
   const user = userEvent.setup();
-  const { calls } = show(MORE, { "POST reminders/ACT-7": () => ({ changeset: "CS-5" }), "POST changesets/CS-5/undo": () => ({ restored: [0], skipped: [] }) });
+  const { calls } = await show(MORE, { "POST reminders/ACT-7": () => ({ changeset: "CS-5" }), "POST changesets/CS-5/undo": () => ({ restored: [0], skipped: [] }) });
   expect(await screen.findByText("Add a reminder on Thu, Oct 29 at 9:00 AM for 'Decide on the renewal'")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Remind me" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/ACT-7")?.body).toEqual({ at: "2026-10-29T09:00:00-05:00" }));
@@ -640,6 +649,7 @@ test("a suggestion that waited for the brief is worded as the brief's own line a
   const onOpenView = vi.fn();
   fakeApi({ "GET brief": () => MORE, "GET today/queue": () => [] });
   renderApp(<BriefCard workspace="ws" onOpenRecord={vi.fn()} onOpenView={onOpenView} />);
+  await user.click(await screen.findByRole("button", { name: "Morning brief" }));
   expect(await screen.findByText("Decide whether you are still doing: Tidy the style sheet")).toBeInTheDocument();
   const item = screen.getByText("Decide whether you are still doing: Tidy the style sheet").closest("li")!;
   await user.click(within(item).getByRole("button", { name: "Open" }));
@@ -647,18 +657,35 @@ test("a suggestion that waited for the brief is worded as the brief's own line a
 });
 
 test("the brief opens with a short summary under its title, before the sections, and Close for today is a quiet link", async () => {
-  show(MONDAY);
+  await show(MONDAY);
   const summary = await screen.findByText("2 more things are already on Today.");
   expect(summary).toHaveAttribute("data-brief-summary");
+  expect(screen.getByRole("button", { name: "This week's briefing" })).toHaveAttribute("aria-expanded", "true");
   const section = document.querySelector("[data-section]")!;
   expect(summary.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole("button", { name: "Close for today" })).toHaveAttribute("data-variant", "quiet");
 });
 
+test("the morning brief starts folded behind its summary and opens on request", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET brief": () => ({ ...MORNING, on_today: 2 }), "GET today/queue": () => [NUDGE] });
+  renderApp(<BriefCard workspace="ws" onOpenRecord={vi.fn()} />);
+
+  const summary = await screen.findByText("2 more things are already on Today.");
+  const toggle = screen.getByRole("button", { name: "Morning brief" });
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(summary).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Changed overnight" })).toBeNull();
+
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(await screen.findByRole("heading", { name: "Changed overnight" })).toBeInTheDocument();
+});
+
 test("a promise Today already has a line for stays in the week's list, marked on Today", async () => {
   const marked = line({ key: "week:ACT-7", kind: "week_promise", text: "Send the invoice", state: "due", day: "2026-10-19", you: true, on_today_line: true, link: { kind: "action", id: "ACT-7" } });
   const plain = line({ key: "week:ACT-8", kind: "week_promise", text: "Pack the samples", state: "due", day: "2026-10-24", you: true, link: { kind: "action", id: "ACT-8" } });
-  show({ ...MONDAY, sections: [{ key: "yours", more: 0, lines: [marked, plain] }] });
+  await show({ ...MONDAY, sections: [{ key: "yours", more: 0, lines: [marked, plain] }] });
   await screen.findByRole("heading", { level: 2, name: /briefing|Monday/i });
   const rows = Array.from(document.querySelectorAll<HTMLElement>("li[data-kind=week_promise]"));
   expect(rows).toHaveLength(2);

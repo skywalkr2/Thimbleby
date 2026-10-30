@@ -53,18 +53,25 @@ test("the popover says the backup is encrypted when it is", async () => {
   expect(within(dialog).getByText("Backed up less than an hour ago · Encrypted")).toBeInTheDocument();
 });
 
-test("once a backup has succeeded the chip itself shows its age, and its name says it too", async () => {
+test("once a backup has succeeded the chip keeps its short label and the popover shows its age", async () => {
+  const user = userEvent.setup();
   show(statusFixture({}, { backup: { configured: true, age_hours: 3, needs_attention: false } }));
   await chipText("All good");
-  await chipText("Backed up 3 hours ago");
-  expect(await chip()).toHaveAccessibleName("App status: All good, Backed up 3 hours ago");
+  expect(chipNow()).not.toHaveTextContent("Backed up 3 hours ago");
+  expect(await chip()).toHaveAccessibleName("App status: All good");
+
+  const dialog = await open(user);
+  expect(within(dialog).getByText("Backed up 3 hours ago")).toBeInTheDocument();
 });
 
-test("an overdue backup keeps its age on the chip beside the warning", async () => {
+test("an overdue backup keeps its short warning on the chip and its age in the popover", async () => {
+  const user = userEvent.setup();
   show(statusFixture({}, { backup: { configured: true, age_hours: 100, needs_attention: true } }));
   await chipIs("backup");
   await chipText("Backup needed");
-  await chipText("Last backup 4 days ago");
+  expect(chipNow()).not.toHaveTextContent("Last backup 4 days ago");
+  const dialog = await open(user);
+  expect(within(dialog).getByText("Backup overdue · last 4 days ago")).toBeInTheDocument();
 });
 
 test("with no backup yet the chip has no age to show", async () => {

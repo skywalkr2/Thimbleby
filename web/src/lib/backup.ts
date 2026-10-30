@@ -1,5 +1,4 @@
-// How the screens word the backup state (design 4.15, 7.1, 7.7): the same words in the status popover, the header chip's
-// age and Today's line.
+// How the screens word the backup state (design 4.15, 7.1, 7.7): the same words in the status popover and Today's line.
 import type { S } from "./api";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -18,11 +17,4 @@ export function backupText(b: S["BackupStatus"], t: T): string {
   const age = backupAge(b, t);
   const text = age === null ? (b.last_error ? t("backup.failed") : t("backup.never")) : b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
   return b.encrypted ? `${text} · ${t("backup.encrypted")}` : text;
-}
-
-/** What the header chip adds after its word once a backup has succeeded, so the age is always in view. */
-export function backupChipAge(b: S["BackupStatus"], t: T): string | null {
-  const age = backupAge(b, t);
-  if (!b.configured || age === null) return null;
-  return t(b.needs_attention ? "backup.chip_last" : "backup.ok", { age });
 }

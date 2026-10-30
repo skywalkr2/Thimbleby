@@ -1,12 +1,11 @@
-// The Schedule card of Today's rail (design 7.7): the first days of the schedule (the connected calendars' events and the
-// app's own entries, day by day), today first, and a link to the full schedule. It is today's view: the week (what is due,
-// who is waiting, the meetings further on) is the inspector's when no line is chosen, never a list in this card. The card is
-// always drawn: with nothing in it, it says so, and with no calendar connected it offers one link to connect one.
+// The Schedule card of Today's rail (design 7.7): today's entries, with tomorrow summarized in its footer. The week (what is
+// due, who is waiting, the meetings further on) is the inspector's when no line is chosen, never a list in this card. The
+// card is always drawn: with nothing in it, it says so, and with no calendar connected it offers one link to connect one.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { addDays, day, todayOn, time, wallTime } from "../lib/dates";
+import { addDays, todayOn, time, wallTime } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
 import { onSide, useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -24,7 +23,7 @@ import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSo
 import { Pill } from "../ui/Pill";
 import { DateField } from "../ui/DateField";
 import { FormField } from "../ui/FormField";
-import { Actions } from "../ui/Actions";
+import styles from "./Today.module.css";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -82,7 +81,6 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const sourceState = useSourceState(onAddSource ?? (connectHref ? () => {} : undefined), t("today.agenda.connect"), "calendar");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
-  const span = useQuery({ queryKey: ["today", "agenda-span"], queryFn: api.agendaSpan });
   const now = useNow();
   const today = todayOn(now);
   const tomorrow = addDays(today, 1);
@@ -90,14 +88,15 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const events = (agenda.data ?? []).filter((e) => onSide(e.side, filter.choice));
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   const groups = groupByDay(events, today);
+  const todayGroups = groups.filter((group) => group.date === today);
   // Deliveries with no date yet are on no day: they are listed under "On its way" at the card's end.
   const onItsWay = events.filter(isOnItsWay);
   const count = events.filter((e) => !e.cancelled && e.days.includes(today)).length;
+  const tomorrowCount = events.filter((e) => !e.cancelled && e.days.includes(tomorrow)).length;
   const settled = !agenda.isPending && !watch.isPending;
   // With no calendar connected the card offers one link to connect one: to the add form once setup is finished, else to Connections.
   const connect = sourceState.button ? (onAddSource ? sourceState.button : { label: sourceState.button.label, href: connectHref }) : undefined;
   const drawn = agenda.isError || groups.length > 0 || onItsWay.length > 0 || sourceState.problems.length > 0 || (!!sourceState.button && !!onAddSource);
-  const dayLabel = (date: string) => (date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date));
   const summary = count > 0 ? tn("today.agenda.count", count) : "";
 
   const card = (
@@ -107,30 +106,35 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
       count={agenda.data ? count : null}
       countText={tn("today.agenda.count", count)}
       summary={agenda.data ? summary || (sourceState.problems.length > 0 ? t("today.rail.not_read") : t("today.agenda.none_today")) : ""}
+      action={
+        <ButtonLink size="sm" href={viewHref("schedule")}>
+          {t("schedule.open")}
+        </ButtonLink>
+      }
       footer={
-        <Actions align="end">
-          <AddMeeting today={today} />
-          <ButtonLink size="sm" href={viewHref("schedule")}>
-            {t("schedule.open")}
-          </ButtonLink>
-        </Actions>
+        agenda.data ? (
+          <div className={styles.tomorrowFooter}>
+            <span>{tomorrowCount > 0 ? tn("today.agenda.tomorrow_count", tomorrowCount) : t("today.agenda.none_tomorrow")}</span>
+            <AddMeeting today={today} compact />
+          </div>
+        ) : undefined
       }
     >
       {agenda.isPending || watch.isPending ? (
         <Skeleton />
       ) : agenda.isError ? (
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
-      ) : groups.length === 0 && onItsWay.length === 0 ? (
+      ) : todayGroups.length === 0 && onItsWay.length === 0 ? (
         sourceState.problems.length > 0 ? (
           <Empty text={t("today.agenda.not_read")}>
             <SourceProblems problems={sourceState.problems} />
           </Empty>
         ) : (
-          <Empty inline text={connect && span.data ? t("today.agenda.empty", { start: day(span.data.first), end: day(span.data.last) }) : t("today.agenda.empty_today")} button={connect} />
+          <Empty inline text={t("today.agenda.empty_today")} button={connect} />
         )
       ) : (
         <>
-          {groups.map((group) => {
+          {todayGroups.map((group) => {
             const headId = `agenda-day-${group.date}`;
             // On today's list, a line marks where the day has got to: after what has ended, before what is still to come.
             const ended = (e: Event) => new Date(e.end ?? e.start).getTime() <= now.getTime();
@@ -145,7 +149,7 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
             return (
               <div key={group.date} className="tb-group">
                 <h3 id={headId} className="tb-group-head">
-                  {dayLabel(group.date)}
+                  {t("today.agenda.today")}
                 </h3>
                 <ul className="tb-list" aria-labelledby={headId}>
                   {rows.map((row, i) =>
@@ -189,13 +193,13 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
 /** The button that adds a meeting to the agenda, opening a drawer with one line to fill: what, the day (today to begin with)
  * and the time (none: all day). The server makes the person's own calendar entry, or merges the meeting into one already
  * there and says so; Undo takes an added one back. The drawer closes once it is added; a refusal leaves what was typed. */
-export function AddMeeting(props: { today: string }) {
+export function AddMeeting(props: { today: string; compact?: boolean }) {
   const { t } = useWords();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        {t("meeting.open")}
+      <Button size="sm" icon={props.compact ? "plus" : undefined} onClick={() => setOpen(true)}>
+        {t(props.compact ? "meeting.add_short" : "meeting.open")}
       </Button>
       {open && <MeetingDrawer today={props.today} onClose={() => setOpen(false)} />}
     </>

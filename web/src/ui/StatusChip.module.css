@@ -17,7 +17,3 @@
 .word { color: var(--text); font-weight: var(--weight-semibold); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .warn .word { color: var(--warn); }
 .danger .word { color: var(--danger); }
-.detail { color: var(--text-muted); font-weight: var(--weight-regular); }
-:global([data-narrow]) .detail { display: none; }
-/* Below 1440px the header has no room for it; the popover and the chip's name say it in full. */
-@media (max-width: 1439px) { .detail { display: none; } }

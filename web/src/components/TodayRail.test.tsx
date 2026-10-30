@@ -138,7 +138,7 @@ test("the agenda groups by day, all-day first, with times, places, called-off la
   open();
   const col = await column("Schedule");
   const days = await within(col).findAllByRole("heading", { level: 3 });
-  expect(days.map((h) => h.textContent)).toEqual(["Today", "Tomorrow", expect.stringMatching(/14/)]);
+  expect(days.map((h) => h.textContent)).toEqual(["Today"]);
   const today = within(within(col).getByRole("list", { name: "Today" })).getAllByRole("listitem");
   // All-day first, then by time, with the "now" line between what has ended and what is to come.
   expect(today[0]).toHaveTextContent("All day");
@@ -151,11 +151,16 @@ test("the agenda groups by day, all-day first, with times, places, called-off la
   expect(link).toHaveAttribute("target", "_blank");
   expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
   expect(today[3]).toHaveTextContent("(meet.example.com)");
-  const tomorrow = within(within(col).getByRole("list", { name: "Tomorrow" })).getAllByRole("listitem");
-  // The all-day event runs on into tomorrow.
-  expect(tomorrow[0]).toHaveTextContent("All day");
-  expect(tomorrow[1]).toHaveTextContent("Called off");
-  expect(tomorrow[1]).toHaveTextContent("Budget call");
+  expect(within(col).getByText("Tomorrow: 1 entry")).toBeInTheDocument();
+  expect(within(col).queryByText("Budget call")).toBeNull();
+});
+
+test("tomorrow's events are summarized in the Schedule footer, not listed as a second day", async () => {
+  open();
+  const col = await column("Schedule");
+  expect(await within(col).findByText("Tomorrow: 1 entry")).toBeInTheDocument();
+  expect(within(col).queryByRole("heading", { name: "Tomorrow" })).toBeNull();
+  expect(within(col).queryByText("Budget call")).toBeNull();
 });
 
 test("the app's own entries follow the calendar events on each day they cover, marked in words, all-day ones with no time", async () => {
@@ -176,9 +181,7 @@ test("the app's own entries follow the calendar events on each day they cover, m
   expect(today[rowOf("Delivery window")]).toHaveTextContent("All day");
   expect(today.filter((row) => row.textContent?.includes("From your notes"))).toHaveLength(1);
   expect(today[rowOf("Delivery window")]).toHaveTextContent("From your notes");
-  const tomorrow = within(within(col).getByRole("list", { name: "Tomorrow" })).getAllByRole("listitem");
-  expect(tomorrow[0]).toHaveTextContent("Delivery window");
-  expect(tomorrow[0]).toHaveTextContent("From your notes");
+  expect(within(col).getByText("Tomorrow: 1 entry")).toBeInTheDocument();
 });
 
 test("a meeting of a series says how many open items wait for it, linking to the series' page; with none it says nothing", async () => {
@@ -282,7 +285,7 @@ test("with nothing connected and setup finished, Schedule and Came in each offer
     "GET today/agenda": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0 }),
   });
-  expect(await screen.findByText(/^Nothing on your calendar from .+ to .+\.$/)).toBeInTheDocument();
+  expect(await screen.findByText("Nothing on your calendar today.")).toBeInTheDocument();
   expect(await screen.findByText("No mail has come in lately.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Connect a calendar" }));
   expect(onView).toHaveBeenLastCalledWith(settingsView("connections"));
@@ -578,7 +581,7 @@ test("the week's due items alone put nothing in the Schedule card, and no count 
   expect(screen.queryByText("Send the estimate")).toBeNull();
 });
 
-// A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add to schedule".
+// A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add".
 
 const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: "CS-9", merged: false }): Routes => ({
   "POST calendar/meetings": () => answer,
@@ -587,7 +590,7 @@ const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: 
 
 /** Opens the drawer from the agenda's button and returns the drawer. */
 const addLine = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(await within(await column("Schedule")).findByRole("button", { name: "Add to schedule" }));
+  await user.click(await within(await column("Schedule")).findByRole("button", { name: "Add" }));
   return screen.findByRole("dialog", { name: "Add a meeting" });
 };
 

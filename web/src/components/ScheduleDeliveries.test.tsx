@@ -58,19 +58,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-test("a dated delivery shows its window as a date range, with its carrier and tracking number as text on its line", async () => {
+test("a dated delivery for tomorrow is summarized in the Tomorrow footer, not listed as a future row", async () => {
   const col = await open([parcel("Parcel from the corner shop", {})]);
-  // The window covers three days, so it is on a row for each, and each row says the whole range.
-  const rows = (await within(col).findAllByText("Parcel from the corner shop")).map((el) => el.closest("li") as HTMLElement);
-  expect(rows).toHaveLength(3);
-  for (const row of rows) {
-    expect(row).toHaveTextContent(`${monthDay(FIRST)} – ${monthDay(LAST)}`);
-    expect(row).toHaveTextContent(CARRIER);
-    expect(row).toHaveTextContent(`Tracking ${TRACKING}`);
-    expect(row).not.toHaveTextContent("All day");
-    // No status word while it is on its way.
-    expect(row).not.toHaveTextContent(/Arrived|Out for delivery/);
-  }
+  expect(await within(col).findByText("Tomorrow: 1 entry")).toBeInTheDocument();
+  expect(within(col).queryByText("Parcel from the corner shop")).toBeNull();
 });
 
 test("a delivery with no date yet is listed under On its way at the card's end, not on a day", async () => {
