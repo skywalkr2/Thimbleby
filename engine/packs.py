@@ -171,7 +171,10 @@ def feed_urls(cfg: Config, product: dict[str, Any]) -> list[str]:
         return []
     shipped = product.get("pack_catalog") if settings.shipped_feed else None
     urls = [shipped] if isinstance(shipped, str) and shipped.startswith("https://") else []
-    return [*urls, *(u for u in settings.feeds if u not in urls and not is_shipped_catalog(u, product))]
+    # A saved feed at a former shipped address is read at the current one; the person's settings are left as they are.
+    current = product.get("pack_catalog")
+    saved = [current if isinstance(current, str) and is_shipped_catalog(u, product) else u for u in settings.feeds]
+    return [*urls, *dict.fromkeys(u for u in saved if u not in urls)]
 
 
 def parse(url: str, text: str) -> Feed:
