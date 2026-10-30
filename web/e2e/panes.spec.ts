@@ -294,8 +294,14 @@ test.describe("the walkthrough's look", () => {
     await steps.getByRole("button", { name: /^You/ }).first().click();
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
+    const youView = await main.evaluate((screen) => ({
+      heading: screen.querySelector("h2")?.textContent?.trim() ?? null,
+      formCount: screen.querySelectorAll("form").length,
+      labels: Array.from(screen.querySelectorAll("label"), (label) => label.textContent?.trim() ?? "").filter(Boolean),
+      screenText: screen.textContent?.trim() ?? "",
+    }));
     const name = main.getByLabel("Your full name");
-    await expect(name).toBeVisible();
+    await expect(name, `You step view at full-name lookup: ${JSON.stringify(youView)}`).toBeVisible();
     const field = (await name.boundingBox())!;
     expect(field.width).toBeLessThanOrEqual(361);
     await expect(page.getByText("Not done yet")).toHaveCount(0);
