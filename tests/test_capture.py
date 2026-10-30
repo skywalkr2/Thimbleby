@@ -129,7 +129,7 @@ def test_only_accounts_listed_as_reading_images_are_returned_and_none_has_a_plai
         )
         try:
             no_readers = Router(cfg_without_reader, store_without_reader, env={})
-            with pytest.raises(Exception, match="can't read pictures"):
+            with pytest.raises(Exception, match="lists a model that reads pictures"):
                 no_readers.image_readers("read-image", "internal")
         finally:
             store_without_reader.close()

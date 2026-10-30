@@ -92,8 +92,8 @@ CANNOT_TRANSCRIBE = (
     "what the voice note says, or list such a model under the account's settings."
 )
 CANNOT_READ_IMAGES = (
-    "This account can't read pictures: none of your AI accounts lists a model that reads pictures. Keep the picture "
-    "in your files, or list such a model under the account's settings."
+    "None of your AI accounts lists a model that reads pictures, so the picture is kept in your files. To have "
+    "pictures read, list such a model in an account's settings."
 )
 
 
