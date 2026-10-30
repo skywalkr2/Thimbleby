@@ -46,6 +46,11 @@
   /* The status chip keeps its whole word; the name above gives up room before it does. */
   .status { flex: none; }
 }
+/* On the narrowest phones a wider font can leave no room for the whole status word, so it is cut with an ellipsis (its
+   full words stay its name and its popover) and the menu button stays inside the window. */
+@media (max-width: 359px) {
+  .status { flex: 0 1 auto; min-width: 0; }
+}
 :global([data-narrow]) .header { gap: var(--space-2); padding: 0 var(--space-3); }
 :global([data-narrow]) .brand { font-size: var(--text-md); line-height: var(--lh-md); flex: 0 1 auto; }
 
