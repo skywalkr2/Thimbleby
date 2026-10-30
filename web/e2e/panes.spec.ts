@@ -230,6 +230,37 @@ test.describe("the phone's review mode", () => {
     expect(sentAfter).toBeGreaterThan(sentBefore);
     await openFresh(page, "work/followups");
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Loading…" }), "Follow-ups should finish loading before its rows are checked").toHaveCount(0);
+    const rows = await page
+      .getByRole("main")
+      .getByRole("list")
+      .first()
+      .getByRole("listitem")
+      .evaluateAll((items) =>
+        items.map((item) => ({
+          name: item.getAttribute("aria-label"),
+          text: item.textContent?.trim() ?? "",
+        })),
+      );
+    const otherPeople = rows.filter((row) => row.name && row.name !== "You");
+    expect(otherPeople, `Follow-ups list needs a person other than you; rows shown: ${JSON.stringify(rows)}`).not.toHaveLength(0);
+
+    const filterGroup = page.getByRole("group", { name: "Show" });
+    const selectedFilters = await filterGroup.getByRole("button").evaluateAll((buttons) =>
+      buttons.filter((button) => button.getAttribute("aria-pressed") === "true").map((button) => button.textContent?.trim()),
+    );
+    expect(selectedFilters, `Follow-ups filter should be To send; selected filters: ${JSON.stringify(selectedFilters)}`).toEqual(["To send"]);
+
+    const byPerson = page.getByRole("radio", { name: "By person" });
+    const groupedByPerson = await byPerson.isChecked();
+    expect(groupedByPerson, `Follow-ups grouping should be By person; selected: ${groupedByPerson}`).toBe(true);
+
+    const phoneLayout = await page.evaluate(() => ({
+      width: window.innerWidth,
+      narrow: document.documentElement.hasAttribute("data-narrow"),
+    }));
+    expect(phoneLayout.narrow, `Follow-ups phone layout at ${phoneLayout.width}px; data-narrow: ${phoneLayout.narrow}`).toBe(true);
+
     const start = page.getByRole("button", { name: "Send one at a time" });
     await expect(start).toBeVisible();
     await start.click();
