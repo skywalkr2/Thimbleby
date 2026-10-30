@@ -42,3 +42,32 @@ The host is moving these findings to Today. These points apply wherever they lan
 3. **"What was read" takes six lines for two accounts,** repeating "Your mail at … : Your inbox". "Your calendar, read" reads as broken English, and "Everything listed was read." adds nothing. **Fix:** one row per account, for example "*address*: inbox and sent mail since Fri, Oct 16 · calendar", with a single status for the whole list.
 4. **There's no action on the promise:** keep it, it's done, or it's not mine. Today will have to provide one.
 5. **Visual:** plain bullets and a bold paragraph. The row pattern (VC01) and the brand (VP16) apply here too.
+
+## X70 (P1): six more lines speak as "we", found by scanning all the wording
+
+The reviewer scanned every string in `web/src/wording/en.json` after X67. These also speak as a company, against "Nothing goes to us". The worst one says the company read the person's mail:
+
+| Key | Text |
+|---|---|
+| `walkthrough.people.suggest.all_added` | "You've added everyone **we found in your mail**." |
+| `welcome.ai.step.paste_hint` | "**We** check it straight away. It stays on this computer only." |
+| `welcome.ai.allow.unknown` | "**We** can't tell which account it is signed in to…" |
+| `welcome.ai.why.not_checked` | "**We** check it when you press Enter…" |
+| `welcome.ai.address_hint_guide` | "…**We** check it as soon as you move on from the box." |
+| `welcome.backup.none_found` | "**We** didn't find a cloud drive folder on this computer…" |
+
+- **Fix:** the app or the assistant is the subject ("Reginald found…", "The app checks it…"), or the sentence needs no subject ("Checked as soon as you leave the box").
+- **Not a finding:** "our neighbor", "our landlord" and the like are the person's own voice, as relation choices.
+- **A guard:** the wording check in the self-check fails on "we", "us" and "our" in app wording, except for an allowlist of the person's own phrases.
+- The same scan found `walkthrough.coverage.read` ("{place}: {name}, read"): that's the "Your calendar, read" in X69.
+
+## Why the reviewer missed these, and what changes
+
+| Item | Visible in the 04ffc21e sweep? | Why it was missed | What changes |
+|---|---|---|---|
+| X66 the old name | **Yes, partly:** two sweep reports quoted the subject "Feedback on PM Cockpit" without flagging it | The briefs never gave the product's decided name, so the agents didn't know it was wrong | The briefs give the product name, the assistant's name and the website's promises. `lib.mjs` flags "Cockpit" on every screen and in the window title |
+| X66 the backup folder | **No:** the test machine has no cloud drive, so setup showed "We didn't find a cloud drive folder" and the cards never appeared | The test machine differs from a real Mac or PC | The sweep runs setup twice: once with no cloud drive, and once with a home folder that holds iCloud Drive, OneDrive, Dropbox and Google Drive folders |
+| X67, X70 "we" | **Yes:** in three captures | Nothing checked the wording against the product's promises | A wording scan of every string in `en.json` (company voice, the old name, broken fragments), as well as the screens, because a scan reaches lines no walk opens |
+| X68 step count | **No:** the eighth entry came after 04ffc21e | New since the sweep | The re-sweep checks every count against what's listed beside it |
+| X69 promises | **Partly:** "What was read" and "Your calendar, read" were captured with one account and not flagged; the long title and the cut-off quote never appeared | The fake mail is short and tidy. Real mail and a real model give long sentences, case numbers, addresses and cut-off quotes | **Worst-case content:** the sweep scripts the AI stand-in's answers to give long titles, numbers, postal addresses, quotes cut mid-sentence and non-English text, and judges every screen that shows them. Plus S5's several accounts |
+| All of them | | Screens were judged as the fake environment drew them, not as a real person's install would | **Owner-path parity:** before a sweep, list what a real install has that the test machine lacks (cloud drives, several accounts, messy mail, an existing old-name folder), and make each one present, or name it as a gap in the report |

@@ -22,6 +22,7 @@ This file and `tooling/` are committed so the run can start from a fresh contain
   - X67: "We copy it…".
   - X68: the step count.
   - X69: the promises findings.
+  - X70: "we" in six more lines.
 
 ## 1. Build
 
@@ -40,6 +41,32 @@ Fill the brief templates in `tooling/`:
 - `{{COMMIT}}` is the commit.
 
 Copy `tooling/lib.mjs` into `{{SWEEP}}`. The scripts in `tooling/scripts-04ffc21e/` show working selectors from the last run. Use them as a starting point, not as the test: the UI will have moved.
+
+## 1b. Method changes after the owner's reports (X66–X70)
+
+These run in every sweep from now on. The reasons are in `owner-reports/old-name-and-two-setup-steps.md`.
+
+1. **The briefs carry the product's facts:** the product name (Thimbleby), the assistant's default name (Reginald), the website's three promises, and the latest decisions in `docs/decisions.md`. Read those decisions before writing the briefs.
+2. **The automatic checks flag the old name** on every screen and in the window title (`lib.mjs`).
+3. **A wording scan** of every string in `web/src/wording/en.json`:
+   - company voice ("we", "us", "our", allowing the person's own phrases)
+   - the old name
+   - fragments ("…, read")
+   - unfilled placeholders
+   - text that breaks a promise
+4. **Owner-path parity:** each of these is present in at least one run, or named as a gap:
+   - cloud drive folders in the home folder (iCloud Drive, OneDrive, Dropbox, Google Drive) for one setup run
+   - several accounts (S5)
+   - an existing backup folder under the old name
+5. **Worst-case content:** script the AI stand-in (the fake's one-answer script) to return:
+   - promise titles of two or more lines, with case numbers and postal addresses
+   - quotes cut off mid-sentence
+   - non-English text
+   - emoji
+   - 40 or more items
+
+   Judge every screen that shows them.
+6. **Owner reports become checks:** every screenshot the owner sends is a check in the next sweep, by id.
 
 ## 2. Phase 1: functional sweeps (Sonnet subagents, in parallel, each on its own ports)
 
