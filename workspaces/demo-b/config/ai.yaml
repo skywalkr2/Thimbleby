@@ -9,6 +9,7 @@ providers:
     refused_models: []
     work_data: ''
     allowed_data: [open, internal, restricted]
+    image_models: [default]
   # Examples of other accounts, left out so a new workspace lists only what it can use. Add one
   # from the setup guide's AI step, or uncomment one here and set its key.
   # low-cost:
@@ -61,6 +62,7 @@ tiers:
   # routine: {use: stub/default, thinking: off}
 tasks:
   notes: {tier: routine, temperature: 0, max_output: 3000, expected_output: 800}
+  read-image: {expected_image_tokens: 1600}
 roles:
   check: {tier: deep, same_account: true}
   research: {tier: routine}

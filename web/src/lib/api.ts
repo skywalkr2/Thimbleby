@@ -257,6 +257,20 @@ export const api = {
       body: file,
     });
   },
+  /** Hand in a picture for reading, or keep it in files if no account is listed for images. */
+  handInImage: (
+    file: Blob & { name: string },
+    options: { note?: string; project?: string; data_level?: "open" | "internal" | "restricted" } = {},
+  ) => {
+    const query = new URLSearchParams({ name: file.name });
+    if (options.note) query.set("note", options.note);
+    if (options.project) query.set("project", options.project);
+    if (options.data_level) query.set("data_level", options.data_level);
+    return send<S["HandedImage"]>("POST", `handin/image?${query.toString()}`, {
+      headers: { "content-type": file.type || "application/octet-stream" },
+      body: file,
+    });
+  },
   /** Read an uploaded document as outside content, or keep an unreadable file for later. */
   handInFile: (
     file: Blob & { name: string },

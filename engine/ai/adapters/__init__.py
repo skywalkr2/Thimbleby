@@ -24,7 +24,8 @@ class Adapter(Protocol):
     Speech-to-text is the capability of `run` on a task whose `audio` is set: the answer is the words spoken. A model
     takes it only when its catalog entry says so (`ModelInfo.transcribes`) or its account lists it
     (`transcribe_models`); the router never gives a voice note to any other, and an adapter that cannot do it raises
-    `AiError` rather than guess."""
+    `AiError` rather than guess. Image reading is the same for `image` tasks: only listed models receive a picture, and
+    adapters that cannot send one refuse it."""
 
     name: str
 

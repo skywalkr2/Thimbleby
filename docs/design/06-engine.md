@@ -3331,7 +3331,10 @@ product never changes its own code. The lesson stays as the record of why.
 mail attachments. So the text extractors (6.2) come with this slice. Reading a screenshot needs an account whose model reads
 images, which is a capability of the account (6.16), not an extractor. A model reads images only where its service's
 listing says so (`ModelInfo.reads_images`) or the account lists it in `image_models`, the way `transcribe_models` works for
-speech; it is never assumed from a model's or vendor's name (decided 2026-10-30, *being built*).
+speech; it is never assumed from a model's or vendor's name. **Built (Task 13):** `AiTask.image`, listed-capability
+filtering, the configured `expected_image_tokens` estimate, adapter image requests, and `POST /handin/image`; readings
+are handed in as outside content (`engine/read_image.py`, `tests/test_ai.py`, `tests/test_anthropic_messages.py`,
+`tests/test_capture.py`).
 
 **Protecting it.** Once the assistant learns, the knowledge is the most valuable part of the workspace and the part that can't
 be rebuilt. Losing a month of lessons is losing the product. So this slice also brings:

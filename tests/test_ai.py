@@ -262,6 +262,66 @@ def test_the_model_list_gives_context_and_prices_per_million(cfg):
     assert catalog["vendor/no-prices"].input_per_million is None
 
 
+def test_the_model_list_marks_image_input_only_when_the_listing_says_so(cfg):
+    body = {
+        "data": [
+            {"id": "listed-image", "architecture": {"input_modalities": ["text", "image"]}},
+            {"id": "listed-text", "architecture": {"input_modalities": ["text"]}},
+            {"id": "not-listed"},
+        ]
+    }
+    catalog = adapter(cfg, "main", lambda r: httpx.Response(200, json=body)).catalog()
+    assert catalog["listed-image"].reads_images is True
+    assert catalog["listed-text"].reads_images is False
+    assert catalog["not-listed"].reads_images is None
+
+
+def test_the_generic_adapter_sends_a_picture_as_part_of_the_user_message(cfg):
+    from engine.ai.task import Image
+
+    seen = []
+
+    def handler(request):
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, json=ok_body())
+
+    task = AiTask(
+        kind="read-image",
+        instructions="Read the picture.",
+        stable="",
+        request="Read this picture.",
+        output_schema={},
+        image=Image(b"\x00\x01", "image/png", "diagram.png"),
+    )
+    adapter(cfg, "main", handler).run(task, "m")
+    assert seen[0]["messages"][1]["content"] == [
+        {"type": "text", "text": "Read this picture."},
+        {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAE="}},
+    ]
+
+
+def test_a_picture_estimate_adds_the_configured_image_tokens_at_the_input_price(cfg, store):
+    from engine.ai.task import Image
+    from engine.config.schema import Price, TaskSettings
+
+    cfg.ai.tasks["read-image"] = TaskSettings(expected_image_tokens=1600)
+    cfg.ai.providers["main"].image_models = ["small"]
+    cfg.ai.prices["main/small"] = Price(input_per_million=1.0, output_per_million=2.0)
+    router, _ = router_with(cfg, store, {})
+    text = AiTask("read-image", "Read the picture.", "", "Read all visible words.", {}, expected_output=100)
+    picture = AiTask(
+        "read-image",
+        "Read the picture.",
+        "",
+        "Read all visible words.",
+        {},
+        expected_output=100,
+        image=Image(b"fixture", "image/png", "diagram.png"),
+    )
+
+    assert router.estimate(picture) - router.estimate(text) == pytest.approx(1600 / 1_000_000)
+
+
 def test_a_catalog_is_kept_refreshed_when_old_and_kept_when_a_fetch_fails(tmp_path):
     from engine.ai.catalog import Catalogs
     from engine.ai.task import ModelInfo

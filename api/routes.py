@@ -76,6 +76,7 @@ from api.schemas import (
     GenericRecordView,
     Handed,
     HandedFile,
+    HandedImage,
     HandIn,
     HandoverChoice,
     HandoverSideView,
@@ -1517,6 +1518,52 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         worker.poke()
         return Handed(request=handed, source=None)
+
+    @r.post("/handin/image")
+    async def handin_image(
+        request: Request,
+        name: str,
+        note: str = "",
+        project: str | None = None,
+        data_level: Literal["open", "internal", "restricted"] | None = None,
+    ) -> HandedImage:
+        """Keep a picture and queue reading it through a listed account.
+
+        Keep it with a plain reason when no account can read it.
+        """
+        from engine import read_image
+
+        cap = cfg.storage.files.max_file_mb * 1024 * 1024
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > cap:
+            raise HTTPException(status_code=413, detail=f"{name} is larger than {cfg.storage.files.max_file_mb:g} MB")
+        data = await request.body()
+        if len(data) > cap:
+            raise HTTPException(status_code=413, detail=f"{name} is larger than {cfg.storage.files.max_file_mb:g} MB")
+        media_type = (request.headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+        handed = guard(
+            lambda: read_image.hand_in(
+                ws,
+                store,
+                cfg,
+                worker.router_factory(),
+                data,
+                name=name,
+                media_type=media_type,
+                note=note,
+                project=project,
+                data_level=data_level,
+            )
+        )
+        changed()
+        if handed.request:
+            worker.poke()
+        return HandedImage(
+            status=handed.status,
+            request=handed.request,
+            file=handed.file,
+            reason=handed.reason,
+        )
 
     @r.post("/handin/file")
     async def handin_file(

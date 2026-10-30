@@ -41,11 +41,12 @@ export function useAddOwnRequest(): (id: string) => void {
 
 /** A voice note: a sound file, kept and turned into text by an account that takes speech once it runs. */
 const SOUND_FILE = /^audio\/|\.(m4a|mp3|wav|ogg|oga|opus|webm|flac|aac)$/i;
+const IMAGE_FILE = /^image\/|\.(png|jpe?g|gif|webp)$/i;
 
 type Whose = "others" | "mine";
 /** How sensitive the person says it is: the usual sends nothing, so the workspace's own rules decide. */
 type Sensitivity = "" | "internal" | "restricted";
-type FileRow = { id: number; name: string; status: "read" | "kept" | "refused" | "voice"; reason?: string; picture?: boolean };
+type FileRow = { id: number; name: string; status: "read" | "kept" | "refused" | "voice" | "picture"; reason?: string };
 
 export function HandIn(props: { onClose: () => void }) {
   const { t } = useWords();
@@ -58,7 +59,6 @@ export function HandIn(props: { onClose: () => void }) {
   const [project, setProject] = useState("");
   const { justMe } = useSides();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
   const [fileRows, setFileRows] = useState<FileRow[]>([]);
@@ -75,10 +75,35 @@ export function HandIn(props: { onClose: () => void }) {
   };
 
   const processFiles = async (files: File[]) => {
-    setDropProblem("");
     const sounds = files.filter((f) => SOUND_FILE.test(f.type) || SOUND_FILE.test(f.name));
-    const documents = files.filter((f) => !sounds.includes(f));
+    const pictures = files.filter((f) => IMAGE_FILE.test(f.type) || IMAGE_FILE.test(f.name));
+    const documents = files.filter((f) => !sounds.includes(f) && !pictures.includes(f));
     setFileBusy(true);
+    for (const picture of pictures) {
+      let refusal: ApiError | undefined;
+      const handed = await act(async () => {
+        try {
+          return await api.handInImage(picture, {
+            note: whose === "others" ? todo : undefined,
+            project: project || undefined,
+            data_level: sensitivity || undefined,
+          });
+        } catch (error) {
+          if (error instanceof ApiError) refusal = error;
+          throw error;
+        }
+      });
+      if (handed) {
+        if (handed.request) own.add(handed.request);
+        addFileRow({
+          name: picture.name,
+          status: handed.status === "queued" ? "picture" : "kept",
+          reason: handed.reason ?? undefined,
+        });
+      } else if (refusal) {
+        addFileRow({ name: picture.name, status: "refused", reason: refusal.detail });
+      }
+    }
     for (const file of documents) {
       let refusal: ApiError | undefined;
       const result = await act(async () => {
@@ -98,7 +123,7 @@ export function HandIn(props: { onClose: () => void }) {
         addFileRow({
           name: result.name,
           status: result.status,
-          picture: file.type.startsWith("image/") && result.status === "kept",
+          reason: result.reason ?? undefined,
         });
       } else if (refusal) {
         addFileRow({ name: file.name, status: "refused", reason: refusal.detail });
@@ -150,17 +175,12 @@ export function HandIn(props: { onClose: () => void }) {
     }
   };
 
-  // A picture on the clipboard can't be read (the assistant reads words): say so, and keep what is in the box. A paste that
-  // carries its words as well is an ordinary paste of text.
+  // A paste that carries words as well as a picture remains an ordinary paste of text.
   const onPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const data = event.clipboardData;
     const files = Array.from(data?.files ?? []);
     if (files.length === 0 || data.getData("text")) return;
     event.preventDefault();
-    if (files.some((file) => file.type.startsWith("image/"))) {
-      setDropProblem(t("handin.picture_not_read"));
-      return;
-    }
     void processFiles(files);
   };
 
@@ -204,18 +224,12 @@ export function HandIn(props: { onClose: () => void }) {
             value={text}
             onChange={(e) => {
               setText(e.target.value);
-              setDropProblem("");
             }}
             onPaste={onPaste}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => void onDrop(e)}
             placeholder={t("handin.box_placeholder")}
           />
-          {dropProblem && (
-            <p className="hint" role="status">
-              {dropProblem}
-            </p>
-          )}
         </FormField>
         <Button type="button" variant="quiet" disabled={fileBusy} onClick={() => fileInput.current?.click()}>
           {t("handin.file.choose")}
@@ -244,9 +258,11 @@ export function HandIn(props: { onClose: () => void }) {
                       ? t("handin.file.kept")
                       : row.status === "voice"
                         ? t("handin.file.voice")
+                        : row.status === "picture"
+                          ? t("handin.picture.queued")
                         : t("handin.file.refused", { reason: row.reason ?? "" })}
                 </span>
-                {row.picture && <span>{t("handin.picture_not_read")}</span>}
+                {row.reason && <span>{row.reason}</span>}
               </li>
             ))}
           </ul>

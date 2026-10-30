@@ -243,6 +243,15 @@ TASKS: dict[str, TaskKind] = {
         label="Turning a voice note into text",
         defaults={"max_output": 4000, "expected_output": 500},
     ),
+    # Reading a picture (engine/read_image.py): its words and meaningful content are handed in as outside material.
+    "read-image": TaskKind(
+        name="read-image",
+        ops=(),
+        prompt="read-image",
+        playbook="read-image",
+        label="Reading a picture",
+        defaults={"max_output": 4000, "expected_output": 500, "expected_image_tokens": 1600},
+    ),
     "follow-on": TaskKind(
         name="follow-on",
         ops=FOLLOW_ON_OPS,

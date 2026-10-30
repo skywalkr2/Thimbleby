@@ -86,6 +86,30 @@ def test_a_json_task_without_an_effort_sends_the_cached_system_prompt_and_nothin
     }
 
 
+def test_a_picture_is_sent_as_a_native_image_block_in_the_user_message():
+    from engine.ai.task import Image
+
+    task = replace(
+        TASK,
+        kind="read-image",
+        image=Image(b"\x00\x01", "image/png", "diagram.png"),
+    )
+    _, seen = run(task)
+    body = json.loads(seen[0].content)
+    assert body["messages"] == [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Input."},
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/png", "data": "AAE="},
+                },
+            ],
+        }
+    ]
+
+
 def test_a_tiers_effort_goes_in_the_place_the_interface_documents():
     _, seen = run(replace(TASK, effort="high"))
     body = json.loads(seen[0].content)
@@ -475,6 +499,24 @@ def test_capabilities_are_read_from_the_model_list_over_two_pages():
     assert (models["m-silent"].efforts, models["m-silent"].adaptive_thinking) == (None, None)
     # Nothing the tree doesn't state is filled in.
     assert all(m.thinking_off_efforts is None for m in models.values())
+    assert models["m-all"].reads_images is True and models["m-silent"].reads_images is None
+
+
+def test_image_input_is_read_only_from_the_models_listed_capability():
+    pages = {
+        None: {
+            "data": [
+                {**model("m-yes"), "capabilities": {"image_input": {"supported": True}}},
+                {**model("m-no"), "capabilities": {"image_input": {"supported": False}}},
+                model("m-unknown"),
+            ],
+            "has_more": False,
+        }
+    }
+    models = adapter_with(lambda request: httpx.Response(200, json=pages[None])).list_models()
+    assert models["m-yes"].reads_images is True
+    assert models["m-no"].reads_images is False
+    assert models["m-unknown"].reads_images is None
 
 
 def test_a_tree_with_an_effort_node_that_names_no_level_leaves_the_efforts_unknown():

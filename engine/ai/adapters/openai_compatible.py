@@ -6,6 +6,7 @@ base URL, a key (except for local servers) and model ids, all from config.
 
 from __future__ import annotations
 
+import base64
 import ipaddress
 import time
 from datetime import UTC, datetime
@@ -36,11 +37,21 @@ class OpenAICompatibleAdapter:
     def run(self, task: AiTask, model: str) -> AiResult:
         if task.audio is not None:
             return self.transcribe(task, model)
+        user_content: str | list[dict[str, Any]] = task.request
+        if task.image is not None:
+            encoded = base64.b64encode(task.image.data).decode("ascii")
+            user_content = [
+                {"type": "text", "text": task.request},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{task.image.media_type};base64,{encoded}"},
+                },
+            ]
         body: dict[str, Any] = {
             "model": model,
             "messages": [
                 {"role": "system", "content": task.instructions + "\n\n" + task.stable},
-                {"role": "user", "content": task.request},
+                {"role": "user", "content": user_content},
             ],
             getattr(self.settings, "max_tokens_param", "max_tokens"): task.max_output,
         }
@@ -140,6 +151,11 @@ class OpenAICompatibleAdapter:
                     continue
                 pricing = item.get("pricing") if isinstance(item.get("pricing"), dict) else {}
                 top = item.get("top_provider") if isinstance(item.get("top_provider"), dict) else {}
+                arch = item.get("architecture") if isinstance(item.get("architecture"), dict) else {}
+                input_modalities = arch.get("input_modalities")
+                if not isinstance(input_modalities, list):
+                    input_modalities = item.get("input_modalities")
+                reads_images = "image" in input_modalities if isinstance(input_modalities, list) else None
                 out[item["id"]] = ModelInfo(
                     context_tokens=_int(item.get("context_length")),
                     max_output_tokens=_int(top.get("max_completion_tokens")),
@@ -149,6 +165,7 @@ class OpenAICompatibleAdapter:
                     released=_released(item.get("created")),
                     retired=_listed_retired(item),
                     chat=_listed_chat(item),
+                    reads_images=reads_images,
                 )
             if more is None or more == after or len(out) == before:
                 break

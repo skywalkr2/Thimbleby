@@ -35,9 +35,9 @@ const PROJECTS = [
   project("P-4", "Ferry"),
 ];
 
-async function setup() {
+async function setup(extra: Parameters<typeof fakeApi>[0] = {}) {
   const user = userEvent.setup();
-  const calls = fakeApi({ "POST handin": handed, "GET projects": () => PROJECTS });
+  const calls = fakeApi({ "POST handin": handed, "GET projects": () => PROJECTS, ...extra });
   const onClose = vi.fn();
   renderApp(<HandIn onClose={onClose} />);
   return { user, calls, onClose };
@@ -166,12 +166,34 @@ test("a chosen project is sent by its id, and choosing not sure again takes it b
 
 const picture = () => new File(["x"], "screenshot.png", { type: "image/png" });
 
-test("a pasted picture says it can't be read and asks for its words, and leaves the box as it was", async () => {
-  const { user } = await setup();
+test("a picture with no reading account is kept with a plain message and leaves the box as it was", async () => {
+  const { user, calls } = await setup({
+    "POST handin/image": () => ({
+      status: "kept",
+      request: null,
+      file: "FILE-1",
+      reason: "No AI account can read pictures. The picture has been kept in your files.",
+    }),
+  });
   const box = screen.getByRole("textbox", { name: "Paste or type it here" });
   await user.type(box, "Notes so far");
   fireEvent.paste(box, { clipboardData: { files: [picture()], types: ["Files"], getData: () => "" } });
-  expect(await screen.findByText(/A picture can't be read yet/)).toBeInTheDocument();
+  expect(
+    await screen.findByText("No AI account can read pictures. The picture has been kept in your files."),
+  ).toBeInTheDocument();
+  expect(calls.some((call) => call.route.startsWith("POST handin/image?name=screenshot.png"))).toBe(true);
+  expect(box).toHaveValue("Notes so far");
+});
+
+test("a dropped picture with a reading account is handed in for reading", async () => {
+  const { user, calls } = await setup({
+    "POST handin/image": () => ({ status: "queued", request: "REQ-9", file: "FILE-9", reason: null }),
+  });
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  await user.type(box, "Notes so far");
+  fireEvent.drop(box, { dataTransfer: { files: [picture()] } });
+  expect(await screen.findByText("Picture handed in for reading")).toBeInTheDocument();
+  expect(calls.some((call) => call.route.startsWith("POST handin/image?name=screenshot.png"))).toBe(true);
   expect(box).toHaveValue("Notes so far");
 });
 
@@ -184,13 +206,22 @@ test("a picture pasted along with its words keeps the words and says nothing abo
   expect(screen.queryByText(/A picture can't be read yet/)).toBeNull();
 });
 
-test("the note about a picture goes when words are typed after it", async () => {
-  const { user } = await setup();
+test("a kept picture's message stays beside it when words are typed", async () => {
+  const { user } = await setup({
+    "POST handin/image": () => ({
+      status: "kept",
+      request: null,
+      file: "FILE-1",
+      reason: "No AI account can read pictures. The picture has been kept in your files.",
+    }),
+  });
   const box = screen.getByRole("textbox", { name: "Paste or type it here" });
   fireEvent.paste(box, { clipboardData: { files: [picture()], types: ["Files"], getData: () => "" } });
-  await screen.findByText(/A picture can't be read yet/);
+  await screen.findByText("No AI account can read pictures. The picture has been kept in your files.");
   await user.type(box, "What it said");
-  expect(screen.queryByText(/A picture can't be read yet/)).toBeNull();
+  expect(
+    screen.getByText("No AI account can read pictures. The picture has been kept in your files."),
+  ).toBeInTheDocument();
 });
 
 // A voice note dropped on the box (design 6.32): it is handed in at once as its own request, to be turned into text, and

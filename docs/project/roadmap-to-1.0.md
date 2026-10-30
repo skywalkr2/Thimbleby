@@ -403,10 +403,15 @@ From the original designer's lessons of 2026-10-14:
   what they do is written here). *Built (B-6b), checked off in `roadmap-done.md`:* Follow-ups by person, or by project;
   Projects at a glance; links to the person's own pages; a meeting added in one line; never raw data on screen. Two
   sub-items are open:
-  - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
-    *Built:* the check of what it does today: a pasted picture is told plainly it can't be read yet, and the box keeps
-    its words (`web/src/components/HandIn.test.tsx`). *Left:* reading a picture.
-  - State (2026-10-29): built: the check of what the drawer does today, a pasted picture told plainly it can't be read, the box keeping its words (`web/src/components/HandIn.test.tsx`); left: reading a picture (not started; the item says two sub-items are open but lists one).
+  - [x] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
+    *Built:* a pasted or dropped picture is kept and queued for reading only by an account listed as reading images; when
+    none can, the drawer says so and leaves the existing text untouched (`tests/test_capture.py`,
+    `web/src/components/HandIn.test.tsx`).
+  - State (2026-10-30): built: pictures are read by a listed account, estimated with the task's configured image-token
+    count, and handed in as outside content (`tests/test_ai.py::test_a_picture_estimate_adds_the_configured_image_tokens_at_the_input_price`,
+    `tests/test_capture.py::test_only_accounts_listed_as_reading_images_are_returned_and_none_has_a_plain_error`,
+    `tests/test_capture.py::test_the_hand_in_image_route_uses_the_stand_in_and_hands_its_reading_in_as_outside_content`,
+    `web/src/components/HandIn.test.tsx`); the drawer keeps pictures when no listed account can read them.
   - Widened (owner, 2026-10-29: "it needs to take almost any attachment, not just pictures"): Hand something in takes
     almost any attachment. Documents (PDF, word processor, spreadsheet, slides, plain text, a saved mail with its
     attachments) are read to text by the app itself, with no AI; pictures, screenshots and scans are read by a model only
@@ -420,7 +425,9 @@ From the original designer's lessons of 2026-10-14:
       `tests/test_capture.py::test_handin_file_keeps_an_unreadable_file_for_later`,
       `tests/test_capture.py::test_handin_file_refuses_a_file_over_the_existing_single_file_limit`,
       `web/src/components/HandIn.test.tsx::dropped, pasted, and picked files each get a row with their outcome`);
-      left: reading pictures, which remains Task 13.
+      built: reading pictures through `POST /handin/image`, with the estimate, account capability check, outside-content
+      intake and the drawer's kept/queued outcomes (`engine/read_image.py`, `tests/test_capture.py`,
+      `web/src/components/HandIn.test.tsx`).
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.

@@ -7,6 +7,7 @@ and model ids, all from config.
 
 from __future__ import annotations
 
+import base64
 import time
 from datetime import UTC, datetime
 from typing import Any
@@ -164,6 +165,7 @@ class AnthropicMessagesAdapter:
                     adaptive_thinking=adaptive,
                     released=_released(item.get("created_at")),
                     retired=True if item.get("deprecated") is True else None,
+                    reads_images=_listed_image_input(item.get("capabilities")),
                 )
             if more is None or more == after or len(out) == before:
                 break
@@ -227,6 +229,13 @@ def listed_capabilities(tree: Any) -> tuple[list[str] | None, bool | None]:
     return efforts, adaptive
 
 
+def _listed_image_input(tree: Any) -> bool | None:
+    """Whether the model's capability listing explicitly says it takes image input."""
+    node = tree.get("image_input") if isinstance(tree, dict) else None
+    supported = _supported(node)
+    return supported
+
+
 def _effort_taken(task: AiTask) -> bool:
     """Whether the tier's effort is sent: when the model's listed efforts include it, or when they aren't known."""
     info = task.model_info
@@ -286,11 +295,24 @@ def request_body(task: AiTask, model: str, *, send_temperature: bool, thinking_r
         limit = task.max_output + thinking_room
         if info.max_output_tokens is not None:
             limit = max(task.max_output, min(limit, info.max_output_tokens))
+    user_content: str | list[dict[str, Any]] = task.request
+    if task.image is not None:
+        user_content = [
+            {"type": "text", "text": task.request},
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": task.image.media_type,
+                    "data": base64.b64encode(task.image.data).decode("ascii"),
+                },
+            },
+        ]
     body: dict[str, Any] = {
         "model": model,
         "max_tokens": limit,
         "system": system,
-        "messages": [{"role": "user", "content": task.request}],
+        "messages": [{"role": "user", "content": user_content}],
     }
     if send_temperature:
         body["temperature"] = task.temperature
