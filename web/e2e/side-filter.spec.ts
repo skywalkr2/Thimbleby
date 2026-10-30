@@ -74,10 +74,16 @@ test.describe("The side filter changes what the screens show", () => {
     await heading(page, "Today");
     const main = page.locator("main");
     // The backup line is the app's own: on no side, so under every choice. The clash is between two meetings of the business
-    // calendar: on the business side alone.
+    // calendar: on the business side alone. The meetings are tomorrow, so the card lists none of them; its footer counts them.
     await expect(main.getByText("Back up your work")).toBeVisible(LOADED);
-    const { shown, hidden } = bySide({ personal: [], job: [seeded.meetings.job[0]], business: [seeded.meetings.business[0], seeded.meetings.business[1], "Sort out the clash"] }, []);
+    const { shown, hidden } = bySide({ personal: [], job: [], business: ["Sort out the clash"] }, []);
     await expectUnder(page, main, shown, hidden);
+    // The Tomorrow footer counts only the chosen side's meetings.
+    const footer: Record<"all" | Side, string> = { all: "Tomorrow: 3 entries", personal: "Nothing scheduled tomorrow.", job: "Tomorrow: 1 entry", business: "Tomorrow: 2 entries" };
+    for (const choice of ["all", ...SIDES] as const) {
+      await choose(page, choice);
+      await expect(main.getByText(footer[choice], { exact: true }), `${choice} footer`).toBeVisible(LOADED);
+    }
     for (const choice of ["all", ...SIDES] as const) {
       await choose(page, choice);
       await expect(main.getByText("Back up your work"), `${choice} shows the backup line`).toBeVisible(LOADED);
