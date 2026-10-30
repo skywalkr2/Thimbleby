@@ -1040,6 +1040,23 @@ test("two examples with the same purpose are told apart by a number, not by the 
   expect(options).toEqual(["Let the app choose", "Recommended", "Stronger 1", "Stronger 2", "Another AI model"]);
 });
 
+test("examples sharing a role show the word with a number, a lone one shows the word alone, and none shows the program's own name", async () => {
+  const user = userEvent.setup();
+  api({
+    "GET ai/endpoints": () =>
+      KINDS.map((k) =>
+        k.id === "app-a"
+          ? { ...k, model_examples: ["alpha", "beta", "gamma", "delta"], model_roles: { alpha: "recommended", beta: "stronger", gamma: "stronger", delta: "faster" } }
+          : k,
+      ),
+  });
+  open();
+  await pickElse(user, "App A");
+  const labels = within(screen.getByLabelText("AI model")).getAllByRole("option").map((o) => o.textContent ?? "");
+  expect(labels).toEqual(["Let the app choose", "Recommended", "Stronger 1", "Stronger 2", "Faster", "Another AI model"]);
+  for (const label of labels) expect(label).not.toMatch(/alpha|beta|gamma|delta/);
+});
+
 test("an example the catalog gives no role is offered by number, never by its name", async () => {
   const user = userEvent.setup();
   api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, model_examples: ["delta", "gamma", "omega"] } : k)) });
