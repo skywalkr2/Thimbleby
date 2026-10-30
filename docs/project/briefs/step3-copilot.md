@@ -42,17 +42,25 @@ runs the full suites; the coding agent runs only what it touched.
 ## Task 7: a browser journey for capture
 - **Item:** `[S4] Capture from anywhere`. Its State line says there is no browser journey for capture (`web/e2e` has
   none).
+- **What the design does (checked):**
+  - A capture folder holds the person's own notes, so a note found there is the person's own words.
+  - It is filed at once with Undo, like a note the person hands in themselves.
+  - It is not held for review; review is for outside content.
+  - The journey checks that path. It does not change trust or the applier.
 - **Build:**
   - a journey in a new `web/e2e/capture-journey.spec.ts`, with its project in `web/playwright.config.ts` beside the other
     journeys, on the shared demo server unless the spec needs data no other test may see;
   - the journey follows a person's path:
     1. turn on a capture folder from Settings › Sources;
     2. put a note file in it, through the same e2e server helper or API the Python capture tests use (read
-       `tests/test_capture.py` and `tests/e2e_server.py` for what exists);
-    3. see it arrive as something to look over;
-    4. open it and keep it;
-    5. see the result where the person would look for it.
+       `tests/test_capture.py` and `tests/e2e_server.py` for what exists; add a helper route there only if none fits,
+       and say so);
+    3. after the folder is read, see the note filed where the person looks for it (Notes), and anything else the
+       stand-in assistant files from it where that belongs;
+    4. undo it from where the app offers Undo for that note, and see it gone;
+    5. put a second note in, and see that a note already read isn't filed twice.
   - Use the screens' own names and roles, never CSS classes.
+  - Name a unique word in each note so leftovers from other tests can't match.
 - **Not this task:** the global shortcut and speech-to-text (phase I and later).
 - **Done when:** the journey passes three times in a row (`--repeat-each 3`), and the State line cites it.
 
@@ -112,3 +120,34 @@ runs the full suites; the coding agent runs only what it touched.
   - Evidence is the note's own words.
 - **Done when:** the test passes for each language added and for an unknown one, and the State line says so. "From a
   contact source" stays open.
+
+## Task 11: the phone review-mode check that still fails on CI
+- **The failure:** `web/e2e/panes.spec.ts`, "the phone's review mode › goes through the messages waiting to be sent one
+  person at a time…", failed on CI at `5e21d04`.
+  - Its setup passed: the API reported at least two people with messages waiting, and a higher count than before.
+  - Then "Send one at a time" was never found on Follow-ups at 390px.
+  - It passes locally when run alone, and the same run passed the rest of the 390 tests.
+- **What the screen needs (checked):** `web/src/components/FollowUps.tsx` shows the button when all of these hold:
+  - the window is narrow (`useIsNarrow()`) and the screen is not `compact`;
+  - the filter is "send" and the grouping is "person" (both the screen's own defaults);
+  - at least one person other than the person themselves has something to send (`reviewable`);
+  - and `shown` is not empty.
+- **Find which of these was false on CI.**
+  - Reproduce in CI's order: run the `root` project and then `root-panes` with its dependency, not `--no-deps`:
+    `PW_CHANNEL=chrome PW_WORKERS=1 npx playwright test --project=root-panes` from `web/`, after a build.
+  - Then run it three times.
+  - If it never fails locally, add to the test, before the button is looked for, a check that reads what the screen
+    shows:
+    - the Follow-ups list's rows;
+    - the filter and grouping as the person sees them;
+    - whether the narrow layout is on.
+  - Each check names what it found, so the next CI failure says which condition was false.
+- **Then fix the cause:**
+  - in the test, if it is the test's own setup (for example the page read before the hand-in's messages were filed);
+  - or stop and report, if a person could hit it (messages waiting but no way to go through them on a phone).
+  - Don't skip the test, add retries, or lengthen timeouts as the fix.
+- **Done when:**
+  - the cause is named, and the fix is in;
+  - or the checks that will name it are in;
+  - the whole `root-panes` project passes with its dependency;
+  - and the P96 row in `docs/project/open-promises.md` says which.
