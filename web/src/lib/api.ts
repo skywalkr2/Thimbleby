@@ -396,7 +396,8 @@ export const api = {
   projectEnding: (cs: string, index: number) => call<S["ProjectEndingView"]>("GET", `changesets/${id(cs)}/ops/${index}/project-ending`),
   /** End the project and drop the items not in `keep`, or (`end` false) keep the project and every item as they are. */
   chooseProjectEnding: (cs: string, index: number, body: S["ProjectEndingChoice"]) => call<S["ProjectEndingDone"]>("POST", `changesets/${id(cs)}/ops/${index}/project-ending`, body),
-  declineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/decline`),
+  declineOp: (cs: string, index: number, note?: string) =>
+    call<S["Noted"]>("POST", `changesets/${id(cs)}/ops/${index}/decline`, note ? { note } : undefined),
   undeclineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/undecline`),
   addPerson: (body: S["PersonIn"]) => call<S["Created"]>("POST", "people", body),
   editPerson: (p: string, body: S["PersonPatch"]) => call<S["Ok"]>("POST", `people/${id(p)}`, body),

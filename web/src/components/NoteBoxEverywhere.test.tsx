@@ -10,8 +10,8 @@ import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
 
 // Every button that acts on a to-do has a note box in its row's menu, so a note typed on any of them reaches the assistant
-// with the act (design 7.5). The to-do rows of Follow-ups and Today's rail are tested in NoteBox.test.tsx; these are the
-// two lines Today holds: a promise past its date, and a reminder.
+// with the act (design 7.5). The to-do rows of Follow-ups and Today's rail are tested in NoteBox.test.tsx; held answers are
+// tested in TodayRecords.test.tsx. These are the two other lines Today holds: a promise past its date, and a reminder.
 
 type Line = S["QueueLineView"];
 

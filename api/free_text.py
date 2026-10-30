@@ -40,6 +40,9 @@ _DETAILS = "details of a record the person keeps for reading"
 ROUTES: dict[str, Declared] = {
     # A note on an action or a question: handed in as the person's own words.
     "POST /api/actions/{action_id}/status": _to("the note typed with Mark done or reopen, through the note helper"),
+    "POST /api/changesets/{cs_id}/ops/{index}/decline": _to(
+        "the note typed with Keep it open, through the note helper"
+    ),
     "POST /api/followups/{person}/actions/{action_id}/finished": _to(
         "the note typed with They finished it, through the note helper"
     ),

@@ -118,6 +118,35 @@ test("the other answer keeps things as they are, says so with Undo, and records 
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/undecline")).toBe(true));
 });
 
+test("a held answer offers a note box for Keep it open", async () => {
+  const user = userEvent.setup();
+  show([held({ ask: "close", item: "Send two spine options", told: [] })]);
+  const row = await rowOf("Close 'Send two spine options'?");
+  await user.click(within(row).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Add a note" }));
+  const form = (await screen.findByRole("textbox", { name: /note/i })).closest("form");
+  expect(form).not.toBeNull();
+  if (form) expect(within(form).getByRole("button", { name: "Keep it open" })).toBeInTheDocument();
+});
+
+test("a note reaches the held decline API with Keep it open", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([held({ ask: "close", item: "Send two spine options", told: [] })], {
+    "POST changesets/CS-1/ops/0/decline": () => ({ ok: "CS-1", request: "REQ-2" }),
+  });
+  const row = await rowOf("Close 'Send two spine options'?");
+  await user.click(within(row).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Add a note" }));
+  const box = await screen.findByRole("textbox", { name: /note/i });
+  await user.type(box, "The source has not changed.");
+  const form = box.closest("form");
+  expect(form).not.toBeNull();
+  if (form) await user.click(within(form).getByRole("button", { name: "Keep it open" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/0/decline")?.body).toEqual({ note: "The source has not changed." }),
+  );
+});
+
 test.each([
   [{ ask: "date", item: "Book a photographer", value: "2026-11-05", from_value: "2026-10-30", told: [] } as S["HeldAsk"], "Change the due date of 'Book a photographer' to " + day("2026-11-05") + "?", "Change it to " + day("2026-11-05"), "Keep " + day("2026-10-30")],
   [{ ask: "owner", item: "Book a photographer", to_name: "Robin Sample", from_value: "Ana Person", told: [] } as S["HeldAsk"], "Give 'Book a photographer' to Robin Sample?", "Give it to Robin", "Keep Ana"],

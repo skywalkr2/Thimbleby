@@ -1792,15 +1792,23 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         )
 
     @r.post("/changesets/{cs_id}/ops/{index}/decline")
-    def decline_op(cs_id: str, index: int) -> Ok:
+    def decline_op(cs_id: str, index: int, body: NoteIn | None = None) -> Noted:
         """Keep things as they are for a held item: it isn't applied and leaves the list, and the choice is a
         correction the assistant learns from."""
         from engine.applier import decline_held
 
         need("changeset", cs_id)
         guard(lambda: decline_held(store, cs_id, index))
+        request = None
+        if body and body.note.strip():
+            changeset = store.read().get("changeset", cs_id)
+            op = changeset.data["ops"][index]["op"]
+            action_id = op.get("id")
+            if not op.get("op", "").startswith("action.") or not isinstance(action_id, str):
+                raise HTTPException(status_code=422, detail="A note can only go with an action choice.")
+            request = hand_note(("action", action_id), body.note, "reopened")
         changed()
-        return Ok(ok=cs_id)
+        return Noted(ok=cs_id, request=request)
 
     @r.post("/changesets/{cs_id}/ops/{index}/undecline")
     def undecline_op(cs_id: str, index: int) -> Ok:

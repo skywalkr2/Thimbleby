@@ -2,10 +2,12 @@
 // use these, so the words and the signals are the same wherever the person answers (design 7.6). The first answer applies
 // the held change; the other leaves things as they were and records one correction the assistant learns from; each says
 // what it did in a toast with Undo.
+import { useState } from "react";
 import { api, type S } from "./api";
 import { useAct } from "./act";
 import { endingWho, heldAnswers, heldTitle } from "./queue-words";
 import { useWords } from "./wording";
+import { useNoted } from "../components/NoteBox";
 
 export interface HeldAnswers {
   title: string;
@@ -14,24 +16,37 @@ export interface HeldAnswers {
   other?: { label: string; run: () => void };
   /** The answers that are not beside the first: "No longer needed" and "Not yet" for the words that only said "closed". */
   menu: Array<{ id: string; label: string; run: () => void }>;
+  noting: boolean;
+  closeNote: () => void;
+  declineWithNote: (note: string) => Promise<S["Noted"] | undefined>;
 }
 
-export function useHeldAnswers(changeset: string, index: number, held: S["HeldAsk"] | null | undefined): HeldAnswers | null {
+export function useHeldAnswers(changeset: string, index: number, held: S["HeldAsk"] | null | undefined, onClosed?: () => void): HeldAnswers | null {
   const { t } = useWords();
   const act = useAct();
+  const noted = useNoted();
+  const [noting, setNoting] = useState(false);
   if (!held) return null;
   const cs = changeset;
   const words = heldAnswers(held, t);
+  const declineWithNote = (note: string) =>
+    act(
+      () => api.declineOp(cs, index, note),
+      (done) => ({
+        message: noted(t("queue.held.kept", { what: held.item }), done.request),
+        undo: () => api.undeclineOp(cs, index),
+      }),
+    );
   const release = () =>
     void act(
       () => api.release(cs, index),
       () => ({ message: t("queue.held.done", { what: held.item }), undo: () => api.undo(cs, [index]) }),
     );
-  const decline = () =>
-    void act(
-      () => api.declineOp(cs, index),
-      () => ({ message: t("queue.held.kept", { what: held.item }), undo: () => api.undeclineOp(cs, index) }),
-    );
+  const decline = () => void declineWithNote("");
+  const closeNote = () => {
+    setNoting(false);
+    onClosed?.();
+  };
   if (held.ask === "ending") {
     const toldNames = held.told ?? [];
     const answer = (ending: "done" | "called_off") =>
@@ -52,6 +67,9 @@ export function useHeldAnswers(changeset: string, index: number, held: S["HeldAs
         { id: "called-off", label: t(toldNames.length > 0 ? "queue.held.e.ending_off_tell" : "queue.held.e.ending_off"), run: () => answer("called_off") },
         { id: "not-yet", label: words.other, run: decline },
       ],
+      noting: false,
+      closeNote,
+      declineWithNote,
     };
   }
   // A drop of something that reached people is one answer, "Drop it and tell them": it drops the to-do and drafts a
@@ -69,6 +87,12 @@ export function useHeldAnswers(changeset: string, index: number, held: S["HeldAs
     title: heldTitle(held, t),
     primary: { label: words.primary, run: told.length > 0 ? dropAndTell : release },
     other: { label: words.other, run: decline },
-    menu: [],
+    menu:
+      held.ask === "close" || held.ask === "part"
+        ? [{ id: "note", label: t("note.add"), run: () => setNoting(true) }]
+        : [],
+    noting: noting && (held.ask === "close" || held.ask === "part"),
+    closeNote,
+    declineWithNote,
   };
 }

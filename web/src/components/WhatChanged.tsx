@@ -25,6 +25,7 @@ import { Button, ButtonLink } from "../ui/Button";
 import { ListDetail } from "../ui/ListDetail";
 import { AskChooser } from "./AskChooser";
 import { ProjectProposalRow } from "./NextSteps";
+import { NoteBox } from "./NoteBox";
 import { Because } from "./Because";
 import { LearnedLines } from "./Learned";
 import { AnswerOnToday } from "./AnswerOnToday";
@@ -764,7 +765,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
       (report) => ({ message: undoMessage(report, t, tn) }),
     );
   // A held change the line on Today asks as a question has the same two answers here, in the same words.
-  const heldWords = useHeldAnswers(cs.id, op.index, op.status === "held" && !ask ? op.held : null);
+  const heldWords = useHeldAnswers(cs.id, op.index, op.status === "held" && !ask ? op.held : null, () => ref.current?.focus());
   const told = op.held ? heldTold(op.held, t) : "";
 
   // Each item the assistant made can be changed on its own, without sending the others back.
@@ -830,6 +831,11 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
         )}
         <RowMenu label={plainTitle(op.title, op.meta.due)} actions={menu} />
       </Actions>
+      {heldWords?.noting && heldWords.other && (
+        <div className="full">
+          <NoteBox sends={[{ label: heldWords.other.label, run: heldWords.declineWithNote }]} onClose={heldWords.closeNote} />
+        </div>
+      )}
       {op.evidence && (
         <div className="because">
           {t("op.because")} <q>{op.evidence.quote}</q>{" "}

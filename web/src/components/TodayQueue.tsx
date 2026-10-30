@@ -50,6 +50,7 @@ import { ActTodayRows } from "./ActToday";
 import { ReminderWhereRow } from "./ReminderWhereRow";
 import { staleLine, useReminderWhere } from "../lib/reminder-where";
 import { StageTodayRows, useStageToday } from "./StageToday";
+import { NoteBox } from "./NoteBox";
 import { ProjectTag } from "./ProjectTag";
 import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
@@ -748,7 +749,7 @@ function QueueRow(props: {
   const promiseRow = usePromiseChoices(line, () => ref.current?.focus());
   const replyRow = useReplyChoices(line, () => ref.current?.focus());
   const sentRow = useSentCheckChoices(line);
-  const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
+  const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null, () => ref.current?.focus());
   const notNow = useNotNow();
   const quietRow = useQuietChoices(line);
   // The offered area's name is a field the person may change before starting it.
@@ -1272,6 +1273,9 @@ function QueueRow(props: {
     >
       {line.kind === "reminder_digest" && <ReminderItems line={line} />}
       {line.kind === "reminder" && reminderRow.form}
+      {line.kind === "held" && heldWords?.noting && heldWords.other && (
+        <NoteBox sends={[{ label: heldWords.other.label, run: heldWords.declineWithNote }]} onClose={heldWords.closeNote} />
+      )}
       {line.kind === "area" && (
         <div className="answer-form">
           <label className="hint" htmlFor={areaNameId}>

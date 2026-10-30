@@ -4,7 +4,7 @@
 // its Looks good, stays on What changed; a held op that isn't shaped as a question is shown as its own row (a project the
 // assistant found, with its three choices).
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../lib/api";
 import { useHeldAnswers } from "../lib/held-answers";
 import { heldTitle, heldTold, titleWords } from "../lib/queue-words";
@@ -17,6 +17,7 @@ import styles from "./HeldDetail.module.css";
 import { ProjectProposalRow } from "./NextSteps";
 import { OpRow, SourcePanel } from "./WhatChanged";
 import { ItemList } from "../ui/ItemList";
+import { NoteBox } from "./NoteBox";
 
 /** The parts of a line the decision reads: a held line on Today, or a held row inside a batch. */
 export type HeldLine = Pick<QueueLine, "changeset" | "op" | "held" | "request" | "title" | "waiting">;
@@ -25,7 +26,8 @@ export function HeldDetail(props: { line: HeldLine }) {
   const { line } = props;
   const { t, has } = useWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
-  const answers = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.held ?? null);
+  const noteButton = useRef<HTMLButtonElement>(null);
+  const answers = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.held ?? null, () => noteButton.current?.focus());
   const [showSource, setShowSource] = useState(false);
   const ask = line.held;
   const item = changes.data?.find((c) => c.id === line.request);
@@ -99,11 +101,12 @@ export function HeldDetail(props: { line: HeldLine }) {
       {showSource && source && ask.quote && <SourcePanel id={source} quote={ask.quote} />}
       <div className={styles.answers}>
         {buttons.map((b) => (
-          <Button key={b.id} size="sm" variant={b.primary ? "primary" : "secondary"} onClick={b.run}>
+          <Button ref={b.id === "note" ? noteButton : undefined} key={b.id} size="sm" variant={b.primary ? "primary" : "secondary"} onClick={b.run}>
             {b.label}
           </Button>
         ))}
       </div>
+      {answers.noting && answers.other && <NoteBox sends={[{ label: answers.other.label, run: answers.declineWithNote }]} onClose={answers.closeNote} />}
     </section>
   );
 }
