@@ -31,6 +31,7 @@ export async function audit(page, name, { full = true, note = "" } = {}) {
   const file = `${OUT}/${name}.png`;
   await page.screenshot({ path: file, fullPage: full });
   const text = await page.locator("body").innerText();
+  const title = await page.title();
   fs.writeFileSync(`${OUT}/${name}.txt`, text);
   const found = [];
   const checks = [
@@ -42,7 +43,9 @@ export async function audit(page, name, { full = true, note = "" } = {}) {
     [/Loading…|Loading\.\.\./, "Loading text still showing"],
     [/\{[a-z_]+\}/, "unfilled {placeholder}"],
     [/Traceback|Internal Server Error|Something went wrong|That didn't work/i, "error text"],
+    [/\bCockpit\b/, "old product name on screen"],
   ];
+  if (/Cockpit/.test(title)) found.push(`old product name in the window title: "${title}"`);
   for (const [re, label] of checks) { const m = text.match(re); if (m) found.push(`${label}: "${text.slice(Math.max(0, m.index - 40), m.index + 60).replace(/\n/g, " ⏎ ")}"`); }
   const geo = await page.evaluate(() => {
     const out = {};

@@ -17,6 +17,11 @@ This file and `tooling/` are committed so the run can start from a fresh contain
 - [ ] **Two fixes announced for this hand-over, to check by name:**
   - Setup's mail step with **two accounts of one service**: the sides question grouped by account and named by address. S1 and S5 check it.
   - The promises step's findings **move from the wizard to Today**. S1 checks the wizard; S2, S3 and S5 check Today.
+- [ ] **The owner's reports X66–X69** (`owner-reports/old-name-and-two-setup-steps.md`):
+  - X66: the old name, which the automatic checks now flag on every screen and in the window title; also the folders setup creates, and an existing old-name backup folder still being found.
+  - X67: "We copy it…".
+  - X68: the step count.
+  - X69: the promises findings.
 
 ## 1. Build
 
