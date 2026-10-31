@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import socket
+from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -406,3 +407,10 @@ def test_the_journey_mail_channel_acts_lists_and_takes_back_through_the_service(
     assert journey_mail.folders("journey-mail/account:me", reading) == ChannelFailed(
         "auth", "Sign in to Example mail again."
     )
+
+
+def test_the_near_events_stay_on_the_same_day_as_now_just_before_midnight():
+    here = datetime.now().astimezone()
+    late = here.replace(hour=23, minute=30, second=0, microsecond=0)
+    near = [e for e in fake_services.events(late.astimezone(UTC)) if e["id"] in ("e-1", "e-2")]
+    assert {datetime.fromisoformat(e["start"]).astimezone().date() for e in near} == {late.date()}

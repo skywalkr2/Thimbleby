@@ -500,8 +500,14 @@ def sent_messages(now: datetime) -> list[dict]:
 
 
 def events(now: datetime, evening: bool = False) -> list[dict]:
-    """Three events: two within the hour, and one next week."""
+    """Three events: two within the hour, and one next week. The two near ones fall on the same day as `now` in this
+    computer's zone, so a run just before midnight still has them on today's schedule (they then come before now)."""
     first, second = people()[1:3]
+    here = now.astimezone()
+    crosses = (here + timedelta(minutes=45)).date() != here.date()
+    first_at, second_at = (
+        (timedelta(minutes=-60), timedelta(minutes=-30)) if crosses else (timedelta(minutes=15), timedelta(minutes=45))
+    )
 
     def event(key: str, title: str, start: datetime, where: str, organizer: str, notes: str) -> dict:
         return {
@@ -516,13 +522,11 @@ def events(now: datetime, evening: bool = False) -> list[dict]:
         }
 
     return [
-        event(
-            "e-1", "Venue walk-through", now + timedelta(minutes=15), "Room 4", first, "To do: bring the floor plan."
-        ),
+        event("e-1", "Venue walk-through", now + first_at, "Room 4", first, "To do: bring the floor plan."),
         event(
             "e-2",
             "Budget check-in",
-            now + timedelta(minutes=45),
+            now + second_at,
             "Room 2",
             second,
             "Agreed: the budget stays as planned.",
