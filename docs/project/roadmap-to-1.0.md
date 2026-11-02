@@ -27,28 +27,26 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 says what each batch covers, what passes at its end and how big it is. A batch is one meaningful piece of scope, with
 one full test run and one push (CLAUDE.md, "Usage and machine load").
 
-## Where things stand (2026-10-28)
+## Where things stand (2026-11-02)
 
-- **Built:** phase S, apart from the Lefts each of its boxes names; the fix batch from the owner's first evening
-  (open promises P34 to P50, the lessons P51 to P54); and **phase U, built and validated by the reviewer**
-  (`reviews/ui-ux-2026-10/validate-82d24cc/`: G1 to G4 fixed, both personas finish setup alone, no Today action raised the
-  count), with its second pass, the audit's leftovers (A2, A2b, A3, A5) and the bookkeeping (A1) done. Each ticked box cites its
-  tests. **Plugin API 0.3.92** (0.3.91, then a channel's folder list); the hold on API changes applies again (P33).
-- **Open in the audit's batch:** A4, the checklist's partials, each re-marked with why (C16, C23, C24, C29, C35, C43).
+- **Built:** phases S and U (each box cites its tests), the audit of judgment calls (P110: the assistant decides, rules
+  narrow), the owner's install findings of 10/30 to 11/2 (P97 to P109, apart from what each row in `open-promises.md` says
+  is left), the visible rename to Thimbleby (P102), views (two roles in one side), days off for teams and people, dated
+  to-dos with "Needs a date", the follow-up line with what is due and a due-soon band, and the Schedule's Timeline (P111,
+  P112). The UI/UX sweep's tracking sheet is reconciled with the code (`sweep-04ffc21e-tracking.md`): all six P0s fixed.
 - **Next, in order:**
-  1. **AI account hardening** (gate I-0a): B-11c's thinking off is done as designed (decided 2026-10-30), B-11b's rest (the recommendation by cost per passing answer, "Measure", the model picker's role words, effort in the
-     pre-save check, confirming each service's effort parameter), each fix checked on a low-cost model first, then the owner's
-     re-run (B-10; P30 and P31 are the owner's captures and the learning-pair groups).
-  2. **The owner's checks and the gate week with its pass bar** (P65: agreed by the owner 2026-10-28, `docs/project/gate-pass-bar-draft-2026-10-28.md`
-     and design 6.32; the week counts what the app sees, and more is expected from the testers after phase I): the laptop and phone
-     exit checks (B-6a, B-6b), an add-on installed from a real release host (B-5), the app-password check (P67: offered on the owner's Gmail, 2026-10-28; the guided mailbox built, change log 240; left: the owner connects their Gmail with it), the real-mail
-     re-run (P46). The gate's instruments already count the pass bar's rows for lost promises, the 50-message sample, sources not read and review time (change log 235).
-  3. **Phase S's leftovers**, the gate week showing which matter; those that need an add-on (calendar acts, the add-ons' channels,
-     Move to, older mail) go to the add-on builders.
-  4. **Phase I**, once I-0, I-0a, I-0c and I-0d pass.
-- **Held, not dropped:** `includes:` (P62, P39) and the test kit case for a validator that reads a file (P71) and a core op that
-  copies long text with its authorship (P72) wait for the next plugin API release; the writer walk-through (P70) waits for the
-  writing pack to register its screens.
+  1. **U2: every open P1 of the UI/UX sweep** (owner, 2026-11-02: "All open P1s first"): batches A (built), B (the
+     partly-done ones) and C (Files, Compare › Measure, Settings search, logo and colour), then one full test run, the fixes
+     it finds in one pass, and the push (CLAUDE.md: deliver the batch, test once, fix in one pass).
+  2. **The UI/UX re-review:** the hand-over to the reviewer with the reconciled sheet, every P1 Fixed or explained.
+  3. **AI account hardening** (gate I-0a), each fix checked on a low-cost model first, then the owner's re-run (B-10).
+  4. **The owner's checks and the gate week** with its pass bar (P65; design 6.32): the laptop and phone exit checks
+     (B-6a, B-6b), an add-on installed from a real release host (B-5), the guided Gmail mailbox (P67), the real-mail re-run (P46).
+  5. **Phase I:** I-0 to I-0d, then **I-0p, the public repository** (P113), then the installers (I-1), then the tester
+     milestone with **the first public alpha** (I-2).
+- **Held, not dropped:** `includes:` (P62, P39) and the test kit cases P71 and P72 wait for the next plugin API release; the
+  writer walk-through (P70) waits for the writing pack to register its screens; the plan record, sprints and milestones on
+  the Timeline, and measures from another tool's data (P112 items 2 and 7) are the project management pack's (C2).
 - **Status lives here and in `open-promises.md`;** finished promises move to `open-promises-done.md`; finished roadmap work to
   `roadmap-done.md`.
 
@@ -58,6 +56,11 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   AI account hardening, then the gate week on the core as built, then phase I (installers; the first milestone ends there),
   then C (the writing pack), P (the other packs), D (sign-off), L-more and E, then Publish 1.0 once the owner finalizes scope
   (owner, 2026-10-22: the gate week comes once the core is built; 2026-10-26: phase U before the gate week).
+- **Public and private repositories** (owner, 2026-11-02, P113): from the first public alpha, the product lives in a new
+  public repository holding only the code and public-level documentation, with its releases; this repository becomes the
+  private coordinator (design, decisions, roadmap, reviews, session instructions). The split is built in phase I before the
+  installers (I-0p), so every installer and release publishes from the public repository; the first public alpha is the
+  tester milestone (I-2), after the UI/UX re-review and the gate week.
 - **The first milestone** (owner, 2026-10-19): the core complete, with full UI and code reviews approved, and the installers
   (phases B, S and I), published as the free core release (the free core's own phase I item, I-3). 1.0 is a moving target until
   the owner finalizes scope; it ships on plugin API 0.x. There is no go/no-go date: the 2026-10-30 one was set aside on
@@ -76,20 +79,11 @@ full test run and one push (CLAUDE.md, "Usage and machine load"). Every open ite
 rough (half a day to two days; the batches from phase C on are sized when they are reached). The phase sections below
 keep each item's full text.
 
-1. **S1-1 Promises core (built; the owner's learning run O3 is its last step)** (0 open items; size: about a day)
-    - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
-    - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
+The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
 
-2. **S1-2 What the person owes and misses (built)** (0 open items; size: about two and a half days)
-    - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
-    - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
-    - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
-    - *Exit:* a journey test for each; the stance gate holds a design question drafted to someone the person works alongside; a draft to someone outside a restricted message's group draws only on the open one; the style pair passes; the new learning pairs pass.
-
-3. **S1-3 Ready for the gate week (built; the gate week is next)** (0 open items; size: about a day and a quarter)
-    - *Covers:* *Sign-in sources taken in quietly* (S1, designer's F6: sources a sign-in adds use the quiet intake, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line; a new item in S1); *A first success in five minutes* (S1); *The gate week's instruments* (S1).
-    - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account; and (the designer's notes for later batches) *Work the assistant releases on its own keeps the person's hours* (design 6.35).
-    - *Exit:* the owner can start the two measured days; journeys J2 and J6 pass with one total, one go and one "Look over what was found" line.
+0. **U2 Every open P1 of the UI/UX sweep, then the re-review** (the rows still open in `sweep-04ffc21e-tracking.md`, "Open after reconciliation"; size: about a day and a half)
+    - *Covers:* batch A (X31, X48, X50, X52, X53, X54, X62, X63, X65; built), batch B (every P1 marked In progress), batch C (X46 Files, X51 Compare › Measure, X55 Settings search, X56 logo and colour); the core items of the designer's 11/2 lessons the owner took (P112: views, days off, dated to-dos, the follow-up line and band, the Timeline; built).
+    - *Exit:* every P1 row Fixed with its test, or explained with the owner's word; one full test run green on CI; the hand-over to the reviewer with the sheet.
 
 4. **B-5 Sources and accounts** (1 open item, plus the numbered wave 5 entry; size: about one to two days)
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
@@ -144,12 +138,17 @@ keep each item's full text.
     - *Covers:* *Gentle suggestions with choices*; *Talking to Reginald*; *The core reads as a daily assistant*; *The outcome, measured* (S5).
     - *Exit:* phase S's exit test: the Quality screen shows the outcome measures from the owner's measured week.
 
+15b. **I-0p The public repository** (P113; size: about a day)
+    - *Covers:* the export to the public repository, the split checks, the public docs, the packs and the catalog pinned to release tags, the CI split and the repository names (phase I, I-0p items).
+    - *Exit:* an export of the current code builds and passes the full suites in a fresh public repository with no internal file in it, and a pack installs from its release tag.
+
 16. **I-1 Installers, name and icons** (16 open items; size: about two sessions, the old estimate for all of phase I)
     - *Covers:* every installer item of phase I: the CI build from a tag, install places, app-data places, opening the app, add-ons beside the app, updates, signing, *A name and icons*, *Nothing made-up ships*, *How it is built*, *Add-ons in an installed app*, the system vault, the *Exit test*; and *A launcher for people who never open a terminal* (phase B, moved here).
     - *Exit:* phase I's exit test on a clean Mac and a clean Windows machine: download, install, open, finish the walkthrough to the first result, quit, reopen with the data still there, update, uninstall with the data kept.
 
 17. **I-2 The tester milestone and the website** (5 open items; size: about half a day, then the owner's decisions)
     - *Covers:* open promise P24: *the content brief for the website's session* and *keeping the website in step with releases* (phase I, "The website"); the tester invitation items: *the release build fills in its catalog and feedback addresses*, *Mail and calendar sign-in approval for testers and launch*; and the tester milestone paragraph at the top of phase I.
+    - *Also covers:* the first public alpha (P113): a tagged release in the public repository with its installers and release notes.
     - *Exit:* the first content brief is sent; a small invited group can install and connect mail, and the website says what to expect.
 
 18. **Tester weeks (testers)** (no items; size: two calendar weeks)
@@ -900,6 +899,20 @@ code. Nearly all is built or planned. What is left, in two batches:
 
 ## Phase I: installers for Windows and macOS (after phase S)
 
+- [ ] [I-0p] **The product in its own public repository** (owner, 2026-11-02, P113: "lets put this into the path to
+  1.0"): a one-way export builds the public tree from an allowlist of paths (code, tests, the fictional workspaces, the
+  public docs) and pushes it with a fresh history, one commit per release; a blocking check refuses an export holding
+  anything internal (internal doc names, review paths, session notes, private pack names), beside the specificity scan.
+  Done when an export passes the full suites in the public repository and contains no file outside the allowlist.
+- [ ] [I-0p] **The self-check split into code checks and docs checks:** the code checks run in both repositories; the
+  checks that read decisions, the change log and the roadmap run only in the private one.
+- [ ] [I-0p] **Public documentation:** README, install, getting started, the plugin guide and the plugin API notes,
+  contributing and security notes, and a short public architecture note that the code's design citations point to (or the
+  export drops the citations).
+- [ ] [I-0p] **Packs and the catalog pin the public release tags** instead of this repository's working branch, so they
+  build without access to the private coordinator.
+- [ ] [I-0p] **CI split and names:** the full suites run in the public repository (free minutes); this one runs the docs
+  checks and scans. The owner renames this repository (private) and creates the public "Thimbleby"; the owner's clicks.
 - [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches
   the app, so the user needs to be able to reboot it"): the app's icon starts it when it isn't running and opens the page
   when it is; a page the browser shows when the app can't be reached says plainly that it isn't running and how to start

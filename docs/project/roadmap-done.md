@@ -3064,3 +3064,21 @@ personas (`reviews/ui-ux-2026-10/validate-82d24cc/`): G1 to G4 fixed, phase U cl
   `tests/test_brief.py::test_a_persons_own_action_does_not_make_an_overnight_requested_action_line`,
   `web/src/components/BriefCard.test.tsx`, "a requested action names who asked and opens the linked calendar entry");
   the owner's AI re-run checks whether the assistant ties such a to-do to its calendar entry.
+
+## Batches S1-1 to S1-3 (built; moved from the plan in batches on 2026-11-02)
+
+1. **S1-1 Promises core (built; the owner's learning run O3 is its last step)** (0 open items; size: about a day)
+    - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
+    - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
+
+2. **S1-2 What the person owes and misses (built)** (0 open items; size: about two and a half days)
+    - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
+    - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
+    - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
+    - *Exit:* a journey test for each; the stance gate holds a design question drafted to someone the person works alongside; a draft to someone outside a restricted message's group draws only on the open one; the style pair passes; the new learning pairs pass.
+
+3. **S1-3 Ready for the gate week (built; the gate week is next)** (0 open items; size: about a day and a quarter)
+    - *Covers:* *Sign-in sources taken in quietly* (S1, designer's F6: sources a sign-in adds use the quiet intake, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line; a new item in S1); *A first success in five minutes* (S1); *The gate week's instruments* (S1).
+    - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account; and (the designer's notes for later batches) *Work the assistant releases on its own keeps the person's hours* (design 6.35).
+    - *Exit:* the owner can start the two measured days; journeys J2 and J6 pass with one total, one go and one "Look over what was found" line.
+
