@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 282. Setup's People step, and a step count that matches the rail (2026-11-02; P103, X68)
+
+| Where | Before | Now |
+|---|---|---|
+| People suggested in setup (`engine/people_suggestions.py`) | An unsubscribe address with a code for a local part was offered, with a name made from the code | An address whose local part is a code is never suggested; unsubscribe, bounce and mailer words join the default list of addresses that aren't people |
+| Adding them | Two ticks per person beside or below each row, then Add these | Tick people, then choose once where those ticked belong (Personal by default), then Add these; one layout per row |
+| The step count | "Step 7 of 7" beside a rail of eight | Every row of the rail is counted: "Step 7 of 8", the last row "8 of 8" |
+
 ## 281. Setup starts the reading, Today shows what came of it (2026-11-02; P99)
 
 | Where | Before | Now |

@@ -21,6 +21,22 @@ person's own cloud drive. The pill shape is the brand's.
 **Impact:** phase I's rename is split: the visible part now, the command and code later. The design text changes with
 each build. No change to scope. Change log: none.
 
+## 2026-11-02: Setup's People step suggests only people, and adds the ticked ones in one choice (P103)
+
+**Decided:**
+- An address whose local part is a code (an unsubscribe or bounce address) is never suggested as a person.
+- The person ticks people, then chooses once where those ticked belong, Personal by default. To put someone on a second
+  side, they add them again.
+- The setup count numbers every row its rail shows.
+
+**Decided by:** the owner's review of the step on their install; the shape is the main session's.
+
+**Why:** an unsubscribe address was offered as a person, rows changed layout with the length of a name, two ticks per
+person was more than the step needs, and "Step 7 of 7" sat beside eight rows.
+
+**Impact:** design 7.x (setup steps), the default of `ui.walkthrough.not_people_addresses` (description updated). No new
+setting. No change to scope. Change log: section 282.
+
 ## 2026-11-02: Setup starts the reading, Today shows what came of it (P99)
 
 **Decided:**
