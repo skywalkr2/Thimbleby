@@ -817,3 +817,22 @@ def test_the_new_signal_kind_is_known_to_the_records():
 
     kinds = Signal.model_fields["kind"].annotation.__args__
     assert "change_requested" in kinds and {"reworded", "dropped", "routed", "draft_edited"} <= set(kinds)
+
+
+def test_moving_a_question_to_someone_else_keeps_its_id_so_a_later_op_in_the_same_answer_still_finds_it(env):
+    """A question's id never changes when it goes to someone else, so marking it asked in the same answer applies too
+    (an earlier tool renamed the record on a move and the next op named the old id, refusing the whole answer)."""
+    _, cfg, store = env
+    with store.transaction() as tx:
+        qid = tx.create("question", {"to": pm_of(cfg), "title": "Which venue holds forty"}, _TEST).id
+    other = other_of(cfg)
+    person_op(env, {"op": "question.move", "id": qid, "to": other})
+    apply_as_person(
+        store,
+        cfg,
+        [{"op": "question.move", "id": qid, "to": pm_of(cfg)}, {"op": "question.mark_sent", "id": qid}],
+        "asked someone else",
+    )
+    moved = question_of(store, qid)
+    assert moved["to"] == pm_of(cfg) and moved["status"] == "sent"
+    assert [q.id for q in store.read().list("question") if q.data.get("title") == "Which venue holds forty"] == [qid]
