@@ -3,6 +3,7 @@
 // line that waits for the person's yes opens Today's own line; the rest open their record. The card closes for the day,
 // which is remembered in this browser only and is no signal of anything. The Monday form also holds the week's goals
 // (kept as confirmed) and the message to whoever the person reports to.
+import { plainDates } from "../lib/read";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useIsNarrow } from "../lib/media";
@@ -392,7 +393,8 @@ function Goals(props: { goals: NonNullable<Brief["goals"]> }) {
               <p className="hint">{goals.confirmed ? t("brief.goals.confirmed") : t("brief.goals.proposed")}</p>
               <ol className={styles.goalList}>
                 {shown.map((g) => (
-                  <li key={g}>{g}</li>
+                  // A goal proposed from a to-do keeps its words, with any year-month-day written as a date reads.
+                  <li key={g}>{plainDates(g)}</li>
                 ))}
               </ol>
             </>

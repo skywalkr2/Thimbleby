@@ -367,6 +367,13 @@ test("the Monday briefing lists the week by who owns it, says how much Today alr
   expect(screen.getByText("2 more things are already on Today.")).toBeInTheDocument();
 });
 
+test("a proposed goal taken from a to-do's own words shows its year-month-day as a date reads", async () => {
+  await show({ ...MONDAY, goals: { ...GOALS_PROPOSED, proposed: ["Send the headcount by 2026-10-21.", "Ship the proof", "Plan the launch"] } });
+  const block = (await screen.findByRole("heading", { name: "Goals for the week" })).closest("[data-block]") as HTMLElement;
+  expect(block.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  expect(within(block).getAllByRole("listitem")[0].textContent).toMatch(/^Send the headcount by \w{3}, \w{3} 21\.$/);
+});
+
 test("the proposed goals are confirmed as they are in one press, and Undo sends back what they replaced", async () => {
   const user = userEvent.setup();
   const calls = (await show(MONDAY, { "PUT brief/goals": () => ({ previous: [] }) })).calls;
