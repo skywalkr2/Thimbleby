@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 281. Setup starts the reading, Today shows what came of it (2026-11-02; P99)
+
+| Where | Before | Now |
+|---|---|---|
+| Your promises step (7.8) | Offered the look back with its cost and a Start, then listed the promises found, one follow-up to copy and "What was read" inside setup | Says what the assistant will look for and that it reads in the background; no findings, counts or read list. The Start and the cost are Today's (the first-Go line or the source's own), and what was found is Today's one "Look over what was found" line with Keep, Not right and Undo |
+| The step's standing (7.8) | Done once the look back had been started | Done once the look back is set up (its requests exist, started or waiting for Today's Start) and the step was reached |
+| The rule (7.8) | Not stated | Every setup step that reads mail or files starts the work; Today shows what came of it |
+
 ## 280. Shipped prices for a service whose model list has none (2026-11-02; P97)
 
 | Where | Before | Now |

@@ -1,6 +1,6 @@
 // What every journey checks on each screen the person sees, and how it reaches the made-up services.
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /** Where the fake services answer over plain HTTP (the config sets the ports; the mail and new-start journeys have their own). */
 export const fakeAddress = (
@@ -117,6 +117,34 @@ export async function connectedAgain(page: Page) {
 export async function pressStart(page: Page) {
   const welcome = page.getByRole("heading", { level: 2, name: "Welcome", exact: true });
   if (await welcome.isVisible()) await page.getByRole("main").getByRole("button", { name: "Start", exact: true }).click();
+}
+
+/** The look back over the mail starts on Today, not in setup: the first Start (or each source's own) is pressed there, with
+ * its cost shown on the line. Presses every such line until none is left. */
+export async function startOnToday(page: Page) {
+  const lines = page.locator('[data-queue-line="first_go"], [data-queue-line="intake_go"]');
+  await expect(lines.first()).toBeVisible({ timeout: 60_000 });
+  for (let round = 0; round < 6 && (await lines.count()) > 0; round++) {
+    const before = await lines.count();
+    await lines.first().getByRole("button", { name: "Start", exact: true }).click();
+    await expect(lines).not.toHaveCount(before, { timeout: 30_000 });
+  }
+  await expect(lines).toHaveCount(0, { timeout: 30_000 });
+}
+
+/** Waits until `expected` lines of one kind are on Today. While the cursor is in the queue, lines that arrive wait behind
+ * "Show N new items" so the list doesn't move under it; this presses that button as the lines come. */
+export async function revealNewLines(page: Page, line: Locator, expected: number) {
+  const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
+  await expect
+    .poll(
+      async () => {
+        if (await showNew.count()) await showNew.first().click();
+        return line.count();
+      },
+      { timeout: 90_000 },
+    )
+    .toBe(expected);
 }
 
 /** On a phone the step list is behind a Steps button; open it so a step can be chosen. Nothing happens on a wider window. */

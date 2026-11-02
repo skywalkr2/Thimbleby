@@ -663,6 +663,22 @@ def test_your_promises_is_not_ticked_before_its_screen_was_reached_even_when_the
     assert _steps(c)["promises"]["done"], "the first result is on the screen, so its own thing happened"
 
 
+def test_the_look_back_counts_as_set_up_while_it_waits_for_the_go_on_today(tmp_path):
+    """The first-result step only explains the look back; the work starts under Today's Start. So an intake request
+    that still waits for that go is the look back under way, and a failed or dismissed one is not."""
+
+    class Req:
+        def __init__(self, **data):
+            self.data = data
+
+    waiting = Req(intake="mail", state="needs_you", approval="required")
+    assert setup._looked_back([waiting])
+    assert setup._looked_back([Req(intake="mail", state="done")])
+    assert not setup._looked_back([Req(intake="mail", state="failed")])
+    assert not setup._looked_back([Req(intake="mail", state="done", dismissed=True)])
+    assert not setup._looked_back([Req(state="needs_you")])
+
+
 def test_the_add_ons_step_is_dropped_once_mail_is_connected_and_offered_only_while_something_is_off(
     tmp_path, monkeypatch
 ):

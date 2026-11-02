@@ -397,6 +397,25 @@ test("Look over on an intake opens its items in the details: nothing is marked s
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/confirm")?.body).toEqual({ changesets: ["CS-1", "CS-2"] }));
 });
 
+test("what the first look back over the mail found is one line, Look over what was found, with its count, and Look over opens the review", async () => {
+  const user = userEvent.setup();
+  const found: Line = {
+    ...intakeReview,
+    count: 2,
+    changesets: ["CS-1", "CS-2"],
+    items: [todo(0, "Send the headcount"), todo(1, "Book the hall", { key: "item:CS-2:0", changeset: "CS-2", request: "REQ-2" })],
+  };
+  show([found]);
+  expect(await screen.findByText("Look over what was found in Inbox: 2 items")).toBeInTheDocument();
+  expect(document.querySelectorAll('[data-queue-line="intake_review"]')).toHaveLength(1);
+  expect(screen.queryByText("Send the headcount")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Look over" }));
+  const open = row("intake_review");
+  expect(await within(open).findByText("Send the headcount")).toBeInTheDocument();
+  expect(within(open).getByRole("button", { name: "All looks good" })).toBeInTheDocument();
+  expect(within(open).getAllByRole("button", { name: /^Not right/ }).length).toBeGreaterThan(0);
+});
+
 test("the intake line has no Mark as seen: the only way off Today is to look it over and say it looks good", async () => {
   const user = userEvent.setup();
   show([intakeReview]);

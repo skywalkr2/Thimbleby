@@ -6,14 +6,14 @@
 // file the app prints are all the journey reads. Names come from the fictional workspace the fake services serve.
 //
 // What the fakes can't produce, and what is asserted instead:
-// - the sent folder taken by itself is for the plain mailbox; this journey signs in to the add-on, so it asserts the
-//   step says the sent mail isn't read yet and offers "Choose the Sent folder", then shows Done after moving on;
+// - the sent folder taken by itself is for the plain mailbox; this journey signs in to the add-on, and the Your promises
+//   step shows no read list any more, so choosing the Sent folder is on Sources (its own tests);
 // - a failed check that names the retired model needs the app to pick it; the app never does, so the journey asserts the
 //   pick is a usable model and the retired one is not on offer (the replace line is covered by WelcomeAi.test.tsx).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, fakeAddress, openView, pressStart, visit, widerThanWindow, type Info, type Requests, type SignInSeen } from "./journey-helpers";
+import { collectProblems, fakeAddress, openView, pressStart, startOnToday, visit, widerThanWindow, type Info, type Requests, type SignInSeen } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_EVENING_FAKE_PORT", 8761);
 const RETIRED = "fake-retired-text";
@@ -141,22 +141,17 @@ test.describe.serial("journey: the owner's first evening", () => {
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
     await main.getByRole("button", { name: "Continue" }).click();
 
-    // 4. Your promises, in its place after mail; started here, so the bill and the rest are read before Today.
+    // 4. Your promises, in its place after mail: it only says what the assistant will look for and that it reads in the
+    // background. Nothing is started, listed or counted here; the Start is on Today.
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
     expect(await widerThanWindow(page, "Your promises")).toEqual([]);
-    const offer = main.locator('[data-first-promises="offer"]');
-    await expect(offer.getByRole("button", { name: "Start", exact: true })).toBeVisible({ timeout: 30_000 });
-    await offer.getByRole("button", { name: "Start", exact: true }).click();
-    await expect.poll(async () => (await requests()).work, { timeout: 90_000 }).toBeGreaterThan(0);
-    // An add-on's mail has no sent folder taken by itself (that is for the plain mailbox): the screen says so and offers it.
-    await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toBeVisible();
-    // The choice opens right there with the usual name first (an add-on's mail can't list its folders), and Cancel leaves it.
-    // It stays open while the first run is working and the list of what was read is drawn again as the run moves on.
-    await main.getByRole("button", { name: "Choose the Sent folder" }).click();
-    // The list waits for the add-on's answer about its folders, which takes longer while the first run is working.
-    await expect(main.getByRole("combobox", { name: "Folder of the mail you sent" })).toHaveValue("Sent", { timeout: 15_000 });
-    await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
-    await main.getByRole("button", { name: "Cancel" }).click();
+    await expect(main.locator('[data-first-promises="background"]')).toContainText("the assistant reads your recent mail in the background", {
+      timeout: 30_000,
+    });
+    await expect(main.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toHaveCount(0);
+    await expect(main.getByRole("heading", { name: /Promises found|What was read|What it will read/ })).toHaveCount(0);
+    expect((await requests()).work).toBe(0);
     await main.getByRole("button", { name: "Continue" }).click();
     // Backups, then People.
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
@@ -182,8 +177,10 @@ test.describe.serial("journey: the owner's first evening", () => {
     for (const step of ["workspace", "work", "ai", "mail", "backup", "people"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
     await main.getByRole("button", { name: "Go to Today" }).click();
 
-    // 6. Today.
+    // 6. Today. The bill and the rest are read under its Start, so they are on screen after it.
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await startOnToday(page);
+    await expect.poll(async () => (await requests()).work, { timeout: 90_000 }).toBeGreaterThan(0);
     const header = page.getByRole("banner");
     // The header has no assistant button. This is a person with only their own life, so the search field says what it finds in
     // those words, and its Ask row (in the list under the field) names the assistant.

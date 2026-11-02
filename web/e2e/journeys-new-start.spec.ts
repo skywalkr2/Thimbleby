@@ -15,6 +15,8 @@ import {
   collectProblems,
   fakeAddress,
   pressStart,
+  revealNewLines,
+  startOnToday,
   visit,
   type Info,
   type Requests,
@@ -217,18 +219,15 @@ test.describe.serial("journey: new start", () => {
     expect(scriptedSent.ok).toBe(true);
     await main.getByRole("button", { name: "Continue" }).click();
 
-    // 5. Your promises, right after mail and before backups or people: the look back over the last 14 days of my own mail
-    // is offered with what it would cost, and the assistant has been asked nothing.
+    // 5. Your promises, right after mail and before backups or people: it says what the assistant will look for and that it
+    // reads in the background. It shows no findings, no cost and no list of what was read; nothing has been asked yet.
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
-    const offer = main.locator('[data-first-promises="offer"]');
-    await expect(offer.getByRole("heading", { level: 3, name: "Look back over the last 14 days of your own mail" })).toBeVisible({
+    await expect(main.locator('[data-first-promises="background"]')).toContainText("the assistant reads your recent mail in the background", {
       timeout: 30_000,
     });
-    await expect(offer).toContainText(
-      new RegExp(`${handedIn} items to look over\\. (About \\$\\d+\\.\\d\\d|Less than a cent) in all\\. Nothing is read by the assistant until you press Start\\.`),
-    );
-    // The sent mail is in the plan with the inbox and the calendar, by itself: nobody chose a folder.
-    await expect(offer.getByRole("list", { name: "What it will read" })).toContainText("Your sent mail");
+    await expect(main.getByRole("heading", { name: /Promises found|What was read|What it will read/ })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toHaveCount(0);
     // Nothing that asks about projects, areas, packs or more accounts is on this screen.
     await expect(main.getByText("Optional extras")).toHaveCount(0);
     await visit(page);
@@ -236,32 +235,6 @@ test.describe.serial("journey: new start", () => {
     seen = await service();
     // The inbox and the sent folder are each read once; nobody chose a folder.
     expect(seen).toMatchObject({ mail_reads: 2, calendar_reads: 1, unauthorized: 0 });
-
-    // Start: one request for each item taken in, each item once, and then the promise it found is on the screen.
-    await offer.getByRole("button", { name: "Start", exact: true }).click();
-    await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
-    const asked = await requests();
-    // The work mail the rules could not place was sorted in one run for each source's batch (the inbox, and the sent mail
-    // when the rules leave it unplaced); sorting is not counted as work.
-    expect(asked.sorting).toBeGreaterThanOrEqual(1);
-    expect(asked.sorting).toBeLessThanOrEqual(2);
-    for (const title of [...mail, ...events, ...sent]) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
-    const promises = main.getByRole("list", { name: "Promises found" });
-    await expect(promises).toBeVisible({ timeout: 60_000 });
-    const mine = promises.locator("li", { hasText: "Send the venue list." });
-    await expect(mine).toHaveCount(1);
-    await expect(mine).toContainText("You owe this");
-    // The quote is shown with its date in words (batch 3), though the evidence kept is the exact line.
-    await expect(mine).toContainText(`From: “${info.people[0]} will send the venue list by Mon, Nov 2.”`);
-    // The promise that is only in the mail I sent is found too, though no folder was chosen.
-    const fromSent = promises.locator("li", { hasText: "Send the revised budget." });
-    await expect(fromSent).toHaveCount(1);
-    await expect(fromSent).toContainText("You owe this");
-    await expect(fromSent).toContainText(`From: “${info.people[0]} will send the revised budget by Thu, Nov 5.”`);
-    await expect(main.getByRole("button", { name: "Choose the Sent folder" })).toHaveCount(0);
-    // Nobody else owes anything yet, so there is no follow-up to copy.
-    await expect(main.getByRole("region", { name: "One follow-up is ready" })).toHaveCount(0);
-    await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
 
     // 6. Backups: a folder outside the workspace, checked before it is saved.
@@ -291,9 +264,16 @@ test.describe.serial("journey: new start", () => {
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
-    // The look back was started on the walkthrough's own screen, so Today has nothing to start.
-    await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
-    await expect(page.locator('[data-queue-line="intake_go"]')).toHaveCount(0);
+    // The look back waits for the Start on Today, which shows its cost first. One request for each item taken in, each item
+    // once, and the promises found arrive below as lines to look over, never in setup.
+    await startOnToday(page);
+    await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
+    const asked = await requests();
+    // The work mail the rules could not place was sorted in one run for each source's batch (the inbox, and the sent mail
+    // when the rules leave it unplaced); sorting is not counted as work.
+    expect(asked.sorting).toBeGreaterThanOrEqual(1);
+    expect(asked.sorting).toBeLessThanOrEqual(2);
+    for (const title of [...mail, ...events, ...sent]) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
     // The first backup was made while setting up, so Today doesn't ask for one and the header chip doesn't say one is needed.
     await expect(page.getByRole("region", { name: "Backup", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^App status: / })).not.toContainText("Backup needed");
@@ -313,6 +293,7 @@ test.describe.serial("journey: new start", () => {
     const found = page.locator('[data-queue-line="intake_review"]');
     // Only what needs a look is counted: a thank-you, an agreement or a plain announcement is filed quietly.
     const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+    await revealNewLines(page, found, 3);
     await expect(found.filter({ hasText: "Your inbox" })).toContainText(
       `Look over what was found in Your inbox: ${items(mailToCheck.length)}`,
       { timeout: 60_000 },

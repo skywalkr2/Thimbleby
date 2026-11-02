@@ -21,6 +21,27 @@ person's own cloud drive. The pill shape is the brand's.
 **Impact:** phase I's rename is split: the visible part now, the command and code later. The design text changes with
 each build. No change to scope. Change log: none.
 
+## 2026-11-02: Setup starts the reading, Today shows what came of it (P99)
+
+**Decided:**
+- The Your promises step only explains: what the assistant will look for (promises the person made and promises made to
+  them, in recent mail) and that it reads in the background. It shows no findings, no counts and no list of what was read.
+- The reading's Start and its cost stay where they already were on Today (the first-Go line, or a source's own line), and
+  what was found is the existing "Look over what was found" line there, with Keep, Not right and Undo.
+- The rule for every setup step that reads mail or files: setup starts the work, Today shows what came of it.
+- The step counts as Done once the look back is set up (its requests exist) and the step was reached, not only once the
+  reading has started.
+- Choosing a mailbox's Sent folder is no longer offered inside this step; it stays on the Sources screen.
+
+**Decided by:** the owner ("this reading / finding promises should be in the background and not show results until you get
+to the main screen - otherwise if someone attaches a real work account it will look awful"); the shape is the main session's.
+
+**Why:** a real work account would put its promises and the list of everything read on a setup screen, before the person
+has seen the app's main screen.
+
+**Impact:** design 7.8 (setup steps) and the step's component. No API, setting or scope change; what is read and the
+estimate and approval rules are unchanged. Change log: section 281.
+
 ## 2026-11-02: The app ships published prices for services whose model list has none (P97)
 
 **Decided:**

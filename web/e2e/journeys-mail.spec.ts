@@ -13,6 +13,8 @@ import {
   fakeAddress,
   openView,
   pressStart,
+  revealNewLines,
+  startOnToday,
   visit,
   widerThanWindow,
   type Info,
@@ -39,7 +41,7 @@ test.describe.serial("journey: mail", () => {
     expect(problems.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
   });
 
-  test("J2. Sign in to my mail and calendar: the look back is offered with its estimate, one Start reads it, and what was found is one line for each source on Today", async ({
+  test("J2. Sign in to my mail and calendar: Your promises only explains, the Start is on Today, and what was found is one line for each source there", async ({
     page,
   }) => {
     test.setTimeout(240_000);
@@ -132,38 +134,18 @@ test.describe.serial("journey: mail", () => {
     expect(handedIn).toBeGreaterThan(recentMail.length + recentEvents.length);
     expect(noted).toHaveLength(0);
 
-    // The next screen, Your promises, comes right after Mail and calendar, before anything about backups or people. Once
-    // the first read has happened it offers the look back over the last 14 days of my own mail, with what it would cost,
-    // and the assistant has been asked nothing.
+    // The next screen, Your promises, comes right after Mail and calendar, before anything about backups or people. It says
+    // what the assistant will look for and that it reads in the background; it shows no findings, no cost and no list of
+    // what was read, and the assistant has been asked nothing.
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
-    const offer = main.locator('[data-first-promises="offer"]');
-    await expect(offer.getByRole("heading", { level: 3, name: "Look back over the last 14 days of your own mail" })).toBeVisible({
+    await expect(main.locator('[data-first-promises="background"]')).toContainText("the assistant reads your recent mail in the background", {
       timeout: 30_000,
     });
-    await expect(offer).toContainText(
-      new RegExp(`${handedIn} items to look over\\. (About \\$\\d+\\.\\d\\d|Less than a cent) in all\\. Nothing is read by the assistant until you press Start\\.`),
-    );
+    await expect(main.getByRole("heading", { name: /Promises found|What was read|What it will read/ })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
     await visit(page);
     expect((await requests()).work).toBe(0);
-
-    // Start: one request for each item taken in, each item once, and the offer gives way to what was found. The stand-in
-    // rules find the person's own to-dos in these messages (mail from their own inbox), and a to-do of theirs the look back
-    // found is one of their promises, so the screen lists them as what they owe.
-    await offer.getByRole("button", { name: "Start", exact: true }).click();
-    await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
-    const asked = await requests();
-    // The work mail the rules could not place was sorted in one run for the whole batch; it is not counted as work.
-    expect(asked.sorting).toBe(1);
-    for (const title of [...mail, ...events]) {
-      expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
-    }
-    for (const title of aside) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
-    const promises = main.locator('[data-first-promises="found"]');
-    await expect(promises.getByRole("heading", { level: 3, name: "Promises found" })).toBeVisible({ timeout: 60_000 });
-    await expect(promises.getByText("You owe this").first()).toBeVisible();
-    await expect(main.locator('[data-first-promises="none"]')).toHaveCount(0);
-    await visit(page);
 
     // Backups and People are left for later, and Done names what was skipped.
     await main.getByRole("button", { name: "Continue" }).click();
@@ -180,13 +162,21 @@ test.describe.serial("journey: mail", () => {
     await main.getByRole("button", { name: "Go to Today" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
 
-    // The sign-in's sources were read at once and taken in when I pressed Start, so Today has nothing to start: no first-go
-    // line, no line waiting for a go.
+    // The sign-in's sources were read at once; taking them in waits for the Start on Today, which shows its cost first. One
+    // request for each item taken in, each item once. The stand-in rules find the person's own to-dos in these messages,
+    // and they arrive below as lines to look over.
     const agenda = page.getByRole("region", { name: "Schedule" });
     const came = page.getByRole("region", { name: "Came in" });
     await expect(came.getByText(recentMail[0])).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
-    await expect(page.locator('[data-queue-line="intake_go"]')).toHaveCount(0);
+    await startOnToday(page);
+    await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
+    const asked = await requests();
+    // The work mail the rules could not place was sorted in one run for the whole batch; it is not counted as work.
+    expect(asked.sorting).toBe(1);
+    for (const title of [...mail, ...events]) {
+      expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
+    }
+    for (const title of aside) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
 
     // Today lists the recent mail on Came in and today's meetings on the agenda; what is older or further off is not.
     for (const title of recentMail) await expect(came.getByText(title, { exact: true })).toBeVisible();
@@ -216,6 +206,7 @@ test.describe.serial("journey: mail", () => {
     const calendar = found.filter({ hasText: "Your calendar" });
     // Only what needs a look is counted: a thank-you, an agreement or a plain announcement is filed quietly.
     const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+    await revealNewLines(page, found, 2);
     await expect(inbox).toContainText(`Look over what was found in Your inbox: ${items(mailToCheck.length)}`, { timeout: 60_000 });
     await expect(calendar).toContainText(`Look over what was found in Your calendar: ${items(eventsToCheck.length)}`, { timeout: 60_000 });
     await expect(found).toHaveCount(2);

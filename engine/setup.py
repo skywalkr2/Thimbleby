@@ -294,18 +294,11 @@ def _jobs_given(view: Any, cfg: Any) -> bool:
 
 
 def _looked_back(requests: list[Any]) -> bool:
-    """Whether the look back over the mail ran: an intake request was started (not still waiting for a go) and didn't
-    fail."""
-    from engine.dispatcher import waits_on_first_go
-    from engine.source_intake import waits_on_go
-
+    """Whether the look back over the mail is under way: setup made an intake request for it (waiting for the person's
+    go on Today, running or finished) and it didn't fail. The first-result step only explains it; the work starts on
+    Today."""
     return any(
-        r.data.get("intake")
-        and not r.data.get("dismissed")
-        and r.data.get("state") != "failed"
-        and not waits_on_go(r.data)
-        and not waits_on_first_go(r.data)
-        for r in requests
+        r.data.get("intake") and not r.data.get("dismissed") and r.data.get("state") != "failed" for r in requests
     )
 
 
