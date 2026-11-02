@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: when the measurements arrive
+    waiting_for: when the measurements arrive
     evidence:
       quote: I'll send Ansel the estimate when the measurements arrive.

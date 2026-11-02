@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 23, 2026
+    due: '2026-11-23'
     evidence:
       quote: I've committed to sending Iona the analysis by November 23, 2026.

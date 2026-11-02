@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 13, 2026
+    due: '2026-11-13'
     evidence:
       quote: I'll send Oren the logo files and usage guide by November 13, 2026.

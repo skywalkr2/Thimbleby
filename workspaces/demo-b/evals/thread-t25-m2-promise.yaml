@@ -55,5 +55,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: Monday
+    due: '2026-11-09'
     evidence:
       quote: I'll review it Monday once it arrives

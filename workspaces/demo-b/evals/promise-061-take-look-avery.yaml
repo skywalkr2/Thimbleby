@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Edda Moss
     due_words: tonight
+    due: '2026-11-02'
     evidence:
       quote: I'll take a look tonight, though I can't promise a fix.

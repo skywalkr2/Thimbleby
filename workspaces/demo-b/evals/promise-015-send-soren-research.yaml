@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 30, 2026
+    due: '2026-11-30'
     evidence:
       quote: I'll send Soren the research notes by November 30, 2026.

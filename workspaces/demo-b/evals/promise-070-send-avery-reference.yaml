@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Zella Brook
     due_words: by close of business
+    due: '2026-11-02'
     evidence:
       quote: I'll send the reference number by close of business.

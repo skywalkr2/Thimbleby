@@ -64,6 +64,28 @@ record (one optional field; plugin guide and API schema regenerated), and the cr
 own sent mail (`engine/applier.py`, `engine/since_yesterday.py`). No new setting. No change to scope. One gap: a sent mail
 whose run happened before the ask's action existed is not read again. Change log: section 285.
 
+## 2026-11-02: The assistant's date stands; the rules' reading of due words is a check (P110, J2 and J3)
+
+**Decided:**
+- A rule no longer replaces the due date the assistant gave, strips it for a condition, puts a promise on hold or ties
+  it to a calendar entry. The rules still read the words; when their reading differs, the answer goes back once with both
+  readings (`due-reading-differs`, severity `return`, configurable), and the second answer stands with no hold and no
+  stronger model. A date that still differs is kept with `due_check`.
+- No due words, or a language the rules don't read: the given date, as before. A promise said again is still turned into
+  a move of the open one, taking the rules' day when the assistant gave none.
+
+**Decided by:** the owner's rule of 2026-11-02 (rules take the mechanical cases; judgment about the work is the
+assistant's); the shape is the main session's.
+
+**Why:** a model that read "next Friday" or "once the keys arrive" with the whole message in view was overruled by a word
+list. The model's reading of a date is a judgment about the person's work.
+
+**Impact:** design 6.33 (dates, conditions), the notes prompt (the assistant gives `due`, decides `waiting_for` and the
+entry link), `action.add`'s `due_words` description. New lint key `due-reading-differs` with demo values in both
+workspaces. The cost is one return round when the readings differ, which the prompt now makes rare. No change to scope.
+Change log: section 286.
+
+
 ## 2026-11-02: One status in the header; a short line on an account card (P107)
 
 **Decided:**

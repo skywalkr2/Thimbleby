@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Ansel Wick
     due_words: by November 13, 2026
+    due: '2026-11-13'
     evidence:
       quote: I'll return your camera by November 13, 2026, Avery.

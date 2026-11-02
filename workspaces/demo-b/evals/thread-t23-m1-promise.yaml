@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Pella Dunn
     due_words: by end of day
+    due: '2026-11-02'
     evidence:
       quote: I'll confirm whether the room is booked by end of day

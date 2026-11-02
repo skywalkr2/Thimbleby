@@ -300,6 +300,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _own_promise_missed(cs, ctx)
     problems += _promise_as_fact(cs, ctx)
     problems += _due_move_missed(cs, ctx)
+    problems += _due_reading_differs(cs, ctx)
     problems += _project_start_as_fact(cs, ctx)
     problems += _decision_from_list(cs, ctx)
     problems += _decided_as_fact(cs, ctx)
@@ -1812,6 +1813,12 @@ def asks_judgment(problems: list[Problem]) -> bool:
     return any(p.severity in ("refuse", "return") and p.check in JUDGMENT_LINTS for p in problems)
 
 
+def needs_escalation(problems: list[Problem]) -> bool:
+    """Whether problems still left after the last round call for a stronger model: not the ones whose answer stands
+    once the assistant has had its say (`JUDGMENT_LINTS`)."""
+    return any(p.severity in ("refuse", "return") and p.check not in JUDGMENT_LINTS for p in problems)
+
+
 def feedback(problems: list[Problem]) -> str:
     lines = [
         (f"- op {p.op}: {p.message}" if p.op is not None else f"- {p.message}")
@@ -2363,7 +2370,7 @@ def _proposed_reminder(
 def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
     """Whether a lint still returned after the fix round holds the op: one that reaches someone else, or one of the
     scope checks or a rule's check, which hold whoever the item reaches."""
-    returned = [p for p in mine if p.severity == "return"]
+    returned = [p for p in mine if p.severity == "return" and p.check not in JUDGMENT_LINTS]
     holds = scope.HELD_LINTS | {RULE_CHECK, "singling-out"}
     owned = any(p.check in OWNER_HELD_LINTS for p in returned) and _owned_by_someone_else(op, ctx)
     return bool(returned) and (_reaches_someone_else(op, ctx) or owned or any(p.check in holds for p in returned))
@@ -2887,6 +2894,78 @@ def _due_move_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             missed[0],
         )
     ]
+
+
+def _due_differs(tx: Tx, ctx: Context, op: Any) -> str | None:
+    """How the rules' reading of an op's due words differs from what the assistant answered, in words for the
+    assistant, or None when it doesn't (no words, a language the rules don't read, the same day, the assistant naming
+    the condition itself)."""
+    from engine.due_phrases import is_condition
+
+    words = " ".join((op.due_words or "").split())
+    source = ctx.inputs.source
+    reading = _read_due(tx, ctx, source, words)
+    if reading is None:
+        return None
+    if getattr(op, "due_at_event", False):
+        return None  # the entry's own day is the due
+    given = f"you gave {op.due.isoformat()}" if op.due is not None else "you gave no date"
+    if reading.day is not None:
+        if op.due is not None and reading.day == op.due:
+            return None
+        return (
+            f"The words {words!r} read as {reading.day.isoformat()} received {reading.received.isoformat()}; {given}."
+        )
+    if not is_condition(words, language_words(ctx.cfg.language, "due_condition_words")):
+        return None
+    named = isinstance(op, ActionAddOp) and bool((op.waiting_for or "").strip())
+    if named:
+        return None
+    kind, entry = _condition(tx, ctx, source, words, reading.received)
+    found = tx.get("event", entry) if entry else None
+    if kind == "hold":
+        reads = "as waiting for something to happen, which is a promise on hold (waiting_for)"
+    elif kind == "event" and found is not None:
+        reads = f"as maybe tied to the calendar entry {found.data['title']!r} on {str(found.data['start'])[:10]}"
+        if isinstance(op, ActionAddOp):
+            reads += " (event with due_at_event true)"
+    elif op.due is not None:
+        reads = "as a condition with no date"
+    else:
+        return None
+    return f"The words {words!r} read {reads}; {given}."
+
+
+def _due_reading_differs(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """An action's due words that the rules read differently from what the assistant answered (another day, a day
+    where it gave none, or a condition: waiting for something, or tied to a calendar entry) are sent back once with both
+    readings, so the assistant makes the call. A rule on the words with no AI that never changes the answer: the
+    assistant's date and hold stand after the return, and a date the rules read differently stays marked for the person
+    to check (`_due`)."""
+    name = "due-reading-differs"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    view = ctx.store.read()
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if not isinstance(op, (ActionAddOp, ActionMoveOp, ActionUnholdOp)) or not (op.due_words or "").strip():
+            continue
+        if isinstance(op.due, MonthDay):
+            continue  # a day with no year is given its year first (`with_years`)
+        said = _due_differs(view, ctx, op)
+        if said:
+            quote = op.evidence.quote if op.evidence is not None else None
+            problems.append(
+                Problem(
+                    name,
+                    level,
+                    i,
+                    f"{said} Check which is right and answer again; keep yours if you are sure.",
+                    quote,
+                )
+            )
+    return problems
 
 
 def _project_start_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
@@ -3797,20 +3876,12 @@ def _apply_op(
         if not owners and ctx.people.pm and _on_personal(tx, ctx.cfg, op.project):
             owners = [{"person": ctx.people.pm}]  # on Personal an action that names nobody is the person's own
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
-        due, check = _due(tx, ctx, source, op.due_words, op.due)
+        named = bool((op.waiting_for or "").strip()) or op.due_at_event
+        due, check = _due(tx, ctx, source, op.due_words, op.due, settled=named)
         placed = series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg))
         due_event = placed if op.due_at_event and placed else None
-        started_on_hold = None
         if due_event:
             due, check = _event_day(tx, due_event), False
-        elif (op.due_words or "").strip() and due is None:
-            # Words that wait for something to happen put the promise on hold from the start; "before <a known
-            # entry>" is due at that entry.
-            kind, entry = _condition(tx, ctx, source, op.due_words, today)
-            if kind == "event" and entry:
-                due, check, due_event = _event_day(tx, entry), False, entry
-            elif kind == "hold":
-                started_on_hold = {"waiting_for": " ".join(op.due_words.split()), "since": today.isoformat()}
         same = _same_promise(tx, ctx, op)
         if same is not None and _exact_repeat(same, op, source, due, ctx):
             _merge_promise(tx, same, op, ctx, w, due, check, ev, today, source)
@@ -3830,7 +3901,7 @@ def _apply_op(
             "due_by_person": due is not None and _persons_own(tx, ctx),
             "on_hold": {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
             if op.waiting_for and op.waiting_for.strip()
-            else started_on_hold,
+            else None,
             "project": op.project,
             "filed_by": _filed_by(op),
             "event": placed,
@@ -4055,18 +4126,24 @@ def _next_occurrence(tx: Tx, ctx: Context, ended: Any, w: WriteContext, made: An
             made("action", found)
 
 
-def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: date | None) -> tuple[date | None, bool]:
-    """An action's due date and whether the person should check it. Words are read by the rules
-    (`engine/due_phrases.py`, with the language settings' own words) against when the input was received, and their
-    reading wins over a date the model gave. Words that tie the due to something that happens ("once the keys arrive")
-    have no date, whatever date the model gave. Other words the rules can't read keep the model's own date, marked for
-    the person to check. Without words, the given date stands. A workspace whose language the rules don't read keeps
-    the given date."""
-    from engine.due_phrases import is_condition, load_holidays, resolve
+@dataclass(frozen=True)
+class DueReading:
+    """What the rules read in an action's due words: the day (None when they read none), whether the day was read with
+    doubt, and the day the input was received. Only a reading to compare with the assistant's own, never an answer."""
+
+    day: date | None
+    doubtful: bool
+    received: date
+
+
+def _read_due(tx: Tx, ctx: Context, source: str | None, words: str | None) -> DueReading | None:
+    """The rules' reading of due words (`engine/due_phrases.py`, with the language settings' own words) against when
+    the input was received, or None when there are no words or the workspace's language isn't one the rules read."""
+    from engine.due_phrases import load_holidays, resolve
 
     language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
     if not (words or "").strip() or not language.lower().startswith("en"):
-        return given, False
+        return None
     locale = "en_US" if language.lower().startswith("en-us") else "en_GB"
     received, where = _received_at(tx, ctx, source), zone(ctx.cfg)
     saved = tx.get("source", source) if source else None
@@ -4089,13 +4166,36 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
         sender_zone=zone(ctx.cfg),
         holidays=load_holidays(settings.holiday_calendar or language),
     )
-    day = found.end or found.start
-    if day is None:
-        if given is None or is_condition(words, language_words(settings, "due_condition_words")):
-            return None, False
-        return given, True
     # One day read with doubt ("next Friday", a year-less date far ahead) is checked; a range is due at its end.
-    return day, not found.exact and found.start == found.end
+    doubtful = not found.exact and found.start == found.end
+    return DueReading(found.end or found.start, doubtful, received.astimezone(where).date())
+
+
+def _due(
+    tx: Tx,
+    ctx: Context,
+    source: str | None,
+    words: str | None,
+    given: date | None,
+    *,
+    settled: bool = False,
+) -> tuple[date | None, bool]:
+    """An action's due date and whether the person should check it. The assistant's date stands, whatever the rules
+    read in the words (`_read_due`): where their reading differs (another day, a day where the assistant gave none, no
+    day for words that wait for something while the assistant gave one) the date is kept and marked for the person to
+    check; the lint `due-reading-differs` has already asked the assistant once. A day the rules read with doubt is
+    marked even when it is the assistant's. `settled` is true when the op itself names what the words wait for. Without
+    words, or in a language the rules don't read, the given date stands as it is."""
+    reading = _read_due(tx, ctx, source, words)
+    if reading is None:
+        return given, False
+    if reading.day is None:
+        # Words the rules can't read as a day: a date the assistant gave is kept for the person to check, unless the
+        # op itself names the condition the words wait for.
+        return given, given is not None and not settled
+    if given is None:
+        return None, False
+    return given, reading.doubtful or reading.day != given
 
 
 def _condition(tx: Tx, ctx: Context, source: str | None, words: str, today: date) -> tuple[str | None, str | None]:

@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Soren Lund
     due_words: by November 25, 2026
+    due: '2026-11-25'
     evidence:
       quote: I'll send you both data files by November 25, 2026.

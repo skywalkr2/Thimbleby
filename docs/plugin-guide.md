@@ -2759,7 +2759,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the user to say who. |
 | `due` | DayOrMonthDay \| None | `None` | The day it is due, if one is stated: YYYY-MM-DD, or --MM-DD when it has no year. |
 | `past` | bool | `False` | True only when the input says the day in `due` already happened, so a day with no year takes the latest such day before the input came. |
-| `due_words` | str \| None | `None` | The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The rules read the date from them, and their date wins over `due`. |
+| `due_words` | str \| None | `None` | The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The rules also read them and send the answer back once when their day differs from your `due`; your date stands after that. |
 | `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
 | `said_by` | str \| None | `None` | Who said it, by name or id, when the input names them. |

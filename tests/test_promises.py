@@ -65,7 +65,7 @@ def made_action(store, outcome: dict) -> dict:
     return action(store, ref["id"])
 
 
-def test_a_promise_keeps_who_it_is_owed_to_how_it_is_known_and_its_date_from_the_rules(env):
+def test_a_promise_keeps_who_it_is_owed_to_how_it_is_known_and_the_date_the_assistant_read(env):
     _, _, store = env
     owner = someone()
     said = "I will send the floor plan by Tuesday."
@@ -78,13 +78,13 @@ def test_a_promise_keeps_who_it_is_owed_to_how_it_is_known_and_its_date_from_the
             "basis": "said",
             "said_by": owner["id"],
             "due_words": "by Tuesday",
-            "due": "2026-12-01",
+            "due": "2026-10-13",
             "evidence": {"quote": said},
         }
     )
     (outcome,), _ = run(env, pasted=said)
     made = made_action(store, outcome)
-    assert made["due"] == date(2026, 10, 13).isoformat()  # the rules' reading wins over the model's date
+    assert made["due"] == date(2026, 10, 13).isoformat()  # the rules read the same day: nothing to check
     assert (made["due_words"], made["due_check"]) == ("by Tuesday", False)
     assert (made["promised_to"], made["basis"], made["said_by"]) == ([owner["id"]], "said", owner["id"])
 
@@ -113,7 +113,7 @@ def test_a_promise_that_holds_only_once_something_happens_starts_on_hold(env):
     ("words", "due", "check"),
     [("next Friday", "2026-10-16", True), ("sometime soon", None, False), ("early next week", "2026-10-14", False)],
 )
-def test_doubtful_words_are_checked_and_vague_words_give_no_date(env, words, due, check):
+def test_doubtful_words_are_checked_and_vague_words_keep_the_assistants_reading(env, words, due, check):
     _, _, store = env
     said = f"They will get back to us {words}."
     answer(
@@ -122,6 +122,7 @@ def test_doubtful_words_are_checked_and_vague_words_give_no_date(env, words, due
             "text": "Get back to us",
             "owners": [someone()["id"]],
             "due_words": words,
+            **({"due": due} if due else {}),
             "evidence": {"quote": said},
         }
     )
@@ -155,9 +156,9 @@ def _promise_with(words, *, due=None, said="They will get back to us."):
         ("due on Friday", "2026-10-16"),
     ],
 )
-def test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_win_over_the_models_date(env, words, due):
+def test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_agree_with_the_assistants_date(env, words, due):
     _, _, store = env
-    said = _promise_with(words, due="2026-12-01")
+    said = _promise_with(words, due=due)
     (outcome,), _ = run(env, pasted=said)
     made = made_action(store, outcome)
     assert made["due"] == due and made["due_words"] == words
@@ -192,15 +193,15 @@ def test_words_the_rules_cannot_read_and_no_model_date_give_no_date(env):
         "sometime soon",
     ],
 )
-def test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one(env, words):
+def test_a_condition_keeps_its_words_and_the_assistants_date_marked_to_check(env, words):
     _, _, store = env
     said = _promise_with(words, due="2026-10-20")
     (outcome,), _ = run(env, pasted=said)
     made = made_action(store, outcome)
-    assert (made["due"], made["due_words"], made["due_check"]) == (None, words, False)
+    assert (made["due"], made["due_words"], made["due_check"]) == ("2026-10-20", words, True)
 
 
-def test_a_condition_moves_an_open_promise_to_no_date_with_its_words_once_the_person_keeps_it(env):
+def test_a_move_with_a_condition_keeps_the_assistants_date_and_its_words_once_the_person_keeps_it(env):
     _, cfg, store = env
     target = open_action(store)
     with store.transaction() as tx:
@@ -219,7 +220,7 @@ def test_a_condition_moves_an_open_promise_to_no_date_with_its_words_once_the_pe
     assert outcome["status"] == "held" and action(store, target)["due"] == "2026-10-12"
     release(store, cfg, cs_id, 0)
     kept = action(store, target)
-    assert (kept["due"], kept["due_words"], kept["due_check"]) == (None, "once the keys arrive", False)
+    assert (kept["due"], kept["due_words"], kept["due_check"]) == ("2026-10-20", "once the keys arrive", True)
 
 
 def test_the_reading_follows_the_language_settings_words(env):
@@ -313,7 +314,15 @@ def test_taking_a_promise_off_hold_with_its_new_date_is_one_step_the_person_keep
         hold = {"waiting_for": "the vendor confirms", "since": "2026-10-01"}
         tx.update("action", target, {"on_hold": hold}, _SETUP, read_version=current.version)
     said = "The vendor confirmed, so the floor plan can go to the printer by Tuesday."
-    answer({"op": "action.unhold", "id": target, "due_words": "by Tuesday", "evidence": {"quote": said}})
+    answer(
+        {
+            "op": "action.unhold",
+            "id": target,
+            "due_words": "by Tuesday",
+            "due": "2026-10-13",
+            "evidence": {"quote": said},
+        }
+    )
     (outcome,), cs_id = run(env, pasted=said)
     assert outcome["status"] == "held"
     release(store, cfg, cs_id, 0)
@@ -360,6 +369,7 @@ def test_relative_dates_read_against_the_message_and_its_senders_zone_whenever_i
                 "text": "Send the floor plan",
                 "owners": [someone()["id"]],
                 "due_words": "tomorrow",
+                "due": "2026-10-10",
                 "evidence": {"quote": said},
             }
         )
@@ -406,6 +416,10 @@ def answers(*bodies: dict) -> list:
     return asked
 
 
+#: The day each of these due words reads as, from the inputs' received day: the assistant gives both.
+FLOOR_PLAN_DAYS = {"by Tuesday": "2026-10-13", "by Wednesday": "2026-10-14", "by October 30": "2026-10-30"}
+
+
 def add_floor_plan(cfg, words: str, quote: str) -> dict:
     return {
         "op": "action.add",
@@ -413,6 +427,7 @@ def add_floor_plan(cfg, words: str, quote: str) -> dict:
         "owners": [someone()["id"]],
         "promised_to": [cfg.workspace.user.person],
         "due_words": words,
+        "due": FLOOR_PLAN_DAYS[words],
         "evidence": {"quote": quote},
     }
 
@@ -430,7 +445,13 @@ def test_a_promise_that_looks_like_an_open_one_is_returned_once_naming_it_and_th
     answers({"ops": [add_floor_plan(cfg, "by Tuesday", FIRST)]})
     run(env, pasted=FIRST)
     (promise,) = floor_plans(store)
-    move = {"op": "action.move", "id": promise.id, "due_words": "by October 30", "evidence": {"quote": LATER}}
+    move = {
+        "op": "action.move",
+        "id": promise.id,
+        "due_words": "by October 30",
+        "due": "2026-10-30",
+        "evidence": {"quote": LATER},
+    }
     asked = answers({"ops": [add_floor_plan(cfg, "by October 30", LATER)]}, {"ops": [move]})
     (moved,), cs_id = run(env, pasted=LATER)
     assert len(asked) == 2, "the add went back once"

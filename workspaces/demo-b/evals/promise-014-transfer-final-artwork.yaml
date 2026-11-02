@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 27, 2026
+    due: '2026-11-27'
     evidence:
       quote: I'll transfer the final artwork to Jori by November 27, 2026.

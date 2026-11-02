@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 20, 2026
+    due: '2026-11-20'
     evidence:
       quote: I'll finish the Copper Finch launch flyer by November 20, 2026

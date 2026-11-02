@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 18, 2026
+    due: '2026-11-18'
     evidence:
       quote: I promise to return Zella's recorder by November 18, 2026.

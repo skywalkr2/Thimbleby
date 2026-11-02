@@ -1139,6 +1139,10 @@ is marked *designed*, with the phase.
 - Words that give an open action a new day ("my approval can wait until Oct 20"), answered only with a fact or a note,
   go back once to move the action's date (`due-move-missed`, *built*; `language.due_move_words`). Any other op quoting
   the words, such as a moved calendar entry, settles it.
+- Due words the rules read differently from what the assistant answered (another day, a day where it gave none, or
+  words that wait for something or sit before a calendar entry) go back once with both readings
+  (`due-reading-differs`, *built*, a judgment lint: the second answer stands, never held, never escalated; section
+  6.33 "Dates"). `tests/test_due_reading_differs.py`.
 - A new day on an action that is no longer open is refused: the date goes on the open action the words are about.
 - The person's own action for something another person has ("return Edda's book"), owed to nobody, goes back once
   naming that person for "promised_to" (`owed-to-missing`, *built*). A bare first name only one person has counts
@@ -4580,37 +4584,45 @@ the person, the person is waiting on it.
 - `news`: what was heard that doesn't end it ("replied, but didn't say when"), each entry with its date, words and
   source.
 
-**Dates by rules first.** `action.add` and `action.move` take `due_words`; the applier reads them with
-`engine/due_phrases.py` against the date the input was received, and the rules' date wins over a date the model gave.
-Anything vague stays "no date". A date tied to a known calendar entry is due at it (`due_at_event`, below); one tied
-to an event with no entry ("once the keys arrive") stays "no date", with the event's words kept. A due date with no
-words behind it is kept as given only when the person wrote it.
+**Dates: the assistant's date stands, the rules check it** (P110, J2). `action.add`, `action.move` and `action.unhold`
+take `due_words` and a `due` the assistant reads from them; the applier also reads the words with
+`engine/due_phrases.py` against the date the input was received, but the rules' reading never replaces the assistant's.
+When it differs (another day, a day where the assistant gave none, or no day for words that wait for something while the
+assistant gave one) the answer goes back once as the lint `due-reading-differs` (default `return`), naming both readings
+("The words 'next Friday' read as 2026-10-16 received 2026-10-09; you gave 2026-10-23. Check which is right and answer
+again; keep yours if you are sure"). The second answer stands whoever the item reaches, and a date that still differs
+from the rules' reading is kept with `due_check`, so the person sees "check this date". With the lint off, the same
+date stands and is marked. Anything vague stays "no date". A date tied to a known calendar entry is due at it
+(`due_at_event`, below). A due date with no words behind it is kept as given only when the person wrote it.
 *The reader and what it can't read (batch B-7).* The reader steps past a leading lead word (`language.due_lead_words`:
 "by", "on", "due", "due by", "no later than") and reads an ordinal day ("the 25th", "by the 30th", "on the 3rd"; the
 endings are `language.due_ordinal_suffixes`) as the next day of the month with that number, marked to check when it is
 read forward into another month; "Oct 22nd" and "the 25th of November" read too. Words it can't read as a date, by
 whether they are a **condition**: a condition (words with one of `language.due_condition_words`, as whole words: "once",
 "after", "before", "when", "until", "as soon as", "of receiving", "soon") keeps its words in `due_words` and has **no
-date**, whatever date the model gave (a condition is never turned into a date); any other unread words **keep the
-model's own date, marked to check** (`due_check`), where they used to drop it. The prompt says the same: a condition's
+date** of their own (the prompt asks for none); a date the assistant gave with them is kept, marked to check, and the
+lint above sends the answer back once with the rules' reading ("waiting for ...", "may be tied to the calendar entry
+..."); any other unread words keep the assistant's own date, marked to check (`due_check`). The prompt says: a condition's
 own words go in `due_words` with no `due` ("once the keys arrive"), and `waiting_for` is in addition to them, never
 instead. A promise with both a day and a condition ("If the committee approves, I'll send it on Friday") keeps the
 day's words as its `due_words` and the condition in `waiting_for`, and its text says the condition, so the day is never
 lost (batch B-10). A bare weekday said on that weekday ("by Friday", written on a Friday) is read forward, as every bare
 weekday is, and marked to check, never firm: it may mean today or a week later (`tests/test_due_phrases.py`). The open-actions list in the packet says "promised to" for a promise, so the assistant can tell which open
 action takes `action.move`. *Built so far:* `tests/test_due_phrases.py` (a test per form, the words as settings, the
-conditions), `tests/test_promises.py::test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_win_over_the_models_date`,
+conditions), `tests/test_promises.py::test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_agree_with_the_assistants_date`,
 `::test_words_the_rules_cannot_read_keep_the_models_own_date_marked_to_check`,
-`::test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one`,
+`::test_a_condition_keeps_its_words_and_the_assistants_date_marked_to_check`,
 `::test_the_reading_follows_the_language_settings_words`, and `tests/test_learning_run_b7.py` (every case that expects a
 condition, and the cases that expect no date for words that are neither).
 *Conditions and "before" (the functional designer's F21, 2026-10-20; batch B-7).* A condition that **waits for something to
-happen** ("once the keys arrive", "after the workshop", "until you publish it", "as soon as …", "of receiving …") puts the
-promise **on hold from the start**, waiting for those words (`on_hold.waiting_for`, the day it was added), where it used to
-be merely dateless; an `action.add` that also names its own `waiting_for` keeps that wording. "Before <a meeting>" is **due
-at that calendar entry** (`due_event`, so it moves with it) when the words after "before" name exactly one entry that is
+happen** ("once the keys arrive", "after the workshop", "until you publish it", "as soon as …", "of receiving …") is, to
+the rules, a promise **on hold** waiting for those words; the assistant decides, with `waiting_for` on its `action.add`,
+and the rules only point it out in the lint above when it left `waiting_for` out (P110, J3: the rules no longer hold a
+promise themselves). "Before <a meeting>" is, to the rules, **due at that calendar entry** (`due_event`, so it moves with
+it) when the words after "before" name exactly one entry that is still ahead; the assistant ties it with `event` and
+`due_at_event`, and the lint says when the rules read one it didn't. The rules' reading names an entry only when it is
 still ahead (a title the words hold whole; the soonest of a repeating title; a title that is part of a longer matching one
-is the same meeting), and has **no date with its words kept** when they name none or several ("before his leave starts").
+is the same meeting); words that name none or several ("before his leave starts") have no such reading.
 Condition words that only leave the date open ("soon", "eventually") stay dateless and not on hold. Which words are which is
 configuration, beside `language.due_condition_words`: `language.due_hold_words` (the ones that put a promise on hold) and
 `language.due_before_words` (the ones after which an entry may be named). The golden cases that expect a condition say

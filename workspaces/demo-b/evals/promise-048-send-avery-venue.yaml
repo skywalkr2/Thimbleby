@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Jori Frame
     due_words: by November 24, 2026
+    due: '2026-11-24'
     evidence:
       quote: I'll send you the venue address by November 24, 2026.

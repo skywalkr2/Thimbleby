@@ -60,5 +60,6 @@ ideal:
       basis: said
       said_by: Avery Lane
       due_words: tomorrow
+      due: '2026-11-10'
       evidence:
         quote: I'll place the order tomorrow

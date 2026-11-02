@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 9, 2026
+    due: '2026-11-09'
     evidence:
       quote: Liora, I'll confirm whether the £800 quote is approved by November 9, 2026.

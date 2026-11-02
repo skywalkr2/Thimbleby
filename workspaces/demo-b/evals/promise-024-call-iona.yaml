@@ -33,6 +33,7 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: tomorrow
+    due: '2026-11-03'
     evidence:
       quote: I'll call Iona tomorrow and deliver her report by November 30, 2026.
   - op: action.add
@@ -42,5 +43,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 30, 2026
+    due: '2026-11-30'
     evidence:
       quote: I'll call Iona tomorrow and deliver her report by November 30, 2026.

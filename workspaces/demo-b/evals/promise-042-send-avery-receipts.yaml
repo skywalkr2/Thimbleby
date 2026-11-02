@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Zella Brook
     due_words: by November 16, 2026
+    due: '2026-11-16'
     evidence:
       quote: I'll send you the receipts by November 16, 2026.

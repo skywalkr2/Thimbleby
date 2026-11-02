@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Bram Foley
     due_words: by close of business
+    due: '2026-11-02'
     evidence:
       quote: I'll send the train and hotel receipts by close of business

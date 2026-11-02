@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Mira Hale
     due_words: by November 26, 2026
+    due: '2026-11-26'
     evidence:
       quote: I'll send the corrected contract by November 26, 2026.

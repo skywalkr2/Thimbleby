@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: Saturday
+    due: '2026-11-07'
     evidence:
       quote: I'll return your recorder Saturday

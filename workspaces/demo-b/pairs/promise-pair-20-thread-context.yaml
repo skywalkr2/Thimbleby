@@ -58,5 +58,6 @@ ideal:
       basis: said
       said_by: Avery Lane
       due_words: Tuesday
+      due: '2026-11-10'
       evidence:
         quote: I'll bring them along

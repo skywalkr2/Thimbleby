@@ -33,6 +33,7 @@ stub_answer:
     basis: said
     said_by: Bram Foley
     due_words: Friday
+    due: '2026-11-06'
     evidence:
       quote: I'll call you Friday and send the estimate Monday.
   - op: action.add
@@ -42,5 +43,6 @@ stub_answer:
     basis: said
     said_by: Bram Foley
     due_words: Monday
+    due: '2026-11-09'
     evidence:
       quote: I'll call you Friday and send the estimate Monday.

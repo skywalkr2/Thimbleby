@@ -37,6 +37,7 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: tonight
+    due: '2026-11-02'
     evidence:
       quote: I'll return your book tonight and call you tomorrow evening
   - op: action.add
@@ -46,5 +47,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: tomorrow evening
+    due: '2026-11-03'
     evidence:
       quote: I'll return your book tonight and call you tomorrow evening

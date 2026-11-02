@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Liora Marsh
     due_words: by November 12, 2026
+    due: '2026-11-12'
     evidence:
       quote: I'll send the survey results to you by November 12, 2026.

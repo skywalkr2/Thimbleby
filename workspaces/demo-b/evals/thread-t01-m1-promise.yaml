@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by Friday at noon
+    due: '2026-11-06'
     evidence:
       quote: I'll send the Alderline proposal by Friday at noon

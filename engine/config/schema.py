@@ -1569,6 +1569,7 @@ def _default_lints() -> dict[str, Severity]:
         "promise-as-fact": "return",
         "someone-given-owner": "return",
         "due-move-missed": "return",
+        "due-reading-differs": "return",
         "owed-to-missing": "return",
         "project-start-as-fact": "return",
         "decision-from-list": "return",

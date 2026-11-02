@@ -426,7 +426,8 @@ class ActionAddOp(OpModel):
         None,
         max_length=120,
         description="The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The "
-        "rules read the date from them, and their date wins over `due`.",
+        "rules also read them and send the answer back once when their day differs from your `due`; your date "
+        "stands after that.",
     )
     promised_to: list[str] = Field(
         default_factory=list,

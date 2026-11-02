@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Bram Foley
     due_words: November 17, 2026
+    due: '2026-11-17'
     evidence:
       quote: I'll bring your keys back on November 17, 2026.

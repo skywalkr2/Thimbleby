@@ -42,6 +42,7 @@ from engine.applier import (
     check,
     feedback,
     needs_another_round,
+    needs_escalation,
     undo,
 )
 from engine.cleaning import quoted_messages
@@ -997,7 +998,7 @@ def _rounds(
                     judgment_asked = judgment_asked or asks_judgment(problems)
                     task = replace(task, request=shown + "\n\n" + feedback(problems))
                     continue
-                out.escalate = True
+                out.escalate = needs_escalation(problems)
             return out
         try:
             if search_request(result.text) is not None:
@@ -1059,7 +1060,7 @@ def _rounds(
                 fine, wrong = fine_ops(changeset, problems), feedback(problems)
                 task = replace(task, request=shown + "\n\n" + wrong)
                 continue
-            out.escalate = True
+            out.escalate = needs_escalation(problems)
         return out
     return out
 

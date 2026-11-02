@@ -48,6 +48,7 @@ def made_by_the_assistant(client) -> str:
         "promised_to": [to],
         "basis": "inferred",
         "due_words": "by Tuesday",
+        "due": "2026-12-01",  # the assistant's own reading: it stands, marked to check if the rules read another day
         "evidence": {"quote": SAID},
     }
     set_responder(lambda task: json.dumps({"summary": "Promise.", "ops": [op]}))

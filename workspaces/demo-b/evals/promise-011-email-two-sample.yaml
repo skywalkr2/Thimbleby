@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 24, 2026
+    due: '2026-11-24'
     evidence:
       quote: I'll email the two sample layouts to Pella by November 24, 2026.

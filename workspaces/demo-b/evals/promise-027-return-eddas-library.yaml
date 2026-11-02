@@ -22,5 +22,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by December 2, 2026
+    due: '2026-12-02'
     evidence:
       quote: 'Note to self: return Edda''s library book by December 2, 2026.'

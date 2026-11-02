@@ -25,5 +25,6 @@ stub_answer:
     basis: said
     said_by: Oren Pike
     due_words: as soon as I've spoken to the surveyor
+    waiting_for: as soon as I've spoken to the surveyor
     evidence:
       quote: I'll reply as soon as I've spoken to the surveyor.

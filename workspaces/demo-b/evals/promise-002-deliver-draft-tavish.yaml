@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by November 10, 2026
+    due: '2026-11-10'
     evidence:
       quote: I'll deliver the draft to Tavish by November 10, 2026.

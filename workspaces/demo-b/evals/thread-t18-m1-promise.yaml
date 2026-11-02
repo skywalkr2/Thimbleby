@@ -37,6 +37,7 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: Tuesday
+    due: '2026-11-03'
     evidence:
       quote: I'll send the draft Tuesday and the printed copies Friday
   - op: action.add
@@ -46,5 +47,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: Friday
+    due: '2026-11-06'
     evidence:
       quote: I'll send the draft Tuesday and the printed copies Friday

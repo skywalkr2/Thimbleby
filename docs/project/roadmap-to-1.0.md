@@ -470,7 +470,7 @@ From the original designer's lessons of 2026-10-14:
     then the owner re-runs the failed cases with `--case-failed`. Built in batch B-7 (owner, 2026-10-20: "include the
     ai fixes").
     *Built (B-7):* a condition keeps its words as the due words with no date
-    (`tests/test_promises.py::test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one`), a reply
+    (`tests/test_promises.py::test_a_condition_keeps_its_words_and_the_assistants_date_marked_to_check`), a reply
     that doesn't answer is news and never an ending, and the date reader takes a leading "on" or "due" and ordinals
     (`tests/test_learning_run_b7.py`, `tests/test_due_phrases.py`). *Left:* the owner's re-run of the failed cases with
     `--case-failed` on the commit that batch B-7 pushes, which is this item's acceptance; and the split of a shared

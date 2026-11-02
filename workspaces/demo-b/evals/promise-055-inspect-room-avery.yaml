@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Ansel Wick
     due_words: Once I receive the keys
+    waiting_for: Once I receive the keys
     evidence:
       quote: Once I receive the keys, I'll inspect the room for you.

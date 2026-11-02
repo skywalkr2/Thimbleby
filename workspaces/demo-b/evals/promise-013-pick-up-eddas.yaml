@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: November 26, 2026
+    due: '2026-11-26'
     evidence:
       quote: I'll pick up Edda's parcel on November 26, 2026.

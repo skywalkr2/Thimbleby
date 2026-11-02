@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Edda Moss
     due_words: by November 23, 2026
+    due: '2026-11-23'
     evidence:
       quote: I'll send the accessibility review to you by November 23, 2026.

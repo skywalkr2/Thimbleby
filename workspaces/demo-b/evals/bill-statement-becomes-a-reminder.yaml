@@ -30,5 +30,6 @@ stub_answer:
     text: Pay the Harbor Power bill, $64.20
     owners: [PER-1]
     due_words: November 12, 2026
+    due: '2026-11-12'
     evidence:
       quote: 'Amount due: $64.20. Payment due: November 12, 2026.'

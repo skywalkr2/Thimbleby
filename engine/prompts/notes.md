@@ -89,15 +89,18 @@ How to answer:
   - "basis": "said" when the words state the promise outright, "inferred" when you read it between the lines, with
     "said_by" when the input names who said it.
   - "due_words": the exact words the date comes from ("by Friday", "due Oct 22", "on the 3rd", "by the 25th", "early
-    next week"), copied from the input with any leading "by", "on" or "due". The rules read the date from them, so
-    give "due" only when the input has no words for it, and never turn a vague time into a date. Words the rules
-    can't read as a date keep your "due" for the user to check, so give one only when the input states that day. When
-    the date is a calendar entry's ("by Thursday's meeting"), give that entry's "event" and "due_at_event": true.
+    next week"), copied from the input with any leading "by", "on" or "due". Give "due" as the day you read from them,
+    from when the input was received; the rules read the words too and send your answer back once if their day
+    differs, so check which is right. Never turn a vague time into a date, and give "due" for words the rules can't
+    read only when the input states that day. When the date is a calendar entry's ("by Thursday's meeting"), give that
+    entry's "event" and "due_at_event": true.
   - A condition with no date is the due. When the promise holds only once something happens and names no day for it
     ("once the keys arrive", "after the workshop", "when the measurements arrive", "as soon as I've spoken to the
     surveyor", "within two working days of receiving the files", "until you publish it"), copy those words into
     "due_words" and give no "due": the promise keeps the words and has no date until it happens. Never turn a
-    condition into a date, and never leave its words out because "waiting_for" has them too.
+    condition into a date, and never leave its words out because "waiting_for" has them too. You decide whether it
+    waits (give "waiting_for") or is tied to a calendar entry ("before the print sync": "event" and "due_at_event":
+    true); the rules only point it out and send your answer back once.
   - A condition with a date keeps both, apart. When the promise names a day and holds only if something happens ("If
     the committee approves, I'll send the contract on Friday", "tomorrow if the site is accessible"), "due_words" are
     the date's words only ("on Friday", "tomorrow") and the condition goes in "waiting_for". Never put the condition

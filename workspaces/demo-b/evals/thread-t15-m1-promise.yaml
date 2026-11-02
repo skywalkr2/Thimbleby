@@ -32,5 +32,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: by noon
+    due: '2026-11-02'
     evidence:
       quote: I'll send your access code by noon

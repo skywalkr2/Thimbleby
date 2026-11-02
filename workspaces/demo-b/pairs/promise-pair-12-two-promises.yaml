@@ -69,6 +69,7 @@ ideal:
       basis: said
       said_by: Lena Ashby
       due_words: Monday
+      due: '2026-11-16'
       evidence:
         quote: I'll confirm the venue on Monday
     - op: action.add
@@ -78,5 +79,6 @@ ideal:
       basis: said
       said_by: Lena Ashby
       due_words: Thursday
+      due: '2026-11-12'
       evidence:
         quote: share the guest list on Thursday

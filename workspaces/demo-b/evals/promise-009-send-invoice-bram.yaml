@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: November 19, 2026
+    due: '2026-11-19'
     evidence:
       quote: I'll send the invoice to Bram on November 19, 2026.

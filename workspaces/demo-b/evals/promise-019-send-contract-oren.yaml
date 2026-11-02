@@ -27,5 +27,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: Friday
+    due: '2026-11-06'
     evidence:
       quote: If the committee approves, I'll send the contract to Oren on Friday.

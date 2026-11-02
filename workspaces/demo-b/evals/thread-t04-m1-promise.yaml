@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Oren Pike
     due_words: by Thursday
+    due: '2026-11-05'
     evidence:
       quote: I'll send you the logo files and the usage guide by Thursday

@@ -30,5 +30,6 @@ stub_answer:
     basis: said
     said_by: Zella Brook
     due_words: by December 31, 2026
+    due: '2026-12-31'
     evidence:
       quote: I'll send the signed form by December 31, 2026

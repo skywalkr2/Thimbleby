@@ -58,12 +58,13 @@ def test_the_cases_that_expect_a_condition_are_found():
 
 
 @pytest.mark.parametrize("case_id", CONDITION_CASES)
-def test_a_condition_keeps_its_words_and_never_gets_a_date(monkeypatch, case_id):
+def test_a_condition_keeps_its_words_and_the_models_own_date_is_a_miss(monkeypatch, case_id):
     case = case_of(DEMO_B, case_id)
     assert run_edited(monkeypatch, DEMO_B, case_id).passed
-    # The model puts a date on the condition anyway: the rules drop it, so the case still passes.
+    # The model puts a date on the condition anyway: it is sent back once, then the model's date stands (marked to
+    # check), so the case, which expects no date, misses.
     dated = {**case["stub_answer"], "ops": [{**o, "due": "2026-12-01"} for o in _ideal(case)]}
-    assert run_edited(monkeypatch, DEMO_B, case_id, stub_answer=dated).passed
+    assert not run_edited(monkeypatch, DEMO_B, case_id, stub_answer=dated).passed
     # The words left out (only a hold given) is a miss.
     held = {
         **case["stub_answer"],
@@ -186,7 +187,9 @@ def test_the_move_of_a_promise_that_exists_is_held_for_keep_not_applied_as_a_dir
     assert not result.passed and result.forbidden == [f"op=record.set, id={ideal['id']}"]
 
 
-def test_the_promise_said_again_with_its_new_date_is_the_same_held_move(monkeypatch):
+def test_the_promise_said_again_as_a_new_add_is_not_turned_into_a_move_by_a_rule(monkeypatch):
+    """A rule used to turn the restated add into a move of the open promise; whether it is the same promise is now the
+    assistant's call (P110 J4), so an answer that only adds it again fails the case, which expects the move."""
     case = case_of(DEMO_A, "quoted-thread-action-exists")
     (ideal,) = _ideal(case)
     given = case["given"][0]["fields"]
@@ -206,7 +209,8 @@ def test_the_promise_said_again_with_its_new_date_is_the_same_held_move(monkeypa
         ],
     }
     restated = run_edited(monkeypatch, DEMO_A, case["id"], stub_answer=again)
-    assert restated.passed, (restated.missing, restated.forbidden, restated.extra)
+    assert not restated.passed
+    assert any("op=action.move" in m for m in restated.missing)
 
 
 def _people(template):

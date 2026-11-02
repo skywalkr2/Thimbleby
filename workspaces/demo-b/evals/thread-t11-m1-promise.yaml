@@ -31,5 +31,6 @@ stub_answer:
     basis: said
     said_by: Edda Moss
     due_words: tomorrow morning
+    due: '2026-11-03'
     evidence:
       quote: If the venue approves access, I'll take the measurements tomorrow morning

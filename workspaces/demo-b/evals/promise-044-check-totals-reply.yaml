@@ -26,5 +26,6 @@ stub_answer:
     basis: said
     said_by: Iona Crane
     due_words: by November 18, 2026
+    due: '2026-11-18'
     evidence:
       quote: I'll check the totals and reply by November 18, 2026.

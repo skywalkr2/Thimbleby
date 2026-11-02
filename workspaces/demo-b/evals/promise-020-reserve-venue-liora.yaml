@@ -27,5 +27,6 @@ stub_answer:
     basis: said
     said_by: Avery Lane
     due_words: tomorrow
+    due: '2026-11-03'
     evidence:
       quote: Provided the deposit arrives, I'll reserve the venue for Liora tomorrow.
