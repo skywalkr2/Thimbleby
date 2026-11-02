@@ -18,6 +18,7 @@ from engine.firm_due import firm_due
 from engine.names import People
 from engine.sides import side_of_item
 from engine.today import AgendaItem, agenda, zone
+from engine.views import views_of_item
 
 
 @dataclass
@@ -39,6 +40,8 @@ class Due:
     kind: str = "due"
     #: The side the to-do is on (the id of its top project); none when it is on none.
     side: str | None = None
+    #: The views its project is in (they only change what a screen shows).
+    views: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -52,6 +55,8 @@ class Waiting:
     due: date | None = None
     #: The side those to-dos are on (the id of its top project); none for those on none.
     side: str | None = None
+    #: The views of the projects those to-dos are in, each once.
+    views: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -135,8 +140,9 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
         elif day is not None and lead > 0 and day > last and lead_start(cfg, day, lead) <= today:
             counted, kind = True, "setup" if meeting else "lead"
         side = side_of_item(reader, cfg, record)
+        in_views = views_of_item(reader, record)
         if counted:
-            due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine, kind, side))
+            due.append(Due(record.id, d["text"], day, d.get("project"), owners, mine, kind, side, in_views))
         if not mine or (day is not None and day > last):
             continue
         asked = [d["asker"]] if d.get("reply_owed") and d.get("asker") else []
@@ -145,6 +151,7 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
                 continue
             found = waiting.setdefault((person, side), Waiting(person, 0, side=side))
             found.count += 1
+            found.views += [v for v in in_views if v not in found.views]
             if day is not None and (found.due is None or day < found.due):
                 found.due = day
     due.sort(key=lambda x: (x.due, x.text.lower(), x.action))

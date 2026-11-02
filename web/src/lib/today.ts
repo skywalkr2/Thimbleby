@@ -52,7 +52,7 @@ export function useQueue(side: SideChoice = "all") {
     // The area filter narrows to one area of life when the person picked one that some line is in.
     select: (lines) => {
       const area = chosenArea(lines, picked);
-      return lines.filter((line) => hasSomething(line) && onSide(line.side, side) && inArea(line, area));
+      return lines.filter((line) => hasSomething(line) && onSide(line.side, side, line.views, !!line.project_name) && inArea(line, area));
     },
   });
 }

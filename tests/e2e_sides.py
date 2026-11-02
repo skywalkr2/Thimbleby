@@ -70,6 +70,38 @@ def calendar_sources() -> list[dict]:
     ]
 
 
+#: What the views' browser test reads: a project of the job side that is in two of the person's views, with a to-do
+#: under it, and a second project that is in the first view only.
+VIEWS = {
+    "project": "Shared rota",
+    "todo": "Draft the shared rota",
+    "only_project": "Portfolio audit",
+    "only_todo": "Review the portfolio audit",
+    "first": "Manager's portfolio",
+    "second": "My projects",
+}
+
+
+def seed_views(store, cfg, seeded):
+    """Two views of the job side, one project in both and one in the first only, each with a to-do, made as the person
+    makes them (`view.add`, with Undo). Adds what the browser test reads to `seeded` and returns it."""
+    from engine.applier import apply_as_person
+
+    job = seeded["sides"]["job"]["id"]
+    me = cfg.workspace.user.person
+    ctx = WriteContext(actor="pm", trust="trusted", op="e2e.views")
+    with store.transaction() as tx:
+        both = tx.create("project", {"name": VIEWS["project"], "parent": job}, ctx).id
+        only = tx.create("project", {"name": VIEWS["only_project"], "parent": job}, ctx).id
+        tx.create("action", {"text": VIEWS["todo"], "owners": [{"person": me}], "project": both}, ctx)
+        tx.create("action", {"text": VIEWS["only_todo"], "owners": [{"person": me}], "project": only}, ctx)
+    for name, projects in ((VIEWS["first"], [both, only]), (VIEWS["second"], [both])):
+        apply_as_person(
+            store, cfg, [{"op": "view.add", "name": name, "side": job, "projects": projects}], "Added a view"
+        )
+    return {**seeded, "views": VIEWS}
+
+
 def seed_sides(client, store, cfg):
     """The to-dos, promises and meetings above, once the two sides are made through the setup route (as setup makes
     them). `client` is a test client of the running app. Returns what the browser test reads."""

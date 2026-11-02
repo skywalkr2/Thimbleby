@@ -26,6 +26,7 @@ import { RecordPage } from "./RecordPage";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { Unfiled } from "./Unfiled";
+import { Views } from "./Views";
 import styles from "./Projects.module.css";
 
 import { PageHeader } from "../ui/PageHeader";
@@ -209,6 +210,7 @@ export function Projects() {
           </>
         )}
       </ListDetail>
+      <Views />
       <Unfiled />
       {adding && <ProjectDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}
       {editing && <ProjectDrawer project={editing} onClose={() => setEditing(null)} />}

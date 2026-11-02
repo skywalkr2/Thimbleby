@@ -22,6 +22,7 @@ from engine.promises import Late
 from engine.scope import stance_of
 from engine.storage import Store, WriteContext
 from engine.today import local_day, zone
+from engine.views import views_of_item
 from engine.written_dates import day_words, plain_dates
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
@@ -215,6 +216,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
         if out_of_reach("question", q.id, d["title"], d, d["to"]):
             continue
         row_side = sides.side_of_item(reader, cfg, q)
+        row_views = views_of_item(reader, q)
         sent = local_day(datetime.fromisoformat(d["sent_at"]), here) if d.get("sent_at") else None
         chased = sorted(str(day) for day in d.get("followed_up") or [])
         # The wait counts from the last word to the person: the message, or the latest chase after it.
@@ -233,6 +235,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                 "ready_since": ready,
                 "id": q.id,
                 "side": row_side,
+                "views": row_views,
                 "title": d["title"],
                 "text": d.get("text", ""),
                 "links": d.get("links", []),
@@ -263,6 +266,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     for a in open_actions:
         d = a.data
         row_side = sides.side_of_item(view, cfg, a)
+        row_views = views_of_item(view, a)
         for owner in d.get("owners", []):
             if owner["person"] != people.pm and stance_of(view, cfg.steward, owner["person"]) in UNTOLD_STANCES:
                 continue  # nothing is drafted to someone the person only watches or reports to (design 6.34)
@@ -285,6 +289,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                     "version": a.version,
                     "owners": [{"person": o["person"], "team": o.get("team")} for o in d.get("owners") or []],
                     "side": row_side,
+                    "views": row_views,
                     "text": d["text"],
                     "due": d.get("due"),
                     "due_check": bool(d.get("due") and d.get("due_check")),

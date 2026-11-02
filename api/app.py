@@ -59,6 +59,7 @@ from api.since_routes import build_since_router
 from api.tie_routes import build_tie_router
 from api.today_routes import build_today_router
 from api.todo_routes import build_todo_router
+from api.view_routes import build_view_router
 from api.waiting_routes import build_waiting_router
 from api.watch_routes import build_watch_router
 from engine import __version__, problems
@@ -382,6 +383,7 @@ def create_app(
     inner.include_router(build_act_router(ws, cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_waiting_router(ws, cfg, store, events, worker))
+    inner.include_router(build_view_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))
     inner.include_router(build_data_form_router(store, cfg))

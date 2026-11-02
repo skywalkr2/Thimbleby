@@ -550,6 +550,12 @@ export const api = {
   /** A document panel's blocks for the project in view, or the workspace; null when there is nothing to show yet. */
   panelDocument: (name: string, project?: string) =>
     call<S["DocumentView"]>("GET", `panels/${named(name)}/document${project ? `?project=${id(project)}` : ""}`),
+  /** The person's views: named lists of projects inside one side (design 6.32). */
+  views: () => call<S["WorkViewView"][]>("GET", "views"),
+  addView: (body: S["ViewAddIn"]) => call<S["ViewApplied"]>("POST", "views", body),
+  renameView: (view: string, body: S["ViewRenameIn"]) => call<S["ViewApplied"]>("POST", `views/${id(view)}/rename`, body),
+  setViewProjects: (view: string, projects: string[]) => call<S["ViewApplied"]>("POST", `views/${id(view)}/projects`, { projects }),
+  removeView: (view: string) => call<S["ViewApplied"]>("DELETE", `views/${id(view)}`),
   valueLists: () => call<S["ValueListView"][]>("GET", "lists"),
   listAdd: (list: string, value: string, meant?: { tone?: S["ListSuggestionView"]["tone"]; meaning?: S["ListSuggestionView"]["meaning"] }) =>
     call<S["Applied"]>("POST", `lists/${named(list)}/add`, { value, ...(meant?.tone ? { tone: meant.tone } : {}), ...(meant?.meaning ? { meaning: meant.meaning } : {}) }),

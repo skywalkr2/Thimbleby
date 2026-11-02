@@ -21,6 +21,7 @@ from engine.names import People, render_owner
 from engine.origin import origins
 from engine.storage import StoreError
 from engine.today import zone
+from engine.views import views_of_item
 
 #: An action's state, in the order a row takes the first that applies.
 ACTION_STATES = ("no_owner", "on_hold", "overdue", "stale", "open")
@@ -82,6 +83,8 @@ class OpenAction:
     #: The side it is on (the id of its top project), whether it is filed on the side itself or in a project of it; none
     #: when it is on none.
     side: str | None = None
+    #: The views its project is in, which only change what a screen shows (design 6.32).
+    views: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -105,6 +108,8 @@ class OpenQuestion:
     side_name: str | None = None
     #: The side it is on (the id of the first project it names that is on one); none when it is on none.
     side: str | None = None
+    #: The views of the projects it names, which only change what a screen shows (design 6.32).
+    views: list[str] = field(default_factory=list)
 
 
 def _day(stamp: str | None, here: Any) -> date | None:
@@ -205,6 +210,7 @@ def open_actions(
                 parent_name=names.get((project or {}).get("parent") or ""),
                 side_name=sides.side_name_of(view, cfg, d.get("project")),
                 side=sides.side_of_item(view, cfg, a),
+                views=views_of_item(view, a),
                 notes=d.get("notes") or None,
                 since=(_day(created[a.id][1], here) or today).isoformat() if a.id in created else "",
                 on_hold=hold["waiting_for"] if hold else None,
@@ -305,6 +311,7 @@ def open_questions(store: Any, cfg: Any, today: date) -> list[OpenQuestion]:
                 )
                 or None,
                 side=sides.side_of_item(view, cfg, q),
+                views=views_of_item(view, q),
                 since=began.isoformat() if began else "",
                 waiting_days=max(0, (today - last_word).days) if last_word and state == "waiting" else None,
                 chases=len(chased),

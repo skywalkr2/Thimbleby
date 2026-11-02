@@ -40,7 +40,7 @@ export function Today(props: {
   const beside = useMediaQuery(INSPECTOR_FROM);
   const filter = useSideFilter();
   const queue = useQueue();
-  const count = useTodayCount(filter.choice);
+  const count = useTodayCount(filter.picked);
   const none = useNoneText();
   const [selected, setSelected] = useState<Selection | null>(null);
 

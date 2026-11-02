@@ -264,6 +264,7 @@ from engine.stages import approve_stage_request, card_details, record_status, st
 from engine.storage import Store, StoreError, WriteContext
 from engine.texts import text_presence
 from engine.usage import spend
+from engine.views import views_of_agenda_item, views_of_line
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
@@ -654,7 +655,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         view = store.read()
         return [
-            AgendaItemView(**vars(a), side=sides.side_of_agenda_item(view, cfg, a))
+            AgendaItemView(
+                **vars(a),
+                side=sides.side_of_agenda_item(view, cfg, a),
+                views=views_of_agenda_item(view, a),
+            )
             for a in today.agenda(store, cfg, worker.now(), undated=True)
         ]
 
@@ -785,6 +790,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 side_name=sides.side_name_of(view, cfg, line.project),
                 notes=(about.data.get("notes") or None) if about is not None else None,
                 side=sides.side_of_line(view, cfg, line),
+                views=views_of_line(view, line),
                 area=(area := areas.area_of_line(view, line)),
                 area_name=(view.get("project", area).data["name"] if area else None),
                 made_by=line_maker.of_line(view, line, here),
@@ -3055,6 +3061,7 @@ def _section(
             chase_due=a["chase_due"],
             origin=action_origin.get(a["id"]),
             side=a.get("side"),
+            views=a.get("views", []),
         )
         for a in s.actions
     ]
@@ -3107,4 +3114,5 @@ def _followup_question(
         ),
         origin=question_origin.get(q["id"]),
         side=q.get("side"),
+        views=q.get("views", []),
     )

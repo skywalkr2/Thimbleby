@@ -124,7 +124,7 @@ def test_handled_counts_what_is_new_since_the_person_opened_it_and_the_route_mar
         shown = client.get(f"{base}/waiting")
         assert shown.status_code == 200, shown.text
         first = shown.json()
-        assert first["handled"] == {"total": 2, "sides": []}
+        assert first["handled"] == {"total": 2, "sides": [], "views": []}
         assert set(first) == {"changed", "followups", "open", "handled"}
         marked = client.post(f"{base}/waiting/looked", json={"screen": "handled"})
         assert marked.status_code == 200, marked.text
@@ -136,9 +136,10 @@ def test_handled_counts_what_is_new_since_the_person_opened_it_and_the_route_mar
 
 def test_a_sides_count_is_its_own_things_and_those_on_no_side():
     from api.waiting_routes import counted
+    from engine.waiting import Thing
 
-    found = counted(["PRJ-a", "PRJ-a", "PRJ-b", None], ["PRJ-a", "PRJ-b", "PRJ-c"])
+    found = counted([Thing(side) for side in ("PRJ-a", "PRJ-a", "PRJ-b", None)], ["PRJ-a", "PRJ-b", "PRJ-c"])
     assert found.total == 4
     assert [(s.side, s.count) for s in found.sides] == [("PRJ-a", 3), ("PRJ-b", 2), ("PRJ-c", 1)]
     # With no side beside Personal there is nothing to count by.
-    assert counted(["PRJ-a", None], []).sides == []
+    assert counted([Thing("PRJ-a"), Thing(None)], []).sides == []

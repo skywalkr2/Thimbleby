@@ -2714,6 +2714,34 @@ class StandingYes(Record):
     ended_at: AwareDatetime | None = Field(None, description="When the person ended it; none while it stands.")
 
 
+class WorkView(Record):
+    """A named list of projects inside one side (design 6.32, "Views: one project under several roles"): the roles the
+    person works in within a side. A project can be in any number of views, and its sub-projects come with it. A view
+    only changes what a screen shows; it never files anything, never changes a project's side and never changes a data
+    level. Only the person's own `view.add`, `view.set` and `view.remove` write one."""
+
+    record_kind: ClassVar[str] = "view"
+    prefix: ClassVar[str] = "VIEW"
+    record_label: ClassVar[str] = "view"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("side", "name"),)
+
+    name: str = Field(min_length=1, max_length=80, description="What the view is called, in the person's words.")
+    label: str = Field(
+        min_length=1,
+        max_length=20,
+        description="A short word for the tag on a line that is in this view; the first word of the name when it is "
+        "left out.",
+    )
+    side: Annotated[str, RefTo("project", blocks_delete=False)] = Field(
+        description="The side the view is inside, as the id of the side's top project."
+    )
+    projects: list[Annotated[str, RefTo("project", blocks_delete=False)]] = Field(
+        default_factory=list,
+        description="The projects in the view, each inside its side. A project's sub-projects come with it. A project "
+        "that has been deleted is skipped when the view is read.",
+    )
+
+
 #: Record kind to its model. The order is the export order.
 REGISTRY: dict[str, type[Record]] = {
     model.record_kind: model
@@ -2759,6 +2787,7 @@ REGISTRY: dict[str, type[Record]] = {
         Copy,
         Act,
         StandingYes,
+        WorkView,
     )
 }
 
@@ -2887,6 +2916,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         *AGENDA_REFERENCES,
     ],
     "series": [("project", "project"), ("source", "source"), *AGENDA_REFERENCES],
+    "view": [("side", "project"), ("projects[]", "project")],
     "note": [("project", "project"), ("question", "question"), ("source", "source")],
     "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],
     "glossary_entry": [*KNOWLEDGE_REFERENCES, ("project", "project")],

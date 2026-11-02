@@ -3660,6 +3660,10 @@ def _apply_op(
         return _review_reply(tx, op, ctx, w), None
     if isinstance(op, (SourceLimitOp, SourceWidenOp)):
         return _change_audience(tx, op, ctx, w), None
+    if op.op in ("view.add", "view.set", "view.remove"):
+        from engine import views
+
+        return views.apply(tx, ctx.cfg, op, w), None
     if isinstance(op, RuleAddOp):
         from engine.rules import add_rule
 

@@ -48,6 +48,7 @@ import { OriginLink } from "./Origin";
 import { useHandToAssistant } from "./HandToAssistant";
 import { usePlaceText } from "../lib/place";
 import { ProjectTag } from "./ProjectTag";
+import { ViewTags, useViewLabels } from "./ViewTags";
 import { NotesTitle } from "./ActionNotes";
 import { dateAndTime, useRemindMe } from "./ReminderLine";
 import type { MenuAction } from "./RowMenu";
@@ -78,9 +79,9 @@ export function OpenItems() {
   const side = useSideFilter();
   // How many wait on the person: the side menu's number, from the same answer, under the same side choice.
   const waiting = useWaiting();
-  const needYou = waiting ? waitingUnder(waiting.open, side.choice) : null;
-  const actions = (items.data?.actions ?? []).filter((a) => onSide(a.side, side.choice));
-  const questions = (items.data?.questions ?? []).filter((q) => onSide(q.side, side.choice));
+  const needYou = waiting ? waitingUnder(waiting.open, side.picked) : null;
+  const actions = (items.data?.actions ?? []).filter((a) => onSide(a.side, side.picked, a.views, !!a.project_name));
+  const questions = (items.data?.questions ?? []).filter((q) => onSide(q.side, side.picked, q.views, (q.projects ?? []).length > 0));
 
   const projectName = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? actions.find((a) => a.project === id)?.project_name ?? id;
   const projectChoices = [...new Set(tab === "actions" ? actions.filter((a) => !a.side_name).map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
@@ -252,6 +253,7 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
     ...(unowned || !hand.entry ? [] : [hand.entry]),
   ];
   const timing: MenuAction[] = [...(unowned ? [] : [...remind.entries, hold.entry]), ...(stopRepeat ? [stopRepeat] : [])];
+  const inViews = useViewLabels(a.views);
   const meta = join([
     a.owners.length > 0 ? a.owners.map((o) => o.name).join(", ") : t("open.nobody"),
     a.to_send && (
@@ -267,6 +269,7 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
       </span>
     ),
     place({ name: a.project_name, side: a.side_name, parent: a.parent_name }) && <ProjectTag key="p" name={a.project_name} side={a.side_name} parent={a.parent_name} />,
+    inViews.length > 0 && <ViewTags key="v" views={a.views} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
@@ -372,12 +375,14 @@ function QuestionRow(props: { question: OpenQuestion; inlineOrigin: boolean }) {
         : q.state === "later"
           ? t("open.q.held", { name: q.to_name, date: q.held_until ? monthDay(q.held_until) : "" })
           : t("open.q.not_sent", { name: q.to_name });
+  const inViews = useViewLabels(q.views);
   const meta = join([
     who,
     q.since && t("open.q.since", { date: monthDay(q.since) }),
     q.waiting_days != null && tn("open.q.days", q.waiting_days),
     q.chases > 0 && tn("open.q.chases", q.chases),
     place({ name: q.project_name, side: q.side_name }) && <ProjectTag key="p" name={q.project_name} side={q.side_name} />,
+    inViews.length > 0 && <ViewTags key="v" views={q.views} />,
   ]);
   return (
     <Row

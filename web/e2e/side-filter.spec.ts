@@ -14,6 +14,7 @@ interface Seeded {
   promises: Record<"personal" | "job" | "business", string>;
   owed_by: Record<"personal" | "job" | "business", string>;
   meetings: Record<"job" | "business", string[]>;
+  views: { project: string; todo: string; only_project: string; only_todo: string; first: string; second: string };
 }
 
 type Side = "personal" | "job" | "business";
@@ -138,5 +139,33 @@ test.describe("The side filter changes what the screens show", () => {
     await expect(main.getByText(seeded.meetings.job[0]).first()).toBeVisible(LOADED);
     const meetings = bySide({ personal: [], job: [seeded.meetings.job[0]], business: [seeded.meetings.business[0], seeded.meetings.business[1]] });
     await expectUnder(page, main, meetings.shown, meetings.hidden);
+  });
+
+  test("Views: a project in two views shows its to-do under each, one in a single view only under that view, and nothing drops on the switch", async ({ page }) => {
+    test.setTimeout(120_000);
+    await go(page, "work/open");
+    await heading(page, "To-dos and questions");
+    const main = page.locator("main");
+    const { views, todos, sides } = seeded;
+    await expect(main.getByText(views.todo)).toBeVisible(LOADED);
+    const pickView = async (view: string) => {
+      const name = new RegExp(`^${`${sides.job.name}: ${view}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(,|$)`);
+      await page.getByRole("radio", { name }).click();
+      await expect(page.getByRole("radio", { name, checked: true })).toBeVisible();
+    };
+    // Under All the shared project's to-do carries a tag for each view it is in.
+    await expect(main.getByRole("listitem").filter({ hasText: views.todo }).locator('[data-tag="view"]')).toHaveCount(2);
+    await pickView(views.first);
+    await expect(main.getByText(views.todo).first(), "the first view shows the shared project").toBeVisible(LOADED);
+    await expect(main.getByText(views.only_todo).first(), "the first view shows its own project").toBeVisible(LOADED);
+    await expect(main.getByText(todos.none).first(), "a to-do on no side shows under a view").toBeVisible(LOADED);
+    await expect(main.getByText(todos.job).first(), "a to-do filed on the side itself shows under its views").toBeVisible(LOADED);
+    await expect(main.getByText(todos.personal), "another side's to-do is hidden").toHaveCount(0, LOADED);
+    await expect(main.getByText(todos.business), "another side's to-do is hidden").toHaveCount(0, LOADED);
+    // The other view still shows the shared project, and not the project only the first view holds.
+    await pickView(views.second);
+    await expect(main.getByText(views.todo).first(), "the second view still shows the shared project").toBeVisible(LOADED);
+    await expect(main.getByText(views.only_todo), "the second view hides what only the first holds").toHaveCount(0, LOADED);
+    await expect(main.getByText(todos.none).first()).toBeVisible(LOADED);
   });
 });

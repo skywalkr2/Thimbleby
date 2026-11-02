@@ -2835,6 +2835,14 @@
             "description": "For a plain entry (nobody else invited, no description) whose title starts with a task verb and that has no to-do yet: the to-do it is offered as, in its own words. Posting to `/api/events/{entry}/todo` makes it.",
             "title": "Todo Offer"
           },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
+          },
           "where": {
             "anyOf": [
               {
@@ -11549,6 +11557,14 @@
             ],
             "description": "Its version as read; sent back when its owners change.",
             "title": "Version"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           }
         },
         "required": [
@@ -11743,6 +11759,14 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           },
           "waiting_days": {
             "anyOf": [
@@ -17375,6 +17399,14 @@
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           }
         },
         "required": [
@@ -17733,6 +17765,14 @@
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           },
           "waiting_days": {
             "anyOf": [
@@ -24709,6 +24749,14 @@
             "description": "For a model_watch or model_moved line: what the change costs per day at the current use, in US dollars (below zero: less); none when a price isn't known.",
             "title": "Usd Per Day"
           },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
+          },
           "waiting": {
             "anyOf": [
               {
@@ -26589,6 +26637,14 @@
             ],
             "description": "For a plain entry (nobody else invited, no description) whose title starts with a task verb and that has no to-do yet: the to-do it is offered as, in its own words. Posting to `/api/events/{entry}/todo` makes it.",
             "title": "Todo Offer"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           },
           "where": {
             "anyOf": [
@@ -31942,6 +31998,163 @@
         "title": "VersionsView",
         "type": "object"
       },
+      "ViewAddIn": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Left out, the first word of the name.",
+            "title": "Label"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "projects": {
+            "description": "The ids of the projects in the view.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "side": {
+            "description": "The id of the side's top project.",
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "side"
+        ],
+        "title": "ViewAddIn",
+        "type": "object"
+      },
+      "ViewApplied": {
+        "properties": {
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "view": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the view that was added; none for a change or a removal.",
+            "title": "View"
+          }
+        },
+        "required": [
+          "changeset"
+        ],
+        "title": "ViewApplied",
+        "type": "object"
+      },
+      "ViewCount": {
+        "properties": {
+          "count": {
+            "description": "How many wait in that view: those in its projects, those on no project at all in its side and those on no side.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "view": {
+            "description": "The id of the view.",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view",
+          "count"
+        ],
+        "title": "ViewCount",
+        "type": "object"
+      },
+      "ViewProjectView": {
+        "properties": {
+          "id": {
+            "description": "The project's id.",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The project's name.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ViewProjectView",
+        "type": "object"
+      },
+      "ViewProjectsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "projects": {
+            "description": "The projects the view now holds, replacing the list it had.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Projects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "projects"
+        ],
+        "title": "ViewProjectsIn",
+        "type": "object"
+      },
+      "ViewRenameIn": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Left out, the tag follows the name.",
+            "title": "Label"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ViewRenameIn",
+        "type": "object"
+      },
       "WaitingCount": {
         "description": "How many things wait on one screen: all of them, and for each side the ones that show under its tab.",
         "properties": {
@@ -31956,6 +32169,14 @@
           "total": {
             "title": "Total",
             "type": "integer"
+          },
+          "views": {
+            "description": "One entry for each view the person has, in the views' order; empty with no views.",
+            "items": {
+              "$ref": "#/components/schemas/ViewCount"
+            },
+            "title": "Views",
+            "type": "array"
           }
         },
         "required": [
@@ -32970,6 +33191,14 @@
           "text": {
             "title": "Text",
             "type": "string"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           }
         },
         "required": [
@@ -33018,6 +33247,14 @@
             ],
             "description": "The side those to-dos are on. A person waiting on the person from several sides has a row for each side; the screen's side filter shows a row with none under every choice.",
             "title": "Side"
+          },
+          "views": {
+            "description": "The ids of the views its project is in (design 6.32); empty when its project is in none. A view only changes what a screen shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
           }
         },
         "required": [
@@ -33087,6 +33324,54 @@
           "choice"
         ],
         "title": "WorkIn",
+        "type": "object"
+      },
+      "WorkViewView": {
+        "description": "A view (design 6.32): a named list of projects inside one side, so a project can show under several roles.",
+        "properties": {
+          "id": {
+            "description": "The view's id; the side filter's choice is `view:<id>`.",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "description": "The short word on the tag of a line that is in this view.",
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "description": "What the view is called.",
+            "title": "Name",
+            "type": "string"
+          },
+          "projects": {
+            "description": "The projects in the view that still exist, in the order the view lists them.",
+            "items": {
+              "$ref": "#/components/schemas/ViewProjectView"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "side": {
+            "description": "The id of the side's top project the view is inside.",
+            "title": "Side",
+            "type": "string"
+          },
+          "side_name": {
+            "description": "The side's name.",
+            "title": "Side Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "label",
+          "side",
+          "side_name",
+          "projects"
+        ],
+        "title": "WorkViewView",
         "type": "object"
       },
       "WorkingCopyFormatView": {
@@ -48119,6 +48404,206 @@
           }
         },
         "summary": "Versions Same"
+      }
+    },
+    "/api/views": {
+      "get": {
+        "description": "The person's views, in the order they were made.",
+        "operationId": "views_api_views_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkViewView"
+                  },
+                  "title": "Response Views Api Views Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Views"
+      },
+      "post": {
+        "description": "Make a view of a side's projects, with Undo.",
+        "operationId": "add_api_views_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewAddIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewApplied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add"
+      }
+    },
+    "/api/views/{view_id}": {
+      "delete": {
+        "description": "Remove a view; the projects stay as they are. Undo brings it back.",
+        "operationId": "remove_api_views__view_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "title": "View Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewApplied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove"
+      }
+    },
+    "/api/views/{view_id}/projects": {
+      "post": {
+        "description": "Replace the projects a view holds, with Undo.",
+        "operationId": "set_projects_api_views__view_id__projects_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "title": "View Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewProjectsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewApplied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Projects"
+      }
+    },
+    "/api/views/{view_id}/rename": {
+      "post": {
+        "description": "Rename a view, and its tag when one is given, with Undo.",
+        "operationId": "rename_api_views__view_id__rename_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "title": "View Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewRenameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewApplied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rename"
       }
     },
     "/api/waiting": {

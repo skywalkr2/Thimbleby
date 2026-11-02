@@ -18,7 +18,7 @@ project:
   personal: PRJ-21  # the project that holds the person's own life
   personal_data_level: restricted   # how sensitive a connection serving the personal project is (open, internal or restricted); the most private by default
   # business: PRJ-1  # the top project of the person's business or job, when they have one (none here: these workspaces track several projects)
-  # sides: [{project: PRJ-1, kind: business, data_level: internal}]  # the sides of your work beside your own life, each a top project and what it is (job or business); none here
+  sides: [{project: PRJ-22, kind: job, data_level: internal}]  # the sides of your work beside your own life, each a top project and what it is (job or business)
   side_words: {personal: [school run], business: [freight audit]}   # words that place an item on a side when its people don't (used with a business)
 plugins:
   enabled: [example, kit]

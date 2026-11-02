@@ -33,6 +33,7 @@ from engine.names import People, render_owner
 from engine.storage import Store
 from engine.this_week import this_week
 from engine.top_priorities import top_priorities
+from engine.views import views_of_agenda_item
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
@@ -45,6 +46,7 @@ def _entry_view(entry: schedule_module.Entry) -> ScheduleEntryView:
         ends=entry.ends,
         kind=entry.kind,
         side=entry.side,
+        views=entry.views,
         action=entry.action,
     )
 
@@ -147,17 +149,28 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     mine=d.mine,
                     kind=d.kind,
                     side=d.side,
+                    views=d.views,
                 )
                 for d in found.due
             ],
             waiting=[
                 WeekWaitingView(
-                    person=w.person, person_name=people.name(w.person), count=w.count, due=w.due, side=w.side
+                    person=w.person,
+                    person_name=people.name(w.person),
+                    count=w.count,
+                    due=w.due,
+                    side=w.side,
+                    views=w.views,
                 )
                 for w in found.waiting
             ],
             meetings=[
-                AgendaItemView(**vars(m), side=sides.side_of_agenda_item(store.read(), cfg, m)) for m in found.meetings
+                AgendaItemView(
+                    **vars(m),
+                    side=sides.side_of_agenda_item(store.read(), cfg, m),
+                    views=views_of_agenda_item(store.read(), m),
+                )
+                for m in found.meetings
             ],
         )
 

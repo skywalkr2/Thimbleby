@@ -1208,6 +1208,59 @@ class SourceWidenOp(OpModel):
         return f"Remove the limit on {what}" if self.open else f"Widen the limit on {what}"
 
 
+class ViewAddOp(OpModel):
+    """Make a view: a named list of projects inside one side (design 6.32). Only the person makes one, on their own
+    screen; it applies at once and Undo removes it."""
+
+    op: Literal["view.add"] = "view.add"
+    name: str = Field(min_length=1, max_length=80, description="What the view is called.")
+    label: str | None = Field(
+        None,
+        min_length=1,
+        max_length=20,
+        description="A short word for its tag; the first word of the name when left out.",
+    )
+    side: Annotated[str, RefTo("project")] = Field(description="The id of the side's top project the view is inside.")
+    projects: list[Annotated[str, RefTo("project")]] = Field(
+        default_factory=list, description="The ids of the projects in the view, each inside that side."
+    )
+
+    def describe(self) -> str | None:
+        return f"Add the view {' '.join(self.name.split())!r}"
+
+
+class ViewSetOp(OpModel):
+    """Change a view: rename it, change its tag, or replace its projects. Only the person makes it; Undo puts the view
+    back as it was."""
+
+    op: Literal["view.set"] = "view.set"
+    id: Annotated[str, RefTo("view")] = Field(description="The id of the view.")
+    name: str | None = Field(None, min_length=1, max_length=80, description="Its new name.")
+    label: str | None = Field(None, min_length=1, max_length=20, description="Its new tag.")
+    projects: list[Annotated[str, RefTo("project")]] | None = Field(
+        None, description="The projects the view now holds, replacing the list it had."
+    )
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> ViewSetOp:
+        if self.name is None and self.label is None and self.projects is None:
+            raise ValueError("give a new name, a new tag or the projects")
+        return self
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change {named(view, 'view', self.id)}"
+
+
+class ViewRemoveOp(OpModel):
+    """Remove a view. The projects stay as they are. Only the person makes it; Undo brings the view back."""
+
+    op: Literal["view.remove"] = "view.remove"
+    id: Annotated[str, RefTo("view")] = Field(description="The id of the view.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Remove {named(view, 'view', self.id)}"
+
+
 class ListRetireOp(OpModel):
     """Stop offering a value; records that hold it keep it."""
 
@@ -1857,6 +1910,9 @@ Op = Annotated[
     | MailRestoreOp
     | SourceLimitOp
     | SourceWidenOp
+    | ViewAddOp
+    | ViewSetOp
+    | ViewRemoveOp
     | ReportDraftOp
     | LessonAddOp
     | LessonUpdateOp
@@ -1938,6 +1994,9 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "mail.restore": MailRestoreOp,
     "source.limit": SourceLimitOp,
     "source.widen": SourceWidenOp,
+    "view.add": ViewAddOp,
+    "view.set": ViewSetOp,
+    "view.remove": ViewRemoveOp,
     "rule.add": RuleAddOp,
     "rule.retire": RuleRetireOp,
     "report.draft": ReportDraftOp,
@@ -2018,6 +2077,9 @@ PERSON_ONLY_OPS = {
     "question.move",
     "question.mark_sent",
     "source.widen",
+    "view.add",
+    "view.set",
+    "view.remove",
     *ACT_PERSON_OPS,
 }
 

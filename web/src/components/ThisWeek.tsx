@@ -9,6 +9,7 @@ import { onSide, useSideFilter, type SideChoice } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed } from "./RailPanel";
+import { ViewTags } from "./ViewTags";
 import styles from "./Today.module.css";
 import { plainTitle } from "../lib/title-dates";
 
@@ -25,15 +26,15 @@ export function useThisWeek() {
 export function weekOn(week: Week, choice: SideChoice): Week {
   const waiting = new Map<string, Week["waiting"][number]>();
   for (const w of week.waiting) {
-    if (!onSide(w.side, choice)) continue;
+    if (!onSide(w.side, choice, w.views)) continue;
     const held = waiting.get(w.person);
     waiting.set(w.person, held ? { ...held, count: held.count + w.count, due: [held.due, w.due].filter((d): d is string => !!d).sort()[0] ?? null } : w);
   }
   return {
     ...week,
-    due: week.due.filter((d) => onSide(d.side, choice)),
+    due: week.due.filter((d) => onSide(d.side, choice, d.views, !!d.project_name)),
     waiting: [...waiting.values()],
-    meetings: week.meetings.filter((m) => onSide(m.side, choice)),
+    meetings: week.meetings.filter((m) => onSide(m.side, choice, m.views)),
   };
 }
 
@@ -81,6 +82,7 @@ export function WeekBody(props: { week: Week; listed?: ReadonlySet<string> }) {
                 <div className="tb-what">
                   <div className="tb-title">{plainTitle(item.text, item.due)}</div>
                   <div className="tb-meta">
+                    <ViewTags views={item.views} />
                     {[item.kind === "hold" ? t("today.week.hold") : null, place({ name: item.project_name, side: item.side_name }), item.mine ? t("today.priorities.yours") : (item.owners ?? []).map((o) => o.name).join(", ")].filter(Boolean).join(" · ")}
                   </div>
                 </div>
@@ -130,7 +132,7 @@ export function ThisWeekInspector() {
   const filter = useSideFilter();
   if (week.isPending) return <Skeleton />;
   if (week.isError || !week.data) return <Failed text={t("today.week.load_failed")} retry={() => void week.refetch()} />;
-  const shown = weekOn(week.data, filter.choice);
+  const shown = weekOn(week.data, filter.picked);
   const summary = weekSummary(shown, tn);
   return (
     <div data-week="inspector">

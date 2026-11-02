@@ -557,7 +557,7 @@ export function BriefCard(props: {
   const queue = useQueue();
   const filter = useSideFilter();
   // How many things need the person is Today's own count (the heading's), so the two never disagree.
-  const needing = useTodayCount(filter.choice);
+  const needing = useTodayCount(filter.picked);
   const id = useId();
   const data = found.data;
   if (!data || data.form === null) return null;

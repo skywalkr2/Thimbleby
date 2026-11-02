@@ -1,6 +1,7 @@
 """What waits for the person on each screen that lists it, counted for the side menu and each screen's side tabs
-(design 7.1, 7.8). Each count is a list of the side every waiting thing is on, so a screen's tab for one side counts the
-things on it and the things on no side, the same rule the screens' lists follow.
+(design 7.1, 7.8). Each count is a list of the side every waiting thing is on and the views its project is in, so a
+screen's tab for one side counts the things on it and the things on no side, and a view's counts the things in it and
+the things on no project, the same rule the screens' lists follow.
 
 - What changed: finished work the person has not yet checked.
 - Follow-ups: what is ready to send.
@@ -15,13 +16,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, NamedTuple
 
 from engine import catch_up, handled, open_items, review_batches, sides, source_intake
 from engine.followups import sections
 from engine.names import People
 from engine.storage import Store, WriteContext
 from engine.today_queue import request_project
+from engine.views import in_a_project, views_of_project
 from engine.workspace import Workspace
 
 #: The screens whose count is "new since the person last opened it".
@@ -30,14 +32,23 @@ LOOKED_SCREENS = ("handled",)
 _LOOK = WriteContext(actor="pm", trust="trusted", op="waiting.look")
 
 
+class Thing(NamedTuple):
+    """One thing waiting: the side it is on (none for none), the views its projects are in, and whether it is on no
+    project at all (a view's count then takes it in, as its side's count does)."""
+
+    side: str | None
+    views: tuple[str, ...] = ()
+    loose: bool = False
+
+
 @dataclass
 class Waiting:
-    """For each screen, the side (or none) of each thing waiting on it."""
+    """For each screen, the side, views and project of each thing waiting on it."""
 
-    changed: list[str | None] = field(default_factory=list)
-    followups: list[str | None] = field(default_factory=list)
-    open: list[str | None] = field(default_factory=list)
-    handled: list[str | None] = field(default_factory=list)
+    changed: list[Thing] = field(default_factory=list)
+    followups: list[Thing] = field(default_factory=list)
+    open: list[Thing] = field(default_factory=list)
+    handled: list[Thing] = field(default_factory=list)
 
 
 def _moment(stamp: Any) -> datetime | None:
@@ -75,9 +86,18 @@ def mark_looked(store: Store, cfg: Any, screen: str, now: datetime) -> None:
             tx.update("screen_look", current.id, {"at": stamp.isoformat()}, _LOOK, read_version=current.version)
 
 
-def _unchecked(view: Any, cfg: Any) -> list[str | None]:
+def _thing(view: Any, cfg: Any, project: str | None) -> Thing:
+    """A thing filed under one project (or none)."""
+    return Thing(
+        sides.side_of_project(view, cfg, project),
+        tuple(views_of_project(view, project)),
+        not in_a_project(view, cfg, project),
+    )
+
+
+def _unchecked(view: Any, cfg: Any) -> list[Thing]:
     """The side of each finished change the person has not yet checked, as What changed lists them."""
-    found: list[str | None] = []
+    found: list[Thing] = []
     for req in view.list("request"):
         d = req.data
         if d.get("set_aside") or d.get("dismissed") or d["state"] not in ("review", "done") or not d.get("changeset"):
@@ -87,46 +107,57 @@ def _unchecked(view: Any, cfg: Any) -> list[str | None]:
         cs = view.get("changeset", d["changeset"])
         if cs is None or review_batches.review_of(cs.data) != "unchecked":
             continue
-        found.append(sides.side_of_project(view, cfg, request_project(view, req, cs.data)))
+        found.append(_thing(view, cfg, request_project(view, req, cs.data)))
     return found
 
 
-def _to_send(store: Store, cfg: Any, today: date) -> list[str | None]:
+def _to_send(store: Store, cfg: Any, today: date) -> list[Thing]:
     """The side of each question and to-do ready to send to someone else, as Follow-ups counts them in To send."""
-    found: list[str | None] = []
+    found: list[Thing] = []
     for section in sections(store, cfg, today):
         if section.is_pm:
             continue
-        found += [q["side"] for q in section.questions if q["status"] == "open"]
-        found += [a["side"] for a in section.actions if a["to_send"]]
+        found += [
+            Thing(q["side"], tuple(q["views"]), not q["project_name"])
+            for q in section.questions
+            if q["status"] == "open"
+        ]
+        found += [Thing(a["side"], tuple(a["views"]), not a["project_name"]) for a in section.actions if a["to_send"]]
     return found
 
 
-def _on_the_person(store: Store, cfg: Any, today: date) -> list[str | None]:
+def _on_the_person(store: Store, cfg: Any, today: date) -> list[Thing]:
     """The side of each to-do that waits on the person (theirs, or with no owner yet, and not on hold) and of each
     question put to them."""
     view = store.read()
     me = cfg.workspace.user.person
-    found: list[str | None] = []
+    found: list[Thing] = []
     for a in open_items.open_actions(store, cfg, today, light=True):
         if a.state == "on_hold":
             continue
         if a.state == "no_owner" or (me and any(o.person == me for o in a.owners)):
-            found.append(sides.side_of_project(view, cfg, a.project))
+            found.append(Thing(sides.side_of_project(view, cfg, a.project), tuple(a.views), not a.project_name))
     for q in open_items.open_questions(store, cfg, today):
         if q.state == "yours":
-            found.append(sides.side_of_project(view, cfg, q.projects[0] if q.projects else None))
+            found.append(
+                Thing(
+                    sides.side_of_project(view, cfg, q.projects[0] if q.projects else None),
+                    tuple(q.views),
+                    not q.projects,
+                )
+            )
     return found
 
 
-def _new_handled(ws: Workspace, store: Store, cfg: Any, now: datetime, since: datetime | None) -> list[str | None]:
-    """The side of each handled item that came after `since` (all of them when the person never looked)."""
-    found: list[str | None] = []
+def _new_handled(ws: Workspace, store: Store, cfg: Any, now: datetime, since: datetime | None) -> list[Thing]:
+    """The side of each handled item that came after `since` (all of them when the person never looked). A handled
+    item came in from a source, so it is on no project."""
+    found: list[Thing] = []
     for tab in handled.TABS:
         for row in handled.rows(ws, store, cfg, tab, now):
             at = _moment(row.get("handled_at"))
             if since is None or at is None or at > since:
-                found.append(row.get("side"))
+                found.append(Thing(row.get("side"), (), True))
     return found
 
 

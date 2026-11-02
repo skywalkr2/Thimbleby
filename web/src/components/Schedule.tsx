@@ -10,7 +10,7 @@ import { moveBy, rangeOf, rememberView, storedView, VIEWS, type CalendarView } f
 import { fullDay, todayOn, monthDayLong, monthDayYear, monthYear } from "../lib/dates";
 import { typing } from "../lib/keys";
 import { useMediaQuery, useWidth } from "../lib/media";
-import { onSide, useSideFilter } from "../lib/sides";
+import { useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
@@ -91,10 +91,10 @@ export function Schedule() {
     const byDate = new Map((data?.days ?? []).map((d) => [d.date, d]));
     return range.shown.map((d) => {
       const found = byDate.get(d);
-      return { date: d, all_day: (found?.all_day ?? []).filter((e) => onSide(e.side, filter.choice)), timed: (found?.timed ?? []).filter((e) => onSide(e.side, filter.choice)) };
+      return { date: d, all_day: (found?.all_day ?? []).filter((e) => filter.shows(e.side, e.views)), timed: (found?.timed ?? []).filter((e) => filter.shows(e.side, e.views)) };
     });
-  }, [data, range, filter.choice]);
-  const onItsWay = useMemo(() => (data?.on_its_way ?? []).filter((e) => onSide(e.side, filter.choice)), [data, filter.choice]);
+  }, [data, range, filter.picked]);
+  const onItsWay = useMemo(() => (data?.on_its_way ?? []).filter((e) => filter.shows(e.side, e.views)), [data, filter.picked]);
 
   // The entry whose details are open.
   const [picked, setPicked] = useState<string | null>(null);

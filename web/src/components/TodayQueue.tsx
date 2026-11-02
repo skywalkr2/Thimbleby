@@ -54,6 +54,7 @@ import { staleLine, useReminderWhere } from "../lib/reminder-where";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { NoteBox } from "./NoteBox";
 import { ProjectTag } from "./ProjectTag";
+import { ViewTags } from "./ViewTags";
 import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
 import { MadeBy } from "./MadeBy";
@@ -95,9 +96,9 @@ export function TodayQueue(props: {
 }) {
   const { t, tn } = useWords();
   const filter = useSideFilter();
-  const queue = useQueue(filter.choice);
+  const queue = useQueue(filter.picked);
   const everything = useQueue();
-  const count = useTodayCount(filter.choice);
+  const count = useTodayCount(filter.picked);
   const total = useTodayCount();
   const stage = useStageToday();
   const outgoing = useActToday();
@@ -1293,6 +1294,7 @@ function QueueRow(props: {
           <span id={`${detailId}-title`} title={line.notes ?? undefined}>
             {area}
             {project}
+            <ViewTags views={line.views} className={styles.tag} />
             {title}
           </span>
           {line.notes && (

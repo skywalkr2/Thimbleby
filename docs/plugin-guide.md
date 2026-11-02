@@ -739,7 +739,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `act.draft`, `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.repeat`, `action.reply`, `action.unhold`, `agenda.add`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `source.widen`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `act.draft`, `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.repeat`, `action.reply`, `action.unhold`, `agenda.add`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `source.widen`, `stage.move`, `text.edit`, `text.propose`, `view.add`, `view.remove`, `view.set`.
 
 ## AI task kinds
 
@@ -2537,6 +2537,17 @@ The person's standing yes for reminders (design 6.12): one choice, on one accoun
 | `given_at` | AwareDatetime | required | When the person gave it. |
 | `ended_at` | AwareDatetime \| None | `None` | When the person ended it; none while it stands. |
 
+### `view` (VIEW-n)
+
+A named list of projects inside one side (design 6.32, "Views: one project under several roles"): the roles the person works in within a side. A project can be in any number of views, and its sub-projects come with it. A view only changes what a screen shows; it never files anything, never changes a project's side and never changes a data level. Only the person's own `view.add`, `view.set` and `view.remove` write one.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `name` | str | required | What the view is called, in the person's words. |
+| `label` | str | required | A short word for the tag on a line that is in this view; the first word of the name when it is left out. |
+| `side` | str | required | The side the view is inside, as the id of the side's top project. |
+| `projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=False)]] | `[]` | The projects in the view, each inside its side. A project's sub-projects come with it. A project that has been deleted is skipped when the view is read. |
+
 ## Core ops
 
 Fields of each core op, for actions and task kinds that use them.
@@ -3629,3 +3640,36 @@ The person's own work on a long text field arriving from outside (a working copy
 | `base` | int \| None | `None` | The number of the version it was made from. |
 | `note` | str \| None | `None` | Where it came from, for the review. |
 | `unmapped` | list[str] | `[]` | What couldn't be mapped back into the text, shown beside the proposal. |
+
+### `view.add`
+
+Make a view: a named list of projects inside one side (design 6.32). Only the person makes one, on their own screen; it applies at once and Undo removes it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `name` | str | required | What the view is called. |
+| `label` | str \| None | `None` | A short word for its tag; the first word of the name when left out. |
+| `side` | str | required | The id of the side's top project the view is inside. |
+| `projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] | `[]` | The ids of the projects in the view, each inside that side. |
+
+### `view.remove`
+
+Remove a view. The projects stay as they are. Only the person makes it; Undo brings the view back.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the view. |
+
+### `view.set`
+
+Change a view: rename it, change its tag, or replace its projects. Only the person makes it; Undo puts the view back as it was.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the view. |
+| `name` | str \| None | `None` | Its new name. |
+| `label` | str \| None | `None` | Its new tag. |
+| `projects` | list[Annotated[str, RefTo(kind='project', blocks_delete=True)]] \| None | `None` | The projects the view now holds, replacing the list it had. |

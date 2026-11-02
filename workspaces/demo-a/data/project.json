@@ -42,6 +42,25 @@
     "name": "Home and family"
   },
   {
+    "id": "PRJ-22",
+    "name": "Freight desk"
+  },
+  {
+    "id": "PRJ-23",
+    "name": "Dispatch handover",
+    "parent": "PRJ-22"
+  },
+  {
+    "id": "PRJ-24",
+    "name": "Carrier onboarding",
+    "parent": "PRJ-22"
+  },
+  {
+    "id": "PRJ-25",
+    "name": "Night shift rota",
+    "parent": "PRJ-22"
+  },
+  {
     "id": "PRJ-2001",
     "name": "The long-running cross-regional coordination program for every season of the year, with all of its many parts and its very long title",
     "owner": "PER-2001"

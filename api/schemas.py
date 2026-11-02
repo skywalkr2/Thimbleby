@@ -1080,6 +1080,11 @@ class FollowupQuestion(BaseModel):
         "personal project's or another side's), or none for neither (the screen's side filter shows such rows under "
         "every choice).",
     )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
+    )
 
 
 class FollowupAction(BaseModel):
@@ -1139,6 +1144,11 @@ class FollowupAction(BaseModel):
         description="Which side the action is on, from its project: the id of that side's top project (the "
         "personal project's or another side's), or none for neither (the screen's side filter shows such rows under "
         "every choice).",
+    )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
     )
 
 
@@ -2720,6 +2730,11 @@ class AgendaItemView(BaseModel):
         "the one side the calendar it comes from serves; none for neither. The screen's side filter shows an entry "
         "with none under every choice.",
     )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
+    )
 
 
 class ScheduleEntryView(AgendaItemView):
@@ -3336,6 +3351,11 @@ class QueueLineView(BaseModel):
         description="Which side the line is on, from its project: the id of that side's top project (the "
         "personal project's or another side's), or none for neither (the screen's side filter shows such lines "
         "under every choice).",
+    )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
     )
     area: str | None = Field(
         None,
@@ -5358,6 +5378,14 @@ class SideCount(BaseModel):
     )
 
 
+class ViewCount(BaseModel):
+    view: str = Field(description="The id of the view.")
+    count: int = Field(
+        description="How many wait in that view: those in its projects, those on no project at all in its side and "
+        "those on no side."
+    )
+
+
 class WaitingCount(BaseModel):
     """How many things wait on one screen: all of them, and for each side the ones that show under its tab."""
 
@@ -5365,6 +5393,10 @@ class WaitingCount(BaseModel):
     sides: list[SideCount] = Field(
         default_factory=list,
         description="One entry for each side the person has, Personal first; empty with no side beside Personal.",
+    )
+    views: list[ViewCount] = Field(
+        default_factory=list,
+        description="One entry for each view the person has, in the views' order; empty with no views.",
     )
 
 
@@ -6991,6 +7023,11 @@ class OpenActionView(BaseModel):
         description="The id of the side's top project it is on, whether it is filed on the side itself or in a project "
         "of it; none for neither. The screen's side filter shows an item with none under every choice.",
     )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
+    )
     parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
     notes: str | None = Field(None, description="Its notes, which the screen shows on hover.")
     since: str = Field("", description="The day it was made, as an ISO date.")
@@ -7086,6 +7123,11 @@ class OpenQuestionView(BaseModel):
         None,
         description="The id of the side's top project it is on; none for neither. The screen's side filter shows an "
         "item with none under every choice.",
+    )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
     since: str = Field("", description="The day it was sent, else the day it was made, as an ISO date.")
@@ -7195,6 +7237,11 @@ class WeekDueView(BaseModel):
     side: str | None = Field(
         None, description="The id of the side's top project it is on; none for neither (shown under every choice)."
     )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
+    )
 
 
 class WeekWaitingView(BaseModel):
@@ -7208,6 +7255,11 @@ class WeekWaitingView(BaseModel):
         None,
         description="The side those to-dos are on. A person waiting on the person from several sides has a row for "
         "each side; the screen's side filter shows a row with none under every choice.",
+    )
+    views: list[str] = Field(
+        default_factory=list,
+        description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
+        "only changes what a screen shows.",
     )
 
 
@@ -8164,3 +8216,45 @@ class SearchHit(BaseModel):
 
 class SearchResults(BaseModel):
     results: list[SearchHit]
+
+
+class ViewProjectView(BaseModel):
+    id: str = Field(description="The project's id.")
+    name: str = Field(description="The project's name.")
+
+
+class WorkViewView(BaseModel):
+    """A view (design 6.32): a named list of projects inside one side, so a project can show under several roles."""
+
+    id: str = Field(description="The view's id; the side filter's choice is `view:<id>`.")
+    name: str = Field(description="What the view is called.")
+    label: str = Field(description="The short word on the tag of a line that is in this view.")
+    side: str = Field(description="The id of the side's top project the view is inside.")
+    side_name: str = Field(description="The side's name.")
+    projects: list[ViewProjectView] = Field(
+        description="The projects in the view that still exist, in the order the view lists them."
+    )
+
+
+class ViewAddIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=80)
+    label: str | None = Field(None, min_length=1, max_length=20, description="Left out, the first word of the name.")
+    side: str = Field(description="The id of the side's top project.")
+    projects: list[str] = Field(default_factory=list, description="The ids of the projects in the view.")
+
+
+class ViewRenameIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=80)
+    label: str | None = Field(None, min_length=1, max_length=20, description="Left out, the tag follows the name.")
+
+
+class ViewProjectsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    projects: list[str] = Field(description="The projects the view now holds, replacing the list it had.")
+
+
+class ViewApplied(BaseModel):
+    changeset: str
+    view: str | None = Field(None, description="The id of the view that was added; none for a change or a removal.")

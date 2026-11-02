@@ -14,6 +14,7 @@ from engine.config.schema import WEEKDAYS
 from engine.connectors import moment
 from engine.sides import side_of_agenda_item, side_of_item
 from engine.today import AgendaItem, agenda, event_dates, todo, zone
+from engine.views import views_of_agenda_item, views_of_item
 
 #: The most days one request may ask for: six weeks, what a month view needs.
 MOST_DAYS = 42
@@ -33,6 +34,7 @@ class Entry:
     ends: str | None = None
     kind: Kind = "event"
     side: str | None = None
+    views: list[str] = field(default_factory=list)
     action: str | None = None  # for a due date: the to-do it is the date of
 
 
@@ -101,10 +103,12 @@ def schedule(store: Any, cfg: Any, now: datetime, start: date | None = None, day
     items = agenda(store, cfg, now, through=through, start=first)
     view = store.read()
     sides = {id(item): side_of_agenda_item(view, cfg, item) for item in items}
+    views = {id(item): views_of_agenda_item(view, item) for item in items}
     due = _due_items(store, cfg, now, first, through)
     for item, action in due:
         record = view.get("action", action)
         sides[id(item)] = side_of_item(view, cfg, record) if record is not None else None
+        views[id(item)] = views_of_item(view, record) if record is not None else []
     actions = {id(item): action for item, action in due}
     out = []
     for n in range(count):
@@ -113,6 +117,7 @@ def schedule(store: Any, cfg: Any, now: datetime, start: date | None = None, day
             if day.date in item.days:
                 entry = _entry(item, day.date, here)
                 entry.side = sides[id(item)]
+                entry.views = views[id(item)]
                 if id(item) in actions:
                     entry.kind, entry.action = "due", actions[id(item)]
                 else:
@@ -138,7 +143,13 @@ def on_its_way(store: Any, cfg: Any, now: datetime) -> list[Entry]:
     """The deliveries with no date yet: on no day, so the schedule lists them apart."""
     view = store.read()
     return [
-        Entry(item, "all_day", kind="delivery", side=side_of_agenda_item(view, cfg, item))
+        Entry(
+            item,
+            "all_day",
+            kind="delivery",
+            side=side_of_agenda_item(view, cfg, item),
+            views=views_of_agenda_item(view, item),
+        )
         for item in agenda(store, cfg, now, undated=True)
         if item.delivery is not None and not item.days
     ]

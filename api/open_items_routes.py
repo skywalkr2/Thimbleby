@@ -42,6 +42,7 @@ def _action(r: OpenAction) -> OpenActionView:
         project_name=r.project_name,
         side_name=r.side_name,
         side=r.side,
+        views=r.views,
         parent_name=r.parent_name,
         notes=r.notes,
         since=r.since,

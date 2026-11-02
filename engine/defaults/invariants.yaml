@@ -21,6 +21,9 @@ invariants:
       - question.move
       - question.mark_sent
       - source.widen
+      - view.add
+      - view.set
+      - view.remove
       - act.edit
       - act.withdraw
       - act.confirm_sent

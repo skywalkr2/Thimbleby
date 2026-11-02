@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api, type S } from "./api";
-import { type SideChoice } from "./sides";
+import { viewOf, type SideChoice } from "./sides";
 
 export type WaitingScreen = keyof S["WaitingCounts"];
 
@@ -14,10 +14,13 @@ export function useWaiting(): S["WaitingCounts"] | null {
   return waiting.data ?? null;
 }
 
-/** How many wait on a screen under a side choice: all of them under All, else that side's and those on no side. */
+/** How many wait on a screen under a side choice: all of them under All, else that side's and those on no side; under a
+ * view, those in it, those on no project in its side and those on no side. */
 export function waitingUnder(count: S["WaitingCount"] | undefined, choice: SideChoice): number {
   if (!count) return 0;
   if (choice === "all") return count.total;
+  const view = viewOf(choice);
+  if (view !== null) return (count.views ?? []).find((v) => v.view === view)?.count ?? 0;
   return (count.sides ?? []).find((s) => s.side === choice)?.count ?? 0;
 }
 

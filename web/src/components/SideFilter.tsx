@@ -20,9 +20,13 @@ export function SideFilter(props: { waiting?: WaitingScreen }) {
   return (
     <SegmentedControl<SideChoice>
       label={t("sides.filter.label")}
-      value={filter.choice}
+      value={filter.picked}
       onChange={filter.set}
-      options={[option("all", t("sides.filter.all")), ...filter.options.map((o) => option(o.id, o.name))]}
+      options={[
+        option("all", t("sides.filter.all")),
+        // A side's views follow it, each named with its side so a choice is never a bare name.
+        ...filter.options.flatMap((o) => [option(o.id, o.name), ...filter.views.filter((v) => v.side === o.id).map((v) => option(v.id, t("sides.filter.view", { side: v.sideName, view: v.name })))]),
+      ]}
     />
   );
 }

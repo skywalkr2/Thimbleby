@@ -37,6 +37,7 @@ import { OriginLink } from "./Origin";
 import { OutsideStep } from "./OutsideStep";
 import { usePlaceText } from "../lib/place";
 import { ProjectTag } from "./ProjectTag";
+import { ViewTags } from "./ViewTags";
 import { useReassign } from "./ReassignAction";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
@@ -82,9 +83,9 @@ const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => !isT
 /** The rows of a section that show under a side choice: those on that side and those on neither. */
 const rowsOnSide = (s: S["FollowupSection"], choice: SideChoice): S["FollowupSection"] => ({
   ...s,
-  questions: s.questions.filter((q) => onSide(q.side, choice)),
-  later: (s.later ?? []).filter((q) => onSide(q.side, choice)),
-  actions: s.actions.filter((a) => onSide(a.side, choice)),
+  questions: s.questions.filter((q) => onSide(q.side, choice, q.views, !!q.project_name)),
+  later: (s.later ?? []).filter((q) => onSide(q.side, choice, q.views, !!q.project_name)),
+  actions: s.actions.filter((a) => onSide(a.side, choice, a.views, !!a.project_name)),
 });
 const hasRows = (s: S["FollowupSection"]) => s.questions.length + (s.later ?? []).length + s.actions.length > 0;
 
@@ -140,7 +141,7 @@ export function FollowUps(props: { compact?: boolean }) {
   // With no side beside Personal the follow-ups are by person only: there is no grouping by project to choose.
   const { justMe } = useSides();
   const byProject = group === "project" && !justMe;
-  const sections = sectionsOnSide(present, side.choice, byProject);
+  const sections = sectionsOnSide(present, side.picked, byProject);
   // By project the tab picks the rows, since a project holds rows of several people.
   const projectSections = byProject ? sections.map((s) => rowsOnTab(s, filter)).filter(hasRows) : sections;
   const shown = sections.filter((s) =>
@@ -165,7 +166,7 @@ export function FollowUps(props: { compact?: boolean }) {
   const choice = useListChoice({
     keys: [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)],
     beside,
-    reset: `${group}|${filter}|${side.choice}`,
+    reset: `${group}|${filter}|${side.picked}`,
     wait: actsComing,
   });
   useEffect(() => {
@@ -594,6 +595,7 @@ function ActionMeta(props: { a: S["FollowupAction"]; rest: string }) {
   return (
     <>
       {where && <ProjectTag name={a.project_name} parent={a.parent_name} side={a.side_name} />}
+      <ViewTags views={a.views} />
       {where && rest && " · "}
       {rest}
     </>

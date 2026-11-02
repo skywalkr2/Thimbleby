@@ -40,7 +40,7 @@ from tests.conftest import DEMO_B, fixture_records
 from tests.e2e_just_me import seed_first_go, seed_just_me, the_person
 from tests.e2e_many_sides import seed_many_sides
 from tests.e2e_meetings import seed_meetings
-from tests.e2e_sides import calendar_sources, seed_sides
+from tests.e2e_sides import calendar_sources, seed_sides, seed_views
 from tests.roundtrip import round_trip
 
 TOKEN = "e2e-token"
@@ -462,7 +462,7 @@ def main() -> None:
 
         # The sides are made through the setup route, as setup makes them, so the running app takes them in at once.
         client = TestClient(app, base_url=f"http://127.0.0.1:{args.port}", headers={"Authorization": f"Bearer {TOKEN}"})
-        sided = seed_sides(client, store, cfg) if args.sides else None
+        sided = seed_views(store, cfg, seed_sides(client, store, cfg)) if args.sides else None
         many_sided = seed_many_sides(client) if args.many_sides else None
     else:
         sided = None

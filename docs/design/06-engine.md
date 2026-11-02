@@ -4142,7 +4142,7 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   and the week. The rows of the week carry a side too, and one person waited on from several sides is one row under All and
   one count per side under a side. A to-do the person types belongs to Personal while Personal is their only side
   (`only_side`); with several sides its form asks where, starting on the side the screen is narrowed to.
-- **Views: one project under several roles (designed 2026-11-02, change log 294; P112):** a side says which part of the
+- **Views: one project under several roles (built 2026-11-02, change log 294; P112; `tests/test_views.py`, `web/src/components/Views.test.tsx`):** a side says which part of the
   person's life a project is in and how private it is, so a project is on one side. Inside a side the person may work in
   more than one role (supporting a manager's portfolio and running some projects of their own), and a project can belong to
   both. A `view` record names a list of projects inside one side: `name`, a short `label` for tags, `side` (the id of the

@@ -7,7 +7,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, todayOn, time, wallTime } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
-import { onSide, useSideFilter } from "../lib/sides";
+import { useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { AgendaItems } from "./AgendaList";
 import { useChangeThis } from "./ChangeThis";
@@ -85,7 +85,7 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const today = todayOn(now);
   const tomorrow = addDays(today, 1);
   const filter = useSideFilter();
-  const events = (agenda.data ?? []).filter((e) => onSide(e.side, filter.choice));
+  const events = (agenda.data ?? []).filter((e) => filter.shows(e.side, e.views));
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   const groups = groupByDay(events, today);
   const todayGroups = groups.filter((group) => group.date === today);
