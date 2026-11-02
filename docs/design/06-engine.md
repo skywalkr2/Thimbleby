@@ -4124,6 +4124,19 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   and the week. The rows of the week carry a side too, and one person waited on from several sides is one row under All and
   one count per side under a side. A to-do the person types belongs to Personal while Personal is their only side
   (`only_side`); with several sides its form asks where, starting on the side the screen is narrowed to.
+- **Views: one project under several roles (designed 2026-11-02, change log 294; P112):** a side says which part of the
+  person's life a project is in and how private it is, so a project is on one side. Inside a side the person may work in
+  more than one role (supporting a manager's portfolio and running some projects of their own), and a project can belong to
+  both. A `view` record names a list of projects inside one side: `name`, a short `label` for tags, `side` (the id of the
+  side's top project) and `projects` (ids; a project's sub-projects come with it). A project can be in any number of views.
+  Views only change what is shown: filing (`file_by_people`), a project's side and every data level ignore them. The side
+  filter lists the person's views under their side; choosing one shows what is filed under its projects plus what is on no
+  project, on Today, To-dos and questions, Follow-ups, the Schedule and the week, with the counts of `GET /api/waiting` given
+  per view as they are per side. Today stays one list: when the person has views, a line under a project in a view carries
+  that view's label as a tag (both labels when in two; none when in no view). The person makes, renames and removes views and
+  picks their projects (`view.add`, `view.set`, `view.remove`: the person's own changes, applied at once with Undo); the
+  assistant never writes a view and an input never becomes one. A view following a list kept elsewhere (a portfolio page)
+  is a later step through a configured source.
 - **Personal only means no work concepts (built, change log 262):** a person whose only side is Personal never sees the stance
   question about a person (manage, work alongside, report to, watch: the default stands), a Project column in a message's
   table, the Projects list (its address opens Personal's page, which holds the areas and anything still to be filed), templates

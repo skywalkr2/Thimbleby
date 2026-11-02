@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 294. Views: a project can show under several roles inside one side (2026-11-02; P112)
+
+| Where | Before | Now |
+|---|---|---|
+| Records (5.1, 6.32) | A project shows under exactly one side, the top of its parent chain | Designed: a `view` record (name, short label, side, projects); a project can be in several views, and what is filed under it shows under each. Filing, sides and data levels are unchanged |
+| Filter (6.32, 7.1) | The side filter offers All and each side | Designed: the filter also offers the person's views; a view's choice shows what is under its projects, plus what is on no project |
+| Today (7.7) | One list, filtered by side | Designed: still one list; a line under a project in a view carries the view's label as a tag, both labels when in two |
+
 ## 292. A kind put off enough times asks whether to quiet it; it is never quieted by a count (2026-11-02; P110 J17)
 
 | Where | Before | Now |

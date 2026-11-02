@@ -4,6 +4,28 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Views: one project can show under two roles in the same side (P112, item 3)
+
+**Decided:** A *view* is a named list of projects inside one side ("Manager's portfolio", "My projects"). A project can be in
+several views, and its sub-projects and every item filed under it come with it. A view only changes what a screen shows: it
+never files anything, never changes a project's side and never changes a data level. The side filter offers the person's
+views beside the sides; choosing a view shows what is filed under its projects, plus what is on no project at all, as a
+side's choice shows what is on no side. Today stays one list: when the person has views, each line under a project in a
+view carries the view's short label as a tag, and a line in two views carries both. The person makes, renames and removes
+views and picks their projects (`view` records, the person's own changes with Undo); the assistant never edits a view. A
+view that follows a list kept somewhere else (a manager's portfolio page) is a later step through a configured source.
+
+**Who:** the owner, 2026-11-02 ("yes that is important for me and might be important for others. So we should include"),
+from the functional designer's 11/2 lessons (a person in two roles in one job lost a project from the manager's list when
+it was filed under their own role).
+
+**Why:** a side answers "which part of my life is this, and how private": one answer per project. Roles inside one job need a
+second, overlapping answer that only decides what is shown. Making roles into sides would force each project into one role
+and give each role its own privacy, which is wrong for one job.
+
+**Impact:** a new core record (`view`) and its ops, the filter's choices, a tag on Today's lines and on list rows, and the
+Projects page's view picker. No change to filing, sides or data levels. Change log: section 294.
+
 ## 2026-11-02: Putting a kind off enough times asks whether to quiet it; the person's yes quiets it (P110, J17)
 
 **Decided:** Reaching `steward.attention.quiet_after_dismissals` (or `stop_after_dismissals`) in `learn_days` days no longer
