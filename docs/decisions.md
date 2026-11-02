@@ -4,6 +4,26 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Setup never picks a paid service's model by its place in the list (P97)
+
+**Decided:**
+- Setup chooses a model for the person only from the service's preset family, or else by price. The first listed model
+  is offered only for a server on this computer, which costs nothing.
+- When the app has no suggestion, the guide shows the model picker with "Pick a model" and checks nothing until the
+  person picks. The Add account form opens its picker the same way.
+
+**Decided by:** the owner ("That needs to NEVER happen", after a week of the app's key running only on the dearest
+model); the rule is the main session's.
+
+**Why:** the cause, found in the code. Until 2026-10-26 the models route made no suggestion, and the setup screen chose
+the first model the service listed. That service lists its newest and dearest model first. The guide then sent it for
+both everyday and harder work, and a named choice skips the service's preset, so every run went to it. The 2026-10-26
+change added a suggestion, but the screen still fell back to the first listed model whenever none came.
+
+**Impact:** design 6.16 and `web/src/components/WelcomeAi.tsx`; one new wording key. No new setting. No change to scope.
+A second cause, runs on a service whose listing has no prices counting nothing against the spending limits, is open
+under P97. Change log: section 275.
+
 ## 2026-10-30: The weekly message is the Monday briefing's, not a Today line
 
 **Decided:**

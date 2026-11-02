@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 275. A paid service's model is never picked by its place in the list (2026-11-02; P97)
+
+| Where | Before | Now |
+|---|---|---|
+| Suggesting a model (6.16, `engine/ai/presets.py`) | Preset family, else by price, else the first listed | Preset family, else by price; the first listed only for a server on this computer |
+| The setup guide and Add account (`WelcomeAi.tsx`) | With no suggestion, the first listed model was chosen and used for everyday and harder work | With no suggestion, the picker shows "Pick a model" and nothing is checked or saved until the person picks |
+
 ## 274. Today's count rule: the weekly message is the Monday briefing's, not a Today line (2026-10-30)
 
 | Where | Before | Now |

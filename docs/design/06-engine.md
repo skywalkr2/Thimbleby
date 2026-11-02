@@ -2322,6 +2322,11 @@ A person who adds an account gets every tier filled in, so routine work never la
   reading the service's words) gives the kind `model_retired`; the check says "{model} is no longer offered by this
   service", keeps that model out of the list for the rest of the setup, and offers the next fitting model from the listing
   with one button.
+- **A paid service's model is never picked by its place in the list** (owner, 2026-11-02, P97; change log 275;
+  *built*, `tests/test_retired_model.py`, `WelcomeAi.test.tsx`): a service lists its newest, often dearest, model
+  first. Setup chooses for the person only by the service's preset family or by price; the first listed model only for
+  a server on this computer. With no suggestion, the picker shows "Pick a model" and nothing is checked until the
+  person picks.
 - **A newer model is asked about, and moved to only by the person's setting, after a check** (designer, 2026-10-22;
   owner, 2026-10-22; change log 174 and 178; *built*, `tests/test_model_watch.py`, `tests/test_family.py`): the preset
   takes the newest model of the family, and setup asks nothing (owner, 2026-10-22); a check every `ai.models.check_every_days` days (default 7) lists each account's

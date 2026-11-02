@@ -69,7 +69,7 @@ function api(accounts: S["AiAccountView"][], extra: Record<string, (body: unknow
     "GET ai/local": () => [],
     "GET ai/check-size": () => ({ calls: 10, input_tokens: 1000, output_tokens: 200 }),
     "GET settings": () => ({ fingerprint: "fp-1", items: [LIMIT] }),
-    "POST ai/models": () => ({ models: MODELS }),
+    "POST ai/models": () => ({ models: MODELS, suggested: MODELS[0].id }),
     "POST ai/accounts": () => SAVED,
     "POST ai/accounts/service-a-account": () => SAVED,
     "POST ai/accounts/main": () => SAVED,
@@ -340,7 +340,7 @@ async function openModels(user: ReturnType<typeof userEvent.setup>) {
 
 test("the pickers list the models with what each costs", async () => {
   const user = userEvent.setup();
-  api([MAIN], { "POST ai/models": () => ({ models: [{ id: "model-a", context_tokens: 200000, input_per_million: 3, output_per_million: 15 }, { id: "model-b" }] }) });
+  api([MAIN], { "POST ai/models": () => ({ models: [{ id: "model-a", context_tokens: 200000, input_per_million: 3, output_per_million: 15 }, { id: "model-b" }], suggested: "model-a" }) });
   open();
   await keyed(user);
   const details = await openModels(user);
@@ -354,7 +354,7 @@ test("the pickers list the models with what each costs", async () => {
 test("a long list of models can be narrowed by typing, and when nothing matches the button says so", async () => {
   const user = userEvent.setup();
   const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${String(i).padStart(2, "0")}` }));
-  api([MAIN], { "POST ai/models": () => ({ models: many }) });
+  api([MAIN], { "POST ai/models": () => ({ models: many, suggested: "model-00" }) });
   open();
   await keyed(user);
   const details = await openModels(user);

@@ -1213,6 +1213,7 @@
   "welcome.ai.models_summary": "The models are chosen for you. Choose them yourself",
   "welcome.ai.model_everyday": "AI model for everyday work",
   "welcome.ai.model_harder": "AI model for harder work (optional)",
+  "welcome.ai.model_pick": "Pick a model",
   "welcome.ai.model_same": "Same as the everyday model",
   "welcome.ai.model_find": "Find a model",
   "welcome.ai.model_none": "No model matches.",

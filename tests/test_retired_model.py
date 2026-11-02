@@ -145,3 +145,22 @@ def test_a_check_stopped_by_a_retired_model_names_it_and_offers_the_next(tmp_pat
     assert "fit-a" not in got["message"] and "fit-b" not in got["message"]  # the model's name is never shown
     assert got["model"] == "fit-a" and got["next_model"] == "fit-b"
     assert "deprecated" not in got["message"]  # the service's words are not the explanation
+
+
+def test_a_paid_service_with_no_preset_match_and_no_prices_gets_no_model_chosen_for_the_person():
+    """The cause of a week on the dearest model: a service lists its newest, dearest model first, and setup chose the
+    first listed for every kind of work. With no family of the preset listed and no prices, nothing is chosen."""
+    listing = {"newest-dearest": ModelInfo(), "older-cheaper": ModelInfo()}
+    assert suggest_models(entry_with("absent"), listing) == (None, None)
+    assert suggest_models(None, listing) == (None, None)
+
+
+def test_a_server_on_this_computer_still_offers_its_first_model_since_it_costs_nothing():
+    listing = {"first": ModelInfo(), "second": ModelInfo()}
+    assert suggest_models({"local": True}, listing) == ("first", "first")
+
+
+def test_the_preset_family_is_chosen_for_everyday_work_even_when_a_dearer_model_is_listed_first():
+    listing = {"top-1": ModelInfo(released="2031-01-01T00:00:00+00:00"), "fit-1": ModelInfo()}
+    easy, _ = suggest_models(entry_with(), listing)
+    assert easy == "fit-1"

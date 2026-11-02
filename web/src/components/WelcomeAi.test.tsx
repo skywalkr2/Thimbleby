@@ -143,7 +143,7 @@ function api(extra: Record<string, (body: unknown) => unknown> = {}) {
     "GET ai/accounts": () => [],
     "GET ai/local": () => [],
     "GET settings": () => ({ fingerprint: "fp-1", items: SPENDING }),
-    "POST ai/models": () => ({ models: MODELS }),
+    "POST ai/models": () => ({ models: MODELS, suggested: MODELS[0].id }),
     "POST ai/account-check": () => WORKS,
     "POST ai/accounts": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
     "POST ai/test": () => [{ tier: "routine", account: "service-a", main: true, ok: true, detail: "answered" }],
@@ -386,6 +386,24 @@ test("there is no Check button for a key: pasting it checks it at once, and says
     use: { routine: "everyday", deep: "everyday" },
   });
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
+});
+
+test("with no suggestion from the app, the list's first model is never chosen: the person picks, then it is checked", async () => {
+  // A service lists its newest and dearest model first; choosing it for every kind of work by its place in the list
+  // once ran everything on the dearest model for days.
+  const user = userEvent.setup();
+  const calls = api({ "POST ai/models": () => ({ models: MODELS }) });
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.paste("pasted-key");
+  const picker = await screen.findByLabelText("AI model for everyday work");
+  expect(picker).toHaveValue("");
+  expect(within(picker).getByRole("option", { name: "Pick a model" })).toBeInTheDocument();
+  expect(checks(calls)).toHaveLength(0);
+  await user.selectOptions(picker, "model-c");
+  expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
+  expect(checks(calls)[0].body).toMatchObject({ models: { everyday: "model-c" } });
 });
 
 test("a typed key is checked when the cursor leaves the box, or on Enter, never on every letter", async () => {

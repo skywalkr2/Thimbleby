@@ -219,7 +219,8 @@ export function WelcomeAi(props: {
   // Nothing in the list matches what was typed: there is no model to pick until the search changes.
   const noMatch = !manualModel && !builtin && list.length > 0 && shown.length === 0;
 
-  /** Narrow the list; a chosen model that the search hides is replaced by the first one still shown. */
+  /** Narrow the list; a chosen model that the search hides is replaced by the first one still shown, in the picker the
+   * person is looking at. */
   const narrow = (text: string) => {
     setFilter(text);
     const wanted = text.trim().toLowerCase();
@@ -265,7 +266,9 @@ export function WelcomeAi(props: {
       if (mine !== lookup.current) return null;
       // A model this account's check found retired stays out of the list for the rest of the setup.
       const got = (answer.models ?? []).filter((m) => !retiredIds.current.has(m.id));
-      const suggested = got.some((m) => m.id === answer.suggested) ? (answer.suggested as string) : got[0]?.id;
+      // Only the app's suggestion is chosen for the person, never the list's first model: a service lists its newest
+      // and dearest first.
+      const suggested = got.some((m) => m.id === answer.suggested) ? (answer.suggested as string) : "";
       setModels(got);
       setListProblem(answer.problem ?? "");
       setFilter("");
@@ -332,7 +335,7 @@ export function WelcomeAi(props: {
         return;
       }
       if (got.models.length) {
-        first = got.models.some((m) => m.id === first) ? first : (got.suggested ?? got.models[0].id);
+        first = got.models.some((m) => m.id === first) ? first : (got.suggested ?? "");
         second = got.models.some((m) => m.id === second) ? second : HARDER_SAME;
       }
     }
@@ -764,6 +767,11 @@ export function WelcomeAi(props: {
           aria-describedby={note ? `${props2.id}-note` : undefined}
           onChange={(e) => props2.onChange(e.target.value)}
         >
+          {props2.value === "" && !props2.same && (
+            <option value="" disabled>
+              {t("welcome.ai.model_pick")}
+            </option>
+          )}
           {props2.same && <option value={HARDER_SAME}>{t("welcome.ai.model_same")}</option>}
           {options.map((m) => (
             <option key={m.id} value={m.id}>
@@ -780,7 +788,7 @@ export function WelcomeAi(props: {
     );
   };
 
-  /** The models the service lists, to choose from: the first is already chosen. */
+  /** The models the service lists, to choose from: the app's suggestion is already chosen, when it has one. */
   const modelFields = (
     <>
       {list.length > SEARCH_ABOVE && (
@@ -1311,14 +1319,18 @@ export function WelcomeAi(props: {
                         </FormField>
                       )}
                     </>
-                  ) : guide ? (
+                  ) : guide && (everyday !== "" || list.length === 0) ? (
+                    // The app's suggestion is used without showing a model's name; with none, the person picks below.
                     list.length > 0 && <p className="hint">{t("welcome.ai.model_auto")}</p>
+                  ) : guide ? (
+                    modelFields
                   ) : (
                     list.length > 0 && (
-                      // The first model is already chosen; the choice is one line until the person asks to change it.
+                      // The suggested model is already chosen; the choice is one line until the person asks to change it, and
+                      // open while nothing is chosen.
                       <details
                         className="more-options model-details"
-                        open={modelsOpen || noMatch}
+                        open={modelsOpen || noMatch || everyday === ""}
                         onToggle={(e) => setModelsOpen((e.currentTarget as HTMLDetailsElement).open)}
                       >
                         <summary>{t("welcome.ai.models_summary")}</summary>

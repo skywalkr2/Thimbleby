@@ -144,8 +144,9 @@ def suggest_models(
 ) -> tuple[str | None, str | None]:
     """The model for everyday work and the one for harder work to offer for a service, from its listing alone: only
     usable models (never one in `avoid`, the models the service already refused as retired). The service's preset
-    families come first (`routine` and `deep`), else the cheapest and dearest priced model, else the first listed.
-    Either is None when nothing fits."""
+    families come first (`routine` and `deep`), else the cheapest and dearest priced model. The first listed is
+    offered only for a server on this computer, which costs nothing: a service lists its newest (and often dearest)
+    model first, so on a paid one the person picks. Either is None when nothing fits."""
     usable = {i: info for i, info in usable_models(listing).items() if i not in avoid}
     ids = list(usable)
     if not ids:
@@ -158,5 +159,6 @@ def suggest_models(
         if priced:
             easy = easy or min(priced)[1]
             hard = hard or max(priced)[1]
-    easy = easy or ids[0]
+    if easy is None and (entry or {}).get("local"):
+        easy = ids[0]
     return easy, hard or easy
