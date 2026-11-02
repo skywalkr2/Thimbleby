@@ -23,9 +23,9 @@ work is allowed, the code stays readable, and the patent grant stays. It replace
 **Impact:** everything already pushed to the public repository stays available under Apache-2.0 to anyone who took it;
 FSL covers what is published from now on. The product is described as source-available, becoming open source two years
 after each release, never as "open source" today (business model, roadmap's release items). Add-ons in their own
-repositories keep their own licences (the owner's choice per add-on). Recommended to the owner the same day: make this
-repository private soon, ahead of phase I's public repository step (P113), to stop further Apache exposure of the work
-in progress. Change log: none.
+repositories keep their own licences (the owner's choice per add-on). The owner accepts that pre-alpha code taken earlier stays under Apache-2.0 ("if someone got the pre-alpha code as
+apache then they can have it since it wasnt final"), and keeps this repository public until the alpha: it is made
+private after the new public repository is set up at the alpha release (owner, 2026-11-02; P113). Change log: none.
 
 ## 2026-11-02: The assistant ties and confirms what the rules propose; guests named in a title are a proposal; the filing review and the brief's quieted kinds finish (P110, J8, J10, J17, the parity case)
 

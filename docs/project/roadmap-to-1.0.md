@@ -912,7 +912,7 @@ code. Nearly all is built or planned. What is left, in two batches:
 - [ ] [I-0p] **Packs and the catalog pin the public release tags** instead of this repository's working branch, so they
   build without access to the private coordinator.
 - [ ] [I-0p] **CI split and names:** the full suites run in the public repository (free minutes); this one runs the docs
-  checks and scans. The owner renames this repository (private) and creates the public "Thimbleby"; the owner's clicks.
+  checks and scans. The owner creates the public repository first and makes this one private after it is set up, at the alpha release (owner, 2026-11-02); the names and both settings are the owner's clicks.
 - [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches
   the app, so the user needs to be able to reboot it"): the app's icon starts it when it isn't running and opens the page
   when it is; a page the browser shows when the app can't be reached says plainly that it isn't running and how to start
