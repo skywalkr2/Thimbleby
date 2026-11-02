@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 302. A job's question is asked once; an answer that changed nothing goes back once, then to the person (2026-11-02; P114, the designer's lessons 8 to 10)
+
+| Where | Before | Now |
+|---|---|---|
+| Add-on questions (3.4, 6.8) | `file_question` made a question on every run, with no check against earlier ones; the core's "Sign in again" question checked only open ones, so a dropped one came back on the next refused read | **Built** (`tests/test_asked_once.py`): a question an add-on's job or handler files carries `Question.raised_by` (add-on and a key of its title and words) and is not filed when any earlier question of that add-on has the same key, in any status; the job's run record (`JobRun.notes`) says "already asked". The sign-in question is asked again only after the sign-in has worked (`resolves.worked_since`) and failed again. A `key=` for add-ons is not built |
+| An answer that changed nothing (6.8, 6.32) | A run on the person's answer or correction to a question could end with no op applied and nothing said | **Built** (`tests/test_answer_effect.py`): such a run goes back to the assistant once (`Request.returned_from`, a line saying the answer changed nothing, never the stronger tier); a second empty run stops with the Today line "Check what your answer changed: <title>" under Decide, with the person's words, **Open the question** and **Leave it** (`Request.no_effect`, line kind `no_effect`) |
+| Plugin API (3.3) | | One record field (`Question.raised_by`): `docs/plugin-guide.md` regenerated, and `file_question` says it is asked once per subject |
+| Not built | | A `key=` on `file_question`; counting a learning the answer teaches as a change (the learning is queued by the answer itself) |
+
 ## 301. The assistant ties and confirms what the rules propose; guests named in a title are proposed; the filing review and the brief's quieted kinds finish (2026-11-02; P110 J8, J10, J17 and the parity case)
 
 | Where | Before | Now |

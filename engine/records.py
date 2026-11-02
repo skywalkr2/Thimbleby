@@ -801,6 +801,12 @@ class Question(Record):
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     options: list[str] = Field(default_factory=list, description="Choices offered, for routing and decisions.")
     resolves: dict[str, Any] | None = Field(None, description="What answering it releases, e.g. a held op.")
+    raised_by: dict[str, str] | None = Field(
+        None,
+        description="For a question an add-on's job or event handler filed: `plugin` is the add-on and `subject` a key "
+        "of its title and words. The same question from the same add-on is never filed twice, whatever became of the "
+        "first one (open, sent, answered or dropped).",
+    )
     matters_for: str | None = Field(
         None,
         description="Which of the person's decisions, designs or dated items depends on the answer, by id or in "
@@ -954,6 +960,11 @@ class JobRun(Record):
         description="ok: it finished. failed: it raised; repeated failures turn the plugin off."
     )
     error: str | None = Field(None, description="What went wrong, for a failed run.")
+    notes: list[str] = Field(
+        default_factory=list,
+        description="What the run did that the person may want to know: a question it filed that had already been "
+        "asked, and so was not filed again.",
+    )
 
 
 class Cite(BaseModel):
@@ -1593,6 +1604,16 @@ class Request(Record):
     created_at: datetime = Field(description="When the request was made.")
     changeset: str | None = Field(None, description="The id of the changeset the assistant proposed for it.")
     previous: str | None = Field(None, description="The request this one redoes after the person sent it back.")
+    returned_from: str | None = Field(
+        None,
+        description="The request about the person's answer or correction to a question whose run changed nothing, "
+        "which this one redoes once, told so. A second run that changes nothing is not redone again.",
+    )
+    no_effect: bool = Field(
+        False,
+        description="The person's answer or correction to a question was handled twice and changed nothing: Today "
+        "asks the person to check what it changed, with their own words.",
+    )
     superseded_by: str | None = Field(
         None,
         description="The later request that redid this one and applied, which retired this attempt: it is done, its "

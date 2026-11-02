@@ -616,7 +616,7 @@ Raise an event of an interface this plugin provides ("<interface>.<event>"), aft
 
 #### `context.file_question(title: str, text: str = '') -> None`
 
-File a question for the person this workspace belongs to; sending is never part of handling an event.
+File a question for the person this workspace belongs to; sending is never part of handling an event. A question is asked once per subject: when an earlier question of this add-on has the same title and words (whitespace and case ignored), in any status, nothing is filed and the run notes it. Ask again in other words once the situation has changed.
 
 ## Stages
 
@@ -1636,6 +1636,7 @@ A question for a person; a decision is a question to the person. Added by `quest
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
 | `options` | list[str] | `[]` | Choices offered, for routing and decisions. |
 | `resolves` | dict[str, Any] \| None | `None` | What answering it releases, e.g. a held op. |
+| `raised_by` | dict[str, str] \| None | `None` | For a question an add-on's job or event handler filed: `plugin` is the add-on and `subject` a key of its title and words. The same question from the same add-on is never filed twice, whatever became of the first one (open, sent, answered or dropped). |
 | `matters_for` | str \| None | `None` | Which of the person's decisions, designs or dated items depends on the answer, by id or in words. A question to anyone but the person says it. |
 | `dropped_reason` | str \| None | `None` | Why the person dropped it, when they did. |
 | `asker` | str \| None | `None` | The id of the person who asked it, when the input says who asked (a question someone put to the person). Empty for a question the assistant or the person made up, and for a name that isn't one known person: it is never guessed. The asker's page lists it as a question they asked. |
@@ -1727,6 +1728,8 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `created_at` | datetime | required | When the request was made. |
 | `changeset` | str \| None | `None` | The id of the changeset the assistant proposed for it. |
 | `previous` | str \| None | `None` | The request this one redoes after the person sent it back. |
+| `returned_from` | str \| None | `None` | The request about the person's answer or correction to a question whose run changed nothing, which this one redoes once, told so. A second run that changes nothing is not redone again. |
+| `no_effect` | bool | `False` | The person's answer or correction to a question was handled twice and changed nothing: Today asks the person to check what it changed, with their own words. |
 | `superseded_by` | str \| None | `None` | The later request that redid this one and applied, which retired this attempt: it is done, its held items and open proposals are closed, and nothing is run or shown for it again. |
 | `dismissed` | bool | `False` | The person set this aside without trying again; it no longer counts as needing attention. |
 | `dismissed_from` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] \| None | `None` | The state the request was in when it was dismissed, put back by undoing the dismissal. |
@@ -2184,6 +2187,7 @@ One run of a plugin's scheduled job. The engine writes it after each run; nothin
 | `seconds` | float | `0.0` | How long it took. |
 | `outcome` | Literal['ok', 'failed'] | required | ok: it finished. failed: it raised; repeated failures turn the plugin off. |
 | `error` | str \| None | `None` | What went wrong, for a failed run. |
+| `notes` | list[str] | `[]` | What the run did that the person may want to know: a question it filed that had already been asked, and so was not filed again. |
 
 ### `setting_change` (SETCHG-n)
 

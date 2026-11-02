@@ -698,7 +698,10 @@ class EventContext(ReadView):
         self.commands.append(("emit", {"event": event, "payload": dict(payload)}))
 
     def file_question(self, title: str, text: str = "") -> None:
-        """File a question for the person this workspace belongs to; sending is never part of handling an event."""
+        """File a question for the person this workspace belongs to; sending is never part of handling an event. A
+        question is asked once per subject: when an earlier question of this add-on has the same title and words
+        (whitespace and case ignored), in any status, nothing is filed and the run notes it. Ask again in other
+        words once the situation has changed."""
         self.commands.append(("question", {"title": title, "text": text}))
 
 

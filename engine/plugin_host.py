@@ -142,6 +142,14 @@ EVENTS_WITH_KIND = {"record.changed", "stage.moved", "file.added", "text.accepte
 log = logging.getLogger(__name__)
 
 
+def question_subject(plugin: str, title: str, text: str) -> str:
+    """The key of a question an add-on files: its add-on, its title and its words with whitespace and case folded."""
+    import hashlib
+
+    folded = "\n".join(" ".join(part.split()).casefold() for part in (title, text))
+    return hashlib.sha256(f"{plugin}\n{folded}".encode()).hexdigest()[:16]
+
+
 def _no_token() -> str | None:
     """The token of an account with no sign-in behind it (a plain mailbox, or no account): there is none."""
     return None
@@ -195,6 +203,7 @@ class PluginHost:
         self._dispatching = False
         self._chain: frozenset = frozenset()
         self._follows: str | None = None  # the change whose event is being delivered
+        self._asked_again: list[str] = []  # questions a running job filed that had already been asked
         self._lock = threading.RLock()
         from engine.pack_calls import PackCalls
 
@@ -769,7 +778,9 @@ class PluginHost:
         keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
         web = WebClient(list(self.manifests[plugin].requires.network))
         try:
-            return access_token(keys, sign_in, web, client_id, client_secret, account=account)
+            token = access_token(keys, sign_in, web, client_id, client_secret, account=account)
+            self.sign_in_worked(sign_in, account)
+            return token
         except SignInError as err:
             if err.refused:
                 self.tell_sign_in_refused(sign_in, err.account)
@@ -785,8 +796,10 @@ class PluginHost:
         if not pm or self.store.read().get("person", pm) is None:
             return
         resolves = {"kind": "sign_in", "name": sign_in.name, **({"account": account} if account else {})}
+        # Asked once: not again while one is open, nor after it was answered or dropped until the sign-in has worked
+        # since and then failed again.
         if any(
-            q.data.get("resolves") == resolves and q.data["status"] == "open"
+            _same_sign_in(q.data.get("resolves"), resolves) and not (q.data.get("resolves") or {}).get("worked_since")
             for q in self.store.read().list("question")
         ):
             return
@@ -804,6 +817,31 @@ class PluginHost:
                 },
                 WriteContext(actor="engine", trust="trusted", op="sign_in.refused"),
             )
+
+    def sign_in_worked(self, sign_in: Any, account: str | None = None) -> None:
+        """The sign-in gave a token (or was just done): mark each question asked about it that is no longer open, so the
+        next refusal asks again. A question still open stays unmarked: it already stands for the sign-in."""
+        from engine.storage import WriteContext
+
+        identity = {"kind": "sign_in", "name": sign_in.name, **({"account": account} if account else {})}
+        unmarked = [
+            q
+            for q in self.store.read().list("question")
+            if q.data["status"] != "open"
+            and _same_sign_in(q.data.get("resolves"), identity, any_account=account is None)
+            and not (q.data.get("resolves") or {}).get("worked_since")
+        ]
+        if not unmarked:
+            return
+        with self.store.transaction() as tx:
+            for q in unmarked:
+                tx.update(
+                    "question",
+                    q.id,
+                    {"resolves": {**q.data["resolves"], "worked_since": True}},
+                    WriteContext(actor="engine", trust="trusted", op="sign_in.worked"),
+                    read_version=q.version,
+                )
 
     def signed_in(self, sign_in: Any, workspace_root: Any, account: str | None = None) -> None:
         """After signing in: close the questions asking the person to sign in to this account (or, with no account
@@ -828,6 +866,7 @@ class PluginHost:
                         WriteContext(actor="engine", trust="trusted", op="sign_in.done"),
                         read_version=q.version,
                     )
+        self.sign_in_worked(sign_in, account)
 
     def read_account(self, sign_in: Any, workspace_root: Any, tokens: dict[str, Any]) -> str | None:
         """The address of the account just signed in, as the plugin names it, read with the new tokens before they are
@@ -1382,6 +1421,7 @@ class PluginHost:
         started, clock = now or datetime.now(UTC), time.monotonic()
         context = self._with_files(EventContext(self.store.read(), plugin, registrar.config))
         outcome, error = "ok", None
+        self._asked_again = []
         try:
             registrar.jobs[name].run(context)
             self._commands(plugin, context.commands, f"job:{name}", {})
@@ -1403,6 +1443,7 @@ class PluginHost:
                     "seconds": round(time.monotonic() - clock, 3),
                     "outcome": outcome,
                     "error": error,
+                    "notes": list(dict.fromkeys(self._asked_again)),
                 },
                 WriteContext(actor="engine", trust="trusted", op="job.run"),
             )
@@ -2353,7 +2394,17 @@ class PluginHost:
                     pm = self.cfg.workspace.user.person
                     if not pm or tx.get("person", pm) is None:
                         raise StoreError("no person is set up to receive the question")
-                    data = {**data, "to": pm}
+                    subject = question_subject(name, data["title"], data.get("text", ""))
+                    raised = {"plugin": name, "subject": subject}
+                    if any(q.data.get("raised_by") == raised for q in tx.list("question")):
+                        # Asked before, whatever became of it: a job never asks the same thing twice.
+                        title = " ".join(data["title"].split())
+                        if event.startswith("job:"):
+                            self._asked_again.append(f"already asked: {title}")
+                        else:
+                            self._note(name, f"it filed a question that had already been asked, so not again: {title}")
+                        continue
+                    data = {**data, "to": pm, "raised_by": raised}
                 tx.create(kind, data, context)
 
     def close(self) -> None:
@@ -2361,6 +2412,13 @@ class PluginHost:
         for key in list(sys.modules):
             if any(key == name or key.startswith(name + ".") for name in self._modules):
                 del sys.modules[key]
+
+
+def _same_sign_in(found: Any, identity: dict[str, Any], any_account: bool = False) -> bool:
+    """Whether a question's `resolves` is the question about this sign-in (and account)."""
+    if not isinstance(found, dict) or found.get("kind") != "sign_in" or found.get("name") != identity["name"]:
+        return False
+    return any_account or found.get("account") == identity.get("account")
 
 
 #: The longest a group's label may be, in characters.

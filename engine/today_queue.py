@@ -55,6 +55,8 @@ from engine.titles import Title, head_of, subject_of, title_for
 from engine.today import zone
 
 GROUPS = TODAY_GROUPS
+#: The most characters of the person's own words a line quotes.
+NO_EFFECT_WORDS = 200
 
 
 @dataclass
@@ -131,6 +133,9 @@ class Line:
     action: its id in `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody
     known, `sender` as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest
     first),
+    no_effect (the person's answer or correction to a question was handled twice and changed nothing: the question's
+    title in `subject` and id in `question`, their own words in `text`; the line opens the question to answer again, and
+    "Leave it" dismisses the request),
     sent_folder (a connected mailbox that reads no sent folder: its first source's id in `source`, the mailbox's name in
     `subject`; the line opens where the source's folders are chosen, and Dismiss ends it for good),
     folder_rename (a folder made under the product's earlier name, found where the new default would be: `state` is
@@ -629,6 +634,27 @@ def _everything(
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") not in ("needs_you", "failed"):
+            continue
+        if d.get("no_effect"):
+            # The person's answer or correction to a question was handled twice and changed nothing: never a silent
+            # stop. The line quotes their words and offers to open the question (to answer again) or to leave it.
+            from engine.intake import source_text
+
+            asked = reader.get("question", (d.get("about") or {}).get("id") or "")
+            words = " ".join(source_text(ws, store, d.get("source")).split())
+            lines.append(
+                Line(
+                    key=f"no_effect:{req.id}",
+                    group="decide",
+                    kind="no_effect",
+                    text=words if len(words) <= NO_EFFECT_WORDS else words[: NO_EFFECT_WORDS - 1].rstrip() + "…",
+                    subject=asked.data["title"] if asked is not None else None,
+                    question=asked.id if asked is not None else None,
+                    request=req.id,
+                    waiting=d.get("waiting"),
+                    since=str(d.get("created_at") or ""),
+                )
+            )
             continue
         if waits_on_first_go(d):
             first_go.append(req)
@@ -1933,6 +1959,7 @@ _KIND_ORDER = {
     "catch_up_go": 4,
     "intake_go": 4,
     "refused": 5,
+    "no_effect": 5.5,
     "question": 6,
     "invitation": 7,
     "failed": 0,

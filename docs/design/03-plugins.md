@@ -152,6 +152,14 @@ raise interface events, and stage the plugin's own ops. Staged ops apply through
 changeset from the plugin that the person can see and undo, treated like work from outside content. They may not write
 records directly or stage a core op; anything that changes knowledge goes through an op and the applier.
 
+A question a handler or a job files is **asked once**: the host records the add-on and a key of the question's title and
+words (whitespace and case folded) on it, and files nothing when any earlier question from that add-on has the same key,
+whether it is still open, was sent, was answered or was dropped. The run that tried is told ("already asked" on the job's
+run record, or a note on the add-on for a handler). A question that is meant to come back has different words, or is
+asked again by the add-on once the situation has changed. The core's own "Sign in to <service> again" question follows
+the same rule: after the person answers or drops it, it is asked again only once that sign-in has worked at least once
+since and then failed again.
+
 ## 3.5 Rules every plugin follows
 
 Enforced by the plugin host, the applier and the self-check, and by the publisher once it exists:

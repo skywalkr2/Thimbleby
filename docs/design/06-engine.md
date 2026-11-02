@@ -1018,6 +1018,17 @@ is per field across groups but all or nothing within a group:
   starts** (a queued automatic try, a fix round, the escalation re-run) the dispatcher checks that its cause still stands: a
   request that is already applied, finished or replaced is not run, a fix round or an escalation for a request closed meanwhile is
   not asked, and a late failure or result is not written onto it. A changeset that applied nothing retires nothing.
+- **An answer or a correction to a question must change something** (functional designer's lessons 9 and 10, 2026-11-02;
+  built, `tests/test_answer_effect.py`). The person's answer to a question, a note they typed to correct one ("Change
+  this") and an answer they recorded for the person it was asked of go to the assistant as a note about the question. When
+  the run on that note ends with no op applied or held for the person and no setting suggested (a summary saying what
+  should happen is not a change), it goes back once: a new request (`returned_from`) with the same words, told "The
+  person's answer to <title> changed nothing: make the change it asks for (a record, a setting or a learning), or ask the
+  person if it is unclear." The return never uses the stronger tier and is never repeated. If that run also changes
+  nothing, the request stops (`no_effect`) and Today shows, under Decide, "Check what your answer changed: <title>"
+  with the person's own words and two actions: open the question (to answer again) and **Leave it** (dismiss, with Undo).
+  A question that acts when answered (who an item belongs to, a held change) is not checked: the answer is the change.
+  The learning the answer teaches is queued by the answer itself and is not counted as the run's change.
 - **Outbound can't be undone.** Undoing a published page edit drafts a reverting edit for approval; a sent message shows as
   "already sent", with a follow-up offered if the PM wants to correct it.
 
@@ -1131,6 +1142,13 @@ is marked *designed*, with the phase.
   has none of `key`, `on_answer`, `batch` or several projects. What is built is the rest of the sentence: the op is held and a
   routing decision is filed to the PM when the recipient is unsure (`to: "?"`, a first name several people share, a name
   nobody on file has), and answering that decision releases it (6.11).
+- **An add-on's question is asked once** (2026-11-02, functional designer's lesson 8; built, `tests/test_asked_once.py`).
+  The host marks a question an add-on's job or event handler files with the add-on and a key of its title and words
+  (`Question.raised_by`) and files nothing when any question of that add-on, in any status, has the same key; the job's run
+  record notes "already asked". A question that should come back has other words. The core's "Sign in again" question is
+  asked once for a sign-in and account: once it was answered or dropped it is asked again only after the sign-in has
+  worked (a token given, or a sign-in done; the question is then marked `worked_since`) and has then failed again. A
+  `key=` the add-on chooses is not built; it joins the next plugin API release.
 - Enriching links automatically from item keys and known titles found in the text is *designed, not yet built, not
   scheduled*. Today a question to anyone but the PM is refused unless it carries a link the recipient can open, and nothing
   adds links.

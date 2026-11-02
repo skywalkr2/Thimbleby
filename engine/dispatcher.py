@@ -15,7 +15,17 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from engine import booking_entries, follow_on, learn, new_terms, pack_tiers, quality, read_image, transcribe
+from engine import (
+    answer_effect,
+    booking_entries,
+    follow_on,
+    learn,
+    new_terms,
+    pack_tiers,
+    quality,
+    read_image,
+    transcribe,
+)
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -259,7 +269,7 @@ def process(
     content = content_levels(store, req.data)
     independent = independence(store, cfg, req.data)
     # The person's pick of account is theirs: no escalation away from it.
-    stronger = escalation_tier(cfg, tier) if use is None else None
+    stronger = escalation_tier(cfg, tier) if use is None and not req.data.get("returned_from") else None
     estimate, high = request_range(
         cfg, router, packet.task, tier, stronger, data_level=level, use=use, content=content, independent=independent
     )
@@ -482,6 +492,8 @@ def process(
     if run_id is not None:
         record_applied(store, run_id, cs_id)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
+    if answer_effect.after_run(store, store.read().get("request", request_id), cs_id, now):
+        return cs_id  # the person's answer changed nothing: sent back once, then Today asks them to look
     if _nothing_to_do(req.data, kind.name, changeset, problems) or (kind.name == "ask" and _answer_only(store, cs_id)):
         close_nothing_to_do(store, cs_id)
     if learn.is_learning(kind.name):

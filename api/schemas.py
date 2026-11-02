@@ -3187,6 +3187,9 @@ class QueueLineView(BaseModel):
     `unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its
     label) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how
     far back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);
+    `no_effect` is the person's answer or correction to a question that was handled twice and changed nothing
+    (`subject` the question's title, `question` its id, `text` the person's own words, cut short; the line opens the
+    question to answer again, and Leave it is POST /api/requests/{request}/dismiss);
     `sent_folder` is a connected mailbox that reads no sent folder, so promises the person makes in their own mail
     can't be found (`source` its first source's id, `subject` the mailbox's name; it opens where the source's folders
     are chosen, and Dismiss is POST /api/watch/{source}/sent-folder/dismiss, which ends it for good);
@@ -3311,6 +3314,7 @@ class QueueLineView(BaseModel):
         "batches",
         "batch_item",
         "refused",
+        "no_effect",
         "restart",
         "stuck",
         "handover",

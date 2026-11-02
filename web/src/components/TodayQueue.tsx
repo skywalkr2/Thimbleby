@@ -625,6 +625,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return firstGoText({ count: line.count, estimate: line.estimate_usd ?? null, unpriced: line.unpriced });
       case "refused":
         return t("queue.refused", { what });
+      case "no_effect":
+        return t("queue.no_effect", { title: line.subject ?? "" });
       case "failed":
         return t("queue.failed", { what });
       case "overdue":
@@ -735,7 +737,7 @@ function QueueRow(props: {
   const reviewCount = useReviewCount();
   const intakeWords = useIntakeWords();
   const { justMe } = useSides();
-  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes, enabled: props.line.kind === "go" });
+  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes, enabled: props.line.kind === "go" || props.line.kind === "no_effect" });
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const { line } = props;
   const open = props.selection !== null;
@@ -913,6 +915,24 @@ function QueueRow(props: {
         return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting), primary: { label: t("changes.send_other") }, menu: [] };
       case "failed":
         return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting), primary: { label: t("queue.act.open") }, menu: [] };
+      case "no_effect": {
+        // The person's own words, then two ways on: open the question to answer again, or leave it.
+        const item = changes.data?.find((c) => c.id === line.request);
+        const leave = () =>
+          item &&
+          void act(
+            () => api.dismiss(item.id, item.version),
+            (result) => ({ message: t("toast.dismissed"), undo: () => api.undismiss(item.id, result.version) }),
+          );
+        return {
+          pill: t("queue.pill.no_effect"),
+          tone: "warn",
+          meta: line.text ? t("queue.no_effect.said", { words: line.text }) : "",
+          primary: { label: t("queue.no_effect.open"), run: () => props.handlers.onOpenRecord?.("question", line.question ?? "") },
+          other: item ? { label: t("queue.no_effect.leave"), run: () => void leave() } : undefined,
+          menu: [],
+        };
+      }
       case "overdue":
         return {
           pill: t("queue.pill.overdue"),

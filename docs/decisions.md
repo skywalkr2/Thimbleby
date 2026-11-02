@@ -4,6 +4,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: A job's question is asked once; an answer that changed nothing goes back once, then to the person (P114, lessons 8 to 10)
+
+**Decided:** (1) A question an add-on's job or event handler files is recorded with the add-on and a key of its title and
+words (whitespace and case folded), and is not filed when any earlier question of that add-on, in any status, has the same
+key; the run notes "already asked". The core's "Sign in again" question is asked again after the person answered or
+dropped it only once the sign-in has worked since and then failed again. (2) When a run that handles the person's answer or
+correction to a question ends with no op applied or held and no setting suggested, it goes back to the assistant once, told
+so, on the same tier; a second empty run stops with a Today line under Decide that quotes the person's words and offers to
+open the question or to leave it. A question that acts when answered is not checked.
+
+**Decided by:** the functional designer's lessons 8 to 10 (2026-11-02), recommended in P114 and verified against the code.
+
+**Why:** an add-on's job asked the same thing every hour, and a dropped sign-in question came back; an answer the assistant
+read and did nothing with looked handled to the person while nothing had changed, a silent stop.
+
+**Impact:** design 3.4 and 6.8 (`03-plugins.md`, `06-engine.md`); `engine/plugin_host.py`, `engine/answer_effect.py` (new),
+`engine/dispatcher.py`, `engine/today_queue.py` (the `no_effect` line), `engine/records.py` (`Question.raised_by`,
+`JobRun.notes`, `Request.returned_from`, `Request.no_effect`), `api/schemas.py`, the web Today line and wording, the plugin
+guide (one record field). No new setting. Not built: a `key=` the add-on chooses (the next plugin API release); counting a
+learning the answer teaches as a change. Change log: section 302.
+
 ## 2026-11-02: The core is licensed FSL-1.1-ALv2, Apache-2.0 two years after each release
 
 **Decided by:** project owner: "i dont need someone just taking it - loading it as a SasS and charging", choosing the
