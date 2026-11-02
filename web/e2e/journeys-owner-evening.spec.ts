@@ -213,6 +213,13 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Schedule", exact: true })).toBeVisible();
     await page.getByRole("radio", { name: "Week", exact: true }).click();
     const agenda = page.locator("main");
+    // The appointment is two days ahead of the workspace's today, so near the end of a week it is in the next one.
+    const today = await page.locator("ul[data-day][data-today]").first().getAttribute("data-day");
+    const ahead = new Date(`${today}T12:00:00Z`);
+    ahead.setUTCDate(ahead.getUTCDate() + 2);
+    if ((await page.locator(`ul[data-day="${ahead.toISOString().slice(0, 10)}"]`).count()) === 0) {
+      await page.getByRole("button", { name: "Next week", exact: true }).click();
+    }
     await expect(agenda.getByText(HALL).first()).toBeVisible({ timeout: 60_000 });
     await expect(agenda.getByText(new RegExp(HALL))).toHaveCount(1);
     await visit(page);
