@@ -74,6 +74,8 @@ These run in every sweep from now on. The reasons are in `owner-reports/old-name
 
 ## 2. Phase 1: functional sweeps (Sonnet subagents, in parallel, each on its own ports)
 
+**At most three agents at once (the owner, after five at once restarted the container).** Start S1–S3. Start S4 and S5 as slots free up. The visual scoring agents count toward the same limit.
+
 | Sweep | Ports (app, https, fake) | Who | What |
 |---|---|---|---|
 | **S1 Setup** | 9245, 9246, 9255 | Fresh install | Three complete runs: skip everything; personal only; everything. Every step, option, Back, reload mid-step, wrong input. Then leave setup from every step (X02) |
